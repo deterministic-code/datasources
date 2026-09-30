@@ -81,10 +81,24 @@ public abstract class UpdateEnrichmentStrategy<T>
     {
         var prop = Prop(obj, name);
         var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+        if (value is not null && IsReference(target) && !target.IsInstanceOfType(value))
+        {
+            var current = prop.GetValue(obj) ?? Activator.CreateInstance(target)
+                ?? throw new DatasourceException($"Cannot create \"{name}\"");
+            var id = target.GetProperty("Id") ?? target.GetProperty("id")
+                ?? throw new DatasourceException($"\"{name}\" requires Id");
+            var idType = Nullable.GetUnderlyingType(id.PropertyType) ?? id.PropertyType;
+            id.SetValue(current, idType.IsInstanceOfType(value) ? value : Convert.ChangeType(value, idType));
+            prop.SetValue(obj, current);
+            return;
+        }
         prop.SetValue(obj, value is null || target.IsInstanceOfType(value)
             ? value
             : Convert.ChangeType(value, target));
     }
+
+    static bool IsReference(Type type) =>
+        type.IsClass && type != typeof(string) && !typeof(IEnumerable).IsAssignableFrom(type);
 
     static PropertyInfo Prop(object obj, string name) =>
         obj.GetType().GetProperty(name)

@@ -84,7 +84,7 @@ const schemaOf = (resolved, heading) => {
 
 const renderSchema = (name) =>
   name
-    ? `<ExampleSchema items="${escapeAttr(JSON.stringify([{ name, href: `../examples.md#${name}`, sql: schemaText(name) }]))}" />\n\n`
+    ? `<ExampleSchema items="${escapeAttr(JSON.stringify([{ name, href: `/examples#${name}`, sql: schemaText(name) }]))}" />\n\n`
     : "";
 
 const readmeSchema = (name) =>

@@ -30,6 +30,10 @@ fn crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
     CRUDRepository::new(connection, options).unwrap()
 }
 
+fn create_lookup_repo(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
+    readonly(connection, entity)
+}
+
 fn readonly(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
     let mut options = ReadonlyRepositoryOptions::default();
     options.entity = entity.into();
@@ -234,10 +238,10 @@ async fn contacts_service_fills_names_and_child_lists() {
     assert!(num(&stray, "id") > 0);
     let service = open_contacts(
         contacts,
-        Arc::new(readonly(types_connection, "ContactType")),
-        Arc::new(readonly(sources_connection, "ContactSource")),
-        Arc::new(readonly(address_types_connection, "AddressType")),
-        Arc::new(readonly(phone_types_connection, "PhoneType")),
+        Arc::new(create_lookup_repo(types_connection, "ContactType")),
+        Arc::new(create_lookup_repo(sources_connection, "ContactSource")),
+        Arc::new(create_lookup_repo(address_types_connection, "AddressType")),
+        Arc::new(create_lookup_repo(phone_types_connection, "PhoneType")),
         addresses,
         phones,
     );

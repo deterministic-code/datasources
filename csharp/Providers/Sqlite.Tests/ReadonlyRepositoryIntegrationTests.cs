@@ -432,6 +432,14 @@ public class UsersViewRoleTests
 
 public class UserCrudTests
 {
+    public UserCrudTests()
+    {
+        DatasourceFactory.Reset();
+        Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
+        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
+        Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "sqlite");
+    }
+
     sealed class User
     {
         public int id { get; set; }
@@ -442,7 +450,7 @@ public class UserCrudTests
     [Fact]
     public async Task WritesUserFromTheType()
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var ds = Datasource.Default;
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-pascal");
         var usersRepo = new CRUDRepository<User>(connection);

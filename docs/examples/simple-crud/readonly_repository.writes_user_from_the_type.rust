@@ -1,5 +1,4 @@
-let built = datasource();
-let ds: &dyn Datasource = &*built;
+let ds = default().unwrap();
 let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
 let mut created = datasources::Row::new();
 created.insert("username".into(), Value::from("ada"));

@@ -6,37 +6,37 @@ internal static class ExtraContact
 
     public static Contact New(ContactLookups ids) => new()
     {
-        uuid = Guid.NewGuid(),
-        created = Stamp,
-        updated = Stamp,
-        version = [],
-        contact_source_id = ids.ContactSourceId,
-        contact_type_id = ids.ContactTypeId,
-        first_name = "Extra",
-        last_name = "Contact",
-        addresses =
+        Uuid = Guid.NewGuid(),
+        Created = Stamp,
+        Updated = Stamp,
+        Version = [],
+        ContactSource = new() { Id = ids.ContactSourceId },
+        ContactType = new() { Id = ids.ContactTypeId },
+        FirstName = "Extra",
+        LastName = "Contact",
+        Addresses =
         [
             new Address
             {
-                uuid = Guid.NewGuid(),
-                created = Stamp,
-                updated = Stamp,
-                version = [],
-                address_type_id = ids.AddressTypeId,
-                line1 = "9 Extra",
-                city = "Oslo"
+                Uuid = Guid.NewGuid(),
+                Created = Stamp,
+                Updated = Stamp,
+                Version = [],
+                AddressType = new() { Id = ids.AddressTypeId },
+                Line1 = "9 Extra",
+                City = "Oslo"
             }
         ],
-        phones =
+        Phones =
         [
             new Phone
             {
-                uuid = Guid.NewGuid(),
-                created = Stamp,
-                updated = Stamp,
-                version = [],
-                phone_type_id = ids.PhoneTypeId,
-                number = "555-extra"
+                Uuid = Guid.NewGuid(),
+                Created = Stamp,
+                Updated = Stamp,
+                Version = [],
+                PhoneType = new() { Id = ids.PhoneTypeId },
+                Number = "555-extra"
             }
         ]
     };

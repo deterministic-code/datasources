@@ -2,6 +2,7 @@ using Datasources;
 using Datasources.SqlSpecs;
 using Datasources.Sqlite;
 using Datasources.Tests.Contact;
+using static Datasources.Cmp;
 
 namespace Datasources.Sqlite.Tests;
 
@@ -31,17 +32,17 @@ public class ContactsRepositoryTests
 
         var service = ContactsServiceOf.Create(conn);
         var created = await service.Create(ExtraContact.New(await ContactLookupIds.Resolve(conn)));
-        Assert.True(created.id > 0);
-        var extra = await service.ReadSingle(new Where(new Operator.Equals("id", Value.From(created.id))));
+        Assert.True(created.Id > 0);
+        var extra = await service.ReadSingle(new Where("Id", eq, created.Id));
         Assert.NotNull(extra);
-        Assert.Equal("Extra", extra.first_name);
-        Assert.Single(extra.addresses);
-        Assert.Equal("9 Extra", extra.addresses[0].line1);
-        Assert.Equal(extra.id, extra.addresses[0].contact_id);
-        Assert.Equal("Home", extra.addresses[0].address_type_name);
-        Assert.Equal("555-extra", Assert.Single(extra.phones).number);
-        Assert.Equal(extra.id, extra.phones[0].contact_id);
-        Assert.Equal("Mobile", extra.phones[0].phone_type_name);
+        Assert.Equal("Extra", extra.FirstName);
+        Assert.Single(extra.Addresses);
+        Assert.Equal("9 Extra", extra.Addresses[0].Line1);
+        Assert.Equal(extra.Id, extra.Addresses[0].Contact.Id);
+        Assert.Equal("Home", extra.Addresses[0].AddressType.Name);
+        Assert.Equal("555-extra", Assert.Single(extra.Phones).Number);
+        Assert.Equal(extra.Id, extra.Phones[0].Contact.Id);
+        Assert.Equal("Mobile", extra.Phones[0].PhoneType.Name);
     }
 
     [Fact]
@@ -84,64 +85,67 @@ public class ContactsRepositoryTests
 
         var contactsRepo = new CRUDRepository<Contact>(conn, new CRUDRepositoryOptions<Contact>
         {
-            Entity = "contacts_base",
-            ReadProperties = [
-                "id", "uuid", "created", "updated", "version",
-                "contact_source_id", "contact_type_id", "first_name", "last_name", "email", "notes"
-            ],
+            EntityMapper = ContactColumns.ContactEntity,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
         var typesRepo = new CRUDRepository<ContactType>(conn, new CRUDRepositoryOptions<ContactType>
         {
-            Entity = "contact_type",
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
         var sourcesRepo = new CRUDRepository<ContactSource>(conn, new CRUDRepositoryOptions<ContactSource>
         {
-            Entity = "contact_source",
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
         var addressTypesRepo = new CRUDRepository<AddressType>(conn, new CRUDRepositoryOptions<AddressType>
         {
-            Entity = "address_type",
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
         var phoneTypesRepo = new CRUDRepository<PhoneType>(conn, new CRUDRepositoryOptions<PhoneType>
         {
-            Entity = "phone_type",
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
         var addressesRepo = new CRUDRepository<Address>(conn, new CRUDRepositoryOptions<Address>
         {
-            Entity = "address",
-            ReadProperties = [
-                "id", "uuid", "created", "updated", "version", "contact_id", "address_type_id",
-                "line1", "line2", "city", "region", "postal_code", "country"
-            ],
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
         var phonesRepo = new CRUDRepository<Phone>(conn, new CRUDRepositoryOptions<Phone>
         {
-            Entity = "phone",
-            ReadProperties = [
-                "id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number"
-            ],
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
         });
-        addressesRepo.AddEnriched(new("address_type_name", "address_type_id", "id", "name"), addressTypesRepo);
-        phonesRepo.AddEnriched(new("phone_type_name", "phone_type_id", "id", "name"), phoneTypesRepo);
-        contactsRepo.AddEnriched(new("contact_type_name", "contact_type_id", "id", "name"), typesRepo);
-        contactsRepo.AddEnriched(new("contact_source_name", "contact_source_id", "id", "name"), sourcesRepo);
-        contactsRepo.AddEnriched(new("addresses", "id", "contact_id", Many: true), addressesRepo);
-        contactsRepo.AddEnriched(new("phones", "id", "contact_id", Many: true), phonesRepo);
+        addressesRepo.AddEnriched(new("AddressType", "AddressType", "Id"), addressTypesRepo);
+        phonesRepo.AddEnriched(new("PhoneType", "PhoneType", "Id"), phoneTypesRepo);
+        contactsRepo.AddEnriched(new("ContactType", "ContactType", "Id"), typesRepo);
+        contactsRepo.AddEnriched(new("ContactSource", "ContactSource", "Id"), sourcesRepo);
+        contactsRepo.AddEnriched(new("Addresses", "Id", "Contact", Many: true), addressesRepo);
+        contactsRepo.AddEnriched(new("Phones", "Id", "Contact", Many: true), phonesRepo);
 
         var created = await contactsRepo.Create(ExtraContact.New(await ContactLookupIds.Resolve(conn)));
-        var loaded = await contactsRepo.ReadSingle(new Where(new Operator.Equals("id", Value.From(created.id))));
+        var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));
 
-        Assert.True(created.id > 0);
+        Assert.True(created.Id > 0);
         Assert.NotNull(loaded);
-        Assert.Equal("Extra", loaded.first_name);
-        Assert.Equal("Person", loaded.contact_type_name);
-        Assert.Equal("Web", loaded.contact_source_name);
-        Assert.Equal("9 Extra", Assert.Single(loaded.addresses).line1);
-        Assert.Equal("Home", loaded.addresses[0].address_type_name);
-        Assert.Equal(loaded.id, loaded.addresses[0].contact_id);
-        Assert.Equal("555-extra", Assert.Single(loaded.phones).number);
-        Assert.Equal("Mobile", loaded.phones[0].phone_type_name);
-        Assert.Equal(loaded.id, loaded.phones[0].contact_id);
+        Assert.Equal("Extra", loaded.FirstName);
+        Assert.Equal("Person", loaded.ContactType.Name);
+        Assert.Equal("Web", loaded.ContactSource.Name);
+        Assert.Equal("9 Extra", Assert.Single(loaded.Addresses).Line1);
+        Assert.Equal("Home", loaded.Addresses[0].AddressType.Name);
+        Assert.Equal(loaded.Id, loaded.Addresses[0].Contact.Id);
+        Assert.Equal("555-extra", Assert.Single(loaded.Phones).Number);
+        Assert.Equal("Mobile", loaded.Phones[0].PhoneType.Name);
+        Assert.Equal(loaded.Id, loaded.Phones[0].Contact.Id);
     }
 
     static string SeedPath() => Path.Combine(SqlSpec.SpecsDir(), "contacts", "sqlite.sql");

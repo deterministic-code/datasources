@@ -2,13 +2,12 @@ namespace Datasources.Tests.Contact;
 
 internal sealed class Address : Base
 {
-    public int contact_id { get; set; }
-    public int address_type_id { get; set; }
-    public string address_type_name { get; set; } = "";
-    public string line1 { get; set; } = "";
-    public string? line2 { get; set; }
-    public string city { get; set; } = "";
-    public string? region { get; set; }
-    public string? postal_code { get; set; }
-    public string? country { get; set; }
+    public Contact Contact { get; set; } = new();
+    public AddressType AddressType { get; set; } = new();
+    public string Line1 { get; set; } = "";
+    public string? Line2 { get; set; }
+    public string City { get; set; } = "";
+    public string? Region { get; set; }
+    public string? PostalCode { get; set; }
+    public string? Country { get; set; }
 }

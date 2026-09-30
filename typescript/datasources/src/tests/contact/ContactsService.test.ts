@@ -3,6 +3,7 @@ import { MemoryDriver } from "@datasources/memory";
 import { collectAsync } from "../../collectAsync.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";
 import { ReadonlyRepository } from "../../ReadonlyRepository.ts";
+import type { Constructable } from "../../converters/Constructable.ts";
 import type { IConnection } from "../../IConnection.ts";
 import type { Scalar } from "../../builders/Scalar.ts";
 import { Address } from "./Address.ts";
@@ -18,16 +19,16 @@ describe("ContactsService", () => {
   it("fills names and child lists", async () => {
     const person: Record<string, Scalar> = { name: "person" };
     const types = await setup([person]);
-    const typesRepo = new ReadonlyRepository(ContactType, types);
+    const typesRepo = createLookupRepo(ContactType, types);
     const source: Record<string, Scalar> = { name: "import" };
     const sources = await setup([source]);
-    const sourcesRepo = new ReadonlyRepository(ContactSource, sources);
+    const sourcesRepo = createLookupRepo(ContactSource, sources);
     const home: Record<string, Scalar> = { name: "Home" };
     const addressTypes = await setup([home]);
-    const addressTypesRepo = new ReadonlyRepository(AddressType, addressTypes);
+    const addressTypesRepo = createLookupRepo(AddressType, addressTypes);
     const work: Record<string, Scalar> = { name: "Work" };
     const phoneTypes = await setup([work]);
-    const phoneTypesRepo = new ReadonlyRepository(PhoneType, phoneTypes);
+    const phoneTypesRepo = createLookupRepo(PhoneType, phoneTypes);
     const connection = await setup();
     const contactsRepo = new CRUDRepository(Contact, connection);
     const addressesRepo = new CRUDRepository(Address, connection);
@@ -80,6 +81,9 @@ describe("ContactsService", () => {
     expect(contact?.phones[0]?.phone_type_name).toBe("Work");
   });
 });
+
+const createLookupRepo = <T extends object>(type: Constructable<T>, connection: IConnection) =>
+  new ReadonlyRepository(type, connection);
 
 const setup = async (rows: Record<string, Scalar>[] = []): Promise<IConnection> => {
   const connection = new MemoryDriver().connection();

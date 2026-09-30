@@ -10,60 +10,75 @@ public class ContactsServiceTests
     {
         var person = new Row { ["name"] = "person" };
         var typesConnection = await Setup(person);
-        var typesRepo = new ReadonlyRepository<ContactType>(typesConnection);
+        var typesRepo = CreateLookupRepo<ContactType>(typesConnection);
         var source = new Row { ["name"] = "import" };
         var sourcesConnection = await Setup(source);
-        var sourcesRepo = new ReadonlyRepository<ContactSource>(sourcesConnection);
+        var sourcesRepo = CreateLookupRepo<ContactSource>(sourcesConnection);
         var home = new Row { ["name"] = "Home" };
         var addressTypesConnection = await Setup(home);
-        var addressTypesRepo = new ReadonlyRepository<AddressType>(addressTypesConnection);
+        var addressTypesRepo = CreateLookupRepo<AddressType>(addressTypesConnection);
         var work = new Row { ["name"] = "Work" };
         var phoneTypesConnection = await Setup(work);
-        var phoneTypesRepo = new ReadonlyRepository<PhoneType>(phoneTypesConnection);
+        var phoneTypesRepo = CreateLookupRepo<PhoneType>(phoneTypesConnection);
         var connection = await Setup();
-        var contactsRepo = new CRUDRepository<Contact>(connection);
-        var addressesRepo = new CRUDRepository<Address>(connection);
-        var phonesRepo = new CRUDRepository<Phone>(connection);
+        var contactsRepo = Repo<Contact>(connection, ContactColumns.ContactEntity);
+        var addressesRepo = Repo<Address>(connection);
+        var phonesRepo = Repo<Phone>(connection);
         var service = ContactsService.Open(
             contactsRepo, typesRepo, sourcesRepo, addressTypesRepo, phoneTypesRepo, addressesRepo, phonesRepo);
         var other = await service.Create(new Contact
         {
-            first_name = "Other",
-            contact_type_id = Id(person),
-            contact_source_id = Id(source)
+            FirstName = "Other",
+            ContactType = new() { Id = Id(person) },
+            ContactSource = new() { Id = Id(source) }
         });
-        Assert.True(other.id > 0);
+        Assert.True(other.Id > 0);
         var stray = await addressesRepo.Create(new Address
         {
-            contact_id = other.id,
-            line1 = "other",
-            city = "x",
-            address_type_id = Id(home)
+            Contact = new() { Id = other.Id },
+            Line1 = "other",
+            City = "x",
+            AddressType = new() { Id = Id(home) }
         });
-        Assert.True(stray.id > 0);
+        Assert.True(stray.Id > 0);
         var created = await service.Create(new Contact
         {
-            contact_type_id = Id(person),
-            contact_source_id = Id(source),
-            first_name = "Ada",
-            addresses = [new Address { line1 = "1 Main", city = "Paris", address_type_id = Id(home) }],
-            phones = [new Phone { number = "555", phone_type_id = Id(work) }]
+            ContactType = new() { Id = Id(person) },
+            ContactSource = new() { Id = Id(source) },
+            FirstName = "Ada",
+            Addresses = [new Address { Line1 = "1 Main", City = "Paris", AddressType = new() { Id = Id(home) } }],
+            Phones = [new Phone { Number = "555", PhoneType = new() { Id = Id(work) } }]
         });
-        Assert.True(created.id > 0);
-        var contact = Assert.Single(await Read(service), item => item.first_name == "Ada");
-        Assert.Equal(created.id, contact.id);
-        Assert.NotEqual(other.id, contact.id);
-        Assert.Equal("person", contact.contact_type_name);
-        Assert.Equal("import", contact.contact_source_name);
-        var address = Assert.Single(contact.addresses);
-        Assert.True(address.id > 0);
-        Assert.Equal("1 Main", address.line1);
-        Assert.Equal("Home", address.address_type_name);
-        var phone = Assert.Single(contact.phones);
-        Assert.True(phone.id > 0);
-        Assert.Equal("555", phone.number);
-        Assert.Equal("Work", phone.phone_type_name);
+        Assert.True(created.Id > 0);
+        var contact = Assert.Single(await Read(service), item => item.FirstName == "Ada");
+        Assert.Equal(created.Id, contact.Id);
+        Assert.NotEqual(other.Id, contact.Id);
+        Assert.Equal("person", contact.ContactType.Name);
+        Assert.Equal("import", contact.ContactSource.Name);
+        var address = Assert.Single(contact.Addresses);
+        Assert.True(address.Id > 0);
+        Assert.Equal("1 Main", address.Line1);
+        Assert.Equal("Home", address.AddressType.Name);
+        var phone = Assert.Single(contact.Phones);
+        Assert.True(phone.Id > 0);
+        Assert.Equal("555", phone.Number);
+        Assert.Equal("Work", phone.PhoneType.Name);
     }
+
+    static ReadonlyRepository<T> CreateLookupRepo<T>(IConnection connection) where T : new() =>
+        new(connection, new ReadonlyRepositoryOptions<T>
+        {
+            EntityMapper = ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+        });
+
+    static CRUDRepository<T> Repo<T>(IConnection connection, IMapper<string, string>? entity = null) where T : new() =>
+        new(connection, new CRUDRepositoryOptions<T>
+        {
+            EntityMapper = entity ?? ContactColumns.Snake,
+            ColumnMappings = ContactColumns.Columns,
+            Ids = ["Id"],
+        });
 
     static async Task<List<Contact>> Read(CRUDRepository<Contact> contacts)
     {
