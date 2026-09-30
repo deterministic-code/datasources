@@ -34,7 +34,6 @@ export default defineConfig({
         "src/IRepository.ts",
         "src/IReadonlyRepository.ts",
         "src/IEnriched.ts",
-        "src/IReadonlyEnrichmentBinder.ts",
         "src/IReadonlyEnrichmentStrategy.ts",
         "src/IRepositoryTree.ts",
         "src/IRepositoryTreeNode.ts",
