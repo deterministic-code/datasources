@@ -4938,7 +4938,7 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L461-L493)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L479-L511)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -4960,7 +4960,7 @@ var removed = await usersRepo.Delete(created);
 var gone = await usersRepo.ReadSingleById(created.Id);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L667-L719)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L696-L748)
 
 ```rust
 let built = datasource();
@@ -5036,7 +5036,7 @@ CREATE TABLE User (id int, is_enabled bool NOT NULL, username string NOT NULL, C
 
 `UsersView` maps onto `user`. Create writes the user and its roles. Read fills `UserType` and `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L595-L668)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L613-L686)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -5073,7 +5073,7 @@ usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L721-L838)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L750-L867)
 
 ```rust
 let built = datasource();
@@ -6755,18 +6755,19 @@ parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: 
 
 #### Fill roles from one join
 
-The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](#flat-to-nested-mapper) groups each user's `Roles`.
+The repository type is `UsersView`. The select reads `User`, joined to `UserType`, `UserRole`, and `Role`. Nested enrichment groups each user's `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L326-L409)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L326-L411)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
 await Execute(connection, Seed());
 var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
 {
+    Entity = "User",
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>
     {
-        ["UsersView"] = "user",
+        ["User"] = "user",
         ["UserType"] = "user_type",
         ["UserRole"] = "user_roles",
         ["Role"] = "roles",
@@ -6778,6 +6779,7 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
         ["Active"] = "is_enabled",
         ["Opened"] = "created",
         ["UserType"] = "user_type.name",
+        ["UserTypeId"] = "user_type_id",
         ["UserId"] = "user_id",
         ["RoleId"] = "role_id",
         ["Name"] = "roles.name",
@@ -6786,14 +6788,14 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
     Select = new TransformMapper<ISelectStatement, ISelectStatement>(
         query => new SelectStatement(new()
         {
-            Table = "UsersView",
+            Table = "User",
             Fields =
             [
-                "UsersView.Key",
-                "UsersView.Login",
-                "UsersView.Active",
-                "UsersView.Opened",
-                "UsersView.UserType",
+                "User.Key",
+                "User.Login",
+                "User.Active",
+                "User.Opened",
+                "User.UserType",
                 "UserRole.UserId",
                 "UserRole.RoleId",
                 "Role.Name",
@@ -6801,8 +6803,8 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
             Where = query.Where,
             Joins =
             [
-                new Join(JoinKind.Left, "UserType", "UserType.Id", "user.user_type_id"),
-                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "UsersView.Key"),
+                new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
+                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
                 new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
             ],
         }),
@@ -6877,12 +6879,12 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L541-L598)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L541-L599)
 
 ```rust
-options.entity = "UsersView".into();
+options.entity = "User".into();
 options.entity_mapper = Box::new(DictionaryMapper::new([
-    ("UsersView".into(), "user".into()),
+    ("User".into(), "user".into()),
     ("UserType".into(), "user_type".into()),
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
@@ -6893,6 +6895,7 @@ options.column_mappings = Box::new(DictionaryMapper::new([
     ("Active".into(), "is_enabled".into()),
     ("Opened".into(), "created".into()),
     ("UserType".into(), "user_type.name".into()),
+    ("UserTypeId".into(), "user_type_id".into()),
     ("UserId".into(), "user_id".into()),
     ("RoleId".into(), "role_id".into()),
     ("Name".into(), "roles.name".into()),
@@ -6947,7 +6950,7 @@ let lin = view("lin");
   {
     Key: '11111111-1111-1111-1111-111111111111',
     Login: 'ada',
-    Active: 1,
+    Active: true,
     Opened: '2020-01-01T00:00:00.000Z',
     UserType: 'admin',
     Roles: 'Name=admin,UserId=11111111-1111-1111-1111-111111111111|Name=editor,UserId=11111111-1111-1111-1111-111111111111'
@@ -6955,7 +6958,7 @@ let lin = view("lin");
   {
     Key: '22222222-2222-2222-2222-222222222222',
     Login: 'grace',
-    Active: 1,
+    Active: true,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'user',
     Roles: 'Name=viewer,UserId=22222222-2222-2222-2222-222222222222'
@@ -6963,7 +6966,7 @@ let lin = view("lin");
   {
     Key: '33333333-3333-3333-3333-333333333333',
     Login: 'lin',
-    Active: 0,
+    Active: false,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'service',
     Roles: ''
@@ -6971,13 +6974,14 @@ let lin = view("lin");
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L118-L180)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L118-L182)
 
 ```typescript
 const usersRepo = new ReadonlyRepository(connection, {
   type: UsersView,
+  entity: "User",
   entityMapper: new DictionaryMapper([
-    ["UsersView", "user"],
+    ["User", "user"],
     ["UserType", "user_type"],
     ["UserRole", "user_roles"],
     ["Role", "roles"],
@@ -6988,6 +6992,7 @@ const usersRepo = new ReadonlyRepository(connection, {
     ["Active", "is_enabled"],
     ["Opened", "created"],
     ["UserType", "user_type.name"],
+    ["UserTypeId", "user_type_id"],
     ["UserId", "user_id"],
     ["RoleId", "role_id"],
     ["Name", "roles.name"],
@@ -6996,21 +7001,21 @@ const usersRepo = new ReadonlyRepository(connection, {
   select: new TransformMapper(
     (query) =>
       new SelectStatement({
-        table: "UsersView",
+        table: "User",
         fields: [
-          "UsersView.Key",
-          "UsersView.Login",
-          "UsersView.Active",
-          "UsersView.Opened",
-          "UsersView.UserType",
+          "User.Key",
+          "User.Login",
+          "User.Active",
+          "User.Opened",
+          "User.UserType",
           "UserRole.UserId",
           "UserRole.RoleId",
           "Role.Name",
         ],
         where: query.where,
         joins: [
-          Join.left("UserType", "UserType.Id", "user.user_type_id"),
-          Join.left("UserRole", "UserRole.UserId", "UsersView.Key"),
+          Join.left("UserType", "UserType.Id", "User.UserTypeId"),
+          Join.left("UserRole", "UserRole.UserId", "User.Key"),
           Join.left("Role", "Role.Id", "UserRole.RoleId"),
         ],
       }),
@@ -7046,7 +7051,7 @@ for await (const item of usersRepo.read()) items.push(item);
   {
     Key: '11111111-1111-1111-1111-111111111111',
     Login: 'ada',
-    Active: 1,
+    Active: true,
     Opened: '2020-01-01T00:00:00.000Z',
     UserType: 'admin',
     Roles: [
@@ -7057,7 +7062,7 @@ for await (const item of usersRepo.read()) items.push(item);
   {
     Key: '22222222-2222-2222-2222-222222222222',
     Login: 'grace',
-    Active: 1,
+    Active: true,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'user',
     Roles: [
@@ -7067,7 +7072,7 @@ for await (const item of usersRepo.read()) items.push(item);
   {
     Key: '33333333-3333-3333-3333-333333333333',
     Login: 'lin',
-    Active: 0,
+    Active: false,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'service',
     Roles: []
@@ -8219,7 +8224,7 @@ See [Bulk repository](#bulk-repository) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L461-L493)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L479-L511)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -8275,7 +8280,7 @@ ada-v2
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L667-L719)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L696-L748)
 
 ```rust
 let built = datasource();
@@ -8639,7 +8644,7 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L519-L552)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L537-L570)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -8676,7 +8681,7 @@ ada-v2
 grace
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L852-L898)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L881-L927)
 
 ```rust
 let built = datasource();
@@ -9036,7 +9041,7 @@ CREATE TABLE contact_change_log (id int, uuid uuid NOT NULL, created datetime NO
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L595-L668)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L613-L686)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -9115,7 +9120,7 @@ var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L721-L838)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L750-L867)
 
 ```rust
 let built = datasource();
@@ -22787,16 +22792,16 @@ await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
 var items = parents.Cast<Parent>();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L531-L611)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L531-L640)
 
 ```rust
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
 let mut options = ReadonlyRepositoryOptions::default();
-options.entity = "UsersView".into();
+options.entity = "User".into();
 options.entity_mapper = Box::new(DictionaryMapper::new([
-    ("UsersView".into(), "user".into()),
+    ("User".into(), "user".into()),
     ("UserType".into(), "user_type".into()),
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
@@ -22807,6 +22812,7 @@ options.column_mappings = Box::new(DictionaryMapper::new([
     ("Active".into(), "is_enabled".into()),
     ("Opened".into(), "created".into()),
     ("UserType".into(), "user_type.name".into()),
+    ("UserTypeId".into(), "user_type_id".into()),
     ("UserId".into(), "user_id".into()),
     ("RoleId".into(), "role_id".into()),
     ("Name".into(), "roles.name".into()),

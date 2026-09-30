@@ -2,9 +2,10 @@ var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, str
 await Execute(connection, Seed());
 var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
 {
+    Entity = "User",
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>
     {
-        ["UsersView"] = "user",
+        ["User"] = "user",
         ["UserType"] = "user_type",
         ["UserRole"] = "user_roles",
         ["Role"] = "roles",
@@ -16,6 +17,7 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
         ["Active"] = "is_enabled",
         ["Opened"] = "created",
         ["UserType"] = "user_type.name",
+        ["UserTypeId"] = "user_type_id",
         ["UserId"] = "user_id",
         ["RoleId"] = "role_id",
         ["Name"] = "roles.name",
@@ -24,14 +26,14 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
     Select = new TransformMapper<ISelectStatement, ISelectStatement>(
         query => new SelectStatement(new()
         {
-            Table = "UsersView",
+            Table = "User",
             Fields =
             [
-                "UsersView.Key",
-                "UsersView.Login",
-                "UsersView.Active",
-                "UsersView.Opened",
-                "UsersView.UserType",
+                "User.Key",
+                "User.Login",
+                "User.Active",
+                "User.Opened",
+                "User.UserType",
                 "UserRole.UserId",
                 "UserRole.RoleId",
                 "Role.Name",
@@ -39,8 +41,8 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
             Where = query.Where,
             Joins =
             [
-                new Join(JoinKind.Left, "UserType", "UserType.Id", "user.user_type_id"),
-                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "UsersView.Key"),
+                new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
+                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
                 new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
             ],
         }),

@@ -332,9 +332,10 @@ public class UsersViewRoleTests
         await Execute(connection, Seed());
         var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
+            Entity = "User",
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>
             {
-                ["UsersView"] = "user",
+                ["User"] = "user",
                 ["UserType"] = "user_type",
                 ["UserRole"] = "user_roles",
                 ["Role"] = "roles",
@@ -346,6 +347,7 @@ public class UsersViewRoleTests
                 ["Active"] = "is_enabled",
                 ["Opened"] = "created",
                 ["UserType"] = "user_type.name",
+                ["UserTypeId"] = "user_type_id",
                 ["UserId"] = "user_id",
                 ["RoleId"] = "role_id",
                 ["Name"] = "roles.name",
@@ -354,14 +356,14 @@ public class UsersViewRoleTests
             Select = new TransformMapper<ISelectStatement, ISelectStatement>(
                 query => new SelectStatement(new()
                 {
-                    Table = "UsersView",
+                    Table = "User",
                     Fields =
                     [
-                        "UsersView.Key",
-                        "UsersView.Login",
-                        "UsersView.Active",
-                        "UsersView.Opened",
-                        "UsersView.UserType",
+                        "User.Key",
+                        "User.Login",
+                        "User.Active",
+                        "User.Opened",
+                        "User.UserType",
                         "UserRole.UserId",
                         "UserRole.RoleId",
                         "Role.Name",
@@ -369,8 +371,8 @@ public class UsersViewRoleTests
                     Where = query.Where,
                     Joins =
                     [
-                        new Join(JoinKind.Left, "UserType", "UserType.Id", "user.user_type_id"),
-                        new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "UsersView.Key"),
+                        new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
+                        new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
                         new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
                     ],
                 }),
@@ -408,10 +410,26 @@ public class UsersViewRoleTests
         var grace = Assert.Single(items, item => item.Login == "grace");
         var lin = Assert.Single(items, item => item.Login == "lin");
 
+        Assert.Equal(3, items.Count);
+        Assert.Equal(Ada, ada.Key);
+        Assert.Equal("ada", ada.Login);
+        Assert.True(ada.Active);
+        Assert.Equal(new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), ada.Opened);
         Assert.Equal("admin", ada.UserType);
         Assert.Equal(["admin", "editor"], ada.Roles.Select(role => role.Name).OrderBy(name => name));
         Assert.Equal(ada.Roles.Count, ada.Roles.Count(role => role.UserId == Ada));
+        Assert.Equal(Grace, grace.Key);
+        Assert.Equal("grace", grace.Login);
+        Assert.True(grace.Active);
+        Assert.Equal(new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), grace.Opened);
+        Assert.Equal("user", grace.UserType);
         Assert.Equal(["viewer"], grace.Roles.Select(role => role.Name));
+        Assert.Equal(grace.Roles.Count, grace.Roles.Count(role => role.UserId == Grace));
+        Assert.Equal(Lin, lin.Key);
+        Assert.Equal("lin", lin.Login);
+        Assert.False(lin.Active);
+        Assert.Equal(new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), lin.Opened);
+        Assert.Equal("service", lin.UserType);
         Assert.Empty(lin.Roles);
     }
 

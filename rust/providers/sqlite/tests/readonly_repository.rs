@@ -421,21 +421,21 @@ mod users_view_roles {
 
     fn joined_users(query: SelectStatement) -> SelectStatement {
         let joins = [
-            Join::left("UserType", "UserType.Id", "user.user_type_id"),
-            Join::left("UserRole", "UserRole.UserId", "UsersView.Key"),
+            Join::left("UserType", "UserType.Id", "User.UserTypeId"),
+            Join::left("UserRole", "UserRole.UserId", "User.Key"),
             Join::left("Role", "Role.Id", "UserRole.RoleId"),
         ];
         SelectStatement::new(SelectStatementOptions {
             where_clause: query.predicate(),
             joins: &joins,
             ..SelectStatementOptions::new(
-                "UsersView",
+                "User",
                 &[
-                    "UsersView.Key",
-                    "UsersView.Login",
-                    "UsersView.Active",
-                    "UsersView.Opened",
-                    "UsersView.UserType",
+                    "User.Key",
+                    "User.Login",
+                    "User.Active",
+                    "User.Opened",
+                    "User.UserType",
                     "UserRole.UserId",
                     "UserRole.RoleId",
                     "Role.Name",
@@ -538,9 +538,9 @@ mod users_view_roles {
             .unwrap();
         execute_sql(&connection, &seed()).await;
         let mut options = ReadonlyRepositoryOptions::default();
-        options.entity = "UsersView".into();
+        options.entity = "User".into();
         options.entity_mapper = Box::new(DictionaryMapper::new([
-            ("UsersView".into(), "user".into()),
+            ("User".into(), "user".into()),
             ("UserType".into(), "user_type".into()),
             ("UserRole".into(), "user_roles".into()),
             ("Role".into(), "roles".into()),
@@ -551,6 +551,7 @@ mod users_view_roles {
             ("Active".into(), "is_enabled".into()),
             ("Opened".into(), "created".into()),
             ("UserType".into(), "user_type.name".into()),
+            ("UserTypeId".into(), "user_type_id".into()),
             ("UserId".into(), "user_id".into()),
             ("RoleId".into(), "role_id".into()),
             ("Name".into(), "roles.name".into()),
@@ -597,6 +598,13 @@ mod users_view_roles {
         let grace = view("grace");
         let lin = view("lin");
         assert_eq!(items.len(), 3);
+        assert_eq!(ada.get("Key"), Some(&Value::from(ADA)));
+        assert_eq!(ada.get("Login"), Some(&Value::from("ada")));
+        assert_eq!(ada.get("Active"), Some(&Value::Bool(true)));
+        assert_eq!(
+            ada.get("Opened"),
+            Some(&Value::from("2020-01-01T00:00:00.000Z"))
+        );
         assert_eq!(ada.get("UserType"), Some(&Value::from("admin")));
         let mut names = role_names(ada.get("Roles").unwrap());
         names.sort();
@@ -606,7 +614,28 @@ mod users_view_roles {
             .unwrap()
             .wire_text()
             .contains(&format!("UserId={ADA}")));
+        assert_eq!(grace.get("Key"), Some(&Value::from(GRACE)));
+        assert_eq!(grace.get("Login"), Some(&Value::from("grace")));
+        assert_eq!(grace.get("Active"), Some(&Value::Bool(true)));
+        assert_eq!(
+            grace.get("Opened"),
+            Some(&Value::from("2024-06-01T00:00:00.000Z"))
+        );
+        assert_eq!(grace.get("UserType"), Some(&Value::from("user")));
         assert_eq!(role_names(grace.get("Roles").unwrap()), ["viewer"]);
+        assert!(grace
+            .get("Roles")
+            .unwrap()
+            .wire_text()
+            .contains(&format!("UserId={GRACE}")));
+        assert_eq!(lin.get("Key"), Some(&Value::from(LIN)));
+        assert_eq!(lin.get("Login"), Some(&Value::from("lin")));
+        assert_eq!(lin.get("Active"), Some(&Value::Bool(false)));
+        assert_eq!(
+            lin.get("Opened"),
+            Some(&Value::from("2024-06-01T00:00:00.000Z"))
+        );
+        assert_eq!(lin.get("UserType"), Some(&Value::from("service")));
         assert_eq!(lin.get("Roles"), Some(&Value::from("")));
     }
 }
