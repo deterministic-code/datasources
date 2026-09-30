@@ -61,6 +61,11 @@ const schemaSection = (schemas) =>
         .join("\n\n")}`
     : "";
 
+const exampleSchemas = (records) => {
+  const used = new Set([...records].map((record) => record.schema).filter(Boolean));
+  return catalogSchemas().filter((schema) => used.has(schema.name));
+};
+
 export const renderExamplesPage = ({ pages, headings, schemas = catalogSchemas() }) => {
   const byDoc = new Map();
   for (const heading of headings) {
@@ -779,9 +784,12 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
   }
   if (errors.length) return { errors, count, changed: 0 };
   const headings = headingsIn(base);
+  const pageRecords = new Map(only ? catalog : []);
+  for (const record of lineRecords.values()) pageRecords.set(record.file, record);
   const pageText = renderExamplesPage({
     pages: parseToc(readFileSync(join(base, "docs/toc.yaml"), "utf8")).pages,
     headings,
+    schemas: exampleSchemas(pageRecords.values()),
   });
   if (check) {
     const pageErrors = directoryErrorsFor(headings, exampleDirectories(base));

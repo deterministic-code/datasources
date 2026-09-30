@@ -7,6 +7,8 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 {
     public Dictionary<string, TypeConverter<Value, Value>> Types { get; set; } = [];
     public Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; } = [];
+    public HashSet<string> References { get; } = [];
+    public IMapper<string, string> ReferenceColumns { get; set; } = new IdentityMapper<string>();
 
     public MetaDataRowTypeConverter(
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null,
@@ -46,14 +48,27 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
     {
         IDictionary<string, Value> dict => new(dict.Select(pair =>
             KeyValuePair.Create(pair.Key, Converted(pair.Key, pair.Value, reverse: true)))),
-        _ => new(Props(typeof(T))
-            .Where(prop => IsColumn(prop.PropertyType))
-            .Select(prop => (prop, Raw: prop.GetValue(to)))
-            .Where(pair => pair.Raw is not null)
-            .Select(pair => KeyValuePair.Create(
-                pair.prop.Name,
-                Converted(pair.prop.Name, Value.From(pair.Raw), reverse: true))))
+        _ => new(Props(typeof(T)).SelectMany(prop => Cells(to, prop)))
     };
+
+    IEnumerable<KeyValuePair<string, Value>> Cells(T source, PropertyInfo prop)
+    {
+        if (References.Contains(prop.Name))
+        {
+            if (ReferenceId(prop.GetValue(source)) is { } id)
+                yield return new(ReferenceColumns.Map(prop.Name), Converted(prop.Name, id, reverse: true));
+            yield break;
+        }
+        if (!IsColumn(prop.PropertyType) || prop.GetValue(source) is not { } raw) yield break;
+        yield return new(prop.Name, Converted(prop.Name, Value.From(raw), reverse: true));
+    }
+
+    static Value? ReferenceId(object? value)
+    {
+        if (value is null) return null;
+        var id = value.GetType().GetProperty("Id") ?? value.GetType().GetProperty("id");
+        return id?.GetValue(value) is { } raw ? Value.From(raw) : null;
+    }
 
     Value Converted(string key, Value value, bool reverse) =>
         Converter(key) switch

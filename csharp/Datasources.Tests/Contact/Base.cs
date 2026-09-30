@@ -2,9 +2,9 @@ namespace Datasources.Tests.Contact;
 
 internal class Base
 {
-    public int id { get; set; }
-    public Guid uuid { get; set; }
-    public DateTime created { get; set; }
-    public DateTime updated { get; set; }
-    public byte[] version { get; set; } = [];
+    public int Id { get; set; }
+    public Guid Uuid { get; set; }
+    public DateTime Created { get; set; }
+    public DateTime Updated { get; set; }
+    public byte[] Version { get; set; } = [];
 }

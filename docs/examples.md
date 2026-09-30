@@ -318,36 +318,6 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 CREATE TABLE account (tenant_id int NOT NULL, id int NOT NULL, name string NOT NULL, CONSTRAINT pk_account PRIMARY KEY (tenant_id, id))
 ```
 
-### null-write-item
-
-```sql
-CREATE TABLE item (id int, name string NOT NULL, created datetime DEFAULT '2020-01-01T00:00:00.000Z' NOT NULL, version binary DEFAULT X'0102' NOT NULL, CONSTRAINT pk_item PRIMARY KEY (id))
-```
-
-### command-user
-
-```sql
-CREATE TABLE user (id int, username string NOT NULL, is_enabled int NOT NULL, created string NOT NULL, CONSTRAINT pk_user PRIMARY KEY (id))
-```
-
-### command-user-versioned
-
-```sql
-CREATE TABLE user (id int, username string NOT NULL, is_enabled int NOT NULL, created string NOT NULL, version int NOT NULL, CONSTRAINT pk_user PRIMARY KEY (id))
-```
-
-### repository-user
-
-```sql
-CREATE TABLE user (id int, uuid uuid, username string, is_enabled bool, balance decimal, location float, created datetime, version binary, CONSTRAINT pk_user PRIMARY KEY (id))
-```
-
-### repository-users-mapped
-
-```sql
-CREATE TABLE users (id int, uuid uuid, username string, usertypename string, decimal_text string, create_string string, version binary, CONSTRAINT pk_users PRIMARY KEY (id))
-```
-
 ### contacts
 
 ```sql
@@ -362,38 +332,6 @@ CREATE TABLE contact_groups_base (id int, uuid uuid NOT NULL, created datetime N
 CREATE TABLE contact_group_member (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, contact_id int NOT NULL, contact_group_id int NOT NULL, CONSTRAINT pk_contact_group_member PRIMARY KEY (id), CONSTRAINT fk_member_contact FOREIGN KEY (contact_id) REFERENCES contacts_base (id), CONSTRAINT fk_member_group FOREIGN KEY (contact_group_id) REFERENCES contact_groups_base (id), CONSTRAINT uq_contact_group_member UNIQUE (contact_id, contact_group_id));
 CREATE TABLE legacy_contact (key string, first_name string NOT NULL, last_name string NOT NULL, email string, imported_at datetime, CONSTRAINT pk_legacy_contact PRIMARY KEY (key));
 CREATE TABLE contact_change_log (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, occurred_at datetime NOT NULL, contact_id int NOT NULL, changed_by string NOT NULL, change_summary string NOT NULL, CONSTRAINT pk_contact_change_log PRIMARY KEY (id))
-```
-
-### contacts-rest
-
-```sql
-CREATE TABLE ContactSource (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, m_Name string NOT NULL, Description string, CONSTRAINT pk_ContactSource PRIMARY KEY (Id));
-CREATE TABLE tbl_ContactType (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, m_Name string NOT NULL, Description string, CONSTRAINT pk_tbl_ContactType PRIMARY KEY (Id));
-CREATE TABLE AddressType (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, m_Name string NOT NULL, Description string, CONSTRAINT pk_AddressType PRIMARY KEY (Id));
-CREATE TABLE tbl_PhoneType (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, m_Name string NOT NULL, Description string, CONSTRAINT pk_tbl_PhoneType PRIMARY KEY (Id));
-CREATE TABLE tbl_Contacts (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, ContactSourceId int NOT NULL, m_ContactTypeId int NOT NULL, m_FirstName string NOT NULL, LastName string NOT NULL, m_Email string, Notes string, CONSTRAINT pk_tbl_Contacts PRIMARY KEY (Id), CONSTRAINT fk_contacts_source FOREIGN KEY (ContactSourceId) REFERENCES ContactSource (Id), CONSTRAINT fk_contacts_type FOREIGN KEY (m_ContactTypeId) REFERENCES tbl_ContactType (Id));
-CREATE TABLE tbl_Address (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, ContactId int NOT NULL, m_AddressTypeId int NOT NULL, m_Line1 string NOT NULL, Line2 string, m_City string NOT NULL, Region string, m_PostalCode string, Country string, CONSTRAINT pk_tbl_Address PRIMARY KEY (Id), CONSTRAINT fk_address_contact FOREIGN KEY (ContactId) REFERENCES tbl_Contacts (Id), CONSTRAINT fk_address_type FOREIGN KEY (m_AddressTypeId) REFERENCES AddressType (Id));
-CREATE TABLE tbl_Phone (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, ContactId int NOT NULL, PhoneTypeId int NOT NULL, m_Number string NOT NULL, CONSTRAINT pk_tbl_Phone PRIMARY KEY (Id), CONSTRAINT fk_phone_contact FOREIGN KEY (ContactId) REFERENCES tbl_Contacts (Id), CONSTRAINT fk_phone_type FOREIGN KEY (PhoneTypeId) REFERENCES tbl_PhoneType (Id));
-CREATE TABLE tbl_ContactGroups (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, m_Name string NOT NULL, Description string, CONSTRAINT pk_tbl_ContactGroups PRIMARY KEY (Id));
-CREATE TABLE tbl_ContactGroupMember (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, ContactId int NOT NULL, ContactGroupId int NOT NULL, CONSTRAINT pk_tbl_ContactGroupMember PRIMARY KEY (Id), CONSTRAINT fk_member_contact FOREIGN KEY (ContactId) REFERENCES tbl_Contacts (Id), CONSTRAINT fk_member_group FOREIGN KEY (ContactGroupId) REFERENCES tbl_ContactGroups (Id), CONSTRAINT uq_contact_group_member UNIQUE (ContactId, ContactGroupId));
-CREATE TABLE legacy_contact (m_Key string NOT NULL, m_FirstName string NOT NULL, LastName string NOT NULL, m_Email string, ImportedAt datetime, CONSTRAINT pk_legacy_contact PRIMARY KEY (m_Key));
-CREATE TABLE tbl_ContactChangeLog (Id int, m_Uuid uuid NOT NULL, Created datetime NOT NULL, m_Updated datetime NOT NULL, Version binary NOT NULL, m_OccurredAt datetime NOT NULL, ContactId int NOT NULL, ChangedBy string NOT NULL, m_ChangeSummary string NOT NULL, CONSTRAINT pk_tbl_ContactChangeLog PRIMARY KEY (Id), CONSTRAINT fk_change_log_contact FOREIGN KEY (ContactId) REFERENCES tbl_Contacts (Id))
-```
-
-### user-roles-cli
-
-```sql
-CREATE TABLE users (id int, username string NOT NULL, password string NOT NULL, is_enabled bool DEFAULT 1 NOT NULL, created datetime NOT NULL, updated binary NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id));
-CREATE TABLE roles (id int, name string NOT NULL, is_enabled bool DEFAULT 1 NOT NULL, created datetime NOT NULL, updated binary NOT NULL, CONSTRAINT pk_roles PRIMARY KEY (id));
-CREATE TABLE groups (id int, ugly_name string NOT NULL, is_enabled bool DEFAULT 1 NOT NULL, created datetime NOT NULL, updated binary NOT NULL, CONSTRAINT pk_groups PRIMARY KEY (id));
-CREATE TABLE user_groups (id int, user_id int NOT NULL, group_id int NOT NULL, created datetime NOT NULL, updated binary NOT NULL, CONSTRAINT pk_user_groups PRIMARY KEY (id), CONSTRAINT fk_user_groups_user FOREIGN KEY (user_id) REFERENCES users (id), CONSTRAINT fk_user_groups_group FOREIGN KEY (group_id) REFERENCES groups (id));
-CREATE TABLE user_roles (id int, user_id int NOT NULL, bad_role_id int NOT NULL, created datetime NOT NULL, updated binary NOT NULL, CONSTRAINT pk_user_roles PRIMARY KEY (id), CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) REFERENCES users (id), CONSTRAINT fk_user_roles_role FOREIGN KEY (bad_role_id) REFERENCES roles (id))
-```
-
-### postgres-items
-
-```sql
-CREATE TABLE items (id int, name string)
 ```
 
 ### items
@@ -424,10 +362,4 @@ CREATE TABLE users (id int, username string, contact_name string)
 
 ```sql
 CREATE TABLE users (id int, username string, email string, contact_name1 string, contact_name2 string, CONSTRAINT pk_users PRIMARY KEY (id))
-```
-
-### flags
-
-```sql
-CREATE TABLE flags (enabled bool, count int)
 ```

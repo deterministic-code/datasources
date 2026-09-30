@@ -9,49 +9,52 @@ foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
 
 var contactsRepo = new CRUDRepository<Contact>(conn, new CRUDRepositoryOptions<Contact>
 {
-    Entity = "contacts_base",
-    ReadProperties = [
-        "id", "uuid", "created", "updated", "version",
-        "contact_source_id", "contact_type_id", "first_name", "last_name", "email", "notes"
-    ],
+    EntityMapper = ContactColumns.ContactEntity,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
 var typesRepo = new CRUDRepository<ContactType>(conn, new CRUDRepositoryOptions<ContactType>
 {
-    Entity = "contact_type",
+    EntityMapper = ContactColumns.Snake,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
 var sourcesRepo = new CRUDRepository<ContactSource>(conn, new CRUDRepositoryOptions<ContactSource>
 {
-    Entity = "contact_source",
+    EntityMapper = ContactColumns.Snake,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
 var addressTypesRepo = new CRUDRepository<AddressType>(conn, new CRUDRepositoryOptions<AddressType>
 {
-    Entity = "address_type",
+    EntityMapper = ContactColumns.Snake,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
 var phoneTypesRepo = new CRUDRepository<PhoneType>(conn, new CRUDRepositoryOptions<PhoneType>
 {
-    Entity = "phone_type",
+    EntityMapper = ContactColumns.Snake,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
 var addressesRepo = new CRUDRepository<Address>(conn, new CRUDRepositoryOptions<Address>
 {
-    Entity = "address",
-    ReadProperties = [
-        "id", "uuid", "created", "updated", "version", "contact_id", "address_type_id",
-        "line1", "line2", "city", "region", "postal_code", "country"
-    ],
+    EntityMapper = ContactColumns.Snake,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
 var phonesRepo = new CRUDRepository<Phone>(conn, new CRUDRepositoryOptions<Phone>
 {
-    Entity = "phone",
-    ReadProperties = [
-        "id", "uuid", "created", "updated", "version", "contact_id", "phone_type_id", "number"
-    ],
+    EntityMapper = ContactColumns.Snake,
+    ColumnMappings = ContactColumns.Columns,
+    Ids = ["Id"],
 });
-addressesRepo.AddEnriched(new("address_type_name", "address_type_id", "id", "name"), addressTypesRepo);
-phonesRepo.AddEnriched(new("phone_type_name", "phone_type_id", "id", "name"), phoneTypesRepo);
-contactsRepo.AddEnriched(new("contact_type_name", "contact_type_id", "id", "name"), typesRepo);
-contactsRepo.AddEnriched(new("contact_source_name", "contact_source_id", "id", "name"), sourcesRepo);
-contactsRepo.AddEnriched(new("addresses", "id", "contact_id", Many: true), addressesRepo);
-contactsRepo.AddEnriched(new("phones", "id", "contact_id", Many: true), phonesRepo);
+addressesRepo.AddEnriched(new("AddressType", "AddressType", "Id"), addressTypesRepo);
+phonesRepo.AddEnriched(new("PhoneType", "PhoneType", "Id"), phoneTypesRepo);
+contactsRepo.AddEnriched(new("ContactType", "ContactType", "Id"), typesRepo);
+contactsRepo.AddEnriched(new("ContactSource", "ContactSource", "Id"), sourcesRepo);
+contactsRepo.AddEnriched(new("Addresses", "Id", "Contact", Many: true), addressesRepo);
+contactsRepo.AddEnriched(new("Phones", "Id", "Contact", Many: true), phonesRepo);
 
 var created = await contactsRepo.Create(ExtraContact.New(await ContactLookupIds.Resolve(conn)));
-var loaded = await contactsRepo.ReadSingle(new Where(new Operator.Equals("id", Value.From(created.id))));
+var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));
