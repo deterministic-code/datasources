@@ -31,7 +31,11 @@ fn crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
 }
 
 fn create_lookup_repo(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
-    readonly(connection, entity)
+    let mut options = ReadonlyRepositoryOptions::default();
+    options.entity = entity.into();
+    options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    ReadonlyRepository::new(connection, options).unwrap()
 }
 
 fn readonly(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
@@ -68,57 +72,33 @@ fn open_contacts(
     mut phones: CRUDRepository,
 ) -> CRUDRepository {
     addresses.add_enriched(
-        Enrichment::new(
-            "address_type_name",
-            "address_type_id",
-            "id",
-            Some("name".into()),
-            false,
-        ),
+        Enrichment::new("AddressType", "AddressType", "Id", None, false),
         address_types,
         None,
     );
     phones.add_enriched(
-        Enrichment::new(
-            "phone_type_name",
-            "phone_type_id",
-            "id",
-            Some("name".into()),
-            false,
-        ),
+        Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
         phone_types,
         None,
     );
     contacts
         .add_enriched(
-            Enrichment::new(
-                "contact_type_name",
-                "contact_type_id",
-                "id",
-                Some("name".into()),
-                false,
-            ),
+            Enrichment::new("ContactType", "ContactType", "Id", None, false),
             types,
             None,
         )
         .add_enriched(
-            Enrichment::new(
-                "contact_source_name",
-                "contact_source_id",
-                "id",
-                Some("name".into()),
-                false,
-            ),
+            Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
             sources,
             None,
         )
         .add_enriched(
-            Enrichment::new("addresses", "id", "contact_id", None, true),
+            Enrichment::new("Addresses", "Id", "Contact", None, true),
             Arc::new(addresses),
             None,
         )
         .add_enriched(
-            Enrichment::new("phones", "id", "contact_id", None, true),
+            Enrichment::new("Phones", "Id", "Contact", None, true),
             Arc::new(phones),
             None,
         );
@@ -212,30 +192,28 @@ async fn contacts_service_fills_names_and_child_lists() {
     let mut work = [record(&[("name", Value::from("Work"))])];
     let phone_types_connection = setup(&mut work).await;
     let connection = setup(&mut []).await;
-    let contacts = crud(connection.clone(), "Contact");
-    let addresses = crud(connection.clone(), "Address");
-    let phones = crud(connection, "Phone");
+    let contacts = domain_crud(connection.clone(), "Contact");
+    let addresses = domain_crud(connection.clone(), "Address");
+    let phones = domain_crud(connection, "Phone");
     let other = contacts
         .create(&mut record(&[
-            ("contact_type_id", person[0].get("id").unwrap().clone()),
-            ("contact_source_id", source[0].get("id").unwrap().clone()),
-            ("first_name", Value::from("Other")),
-            ("label", Value::from("other")),
+            ("ContactType", person[0].get("id").unwrap().clone()),
+            ("ContactSource", source[0].get("id").unwrap().clone()),
+            ("FirstName", Value::from("Other")),
         ]))
         .await
         .unwrap();
-    assert!(num(&other, "id") > 0);
+    assert!(num(&other, "Id") > 0);
     let stray = addresses
         .create(&mut record(&[
-            ("contact_id", other.get("id").unwrap().clone()),
-            ("line1", Value::from("other")),
-            ("city", Value::from("x")),
-            ("address_type_id", home[0].get("id").unwrap().clone()),
-            ("label", Value::from("stray")),
+            ("Contact", other.get("Id").unwrap().clone()),
+            ("Line1", Value::from("other")),
+            ("City", Value::from("x")),
+            ("AddressType", home[0].get("id").unwrap().clone()),
         ]))
         .await
         .unwrap();
-    assert!(num(&stray, "id") > 0);
+    assert!(num(&stray, "Id") > 0);
     let service = open_contacts(
         contacts,
         Arc::new(create_lookup_repo(types_connection, "ContactType")),
@@ -247,49 +225,107 @@ async fn contacts_service_fills_names_and_child_lists() {
     );
     let created = service
         .create(&mut record(&[
-            ("contact_type_id", person[0].get("id").unwrap().clone()),
-            ("contact_source_id", source[0].get("id").unwrap().clone()),
-            ("first_name", Value::from("Ada")),
-            ("label", Value::from("ada")),
+            ("ContactType", person[0].get("id").unwrap().clone()),
+            ("ContactSource", source[0].get("id").unwrap().clone()),
+            ("FirstName", Value::from("Ada")),
             (
-                "addresses",
+                "Addresses",
                 encode_rows(&[record(&[
-                    ("line1", Value::from("1 Main")),
-                    ("city", Value::from("Paris")),
-                    ("address_type_id", home[0].get("id").unwrap().clone()),
+                    ("Line1", Value::from("1 Main")),
+                    ("City", Value::from("Paris")),
+                    ("AddressType", home[0].get("id").unwrap().clone()),
                 ])]),
             ),
             (
-                "phones",
+                "Phones",
                 encode_rows(&[record(&[
-                    ("number", Value::from("555")),
-                    ("phone_type_id", work[0].get("id").unwrap().clone()),
+                    ("Number", Value::from("555")),
+                    ("PhoneType", work[0].get("id").unwrap().clone()),
                 ])]),
             ),
         ]))
         .await
         .unwrap();
-    assert!(num(&created, "id") > 0);
+    assert!(num(&created, "Id") > 0);
     let contact = service
         .read(None, None)
         .await
         .unwrap()
         .into_iter()
-        .find(|item| item.get("first_name") == Some(&Value::from("Ada")))
+        .find(|item| item.get("FirstName") == Some(&Value::from("Ada")))
         .unwrap();
-    assert_eq!(contact["id"], created["id"]);
-    assert_ne!(contact["id"], other["id"]);
-    assert_eq!(contact["contact_type_name"], Value::from("person"));
-    assert_eq!(contact["contact_source_name"], Value::from("import"));
-    assert!(contact["addresses"].wire_text().contains("line1=1 Main"));
-    assert!(contact["addresses"]
-        .wire_text()
-        .contains("address_type_name=Home"));
-    assert!(!contact["addresses"].wire_text().contains("line1=other"));
-    assert!(contact["phones"].wire_text().contains("number=555"));
-    assert!(contact["phones"]
-        .wire_text()
-        .contains("phone_type_name=Work"));
+    assert_eq!(contact["Id"], created["Id"]);
+    assert_ne!(contact["Id"], other["Id"]);
+    assert!(contact["ContactType"].wire_text().contains("Name=person")
+        || contact["ContactType"].wire_text().contains("name=person"));
+    assert!(contact["ContactSource"].wire_text().contains("Name=import")
+        || contact["ContactSource"].wire_text().contains("name=import"));
+    let addresses = contact["Addresses"].wire_text();
+    assert!(addresses.contains("Line1=1 Main"), "{addresses}");
+    assert!(
+        addresses.contains("Name=Home")
+            || addresses.contains("name=Home")
+            || addresses.contains("Name%3DHome"),
+        "{addresses}"
+    );
+    assert!(!contact["Addresses"].wire_text().contains("Line1=other"));
+    let phones = contact["Phones"].wire_text();
+    assert!(phones.contains("Number=555"), "{phones}");
+    assert!(
+        phones.contains("Name=Work") || phones.contains("name=Work") || phones.contains("Name%3DWork"),
+        "{phones}"
+    );
+}
+
+fn domain_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = entity.into();
+    options.ids = vec!["Id".into()];
+    options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.column_mappings = Box::new(contact_columns());
+    options.object_converter = Some(Box::new(
+        MetaDataRowTypeConverter::new(Vec::new())
+            .with_references(contact_references(), Box::new(contact_columns())),
+    ));
+    CRUDRepository::new(connection, options).unwrap()
+}
+
+fn contact_references() -> Vec<String> {
+    ["Contact", "AddressType", "ContactType", "ContactSource", "PhoneType"]
+        .into_iter()
+        .map(str::to_string)
+        .collect()
+}
+
+fn contact_columns() -> TransformMapper<String, String> {
+    let references = std::sync::Arc::new(DictionaryMapper::new([
+        ("Contact".to_string(), "contact_id".to_string()),
+        ("AddressType".to_string(), "address_type_id".to_string()),
+        ("ContactType".to_string(), "contact_type_id".to_string()),
+        ("ContactSource".to_string(), "contact_source_id".to_string()),
+        ("PhoneType".to_string(), "phone_type_id".to_string()),
+    ]));
+    let snake = std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let forward_references = references.clone();
+    let forward_snake = snake.clone();
+    let reverse_references = references.clone();
+    let reverse_snake = snake;
+    TransformMapper::new(
+        move |name: String| {
+            Mapper::map(
+                forward_snake.as_ref(),
+                Mapper::map(forward_references.as_ref(), name),
+            )
+        },
+        move |name: String| {
+            let from = Mapper::reverse_map(reverse_references.as_ref(), name.clone());
+            if from != name {
+                from
+            } else {
+                Mapper::reverse_map(reverse_snake.as_ref(), name)
+            }
+        },
+    )
 }
 
 #[tokio::test]

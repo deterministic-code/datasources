@@ -273,7 +273,7 @@ fn decode_row(text: &str) -> Row {
     text.split(',')
         .filter_map(|pair| {
             let (key, value) = pair.split_once('=')?;
-            Some((key.to_string(), parse_value(value)))
+            Some((key.to_string(), parse_value(&unescape(value))))
         })
         .collect()
 }
@@ -302,13 +302,27 @@ pub(crate) fn encode_row(row: &Row) -> Value {
     Value::Text(encode_row_text(row))
 }
 
+fn unescape(text: &str) -> String {
+    text.replace("%7C", "|")
+        .replace("%2C", ",")
+        .replace("%3D", "=")
+        .replace("%25", "%")
+}
+
+fn escape_cell(text: &str) -> String {
+    text.replace('%', "%25")
+        .replace('|', "%7C")
+        .replace(',', "%2C")
+        .replace('=', "%3D")
+}
+
 fn encode_row_text(row: &Row) -> String {
     let mut keys: Vec<_> = row.keys().cloned().collect();
     keys.sort();
     keys.into_iter()
         .filter_map(|key| {
             row.get(&key)
-                .map(|value| format!("{key}={}", value.wire_text()))
+                .map(|value| format!("{key}={}", escape_cell(&value.wire_text())))
         })
         .collect::<Vec<_>>()
         .join(",")
