@@ -1,4 +1,4 @@
-import { blobUrl, SOURCE_ICON } from "./example.mjs";
+import { blobUrl, sourceHref, SOURCE_ICON } from "./example.mjs";
 import { renderClassReference } from "./reference.mjs";
 import { readSnippet } from "./sync-examples.mjs";
 
@@ -91,10 +91,10 @@ const resolveExamples = (body, heading, files) =>
       files.push(snippet.file);
       if (!files.includes(snippet.linesFile)) files.push(snippet.linesFile);
     }
-    return { lang, code: snippet.body, href: blobUrl(snippet) };
+    return { lang, code: snippet.body, href: blobUrl(snippet), source: sourceHref(snippet) };
   });
 
-const sourceLink = (href) => `<ExampleSource href="${href}" />`;
+const sourceLink = (href) => `<ExampleSource href="${href.replaceAll("&", "&amp;")}" />`;
 
 const groupedExamples = (resolved) => {
   const groups = [];
@@ -104,7 +104,8 @@ const groupedExamples = (resolved) => {
     if (last?.lang === lang) {
       last.code = `${last.code}\n\n${item.code}`;
       last.hrefs.push(item.href);
-    } else groups.push({ lang, code: item.code, hrefs: [item.href] });
+      last.sources.push(item.source);
+    } else groups.push({ lang, code: item.code, hrefs: [item.href], sources: [item.source] });
   }
   return groups;
 };
@@ -265,9 +266,9 @@ const toReadmeExamples = (body, heading, files) => {
 const toVitePressExamplePanels = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
   return groupedExamples(resolveExamples(body, heading, files))
-    .map(({ lang, code, hrefs }) => {
+    .map(({ lang, code, sources }) => {
       const boxes = renderOutputs(outputsFor(outputs, lang));
-      const links = hrefs.map(sourceLink).join("\n");
+      const links = sources.map(sourceLink).join("\n");
       return toPanel(lang, `${links}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`);
     })
     .join("\n\n");
@@ -279,7 +280,7 @@ const toVitePressExamples = (body, heading, files) => {
   const group = resolved
     .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
     .join("\n\n");
-  const links = resolved.flatMap(({ hrefs }) => hrefs.map(sourceLink)).join("\n");
+  const links = resolved.flatMap(({ sources }) => sources.map(sourceLink)).join("\n");
   return `${links}\n\n::: code-group\n\n${group}\n\n:::${boxes ? `\n\n${boxes}` : ""}`;
 };
 

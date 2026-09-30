@@ -75,10 +75,13 @@ test("a type and its usage render as one sample", () => {
 :::
 `;
   const page = transformDialects(source, "vitepress");
+  assert.match(page, /href="\/view-source\?path=csharp%2FProviders%2FSqlite\.Tests%2FSqliteCommandIntegrationTests\.cs&amp;from=\d+&amp;to=\d+"/);
+  assert.doesNotMatch(page, /github\.com/);
   assert.equal(page.match(/<DialectPanel name="csharp">/g).length, 1);
   const sample = page.slice(page.indexOf("sealed class NameValue"), page.indexOf("Datasource.Default"));
   assert.match(sample, /public string value/);
   const readme = transformDialects(source, "readme");
+  assert.match(readme, /github\.com\/deterministic-code\/datasources\/blob\/main\//);
   assert.equal(readme.match(/#### C#/g).length, 1);
   assert.match(readme, /sealed class NameValue[\s\S]*Datasource\.Default/);
 });
