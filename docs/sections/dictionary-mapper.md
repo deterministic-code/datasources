@@ -177,3 +177,23 @@ Email
 Phone
 ```
 :::
+
+### First key wins on reverse
+
+::: example
+```csharp csharp/Datasources.Tests/DictionaryMapperTests.cs#FirstKeyWinsOnReverse
+```
+```rust rust/datasources/src/mappers/dictionary_mapper.rs#first_key_wins_on_reverse
+```
+```typescript typescript/datasources/src/mappers/DictionaryMapper.test.ts#first-key-wins-on-reverse
+```
+
+```output [Map]
+address
+address
+```
+
+```output [Reverse map]
+Home
+```
+:::

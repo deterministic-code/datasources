@@ -1,0 +1,16 @@
+let contact = Contact {
+    name: "Ada".into(),
+    email: "ada@x.dev".into(),
+};
+let mapper = TransformMapper::new(
+    |item: Contact| ContactRow {
+        contact_name: item.name,
+        contact_email: item.email,
+    },
+    |row: ContactRow| Contact {
+        name: row.contact_name,
+        email: row.contact_email,
+    },
+);
+let mapped = Mapper::map(&mapper, contact.clone());
+let reversed = Mapper::reverse_map(&mapper, mapped.clone());

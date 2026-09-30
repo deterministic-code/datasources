@@ -1,0 +1,6 @@
+var contact = new Contact("Ada", "ada@x.dev");
+var mapper = new TransformMapper<Contact, ContactRow>(
+    map: item => new ContactRow(item.Name, item.Email),
+    reverseMap: row => new Contact(row.ContactName, row.ContactEmail));
+var mapped = mapper.Map(contact);
+var reversed = mapper.ReverseMap(mapped);

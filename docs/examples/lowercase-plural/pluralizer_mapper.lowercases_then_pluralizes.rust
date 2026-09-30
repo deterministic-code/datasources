@@ -1,0 +1,6 @@
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let pluralizer = PluralizerMapper::new();
+let contact = pluralizer.map(casing.map("Contact".into()));
+let address = pluralizer.map(casing.map("Address".into()));
+let contact_name = casing.reverse_map(pluralizer.reverse_map(contact.clone()));
+let address_name = casing.reverse_map(pluralizer.reverse_map(address.clone()));

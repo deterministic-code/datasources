@@ -1,0 +1,6 @@
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const pluralizer = new PluralizerMapper();
+const contact = pluralizer.map(casing.map("Contact"));
+const address = pluralizer.map(casing.map("Address"));
+const contactName = casing.reverseMap(pluralizer.reverseMap(contact));
+const addressName = casing.reverseMap(pluralizer.reverseMap(address));
