@@ -1,0 +1,4 @@
+const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
+const contact = mapper.reverseMap("contact");
+const firstName = mapper.reverseMap("first_name");
+const emailAddress = mapper.reverseMap("email_address");

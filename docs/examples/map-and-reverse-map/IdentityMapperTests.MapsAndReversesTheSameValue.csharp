@@ -1,1 +1,3 @@
 var mapper = new IdentityMapper<string>();
+var mapped = mapper.Map("contact");
+var reversed = mapper.ReverseMap("contact");

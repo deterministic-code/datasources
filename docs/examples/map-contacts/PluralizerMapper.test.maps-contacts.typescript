@@ -1,0 +1,3 @@
+const mapper = new PluralizerMapper();
+const contact = mapper.map("Contact");
+const address = mapper.map("Address");

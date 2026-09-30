@@ -1,0 +1,5 @@
+var mapper = new TransformMapper<string, string>(
+    map: name => "contact_" + name,
+    reverseMap: name => name["contact_".Length..]);
+var mapped = mapper.Map("email");
+var reversed = mapper.ReverseMap(mapped);

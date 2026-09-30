@@ -178,3 +178,47 @@ Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. 
 }
 ```
 :::
+
+### Prefix a contact field
+
+::: example
+```csharp csharp/Datasources.Tests/TransformMapperTests.cs#PrefixesAContactField
+```
+```rust rust/datasources/src/mappers/mod.rs#prefixes_a_contact_field
+```
+```typescript typescript/datasources/src/mappers/transformMapper.test.ts#prefixes-a-contact-field
+```
+
+```output [Map]
+contact_email
+```
+
+```output [Reverse map]
+email
+```
+:::
+
+### Map a contact name and email
+
+::: example
+```csharp csharp/Datasources.Tests/TransformMapperTests.cs#MapsAContactNameAndEmail
+```
+```rust rust/datasources/src/mappers/mod.rs#maps_a_contact_name_and_email
+```
+```typescript typescript/datasources/src/mappers/transformMapper.test.ts#maps-a-contact-name-and-email
+```
+
+```output [Before: contact]
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+```output [After: mapped contact]
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+:::

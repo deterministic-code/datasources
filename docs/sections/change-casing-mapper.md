@@ -156,13 +156,36 @@ Use this as [EntityMapper](./readonly-repository.md#entitymapper) and [ColumnMap
 
 ## Examples
 
-### Map Pascal to snake case
+### Map contacts
 
 ::: example
-```csharp csharp/Datasources.Tests/ChangeCasingMapperTests.cs#MapsPascalToSnakeAndBack
+```csharp csharp/Datasources.Tests/ChangeCasingMapperTests.cs#MapsContactNames
 ```
-```rust rust/datasources/src/mappers/change_casing_mapper.rs#maps_pascal_to_snake_and_back
+```rust rust/datasources/src/mappers/change_casing_mapper.rs#maps_contact_names
 ```
-```typescript typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#maps-pascal-to-snake-and-back
+```typescript typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#maps-contact-names
+```
+
+```output [Map]
+contact
+first_name
+email_address
+```
+:::
+
+### Reverse map contacts
+
+::: example
+```csharp csharp/Datasources.Tests/ChangeCasingMapperTests.cs#ReverseMapsContactNames
+```
+```rust rust/datasources/src/mappers/change_casing_mapper.rs#reverse_maps_contact_names
+```
+```typescript typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#reverse-maps-contact-names
+```
+
+```output [Reverse map]
+Contact
+FirstName
+EmailAddress
 ```
 :::

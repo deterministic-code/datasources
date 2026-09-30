@@ -15,13 +15,26 @@ public class DictionaryMapperTests
     {
         var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
         {
-            ["Key"] = "id",
-            ["Login"] = "username",
+            ["FirstName"] = "given_name",
+            ["LastName"] = "family_name",
+            ["Email"] = "email_address",
         });
-        Assert.Equal("id", mapper.Map("Key"));
-        Assert.Equal("Key", mapper.ReverseMap("id"));
-        Assert.Equal("other", mapper.Map("other"));
-        Assert.Equal("other", mapper.ReverseMap("other"));
+        var firstName = mapper.Map("FirstName");
+        var lastName = mapper.Map("LastName");
+        var email = mapper.Map("Email");
+        var phone = mapper.Map("Phone");
+        var fromFirst = mapper.ReverseMap("given_name");
+        var fromLast = mapper.ReverseMap("family_name");
+        var fromEmail = mapper.ReverseMap("email_address");
+        var fromPhone = mapper.ReverseMap("Phone");
+        Assert.Equal("given_name", firstName);
+        Assert.Equal("family_name", lastName);
+        Assert.Equal("email_address", email);
+        Assert.Equal("Phone", phone);
+        Assert.Equal("FirstName", fromFirst);
+        Assert.Equal("LastName", fromLast);
+        Assert.Equal("Email", fromEmail);
+        Assert.Equal("Phone", fromPhone);
     }
 
     [Fact]

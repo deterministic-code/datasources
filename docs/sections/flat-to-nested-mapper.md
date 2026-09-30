@@ -1,6 +1,6 @@
 # FlatToNestedMapper
 
-Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
+Maps flat objects to nested objects. {{ReverseMap|reverseMap|reverse_map}} maps the nested object back.
 
 ## Classes
 
@@ -544,6 +544,8 @@ A mapped graph row. Keys are destination field names.
 :::
 
 ## Remarks
+
+Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
 
 ::: prose
 ### typescript

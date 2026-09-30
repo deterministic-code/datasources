@@ -1,0 +1,3 @@
+const mapper = new PluralizerMapper();
+const contact = mapper.reverseMap("contacts");
+const address = mapper.reverseMap("addresses");

@@ -1,0 +1,6 @@
+const mapper = new TransformMapper<string, string>(
+  (name) => `contact_${name}`,
+  (name) => name.slice("contact_".length),
+);
+const mapped = mapper.map("email");
+const reversed = mapper.reverseMap(mapped);

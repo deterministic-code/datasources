@@ -71,6 +71,18 @@ mod tests {
         contact_phone: String,
     }
 
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct Contact {
+        name: String,
+        email: String,
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct ContactRow {
+        contact_name: String,
+        contact_email: String,
+    }
+
     #[test]
     fn flattens_and_unflattens_user_and_contacts() {
         let nested = Nested {
@@ -107,5 +119,45 @@ mod tests {
         assert_eq!(flat.contact_email, "ada@x.dev");
         assert_eq!(flat.contact_phone, "555");
         assert_eq!(Mapper::reverse_map(&mapper, flat), nested);
+    }
+
+    #[test]
+    fn prefixes_a_contact_field() {
+        let mapper = TransformMapper::new(
+            |name: String| format!("contact_{name}"),
+            |name: String| name["contact_".len()..].to_string(),
+        );
+        let mapped = Mapper::map(&mapper, "email".to_string());
+        let reversed = Mapper::reverse_map(&mapper, mapped.clone());
+        assert_eq!(mapped, "contact_email");
+        assert_eq!(reversed, "email");
+    }
+
+    #[test]
+    fn maps_a_contact_name_and_email() {
+        let contact = Contact {
+            name: "Ada".into(),
+            email: "ada@x.dev".into(),
+        };
+        let mapper = TransformMapper::new(
+            |item: Contact| ContactRow {
+                contact_name: item.name,
+                contact_email: item.email,
+            },
+            |row: ContactRow| Contact {
+                name: row.contact_name,
+                email: row.contact_email,
+            },
+        );
+        let mapped = Mapper::map(&mapper, contact.clone());
+        let reversed = Mapper::reverse_map(&mapper, mapped.clone());
+        assert_eq!(
+            mapped,
+            ContactRow {
+                contact_name: "Ada".into(),
+                contact_email: "ada@x.dev".into(),
+            }
+        );
+        assert_eq!(reversed, contact);
     }
 }

@@ -1,0 +1,3 @@
+let mapper = PluralizerMapper::new();
+let contact = mapper.reverse_map("contacts".into());
+let address = mapper.reverse_map("addresses".into());

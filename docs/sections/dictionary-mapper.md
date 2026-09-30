@@ -1,6 +1,6 @@
 # DictionaryMapper
 
-Mapper that rewrites known keys and passes the rest through. Reverse lookup uses the mapped value. When two keys share a value, the first one wins on reverse.
+Maps keys to values with a dictionary. {{ReverseMap|reverseMap|reverse_map}} maps values back to keys.
 
 ## Classes
 
@@ -147,6 +147,8 @@ fn reverse_map(&self, value: T) -> T
 
 ## Remarks
 
+Unknown keys pass through. When two keys share a value, the first one wins on reverse.
+
 Use this for [ColumnMappings](./readonly-repository.md#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list, where identifiers, and write parameters. `ReverseMap` restores property names on each result key before the row converter.
 
 ## Examples
@@ -159,5 +161,19 @@ Use this for [ColumnMappings](./readonly-repository.md#columnmappings) when prop
 ```rust rust/datasources/src/mappers/dictionary_mapper.rs#maps_known_names_and_passes_through_the_rest
 ```
 ```typescript typescript/datasources/src/mappers/DictionaryMapper.test.ts#maps-known-names-and-passes-through-the-rest
+```
+
+```output [Map]
+given_name
+family_name
+email_address
+Phone
+```
+
+```output [Reverse map]
+FirstName
+LastName
+Email
+Phone
 ```
 :::

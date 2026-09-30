@@ -1,1 +1,0 @@
-var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);

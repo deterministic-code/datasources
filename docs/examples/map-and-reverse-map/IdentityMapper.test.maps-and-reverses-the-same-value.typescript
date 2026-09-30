@@ -1,1 +1,3 @@
 const mapper = new IdentityMapper<string>();
+const mapped = mapper.map("contact");
+const reversed = mapper.reverseMap("contact");

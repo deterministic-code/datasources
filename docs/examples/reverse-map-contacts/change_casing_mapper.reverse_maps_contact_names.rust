@@ -1,0 +1,4 @@
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let contact = mapper.reverse_map("contact".into());
+let first_name = mapper.reverse_map("first_name".into());
+let email_address = mapper.reverse_map("email_address".into());

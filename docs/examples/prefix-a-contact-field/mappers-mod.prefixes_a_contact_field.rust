@@ -1,0 +1,6 @@
+let mapper = TransformMapper::new(
+    |name: String| format!("contact_{name}"),
+    |name: String| name["contact_".len()..].to_string(),
+);
+let mapped = Mapper::map(&mapper, "email".to_string());
+let reversed = Mapper::reverse_map(&mapper, mapped.clone());
