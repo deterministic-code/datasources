@@ -1,8 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "user-account",
+execute_sql(
+    &connection,
     &format!(
         "
     INSERT INTO user (id, username, is_enabled, created) VALUES

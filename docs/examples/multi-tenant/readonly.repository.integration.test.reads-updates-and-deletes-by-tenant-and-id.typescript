@@ -1,5 +1,5 @@
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-const connection = await open(ds, "multi-tenant", `
+await executeSql(connection, `
   INSERT INTO account (tenant_id, id, name) VALUES
     (1, 1, 'ada'),
     (2, 1, 'grace');

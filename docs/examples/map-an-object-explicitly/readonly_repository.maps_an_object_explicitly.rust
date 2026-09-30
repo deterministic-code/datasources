@@ -1,8 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "minimal-users",
+execute_sql(
+    &connection,
     "
     INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),

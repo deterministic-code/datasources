@@ -1,8 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "multi-tenant",
+execute_sql(
+    &connection,
     "
     INSERT INTO account (tenant_id, id, name) VALUES
         (1, 1, 'ada'),

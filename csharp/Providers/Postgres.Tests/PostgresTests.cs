@@ -74,4 +74,30 @@ public class PostgresTests
         Assert.Equal("BYTEA", driver.ColumnType("binary"));
         Assert.Contains("Unknown postgres type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
     }
+
+    [Fact]
+    public void RowConverterMapsUuidAndBooleanAndLeavesText()
+    {
+        IDriver driver = new PostgresDriver();
+        var converter = driver.RowConverter(new Dictionary<string, string>
+        {
+            ["Key"] = "UUID",
+            ["Active"] = "BOOLEAN",
+            ["Login"] = "TEXT",
+        });
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var row = converter.Convert(new Row
+        {
+            ["Key"] = id.ToString(),
+            ["Active"] = 1L,
+            ["Login"] = "ada",
+        });
+        Assert.Equal(new Value.Guid(id), row["Key"]);
+        Assert.Equal(new Value.Bool(true), row["Active"]);
+        Assert.Equal(new Value.Text("ada"), row["Login"]);
+        var stored = converter.ReverseConvert(row);
+        Assert.Equal(new Value.Guid(id), stored["Key"]);
+        Assert.Equal(new Value.Bool(true), stored["Active"]);
+        Assert.Equal(new Value.Text("ada"), stored["Login"]);
+    }
 }

@@ -1,5 +1,5 @@
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-const connection = await open(ds, "user-type-lookup", `
+await executeSql(connection, `
   INSERT INTO user_type (id, name) VALUES
     (1, 'admin'),
     (2, 'user'),

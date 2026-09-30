@@ -11,12 +11,11 @@ import {
   TransformMapper,
   Where,
   eq,
-  execute,
   Native,
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
-import { tables } from "../../../schema-spec.ts";
+import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
@@ -66,7 +65,9 @@ const names = (roles: UserRole[]) => roles.map((role) => role.Name).sort();
 describe("users view roles", () => {
   it("fills roles with a hashset", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "user-roles-read", seed());
+    const connection = await open(ds);
+    await applySchema(connection, "user-roles-read");
+    await executeSql(connection, seed());
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>();
     const usersRepo = new ReadonlyRepository(connection, {
@@ -111,7 +112,9 @@ describe("users view roles", () => {
 
   it("fills roles from a join", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "user-roles-read", seed());
+    const connection = await open(ds);
+    await applySchema(connection, "user-roles-read");
+    await executeSql(connection, seed());
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
       columnMappings: new DictionaryMapper([
@@ -178,15 +181,14 @@ describe("users view roles", () => {
   });
 });
 
-const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
-
-const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnection> => {
+const open = async (ds: IDatasource): Promise<IConnection> => {
   const connection = await ds.createConnection();
   await connection.open();
+  return connection;
+};
+
+const executeSql = async (connection: IConnection, sql: string): Promise<void> => {
   const command = connection.createCommand();
-  for (const statement of tables(schema, quote))
-    await execute(command, statement);
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
     await command.executeNative(new Native(statement));
-  return connection;
 };

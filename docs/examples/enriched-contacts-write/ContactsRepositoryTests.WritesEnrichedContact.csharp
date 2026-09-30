@@ -4,8 +4,6 @@ var conn = new SqliteConnection(new SqliteConnectionOptions
 });
 await conn.Open();
 var command = new SqliteCommand(conn);
-foreach (var statement in SchemaSpec.Tables("contacts", Quote))
-    await command.Execute(statement);
 foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
     await command.Execute(new Native(sql));
 

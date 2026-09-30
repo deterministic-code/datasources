@@ -2,10 +2,6 @@ let ds = default().unwrap();
 let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
-command
-    .execute_native(&Native::new("CREATE TABLE settings (name TEXT, value TEXT)"), None)
-    .await
-    .unwrap();
 let parameters = [
     Parameter::new("name", "theme"),
     Parameter::new("value", "dark"),

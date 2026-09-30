@@ -16,8 +16,7 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var statement in SchemaSpec.Tables("contacts", Quote))
-            await command.Execute(statement);
+        await SchemaSpec.Apply(conn, "contacts");
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(new Native(sql));
 
@@ -54,8 +53,7 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var statement in SchemaSpec.Tables("contacts", Quote))
-            await command.Execute(statement);
+        await SchemaSpec.Apply(conn, "contacts");
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(new Native(sql));
 
@@ -80,8 +78,7 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        foreach (var statement in SchemaSpec.Tables("contacts", Quote))
-            await command.Execute(statement);
+        await SchemaSpec.Apply(conn, "contacts");
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
             await command.Execute(new Native(sql));
 
@@ -146,8 +143,6 @@ public class ContactsRepositoryTests
         Assert.Equal("Mobile", loaded.phones[0].phone_type_name);
         Assert.Equal(loaded.id, loaded.phones[0].contact_id);
     }
-
-    static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
 
     static string SeedPath() => Path.Combine(SqlSpec.SpecsDir(), "contacts", "sqlite.sql");
 

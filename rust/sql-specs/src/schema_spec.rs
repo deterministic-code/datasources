@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs;
 
 use datasources::{
-    CheckConstraint, Column, ColumnDefault, CreateTableStatement, ForeignKey, NotNull, PrimaryKey,
-    UniqueConstraint,
+    CheckConstraint, Column, ColumnDefault, Connection, CreateTableStatement, ForeignKey,
+    NotNull, PrimaryKey, Result, UniqueConstraint,
 };
 use serde::Deserialize;
 
@@ -175,4 +175,16 @@ where
         .iter()
         .map(|table| statement_of(table, &quote, rename, &file.fragments))
         .collect()
+}
+
+fn quote_ident(id: &str) -> String {
+    format!("\"{}\"", id.replace('"', "\"\""))
+}
+
+pub async fn apply_schema(connection: &dyn Connection, name: &str) -> Result<()> {
+    let command = connection.create_command();
+    for statement in tables(name, quote_ident, None) {
+        command.execute_statement(&statement, None).await?;
+    }
+    Ok(())
 }

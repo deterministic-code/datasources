@@ -10,13 +10,12 @@ import {
   type Cells,
   createCRUDRepositoryOptions,
   eq,
-  execute,
   gt,
   Native,
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
-import { tables } from "../../../schema-spec.ts";
+import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const ada = "11111111-1111-1111-1111-111111111111";
@@ -61,7 +60,9 @@ class UserAccount {
 describe("readonly repository", () => {
   it("reads users by id and by username and enabled", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "minimal-users", `
+    const connection = await open(ds);
+    await applySchema(connection, "minimal-users");
+    await executeSql(connection, `
       INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
         (2, 'grace', 0);
@@ -82,7 +83,9 @@ describe("readonly repository", () => {
 
   it("maps an object explicitly", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "minimal-users", `
+    const connection = await open(ds);
+    await applySchema(connection, "minimal-users");
+    await executeSql(connection, `
       INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
         (2, 'grace', 0);
@@ -101,7 +104,9 @@ describe("readonly repository", () => {
 
   it("reads user by guid username and created", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "user-account", `
+    const connection = await open(ds);
+    await applySchema(connection, "user-account");
+    await executeSql(connection, `
       INSERT INTO user (id, username, is_enabled, created) VALUES
         ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
         ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
@@ -151,7 +156,9 @@ describe("user view", () => {
 
   it("fills user type on a user view", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "user-type-lookup", `
+    const connection = await open(ds);
+    await applySchema(connection, "user-type-lookup");
+    await executeSql(connection, `
       INSERT INTO user_type (id, name) VALUES
         (1, 'admin'),
         (2, 'user'),
@@ -187,23 +194,23 @@ describe("user view", () => {
   });
 });
 
-const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
-
-const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnection> => {
+const open = async (ds: IDatasource): Promise<IConnection> => {
   const connection = await ds.createConnection();
   await connection.open();
+  return connection;
+};
+
+const executeSql = async (connection: IConnection, sql: string): Promise<void> => {
   const command = connection.createCommand();
-  for (const statement of tables(schema, quote))
-    await execute(command, statement);
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
     await command.executeNative(new Native(statement));
-  return connection;
 };
 
 describe("user crud", () => {
   it("writes a user from the type", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "user-pascal");
+    const connection = await open(ds);
+    await applySchema(connection, "user-pascal");
     const usersRepo = new CRUDRepository(User, connection);
     const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
     expect(created.id).toBe(1);
@@ -250,7 +257,8 @@ describe("users view crud", () => {
 
   it("updates a user view when the version matches", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "user-view-version");
+    const connection = await open(ds);
+    await applySchema(connection, "user-view-version");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(UsersView),
@@ -325,7 +333,9 @@ describe("multi-tenant account", () => {
 
   it("reads updates and deletes by tenant and id", async () => {
     const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-    const connection = await open(ds, "multi-tenant", `
+    const connection = await open(ds);
+    await applySchema(connection, "multi-tenant");
+    await executeSql(connection, `
       INSERT INTO account (tenant_id, id, name) VALUES
         (1, 1, 'ada'),
         (2, 1, 'grace');

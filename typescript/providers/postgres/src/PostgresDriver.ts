@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  RowTypeConverter,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -31,6 +32,7 @@ export class PostgresDriver implements IDriver {
     (() => {
       throw new DatasourceError(`Unknown postgres type "${name}"`);
     })();
+  rowConverter = (columns: Record<string, string>) => RowTypeConverter.from(this, columns);
   connection = (options?: DatasourceOptions): IConnection =>
     PostgresConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

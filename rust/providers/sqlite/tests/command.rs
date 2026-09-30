@@ -3,6 +3,7 @@ use datasources::{
     Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, TypeMap, TypeMapField,
     TypeMapGroup, Value,
 };
+use datasources_sql_specs::apply_schema;
 
 struct NameValue;
 
@@ -103,14 +104,8 @@ async fn reads_boolean_as_bool_and_leaves_integer() {
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "flags").await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(
-            &Native::new("CREATE TABLE flags (enabled BOOLEAN, count INTEGER)"),
-            None,
-        )
-        .await
-        .unwrap();
     command
         .execute("INSERT INTO flags (enabled, count) VALUES (1, 1)", None)
         .await
@@ -135,14 +130,8 @@ async fn run_raw_sql() {
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "items").await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(
-            &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
-            None,
-        )
-        .await
-        .unwrap();
     command
         .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
         .await
@@ -164,14 +153,8 @@ async fn read_with_case_mapping() {
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "case-contacts").await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(
-            &Native::new("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"),
-            None,
-        )
-        .await
-        .unwrap();
     command
         .execute(
             "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
@@ -201,14 +184,8 @@ async fn read_flat_rows_to_nested() {
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "flat-users").await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(
-            &Native::new("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
-            None,
-        )
-        .await
-        .unwrap();
     command
         .execute(
             "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
@@ -268,10 +245,7 @@ async fn run_execute_reader_and_return_name_value() {
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(&Native::new("CREATE TABLE settings (name TEXT, value TEXT)"), None)
-        .await
-        .unwrap();
+    apply_schema(connection.as_ref(), "settings").await.unwrap();
     let parameters = [
         Parameter::new("name", "theme"),
         Parameter::new("value", "dark"),
@@ -302,14 +276,8 @@ async fn execute_insert_update_and_delete() {
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "items").await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(
-            &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
-            None,
-        )
-        .await
-        .unwrap();
     command
         .execute(
             "INSERT INTO items (id, name) VALUES ($id, $name)",
@@ -374,20 +342,8 @@ async fn execute_reader_maps_flat_contacts() {
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
+    apply_schema(connection.as_ref(), "flat-contact-users").await.unwrap();
     let command = connection.create_command();
-    command
-        .execute_native(
-            &Native::new("CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                username TEXT,
-                email TEXT,
-                contact_name1 TEXT,
-                contact_name2 TEXT
-            )"),
-            None,
-        )
-        .await
-        .unwrap();
     command
         .execute(
             "INSERT INTO users (id, username, email, contact_name1, contact_name2)

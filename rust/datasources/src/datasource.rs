@@ -23,6 +23,7 @@ pub trait Datasource: Send + Sync {
     fn row_type_converters(
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
+    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter;
     fn repository_from(
         &self,
         connection: Arc<dyn Connection>,
@@ -65,10 +66,15 @@ fn repository_options<T: ConvertSchema + 'static>(
 ) -> CRUDRepositoryOptions {
     let built = create_crud_repository_options::<T>();
     let types = datasource.row_type_converters();
+    let columns = T::schema()
+        .into_iter()
+        .map(|(name, ty)| (name.to_string(), ty.to_string()))
+        .collect();
+    let rows = datasource.row_converter(&columns);
     match custom {
         None => {
             let mut options = built;
-            options.row_converter = Some(RowTypeConverter::of::<T>());
+            options.row_converter = Some(rows);
             options.row_type_converters = types;
             options
         }
@@ -77,7 +83,7 @@ fn repository_options<T: ConvertSchema + 'static>(
                 crud.entity = built.entity.clone();
             }
             if crud.row_converter.is_none() {
-                crud.row_converter = Some(RowTypeConverter::of::<T>());
+                crud.row_converter = Some(rows);
             }
             crud.row_type_converters = types;
             crud
@@ -136,6 +142,10 @@ impl Datasource for BuiltDatasource {
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
         self.driver.row_type_converters()
+    }
+
+    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter {
+        self.driver.row_converter(columns)
     }
 
     fn repository_from(

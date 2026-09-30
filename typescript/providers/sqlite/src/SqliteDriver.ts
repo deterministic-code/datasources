@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  RowTypeConverter,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -31,6 +32,7 @@ export class SqliteDriver implements IDriver {
     (() => {
       throw new DatasourceError(`Unknown sqlite type "${name}"`);
     })();
+  rowConverter = (columns: Record<string, string>) => RowTypeConverter.from(this, columns);
   connection = (options?: DatasourceOptions): IConnection =>
     SqliteConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

@@ -41,6 +41,38 @@ impl RowTypeConverter {
         self
     }
 
+    pub fn from_catalog(
+        mut catalog: impl FnMut() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+        columns: &HashMap<String, String>,
+        column_type: impl Fn(&str) -> Result<String>,
+    ) -> Self {
+        let sample = catalog();
+        let mut counts: HashMap<String, usize> = HashMap::new();
+        let mut native: HashMap<String, String> = HashMap::new();
+        for key in sample.keys() {
+            let sql = column_type(key)
+                .unwrap_or_else(|err| panic!("{err}"))
+                .to_ascii_lowercase();
+            *counts.entry(sql.clone()).or_insert(0) += 1;
+            native.insert(sql, key.clone());
+        }
+        native.retain(|sql, _| counts[sql] == 1);
+        let names: Vec<String> = columns.keys().cloned().collect();
+        let mut fields = HashMap::new();
+        for (name, ty) in columns {
+            let key = if sample.contains_key(ty) {
+                Some(ty.clone())
+            } else {
+                native.get(&ty.to_ascii_lowercase()).cloned()
+            };
+            let Some(key) = key else { continue };
+            if let Some(converter) = catalog().remove(&key) {
+                fields.insert(name.clone(), converter);
+            }
+        }
+        Self::new(names).with_fields(fields)
+    }
+
     pub(crate) fn column_names(&self) -> &[String] {
         &self.columns
     }

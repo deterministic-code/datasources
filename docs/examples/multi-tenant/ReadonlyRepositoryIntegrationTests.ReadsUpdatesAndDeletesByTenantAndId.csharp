@@ -1,5 +1,5 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-var connection = await Open(ds, "multi-tenant", """
+await Execute(connection, """
     INSERT INTO account (tenant_id, id, name) VALUES
         (1, 1, 'ada'),
         (2, 1, 'grace');

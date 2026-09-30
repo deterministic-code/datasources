@@ -1,5 +1,5 @@
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-const connection = await open(ds, "minimal-users", `
+await executeSql(connection, `
   INSERT INTO users (id, username, is_enabled) VALUES
     (1, 'ada', 1),
     (2, 'grace', 0);

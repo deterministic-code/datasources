@@ -1,3 +1,6 @@
+using System.Collections;
+using System.Reflection;
+
 namespace Datasources;
 
 public sealed class Datasource(
@@ -26,9 +29,16 @@ public sealed class Datasource(
     {
         var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
+        var rows = driver.RowConverter(Columns(typeof(T)));
         return options switch
         {
-            null => built,
+            null => new()
+            {
+                Ids = built.Ids,
+                Entity = built.Entity,
+                RowTypeConverters = types,
+                RowConverter = rows,
+            },
             CRUDRepositoryOptions<T> crud => new()
             {
                 Entity = crud.Entity ?? built.Entity,
@@ -36,7 +46,7 @@ public sealed class Datasource(
                 ColumnMappings = crud.ColumnMappings,
                 Select = crud.Select,
                 RowsMapper = crud.RowsMapper,
-                RowConverter = crud.RowConverter,
+                RowConverter = crud.RowConverter ?? rows,
                 ObjectConverter = crud.ObjectConverter,
                 ReadProperties = crud.ReadProperties,
                 RowTypeConverters = types,
@@ -54,7 +64,7 @@ public sealed class Datasource(
                 ColumnMappings = read.ColumnMappings,
                 Select = read.Select,
                 RowsMapper = read.RowsMapper,
-                RowConverter = read.RowConverter,
+                RowConverter = read.RowConverter ?? rows,
                 ObjectConverter = read.ObjectConverter,
                 ReadProperties = read.ReadProperties,
                 RowTypeConverters = types,
@@ -62,5 +72,24 @@ public sealed class Datasource(
             }
         };
     }
+
+    static IReadOnlyDictionary<string, string> Columns(Type type) =>
+        typeof(IDictionary).IsAssignableFrom(type)
+            ? new Dictionary<string, string>()
+            : type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
+                .Select(prop => (prop.Name, Type: Canonical(prop.PropertyType)))
+                .Where(pair => pair.Type is not null)
+                .ToDictionary(pair => pair.Name, pair => pair.Type!);
+
+    static string? Canonical(Type type) => (Nullable.GetUnderlyingType(type) ?? type) switch
+    {
+        var kind when kind == typeof(Guid) => "uuid",
+        var kind when kind == typeof(bool) => "bool",
+        var kind when kind == typeof(DateTime) => "datetime",
+        var kind when kind == typeof(decimal) => "decimal",
+        var kind when kind == typeof(byte[]) => "binary",
+        _ => null
+    };
 }
 

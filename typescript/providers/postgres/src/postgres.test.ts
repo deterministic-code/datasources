@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toPostgres } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -257,6 +257,9 @@ describe("Postgres datasource", () => {
         new PostgresTransaction(c as PostgresConnection, isolation),
       rowTypeConverters: PostgresRowTypeConverters,
       columnType,
+      rowConverter(columns) {
+        return RowTypeConverter.from(this, columns);
+      },
     });
     const ds = new Datasource("postgres", of());
     expect(ds.provider).toBe("postgres");
@@ -297,5 +300,25 @@ describe("Postgres datasource", () => {
     expect(() => provider.columnType("xml")).toThrow('Unknown postgres type "xml"');
     expect(provider.command(connection)).toBeInstanceOf(PostgresCommand);
     expect(provider.transaction(connection as PostgresConnection).isolation).toBe("readCommitted");
+  });
+
+  it("maps uuid and boolean and leaves text", () => {
+    const provider = new PostgresDriver();
+    const converter = provider.rowConverter({ Key: "UUID", Active: "BOOLEAN", Login: "TEXT" });
+    const row = converter.convert({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: 1,
+      Login: "ada",
+    });
+    expect(row).toEqual({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: true,
+      Login: "ada",
+    });
+    expect(converter.reverseConvert(row)).toEqual({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: true,
+      Login: "ada",
+    });
   });
 });

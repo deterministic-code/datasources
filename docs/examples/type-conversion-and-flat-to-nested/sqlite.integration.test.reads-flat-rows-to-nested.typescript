@@ -2,9 +2,6 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.executeNative(
-  new Native("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
-);
 await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
 await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
 await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");

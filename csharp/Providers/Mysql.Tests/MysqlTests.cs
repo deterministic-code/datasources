@@ -64,4 +64,30 @@ public class MysqlTests
         Assert.Equal("BLOB", driver.ColumnType("binary"));
         Assert.Contains("Unknown mysql type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
     }
+
+    [Fact]
+    public void RowConverterMapsUuidAndBooleanAndLeavesUnknownText()
+    {
+        IDriver driver = new MysqlDriver();
+        var converter = driver.RowConverter(new Dictionary<string, string>
+        {
+            ["Key"] = "uuid",
+            ["Active"] = "TINYINT",
+            ["Login"] = "XML",
+        });
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var row = converter.Convert(new Row
+        {
+            ["Key"] = id.ToString(),
+            ["Active"] = 1L,
+            ["Login"] = "ada",
+        });
+        Assert.Equal(new Value.Guid(id), row["Key"]);
+        Assert.Equal(new Value.Bool(true), row["Active"]);
+        Assert.Equal(new Value.Text("ada"), row["Login"]);
+        var stored = converter.ReverseConvert(row);
+        Assert.Equal(new Value.Text(id.ToString()), stored["Key"]);
+        Assert.Equal(new Value.Int(1), stored["Active"]);
+        Assert.Equal(new Value.Text("ada"), stored["Login"]);
+    }
 }

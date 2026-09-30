@@ -12,6 +12,13 @@ public static class SchemaSpec
         IReadOnlyDictionary<string, string>? rename = null) =>
         Load(name).Select(table => Statement(table, quote, rename)).ToArray();
 
+    public static async Task Apply(IConnection connection, string name)
+    {
+        var command = connection.CreateCommand();
+        foreach (var statement in Tables(name, static id => $"\"{id.Replace("\"", "\"\"")}\""))
+            await command.Execute(statement);
+    }
+
     static CreateTableStatement Statement(
         TableSpec table,
         Func<string, string> quote,

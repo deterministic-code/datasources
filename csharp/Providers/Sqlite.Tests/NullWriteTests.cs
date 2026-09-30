@@ -17,7 +17,8 @@ public class NullWriteTests
     [Fact]
     public async Task OmitsNullDatetimeAndVersion()
     {
-        var connection = await Open("null-write-item");
+        var connection = await Open();
+        await SchemaSpec.Apply(connection, "null-write-item");
         var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
         var omitted = await repo.Create(new Item { name = "ada" });
         Assert.True(omitted.id > 0);
@@ -45,14 +46,11 @@ public class NullWriteTests
         Assert.Equal(explicitItem.version, written.version);
     }
 
-    static async Task<IConnection> Open(string schema)
+    static async Task<IConnection> Open()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await ds.CreateConnection();
         await connection.Open();
-        var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         return connection;
     }
 }

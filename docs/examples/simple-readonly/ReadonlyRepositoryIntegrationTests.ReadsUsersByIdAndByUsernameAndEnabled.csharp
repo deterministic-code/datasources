@@ -1,5 +1,5 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-var connection = await Open(ds, "minimal-users", """
+await Execute(connection, """
     INSERT INTO users (id, username, is_enabled) VALUES
         (1, 'ada', 1),
         (2, 'grace', 0);
