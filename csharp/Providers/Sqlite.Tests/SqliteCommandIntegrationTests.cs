@@ -88,6 +88,70 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
+    public async Task ReadWithCaseMapping()
+    {
+        var ds = Datasource.Default;
+        await using var connection = await ds.CreateConnection();
+        await connection.Open();
+        var command = connection.CreateCommand();
+        await command.Execute(Native.N("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"));
+        await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+        await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
+        var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+        Row? mapped = null;
+        while (await reader.Next())
+        {
+            var row = new Row();
+            foreach (var (key, value) in reader.Current!)
+                row[casing.ReverseMap(key)] = value;
+            mapped = row;
+        }
+        Assert.Equal(new Value.Int(1), mapped!["UserId"]);
+        Assert.Equal(new Value.Text("Ada"), mapped["FirstName"]);
+    }
+
+    [Fact]
+    public async Task ReadFlatRowsToNested()
+    {
+        var ds = Datasource.Default;
+        await using var connection = await ds.CreateConnection();
+        await connection.Open();
+        var command = connection.CreateCommand();
+        await command.Execute(Native.N("""
+            CREATE TABLE users (
+                id INTEGER,
+                username TEXT,
+                contact_name TEXT
+            )
+            """));
+        await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
+        await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+        await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
+        var rows = new List<Row>();
+        while (await reader.Next())
+            rows.Add(reader.Current!);
+        var mapper = new FlatToNestedMapper(new TypeMap
+        {
+            Key = "id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "id",
+                ["username"] = "username",
+                ["contacts"] = new TypeMapGroup
+                {
+                    Key = "contact_name",
+                    Fields = new Dictionary<string, TypeMapField> { ["name"] = "contact_name" },
+                },
+            },
+        });
+        var nested = mapper.Map(rows);
+        Assert.Equal(new MappedValue.Cell(new Value.Int(1)), Assert.Single(nested)["id"]);
+        Assert.Equal(new MappedValue.Cell(new Value.Text("bobby")), nested[0]["username"]);
+        Assert.Equal(new MappedValue.Cell(new Value.Text("bob")), ((MappedValue.Many)nested[0]["contacts"]).Items[0]["name"]);
+        Assert.Equal(new MappedValue.Cell(new Value.Text("roberta")), ((MappedValue.Many)nested[0]["contacts"]).Items[1]["name"]);
+    }
+
+    [Fact]
     public async Task RunExecuteReaderAndReturnNameValue()
     {
         var ds = Datasource.Default;

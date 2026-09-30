@@ -40,7 +40,10 @@ fn datasource() -> Arc<BuiltDatasource> {
     Arc::new(BuiltDatasource::new(
         "sqlite",
         Arc::new(crate::SqliteDriver),
-        Some(HashMap::from([("DATASOURCE_URL".into(), "sqlite:///:memory:".into())])),
+        Some(HashMap::from([(
+            "DATASOURCE_URL".into(),
+            "sqlite:///:memory:".into(),
+        )])),
     ))
 }
 
@@ -158,7 +161,10 @@ async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connectio
         .map(str::trim)
         .filter(|part| !part.is_empty())
     {
-        command.execute_native(&Native::new(statement), None).await.unwrap();
+        command
+            .execute_native(&Native::new(statement), None)
+            .await
+            .unwrap();
     }
     connection
 }
@@ -499,9 +505,9 @@ mod users_view_roles {
 mod user_crud {
     use super::{datasource, open, User};
     use datasources::{
-        create_crud_repository_options, encode_rows, eq, CRUDRepository, Casing, ChangeCasingMapper,
-        ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository, IReadonlyRepository,
-        RowTypeConverter, Value, Where,
+        create_crud_repository_options, encode_rows, eq, CRUDRepository, Casing,
+        ChangeCasingMapper, ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository,
+        IReadonlyRepository, RowTypeConverter, Value, Where,
     };
     use std::sync::Arc;
 

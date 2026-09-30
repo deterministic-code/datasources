@@ -13,7 +13,10 @@ pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
 pub use uuid_converter::UuidConverter;
 
-fn catalog() -> Vec<(&'static str, Box<dyn TypeConverter<Value, Value> + Send + Sync>)> {
+fn catalog() -> Vec<(
+    &'static str,
+    Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+)> {
     vec![
         ("bool", Box::new(BoolConverter)),
         ("datetime", Box::new(DateTimeConverter)),

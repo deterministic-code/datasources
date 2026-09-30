@@ -1728,10 +1728,12 @@ interface ICommand
 | Name | Description |
 | --- | --- |
 | [addMiddleware(middleware)](#typescript-icommand-addmiddleware-middleware) | Adds [ICommandMiddleware](#typescript-icommandmiddleware). Returns this command. |
-| [executeReader(text, parameters?)](#typescript-icommand-executereader-text-parameters) | Runs a query and returns a reader over the rows. |
-| [execute(text, parameters?)](#typescript-icommand-execute-text-parameters) | Runs a non-query command. |
-| [execute(command, statement, parameters?)](#typescript-icommand-execute-command-statement-parameters) | Runs [execute](#typescript-icommand-execute-text-parameters) with `statement.getText()`. |
-| [executeReader(command, statement, parameters?)](#typescript-icommand-executereader-command-statement-parameters) | Runs [executeReader](#typescript-icommand-executereader-text-parameters) with `statement.getText()`. |
+| [executeReader(text, parameters?)](#typescript-icommand-executereader-text-parameters) | Parses `text` with [StatementParser.parse](#statements) and runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters). Blank text runs [executeReaderNative](#typescript-icommand-executereadernative-text-parameters). |
+| [execute(text, parameters?)](#typescript-icommand-execute-text-parameters) | Parses `text` with [StatementParser.parse](#statements) and runs [executeStatement](#typescript-icommand-executestatement-statement-parameters). Blank text runs [executeNative](#typescript-icommand-executenative-text-parameters). |
+| [executeReaderNative(text, parameters?)](#typescript-icommand-executereadernative-text-parameters) | Runs provider text without parsing it. |
+| [executeNative(text, parameters?)](#typescript-icommand-executenative-text-parameters) | Runs provider text without parsing it. |
+| [execute(command, statement, parameters?)](#typescript-icommand-execute-command-statement-parameters) | Runs [executeStatement](#typescript-icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#typescript-icommand-executenative-text-parameters) with `statement.getText()`. |
+| [executeReader(command, statement, parameters?)](#typescript-icommand-executereader-command-statement-parameters) | Runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#typescript-icommand-executereadernative-text-parameters) with `statement.getText()`. |
 
 ###### addMiddleware(middleware) {#typescript-icommand-addmiddleware-middleware}
 
@@ -1755,7 +1757,7 @@ addMiddleware(middleware: ICommandMiddleware): this
 
 ###### executeReader(text, parameters?) {#typescript-icommand-executereader-text-parameters}
 
-Runs a query and returns a reader over the rows.
+Parses `text` with [StatementParser.parse](#statements) and runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters). Blank text runs [executeReaderNative](#typescript-icommand-executereadernative-text-parameters).
 
 **Definition**
 
@@ -1767,7 +1769,7 @@ executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>
 
 | Name | Description |
 | --- | --- |
-| `text` | SQL or dialect command text |
+| `text` | SQL parsed as a statement |
 | `parameters` | optional [Parameter](#typescript-parameter) list |
 
 **Returns**
@@ -1776,7 +1778,7 @@ executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>
 
 ###### execute(text, parameters?) {#typescript-icommand-execute-text-parameters}
 
-Runs a non-query command.
+Parses `text` with [StatementParser.parse](#statements) and runs [executeStatement](#typescript-icommand-executestatement-statement-parameters). Blank text runs [executeNative](#typescript-icommand-executenative-text-parameters).
 
 **Definition**
 
@@ -1788,7 +1790,49 @@ execute(text: string, parameters?: Parameter[]): Promise<Response>
 
 | Name | Description |
 | --- | --- |
-| `text` | SQL or dialect command text |
+| `text` | SQL parsed as a statement |
+| `parameters` | optional [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+`Promise<[Response](#typescript-response)>`
+
+###### executeReaderNative(text, parameters?) {#typescript-icommand-executereadernative-text-parameters}
+
+Runs provider text without parsing it.
+
+**Definition**
+
+```typescript
+executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cells>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [Native](#typescript-native) engine text |
+| `parameters` | optional [Parameter](#typescript-parameter) list |
+
+**Returns**
+
+`Promise<[IReader](#reader)<Cells>>`
+
+###### executeNative(text, parameters?) {#typescript-icommand-executenative-text-parameters}
+
+Runs provider text without parsing it.
+
+**Definition**
+
+```typescript
+executeNative(text: Native, parameters?: Parameter[]): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [Native](#typescript-native) engine text |
 | `parameters` | optional [Parameter](#typescript-parameter) list |
 
 **Returns**
@@ -1797,7 +1841,7 @@ execute(text: string, parameters?: Parameter[]): Promise<Response>
 
 ###### execute(command, statement, parameters?) {#typescript-icommand-execute-command-statement-parameters}
 
-Runs [execute](#typescript-icommand-execute-text-parameters) with `statement.getText()`.
+Runs [executeStatement](#typescript-icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#typescript-icommand-executenative-text-parameters) with `statement.getText()`.
 
 **Definition**
 
@@ -1819,7 +1863,7 @@ function execute(command: ICommand, statement: IStatement, parameters?: Paramete
 
 ###### executeReader(command, statement, parameters?) {#typescript-icommand-executereader-command-statement-parameters}
 
-Runs [executeReader](#typescript-icommand-executereader-text-parameters) with `statement.getText()`.
+Runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#typescript-icommand-executereadernative-text-parameters) with `statement.getText()`.
 
 **Definition**
 
@@ -1838,6 +1882,44 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 **Returns**
 
 `Promise<[IReader](#reader)<Cells>>`
+
+##### Native {#typescript-native}
+
+```typescript
+class Native
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Native(text)](#typescript-native-native-text) | Engine text. `n(text)` builds the same value. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| text | Provider command text. |
+
+###### Native(text) {#typescript-native-native-text}
+
+Engine text. `n(text)` builds the same value.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#typescript-native)
 
 ##### ICommandMiddleware {#typescript-icommandmiddleware}
 
@@ -1970,10 +2052,12 @@ public interface ICommand
 | Name | Description |
 | --- | --- |
 | [AddMiddleware(middleware)](#csharp-icommand-addmiddleware-middleware) | Adds [ICommandMiddleware](#csharp-icommandmiddleware). Returns this command. |
-| [ExecuteReader(text, parameters)](#csharp-icommand-executereader-text-parameters) | Runs a query and returns a reader over the rows. |
-| [Execute(text, parameters)](#csharp-icommand-execute-text-parameters) | Runs a non-query command. |
-| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs [ExecuteReader](#csharp-icommand-executereader-text-parameters) with `statement.GetText()`. |
-| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs [Execute](#csharp-icommand-execute-text-parameters) with `statement.GetText()`. |
+| [ExecuteReader(text, parameters)](#csharp-icommand-executereader-text-parameters) | Parses `text` with [StatementParser.Parse](#statements) and runs [ExecuteReader(statement)](#csharp-icommand-executereader-statement-parameters). Blank text runs [ExecuteReader(Native)](#csharp-icommand-executereader-native-parameters). |
+| [Execute(text, parameters)](#csharp-icommand-execute-text-parameters) | Parses `text` with [StatementParser.Parse](#statements) and runs [Execute(statement)](#csharp-icommand-execute-statement-parameters). Blank text runs [Execute(Native)](#csharp-icommand-execute-native-parameters). |
+| [ExecuteReader(native, parameters)](#csharp-icommand-executereader-native-parameters) | Runs provider text without parsing it. |
+| [Execute(native, parameters)](#csharp-icommand-execute-native-parameters) | Runs provider text without parsing it. |
+| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`. |
+| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`. |
 
 ###### AddMiddleware(middleware) {#csharp-icommand-addmiddleware-middleware}
 
@@ -1997,7 +2081,7 @@ ICommand AddMiddleware(ICommandMiddleware middleware)
 
 ###### ExecuteReader(text, parameters) {#csharp-icommand-executereader-text-parameters}
 
-Runs a query and returns a reader over the rows.
+Parses `text` with [StatementParser.Parse](#statements) and runs [ExecuteReader(statement)](#csharp-icommand-executereader-statement-parameters). Blank text runs [ExecuteReader(Native)](#csharp-icommand-executereader-native-parameters).
 
 **Definition**
 
@@ -2009,7 +2093,7 @@ Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? paramete
 
 | Name | Description |
 | --- | --- |
-| `text` | SQL or dialect command text |
+| `text` | SQL parsed as a statement |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
@@ -2018,7 +2102,7 @@ Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? paramete
 
 ###### Execute(text, parameters) {#csharp-icommand-execute-text-parameters}
 
-Runs a non-query command.
+Parses `text` with [StatementParser.Parse](#statements) and runs [Execute(statement)](#csharp-icommand-execute-statement-parameters). Blank text runs [Execute(Native)](#csharp-icommand-execute-native-parameters).
 
 **Definition**
 
@@ -2030,7 +2114,49 @@ Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null)
 
 | Name | Description |
 | --- | --- |
-| `text` | SQL or dialect command text |
+| `text` | SQL parsed as a statement |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<[Response](#csharp-response)>`
+
+###### ExecuteReader(native, parameters) {#csharp-icommand-executereader-native-parameters}
+
+Runs provider text without parsing it.
+
+**Definition**
+
+```csharp
+Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [Native](#csharp-native) engine text |
+| `parameters` | optional [Parameter](#csharp-parameter) list |
+
+**Returns**
+
+`Task<[IReader](#reader)<Row>>`
+
+###### Execute(native, parameters) {#csharp-icommand-execute-native-parameters}
+
+Runs provider text without parsing it.
+
+**Definition**
+
+```csharp
+Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [Native](#csharp-native) engine text |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
@@ -2039,7 +2165,7 @@ Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null)
 
 ###### ExecuteReader(statement, parameters) {#csharp-icommand-executereader-statement-parameters}
 
-Runs [ExecuteReader](#csharp-icommand-executereader-text-parameters) with `statement.GetText()`.
+Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`.
 
 **Definition**
 
@@ -2060,7 +2186,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 ###### Execute(statement, parameters) {#csharp-icommand-execute-statement-parameters}
 
-Runs [Execute](#csharp-icommand-execute-text-parameters) with `statement.GetText()`.
+Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`.
 
 **Definition**
 
@@ -2078,6 +2204,70 @@ Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameter
 **Returns**
 
 `Task<[Response](#csharp-response)>`
+
+##### Native {#csharp-native}
+
+```csharp
+public readonly record struct Native(string Text)
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Native(Text)](#csharp-native-native-text) | Engine text. [N](#csharp-native-n-text) builds the same value. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Text | Provider command text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [N(text)](#csharp-native-n-text) | Builds a [Native](#csharp-native). |
+
+###### Native(Text) {#csharp-native-native-text}
+
+Engine text. [N](#csharp-native-n-text) builds the same value.
+
+**Definition**
+
+```csharp
+Native(string Text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `Text` | provider command text |
+
+**Returns**
+
+[Native](#csharp-native)
+
+###### N(text) {#csharp-native-n-text}
+
+Builds a [Native](#csharp-native).
+
+**Definition**
+
+```csharp
+static Native N(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#csharp-native)
 
 ##### ICommandMiddleware {#csharp-icommandmiddleware}
 
@@ -2231,10 +2421,12 @@ pub trait Command: Send + Sync
 | Name | Description |
 | --- | --- |
 | [add_middleware(middleware)](#rust-command-add_middleware-middleware) | Adds [CommandMiddleware](#rust-commandmiddleware). |
-| [execute_reader(text, parameters)](#rust-command-execute_reader-text-parameters) | Runs a query and returns a reader over the rows. |
-| [execute(text, parameters)](#rust-command-execute-text-parameters) | Runs a non-query command. |
-| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs [execute_reader](#rust-command-execute_reader-text-parameters) with `statement.get_text()`. |
-| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs [execute](#rust-command-execute-text-parameters) with `statement.get_text()`. |
+| [execute_reader(text, parameters)](#rust-command-execute_reader-text-parameters) | Parses `text` with [StatementParser::parse](#statements) and runs [execute_reader_statement](#rust-command-execute_reader_statement-statement-parameters). Blank text runs [execute_reader_native](#rust-command-execute_reader_native-text-parameters). |
+| [execute(text, parameters)](#rust-command-execute-text-parameters) | Parses `text` with [StatementParser::parse](#statements) and runs [execute_statement](#rust-command-execute_statement-statement-parameters). Blank text runs [execute_native](#rust-command-execute_native-text-parameters). |
+| [execute_reader_native(text, parameters)](#rust-command-execute_reader_native-text-parameters) | Runs provider text without parsing it. |
+| [execute_native(text, parameters)](#rust-command-execute_native-text-parameters) | Runs provider text without parsing it. |
+| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`. |
+| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`. |
 
 ###### add_middleware(middleware) {#rust-command-add_middleware-middleware}
 
@@ -2254,7 +2446,7 @@ fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>)
 
 ###### execute_reader(text, parameters) {#rust-command-execute_reader-text-parameters}
 
-Runs a query and returns a reader over the rows.
+Parses `text` with [StatementParser::parse](#statements) and runs [execute_reader_statement](#rust-command-execute_reader_statement-statement-parameters). Blank text runs [execute_reader_native](#rust-command-execute_reader_native-text-parameters).
 
 **Definition**
 
@@ -2266,7 +2458,7 @@ async fn execute_reader(&self, text: &str, parameters: Option<&[Parameter]>) -> 
 
 | Name | Description |
 | --- | --- |
-| `text` | SQL or dialect command text |
+| `text` | SQL parsed as a statement |
 | `parameters` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
@@ -2275,7 +2467,7 @@ async fn execute_reader(&self, text: &str, parameters: Option<&[Parameter]>) -> 
 
 ###### execute(text, parameters) {#rust-command-execute-text-parameters}
 
-Runs a non-query command.
+Parses `text` with [StatementParser::parse](#statements) and runs [execute_statement](#rust-command-execute_statement-statement-parameters). Blank text runs [execute_native](#rust-command-execute_native-text-parameters).
 
 **Definition**
 
@@ -2287,7 +2479,49 @@ async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<
 
 | Name | Description |
 | --- | --- |
-| `text` | SQL or dialect command text |
+| `text` | SQL parsed as a statement |
+| `parameters` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<[Response](#rust-response)>`
+
+###### execute_reader_native(text, parameters) {#rust-command-execute_reader_native-text-parameters}
+
+Runs provider text without parsing it.
+
+**Definition**
+
+```rust
+async fn execute_reader_native(&self, text: &Native, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [Native](#rust-native) engine text |
+| `parameters` | optional [Parameter](#rust-parameter) slice |
+
+**Returns**
+
+`Result<Box<dyn `[Reader](#reader)`>>`
+
+###### execute_native(text, parameters) {#rust-command-execute_native-text-parameters}
+
+Runs provider text without parsing it.
+
+**Definition**
+
+```rust
+async fn execute_native(&self, text: &Native, parameters: Option<&[Parameter]>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [Native](#rust-native) engine text |
 | `parameters` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
@@ -2296,7 +2530,7 @@ async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<
 
 ###### execute_reader_statement(statement, parameters) {#rust-command-execute_reader_statement-statement-parameters}
 
-Runs [execute_reader](#rust-command-execute_reader-text-parameters) with `statement.get_text()`.
+Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`.
 
 **Definition**
 
@@ -2317,7 +2551,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 ###### execute_statement(statement, parameters) {#rust-command-execute_statement-statement-parameters}
 
-Runs [execute](#rust-command-execute-text-parameters) with `statement.get_text()`.
+Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`.
 
 **Definition**
 
@@ -2335,6 +2569,74 @@ async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<
 **Returns**
 
 `Result<[Response](#rust-response)>`
+
+##### Native {#rust-native}
+
+```rust
+pub struct Native(String)
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-native-new-text) | Engine text. [n](#rust-n-text) builds the same value. |
+| [text()](#rust-native-text) | Provider command text. |
+| [n(text)](#rust-native-n-text) | Builds a [Native](#rust-native). |
+
+###### new(text) {#rust-native-new-text}
+
+Engine text. [n](#rust-n-text) builds the same value.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#rust-native)
+
+###### text() {#rust-native-text}
+
+Provider command text.
+
+**Definition**
+
+```rust
+pub fn text(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+###### n(text) {#rust-native-n-text}
+
+Builds a [Native](#rust-native).
+
+**Definition**
+
+```rust
+pub fn n(text: impl Into<String>) -> Native
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#rust-native)
 
 ##### CommandMiddleware {#rust-commandmiddleware}
 
@@ -2575,7 +2877,7 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
 await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
 Row? row = null;
@@ -2592,7 +2894,7 @@ if (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L98-L125)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L100-L127)
 
 ```rust
 let ds = default().unwrap();
@@ -2600,8 +2902,8 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute(
-        "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+    .execute_native(
+        &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
         None,
     )
     .await
@@ -2627,16 +2929,18 @@ let row = reader.current().unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L87-L98)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L103)
 
 ```typescript
 const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
 await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await using reader = await command.executeReader("SELECT id, name FROM items");
+let row: Cells | undefined;
+if (await reader.next()) row = reader.current;
 ```
 
 **Row**
@@ -2650,7 +2954,7 @@ await using reader = await command.executeReader("SELECT id, name FROM items");
 
 #### Run ExecuteReader and return NameValue
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L108)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L154-L172)
 
 ```csharp
 sealed class NameValue
@@ -2663,7 +2967,7 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("CREATE TABLE settings (name TEXT, value TEXT)");
+await command.Execute(Native.N("CREATE TABLE settings (name TEXT, value TEXT)"));
 await command.Execute(
     "INSERT INTO settings (name, value) VALUES ($name, $value)",
     [new Parameter("name", "theme"), new Parameter("value", "dark")]);
@@ -2683,7 +2987,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L7-L11) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L127-L160)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L9-L13) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L232-L265)
 
 ```rust
 impl ConvertSchema for NameValue {
@@ -2697,7 +3001,7 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute("CREATE TABLE settings (name TEXT, value TEXT)", None)
+    .execute_native(&Native::new("CREATE TABLE settings (name TEXT, value TEXT)"), None)
     .await
     .unwrap();
 let parameters = [
@@ -2731,7 +3035,7 @@ while reader.next().await.unwrap() {
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L21-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L100-L116)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L156-L172)
 
 ```typescript
 class NameValue {
@@ -2743,7 +3047,7 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.execute("CREATE TABLE settings (name TEXT, value TEXT)");
+await command.executeNative(new Native("CREATE TABLE settings (name TEXT, value TEXT)"));
 await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)", [
   { name: "name", value: "theme" },
   { name: "value", value: "dark" },
@@ -2765,7 +3069,7 @@ while (await reader.next()) items.push(converter.convert(reader.current!, NameVa
 
 #### Execute insert, update, and delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L110-L145)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L174-L209)
 
 ```csharp
 sealed class Item
@@ -2778,7 +3082,7 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
 await command.Execute(
     "INSERT INTO items (id, name) VALUES ($id, $name)",
     [new Parameter("id", 1), new Parameter("name", "a")]);
@@ -2820,7 +3124,7 @@ Item? gone = null;
 null
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L15-L19) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L162-L232)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L267-L337)
 
 ```rust
 impl ConvertSchema for Item {
@@ -2834,8 +3138,8 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute(
-        "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+    .execute_native(
+        &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
         None,
     )
     .await
@@ -2910,7 +3214,7 @@ let updated = updated.unwrap();
 None
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L26-L29) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L118-L151)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L174-L207)
 
 ```typescript
 class Item {
@@ -2922,7 +3226,7 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
 await command.execute("INSERT INTO items (id, name) VALUES ($id, $name)", [
   { name: "id", value: 1 },
   { name: "name", value: "a" },
@@ -2966,7 +3270,7 @@ undefined
 
 #### Map flat contacts
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L44-L54) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L147-L175)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L44-L54) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L211-L239)
 
 ```csharp
 sealed class User
@@ -3000,7 +3304,7 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("""
+await command.Execute(Native.N("""
     CREATE TABLE users (
         id INTEGER PRIMARY KEY,
         username TEXT,
@@ -3008,7 +3312,7 @@ await command.Execute("""
         contact_name1 TEXT,
         contact_name2 TEXT
     )
-    """);
+    """));
 await command.Execute(
     "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
 await using var reader = await command.ExecuteReader(
@@ -3034,7 +3338,7 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L46-L96) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L234-L285)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L48-L98) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L339-L390)
 
 ```rust
 fn text_of(row: &Row, key: &str) -> String {
@@ -3092,14 +3396,14 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute(
-        "CREATE TABLE users (
+    .execute_native(
+        &Native::new("CREATE TABLE users (
             id INTEGER PRIMARY KEY,
             username TEXT,
             email TEXT,
             contact_name1 TEXT,
             contact_name2 TEXT
-        )",
+        )"),
         None,
     )
     .await
@@ -3142,7 +3446,7 @@ let user = user.unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L31-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L44-L59) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L153-L178)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L48-L63) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L209-L234)
 
 ```typescript
 class Contact {
@@ -3179,13 +3483,13 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.execute(`CREATE TABLE users (
+await command.executeNative(new Native(`CREATE TABLE users (
   id INTEGER PRIMARY KEY,
   username TEXT,
   email TEXT,
   contact_name1 TEXT,
   contact_name2 TEXT
-)`);
+)`));
 await command.execute(
   "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
 );
@@ -3217,12 +3521,12 @@ while (await reader.next()) user = mapper.map(converter.convert(reader.current!,
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L66-L78)
 
 ```csharp
-await command.Execute("""
+await command.Execute(Native.N("""
     CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
     BEGIN
       SET result = start_n + 1;
     END
-    """);
+    """));
 var start = new Parameter("start_n", 4);
 var result = new Parameter("result", ParameterDirection.Output);
 var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]), [start, result]);
@@ -3239,8 +3543,8 @@ result: 5
 ```rust
 use datasources::{ExecuteStoredProcedureStatement, Parameter};
 command
-    .execute(
-        "CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END",
+    .execute_native(
+        &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
         None,
     )
     .await
@@ -3264,16 +3568,16 @@ let call = command
 result: 5
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L24-L38)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L25-L39)
 
 ```typescript
 async function fillOutputParameter(command: MysqlCommand) {
-  await command.execute(`
+  await command.executeNative(new Native(`
     CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
     BEGIN
       SET result = start_n + 1;
     END
-  `);
+  `));
   const start = { name: "start_n", value: 4 };
   const result = { name: "result", direction: ParameterDirection.Output };
   const call = await command.executeStatement(
@@ -3293,11 +3597,11 @@ result: 5
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Postgres.Tests/PostgresCommandIntegrationTests.cs#L56-L66)
 
 ```csharp
-await command.Execute("""
+await command.Execute(Native.N("""
     CREATE FUNCTION add_one(n INT) RETURNS INT
     LANGUAGE sql
     AS $$ SELECT n + 1 $$
-    """);
+    """));
 var n = new Parameter("n", 4);
 var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 ```
@@ -3313,8 +3617,8 @@ var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 ```rust
 use datasources::{Parameter, ReturnStatement};
 command
-    .execute(
-        "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
+    .execute_native(
+        &Native::new("CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$"),
         None,
     )
     .await
@@ -3335,15 +3639,15 @@ let ret = command
 5
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L24-L33)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L25-L34)
 
 ```typescript
 async function readReturnValue(command: PostgresCommand) {
-  await command.execute(`
+  await command.executeNative(new Native(`
     CREATE FUNCTION add_one(n INT) RETURNS INT
     LANGUAGE sql
     AS $$ SELECT n + 1 $$
-  `);
+  `));
   const n = { name: "n", value: 4 };
   const ret = await command.executeStatement(new ReturnStatement("add_one", [n]), [n]);
 ```
@@ -3563,22 +3867,373 @@ async fn next_result(&self) -> Result<bool>
 
 ### Remarks
 
-`ExecuteReader` / `executeReader` / `execute_reader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next` / `next` / `next`. MySQL advances each result of a `CALL`. SQLite advances to the next statement in the command. Postgres advances to the next result of a multi-statement batch.
+`ExecuteReader` / `executeReader` / `execute_reader` returns a reader for the first result set. `Next` / `next` / `next` reads that set. `NextResult` / `nextResult` / `next_result` advances to the next set. Rows stay unread until `Next` / `next` / `next`.
 
 Dispose the reader with `await using`. Rust drops it.
 
 ### Examples
 
-#### Read multiple results returned in a single command
+#### Read a row
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L177-L197)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L73-L88)
 
 ```csharp
 var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await using var reader = await command.ExecuteReader("SELECT 1 AS id; SELECT 2 AS id");
+await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
+Row? row = null;
+if (await reader.Next())
+    row = reader.Current;
+```
+
+**Row**
+
+```
+{
+  id: 1,
+  name: 'ada'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L100-L127)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute_native(
+        &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT id, name FROM items", None)
+    .await
+    .unwrap();
+assert!(reader.next().await.unwrap());
+let row = reader.current().unwrap();
+```
+
+**Row**
+
+```
+{
+  id: 1,
+  name: 'ada'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L103)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+await using reader = await command.executeReader("SELECT id, name FROM items");
+let row: Cells | undefined;
+if (await reader.next()) row = reader.current;
+```
+
+**Row**
+
+```
+{
+  id: 1,
+  name: 'ada'
+}
+```
+
+#### Read with case mapping
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L111)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute(Native.N("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"));
+await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+Row? mapped = null;
+while (await reader.Next())
+{
+    var row = new Row();
+    foreach (var (key, value) in reader.Current!)
+        row[casing.ReverseMap(key)] = value;
+    mapped = row;
+}
+```
+
+**Row**
+
+```
+{
+  UserId: 1,
+  FirstName: 'Ada'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L129-L164)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute_native(
+        &Native::new("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"),
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT user_id, first_name FROM contacts", None)
+    .await
+    .unwrap();
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let mut mapped = Row::new();
+while reader.next().await.unwrap() {
+    mapped.clear();
+    for (key, value) in reader.current().unwrap() {
+        mapped.insert(Mapper::reverse_map(&casing, key), value);
+    }
+}
+```
+
+**Row**
+
+```
+{
+  UserId: 1,
+  FirstName: 'Ada'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L105-L123)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.executeNative(
+  new Native("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"),
+);
+await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+let mapped: Cells | undefined;
+while (await reader.next()) {
+  const row: Cells = {};
+  for (const [key, value] of Object.entries(reader.current!)) row[casing.reverseMap(key)] = value;
+  mapped = row;
+}
+```
+
+**Row**
+
+```
+{
+  UserId: 1,
+  FirstName: 'Ada'
+}
+```
+
+#### Type conversion and flat to nested
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L113-L152)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute(Native.N("""
+    CREATE TABLE users (
+        id INTEGER,
+        username TEXT,
+        contact_name TEXT
+    )
+    """));
+await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
+await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
+var rows = new List<Row>();
+while (await reader.Next())
+    rows.Add(reader.Current!);
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["id"] = "id",
+        ["username"] = "username",
+        ["contacts"] = new TypeMapGroup
+        {
+            Key = "contact_name",
+            Fields = new Dictionary<string, TypeMapField> { ["name"] = "contact_name" },
+        },
+    },
+});
+var nested = mapper.Map(rows);
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L166-L230)
+
+```rust
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute_native(
+        &Native::new("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')",
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT id, username, contact_name FROM users", None)
+    .await
+    .unwrap();
+let mut rows = Vec::new();
+while reader.next().await.unwrap() {
+    rows.push(reader.current().unwrap());
+}
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "id",
+    vec![
+        ("id".into(), TypeMapField::column("id")),
+        ("username".into(), TypeMapField::column("username")),
+        (
+            "contacts".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "contact_name",
+                vec![("name".into(), TypeMapField::column("contact_name"))],
+            )),
+        ),
+    ],
+));
+let nested = Mapper::map(&mapper, rows);
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L125-L154)
+
+```typescript
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.executeNative(
+  new Native("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
+);
+await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
+await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
+const rows: Cells[] = [];
+while (await reader.next()) rows.push(reader.current!);
+const mapper = new FlatToNestedMapper<{
+  id: number;
+  username: string;
+  contacts: { name: string }[];
+}>({
+  key: "id",
+  fields: {
+    id: "id",
+    username: "username",
+    contacts: { key: "contact_name", fields: { name: "contact_name" } },
+  },
+});
+const nested = mapper.map(rows);
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+#### Read multiple results returned in a single command
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L241-L261)
+
+```csharp
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await using var reader = await command.ExecuteReader(Native.N("SELECT 1 AS id; SELECT 2 AS id"));
 var first = new List<Row>();
 while (await reader.Next())
     first.Add(reader.Current!);
@@ -3605,7 +4260,7 @@ var again = await reader.NextResult();
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L287-L312)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L392-L417)
 
 ```rust
 let ds = default().unwrap();
@@ -3613,7 +4268,7 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 let reader = command
-    .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
+    .execute_reader_native(&Native::new("SELECT 1 AS id; SELECT 2 AS id"), None)
     .await
     .unwrap();
 let mut first = Vec::new();
@@ -3646,14 +4301,14 @@ assert!(!again);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L180-L196)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L236-L252)
 
 ```typescript
 const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await using reader = await command.executeReader("SELECT 1 AS id; SELECT 2 AS id");
+await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
 const first: { id: number }[] = [];
 while (await reader.next()) first.push(reader.current as { id: number });
 const moved = await reader.nextResult();
@@ -3682,9 +4337,9294 @@ const again = await reader.nextResult();
 >
 > There is no `using`. The reader is dropped at the end of the scope.
 
+## Repositories
+
+Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
+
+Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
+
+### Classes
+
+##### TypeScript
+
+##### IRepository {#typescript-irepository}
+
+```typescript
+interface IRepository<T = unknown>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| type | Item constructor the repository exposes. |
+
+##### IRepositoryFactory {#typescript-irepositoryfactory}
+
+```typescript
+interface IRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [register(repository)](#typescript-irepositoryfactory-register-repository) | Registers a readonly repository by [type](#typescript-irepository-type). |
+| [create(type)](#typescript-irepositoryfactory-create-type) | Creates a readonly repository. |
+
+###### register(repository) {#typescript-irepositoryfactory-register-repository}
+
+Registers a readonly repository by [type](#typescript-irepository-type).
+
+**Definition**
+
+```typescript
+register(repository: IRepository): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
+
+###### create(type) {#typescript-irepositoryfactory-create-type}
+
+Creates a readonly repository.
+
+**Definition**
+
+```typescript
+create<T>(type: Constructable<T>): IReadonlyRepository<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type` | item constructor |
+
+**Returns**
+
+[IReadonlyRepository](#readonly-repository)`<T>`
+
+##### ICRUDRepositoryFactory {#typescript-icrudrepositoryfactory}
+
+```typescript
+interface ICRUDRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [register(repository)](#typescript-icrudrepositoryfactory-register-repository) | Registers a CRUD repository by [type](#typescript-irepository-type). |
+| [create(type)](#typescript-icrudrepositoryfactory-create-type) | Creates a CRUD repository. |
+
+###### register(repository) {#typescript-icrudrepositoryfactory-register-repository}
+
+Registers a CRUD repository by [type](#typescript-irepository-type).
+
+**Definition**
+
+```typescript
+register(repository: IRepository): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
+
+###### create(type) {#typescript-icrudrepositoryfactory-create-type}
+
+Creates a CRUD repository.
+
+**Definition**
+
+```typescript
+create<T>(type: Constructable<T>): ICRUDRepository<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type` | item constructor |
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)`<T>`
+
+##### RepositoryFactory {#typescript-repositoryfactory}
+
+```typescript
+class RepositoryFactory implements ICRUDRepositoryFactory
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| asReadonly | Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [register(repository)](#typescript-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
+| [create(type)](#typescript-repositoryfactory-create-type) | Creates a CRUD repository. |
+
+###### register(repository) {#typescript-repositoryfactory-register-repository}
+
+Registers CRUD and readonly for the same repository.
+
+**Definition**
+
+```typescript
+register(repository: IRepository): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
+
+###### create(type) {#typescript-repositoryfactory-create-type}
+
+Creates a CRUD repository.
+
+**Definition**
+
+```typescript
+create<T>(type: Constructable<T>): ICRUDRepository<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type` | item constructor |
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)`<T>`
+
+##### RepositoryNotRegisteredError {#typescript-repositorynotregisterederror}
+
+```typescript
+class RepositoryNotRegisteredError extends Error
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [RepositoryNotRegisteredError(entityTypeName)](#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename) | Thrown when [create](#typescript-repositoryfactory-create-type) cannot find a repository. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| entityTypeName | Missing entity type name. |
+
+###### RepositoryNotRegisteredError(entityTypeName) {#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename}
+
+Thrown when [create](#typescript-repositoryfactory-create-type) cannot find a repository.
+
+**Definition**
+
+```typescript
+constructor(entityTypeName: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entityTypeName` | missing entity type name |
+
+##### C#
+
+##### IRepository {#csharp-irepository}
+
+```csharp
+public interface IRepository
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Type | Item CLR type the repository exposes. |
+
+##### IRepositoryFactory {#csharp-irepositoryfactory}
+
+```csharp
+public interface IRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Register(repository)](#csharp-irepositoryfactory-register-repository) | Registers a readonly repository by [Type](#csharp-irepository-type). |
+| [Create()](#csharp-irepositoryfactory-create) | Creates a readonly repository by `T`. |
+
+###### Register(repository) {#csharp-irepositoryfactory-register-repository}
+
+Registers a readonly repository by [Type](#csharp-irepository-type).
+
+**Definition**
+
+```csharp
+void Register(IRepository repository)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
+
+###### Create() {#csharp-irepositoryfactory-create}
+
+Creates a readonly repository by `T`.
+
+**Definition**
+
+```csharp
+IReadonlyRepository<T> Create<T>()
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | optional open [IConnection](#connection) |
+
+**Returns**
+
+[IReadonlyRepository](#readonly-repository)`<T>`
+
+##### ICRUDRepositoryFactory {#csharp-icrudrepositoryfactory}
+
+```csharp
+public interface ICRUDRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Register(repository)](#csharp-icrudrepositoryfactory-register-repository) | Registers a CRUD repository by [Type](#csharp-irepository-type). |
+| [Create()](#csharp-icrudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
+
+###### Register(repository) {#csharp-icrudrepositoryfactory-register-repository}
+
+Registers a CRUD repository by [Type](#csharp-irepository-type).
+
+**Definition**
+
+```csharp
+void Register(IRepository repository)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
+
+###### Create() {#csharp-icrudrepositoryfactory-create}
+
+Creates a CRUD repository by `T`.
+
+**Definition**
+
+```csharp
+ICRUDRepository<T> Create<T>()
+```
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)`<T>`
+
+##### RepositoryFactory {#csharp-repositoryfactory}
+
+```csharp
+public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Register(repository)](#csharp-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
+| [Create()](#csharp-repositoryfactory-create) | Creates a CRUD repository by `T`. |
+
+###### Register(repository) {#csharp-repositoryfactory-register-repository}
+
+Registers CRUD and readonly for the same repository.
+
+**Definition**
+
+```csharp
+public void Register(IRepository repository)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
+
+###### Create() {#csharp-repositoryfactory-create}
+
+Creates a CRUD repository by `T`.
+
+**Definition**
+
+```csharp
+public ICRUDRepository<T> Create<T>()
+```
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)`<T>`
+
+##### RepositoryNotRegisteredException {#csharp-repositorynotregisteredexception}
+
+```csharp
+public sealed class RepositoryNotRegisteredException : DatasourceException
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [RepositoryNotRegisteredException(entityTypeName)](#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename) | Thrown when [Create](#csharp-repositoryfactory-create) cannot find a repository. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| EntityTypeName | Missing entity type name. |
+
+###### RepositoryNotRegisteredException(entityTypeName) {#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename}
+
+Thrown when [Create](#csharp-repositoryfactory-create) cannot find a repository.
+
+**Definition**
+
+```csharp
+public RepositoryNotRegisteredException(string entityTypeName)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `entityTypeName` | missing entity type name |
+
+##### Rust
+
+##### IRepository {#rust-irepository}
+
+```rust
+pub trait IRepository
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [entity_type()](#rust-irepository-entity_type) | Item `TypeId` the repository exposes. Defaults to `Row`. |
+
+###### entity_type() {#rust-irepository-entity_type}
+
+Item `TypeId` the repository exposes. Defaults to `Row`.
+
+**Definition**
+
+```rust
+fn entity_type(&self) -> TypeId
+```
+
+**Returns**
+
+`TypeId`
+
+##### datasources {#rust-datasources}
+
+```rust
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [as_readonly(repo)](#rust-datasources-as_readonly-repo) | Views a [ICRUDRepository](#crud-repository) as a [IReadonlyRepository](#readonly-repository). |
+
+###### as_readonly(repo) {#rust-datasources-as_readonly-repo}
+
+Views a [ICRUDRepository](#crud-repository) as a [IReadonlyRepository](#readonly-repository).
+
+**Definition**
+
+```rust
+pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repo` | [ICRUDRepository](#crud-repository) |
+
+**Returns**
+
+`Arc<dyn `[IReadonlyRepository](#readonly-repository)`>`
+
+##### ReadonlyRepositoryFactory {#rust-readonlyrepositoryfactory}
+
+```rust
+pub trait ReadonlyRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [register(repository)](#rust-readonlyrepositoryfactory-register-repository) | Registers a readonly repository by [entity_type](#rust-irepository-entity_type). |
+| [create()](#rust-readonlyrepositoryfactory-create) | Creates a readonly repository by `T`. |
+
+###### register(repository) {#rust-readonlyrepositoryfactory-register-repository}
+
+Registers a readonly repository by [entity_type](#rust-irepository-entity_type).
+
+**Definition**
+
+```rust
+fn register(&self, repository: Arc<dyn IReadonlyRepository>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [IReadonlyRepository](#readonly-repository) to look up by `entity_type` |
+
+###### create() {#rust-readonlyrepositoryfactory-create}
+
+Creates a readonly repository by `T`.
+
+**Definition**
+
+```rust
+fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[IReadonlyRepository](#readonly-repository)`>>`
+
+##### CRUDRepositoryFactory {#rust-crudrepositoryfactory}
+
+```rust
+pub trait CRUDRepositoryFactory
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [register(repository)](#rust-crudrepositoryfactory-register-repository) | Registers a CRUD repository by [entity_type](#rust-irepository-entity_type). |
+| [create()](#rust-crudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
+
+###### register(repository) {#rust-crudrepositoryfactory-register-repository}
+
+Registers a CRUD repository by [entity_type](#rust-irepository-entity_type).
+
+**Definition**
+
+```rust
+fn register(&self, repository: Arc<dyn ICRUDRepository>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [ICRUDRepository](#crud-repository) to look up by `entity_type` |
+
+###### create() {#rust-crudrepositoryfactory-create}
+
+Creates a CRUD repository by `T`.
+
+**Definition**
+
+```rust
+fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
+
+##### RepositoryFactory {#rust-repositoryfactory}
+
+```rust
+pub struct RepositoryFactory
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new()](#rust-repositoryfactory-new) | Empty registry. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [register(repository)](#rust-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
+| [create()](#rust-repositoryfactory-create) | Creates a CRUD repository by `T`. |
+
+###### new() {#rust-repositoryfactory-new}
+
+Empty registry.
+
+**Definition**
+
+```rust
+pub fn new() -> Self
+```
+
+**Returns**
+
+[RepositoryFactory](#rust-repositoryfactory)
+
+###### register(repository) {#rust-repositoryfactory-register-repository}
+
+Registers CRUD and readonly for the same repository.
+
+**Definition**
+
+```rust
+pub fn register(&self, repository: Arc<dyn ICRUDRepository>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repository` | [ICRUDRepository](#crud-repository) to look up by `entity_type` |
+
+###### create() {#rust-repositoryfactory-create}
+
+Creates a CRUD repository by `T`.
+
+**Definition**
+
+```rust
+pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
+
+### Remarks
+
+SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
+
+> **TypeScript**
+>
+> A missing repository throws [RepositoryNotRegisteredError](#repositorynotregisterederror).
+
+> **C#**
+>
+> A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception).
+
+> **Rust**
+>
+> A missing repository throws `DatasourceError`.
+
+See [Datasource](#datasource) for `CreateRepository` / `createRepository` / `create_repository`.
+
+### Examples
+
+#### Register and create
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryFactoryTests.cs#L12-L19)
+
+```csharp
+{
+    var factory = new RepositoryFactory();
+    var repo = new StubRepository<Item>("memory", new StubConnection("memory"));
+    factory.Register(repo);
+    var created = factory.Create<Item>();
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L112-L116)
+
+```rust
+let factory = RepositoryFactory::new();
+factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
+let created = factory.create::<Item>().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/RepositoryFactory.test.ts#L18-L24)
+
+```typescript
+const factory = new RepositoryFactory();
+const repo = new MockRepository<Item>(new MockConnection(), Item);
+factory.register(repo);
+const created = factory.create(Item);
+```
+
+### See also
+
+- [Readonly repository](#readonly-repository)
+- [CRUD repository](#crud-repository)
+- [Bulk repository](#bulk-repository)
+
+## Readonly repository
+
+Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` / `read` yields every row.
+
+Construct it with a connection, then register each fill with `AddEnriched` / `addEnriched` / `add_enriched`. That fill runs after convert-then-map. Lookups use `ReadSingle` / `readSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read` / `read`. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](#crud-repository).
+
+### Classes
+
+##### TypeScript
+
+##### IReadonlyRepository {#typescript-ireadonlyrepository}
+
+```typescript
+interface IReadonlyRepository<T = unknown> extends IRepository<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [readSingle(query?)](#typescript-ireadonlyrepository-readsingle-query) | Returns the first item, or `undefined` when the result is empty. |
+| [read(query?)](#typescript-ireadonlyrepository-read-query) | Yields every item. |
+
+###### readSingle(query?) {#typescript-ireadonlyrepository-readsingle-query}
+
+Returns the first item, or `undefined` when the result is empty.
+
+**Definition**
+
+```typescript
+readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`Promise<T | undefined>`
+
+###### read(query?) {#typescript-ireadonlyrepository-read-query}
+
+Yields every item.
+
+**Definition**
+
+```typescript
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`AsyncIterable<T>`
+
+##### ReadonlyRepository {#typescript-readonlyrepository}
+
+```typescript
+abstract class ReadonlyRepository<T> implements IReadonlyRepository<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ReadonlyRepository(type)](#typescript-readonlyrepository-readonlyrepository-type) | Stores the item constructor. |
+| [ReadonlyRepository(inner, strategy?)](#typescript-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#typescript-ienriched). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| type | Item constructor the repository exposes. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [read(query?)](#typescript-readonlyrepository-read-query) | Yields every item. Table repositories convert then map; subclasses may override. |
+| [readSingle(query?)](#typescript-readonlyrepository-readsingle-query) | Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`. |
+
+###### ReadonlyRepository(type) {#typescript-readonlyrepository-readonlyrepository-type}
+
+Stores the item constructor.
+
+**Definition**
+
+```typescript
+constructor(type: Constructable<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type` | item constructor ([IRepository.type](#typescript-irepository-type)) |
+
+###### ReadonlyRepository(inner, strategy?) {#typescript-readonlyrepository-readonlyrepository-inner-strategy}
+
+Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#typescript-ienriched).
+
+**Definition**
+
+```typescript
+constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [IReadonlyRepository](#typescript-ireadonlyrepository) |
+| `strategy` | optional enrichment strategy |
+
+###### read(query?) {#typescript-readonlyrepository-read-query}
+
+Yields every item. Table repositories convert then map; subclasses may override.
+
+**Definition**
+
+```typescript
+abstract read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`AsyncIterable<T>`
+
+###### readSingle(query?) {#typescript-readonlyrepository-readsingle-query}
+
+Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`.
+
+**Definition**
+
+```typescript
+readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`Promise<T | undefined>`
+
+##### ReadonlyRepositoryOptions {#typescript-readonlyrepositoryoptions}
+
+```typescript
+type ReadonlyRepositoryOptions<T = Cells>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| entity | Table or entity name. |
+| entityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| columnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
+| query | Rewrites the finished select. Omitted leaves the statement unchanged. |
+| rowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
+| rowConverter | Row [TypeConverter](#type-converters). |
+| type | Item constructor. Supplies the default entity name and column list. |
+| rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
+| readColumns | SELECT column names. When omitted, public fields of `type` are used. |
+
+##### IEnriched {#typescript-ienriched}
+
+```typescript
+interface IEnriched<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [addEnriched(enrichment, via, strategy?)](#typescript-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
+
+###### addEnriched(enrichment, via, strategy?) {#typescript-ienriched-addenriched-enrichment-via-strategy}
+
+Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
+
+**Definition**
+
+```typescript
+addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#typescript-enrichment) |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`this`
+
+##### IRepositoryTree {#typescript-irepositorytree}
+
+```typescript
+interface IRepositoryTree
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| parent | Root [IRepositoryTreeNode](#typescript-irepositorytreenode). |
+
+##### IRepositoryTreeNode {#typescript-irepositorytreenode}
+
+```typescript
+interface IRepositoryTreeNode
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| value | Related repository. |
+| propertyName | Destination property name. |
+| parent | Parent node, if any. |
+| items | Child nodes. |
+| enrichment | [Enrichment](#typescript-enrichment) for this node. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [include(via, into, from, by, select?, many?)](#typescript-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
+| [enrichFrom(parents)](#typescript-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
+
+###### include(via, into, from, by, select?, many?) {#typescript-irepositorytreenode-include-via-into-from-by-select-many}
+
+Adds a child node.
+
+**Definition**
+
+```typescript
+include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: string, from: string, by: string, select?: string, many?: boolean): IRepositoryTreeNode
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `into` | destination property |
+| `from` | parent key |
+| `by` | related key |
+| `select` | optional related property to copy |
+| `many` | collect a list |
+
+**Returns**
+
+[IRepositoryTreeNode](#typescript-irepositorytreenode)
+
+###### enrichFrom(parents) {#typescript-irepositorytreenode-enrichfrom-parents}
+
+Fills `parents` from this node.
+
+**Definition**
+
+```typescript
+enrichFrom(parents: object[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `parents` | parent objects |
+
+##### Enrichment {#typescript-enrichment}
+
+```typescript
+type Enrichment
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| into | Destination property. |
+| from | Parent key. |
+| by | Related key. |
+| select | Optional related property to copy. |
+| many | Collect a list. |
+
+##### IReadonlyEnrichmentStrategy {#typescript-ireadonlyenrichmentstrategy}
+
+```typescript
+interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichmentBinder
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [read(inner, tree, query?)](#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
+| [enrich(tree, items)](#typescript-ireadonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
+
+###### read(inner, tree, query?) {#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query}
+
+Reads through `inner`, then enriches.
+
+**Definition**
+
+```typescript
+read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [IReadonlyRepository](#readonly-repository) |
+| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
+| `query` | optional query, where, or stored procedure |
+
+**Returns**
+
+`AsyncIterable<T>`
+
+###### enrich(tree, items) {#typescript-ireadonlyenrichmentstrategy-enrich-tree-items}
+
+Fills `items` from the tree.
+
+**Definition**
+
+```typescript
+enrich(tree: IRepositoryTree, items: T[]): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
+| `items` | parents to fill |
+
+##### C#
+
+##### IReadonlyRepository {#csharp-ireadonlyrepository}
+
+```csharp
+public interface IReadonlyRepository<T> : IRepository
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [ReadSingle(query)](#csharp-ireadonlyrepository-readsingle-query) | Returns the first item, or `default` when the result is empty. |
+| [Read(query)](#csharp-ireadonlyrepository-read-query) | Yields every item. |
+
+###### ReadSingle(query) {#csharp-ireadonlyrepository-readsingle-query}
+
+Returns the first item, or `default` when the result is empty.
+
+**Definition**
+
+```csharp
+Task<T?> ReadSingle(IStatement? query = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
+
+**Returns**
+
+`Task<T?>`
+
+###### Read(query) {#csharp-ireadonlyrepository-read-query}
+
+Yields every item.
+
+**Definition**
+
+```csharp
+IAsyncEnumerable<T> Read(IStatement? query = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
+
+**Returns**
+
+`IAsyncEnumerable<T>`
+
+##### ReadonlyRepository {#csharp-readonlyrepository}
+
+```csharp
+public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ReadonlyRepository(inner, strategy)](#csharp-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#csharp-ienriched). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Type | Item CLR type. `typeof(T)`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Read(query)](#csharp-readonlyrepository-read-query) | Yields every item. Table repositories convert then map; subclasses may override. |
+| [ReadSingle(query)](#csharp-readonlyrepository-readsingle-query) | Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`. |
+
+###### ReadonlyRepository(inner, strategy) {#csharp-readonlyrepository-readonlyrepository-inner-strategy}
+
+Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#csharp-ienriched).
+
+**Definition**
+
+```csharp
+public ReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [IReadonlyRepository](#csharp-ireadonlyrepository) |
+| `strategy` | optional enrichment strategy |
+
+###### Read(query) {#csharp-readonlyrepository-read-query}
+
+Yields every item. Table repositories convert then map; subclasses may override.
+
+**Definition**
+
+```csharp
+public virtual IAsyncEnumerable<T> Read(IStatement? query = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
+
+**Returns**
+
+`IAsyncEnumerable<T>`
+
+###### ReadSingle(query) {#csharp-readonlyrepository-readsingle-query}
+
+Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`.
+
+**Definition**
+
+```csharp
+public virtual Task<T?> ReadSingle(IStatement? query = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
+
+**Returns**
+
+`Task<T?>`
+
+##### ReadonlyRepositoryOptions {#csharp-readonlyrepositoryoptions}
+
+```csharp
+public class ReadonlyRepositoryOptions<T> where T : new()
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Entity | Table or entity name. When omitted, `typeof(T).Name` is used. |
+| EntityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| ColumnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
+| Query | Rewrites the finished select. Omitted leaves the statement unchanged. |
+| RowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
+| RowConverter | Row [TypeConverter](#type-converters). |
+| RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
+| ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
+
+##### IEnriched {#csharp-ienriched}
+
+```csharp
+public interface IEnriched<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [AddEnriched(enrichment, via, strategy)](#csharp-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
+
+###### AddEnriched(enrichment, via, strategy) {#csharp-ienriched-addenriched-enrichment-via-strategy}
+
+Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
+
+**Definition**
+
+```csharp
+IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#csharp-enrichment) |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+[IEnriched](#csharp-ienriched)`<T>`
+
+##### IRepositoryTree {#csharp-irepositorytree}
+
+```csharp
+public interface IRepositoryTree
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Parent | Root [IRepositoryTreeNode](#csharp-irepositorytreenode). |
+
+##### IRepositoryTreeNode {#csharp-irepositorytreenode}
+
+```csharp
+public interface IRepositoryTreeNode
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Value | Related repository. |
+| PropertyName | Destination property name. |
+| Parent | Parent node, if any. |
+| Items | Child nodes. |
+| Enrichment | [Enrichment](#csharp-enrichment) for this node. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Include(via, into, from, by, select, many)](#csharp-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
+| [EnrichFrom(parents)](#csharp-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
+
+###### Include(via, into, from, by, select, many) {#csharp-irepositorytreenode-include-via-into-from-by-select-many}
+
+Adds a child node.
+
+**Definition**
+
+```csharp
+IRepositoryTreeNode Include<TRelated>(IReadonlyRepository<TRelated> via, string into, string from, string by, string? select = null, bool many = false)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `into` | destination property |
+| `from` | parent key |
+| `by` | related key |
+| `select` | optional related property to copy |
+| `many` | collect a list |
+
+**Returns**
+
+[IRepositoryTreeNode](#csharp-irepositorytreenode)
+
+###### EnrichFrom(parents) {#csharp-irepositorytreenode-enrichfrom-parents}
+
+Fills `parents` from this node.
+
+**Definition**
+
+```csharp
+Task EnrichFrom(IReadOnlyList<object> parents)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `parents` | parent objects |
+
+##### Enrichment {#csharp-enrichment}
+
+```csharp
+public sealed record Enrichment
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Into | Destination property. |
+| From | Parent key. |
+| By | Related key. |
+| Select | Optional related property to copy. |
+| Many | Collect a list. |
+
+##### IReadonlyEnrichmentStrategy {#csharp-ireadonlyenrichmentstrategy}
+
+```csharp
+public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Read(inner, tree, query)](#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
+| [Enrich(tree, items, sources)](#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources) | Fills `items` from the tree. `sources` supplies the unread columns for each parent. |
+
+###### Read(inner, tree, query) {#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query}
+
+Reads through `inner`, then enriches.
+
+**Definition**
+
+```csharp
+IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [IReadonlyRepository](#readonly-repository) |
+| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
+| `query` | optional statement or where |
+
+**Returns**
+
+`IAsyncEnumerable<T>`
+
+###### Enrich(tree, items, sources) {#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources}
+
+Fills `items` from the tree. `sources` supplies the unread columns for each parent.
+
+**Definition**
+
+```csharp
+Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
+| `items` | parents to fill |
+| `sources` | optional source rows aligned with `items` |
+
+##### Rust
+
+##### IReadonlyRepository {#rust-ireadonlyrepository}
+
+```rust
+pub trait IReadonlyRepository: IRepository
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [read_single(query)](#rust-ireadonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
+| [read(query)](#rust-ireadonlyrepository-read-query) | Returns every row. |
+
+###### read_single(query) {#rust-ireadonlyrepository-read_single-query}
+
+Returns the first row, or `None` when the result is empty.
+
+**Definition**
+
+```rust
+async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`Result<Option<Row>>`
+
+###### read(query) {#rust-ireadonlyrepository-read-query}
+
+Returns every row.
+
+**Definition**
+
+```rust
+async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`Result<Vec<Row>>`
+
+##### ReadonlyRepository {#rust-readonlyrepository}
+
+```rust
+pub struct ReadonlyRepository
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [from_repository(inner)](#rust-readonlyrepository-from_repository-inner) | Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#rust-ienriched). |
+| [with_strategy(inner, strategy)](#rust-readonlyrepository-with_strategy-inner-strategy) | Wraps an inner repository with an enrichment strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [add_enriched(enrichment, via, strategy)](#rust-readonlyrepository-add_enriched-enrichment-via-strategy) | Adds a related fill. A related repository fills its own fields. Does not write. |
+
+###### from_repository(inner) {#rust-readonlyrepository-from_repository-inner}
+
+Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#rust-ienriched).
+
+**Definition**
+
+```rust
+pub fn from_repository(inner: Arc<dyn IReadonlyRepository>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [IReadonlyRepository](#rust-ireadonlyrepository) |
+
+**Returns**
+
+[ReadonlyRepository](#rust-readonlyrepository)
+
+###### with_strategy(inner, strategy) {#rust-readonlyrepository-with_strategy-inner-strategy}
+
+Wraps an inner repository with an enrichment strategy.
+
+**Definition**
+
+```rust
+pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn ReadonlyEnrichmentStrategy>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [IReadonlyRepository](#rust-ireadonlyrepository) |
+| `strategy` | enrichment strategy |
+
+**Returns**
+
+[ReadonlyRepository](#rust-readonlyrepository)
+
+###### add_enriched(enrichment, via, strategy) {#rust-readonlyrepository-add_enriched-enrichment-via-strategy}
+
+Adds a related fill. A related repository fills its own fields. Does not write.
+
+**Definition**
+
+```rust
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#rust-enrichment) |
+| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository). The readonly path keeps the read repository only |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`&mut Self`
+
+##### ReadonlyRepositoryOptions {#rust-readonlyrepositoryoptions}
+
+```rust
+pub struct ReadonlyRepositoryOptions
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| entity | Table or entity name. Default `"items"`. |
+| entity_mapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
+| column_mappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
+| query | Rewrites finished select SQL. `None` leaves the statement unchanged. |
+| rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
+| row_converter | Row [RowTypeConverter](#row-type-converter). |
+| row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
+
+##### RepositoryTree {#rust-repositorytree}
+
+```rust
+pub struct RepositoryTree
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| parent | Root [RepositoryTreeNode](#rust-repositorytreenode). |
+
+##### RepositoryTreeNode {#rust-repositorytreenode}
+
+```rust
+pub struct RepositoryTreeNode
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| value | Related [ReadonlyRepository](#readonly-repository). |
+| property_name | Destination field name. |
+| items | Child nodes. |
+| enrichment | [Enrichment](#rust-enrichment) for this node. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [include(via, into, from, by, select, many)](#rust-repositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
+
+###### include(via, into, from, by, select, many) {#rust-repositorytreenode-include-via-into-from-by-select-many}
+
+Adds a child node.
+
+**Definition**
+
+```rust
+pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
+| `into` | destination field |
+| `from` | parent key |
+| `by` | related key |
+| `select` | optional related field to copy |
+| `many` | collect a list |
+
+**Returns**
+
+`&mut Self`
+
+##### Enrichment {#rust-enrichment}
+
+```rust
+pub struct Enrichment
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(into, from, by, select, many)](#rust-enrichment-new-into-from-by-select-many) | Builds an enrichment. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| into | Destination field. |
+| from | Parent key. |
+| by | Related key. |
+| select | Optional related field to copy. |
+| many | Collect a list. |
+
+###### new(into, from, by, select, many) {#rust-enrichment-new-into-from-by-select-many}
+
+Builds an enrichment.
+
+**Definition**
+
+```rust
+pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `into` | destination field |
+| `from` | parent key |
+| `by` | related key |
+| `select` | optional related field to copy |
+| `many` | collect a list |
+
+**Returns**
+
+[Enrichment](#rust-enrichment)
+
+##### ReadonlyEnrichmentStrategy {#rust-readonlyenrichmentstrategy}
+
+```rust
+pub trait ReadonlyEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [read(inner, tree, query)](#rust-readonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
+| [enrich(tree, items)](#rust-readonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
+
+###### read(inner, tree, query) {#rust-readonlyenrichmentstrategy-read-inner-tree-query}
+
+Reads through `inner`, then enriches.
+
+**Definition**
+
+```rust
+async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ReadonlyRepository](#readonly-repository) |
+| `tree` | [RepositoryTree](#rust-repositorytree) |
+| `query` | optional query, where, or stored procedure |
+
+**Returns**
+
+`Result<Vec<Row>>`
+
+###### enrich(tree, items) {#rust-readonlyenrichmentstrategy-enrich-tree-items}
+
+Fills `items` from the tree.
+
+**Definition**
+
+```rust
+async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `tree` | [RepositoryTree](#rust-repositorytree) |
+| `items` | parents to fill |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
+
+`AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
+
+```
+childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+```
+
+Repository read is convert, then map. See [Type Converters](#type-converters) and [Mappers](#mappers).
+
+`read` and `read_single` accept a query, a where, or an [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement). Result rows still convert, then map. Procedure argument names are not rewritten as columns.
+
+### Examples
+
+#### Read users by id and by username
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L29-L53)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "minimal-users", """
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    """);
+var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+{
+    EntityMapper = new PluralizerMapper(),
+});
+
+var byId = await repo.ReadSingle(new Where("id", eq, 1));
+var disabled = new List<User>();
+await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
+    disabled.Add(row);
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+**After: disabled**
+
+```
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: false
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L47-L85)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "minimal-users",
+    "
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    ",
+)
+.await;
+let mut options = create_crud_repository_options::<User>();
+options.entity_mapper = Box::new(PluralizerMapper::new());
+let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let by_id = repo
+    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+    .await
+    .unwrap()
+    .unwrap();
+let disabled = repo
+    .read(
+        Some(&Where::binary("username", eq, "grace").and(
+            "is_enabled",
+            eq,
+            0_i64,
+        )),
+        None,
+    )
+    .await
+    .unwrap();
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**After: disabled**
+
+```
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: 0
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L37-L55)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, "minimal-users", `
+  INSERT INTO users (id, username, is_enabled) VALUES
+    (1, 'ada', 1),
+    (2, 'grace', 0);
+`);
+const repo = ds.createReadonlyRepository(User, connection, {
+  entityMapper: new PluralizerMapper(),
+});
+const byId = await repo.readSingle(new Where("id", eq, 1));
+const disabled: User[] = [];
+for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
+  disabled.push(row);
+```
+
+**After: by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**After: disabled**
+
+```
+[
+  {
+    id: 2,
+    username: 'grace',
+    is_enabled: 0
+  }
+]
+```
+
+#### Read a user by guid, username, and created
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L55-L92)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "user-account", $"""
+    INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    """);
+var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+{
+    Entity = "user",
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+    }),
+});
+
+var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+var byId = await repo.ReadSingle(new Where("Key", eq, Ada));
+var byLogin = new List<UserAccount>();
+await foreach (var row in repo.Read(new Where("Login", eq, "ada").And("Active", eq, true)))
+    byLogin.Add(row);
+var later = new List<UserAccount>();
+await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", gt, opened)))
+    later.Add(row);
+```
+
+**After: by id**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+**After: by login**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: true,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+**After: later**
+
+```
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: true,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L87-L151)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "user-account",
+    &format!(
+        "
+    INSERT INTO user (id, username, is_enabled, created) VALUES
+        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+    "
+    ),
+)
+.await;
+let mut options = create_crud_repository_options::<UserAccount>();
+options.entity = "user".into();
+options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+]));
+let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
+let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+let by_id = repo
+    .read_single(
+        Some(&Where::binary(
+            "Key",
+            eq,
+            Uuid::parse_str(ADA).unwrap(),
+        )),
+        None,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+let by_login = repo
+    .read(
+        Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
+        None,
+    )
+    .await
+    .unwrap();
+let later = repo
+    .read(
+        Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
+        None,
+    )
+    .await
+    .unwrap();
+```
+
+**After: by id**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+**After: by login**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+**After: later**
+
+```
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L90)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, "user-account", `
+  INSERT INTO user (id, username, is_enabled, created) VALUES
+    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
+    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
+    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
+`);
+const repo = ds.createReadonlyRepository(UserAccount, connection, {
+  entity: "user",
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+  ]),
+});
+const opened = new Date("2024-01-01T00:00:00.000Z");
+const byId = await repo.readSingle(new Where("Key", eq, ada));
+const byLogin: UserAccount[] = [];
+for await (const row of repo.read(new Where("Login", eq, "ada").and("Active", eq, true)))
+  byLogin.push(row);
+const later: UserAccount[] = [];
+for await (const row of repo.read(new Where("Active", eq, true).and("Opened", gt, opened)))
+  later.push(row);
+```
+
+**After: by id**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z'
+}
+```
+
+**After: by login**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z'
+  }
+]
+```
+
+**After: later**
+
+```
+[
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z'
+  }
+]
+```
+
+#### Call a stored procedure
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L107-L116)
+
+```csharp
+Parameter[] parameters = [new("id", 9)];
+var call = new ExecuteStoredProcedureStatement("get_user", parameters);
+var rows = new List<UserRow>();
+await foreach (var row in repo.Read(call, parameters))
+    rows.Add(row);
+```
+
+**After: rows**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1438-L1454)
+
+```rust
+        &row
+    ),
+    no
+);
+```
+
+**After: rows**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L102-L109)
+
+```typescript
+command.reader = new MockReader([{ id: 1, name: "a" }]);
+const parameters = [{ name: "id", value: 9 }];
+const call = new ExecuteStoredProcedureStatement("get_user", parameters);
+const rows: Cells[] = [];
+for await (const row of repo.read(call, parameters)) rows.push(row);
+```
+
+**After: rows**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+#### Read and read single
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L69-L76)
+
+```csharp
+await foreach (var row in repo.Read())
+    rows.Add(row);
+Assert.Single(rows);
+```
+
+**After: read**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+**After: read single**
+
+```
+{ id: 1, name: 'a' }
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1475-L1481)
+
+```rust
+
+```
+
+**After: read**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+**After: read single**
+
+```
+{ id: 1, name: 'a' }
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
+
+```typescript
+const { repo, command } = create();
+repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
+command.reader = new MockReader([
+  { id: 1, name: "a" },
+]);
+const rows: Cells[] = [];
+for await (const row of repo.read()) rows.push(row);
+```
+
+**After: read**
+
+```
+[
+  { id: 1, name: 'a' }
+]
+```
+
+**After: read single**
+
+```
+{ id: 1, name: 'a' }
+```
+
+#### Fill a lookup
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+
+```csharp
+var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L112-L118)
+
+```rust
+let mut parents_repo = readonly(connection, "Parent");
+let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+parents_repo.add_enriched(
+    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    types_repo,
+    None,
+);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+
+```typescript
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+```
+
+#### Fill user type on a user view
+
+`UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L129-L169)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "user-type-lookup", $"""
+    INSERT INTO user_type (id, name) VALUES
+        (1, 'admin'),
+        (2, 'user'),
+        (3, 'service');
+    INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+        ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+        ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+        ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+    """);
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+{
+    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserType"] = "user_type_id",
+    }),
+});
+var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+{
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo);
+var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
+```
+
+**User view**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L204-L272)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(
+    ds,
+    "user-type-lookup",
+    &format!(
+        "
+    INSERT INTO user_type (id, name) VALUES
+        (1, 'admin'),
+        (2, 'user'),
+        (3, 'service');
+    INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+    "
+    ),
+)
+.await;
+let mut users_options = create_crud_repository_options::<UserAccount>();
+users_options.entity = "user".into();
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserTypeId".to_string(), "user_type_id".to_string()),
+]));
+let mut type_options = create_crud_repository_options::<UserType>();
+type_options.entity = "UserType".into();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+let mut users_repo = ReadonlyRepository::new(
+    connection.clone(),
+    users_options.read,
+)
+.unwrap();
+let types =
+    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
+users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), types, None);
+let account = users_repo
+    .read_single(
+        Some(&Where::binary(
+            "Key",
+            eq,
+            Uuid::parse_str(ADA).unwrap(),
+        )),
+        None,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+let mut users_view = account.clone();
+users_view.remove("UserTypeId");
+```
+
+**User view**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L108-L143)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, "user-type-lookup", `
+  INSERT INTO user_type (id, name) VALUES
+    (1, 'admin'),
+    (2, 'user'),
+    (3, 'service');
+  INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
+    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
+    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
+    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
+`);
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
+  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserType", "user_type_id"],
+  ]),
+}) as ReadonlyRepository<UsersView>;
+const typesRepo = ds.createReadonlyRepository(UserType, connection, {
+  entityMapper: casing,
+  columnMappings: casing,
+});
+usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
+const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
+```
+
+**User view**
+
+```
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+#### Fill roles from one join
+
+The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](#flat-to-nested-mapper) groups each user's `Roles`.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L266-L340)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "user-roles-read", Seed());
+var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["Key"] = "id",
+    ["Login"] = "username",
+    ["Active"] = "is_enabled",
+    ["Opened"] = "created",
+    ["UserType"] = "user_type.name",
+    ["UserId"] = "user_id",
+    ["RoleId"] = "role_id",
+    ["Name"] = "roles.name",
+});
+var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+{
+    ColumnMappings = mappings,
+});
+usersRepo.AddEnriched(
+    new("Roles", "Key", "UserId", Many: true),
+    usersRepo,
+    new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
+    {
+        Key = "Key",
+        Fields = new Dictionary<string, TypeMapField>
+        {
+            ["Key"] = "Key",
+            ["Login"] = "Login",
+            ["Active"] = "Active",
+            ["Opened"] = "Opened",
+            ["UserType"] = "UserType",
+            ["Roles"] = new TypeMapGroup
+            {
+                Key = "RoleId",
+                Fields = new Dictionary<string, TypeMapField>
+                {
+                    ["RoleId"] = "RoleId",
+                    ["UserId"] = "UserId",
+                    ["Name"] = "Name",
+                }
+            }
+        }
+    }));
+var items = new List<UsersView>();
+await foreach (var item in usersRepo.Read(new SelectStatement(new()
+{
+    Table = "user",
+    Fields =
+    [
+        "user.id",
+        "user.username",
+        "user.is_enabled",
+        "user.created",
+        "user_type.name",
+        "user_roles.user_id",
+        "user_roles.role_id",
+        "roles.name",
+    ],
+    Joins =
+    [
+        new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
+        new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
+        new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
+    ],
+})))
+    items.Add(item);
+var ada = Assert.Single(items, item => item.Login == "ada");
+var grace = Assert.Single(items, item => item.Login == "grace");
+var lin = Assert.Single(items, item => item.Login == "lin");
+```
+
+**Users with roles**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: true,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: [
+      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
+      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
+    ]
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: true,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: [
+      { UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
+    ]
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: false,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: []
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L435-L496)
+
+```rust
+            "user.is_enabled AS Active",
+            "user.created AS Opened",
+            "user_type.name AS UserType",
+            "user.id AS UserId",
+            "user_roles.role_id AS RoleId",
+            "roles.name AS RoleName",
+        ],
+    )
+}));
+let options = ReadonlyRepositoryOptions::default();
+let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    Arc::new(ReadonlyRepository::memory(vec![])),
+    Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+        TypeMap::new(
+            "Key",
+            vec![
+                ("Key".into(), TypeMapField::column("Key")),
+                ("Login".into(), TypeMapField::column("Login")),
+                ("Active".into(), TypeMapField::column("Active")),
+                ("Opened".into(), TypeMapField::column("Opened")),
+                ("UserType".into(), TypeMapField::column("UserType")),
+                (
+                    "Roles".into(),
+                    TypeMapField::Group(TypeMapGroup::new(
+                        "RoleId",
+                        vec![
+                            ("RoleId".into(), TypeMapField::column("RoleId")),
+                            ("UserId".into(), TypeMapField::column("UserId")),
+                            ("Name".into(), TypeMapField::column("RoleName")),
+                        ],
+                    )),
+                ),
+            ],
+        ),
+    ))),
+);
+let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
+let view = |login: &str| {
+    items
+        .iter()
+        .find(|item| item.get("Login") == Some(&Value::from(login)))
+        .unwrap()
+        .clone()
+};
+let ada = view("ada");
+let grace = view("grace");
+let lin = view("lin");
+```
+
+**Users with roles**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: 'Name=admin,UserId=11111111-1111-1111-1111-111111111111|Name=editor,UserId=11111111-1111-1111-1111-111111111111'
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: 'Name=viewer,UserId=22222222-2222-2222-2222-222222222222'
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: 0,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: ''
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L115-L167)
+
+```typescript
+const usersRepo = new ReadonlyRepository(connection, {
+  type: UsersView,
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserType", "user_type.name"],
+    ["UserId", "user_id"],
+    ["RoleId", "role_id"],
+    ["Name", "roles.name"],
+  ]),
+});
+usersRepo.addEnriched(
+  { into: "Roles", from: "Key", by: "UserId", many: true },
+  usersRepo,
+  new NestedToObjectEnrichmentStrategy<UsersView>({
+    key: "Key",
+    fields: {
+      Key: "Key",
+      Login: "Login",
+      Active: "Active",
+      Opened: "Opened",
+      UserType: "UserType",
+      Roles: {
+        key: "RoleId",
+        fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
+      },
+    },
+  }),
+);
+const items: UsersView[] = [];
+for await (const item of usersRepo.read(
+  new SelectStatement({
+    table: "user",
+    fields: [
+      "user.id",
+      "user.username",
+      "user.is_enabled",
+      "user.created",
+      "user_type.name",
+      "user_roles.user_id",
+      "user_roles.role_id",
+      "roles.name",
+    ],
+    joins: [
+      Join.left("user_type", "user_type.id", "user.user_type_id"),
+      Join.left("user_roles", "user_roles.user_id", "user.id"),
+      Join.left("roles", "roles.id", "user_roles.role_id"),
+    ],
+  }),
+))
+  items.push(item);
+```
+
+**Users with roles**
+
+```
+[
+  {
+    Key: '11111111-1111-1111-1111-111111111111',
+    Login: 'ada',
+    Active: 1,
+    Opened: '2020-01-01T00:00:00.000Z',
+    UserType: 'admin',
+    Roles: [
+      { RoleId: 1, UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
+      { RoleId: 2, UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
+    ]
+  },
+  {
+    Key: '22222222-2222-2222-2222-222222222222',
+    Login: 'grace',
+    Active: 1,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'user',
+    Roles: [
+      { RoleId: 3, UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
+    ]
+  },
+  {
+    Key: '33333333-3333-3333-3333-333333333333',
+    Login: 'lin',
+    Active: 0,
+    Opened: '2024-06-01T00:00:00.000Z',
+    UserType: 'service',
+    Roles: []
+  }
+]
+```
+
+## CRUD repository
+
+[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `CRUDRepository` from `RepositoryBuilder` and a [RowTypeConverter](#row-type-converter).
+
+Read is convert, then map. Writes reverse-map, then reverse-convert.
+
+### Classes
+
+##### TypeScript
+
+##### ICRUDRepository {#typescript-icrudrepository}
+
+```typescript
+interface ICRUDRepository<T = unknown> extends IReadonlyRepository<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(item)](#typescript-icrudrepository-create-item) | Inserts one item. |
+| [update(item, byWhere?)](#typescript-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
+| [delete(item, byWhere?)](#typescript-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
+| [readSingleById(id)](#typescript-icrudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`. |
+
+###### create(item) {#typescript-icrudrepository-create-item}
+
+Inserts one item.
+
+**Definition**
+
+```typescript
+create(item: T): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to insert |
+
+**Returns**
+
+`Promise<Response>`
+
+###### update(item, byWhere?) {#typescript-icrudrepository-update-item-bywhere}
+
+Updates one item. Omitted `byWhere` uses id columns.
+
+**Definition**
+
+```typescript
+update(item: T, byWhere?: IWhere): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Promise<Response>`
+
+###### delete(item, byWhere?) {#typescript-icrudrepository-delete-item-bywhere}
+
+Deletes one item. Omitted `byWhere` uses id columns.
+
+**Definition**
+
+```typescript
+delete(item: T, byWhere?: IWhere): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Promise<Response>`
+
+###### readSingleById(id) {#typescript-icrudrepository-readsinglebyid-id}
+
+Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`.
+
+**Definition**
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column, or a row keyed by each id column |
+
+**Returns**
+
+`Promise<T | undefined>`
+
+##### CRUDRepository {#typescript-crudrepository}
+
+```typescript
+class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>, IEnriched<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
+| [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions). |
+| [CRUDRepository(inner, strategy?)](#typescript-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| ids | Configured id property names. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [addMiddleware(middleware)](#typescript-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
+| [read(query?)](#typescript-crudrepository-read-query) | Reads rows. Convert the database row, then map it. |
+| [create(item)](#typescript-crudrepository-create-item) | Inserts one item. |
+| [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
+| [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
+| [readSingleById(id)](#typescript-crudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. |
+| [addEnriched(enrichment, via, strategy?)](#typescript-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
+| [addLinked(enrichment, via, link, strategy?)](#typescript-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
+
+###### CRUDRepository(type, connection) {#typescript-crudrepository-crudrepository-type-connection}
+
+Builds a table repository from a type and [IConnection](#connection).
+
+**Definition**
+
+```typescript
+constructor(type: Constructable<T>, connection: IConnection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type` | item constructor |
+| `connection` | open [IConnection](#connection) |
+
+###### CRUDRepository(connection, options) {#typescript-crudrepository-crudrepository-connection-options}
+
+Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions).
+
+**Definition**
+
+```typescript
+constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open [IConnection](#connection) |
+| `options` | [CRUDRepositoryOptions](#typescript-crudrepositoryoptions) |
+
+###### CRUDRepository(inner, strategy?) {#typescript-crudrepository-crudrepository-inner-strategy}
+
+Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
+
+**Definition**
+
+```typescript
+constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#typescript-icrudrepository) |
+| `strategy` | optional read enrichment strategy |
+
+###### addMiddleware(middleware) {#typescript-crudrepository-addmiddleware-middleware}
+
+Adds command middleware. Returns this repository.
+
+**Definition**
+
+```typescript
+addMiddleware(middleware: ICommandMiddleware): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `middleware` | command middleware |
+
+**Returns**
+
+`this`
+
+###### read(query?) {#typescript-crudrepository-read-query}
+
+Reads rows. Convert the database row, then map it.
+
+**Definition**
+
+```typescript
+read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional query, where, or stored procedure; omitted uses the default select |
+
+**Returns**
+
+`AsyncIterable<T>`
+
+###### create(item) {#typescript-crudrepository-create-item}
+
+Inserts one item.
+
+**Definition**
+
+```typescript
+create(item: T): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to insert |
+
+**Returns**
+
+`Promise<Response>`
+
+###### update(item, byWhere?) {#typescript-crudrepository-update-item-bywhere}
+
+Updates one item.
+
+**Definition**
+
+```typescript
+update(item: T, byWhere?: IWhere): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Promise<Response>`
+
+###### delete(item, byWhere?) {#typescript-crudrepository-delete-item-bywhere}
+
+Deletes one item.
+
+**Definition**
+
+```typescript
+delete(item: T, byWhere?: IWhere): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Promise<Response>`
+
+###### readSingleById(id) {#typescript-crudrepository-readsinglebyid-id}
+
+Returns the row for one id column, or for a composite key.
+
+**Definition**
+
+```typescript
+readSingleById(id: Scalar | Cells): Promise<T | undefined>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column, or a row keyed by each id column |
+
+**Returns**
+
+`Promise<T | undefined>`
+
+###### addEnriched(enrichment, via, strategy?) {#typescript-crudrepository-addenriched-enrichment-via-strategy}
+
+Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
+
+**Definition**
+
+```typescript
+addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#typescript-enrichment) |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`this`
+
+###### addLinked(enrichment, via, link, strategy?) {#typescript-crudrepository-addlinked-enrichment-via-link-strategy}
+
+Registers an association. `via` is read. `link` is the CRUD writer.
+
+**Definition**
+
+```typescript
+addLinked<TRelated extends object, TLink extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#typescript-enrichment) with `association` |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#typescript-icrudrepository) that stores the association rows |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`this`
+
+##### CRUDRepositoryOptions {#typescript-crudrepositoryoptions}
+
+```typescript
+type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| ids | Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field and no `id`. |
+| insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
+| update | Rewrites the finished update. Omitted leaves the statement unchanged. |
+| delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
+| return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
+
+##### BuiltRepository {#typescript-builtrepository}
+
+```typescript
+type BuiltRepository<T = Cells>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| connection | Open [IConnection](#connection). |
+| rowConverter | Row [TypeConverter](#type-converters). |
+| rowsMapper | Read-row [Mapper](#mappers). |
+| statements | SQL fragments. |
+| ids | Id column names. |
+| type | Item constructor. |
+
+##### C#
+
+##### ICRUDRepository {#csharp-icrudrepository}
+
+```csharp
+public interface ICRUDRepository<T> : IReadonlyRepository<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(item)](#csharp-icrudrepository-create-item) | Inserts one item. |
+| [Update(item, byWhere)](#csharp-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
+| [Delete(item, byWhere)](#csharp-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
+| [ReadSingleById(id)](#csharp-icrudrepository-readsinglebyid-id) | Returns the row for the single configured id column. Zero id columns, or more than one, throw. |
+| [ReadSingleById(ids)](#csharp-icrudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`. |
+
+###### Create(item) {#csharp-icrudrepository-create-item}
+
+Inserts one item.
+
+**Definition**
+
+```csharp
+Task<Response> Create(T item)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to insert |
+
+**Returns**
+
+`Task<Response>`
+
+###### Update(item, byWhere) {#csharp-icrudrepository-update-item-bywhere}
+
+Updates one item. Omitted `byWhere` uses id columns.
+
+**Definition**
+
+```csharp
+Task<Response> Update(T item, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Task<Response>`
+
+###### Delete(item, byWhere) {#csharp-icrudrepository-delete-item-bywhere}
+
+Deletes one item. Omitted `byWhere` uses id columns.
+
+**Definition**
+
+```csharp
+Task<Response> Delete(T item, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Task<Response>`
+
+###### ReadSingleById(id) {#csharp-icrudrepository-readsinglebyid-id}
+
+Returns the row for the single configured id column. Zero id columns, or more than one, throw.
+
+**Definition**
+
+```csharp
+Task<T?> ReadSingleById(Value id)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column |
+
+**Returns**
+
+`Task<T?>`
+
+###### ReadSingleById(ids) {#csharp-icrudrepository-readsinglebyid-ids}
+
+Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`.
+
+**Definition**
+
+```csharp
+Task<T?> ReadSingleById(Row ids)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `ids` | id column names and values |
+
+**Returns**
+
+`Task<T?>`
+
+##### CRUDRepository {#csharp-crudrepository}
+
+```csharp
+public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnriched<T> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
+| [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions). |
+| [CRUDRepository(inner, strategy)](#csharp-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Ids | Configured id property names. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [AddMiddleware(middleware)](#csharp-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
+| [Read(query)](#csharp-crudrepository-read-query) | Reads rows. Convert the database row, then map it. |
+| [Create(item)](#csharp-crudrepository-create-item) | Inserts one item. |
+| [Update(item, byWhere)](#csharp-crudrepository-update-item-bywhere) | Updates one item. |
+| [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
+| [ReadSingleById(id)](#csharp-crudrepository-readsinglebyid-id) | Returns the row for the single configured id column. |
+| [ReadSingleById(ids)](#csharp-crudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. |
+| [AddEnriched(enrichment, via, strategy)](#csharp-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
+| [AddLinked(enrichment, via, link, strategy)](#csharp-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
+
+###### CRUDRepository(connection) {#csharp-crudrepository-crudrepository-connection}
+
+Builds a table repository from an [IConnection](#connection).
+
+**Definition**
+
+```csharp
+public Repository(IConnection connection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open [IConnection](#connection) |
+
+###### CRUDRepository(connection, options) {#csharp-crudrepository-crudrepository-connection-options}
+
+Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions).
+
+**Definition**
+
+```csharp
+public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | open [IConnection](#connection) |
+| `options` | [CRUDRepositoryOptions](#csharp-crudrepositoryoptions) |
+
+###### CRUDRepository(inner, strategy) {#csharp-crudrepository-crudrepository-inner-strategy}
+
+Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
+
+**Definition**
+
+```csharp
+public CRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#csharp-icrudrepository) |
+| `strategy` | optional read enrichment strategy |
+
+###### AddMiddleware(middleware) {#csharp-crudrepository-addmiddleware-middleware}
+
+Adds command middleware. Returns this repository.
+
+**Definition**
+
+```csharp
+public Repository<T> AddMiddleware(ICommandMiddleware middleware)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `middleware` | command middleware |
+
+**Returns**
+
+[CRUDRepository](#csharp-crudrepository)`<T>`
+
+###### Read(query) {#csharp-crudrepository-read-query}
+
+Reads rows. Convert the database row, then map it.
+
+**Definition**
+
+```csharp
+public override IAsyncEnumerable<T> Read(IStatement? query = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `query` | optional statement or where; omitted uses the default select |
+
+**Returns**
+
+`IAsyncEnumerable<T>`
+
+###### Create(item) {#csharp-crudrepository-create-item}
+
+Inserts one item.
+
+**Definition**
+
+```csharp
+public Task<Response> Create(T item)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to insert |
+
+**Returns**
+
+`Task<Response>`
+
+###### Update(item, byWhere) {#csharp-crudrepository-update-item-bywhere}
+
+Updates one item.
+
+**Definition**
+
+```csharp
+public Task<Response> Update(T item, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Task<Response>`
+
+###### Delete(item, byWhere) {#csharp-crudrepository-delete-item-bywhere}
+
+Deletes one item.
+
+**Definition**
+
+```csharp
+public Task<Response> Delete(T item, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `byWhere` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Task<Response>`
+
+###### ReadSingleById(id) {#csharp-crudrepository-readsinglebyid-id}
+
+Returns the row for the single configured id column.
+
+**Definition**
+
+```csharp
+public Task<T?> ReadSingleById(Value id)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | value of the single id column |
+
+**Returns**
+
+`Task<T?>`
+
+###### ReadSingleById(ids) {#csharp-crudrepository-readsinglebyid-ids}
+
+Returns the row whose configured id columns match `ids`.
+
+**Definition**
+
+```csharp
+public Task<T?> ReadSingleById(Row ids)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `ids` | id column names and values |
+
+**Returns**
+
+`Task<T?>`
+
+###### AddEnriched(enrichment, via, strategy) {#csharp-crudrepository-addenriched-enrichment-via-strategy}
+
+Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
+
+**Definition**
+
+```csharp
+public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#csharp-enrichment) |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+[IEnriched](#csharp-ienriched)`<T>`
+
+###### AddLinked(enrichment, via, link, strategy) {#csharp-crudrepository-addlinked-enrichment-via-link-strategy}
+
+Registers an association. `via` is read. `link` is the CRUD writer.
+
+**Definition**
+
+```csharp
+public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#csharp-enrichment) with `Association` |
+| `via` | related [IReadonlyRepository](#readonly-repository) |
+| `link` | [ICRUDRepository](#csharp-icrudrepository) that stores the association rows |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+[IEnriched](#csharp-ienriched)`<T>`
+
+##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
+
+```csharp
+public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> where T : new()
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Ids | Id column names. Default `["id"]`. |
+| Insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
+| Update | Rewrites the finished update. Omitted leaves the statement unchanged. |
+| Delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
+| Return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
+
+##### BuiltRepository {#csharp-builtrepository}
+
+```csharp
+public sealed record BuiltRepository<T> where T : new()
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Connection | Open [IConnection](#connection). |
+| RowConverter | Row [TypeConverter](#type-converters). |
+| RowsMapper | Read-row [Mapper](#mappers). |
+| Statements | SQL fragments. |
+| Ids | Id column names. |
+
+##### Rust
+
+##### ICRUDRepository {#rust-icrudrepository}
+
+```rust
+pub trait ICRUDRepository: IReadonlyRepository
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create(item)](#rust-icrudrepository-create-item) | Inserts one row. |
+| [update(item, by_where)](#rust-icrudrepository-update-item-by_where) | Updates one row. `None` `by_where` uses id columns. |
+| [delete(item, by_where)](#rust-icrudrepository-delete-item-by_where) | Deletes one row. `None` `by_where` uses id columns. |
+| [read_single_by_id(id)](#rust-icrudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`. |
+
+###### create(item) {#rust-icrudrepository-create-item}
+
+Inserts one row.
+
+**Definition**
+
+```rust
+async fn create(&self, item: &mut Row) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to insert |
+
+**Returns**
+
+`Result<Response>`
+
+###### update(item, by_where) {#rust-icrudrepository-update-item-by_where}
+
+Updates one row. `None` `by_where` uses id columns.
+
+**Definition**
+
+```rust
+async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `by_where` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Result<Response>`
+
+###### delete(item, by_where) {#rust-icrudrepository-delete-item-by_where}
+
+Deletes one row. `None` `by_where` uses id columns.
+
+**Definition**
+
+```rust
+async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `by_where` | optional predicate; omitted uses id values on `item` |
+
+**Returns**
+
+`Result<Response>`
+
+###### read_single_by_id(id) {#rust-icrudrepository-read_single_by_id-id}
+
+Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`.
+
+**Definition**
+
+```rust
+async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
+
+**Returns**
+
+`Result<Option<Row>>`
+
+##### CRUDRepository {#rust-crudrepository}
+
+```rust
+pub struct CRUDRepository
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
+| [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions). |
+| [from_repository(inner)](#rust-crudrepository-from_repository-inner) | Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [add_enriched(enrichment, via, strategy)](#rust-crudrepository-add_enriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
+| [add_linked(enrichment, via, link, strategy)](#rust-crudrepository-add_linked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
+| [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
+| [read_single_by_id(id)](#rust-crudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. |
+
+###### from_type(connection) {#rust-crudrepository-from_type-connection}
+
+Builds a table repository from `T: ConvertSchema`.
+
+**Definition**
+
+```rust
+pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | [Connection](#connection) |
+
+**Returns**
+
+`Result<`[CRUDRepository](#rust-crudrepository)`>`
+
+###### new(connection, options) {#rust-crudrepository-new-connection-options}
+
+Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions).
+
+**Definition**
+
+```rust
+pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `connection` | [Connection](#connection) |
+| `options` | [CRUDRepositoryOptions](#rust-crudrepositoryoptions) |
+
+**Returns**
+
+`Result<`[CRUDRepository](#rust-crudrepository)`>`
+
+###### from_repository(inner) {#rust-crudrepository-from_repository-inner}
+
+Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`.
+
+**Definition**
+
+```rust
+pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#rust-icrudrepository) |
+
+**Returns**
+
+[CRUDRepository](#rust-crudrepository)
+
+###### add_enriched(enrichment, via, strategy) {#rust-crudrepository-add_enriched-enrichment-via-strategy}
+
+Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
+
+**Definition**
+
+```rust
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#rust-enrichment) |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`&mut Self`
+
+###### add_linked(enrichment, via, link, strategy) {#rust-crudrepository-add_linked-enrichment-via-link-strategy}
+
+Registers an association. `via` is read. `link` is the CRUD writer.
+
+**Definition**
+
+```rust
+pub fn add_linked(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, link: Arc<dyn ICRUDRepository>, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#rust-enrichment) with `association` |
+| `via` | related readonly repository |
+| `link` | [ICRUDRepository](#rust-icrudrepository) that stores the association rows |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`&mut Self`
+
+###### add_middleware(middleware) {#rust-crudrepository-add_middleware-middleware}
+
+Adds command middleware.
+
+**Definition**
+
+```rust
+pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `middleware` | command middleware |
+
+###### read_single_by_id(id) {#rust-crudrepository-read_single_by_id-id}
+
+Returns the row for one id column, or for a composite key.
+
+**Definition**
+
+```rust
+pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
+
+**Returns**
+
+`Result<Option<Row>>`
+
+##### CRUDRepositoryOptions {#rust-crudrepositoryoptions}
+
+```rust
+pub struct CRUDRepositoryOptions
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| ids | Id column names. Default `["id"]`. |
+| insert | Rewrites finished insert SQL. `None` leaves the statement unchanged. |
+| update | Rewrites finished update SQL. `None` leaves the statement unchanged. |
+| delete | Rewrites finished delete SQL. `None` leaves the statement unchanged. |
+| return_ | Rewrites finished return SQL. `None` leaves it unchanged. |
+| read | The embedded [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
+
+##### BuiltRepository {#rust-builtrepository}
+
+```rust
+pub struct BuiltRepository
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| connection | [Connection](#connection). |
+| row_converter | [RowTypeConverter](#row-type-converter). |
+| rows_mapper | Read-row [Mapper](#mappers). |
+| statements | SQL fragments. |
+| ids | Id column names. |
+
+### Remarks
+
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, maps it, and copies the id onto the entity. The driver statement factory formats that statement. A stored-procedure create reads that id from the `Return` mapper instead. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
+
+`ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
+
+`AddEnriched` registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. `LazyWriteEnrichmentStrategy` skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+
+`DefaultWriteEnrichmentStrategy` takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
+
+- **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
+- **Update** — `DefaultUpdateEnrichmentStrategy` is the default. Write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest). `CascadeDeleteUpdateEnrichmentStrategy` deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
+- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+
+See [Bulk repository](#bulk-repository) for list writes.
+
+### Examples
+
+#### User from the type
+
+The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L383-L410)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "user-pascal");
+var usersRepo = new CRUDRepository<User>(connection);
+var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
+```
+
+**Created**
+
+```
+id: 1
+```
+
+**Read by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
+```
+
+**Read by username and enabled**
+
+```
+ada
+```
+
+**After update**
+
+```
+ada-v2
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L604-L707)
+
+```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-view-version", "")
+.await;
+let mut users_options = create_crud_repository_options::<UsersView>();
+users_options.ids = vec!["Key".into()];
+users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+    "UsersView".to_string(),
+    "user".to_string(),
+)]));
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserTypeId".to_string(), "user_type_id".to_string()),
+    ("Version".to_string(), "version".to_string()),
+]));
+users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let mut type_options = create_crud_repository_options::<UserType>();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings = Box::new(casing);
+type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+let mut role_options = create_crud_repository_options::<UserRole>();
+role_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+role_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
+let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+let user_types_repo =
+    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
+let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
+users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
+let mut admin = datasources::Row::new();
+admin.insert("Name".into(), Value::from("admin"));
+let admin = user_types_repo.create(&mut admin).await.unwrap();
+```
+
+**Created**
+
+```
+id: 1
+```
+
+**Read by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**Read by username and enabled**
+
+```
+ada
+```
+
+**After update**
+
+```
+ada-v2
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L160-L182)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, "user-pascal");
+const usersRepo = new CRUDRepository(User, connection);
+const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
+```
+
+**Created**
+
+```
+id: 1
+```
+
+**Read by id**
+
+```
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: 1
+}
+```
+
+**Read by username and enabled**
+
+```
+ada
+```
+
+**After update**
+
+```
+ada-v2
+```
+
+**After delete**
+
+```
+no row
+```
+
+#### Users view with enrichment and a version
+
+`UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L451-L523)
+
+```csharp
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
+var connection = await Open(ds, "user-view-version");
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+{
+    Ids = ["Key"],
+    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserTypeId"] = "user_type_id",
+        ["Version"] = "version",
+    }),
+});
+var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryOptions<UserType>
+{
+    Ids = ["Id"],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
+{
+    Ids = [],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
+usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
+var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
+```
+
+**Created**
+
+```
+{
+  id: 1,
+  Key: 1
+}
+```
+
+**Enriched Ada**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+**Versioned update**
+
+```
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+**Stale update**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L641-L689)
+
+```rust
+users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
+users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
+let mut admin = datasources::Row::new();
+admin.insert("Name".into(), Value::from("admin"));
+let admin = user_types_repo.create(&mut admin).await.unwrap();
+```
+
+**Created**
+
+```
+{
+  id: 1,
+  Key: 1
+}
+```
+
+**Enriched Ada**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+**Versioned update**
+
+```
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+**Stale update**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**After delete**
+
+```
+no row
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L207-L272)
+
+```typescript
+const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const connection = await open(ds, "user-view-version");
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UsersView),
+  ids: ["Key"],
+  readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserTypeId", "user_type_id"],
+    ["Version", "version"],
+  ]),
+});
+const userTypesRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UserType),
+  entityMapper: casing,
+  columnMappings: casing,
+});
+const userRolesRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UserRole),
+  entityMapper: casing,
+  columnMappings: casing,
+});
+usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
+```
+
+**Created**
+
+```
+{
+  id: 1,
+  Key: 1
+}
+```
+
+**Enriched Ada**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor']
+}
+```
+
+**Versioned update**
+
+```
+{
+  rowsAffected: 1,
+  version: 2,
+  Login: 'ada-v2'
+}
+```
+
+**Stale update**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**After delete**
+
+```
+no row
+```
+
+#### Users with linked roles and groups
+
+`AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L120-L192)
+
+```csharp
+var graph = await GraphAsync();
+var usersRepo = graph.UsersRepo;
+usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), graph.UserTypesRepo);
+usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), graph.RolesRepo, graph.UserRolesRepo);
+usersRepo.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), graph.GroupsRepo, graph.UserGroupsRepo);
+var created = await usersRepo.Create(new UserView
+{
+    Username = "ada",
+    IsEnabled = true,
+    UserTypeId = graph.AdminType.Id,
+    Roles = [graph.AdminRole, graph.EditorRole],
+    Groups = [graph.Engineering],
+});
+var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var saved = await usersRepo.Update(new UserView
+{
+    Id = created.Id,
+    Username = "ada",
+    IsEnabled = true,
+    UserTypeId = graph.AdminType.Id,
+    Roles = [graph.EditorRole],
+    Groups = [graph.Engineering, graph.Ops],
+});
+var updated = await usersRepo.ReadSingleById(created.Id);
+var updatedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
+var updatedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
+var removed = await usersRepo.Delete(new UserView { Id = created.Id });
+```
+
+**Created**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+**Updated**
+
+```
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+**After delete**
+
+```
+no user
+roles and groups remain
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L151-L250)
+
+```rust
+let (mut users, seeded) = open(None).await;
+users
+    .add_enriched(
+        Enrichment::new("user_type", "user_type_id", "id", None, false),
+        seeded.user_types.clone(),
+        None,
+    )
+    .add_linked(
+        Enrichment::new("roles", "id", "id", None, false)
+            .linked(Association::new("user_id", "role_id")),
+        seeded.roles.clone(),
+        seeded.user_roles.clone(),
+        None,
+    )
+    .add_linked(
+        Enrichment::new("groups", "id", "id", None, false)
+            .linked(Association::new("user_id", "group_id")),
+        seeded.groups.clone(),
+        seeded.user_groups.clone(),
+        None,
+    );
+let created = users
+    .create(&mut ada(
+        &seeded,
+        encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
+        encode_rows(&[seeded.engineering.clone()]),
+    ))
+    .await
+    .unwrap();
+let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let mut next = ada(
+    &seeded,
+    encode_rows(&[seeded.editor_role.clone()]),
+    encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
+);
+next.insert("id".into(), created.get("id").unwrap().clone());
+let saved = users.update(&next, None).await.unwrap();
+let updated = users
+    .read_single_by_id(created.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+let updated_role_links = seeded.user_roles.read(None, None).await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let removed = users
+    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+    .await
+    .unwrap();
+```
+
+**Created**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+**Updated**
+
+```
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+**After delete**
+
+```
+no user
+roles and groups remain
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/UserViewCRUDRepository.test.ts#L107-L172)
+
+```typescript
+const seeded = await graph();
+const usersRepo = seeded.usersRepo;
+usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
+usersRepo.addLinked(
+  { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+  seeded.rolesRepo,
+  seeded.userRolesRepo,
+);
+usersRepo.addLinked(
+  { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
+  seeded.groupsRepo,
+  seeded.userGroupsRepo,
+);
+const created = await usersRepo.create(Object.assign(new UserView(), {
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.adminRole, seeded.editorRole],
+  groups: [seeded.engineering],
+}));
+const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const saved = await usersRepo.update(Object.assign(new UserView(), {
+  id: created.id,
+  username: "ada",
+  is_enabled: true,
+  user_type_id: seeded.adminType.id,
+  roles: [seeded.editorRole],
+  groups: [seeded.engineering, seeded.ops],
+}));
+const updated = await usersRepo.readSingleById(created.id);
+const updatedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
+const updatedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
+const removed = await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));
+```
+
+**Created**
+
+```
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+**Updated**
+
+```
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+**After delete**
+
+```
+no user
+roles and groups remain
+```
+
+#### Null datetime and version
+
+Create and update leave a null `created` and `version` out of the statement. SQLite fills `2020-01-01T00:00:00.000Z` and `X'0102'`. An update of `name` leaves those defaults in place. A later create that sets both stores those values.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/NullWriteTests.cs#L17-L46)
+
+```csharp
+var connection = await Open("null-write-item");
+var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
+var omitted = await repo.Create(new Item { name = "ada" });
+```
+
+**Stored default**
+
+```
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+**Explicit values**
+
+```
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/null_write.rs#L24-L81)
+
+```rust
+let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
+conn.open().await.unwrap();
+let command = SqliteCommand::new(conn.clone());
+for statement in datasources_sql_specs::schema_tables("null-write-item", quote_ident, None) {
+    command.execute_statement(&statement, None).await.unwrap();
+}
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "item".into();
+options.row_converter = Some(item_converter());
+let repo = CRUDRepository::new(conn, options).unwrap();
+let mut omitted = Row::new();
+omitted.insert("name".into(), Value::from("ada"));
+omitted.insert("created".into(), Value::Null);
+omitted.insert("version".into(), Value::Null);
+let mut omitted = repo.create(&mut omitted).await.unwrap();
+assert!(matches!(omitted.get("id"), Some(Value::Int(id)) if *id > 0));
+let stored = repo
+    .read_single_by_id(omitted.get("id").unwrap())
+    .await
+    .unwrap()
+    .unwrap();
+omitted.insert("name".into(), Value::from("ada-v2"));
+let updated = repo.update(&omitted, None).await.unwrap();
+```
+
+**Stored default**
+
+```
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+**Explicit values**
+
+```
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#L28-L54)
+
+```typescript
+const connection = await open();
+const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
+const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
+```
+
+**Stored default**
+
+```
+{
+  name: 'ada-v2',
+  created: '2020-01-01T00:00:00.000Z',
+  version: '0102'
+}
+```
+
+**Explicit values**
+
+```
+{
+  name: 'grace',
+  created: '2024-06-01T00:00:00.000Z',
+  version: '0909'
+}
+```
+
+## Bulk repository
+
+[CRUDRepository](#crud-repository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+
+### Classes
+
+##### TypeScript
+
+##### BulkCRUDRepository {#typescript-bulkcrudrepository}
+
+```typescript
+class BulkCRUDRepository<T extends object> extends CRUDRepository<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [BulkCRUDRepository(inner)](#typescript-bulkcrudrepository-bulkcrudrepository-inner) | Wraps an inner [ICRUDRepository](#crud-repository). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [createBulk(items)](#typescript-bulkcrudrepository-createbulk-items) | Creates each item, including nested `many` children. |
+| [updateBulk(items, byWhere?)](#typescript-bulkcrudrepository-updatebulk-items-bywhere) | Updates each item, then replace-syncs nested `many` lists. |
+| [deleteBulk(items, byWhere?)](#typescript-bulkcrudrepository-deletebulk-items-bywhere) | Deletes nested `many` rows for each item, then the parents. |
+
+###### BulkCRUDRepository(inner) {#typescript-bulkcrudrepository-bulkcrudrepository-inner}
+
+Wraps an inner [ICRUDRepository](#crud-repository).
+
+**Definition**
+
+```typescript
+constructor(inner: ICRUDRepository<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#crud-repository) |
+
+###### createBulk(items) {#typescript-bulkcrudrepository-createbulk-items}
+
+Creates each item, including nested `many` children.
+
+**Definition**
+
+```typescript
+createBulk(items: T[]): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to insert |
+
+**Returns**
+
+`Promise<Response>`
+
+###### updateBulk(items, byWhere?) {#typescript-bulkcrudrepository-updatebulk-items-bywhere}
+
+Updates each item, then replace-syncs nested `many` lists.
+
+**Definition**
+
+```typescript
+updateBulk(items: T[], byWhere?: IWhere): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to update |
+| `byWhere` | optional predicate applied to each item |
+
+**Returns**
+
+`Promise<Response>`
+
+###### deleteBulk(items, byWhere?) {#typescript-bulkcrudrepository-deletebulk-items-bywhere}
+
+Deletes nested `many` rows for each item, then the parents.
+
+**Definition**
+
+```typescript
+deleteBulk(items: T[], byWhere?: IWhere): Promise<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to delete |
+| `byWhere` | optional predicate applied to each item |
+
+**Returns**
+
+`Promise<Response>`
+
+##### C#
+
+##### BulkCRUDRepository {#csharp-bulkcrudrepository}
+
+```csharp
+public class BulkCRUDRepository<T> : CRUDRepository<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [BulkCRUDRepository(inner)](#csharp-bulkcrudrepository-bulkcrudrepository-inner) | Wraps an inner [ICRUDRepository](#crud-repository). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(items)](#csharp-bulkcrudrepository-create-items) | Creates each item, including nested `many` children. |
+| [Update(items, byWhere)](#csharp-bulkcrudrepository-update-items-bywhere) | Updates each item, then replace-syncs nested `many` lists. |
+| [Delete(items, byWhere)](#csharp-bulkcrudrepository-delete-items-bywhere) | Deletes nested `many` rows for each item, then the parents. |
+| [BulkCreate(items)](#csharp-bulkcrudrepository-bulkcreate-items) | Alias of [Create](#csharp-bulkcrudrepository-create-items). |
+| [BulkUpdate(items, byWhere)](#csharp-bulkcrudrepository-bulkupdate-items-bywhere) | Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere). |
+| [BulkDelete(items, byWhere)](#csharp-bulkcrudrepository-bulkdelete-items-bywhere) | Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere). |
+
+###### BulkCRUDRepository(inner) {#csharp-bulkcrudrepository-bulkcrudrepository-inner}
+
+Wraps an inner [ICRUDRepository](#crud-repository).
+
+**Definition**
+
+```csharp
+public BulkCRUDRepository(ICRUDRepository<T> inner)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [ICRUDRepository](#crud-repository) |
+
+###### Create(items) {#csharp-bulkcrudrepository-create-items}
+
+Creates each item, including nested `many` children.
+
+**Definition**
+
+```csharp
+public Task<Response> Create(IReadOnlyList<T> items)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to insert |
+
+**Returns**
+
+`Task<Response>`
+
+###### Update(items, byWhere) {#csharp-bulkcrudrepository-update-items-bywhere}
+
+Updates each item, then replace-syncs nested `many` lists.
+
+**Definition**
+
+```csharp
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to update |
+| `byWhere` | optional predicate applied to each item |
+
+**Returns**
+
+`Task<Response>`
+
+###### Delete(items, byWhere) {#csharp-bulkcrudrepository-delete-items-bywhere}
+
+Deletes nested `many` rows for each item, then the parents.
+
+**Definition**
+
+```csharp
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to delete |
+| `byWhere` | optional predicate applied to each item |
+
+**Returns**
+
+`Task<Response>`
+
+###### BulkCreate(items) {#csharp-bulkcrudrepository-bulkcreate-items}
+
+Alias of [Create](#csharp-bulkcrudrepository-create-items).
+
+**Definition**
+
+```csharp
+public Task<Response> BulkCreate(IReadOnlyList<T> items)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to insert |
+
+**Returns**
+
+`Task<Response>`
+
+###### BulkUpdate(items, byWhere) {#csharp-bulkcrudrepository-bulkupdate-items-bywhere}
+
+Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere).
+
+**Definition**
+
+```csharp
+public Task<Response> BulkUpdate(IReadOnlyList<T> items, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to update |
+| `byWhere` | optional predicate applied to each item |
+
+**Returns**
+
+`Task<Response>`
+
+###### BulkDelete(items, byWhere) {#csharp-bulkcrudrepository-bulkdelete-items-bywhere}
+
+Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere).
+
+**Definition**
+
+```csharp
+public Task<Response> BulkDelete(IReadOnlyList<T> items, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to delete |
+| `byWhere` | optional predicate applied to each item |
+
+**Returns**
+
+`Task<Response>`
+
+##### Rust
+
+##### BulkCRUDRepository {#rust-bulkcrudrepository}
+
+```rust
+pub struct BulkCRUDRepository
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(inner)](#rust-bulkcrudrepository-new-inner) | Wraps an inner [CRUDRepository](#crud-repository). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [add_enriched(enrichment, via, strategy)](#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy) | Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written. |
+| [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `many` children. |
+| [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `many` lists. |
+| [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `many` rows for each item, then the parents. |
+
+###### new(inner) {#rust-bulkcrudrepository-new-inner}
+
+Wraps an inner [CRUDRepository](#crud-repository).
+
+**Definition**
+
+```rust
+pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `inner` | [CRUDRepository](#crud-repository) |
+
+**Returns**
+
+[BulkCRUDRepository](#rust-bulkcrudrepository)
+
+###### add_enriched(enrichment, via, strategy) {#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy}
+
+Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written.
+
+**Definition**
+
+```rust
+pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `enrichment` | [Enrichment](#rust-enrichment) |
+| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
+
+**Returns**
+
+`&mut Self`
+
+###### create_bulk(items) {#rust-bulkcrudrepository-create_bulk-items}
+
+Creates each item, including nested `many` children.
+
+**Definition**
+
+```rust
+pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to insert |
+
+**Returns**
+
+`Result<Response>`
+
+###### update_bulk(items, by_where) {#rust-bulkcrudrepository-update_bulk-items-by_where}
+
+Updates each item, then replace-syncs nested `many` lists.
+
+**Definition**
+
+```rust
+pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to update |
+| `by_where` | optional predicate applied to each item |
+
+**Returns**
+
+`Result<Response>`
+
+###### delete_bulk(items, by_where) {#rust-bulkcrudrepository-delete_bulk-items-by_where}
+
+Deletes nested `many` rows for each item, then the parents.
+
+**Definition**
+
+```rust
+pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `items` | parents to delete |
+| `by_where` | optional predicate applied to each item |
+
+**Returns**
+
+`Result<Response>`
+
+### Remarks
+
+> **TypeScript**
+>
+> Bulk writes use `createBulk` only.
+
+> **C#**
+>
+> List overloads are `Create(IReadOnlyList<T>)`, with `Bulk*` aliases.
+
+> **Rust**
+>
+> Bulk writes use `create_bulk` only.
+
+Each item still runs the same deep persist as [CRUDRepository](#crud-repository). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
+
+### Examples
+
+#### Create parents and children
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L23-L30)
+
+```csharp
+var connection = await Setup();
+var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+var childrenRepo = new BulkCRUDRepository<Child>(connection);
+var response = await Repo(parentsRepo, childrenRepo).Create(
+[
+    new Parent { children = [new Child { label = "a" }] },
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1897-L1911)
+
+```rust
+let command = Arc::new(MockCommand::new());
+command.reader_rows.lock().unwrap().push(record(&[
+    ("id", Value::Int(1)),
+    ("username", Value::from("bobby")),
+    ("email", Value::from("bob@asdf.com")),
+    ("contact_name1", Value::from("bob")),
+    ("contact_name2", Value::from("roberta")),
+]));
+let connection = MockConnection::with_command_provider(command.clone(), "memory");
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "users".into();
+options.row_converter = Some(RowTypeConverter::of::<UserRow>());
+options.rows_mapper = Box::new(user_contacts_mapper());
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L39)
+
+```typescript
+const connection = await setup();
+const parentsRepo = new BulkCRUDRepository(Parent, connection);
+const childrenRepo = new BulkCRUDRepository(Child, connection);
+const response = await relate(parentsRepo, childrenRepo).createBulk([
+  Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
+  Object.assign(new Parent(), {
+```
+
+## Mappers
+
+Bidirectional `Map` / `map` / `map` and `ReverseMap` / `reverseMap` / `reverse_map`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
+
+### Classes
+
+##### TypeScript
+
+##### IMapper {#typescript-imapper}
+
+```typescript
+interface IMapper<TFrom, TTo>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-imapper-map-value) | Maps `TFrom` to `TTo`. |
+| [reverseMap(value)](#typescript-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
+
+###### map(value) {#typescript-imapper-map-value}
+
+Maps `TFrom` to `TTo`.
+
+**Definition**
+
+```typescript
+map(value: TFrom): TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverseMap(value) {#typescript-imapper-reversemap-value}
+
+Maps `TTo` back to `TFrom`.
+
+**Definition**
+
+```typescript
+reverseMap(value: TTo): TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### C#
+
+##### IMapper {#csharp-imapper}
+
+```csharp
+public interface IMapper<TFrom, TTo>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-imapper-map-value) | Maps `TFrom` to `TTo`. |
+| [ReverseMap(value)](#csharp-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
+
+###### Map(value) {#csharp-imapper-map-value}
+
+Maps `TFrom` to `TTo`.
+
+**Definition**
+
+```csharp
+TTo Map(TFrom value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### ReverseMap(value) {#csharp-imapper-reversemap-value}
+
+Maps `TTo` back to `TFrom`.
+
+**Definition**
+
+```csharp
+TFrom ReverseMap(TTo value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### Rust
+
+##### Mapper {#rust-mapper}
+
+```rust
+pub trait Mapper<TFrom, TTo>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-mapper-map-value) | Maps `TFrom` to `TTo`. |
+| [reverse_map(value)](#rust-mapper-reverse_map-value) | Maps `TTo` back to `TFrom`. |
+
+###### map(value) {#rust-mapper-map-value}
+
+Maps `TFrom` to `TTo`.
+
+**Definition**
+
+```rust
+fn map(&self, value: TFrom) -> TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverse_map(value) {#rust-mapper-reverse_map-value}
+
+Maps `TTo` back to `TFrom`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: TTo) -> TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+### Examples
+
+#### Transform a contact
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransformMapperTests.cs#L41-L52)
+
+```csharp
+var contact = new Contact("Ada", "ada@x.dev");
+var mapper = new TransformMapper<Contact, ContactRow>(
+    map: item => new ContactRow(item.Name, item.Email),
+    reverseMap: row => new Contact(row.ContactName, row.ContactEmail));
+var mapped = mapper.Map(contact);
+var reversed = mapper.ReverseMap(mapped);
+```
+
+**Before: contact**
+
+```
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+**After: mapped contact**
+
+```
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L136-L162)
+
+```rust
+let contact = Contact {
+    name: "Ada".into(),
+    email: "ada@x.dev".into(),
+};
+let mapper = TransformMapper::new(
+    |item: Contact| ContactRow {
+        contact_name: item.name,
+        contact_email: item.email,
+    },
+    |row: ContactRow| Contact {
+        name: row.contact_name,
+        email: row.contact_email,
+    },
+);
+let mapped = Mapper::map(&mapper, contact.clone());
+let reversed = Mapper::reverse_map(&mapper, mapped.clone());
+```
+
+**Before: contact**
+
+```
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+**After: mapped contact**
+
+```
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L55-L65)
+
+```typescript
+const contact: Contact = { name: "Ada", email: "ada@x.dev" };
+const mapper = new TransformMapper<Contact, ContactRow>(
+  (item) => ({ contactName: item.name, contactEmail: item.email }),
+  (row) => ({ name: row.contactName, email: row.contactEmail }),
+);
+const mapped = mapper.map(contact);
+const reversed = mapper.reverseMap(mapped);
+```
+
+**Before: contact**
+
+```
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+**After: mapped contact**
+
+```
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+
+#### Change casing
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L17-L27)
+
+```csharp
+var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var contact = mapper.Map("Contact");
+var firstName = mapper.Map("FirstName");
+var emailAddress = mapper.Map("EmailAddress");
+```
+
+**Map**
+
+```
+contact
+first_name
+email_address
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L43-L52)
+
+```rust
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let contact = mapper.map("Contact".into());
+let first_name = mapper.map("FirstName".into());
+let email_address = mapper.map("EmailAddress".into());
+```
+
+**Map**
+
+```
+contact
+first_name
+email_address
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L13-L21)
+
+```typescript
+const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
+const contact = mapper.map("Contact");
+const firstName = mapper.map("FirstName");
+const emailAddress = mapper.map("EmailAddress");
+```
+
+**Map**
+
+```
+contact
+first_name
+email_address
+```
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L29-L39)
+
+```csharp
+var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var contact = mapper.ReverseMap("contact");
+var firstName = mapper.ReverseMap("first_name");
+var emailAddress = mapper.ReverseMap("email_address");
+```
+
+**Reverse map**
+
+```
+Contact
+FirstName
+EmailAddress
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L54-L63)
+
+```rust
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let contact = mapper.reverse_map("contact".into());
+let first_name = mapper.reverse_map("first_name".into());
+let email_address = mapper.reverse_map("email_address".into());
+```
+
+**Reverse map**
+
+```
+Contact
+FirstName
+EmailAddress
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L23-L31)
+
+```typescript
+const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
+const contact = mapper.reverseMap("contact");
+const firstName = mapper.reverseMap("first_name");
+const emailAddress = mapper.reverseMap("email_address");
+```
+
+**Reverse map**
+
+```
+Contact
+FirstName
+EmailAddress
+```
+
+#### Lowercase plural
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/PluralizerMapperTests.cs#L35-L48)
+
+```csharp
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var pluralizer = new PluralizerMapper();
+var contact = pluralizer.Map(casing.Map("Contact"));
+var address = pluralizer.Map(casing.Map("Address"));
+var contactName = casing.ReverseMap(pluralizer.ReverseMap(contact));
+var addressName = casing.ReverseMap(pluralizer.ReverseMap(address));
+```
+
+**Map**
+
+```
+contacts
+addresses
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/pluralizer_mapper.rs#L63-L75)
+
+```rust
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let pluralizer = PluralizerMapper::new();
+let contact = pluralizer.map(casing.map("Contact".into()));
+let address = pluralizer.map(casing.map("Address".into()));
+let contact_name = casing.reverse_map(pluralizer.reverse_map(contact.clone()));
+let address_name = casing.reverse_map(pluralizer.reverse_map(address.clone()));
+```
+
+**Map**
+
+```
+contacts
+addresses
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/PluralizerMapper.test.ts#L28-L39)
+
+```typescript
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const pluralizer = new PluralizerMapper();
+const contact = pluralizer.map(casing.map("Contact"));
+const address = pluralizer.map(casing.map("Address"));
+const contactName = casing.reverseMap(pluralizer.reverseMap(contact));
+const addressName = casing.reverseMap(pluralizer.reverseMap(address));
+```
+
+**Map**
+
+```
+contacts
+addresses
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+#### Flat to nested
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164)
+
+```csharp
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["id"] = "id",
+        ["first_name"] = "first_name",
+        ["last_name"] = "last_name",
+        ["email"] = "email",
+        ["contact_source_name"] = "contact_source_name",
+        ["contact_type_name"] = "contact_type_name",
+        ["addresses"] = new TypeMapGroup
+        {
+            Key = "address_id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "address_id",
+                ["line1"] = "address_line1",
+                ["city"] = "address_city",
+                ["address_type_name"] = "address_type_name",
+            },
+        },
+        ["phones"] = new TypeMapGroup
+        {
+            Key = "phone_id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "phone_id",
+                ["number"] = "phone_number",
+                ["phone_type_name"] = "phone_type_name",
+            },
+        },
+    },
+});
+var adaHome = new Row(
+[
+    new("id", 7),
+    new("first_name", "Ada"),
+    new("last_name", "Lovelace"),
+    new("email", "ada@ex.com"),
+    new("contact_source_name", "Web"),
+    new("contact_type_name", "Person"),
+    new("address_id", 101),
+    new("address_line1", "10 Downing St"),
+    new("address_city", "London"),
+    new("address_type_name", "Home"),
+    new("phone_id", 201),
+    new("phone_number", "+44"),
+    new("phone_type_name", "Mobile"),
+]);
+var adaWork = new Row(adaHome)
+{
+    ["address_id"] = 102,
+    ["address_line1"] = "1 Parliament Sq"
+};
+var nested = mapper.Map([adaHome, adaWork]);
+var flat = mapper.ReverseMap(nested);
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L385-L456)
+
+```rust
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "id",
+    vec![
+        ("id".into(), TypeMapField::column("id")),
+        ("first_name".into(), TypeMapField::column("first_name")),
+        ("last_name".into(), TypeMapField::column("last_name")),
+        ("email".into(), TypeMapField::column("email")),
+        (
+            "contact_source_name".into(),
+            TypeMapField::column("contact_source_name"),
+        ),
+        (
+            "contact_type_name".into(),
+            TypeMapField::column("contact_type_name"),
+        ),
+        (
+            "addresses".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "address_id",
+                vec![
+                    ("id".into(), TypeMapField::column("address_id")),
+                    ("line1".into(), TypeMapField::column("address_line1")),
+                    ("city".into(), TypeMapField::column("address_city")),
+                    (
+                        "address_type_name".into(),
+                        TypeMapField::column("address_type_name"),
+                    ),
+                ],
+            )),
+        ),
+        (
+            "phones".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "phone_id",
+                vec![
+                    ("id".into(), TypeMapField::column("phone_id")),
+                    ("number".into(), TypeMapField::column("phone_number")),
+                    (
+                        "phone_type_name".into(),
+                        TypeMapField::column("phone_type_name"),
+                    ),
+                ],
+            )),
+        ),
+    ],
+));
+let ada_home = cell(&[
+    ("id", Value::Int(7)),
+    ("first_name", Value::from("Ada")),
+    ("last_name", Value::from("Lovelace")),
+    ("email", Value::from("ada@ex.com")),
+    ("contact_source_name", Value::from("Web")),
+    ("contact_type_name", Value::from("Person")),
+    ("address_id", Value::Int(101)),
+    ("address_line1", Value::from("10 Downing St")),
+    ("address_city", Value::from("London")),
+    ("address_type_name", Value::from("Home")),
+    ("phone_id", Value::Int(201)),
+    ("phone_number", Value::from("+44")),
+    ("phone_type_name", Value::from("Mobile")),
+]);
+let mut ada_work = ada_home.clone();
+ada_work.insert("address_id".into(), Value::Int(102));
+ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
+let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
+let flat = Mapper::reverse_map(&mapper, nested.clone());
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#L90-L155)
+
+```typescript
+const mapper = new FlatToNestedMapper<Contact>({
+  key: "id",
+  fields: {
+    id: "id",
+    first_name: "first_name",
+    last_name: "last_name",
+    email: "email",
+    contact_source_name: "contact_source_name",
+    contact_type_name: "contact_type_name",
+    addresses: {
+      key: "address_id",
+      fields: {
+        id: "address_id",
+        line1: "address_line1",
+        city: "address_city",
+        address_type_name: "address_type_name",
+      },
+    },
+    phones: {
+      key: "phone_id",
+      fields: {
+        id: "phone_id",
+        number: "phone_number",
+        phone_type_name: "phone_type_name",
+      },
+    },
+  },
+});
+const adaHome: Cells = {
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  address_id: 101,
+  address_line1: "10 Downing St",
+  address_city: "London",
+  address_type_name: "Home",
+  phone_id: 201,
+  phone_number: "+44",
+  phone_type_name: "Mobile",
+};
+const adaWork = {
+  ...adaHome,
+  address_id: 102,
+  address_line1: "1 Parliament Sq",
+};
+const nested = mapper.map([adaHome, adaWork]);
+const flat = mapper.reverseMap(nested);
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+### See also
+
+- [IdentityMapper](#identity-mapper)
+- [DictionaryMapper](#dictionary-mapper)
+- [PluralizerMapper](#pluralizer-mapper)
+- [ChangeCasingMapper](#change-casing-mapper)
+- [TransformMapper](#transform-mapper)
+- [FlatToNestedMapper](#flat-to-nested-mapper)
+- [ReadonlyRepositoryOptions](#readonlyrepositoryoptions)
+
+## IdentityMapper
+
+Mapper that returns the value unchanged.
+
+### Classes
+
+##### TypeScript
+
+##### IdentityMapper {#typescript-identitymapper}
+
+```typescript
+class IdentityMapper<T> implements IMapper<T, T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-identitymapper-map-value) | Returns `value`. |
+| [reverseMap(value)](#typescript-identitymapper-reversemap-value) | Returns `value`. |
+
+###### map(value) {#typescript-identitymapper-map-value}
+
+Returns `value`.
+
+**Definition**
+
+```typescript
+map(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`T`
+
+###### reverseMap(value) {#typescript-identitymapper-reversemap-value}
+
+Returns `value`.
+
+**Definition**
+
+```typescript
+reverseMap(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`T`
+
+##### C#
+
+##### IdentityMapper {#csharp-identitymapper}
+
+```csharp
+public class IdentityMapper<T> : IMapper<T, T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-identitymapper-map-value) | Returns `value`. |
+| [ReverseMap(value)](#csharp-identitymapper-reversemap-value) | Returns `value`. |
+
+###### Map(value) {#csharp-identitymapper-map-value}
+
+Returns `value`.
+
+**Definition**
+
+```csharp
+T Map(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`T`
+
+###### ReverseMap(value) {#csharp-identitymapper-reversemap-value}
+
+Returns `value`.
+
+**Definition**
+
+```csharp
+T ReverseMap(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`T`
+
+##### Rust
+
+##### IdentityMapper {#rust-identitymapper}
+
+```rust
+pub struct IdentityMapper<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new()](#rust-identitymapper-new) | Builds an identity mapper. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-identitymapper-map-value) | Returns `value`. |
+| [reverse_map(value)](#rust-identitymapper-reverse_map-value) | Returns `value`. |
+
+###### new() {#rust-identitymapper-new}
+
+Builds an identity mapper.
+
+**Definition**
+
+```rust
+pub fn new() -> Self
+```
+
+**Returns**
+
+[IdentityMapper](#rust-identitymapper)
+
+###### map(value) {#rust-identitymapper-map-value}
+
+Returns `value`.
+
+**Definition**
+
+```rust
+fn map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`T`
+
+###### reverse_map(value) {#rust-identitymapper-reverse_map-value}
+
+Returns `value`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`T`
+
+### Examples
+
+#### Map and reverse map
+
+`Map` / `map` / `map` and `ReverseMap` / `reverseMap` / `reverse_map` return the value unchanged.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/IdentityMapperTests.cs#L10-L14)
+
+```csharp
+var mapper = new IdentityMapper<string>();
+var mapped = mapper.Map("contact");
+var reversed = mapper.ReverseMap("contact");
+```
+
+**Map**
+
+```
+contact
+```
+
+**Reverse map**
+
+```
+contact
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/identity_mapper.rs#L39-L43)
+
+```rust
+let mapper = IdentityMapper::<String>::new();
+let mapped = mapper.map("contact".into());
+let reversed = mapper.reverse_map("contact".into());
+```
+
+**Map**
+
+```
+contact
+```
+
+**Reverse map**
+
+```
+contact
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/IdentityMapper.test.ts#L6-L10)
+
+```typescript
+const mapper = new IdentityMapper<string>();
+const mapped = mapper.map("contact");
+const reversed = mapper.reverseMap("contact");
+```
+
+**Map**
+
+```
+contact
+```
+
+**Reverse map**
+
+```
+contact
+```
+
+## DictionaryMapper
+
+Maps keys to values with a dictionary. `ReverseMap` / `reverseMap` / `reverse_map` maps values back to keys.
+
+### Classes
+
+##### TypeScript
+
+##### DictionaryMapper {#typescript-dictionarymapper}
+
+```typescript
+class DictionaryMapper<T extends string | number> implements IMapper<T, T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DictionaryMapper(map)](#typescript-dictionarymapper-dictionarymapper-map) | Builds the forward map and its reverse. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
+| [reverseMap(value)](#typescript-dictionarymapper-reversemap-value) | Returns the source key for a stored name, or `value`. |
+
+###### DictionaryMapper(map) {#typescript-dictionarymapper-dictionarymapper-map}
+
+Builds the forward map and its reverse.
+
+**Definition**
+
+```typescript
+constructor(map: readonly (readonly [T, T])[])
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | pairs of source key and stored name |
+
+**Returns**
+
+[DictionaryMapper](#typescript-dictionarymapper)
+
+###### map(value) {#typescript-dictionarymapper-map-value}
+
+Returns the stored name for a known key, or `value`.
+
+**Definition**
+
+```typescript
+map(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source key |
+
+**Returns**
+
+`T`
+
+###### reverseMap(value) {#typescript-dictionarymapper-reversemap-value}
+
+Returns the source key for a stored name, or `value`.
+
+**Definition**
+
+```typescript
+reverseMap(value: T): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`T`
+
+##### C#
+
+##### DictionaryMapper {#csharp-dictionarymapper}
+
+```csharp
+public sealed class DictionaryMapper<T> : IMapper<T, T> where T : notnull
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DictionaryMapper(map)](#csharp-dictionarymapper-dictionarymapper-map) | Builds the forward map and its reverse. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
+| [ReverseMap(value)](#csharp-dictionarymapper-reversemap-value) | Returns the source key for a stored name, or `value`. |
+
+###### DictionaryMapper(map) {#csharp-dictionarymapper-dictionarymapper-map}
+
+Builds the forward map and its reverse.
+
+**Definition**
+
+```csharp
+public DictionaryMapper(IReadOnlyDictionary<T, T> map)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | pairs of source key and stored name |
+
+###### Map(value) {#csharp-dictionarymapper-map-value}
+
+Returns the stored name for a known key, or `value`.
+
+**Definition**
+
+```csharp
+T Map(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source key |
+
+**Returns**
+
+`T`
+
+###### ReverseMap(value) {#csharp-dictionarymapper-reversemap-value}
+
+Returns the source key for a stored name, or `value`.
+
+**Definition**
+
+```csharp
+T ReverseMap(T value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`T`
+
+##### Rust
+
+##### DictionaryMapper {#rust-dictionarymapper}
+
+```rust
+pub struct DictionaryMapper<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(map)](#rust-dictionarymapper-new-map) | Builds the forward map and its reverse. `T: Clone + Eq + Hash`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
+| [reverse_map(value)](#rust-dictionarymapper-reverse_map-value) | Returns the source key for a stored name, or `value`. |
+
+###### new(map) {#rust-dictionarymapper-new-map}
+
+Builds the forward map and its reverse. `T: Clone + Eq + Hash`.
+
+**Definition**
+
+```rust
+pub fn new(map: impl IntoIterator<Item = (T, T)>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | pairs of source key and stored name, in first-wins order |
+
+**Returns**
+
+[DictionaryMapper](#rust-dictionarymapper)
+
+###### map(value) {#rust-dictionarymapper-map-value}
+
+Returns the stored name for a known key, or `value`.
+
+**Definition**
+
+```rust
+fn map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source key |
+
+**Returns**
+
+`T`
+
+###### reverse_map(value) {#rust-dictionarymapper-reverse_map-value}
+
+Returns the source key for a stored name, or `value`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: T) -> T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`T`
+
+### Remarks
+
+Unknown keys pass through. When two keys share a value, the first one wins on reverse.
+
+Use this for [ColumnMappings](#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list, where identifiers, and write parameters. `ReverseMap` restores property names on each result key before the row converter.
+
+### Examples
+
+#### Map and reverse map
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DictionaryMapperTests.cs#L14-L38)
+
+```csharp
+var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["FirstName"] = "given_name",
+    ["LastName"] = "family_name",
+    ["Email"] = "email_address",
+});
+var firstName = mapper.Map("FirstName");
+var lastName = mapper.Map("LastName");
+var email = mapper.Map("Email");
+var phone = mapper.Map("Phone");
+var fromFirst = mapper.ReverseMap("given_name");
+var fromLast = mapper.ReverseMap("family_name");
+var fromEmail = mapper.ReverseMap("email_address");
+var fromPhone = mapper.ReverseMap("Phone");
+```
+
+**Map**
+
+```
+given_name
+family_name
+email_address
+Phone
+```
+
+**Reverse map**
+
+```
+FirstName
+LastName
+Email
+Phone
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L51-L74)
+
+```rust
+let mapper = DictionaryMapper::new([
+    ("FirstName".to_string(), "given_name".to_string()),
+    ("LastName".to_string(), "family_name".to_string()),
+    ("Email".to_string(), "email_address".to_string()),
+]);
+let first_name = mapper.map("FirstName".into());
+let last_name = mapper.map("LastName".into());
+let email = mapper.map("Email".into());
+let phone = mapper.map("Phone".into());
+let from_first = mapper.reverse_map("given_name".into());
+let from_last = mapper.reverse_map("family_name".into());
+let from_email = mapper.reverse_map("email_address".into());
+let from_phone = mapper.reverse_map("Phone".into());
+```
+
+**Map**
+
+```
+given_name
+family_name
+email_address
+Phone
+```
+
+**Reverse map**
+
+```
+FirstName
+LastName
+Email
+Phone
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/DictionaryMapper.test.ts#L14-L36)
+
+```typescript
+const mapper = new DictionaryMapper([
+  ["FirstName", "given_name"],
+  ["LastName", "family_name"],
+  ["Email", "email_address"],
+]);
+const firstName = mapper.map("FirstName");
+const lastName = mapper.map("LastName");
+const email = mapper.map("Email");
+const phone = mapper.map("Phone");
+const fromFirst = mapper.reverseMap("given_name");
+const fromLast = mapper.reverseMap("family_name");
+const fromEmail = mapper.reverseMap("email_address");
+const fromPhone = mapper.reverseMap("Phone");
+```
+
+**Map**
+
+```
+given_name
+family_name
+email_address
+Phone
+```
+
+**Reverse map**
+
+```
+FirstName
+LastName
+Email
+Phone
+```
+
+#### First key wins on reverse
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DictionaryMapperTests.cs#L40-L54)
+
+```csharp
+var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["Home"] = "address",
+    ["Work"] = "address",
+});
+var home = mapper.Map("Home");
+var work = mapper.Map("Work");
+var address = mapper.ReverseMap("address");
+```
+
+**Map**
+
+```
+address
+address
+```
+
+**Reverse map**
+
+```
+Home
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L76-L88)
+
+```rust
+let mapper = DictionaryMapper::new([
+    ("Home".to_string(), "address".to_string()),
+    ("Work".to_string(), "address".to_string()),
+]);
+let home = mapper.map("Home".into());
+let work = mapper.map("Work".into());
+let address = mapper.reverse_map("address".into());
+```
+
+**Map**
+
+```
+address
+address
+```
+
+**Reverse map**
+
+```
+Home
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/DictionaryMapper.test.ts#L38-L49)
+
+```typescript
+const mapper = new DictionaryMapper([
+  ["Home", "address"],
+  ["Work", "address"],
+]);
+const home = mapper.map("Home");
+const work = mapper.map("Work");
+const address = mapper.reverseMap("address");
+```
+
+**Map**
+
+```
+address
+address
+```
+
+**Reverse map**
+
+```
+Home
+```
+
+## PluralizerMapper
+
+Mapper that pluralizes a name and keeps its case. Reverse singularizes and keeps the first letter's case.
+
+### Classes
+
+##### TypeScript
+
+##### PluralizerMapper {#typescript-pluralizermapper}
+
+```typescript
+class PluralizerMapper implements IMapper<string, string>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-pluralizermapper-map-value) | Pluralizes `value` and keeps its case. `User` becomes `Users`. |
+| [reverseMap(value)](#typescript-pluralizermapper-reversemap-value) | Singularizes `value` and keeps the first letter's case. `Users` becomes `User`. |
+
+###### map(value) {#typescript-pluralizermapper-map-value}
+
+Pluralizes `value` and keeps its case. `User` becomes `Users`.
+
+**Definition**
+
+```typescript
+map(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source name |
+
+**Returns**
+
+`string`
+
+###### reverseMap(value) {#typescript-pluralizermapper-reversemap-value}
+
+Singularizes `value` and keeps the first letter's case. `Users` becomes `User`.
+
+**Definition**
+
+```typescript
+reverseMap(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | plural name |
+
+**Returns**
+
+`string`
+
+##### C#
+
+##### PluralizerMapper {#csharp-pluralizermapper}
+
+```csharp
+public sealed class PluralizerMapper : IMapper<string, string>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-pluralizermapper-map-value) | Pluralizes `value` and keeps its case. `User` becomes `Users`. |
+| [ReverseMap(value)](#csharp-pluralizermapper-reversemap-value) | Singularizes `value` and keeps the first letter's case. `Users` becomes `User`. |
+
+###### Map(value) {#csharp-pluralizermapper-map-value}
+
+Pluralizes `value` and keeps its case. `User` becomes `Users`.
+
+**Definition**
+
+```csharp
+string Map(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source name |
+
+**Returns**
+
+`string`
+
+###### ReverseMap(value) {#csharp-pluralizermapper-reversemap-value}
+
+Singularizes `value` and keeps the first letter's case. `Users` becomes `User`.
+
+**Definition**
+
+```csharp
+string ReverseMap(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | plural name |
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### PluralizerMapper {#rust-pluralizermapper}
+
+```rust
+pub struct PluralizerMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new()](#rust-pluralizermapper-new) | Builds a pluralizer mapper. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-pluralizermapper-map-value) | Pluralizes `value` and keeps its case. `User` becomes `Users`. |
+| [reverse_map(value)](#rust-pluralizermapper-reverse_map-value) | Singularizes `value` and keeps the first letter's case. `Users` becomes `User`. |
+
+###### new() {#rust-pluralizermapper-new}
+
+Builds a pluralizer mapper.
+
+**Definition**
+
+```rust
+pub fn new() -> Self
+```
+
+**Returns**
+
+[PluralizerMapper](#rust-pluralizermapper)
+
+###### map(value) {#rust-pluralizermapper-map-value}
+
+Pluralizes `value` and keeps its case. `User` becomes `Users`.
+
+**Definition**
+
+```rust
+fn map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source name |
+
+**Returns**
+
+`String`
+
+###### reverse_map(value) {#rust-pluralizermapper-reverse_map-value}
+
+Singularizes `value` and keeps the first letter's case. `Users` becomes `User`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | plural name |
+
+**Returns**
+
+`String`
+
+### Remarks
+
+Use this as [EntityMapper](#entitymapper) when the type name is singular and the table name is its plural. A lowercase plural table is [ChangeCasingMapper](#change-casing-mapper) then `PluralizerMapper`. Setting `Entity` / `entity` / `entity` skips the mapper.
+
+### Examples
+
+#### Map contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/PluralizerMapperTests.cs#L15-L23)
+
+```csharp
+var mapper = new PluralizerMapper();
+var contact = mapper.Map("Contact");
+var address = mapper.Map("Address");
+```
+
+**Map**
+
+```
+Contacts
+Addresses
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/pluralizer_mapper.rs#L45-L52)
+
+```rust
+let mapper = PluralizerMapper::new();
+let contact = mapper.map("Contact".into());
+let address = mapper.map("Address".into());
+```
+
+**Map**
+
+```
+Contacts
+Addresses
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/PluralizerMapper.test.ts#L12-L18)
+
+```typescript
+const mapper = new PluralizerMapper();
+const contact = mapper.map("Contact");
+const address = mapper.map("Address");
+```
+
+**Map**
+
+```
+Contacts
+Addresses
+```
+
+#### Reverse map contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/PluralizerMapperTests.cs#L25-L33)
+
+```csharp
+var mapper = new PluralizerMapper();
+var contact = mapper.ReverseMap("Contacts");
+var address = mapper.ReverseMap("Addresses");
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/pluralizer_mapper.rs#L54-L61)
+
+```rust
+let mapper = PluralizerMapper::new();
+let contact = mapper.reverse_map("Contacts".into());
+let address = mapper.reverse_map("Addresses".into());
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/PluralizerMapper.test.ts#L20-L26)
+
+```typescript
+const mapper = new PluralizerMapper();
+const contact = mapper.reverseMap("Contacts");
+const address = mapper.reverseMap("Addresses");
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+#### Lowercase plural
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/PluralizerMapperTests.cs#L35-L48)
+
+```csharp
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var pluralizer = new PluralizerMapper();
+var contact = pluralizer.Map(casing.Map("Contact"));
+var address = pluralizer.Map(casing.Map("Address"));
+var contactName = casing.ReverseMap(pluralizer.ReverseMap(contact));
+var addressName = casing.ReverseMap(pluralizer.ReverseMap(address));
+```
+
+**Map**
+
+```
+contacts
+addresses
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/pluralizer_mapper.rs#L63-L75)
+
+```rust
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let pluralizer = PluralizerMapper::new();
+let contact = pluralizer.map(casing.map("Contact".into()));
+let address = pluralizer.map(casing.map("Address".into()));
+let contact_name = casing.reverse_map(pluralizer.reverse_map(contact.clone()));
+let address_name = casing.reverse_map(pluralizer.reverse_map(address.clone()));
+```
+
+**Map**
+
+```
+contacts
+addresses
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/PluralizerMapper.test.ts#L28-L39)
+
+```typescript
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const pluralizer = new PluralizerMapper();
+const contact = pluralizer.map(casing.map("Contact"));
+const address = pluralizer.map(casing.map("Address"));
+const contactName = casing.reverseMap(pluralizer.reverseMap(contact));
+const addressName = casing.reverseMap(pluralizer.reverseMap(address));
+```
+
+**Map**
+
+```
+contacts
+addresses
+```
+
+**Reverse map**
+
+```
+Contact
+Address
+```
+
+## ChangeCasingMapper
+
+Mapper that rewrites a name from one casing to another through `ChangeCasingConverter`. `Map` writes the stored casing. `ReverseMap` restores the application casing.
+
+### Classes
+
+##### TypeScript
+
+##### ChangeCasingMapper {#typescript-changecasingmapper}
+
+```typescript
+class ChangeCasingMapper implements IMapper<string, string>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ChangeCasingMapper(from, to)](#typescript-changecasingmapper-changecasingmapper-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `snakeCase` becomes `user_type`. |
+| [reverseMap(value)](#typescript-changecasingmapper-reversemap-value) | Rewrites `value` into the application casing. `user_type` with `pascalCase` becomes `UserType`. |
+
+###### ChangeCasingMapper(from, to) {#typescript-changecasingmapper-changecasingmapper-from-to}
+
+Maps names from `from` to `to`. Reverse maps back to `from`.
+
+**Definition**
+
+```typescript
+constructor(from: Casing, to: Casing)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | application casing, such as `pascalCase` |
+| `to` | stored casing, such as `snakeCase` |
+
+**Returns**
+
+[ChangeCasingMapper](#typescript-changecasingmapper)
+
+###### map(value) {#typescript-changecasingmapper-map-value}
+
+Rewrites `value` into the stored casing. `UserType` with `snakeCase` becomes `user_type`.
+
+**Definition**
+
+```typescript
+map(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | application name |
+
+**Returns**
+
+`string`
+
+###### reverseMap(value) {#typescript-changecasingmapper-reversemap-value}
+
+Rewrites `value` into the application casing. `user_type` with `pascalCase` becomes `UserType`.
+
+**Definition**
+
+```typescript
+reverseMap(value: string): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`string`
+
+##### C#
+
+##### ChangeCasingMapper {#csharp-changecasingmapper}
+
+```csharp
+public sealed class ChangeCasingMapper : IMapper<string, string>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [ChangeCasingMapper(from, to)](#csharp-changecasingmapper-changecasingmapper-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`. |
+| [ReverseMap(value)](#csharp-changecasingmapper-reversemap-value) | Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`. |
+
+###### ChangeCasingMapper(from, to) {#csharp-changecasingmapper-changecasingmapper-from-to}
+
+Maps names from `from` to `to`. Reverse maps back to `from`.
+
+**Definition**
+
+```csharp
+public ChangeCasingMapper(Casing from, Casing to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | application casing, such as `Pascal` |
+| `to` | stored casing, such as `Snake` |
+
+**Returns**
+
+[ChangeCasingMapper](#csharp-changecasingmapper)
+
+###### Map(value) {#csharp-changecasingmapper-map-value}
+
+Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`.
+
+**Definition**
+
+```csharp
+string Map(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | application name |
+
+**Returns**
+
+`string`
+
+###### ReverseMap(value) {#csharp-changecasingmapper-reversemap-value}
+
+Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`.
+
+**Definition**
+
+```csharp
+string ReverseMap(string value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`string`
+
+##### Rust
+
+##### ChangeCasingMapper {#rust-changecasingmapper}
+
+```rust
+pub struct ChangeCasingMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(from, to)](#rust-changecasingmapper-new-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`. |
+| [reverse_map(value)](#rust-changecasingmapper-reverse_map-value) | Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`. |
+
+###### new(from, to) {#rust-changecasingmapper-new-from-to}
+
+Maps names from `from` to `to`. Reverse maps back to `from`.
+
+**Definition**
+
+```rust
+pub fn new(from: Casing, to: Casing) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | application casing, such as `Pascal` |
+| `to` | stored casing, such as `Snake` |
+
+**Returns**
+
+[ChangeCasingMapper](#rust-changecasingmapper)
+
+###### map(value) {#rust-changecasingmapper-map-value}
+
+Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`.
+
+**Definition**
+
+```rust
+fn map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | application name |
+
+**Returns**
+
+`String`
+
+###### reverse_map(value) {#rust-changecasingmapper-reverse_map-value}
+
+Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: String) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | stored name |
+
+**Returns**
+
+`String`
+
+### Remarks
+
+Use this as [EntityMapper](#entitymapper) and [ColumnMappings](#columnmappings) when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
+
+### Examples
+
+#### Map contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L17-L27)
+
+```csharp
+var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var contact = mapper.Map("Contact");
+var firstName = mapper.Map("FirstName");
+var emailAddress = mapper.Map("EmailAddress");
+```
+
+**Map**
+
+```
+contact
+first_name
+email_address
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L43-L52)
+
+```rust
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let contact = mapper.map("Contact".into());
+let first_name = mapper.map("FirstName".into());
+let email_address = mapper.map("EmailAddress".into());
+```
+
+**Map**
+
+```
+contact
+first_name
+email_address
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L13-L21)
+
+```typescript
+const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
+const contact = mapper.map("Contact");
+const firstName = mapper.map("FirstName");
+const emailAddress = mapper.map("EmailAddress");
+```
+
+**Map**
+
+```
+contact
+first_name
+email_address
+```
+
+#### Reverse map contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L29-L39)
+
+```csharp
+var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var contact = mapper.ReverseMap("contact");
+var firstName = mapper.ReverseMap("first_name");
+var emailAddress = mapper.ReverseMap("email_address");
+```
+
+**Reverse map**
+
+```
+Contact
+FirstName
+EmailAddress
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L54-L63)
+
+```rust
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let contact = mapper.reverse_map("contact".into());
+let first_name = mapper.reverse_map("first_name".into());
+let email_address = mapper.reverse_map("email_address".into());
+```
+
+**Reverse map**
+
+```
+Contact
+FirstName
+EmailAddress
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L23-L31)
+
+```typescript
+const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
+const contact = mapper.reverseMap("contact");
+const firstName = mapper.reverseMap("first_name");
+const emailAddress = mapper.reverseMap("email_address");
+```
+
+**Reverse map**
+
+```
+Contact
+FirstName
+EmailAddress
+```
+
+## TransformMapper
+
+Mapper built from a pair of functions.
+
+### Classes
+
+##### TypeScript
+
+##### TransformMapper {#typescript-transformmapper}
+
+```typescript
+class TransformMapper<TFrom, TTo> implements IMapper<TFrom, TTo>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [TransformMapper(map, reverseMap)](#typescript-transformmapper-transformmapper-map-reversemap) | Builds a mapper from a pair of functions. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#typescript-transformmapper-map-value) | Runs the map function. |
+| [reverseMap(value)](#typescript-transformmapper-reversemap-value) | Runs the reverse-map function. |
+
+###### TransformMapper(map, reverseMap) {#typescript-transformmapper-transformmapper-map-reversemap}
+
+Builds a mapper from a pair of functions.
+
+**Definition**
+
+```typescript
+constructor(map: (value: TFrom) => TTo, reverseMap: (value: TTo) => TFrom)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | `TFrom` to `TTo` |
+| `reverseMap` | `TTo` to `TFrom` |
+
+###### map(value) {#typescript-transformmapper-map-value}
+
+Runs the map function.
+
+**Definition**
+
+```typescript
+map(value: TFrom): TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverseMap(value) {#typescript-transformmapper-reversemap-value}
+
+Runs the reverse-map function.
+
+**Definition**
+
+```typescript
+reverseMap(value: TTo): TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### C#
+
+##### TransformMapper {#csharp-transformmapper}
+
+```csharp
+public class TransformMapper<TFrom, TTo> : IMapper<TFrom, TTo>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [TransformMapper(map, reverseMap)](#csharp-transformmapper-transformmapper-map-reversemap) | Builds a mapper from a pair of functions. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(value)](#csharp-transformmapper-map-value) | Runs the map function. |
+| [ReverseMap(value)](#csharp-transformmapper-reversemap-value) | Runs the reverse-map function. |
+
+###### TransformMapper(map, reverseMap) {#csharp-transformmapper-transformmapper-map-reversemap}
+
+Builds a mapper from a pair of functions.
+
+**Definition**
+
+```csharp
+public TransformMapper(Func<TFrom, TTo> map, Func<TTo, TFrom> reverseMap)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | `TFrom` to `TTo` |
+| `reverseMap` | `TTo` to `TFrom` |
+
+###### Map(value) {#csharp-transformmapper-map-value}
+
+Runs the map function.
+
+**Definition**
+
+```csharp
+TTo Map(TFrom value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### ReverseMap(value) {#csharp-transformmapper-reversemap-value}
+
+Runs the reverse-map function.
+
+**Definition**
+
+```csharp
+TFrom ReverseMap(TTo value)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+##### Rust
+
+##### TransformMapper {#rust-transformmapper}
+
+```rust
+pub struct TransformMapper<TFrom, TTo>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(map, reverse_map)](#rust-transformmapper-new-map-reverse_map) | Builds a mapper from a pair of functions. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(value)](#rust-transformmapper-map-value) | Runs the map function. |
+| [reverse_map(value)](#rust-transformmapper-reverse_map-value) | Runs the reverse-map function. |
+
+###### new(map, reverse_map) {#rust-transformmapper-new-map-reverse_map}
+
+Builds a mapper from a pair of functions.
+
+**Definition**
+
+```rust
+pub fn new(map: impl Fn(TFrom) -> TTo + Send + Sync + 'static, reverse_map: impl Fn(TTo) -> TFrom + Send + Sync + 'static) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `map` | `TFrom` to `TTo` |
+| `reverse_map` | `TTo` to `TFrom` |
+
+**Returns**
+
+[TransformMapper](#rust-transformmapper)
+
+###### map(value) {#rust-transformmapper-map-value}
+
+Runs the map function.
+
+**Definition**
+
+```rust
+fn map(&self, value: TFrom) -> TTo
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | source value |
+
+**Returns**
+
+`TTo`
+
+###### reverse_map(value) {#rust-transformmapper-reverse_map-value}
+
+Runs the reverse-map function.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, value: TTo) -> TFrom
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `value` | mapped value |
+
+**Returns**
+
+`TFrom`
+
+### Remarks
+
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryOptions](#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](#identity-mapper).
+
+### Examples
+
+#### Flatten with TransformMapper
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransformMapperTests.cs#L15-L26)
+
+```csharp
+var nested = new Nested(new User(1, "Ada"), new Contacts("ada@x.dev", "555"));
+var mapper = new TransformMapper<Nested, Flat>(
+    map: n => new Flat(n.User.Id, n.User.Name, n.Contacts.Email, n.Contacts.Phone),
+    reverseMap: f => new Nested(new User(f.UserId, f.UserName), new Contacts(f.ContactEmail, f.ContactPhone)));
+var flat = mapper.Map(nested);
+```
+
+**Before: nested value**
+
+```
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+**After: flat value**
+
+```
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L86-L106)
+
+```rust
+let nested = Nested {
+    user: User {
+        id: 1,
+        name: "Ada".into(),
+    },
+    contacts: Contacts {
+        email: "ada@x.dev".into(),
+        phone: "555".into(),
+    },
+};
+let mapper = TransformMapper::new(
+    |n: Nested| Flat {
+        user_id: n.user.id,
+        user_name: n.user.name,
+        contact_email: n.contacts.email,
+        contact_phone: n.contacts.phone,
+    },
+    |f: Flat| Nested {
+        user: User {
+```
+
+**Before: nested value**
+
+```
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+**After: flat value**
+
+```
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L18-L42)
+
+```typescript
+const nested: Nested = {
+  user: { id: 1, name: "Ada" },
+  contacts: { email: "ada@x.dev", phone: "555" },
+};
+const mapper = new TransformMapper<Nested, Flat>(
+  (n) => ({
+    userId: n.user.id,
+    userName: n.user.name,
+    contactEmail: n.contacts.email,
+    contactPhone: n.contacts.phone,
+  }),
+  (f) => ({
+    user: { id: f.userId, name: f.userName },
+    contacts: { email: f.contactEmail, phone: f.contactPhone },
+  }),
+);
+const flat = mapper.map(nested);
+```
+
+**Before: nested value**
+
+```
+{
+  user: { id: 1, name: 'Ada' },
+  contacts: { email: 'ada@x.dev', phone: '555' }
+}
+```
+
+**After: flat value**
+
+```
+{
+  userId: 1,
+  userName: 'Ada',
+  contactEmail: 'ada@x.dev',
+  contactPhone: '555'
+}
+```
+
+#### Prefix a contact field
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransformMapperTests.cs#L29-L39)
+
+```csharp
+var mapper = new TransformMapper<string, string>(
+    map: name => "contact_" + name,
+    reverseMap: name => name["contact_".Length..]);
+var mapped = mapper.Map("email");
+var reversed = mapper.ReverseMap(mapped);
+```
+
+**Map**
+
+```
+contact_email
+```
+
+**Reverse map**
+
+```
+email
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L124-L134)
+
+```rust
+let mapper = TransformMapper::new(
+    |name: String| format!("contact_{name}"),
+    |name: String| name["contact_".len()..].to_string(),
+);
+let mapped = Mapper::map(&mapper, "email".to_string());
+let reversed = Mapper::reverse_map(&mapper, mapped.clone());
+```
+
+**Map**
+
+```
+contact_email
+```
+
+**Reverse map**
+
+```
+email
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L44-L53)
+
+```typescript
+const mapper = new TransformMapper<string, string>(
+  (name) => `contact_${name}`,
+  (name) => name.slice("contact_".length),
+);
+const mapped = mapper.map("email");
+const reversed = mapper.reverseMap(mapped);
+```
+
+**Map**
+
+```
+contact_email
+```
+
+**Reverse map**
+
+```
+email
+```
+
+#### Map a contact name and email
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransformMapperTests.cs#L41-L52)
+
+```csharp
+var contact = new Contact("Ada", "ada@x.dev");
+var mapper = new TransformMapper<Contact, ContactRow>(
+    map: item => new ContactRow(item.Name, item.Email),
+    reverseMap: row => new Contact(row.ContactName, row.ContactEmail));
+var mapped = mapper.Map(contact);
+var reversed = mapper.ReverseMap(mapped);
+```
+
+**Before: contact**
+
+```
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+**After: mapped contact**
+
+```
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L136-L162)
+
+```rust
+let contact = Contact {
+    name: "Ada".into(),
+    email: "ada@x.dev".into(),
+};
+let mapper = TransformMapper::new(
+    |item: Contact| ContactRow {
+        contact_name: item.name,
+        contact_email: item.email,
+    },
+    |row: ContactRow| Contact {
+        name: row.contact_name,
+        email: row.contact_email,
+    },
+);
+let mapped = Mapper::map(&mapper, contact.clone());
+let reversed = Mapper::reverse_map(&mapper, mapped.clone());
+```
+
+**Before: contact**
+
+```
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+**After: mapped contact**
+
+```
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L55-L65)
+
+```typescript
+const contact: Contact = { name: "Ada", email: "ada@x.dev" };
+const mapper = new TransformMapper<Contact, ContactRow>(
+  (item) => ({ contactName: item.name, contactEmail: item.email }),
+  (row) => ({ name: row.contactName, email: row.contactEmail }),
+);
+const mapped = mapper.map(contact);
+const reversed = mapper.reverseMap(mapped);
+```
+
+**Before: contact**
+
+```
+{
+  name: 'Ada',
+  email: 'ada@x.dev'
+}
+```
+
+**After: mapped contact**
+
+```
+{
+  contactName: 'Ada',
+  contactEmail: 'ada@x.dev'
+}
+```
+
+## FlatToNestedMapper
+
+Maps flat objects to nested objects. `ReverseMap` / `reverseMap` / `reverse_map` maps the nested object back.
+
+### Classes
+
+##### TypeScript
+
+##### IFlatToNestedMapper {#typescript-iflattonestedmapper}
+
+```typescript
+interface IFlatToNestedMapper<T> extends IMapper<Iterable<T | Cells>, T[]>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| spec | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+
+##### FlatToNestedMapper {#typescript-flattonestedmapper}
+
+```typescript
+class FlatToNestedMapper<T> implements IFlatToNestedMapper<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [FlatToNestedMapper(spec)](#typescript-flattonestedmapper-flattonestedmapper-spec) | Builds a collapse mapper from a [TypeMap](#typescript-typemap). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| spec | The [TypeMap](#typescript-typemap) used to collapse join rows. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(rows)](#typescript-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
+| [reverseMap(values)](#typescript-flattonestedmapper-reversemap-values) | Flattens nested parents back to denormalized join rows. |
+
+###### FlatToNestedMapper(spec) {#typescript-flattonestedmapper-flattonestedmapper-spec}
+
+Builds a collapse mapper from a [TypeMap](#typescript-typemap).
+
+**Definition**
+
+```typescript
+constructor(spec: TypeMap<T>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `spec` | [TypeMap](#typescript-typemap); scalars map column to field, groups collect unique children by key |
+
+###### map(rows) {#typescript-flattonestedmapper-map-rows}
+
+Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
+
+**Definition**
+
+```typescript
+map(rows: Iterable<T | Cells>): T[]
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows, or already-mapped `T` |
+
+**Returns**
+
+`T[]`
+
+###### reverseMap(values) {#typescript-flattonestedmapper-reversemap-values}
+
+Flattens nested parents back to denormalized join rows.
+
+**Definition**
+
+```typescript
+reverseMap(values: T[]): Cells[]
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `values` | nested parents |
+
+**Returns**
+
+`Cells[]`
+
+##### TypeMap {#typescript-typemap}
+
+```typescript
+type TypeMap<T>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| key | Parent key column. |
+| fields | Column or group per destination field. |
+
+##### TypeMapGroup {#typescript-typemapgroup}
+
+```typescript
+type TypeMapGroup<E>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| key | Child key column used to unique children. |
+| fields | Column names for the child. |
+
+##### TypeMapFields {#typescript-typemapfields}
+
+```typescript
+type TypeMapFields<T>
+```
+
+##### C#
+
+##### IFlatToNestedMapper {#csharp-iflattonestedmapper}
+
+```csharp
+public interface IFlatToNestedMapper : IMapper<IEnumerable<Row>, IReadOnlyList<Dictionary<string, MappedValue>>>
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Spec | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+
+##### FlatToNestedMapper {#csharp-flattonestedmapper}
+
+```csharp
+public sealed class FlatToNestedMapper : IFlatToNestedMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [FlatToNestedMapper(spec)](#csharp-flattonestedmapper-flattonestedmapper-spec) | Builds a collapse mapper from a [TypeMap](#csharp-typemap). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Spec | The [TypeMap](#csharp-typemap) used to collapse join rows. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Map(rows)](#csharp-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
+| [ReverseMap(values)](#csharp-flattonestedmapper-reversemap-values) | Flattens nested parents back to denormalized join rows. |
+
+###### FlatToNestedMapper(spec) {#csharp-flattonestedmapper-flattonestedmapper-spec}
+
+Builds a collapse mapper from a [TypeMap](#csharp-typemap).
+
+**Definition**
+
+```csharp
+public FlatToNestedMapper(TypeMap spec)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `spec` | [TypeMap](#csharp-typemap); scalars map column to field, groups collect unique children by key |
+
+###### Map(rows) {#csharp-flattonestedmapper-map-rows}
+
+Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
+
+**Definition**
+
+```csharp
+IReadOnlyList<Dictionary<string, MappedValue>> Map(IEnumerable<Row> rows)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows |
+
+**Returns**
+
+`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
+
+###### ReverseMap(values) {#csharp-flattonestedmapper-reversemap-values}
+
+Flattens nested parents back to denormalized join rows.
+
+**Definition**
+
+```csharp
+IReadOnlyList<Row> ReverseMap(IReadOnlyList<Dictionary<string, MappedValue>> values)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `values` | nested parents |
+
+**Returns**
+
+`IReadOnlyList<`[Row](#repositories)`>`
+
+##### TypeMap {#csharp-typemap}
+
+```csharp
+public sealed class TypeMap
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Key | Parent key column. |
+| Fields | Column or group per destination field. |
+
+##### TypeMapGroup {#csharp-typemapgroup}
+
+```csharp
+public sealed class TypeMapGroup
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Key | Child key column used to unique children. |
+| Fields | Column or group per child field. |
+
+##### TypeMapField {#csharp-typemapfield}
+
+```csharp
+public abstract record TypeMapField
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Column | Maps a destination field to a source column. |
+| Group | Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup). |
+
+##### MappedValue {#csharp-mappedvalue}
+
+```csharp
+public abstract record MappedValue
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Cell | A scalar cell. |
+| Many | A child collection. |
+
+##### Rust
+
+##### FlatToNestedMapperTrait {#rust-flattonestedmappertrait}
+
+```rust
+pub trait FlatToNestedMapper: Mapper<Vec<Row>, Vec<MappedRow>>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [spec()](#rust-flattonestedmappertrait-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
+
+###### spec() {#rust-flattonestedmappertrait-spec}
+
+The [TypeMap](#rust-typemap) used to collapse join rows.
+
+**Definition**
+
+```rust
+fn spec(&self) -> &TypeMap
+```
+
+**Returns**
+
+`&`[TypeMap](#rust-typemap)
+
+##### FlatToNestedMapper {#rust-flattonestedmapper}
+
+```rust
+pub struct FlatToNestedMapper
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(spec)](#rust-flattonestedmapper-new-spec) | Builds a collapse mapper from a [TypeMap](#rust-typemap). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [map(rows)](#rust-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
+| [reverse_map(values)](#rust-flattonestedmapper-reverse_map-values) | Flattens nested parents back to denormalized join rows. |
+| [spec()](#rust-flattonestedmapper-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
+
+###### new(spec) {#rust-flattonestedmapper-new-spec}
+
+Builds a collapse mapper from a [TypeMap](#rust-typemap).
+
+**Definition**
+
+```rust
+pub fn new(spec: TypeMap) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `spec` | [TypeMap](#rust-typemap); scalars map column to field, groups collect unique children by key |
+
+**Returns**
+
+[FlatToNestedMapper](#rust-flattonestedmapper)
+
+###### map(rows) {#rust-flattonestedmapper-map-rows}
+
+Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
+
+**Definition**
+
+```rust
+fn map(&self, rows: Vec<Row>) -> Vec<MappedRow>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `rows` | denormalized join rows |
+
+**Returns**
+
+`Vec<`[MappedRow](#rust-mappedrow)`>`
+
+###### reverse_map(values) {#rust-flattonestedmapper-reverse_map-values}
+
+Flattens nested parents back to denormalized join rows.
+
+**Definition**
+
+```rust
+fn reverse_map(&self, values: Vec<MappedRow>) -> Vec<Row>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `values` | nested parents |
+
+**Returns**
+
+`Vec<Row>`
+
+###### spec() {#rust-flattonestedmapper-spec}
+
+The [TypeMap](#rust-typemap) used to collapse join rows.
+
+**Definition**
+
+```rust
+fn spec(&self) -> &TypeMap
+```
+
+**Returns**
+
+`&`[TypeMap](#rust-typemap)
+
+##### TypeMap {#rust-typemap}
+
+```rust
+pub struct TypeMap
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(key, fields)](#rust-typemap-new-key-fields) | Builds a collapse spec. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| key | Parent key column. |
+| fields | Column or group per destination field. |
+
+###### new(key, fields) {#rust-typemap-new-key-fields}
+
+Builds a collapse spec.
+
+**Definition**
+
+```rust
+pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `key` | parent key column |
+| `fields` | destination name and [TypeMapField](#rust-typemapfield) pairs |
+
+**Returns**
+
+[TypeMap](#rust-typemap)
+
+##### TypeMapGroup {#rust-typemapgroup}
+
+```rust
+pub struct TypeMapGroup
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(key, fields)](#rust-typemapgroup-new-key-fields) | Builds a child-group spec. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| key | Child key column used to unique children. |
+| fields | Column or group per child field. |
+
+###### new(key, fields) {#rust-typemapgroup-new-key-fields}
+
+Builds a child-group spec.
+
+**Definition**
+
+```rust
+pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `key` | child key column |
+| `fields` | destination name and [TypeMapField](#rust-typemapfield) pairs |
+
+**Returns**
+
+[TypeMapGroup](#rust-typemapgroup)
+
+##### TypeMapField {#rust-typemapfield}
+
+```rust
+pub enum TypeMapField
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Column | Maps a destination field to a source column. |
+| Group | Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [column(source)](#rust-typemapfield-column-source) | Builds a [Column](#rust-typemapfield-column) field. |
+
+###### column(source) {#rust-typemapfield-column-source}
+
+Builds a [Column](#rust-typemapfield-column) field.
+
+**Definition**
+
+```rust
+pub fn column(source: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `source` | source column name |
+
+**Returns**
+
+[TypeMapField](#rust-typemapfield)
+
+##### MappedValue {#rust-mappedvalue}
+
+```rust
+pub enum MappedValue
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Cell | A scalar cell. |
+| Many | A child collection. |
+
+##### MappedRow {#rust-mappedrow}
+
+```rust
+pub type MappedRow = HashMap<String, MappedValue>
+```
+
+### Remarks
+
+Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
+
+> **TypeScript**
+>
+> Map to generic `T`.
+
+> **C#**
+>
+> Map to a [MappedValue](#mappedvalue) graph.
+
+> **Rust**
+>
+> Map to a [MappedValue](#mappedvalue) graph.
+
+Nested group fields on a collection are omitted.
+
+This is a collapse mapper, not enrichment. Related fills after read use [Readonly repository](#ienriched).
+
+### Examples
+
+#### Map join rows to a nested contact
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164)
+
+```csharp
+var mapper = new FlatToNestedMapper(new TypeMap
+{
+    Key = "id",
+    Fields = new Dictionary<string, TypeMapField>
+    {
+        ["id"] = "id",
+        ["first_name"] = "first_name",
+        ["last_name"] = "last_name",
+        ["email"] = "email",
+        ["contact_source_name"] = "contact_source_name",
+        ["contact_type_name"] = "contact_type_name",
+        ["addresses"] = new TypeMapGroup
+        {
+            Key = "address_id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "address_id",
+                ["line1"] = "address_line1",
+                ["city"] = "address_city",
+                ["address_type_name"] = "address_type_name",
+            },
+        },
+        ["phones"] = new TypeMapGroup
+        {
+            Key = "phone_id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["id"] = "phone_id",
+                ["number"] = "phone_number",
+                ["phone_type_name"] = "phone_type_name",
+            },
+        },
+    },
+});
+var adaHome = new Row(
+[
+    new("id", 7),
+    new("first_name", "Ada"),
+    new("last_name", "Lovelace"),
+    new("email", "ada@ex.com"),
+    new("contact_source_name", "Web"),
+    new("contact_type_name", "Person"),
+    new("address_id", 101),
+    new("address_line1", "10 Downing St"),
+    new("address_city", "London"),
+    new("address_type_name", "Home"),
+    new("phone_id", 201),
+    new("phone_number", "+44"),
+    new("phone_type_name", "Mobile"),
+]);
+var adaWork = new Row(adaHome)
+{
+    ["address_id"] = 102,
+    ["address_line1"] = "1 Parliament Sq"
+};
+var nested = mapper.Map([adaHome, adaWork]);
+var flat = mapper.ReverseMap(nested);
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L385-L453)
+
+```rust
+let mapper = FlatToNestedMapper::new(TypeMap::new(
+    "id",
+    vec![
+        ("id".into(), TypeMapField::column("id")),
+        ("first_name".into(), TypeMapField::column("first_name")),
+        ("last_name".into(), TypeMapField::column("last_name")),
+        ("email".into(), TypeMapField::column("email")),
+        (
+            "contact_source_name".into(),
+            TypeMapField::column("contact_source_name"),
+        ),
+        (
+            "contact_type_name".into(),
+            TypeMapField::column("contact_type_name"),
+        ),
+        (
+            "addresses".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "address_id",
+                vec![
+                    ("id".into(), TypeMapField::column("address_id")),
+                    ("line1".into(), TypeMapField::column("address_line1")),
+                    ("city".into(), TypeMapField::column("address_city")),
+                    (
+                        "address_type_name".into(),
+                        TypeMapField::column("address_type_name"),
+                    ),
+                ],
+            )),
+        ),
+        (
+            "phones".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "phone_id",
+                vec![
+                    ("id".into(), TypeMapField::column("phone_id")),
+                    ("number".into(), TypeMapField::column("phone_number")),
+                    (
+                        "phone_type_name".into(),
+                        TypeMapField::column("phone_type_name"),
+                    ),
+                ],
+            )),
+        ),
+    ],
+));
+let ada_home = cell(&[
+    ("id", Value::Int(7)),
+    ("first_name", Value::from("Ada")),
+    ("last_name", Value::from("Lovelace")),
+    ("email", Value::from("ada@ex.com")),
+    ("contact_source_name", Value::from("Web")),
+    ("contact_type_name", Value::from("Person")),
+    ("address_id", Value::Int(101)),
+    ("address_line1", Value::from("10 Downing St")),
+    ("address_city", Value::from("London")),
+    ("address_type_name", Value::from("Home")),
+    ("phone_id", Value::Int(201)),
+    ("phone_number", Value::from("+44")),
+    ("phone_type_name", Value::from("Mobile")),
+]);
+let mut ada_work = ada_home.clone();
+ada_work.insert("address_id".into(), Value::Int(102));
+ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
+let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
+let flat = Mapper::reverse_map(&mapper, nested.clone());
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#L90-L155)
+
+```typescript
+const mapper = new FlatToNestedMapper<Contact>({
+  key: "id",
+  fields: {
+    id: "id",
+    first_name: "first_name",
+    last_name: "last_name",
+    email: "email",
+    contact_source_name: "contact_source_name",
+    contact_type_name: "contact_type_name",
+    addresses: {
+      key: "address_id",
+      fields: {
+        id: "address_id",
+        line1: "address_line1",
+        city: "address_city",
+        address_type_name: "address_type_name",
+      },
+    },
+    phones: {
+      key: "phone_id",
+      fields: {
+        id: "phone_id",
+        number: "phone_number",
+        phone_type_name: "phone_type_name",
+      },
+    },
+  },
+});
+const adaHome: Cells = {
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  address_id: 101,
+  address_line1: "10 Downing St",
+  address_city: "London",
+  address_type_name: "Home",
+  phone_id: 201,
+  phone_number: "+44",
+  phone_type_name: "Mobile",
+};
+const adaWork = {
+  ...adaHome,
+  address_id: 102,
+  address_line1: "1 Parliament Sq",
+};
+const nested = mapper.map([adaHome, adaWork]);
+const flat = mapper.reverseMap(nested);
+```
+
+**After: nested contact**
+
+```
+{
+  id: 7,
+  first_name: "Ada",
+  last_name: "Lovelace",
+  email: "ada@ex.com",
+  contact_source_name: "Web",
+  contact_type_name: "Person",
+  addresses: [
+    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
+    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
+  ],
+  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
+}
+```
+
+**After: reverseMap join rows**
+
+```
+[
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 101,
+    address_line1: "10 Downing St",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  },
+  {
+    id: 7,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@ex.com",
+    contact_source_name: "Web",
+    contact_type_name: "Person",
+    address_id: 102,
+    address_line1: "1 Parliament Sq",
+    address_city: "London",
+    address_type_name: "Home",
+    phone_id: 201,
+    phone_number: "+44",
+    phone_type_name: "Mobile"
+  }
+]
+```
+
+## Type Converters
+
+`TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
+
+### Classes
+
+##### TypeScript
+
+##### TypeConverter {#typescript-typeconverter}
+
+```typescript
+abstract class TypeConverter<To = Cells, From = Cells>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [convert(from)](#typescript-typeconverter-convert-from) | Converts `From` to `To`. |
+| [reverseConvert(to)](#typescript-typeconverter-reverseconvert-to) | Converts `To` back to `From`. |
+
+###### convert(from) {#typescript-typeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```typescript
+abstract convert(from: From): To
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`To`
+
+###### reverseConvert(to) {#typescript-typeconverter-reverseconvert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```typescript
+abstract reverseConvert(to: To): From
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`From`
+
+##### C#
+
+##### ITypeConverter {#csharp-itypeconverter}
+
+```csharp
+public interface ITypeConverter<To, From>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Convert(from)](#csharp-itypeconverter-convert-from) | Converts `From` to `To`. |
+| [ReverseConvert(to)](#csharp-itypeconverter-reverseconvert-to) | Converts `To` back to `From`. |
+
+###### Convert(from) {#csharp-itypeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```csharp
+To Convert(From from)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`To`
+
+###### ReverseConvert(to) {#csharp-itypeconverter-reverseconvert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```csharp
+From ReverseConvert(To to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`From`
+
+##### TypeConverter {#csharp-typeconverter}
+
+```csharp
+public abstract class TypeConverter<To, From> : ITypeConverter<To, From>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Convert(from)](#csharp-typeconverter-convert-from) | Converts `From` to `To`. |
+| [ReverseConvert(to)](#csharp-typeconverter-reverseconvert-to) | Converts `To` back to `From`. |
+
+###### Convert(from) {#csharp-typeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```csharp
+public abstract To Convert(From from)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`To`
+
+###### ReverseConvert(to) {#csharp-typeconverter-reverseconvert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```csharp
+public abstract From ReverseConvert(To to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`From`
+
+##### Rust
+
+##### TypeConverter {#rust-typeconverter}
+
+```rust
+pub trait TypeConverter<To, From>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [convert(from)](#rust-typeconverter-convert-from) | Converts `From` to `To`. |
+| [reverse_convert(to)](#rust-typeconverter-reverse_convert-to) | Converts `To` back to `From`. |
+
+###### convert(from) {#rust-typeconverter-convert-from}
+
+Converts `From` to `To`.
+
+**Definition**
+
+```rust
+fn convert(&self, from: &From) -> Result<To>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source value |
+
+**Returns**
+
+`Result<To>`
+
+###### reverse_convert(to) {#rust-typeconverter-reverse_convert-to}
+
+Converts `To` back to `From`.
+
+**Definition**
+
+```rust
+fn reverse_convert(&self, to: &To) -> Result<From>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted value |
+
+**Returns**
+
+`Result<From>`
+
+### Remarks
+
+Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [Repositories](#repositories).
+
+### See also
+
+- [RowTypeConverter](#row-type-converter)
+
+## RowTypeConverter
+
+TypeConverter for a row. Holds `Types` / `types` / `types` and `Fields` / `fields` / `fields`. `Convert` / `convert` / `convert` uses `Fields[name]` / `fields[name]` / `fields[name]`. `Types` / `types` / `types` is the provider catalog merge and is unused at convert time.
+
+### Classes
+
+##### TypeScript
+
+##### RowTypeConverter {#typescript-rowtypeconverter}
+
+```typescript
+class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [RowTypeConverter(types, fields)](#typescript-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| types | Provider type catalog. Convert does not read this map. |
+| fields | Per-column converters. Convert uses `fields[name]`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [convert(row, type?)](#typescript-rowtypeconverter-convert-row-type) | Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance. |
+| [reverseConvert(row)](#typescript-rowtypeconverter-reverseconvert-row) | Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values. |
+
+###### RowTypeConverter(types, fields) {#typescript-rowtypeconverter-rowtypeconverter-types-fields}
+
+Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types).
+
+**Definition**
+
+```typescript
+constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<string, TypeConverter<Cell, Cell>>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `types` | provider catalog; unused at convert time |
+| `fields` | per-column TypeConverter |
+
+###### convert(row, type?) {#typescript-rowtypeconverter-convert-row-type}
+
+Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance.
+
+**Definition**
+
+```typescript
+convert(row: Cells, type?: Constructable<T>): T
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | source cells |
+| `type` | optional `new () => T` |
+
+**Returns**
+
+`T`
+
+###### reverseConvert(row) {#typescript-rowtypeconverter-reverseconvert-row}
+
+Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values.
+
+**Definition**
+
+```typescript
+reverseConvert(row: T): Cells
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | converted object |
+
+**Returns**
+
+`Cells`
+
+##### C#
+
+##### RowTypeConverter {#csharp-rowtypeconverter}
+
+```csharp
+public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [RowTypeConverter(types, fields)](#csharp-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types). |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Types | Provider type catalog. Convert does not read this map. |
+| Fields | Per-column converters. Convert uses `Fields[name]`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Convert(from)](#csharp-rowtypeconverter-convert-from) | Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys). |
+| [ReverseConvert(to)](#csharp-rowtypeconverter-reverseconvert-to) | Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields). |
+
+###### RowTypeConverter(types, fields) {#csharp-rowtypeconverter-rowtypeconverter-types-fields}
+
+Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types).
+
+**Definition**
+
+```csharp
+public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `types` | provider catalog; unused at convert time |
+| `fields` | per-column TypeConverter |
+
+###### Convert(from) {#csharp-rowtypeconverter-convert-from}
+
+Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys).
+
+**Definition**
+
+```csharp
+public override T Convert(Row from)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `from` | source row |
+
+**Returns**
+
+`T`
+
+###### ReverseConvert(to) {#csharp-rowtypeconverter-reverseconvert-to}
+
+Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields).
+
+**Definition**
+
+```csharp
+public override Row ReverseConvert(T to)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `to` | converted object |
+
+**Returns**
+
+`Row`
+
+##### Rust
+
+##### RowTypeConverter {#rust-rowtypeconverter}
+
+```rust
+pub struct RowTypeConverter
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(columns)](#rust-rowtypeconverter-new-columns) | Builds a row converter for the given columns. |
+| [of()](#rust-rowtypeconverter-of) | Builds a converter from `T: ConvertSchema`. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| types | Provider type catalog. Convert does not read this map. |
+| fields | Per-column converters. Convert uses `fields[name]`. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [with_types(types)](#rust-rowtypeconverter-with_types-types) | Merges a provider catalog into [types](#rust-rowtypeconverter-types). |
+| [with_fields(fields)](#rust-rowtypeconverter-with_fields-fields) | Merges per-column converters into [fields](#rust-rowtypeconverter-fields). |
+| [convert(row)](#rust-rowtypeconverter-convert-row) | Converts each cell through [fields](#rust-rowtypeconverter-fields). |
+| [reverse_convert(row)](#rust-rowtypeconverter-reverse_convert-row) | Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields). |
+
+###### new(columns) {#rust-rowtypeconverter-new-columns}
+
+Builds a row converter for the given columns.
+
+**Definition**
+
+```rust
+pub fn new(columns: Vec<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `columns` | column names |
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### of() {#rust-rowtypeconverter-of}
+
+Builds a converter from `T: ConvertSchema`.
+
+**Definition**
+
+```rust
+pub fn of<T: ConvertSchema>() -> Self
+```
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### with_types(types) {#rust-rowtypeconverter-with_types-types}
+
+Merges a provider catalog into [types](#rust-rowtypeconverter-types).
+
+**Definition**
+
+```rust
+pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `types` | provider catalog; unused at convert time |
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### with_fields(fields) {#rust-rowtypeconverter-with_fields-fields}
+
+Merges per-column converters into [fields](#rust-rowtypeconverter-fields).
+
+**Definition**
+
+```rust
+pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `fields` | per-column TypeConverter |
+
+**Returns**
+
+[RowTypeConverter](#rust-rowtypeconverter)
+
+###### convert(row) {#rust-rowtypeconverter-convert-row}
+
+Converts each cell through [fields](#rust-rowtypeconverter-fields).
+
+**Definition**
+
+```rust
+pub fn convert(&self, row: &Row) -> Result<Row>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | source row |
+
+**Returns**
+
+`Result<Row>`
+
+###### reverse_convert(row) {#rust-rowtypeconverter-reverse_convert-row}
+
+Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields).
+
+**Definition**
+
+```rust
+pub fn reverse_convert(&self, row: &Row) -> Result<Row>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `row` | converted row |
+
+**Returns**
+
+`Result<Row>`
+
+### Remarks
+
+`Types` / `types` / `types` is the provider catalog merge. `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` only consult `Fields` / `fields` / `fields`.
+
+Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
+
+### Examples
+
+#### Convert a row
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L46)
+
+```csharp
+var converter = new RowTypeConverter<User>();
+var user = converter.Convert(new Row
+{
+    ["Id"] = 7,
+    ["Username"] = "ada",
+    ["IsEnabled"] = 1,
+    ["Created"] = "2020-01-02T03:04:05.000Z"
+});
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L101-L108)
+
+```rust
+let converter = RowTypeConverter::new(vec!["id".into(), "name".into()]);
+let row = record(&[("id", Value::Int(7)), ("name", Value::from("ada"))]);
+let dest = converter.convert(&row).unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L18)
+
+```typescript
+const converter = new RowTypeConverter();
+const item = converter.convert({ id: 7, username: "ada" });
+const row = converter.reverseConvert(item);
+```
+
+#### Field converter
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L91-L102)
+
+```csharp
+var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+{
+    ["flag"] = new OnlyOne()
+});
+var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L125-L143)
+
+```rust
+let converter =
+    RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
+        "is_enabled".into(),
+        Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+    )]));
+let row = record(&[("is_enabled", Value::Int(2))]);
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L26)
+
+```typescript
+const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
+const dest = converter.convert({ flag: 1, name: "a" });
+```
+
 ## Statements
 
-Command text. [Command](#command) `Execute` / `execute` / `execute` and `ExecuteReader` / `executeReader` / `execute_reader` overloads take any statement and use `GetText()` / `getText()` / `get_text()` only.
+Command text. A string passed to [Command](#command) `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader` is parsed with `StatementParser.Parse` / `StatementParser.parse` / `StatementParser::parse`. `Native` / `Native` / `Native` and `N` / `n` / `n` send that text to the provider engine. A statement overload renders with `GetText()` / `getText()` / `get_text()` after the provider transforms it, then runs `Native` / `Native` / `Native`.
 
 ### Classes
 
@@ -9599,8043 +19539,6 @@ var ret = new ReturnStatement("add", fields);
 
 ```typescript
 
-```
-
-## Repositories
-
-Typed item marker and instance registry. `Type` / `type` / `entity_type` is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
-
-Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
-
-### Classes
-
-##### TypeScript
-
-##### IRepository {#typescript-irepository}
-
-```typescript
-interface IRepository<T = unknown>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| type | Item constructor the repository exposes. |
-
-##### IRepositoryFactory {#typescript-irepositoryfactory}
-
-```typescript
-interface IRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(repository)](#typescript-irepositoryfactory-register-repository) | Registers a readonly repository by [type](#typescript-irepository-type). |
-| [create(type)](#typescript-irepositoryfactory-create-type) | Creates a readonly repository. |
-
-###### register(repository) {#typescript-irepositoryfactory-register-repository}
-
-Registers a readonly repository by [type](#typescript-irepository-type).
-
-**Definition**
-
-```typescript
-register(repository: IRepository): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
-
-###### create(type) {#typescript-irepositoryfactory-create-type}
-
-Creates a readonly repository.
-
-**Definition**
-
-```typescript
-create<T>(type: Constructable<T>): IReadonlyRepository<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item constructor |
-
-**Returns**
-
-[IReadonlyRepository](#readonly-repository)`<T>`
-
-##### ICRUDRepositoryFactory {#typescript-icrudrepositoryfactory}
-
-```typescript
-interface ICRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(repository)](#typescript-icrudrepositoryfactory-register-repository) | Registers a CRUD repository by [type](#typescript-irepository-type). |
-| [create(type)](#typescript-icrudrepositoryfactory-create-type) | Creates a CRUD repository. |
-
-###### register(repository) {#typescript-icrudrepositoryfactory-register-repository}
-
-Registers a CRUD repository by [type](#typescript-irepository-type).
-
-**Definition**
-
-```typescript
-register(repository: IRepository): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
-
-###### create(type) {#typescript-icrudrepositoryfactory-create-type}
-
-Creates a CRUD repository.
-
-**Definition**
-
-```typescript
-create<T>(type: Constructable<T>): ICRUDRepository<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item constructor |
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)`<T>`
-
-##### RepositoryFactory {#typescript-repositoryfactory}
-
-```typescript
-class RepositoryFactory implements ICRUDRepositoryFactory
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| asReadonly | Readonly factory view. `register` / `create` call [IRepositoryFactory](#typescript-irepositoryfactory). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(repository)](#typescript-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
-| [create(type)](#typescript-repositoryfactory-create-type) | Creates a CRUD repository. |
-
-###### register(repository) {#typescript-repositoryfactory-register-repository}
-
-Registers CRUD and readonly for the same repository.
-
-**Definition**
-
-```typescript
-register(repository: IRepository): void
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IRepository](#typescript-irepository) to look up by `type` |
-
-###### create(type) {#typescript-repositoryfactory-create-type}
-
-Creates a CRUD repository.
-
-**Definition**
-
-```typescript
-create<T>(type: Constructable<T>): ICRUDRepository<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item constructor |
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)`<T>`
-
-##### RepositoryNotRegisteredError {#typescript-repositorynotregisterederror}
-
-```typescript
-class RepositoryNotRegisteredError extends Error
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [RepositoryNotRegisteredError(entityTypeName)](#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename) | Thrown when [create](#typescript-repositoryfactory-create-type) cannot find a repository. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| entityTypeName | Missing entity type name. |
-
-###### RepositoryNotRegisteredError(entityTypeName) {#typescript-repositorynotregisterederror-repositorynotregisterederror-entitytypename}
-
-Thrown when [create](#typescript-repositoryfactory-create-type) cannot find a repository.
-
-**Definition**
-
-```typescript
-constructor(entityTypeName: string)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | missing entity type name |
-
-##### C#
-
-##### IRepository {#csharp-irepository}
-
-```csharp
-public interface IRepository
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Type | Item CLR type the repository exposes. |
-
-##### IRepositoryFactory {#csharp-irepositoryfactory}
-
-```csharp
-public interface IRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Register(repository)](#csharp-irepositoryfactory-register-repository) | Registers a readonly repository by [Type](#csharp-irepository-type). |
-| [Create()](#csharp-irepositoryfactory-create) | Creates a readonly repository by `T`. |
-
-###### Register(repository) {#csharp-irepositoryfactory-register-repository}
-
-Registers a readonly repository by [Type](#csharp-irepository-type).
-
-**Definition**
-
-```csharp
-void Register(IRepository repository)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
-
-###### Create() {#csharp-irepositoryfactory-create}
-
-Creates a readonly repository by `T`.
-
-**Definition**
-
-```csharp
-IReadonlyRepository<T> Create<T>()
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | optional open [IConnection](#connection) |
-
-**Returns**
-
-[IReadonlyRepository](#readonly-repository)`<T>`
-
-##### ICRUDRepositoryFactory {#csharp-icrudrepositoryfactory}
-
-```csharp
-public interface ICRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Register(repository)](#csharp-icrudrepositoryfactory-register-repository) | Registers a CRUD repository by [Type](#csharp-irepository-type). |
-| [Create()](#csharp-icrudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
-
-###### Register(repository) {#csharp-icrudrepositoryfactory-register-repository}
-
-Registers a CRUD repository by [Type](#csharp-irepository-type).
-
-**Definition**
-
-```csharp
-void Register(IRepository repository)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
-
-###### Create() {#csharp-icrudrepositoryfactory-create}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```csharp
-ICRUDRepository<T> Create<T>()
-```
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)`<T>`
-
-##### RepositoryFactory {#csharp-repositoryfactory}
-
-```csharp
-public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Register(repository)](#csharp-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
-| [Create()](#csharp-repositoryfactory-create) | Creates a CRUD repository by `T`. |
-
-###### Register(repository) {#csharp-repositoryfactory-register-repository}
-
-Registers CRUD and readonly for the same repository.
-
-**Definition**
-
-```csharp
-public void Register(IRepository repository)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IRepository](#csharp-irepository) to look up by `Type` |
-
-###### Create() {#csharp-repositoryfactory-create}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```csharp
-public ICRUDRepository<T> Create<T>()
-```
-
-**Returns**
-
-[ICRUDRepository](#crud-repository)`<T>`
-
-##### RepositoryNotRegisteredException {#csharp-repositorynotregisteredexception}
-
-```csharp
-public sealed class RepositoryNotRegisteredException : DatasourceException
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [RepositoryNotRegisteredException(entityTypeName)](#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename) | Thrown when [Create](#csharp-repositoryfactory-create) cannot find a repository. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| EntityTypeName | Missing entity type name. |
-
-###### RepositoryNotRegisteredException(entityTypeName) {#csharp-repositorynotregisteredexception-repositorynotregisteredexception-entitytypename}
-
-Thrown when [Create](#csharp-repositoryfactory-create) cannot find a repository.
-
-**Definition**
-
-```csharp
-public RepositoryNotRegisteredException(string entityTypeName)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entityTypeName` | missing entity type name |
-
-##### Rust
-
-##### IRepository {#rust-irepository}
-
-```rust
-pub trait IRepository
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [entity_type()](#rust-irepository-entity_type) | Item `TypeId` the repository exposes. Defaults to `Row`. |
-
-###### entity_type() {#rust-irepository-entity_type}
-
-Item `TypeId` the repository exposes. Defaults to `Row`.
-
-**Definition**
-
-```rust
-fn entity_type(&self) -> TypeId
-```
-
-**Returns**
-
-`TypeId`
-
-##### datasources {#rust-datasources}
-
-```rust
-pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [as_readonly(repo)](#rust-datasources-as_readonly-repo) | Views a [ICRUDRepository](#crud-repository) as a [IReadonlyRepository](#readonly-repository). |
-
-###### as_readonly(repo) {#rust-datasources-as_readonly-repo}
-
-Views a [ICRUDRepository](#crud-repository) as a [IReadonlyRepository](#readonly-repository).
-
-**Definition**
-
-```rust
-pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepository>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repo` | [ICRUDRepository](#crud-repository) |
-
-**Returns**
-
-`Arc<dyn `[IReadonlyRepository](#readonly-repository)`>`
-
-##### ReadonlyRepositoryFactory {#rust-readonlyrepositoryfactory}
-
-```rust
-pub trait ReadonlyRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(repository)](#rust-readonlyrepositoryfactory-register-repository) | Registers a readonly repository by [entity_type](#rust-irepository-entity_type). |
-| [create()](#rust-readonlyrepositoryfactory-create) | Creates a readonly repository by `T`. |
-
-###### register(repository) {#rust-readonlyrepositoryfactory-register-repository}
-
-Registers a readonly repository by [entity_type](#rust-irepository-entity_type).
-
-**Definition**
-
-```rust
-fn register(&self, repository: Arc<dyn IReadonlyRepository>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [IReadonlyRepository](#readonly-repository) to look up by `entity_type` |
-
-###### create() {#rust-readonlyrepositoryfactory-create}
-
-Creates a readonly repository by `T`.
-
-**Definition**
-
-```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>
-```
-
-**Returns**
-
-`Result<Arc<dyn `[IReadonlyRepository](#readonly-repository)`>>`
-
-##### CRUDRepositoryFactory {#rust-crudrepositoryfactory}
-
-```rust
-pub trait CRUDRepositoryFactory
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(repository)](#rust-crudrepositoryfactory-register-repository) | Registers a CRUD repository by [entity_type](#rust-irepository-entity_type). |
-| [create()](#rust-crudrepositoryfactory-create) | Creates a CRUD repository by `T`. |
-
-###### register(repository) {#rust-crudrepositoryfactory-register-repository}
-
-Registers a CRUD repository by [entity_type](#rust-irepository-entity_type).
-
-**Definition**
-
-```rust
-fn register(&self, repository: Arc<dyn ICRUDRepository>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [ICRUDRepository](#crud-repository) to look up by `entity_type` |
-
-###### create() {#rust-crudrepositoryfactory-create}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
-```
-
-**Returns**
-
-`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
-
-##### RepositoryFactory {#rust-repositoryfactory}
-
-```rust
-pub struct RepositoryFactory
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new()](#rust-repositoryfactory-new) | Empty registry. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [register(repository)](#rust-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
-| [create()](#rust-repositoryfactory-create) | Creates a CRUD repository by `T`. |
-
-###### new() {#rust-repositoryfactory-new}
-
-Empty registry.
-
-**Definition**
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns**
-
-[RepositoryFactory](#rust-repositoryfactory)
-
-###### register(repository) {#rust-repositoryfactory-register-repository}
-
-Registers CRUD and readonly for the same repository.
-
-**Definition**
-
-```rust
-pub fn register(&self, repository: Arc<dyn ICRUDRepository>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `repository` | [ICRUDRepository](#crud-repository) to look up by `entity_type` |
-
-###### create() {#rust-repositoryfactory-create}
-
-Creates a CRUD repository by `T`.
-
-**Definition**
-
-```rust
-pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
-```
-
-**Returns**
-
-`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
-
-### Remarks
-
-SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
-
-> **TypeScript**
->
-> A missing repository throws [RepositoryNotRegisteredError](#repositorynotregisterederror).
-
-> **C#**
->
-> A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception).
-
-> **Rust**
->
-> A missing repository throws `DatasourceError`.
-
-See [Datasource](#datasource) for `CreateRepository` / `createRepository` / `create_repository`.
-
-### Examples
-
-#### Register and create
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryFactoryTests.cs#L12-L19)
-
-```csharp
-{
-    var factory = new RepositoryFactory();
-    var repo = new StubRepository<Item>("memory", new StubConnection("memory"));
-    factory.Register(repo);
-    var created = factory.Create<Item>();
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L112-L116)
-
-```rust
-let factory = RepositoryFactory::new();
-factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
-let created = factory.create::<Item>().unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/RepositoryFactory.test.ts#L18-L24)
-
-```typescript
-const factory = new RepositoryFactory();
-const repo = new MockRepository<Item>(new MockConnection(), Item);
-factory.register(repo);
-const created = factory.create(Item);
-```
-
-### See also
-
-- [Readonly repository](#readonly-repository)
-- [CRUD repository](#crud-repository)
-- [Bulk repository](#bulk-repository)
-
-## Readonly repository
-
-Read-only typed read over a connection. `ReadSingle` / `readSingle` / `read_single` returns the first row or none. `Read` / `read` / `read` yields every row.
-
-Construct it with a connection, then register each fill with `AddEnriched` / `addEnriched` / `add_enriched`. That fill runs after convert-then-map. Lookups use `ReadSingle` / `readSingle` / `read_single` (cached per distinct key). Lists use `Read` / `read` / `read`. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](#crud-repository).
-
-### Classes
-
-##### TypeScript
-
-##### IReadonlyRepository {#typescript-ireadonlyrepository}
-
-```typescript
-interface IReadonlyRepository<T = unknown> extends IRepository<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [readSingle(query?)](#typescript-ireadonlyrepository-readsingle-query) | Returns the first item, or `undefined` when the result is empty. |
-| [read(query?)](#typescript-ireadonlyrepository-read-query) | Yields every item. |
-
-###### readSingle(query?) {#typescript-ireadonlyrepository-readsingle-query}
-
-Returns the first item, or `undefined` when the result is empty.
-
-**Definition**
-
-```typescript
-readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`Promise<T | undefined>`
-
-###### read(query?) {#typescript-ireadonlyrepository-read-query}
-
-Yields every item.
-
-**Definition**
-
-```typescript
-read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`AsyncIterable<T>`
-
-##### ReadonlyRepository {#typescript-readonlyrepository}
-
-```typescript
-abstract class ReadonlyRepository<T> implements IReadonlyRepository<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [ReadonlyRepository(type)](#typescript-readonlyrepository-readonlyrepository-type) | Stores the item constructor. |
-| [ReadonlyRepository(inner, strategy?)](#typescript-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#typescript-ienriched). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| type | Item constructor the repository exposes. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [read(query?)](#typescript-readonlyrepository-read-query) | Yields every item. Table repositories convert then map; subclasses may override. |
-| [readSingle(query?)](#typescript-readonlyrepository-readsingle-query) | Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`. |
-
-###### ReadonlyRepository(type) {#typescript-readonlyrepository-readonlyrepository-type}
-
-Stores the item constructor.
-
-**Definition**
-
-```typescript
-constructor(type: Constructable<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item constructor ([IRepository.type](#typescript-irepository-type)) |
-
-###### ReadonlyRepository(inner, strategy?) {#typescript-readonlyrepository-readonlyrepository-inner-strategy}
-
-Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#typescript-ienriched).
-
-**Definition**
-
-```typescript
-constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [IReadonlyRepository](#typescript-ireadonlyrepository) |
-| `strategy` | optional enrichment strategy |
-
-###### read(query?) {#typescript-readonlyrepository-read-query}
-
-Yields every item. Table repositories convert then map; subclasses may override.
-
-**Definition**
-
-```typescript
-abstract read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`AsyncIterable<T>`
-
-###### readSingle(query?) {#typescript-readonlyrepository-readsingle-query}
-
-Returns the first item from [read](#typescript-readonlyrepository-read-query), or `undefined`.
-
-**Definition**
-
-```typescript
-readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Promise<T | undefined>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`Promise<T | undefined>`
-
-##### ReadonlyRepositoryOptions {#typescript-readonlyrepositoryoptions}
-
-```typescript
-type ReadonlyRepositoryOptions<T = Cells>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| entity | Table or entity name. |
-| entityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| columnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
-| query | Rewrites the finished select. Omitted leaves the statement unchanged. |
-| rowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
-| rowConverter | Row [TypeConverter](#type-converters). |
-| type | Item constructor. Supplies the default entity name and column list. |
-| rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
-| readColumns | SELECT column names. When omitted, public fields of `type` are used. |
-
-##### IEnriched {#typescript-ienriched}
-
-```typescript
-interface IEnriched<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [addEnriched(enrichment, via, strategy?)](#typescript-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
-
-###### addEnriched(enrichment, via, strategy?) {#typescript-ienriched-addenriched-enrichment-via-strategy}
-
-Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
-
-**Definition**
-
-```typescript
-addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#typescript-enrichment) |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`this`
-
-##### IRepositoryTree {#typescript-irepositorytree}
-
-```typescript
-interface IRepositoryTree
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| parent | Root [IRepositoryTreeNode](#typescript-irepositorytreenode). |
-
-##### IRepositoryTreeNode {#typescript-irepositorytreenode}
-
-```typescript
-interface IRepositoryTreeNode
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| value | Related repository. |
-| propertyName | Destination property name. |
-| parent | Parent node, if any. |
-| items | Child nodes. |
-| enrichment | [Enrichment](#typescript-enrichment) for this node. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [include(via, into, from, by, select?, many?)](#typescript-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
-| [enrichFrom(parents)](#typescript-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
-
-###### include(via, into, from, by, select?, many?) {#typescript-irepositorytreenode-include-via-into-from-by-select-many}
-
-Adds a child node.
-
-**Definition**
-
-```typescript
-include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: string, from: string, by: string, select?: string, many?: boolean): IRepositoryTreeNode
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `into` | destination property |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related property to copy |
-| `many` | collect a list |
-
-**Returns**
-
-[IRepositoryTreeNode](#typescript-irepositorytreenode)
-
-###### enrichFrom(parents) {#typescript-irepositorytreenode-enrichfrom-parents}
-
-Fills `parents` from this node.
-
-**Definition**
-
-```typescript
-enrichFrom(parents: object[]): Promise<void>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `parents` | parent objects |
-
-##### Enrichment {#typescript-enrichment}
-
-```typescript
-type Enrichment
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| into | Destination property. |
-| from | Parent key. |
-| by | Related key. |
-| select | Optional related property to copy. |
-| many | Collect a list. |
-
-##### IReadonlyEnrichmentStrategy {#typescript-ireadonlyenrichmentstrategy}
-
-```typescript
-interface IReadonlyEnrichmentStrategy<T extends object> extends IReadonlyEnrichmentBinder
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [read(inner, tree, query?)](#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [enrich(tree, items)](#typescript-ireadonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
-
-###### read(inner, tree, query?) {#typescript-ireadonlyenrichmentstrategy-read-inner-tree-query}
-
-Reads through `inner`, then enriches.
-
-**Definition**
-
-```typescript
-read(inner: IReadonlyRepository<T>, tree: IRepositoryTree, query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
-| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
-| `query` | optional query, where, or stored procedure |
-
-**Returns**
-
-`AsyncIterable<T>`
-
-###### enrich(tree, items) {#typescript-ireadonlyenrichmentstrategy-enrich-tree-items}
-
-Fills `items` from the tree.
-
-**Definition**
-
-```typescript
-enrich(tree: IRepositoryTree, items: T[]): Promise<void>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `tree` | [IRepositoryTree](#typescript-irepositorytree) |
-| `items` | parents to fill |
-
-##### C#
-
-##### IReadonlyRepository {#csharp-ireadonlyrepository}
-
-```csharp
-public interface IReadonlyRepository<T> : IRepository
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [ReadSingle(query)](#csharp-ireadonlyrepository-readsingle-query) | Returns the first item, or `default` when the result is empty. |
-| [Read(query)](#csharp-ireadonlyrepository-read-query) | Yields every item. |
-
-###### ReadSingle(query) {#csharp-ireadonlyrepository-readsingle-query}
-
-Returns the first item, or `default` when the result is empty.
-
-**Definition**
-
-```csharp
-Task<T?> ReadSingle(IStatement? query = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
-
-**Returns**
-
-`Task<T?>`
-
-###### Read(query) {#csharp-ireadonlyrepository-read-query}
-
-Yields every item.
-
-**Definition**
-
-```csharp
-IAsyncEnumerable<T> Read(IStatement? query = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
-
-**Returns**
-
-`IAsyncEnumerable<T>`
-
-##### ReadonlyRepository {#csharp-readonlyrepository}
-
-```csharp
-public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [ReadonlyRepository(inner, strategy)](#csharp-readonlyrepository-readonlyrepository-inner-strategy) | Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#csharp-ienriched). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Type | Item CLR type. `typeof(T)`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Read(query)](#csharp-readonlyrepository-read-query) | Yields every item. Table repositories convert then map; subclasses may override. |
-| [ReadSingle(query)](#csharp-readonlyrepository-readsingle-query) | Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`. |
-
-###### ReadonlyRepository(inner, strategy) {#csharp-readonlyrepository-readonlyrepository-inner-strategy}
-
-Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#csharp-ienriched).
-
-**Definition**
-
-```csharp
-public ReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [IReadonlyRepository](#csharp-ireadonlyrepository) |
-| `strategy` | optional enrichment strategy |
-
-###### Read(query) {#csharp-readonlyrepository-read-query}
-
-Yields every item. Table repositories convert then map; subclasses may override.
-
-**Definition**
-
-```csharp
-public virtual IAsyncEnumerable<T> Read(IStatement? query = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
-
-**Returns**
-
-`IAsyncEnumerable<T>`
-
-###### ReadSingle(query) {#csharp-readonlyrepository-readsingle-query}
-
-Returns the first item from [Read](#csharp-readonlyrepository-read-query), or `default`.
-
-**Definition**
-
-```csharp
-public virtual Task<T?> ReadSingle(IStatement? query = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored-procedure statement; omitted uses the default select |
-
-**Returns**
-
-`Task<T?>`
-
-##### ReadonlyRepositoryOptions {#csharp-readonlyrepositoryoptions}
-
-```csharp
-public class ReadonlyRepositoryOptions<T> where T : new()
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Entity | Table or entity name. When omitted, `typeof(T).Name` is used. |
-| EntityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| ColumnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
-| Query | Rewrites the finished select. Omitted leaves the statement unchanged. |
-| RowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
-| RowConverter | Row [TypeConverter](#type-converters). |
-| RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
-| ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
-
-##### IEnriched {#csharp-ienriched}
-
-```csharp
-public interface IEnriched<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [AddEnriched(enrichment, via, strategy)](#csharp-ienriched-addenriched-enrichment-via-strategy) | Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write. |
-
-###### AddEnriched(enrichment, via, strategy) {#csharp-ienriched-addenriched-enrichment-via-strategy}
-
-Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
-
-**Definition**
-
-```csharp
-IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#csharp-enrichment) |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-[IEnriched](#csharp-ienriched)`<T>`
-
-##### IRepositoryTree {#csharp-irepositorytree}
-
-```csharp
-public interface IRepositoryTree
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Parent | Root [IRepositoryTreeNode](#csharp-irepositorytreenode). |
-
-##### IRepositoryTreeNode {#csharp-irepositorytreenode}
-
-```csharp
-public interface IRepositoryTreeNode
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Value | Related repository. |
-| PropertyName | Destination property name. |
-| Parent | Parent node, if any. |
-| Items | Child nodes. |
-| Enrichment | [Enrichment](#csharp-enrichment) for this node. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Include(via, into, from, by, select, many)](#csharp-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
-| [EnrichFrom(parents)](#csharp-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
-
-###### Include(via, into, from, by, select, many) {#csharp-irepositorytreenode-include-via-into-from-by-select-many}
-
-Adds a child node.
-
-**Definition**
-
-```csharp
-IRepositoryTreeNode Include<TRelated>(IReadonlyRepository<TRelated> via, string into, string from, string by, string? select = null, bool many = false)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `into` | destination property |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related property to copy |
-| `many` | collect a list |
-
-**Returns**
-
-[IRepositoryTreeNode](#csharp-irepositorytreenode)
-
-###### EnrichFrom(parents) {#csharp-irepositorytreenode-enrichfrom-parents}
-
-Fills `parents` from this node.
-
-**Definition**
-
-```csharp
-Task EnrichFrom(IReadOnlyList<object> parents)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `parents` | parent objects |
-
-##### Enrichment {#csharp-enrichment}
-
-```csharp
-public sealed record Enrichment
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Into | Destination property. |
-| From | Parent key. |
-| By | Related key. |
-| Select | Optional related property to copy. |
-| Many | Collect a list. |
-
-##### IReadonlyEnrichmentStrategy {#csharp-ireadonlyenrichmentstrategy}
-
-```csharp
-public interface IReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentBinder
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Read(inner, tree, query)](#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [Enrich(tree, items, sources)](#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources) | Fills `items` from the tree. `sources` supplies the unread columns for each parent. |
-
-###### Read(inner, tree, query) {#csharp-ireadonlyenrichmentstrategy-read-inner-tree-query}
-
-Reads through `inner`, then enriches.
-
-**Definition**
-
-```csharp
-IAsyncEnumerable<T> Read(IReadonlyRepository<T> inner, IRepositoryTree tree, IStatement? query)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [IReadonlyRepository](#readonly-repository) |
-| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
-| `query` | optional statement or where |
-
-**Returns**
-
-`IAsyncEnumerable<T>`
-
-###### Enrich(tree, items, sources) {#csharp-ireadonlyenrichmentstrategy-enrich-tree-items-sources}
-
-Fills `items` from the tree. `sources` supplies the unread columns for each parent.
-
-**Definition**
-
-```csharp
-Task Enrich(IRepositoryTree tree, IList<T> items, IReadOnlyList<Row?>? sources = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `tree` | [IRepositoryTree](#csharp-irepositorytree) |
-| `items` | parents to fill |
-| `sources` | optional source rows aligned with `items` |
-
-##### Rust
-
-##### IReadonlyRepository {#rust-ireadonlyrepository}
-
-```rust
-pub trait IReadonlyRepository: IRepository
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [read_single(query)](#rust-ireadonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
-| [read(query)](#rust-ireadonlyrepository-read-query) | Returns every row. |
-
-###### read_single(query) {#rust-ireadonlyrepository-read_single-query}
-
-Returns the first row, or `None` when the result is empty.
-
-**Definition**
-
-```rust
-async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`Result<Option<Row>>`
-
-###### read(query) {#rust-ireadonlyrepository-read-query}
-
-Returns every row.
-
-**Definition**
-
-```rust
-async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`Result<Vec<Row>>`
-
-##### ReadonlyRepository {#rust-readonlyrepository}
-
-```rust
-pub struct ReadonlyRepository
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [from_repository(inner)](#rust-readonlyrepository-from_repository-inner) | Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#rust-ienriched). |
-| [with_strategy(inner, strategy)](#rust-readonlyrepository-with_strategy-inner-strategy) | Wraps an inner repository with an enrichment strategy. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [add_enriched(enrichment, via, strategy)](#rust-readonlyrepository-add_enriched-enrichment-via-strategy) | Adds a related fill. A related repository fills its own fields. Does not write. |
-
-###### from_repository(inner) {#rust-readonlyrepository-from_repository-inner}
-
-Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#rust-ienriched).
-
-**Definition**
-
-```rust
-pub fn from_repository(inner: Arc<dyn IReadonlyRepository>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [IReadonlyRepository](#rust-ireadonlyrepository) |
-
-**Returns**
-
-[ReadonlyRepository](#rust-readonlyrepository)
-
-###### with_strategy(inner, strategy) {#rust-readonlyrepository-with_strategy-inner-strategy}
-
-Wraps an inner repository with an enrichment strategy.
-
-**Definition**
-
-```rust
-pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn ReadonlyEnrichmentStrategy>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [IReadonlyRepository](#rust-ireadonlyrepository) |
-| `strategy` | enrichment strategy |
-
-**Returns**
-
-[ReadonlyRepository](#rust-readonlyrepository)
-
-###### add_enriched(enrichment, via, strategy) {#rust-readonlyrepository-add_enriched-enrichment-via-strategy}
-
-Adds a related fill. A related repository fills its own fields. Does not write.
-
-**Definition**
-
-```rust
-pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) |
-| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository). The readonly path keeps the read repository only |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`&mut Self`
-
-##### ReadonlyRepositoryOptions {#rust-readonlyrepositoryoptions}
-
-```rust
-pub struct ReadonlyRepositoryOptions
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| entity | Table or entity name. Default `"items"`. |
-| entity_mapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| column_mappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
-| query | Rewrites finished select SQL. `None` leaves the statement unchanged. |
-| rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
-| row_converter | Row [RowTypeConverter](#row-type-converter). |
-| row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
-
-##### RepositoryTree {#rust-repositorytree}
-
-```rust
-pub struct RepositoryTree
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| parent | Root [RepositoryTreeNode](#rust-repositorytreenode). |
-
-##### RepositoryTreeNode {#rust-repositorytreenode}
-
-```rust
-pub struct RepositoryTreeNode
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| value | Related [ReadonlyRepository](#readonly-repository). |
-| property_name | Destination field name. |
-| items | Child nodes. |
-| enrichment | [Enrichment](#rust-enrichment) for this node. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [include(via, into, from, by, select, many)](#rust-repositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
-
-###### include(via, into, from, by, select, many) {#rust-repositorytreenode-include-via-into-from-by-select-many}
-
-Adds a child node.
-
-**Definition**
-
-```rust
-pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
-| `into` | destination field |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related field to copy |
-| `many` | collect a list |
-
-**Returns**
-
-`&mut Self`
-
-##### Enrichment {#rust-enrichment}
-
-```rust
-pub struct Enrichment
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(into, from, by, select, many)](#rust-enrichment-new-into-from-by-select-many) | Builds an enrichment. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| into | Destination field. |
-| from | Parent key. |
-| by | Related key. |
-| select | Optional related field to copy. |
-| many | Collect a list. |
-
-###### new(into, from, by, select, many) {#rust-enrichment-new-into-from-by-select-many}
-
-Builds an enrichment.
-
-**Definition**
-
-```rust
-pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `into` | destination field |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related field to copy |
-| `many` | collect a list |
-
-**Returns**
-
-[Enrichment](#rust-enrichment)
-
-##### ReadonlyEnrichmentStrategy {#rust-readonlyenrichmentstrategy}
-
-```rust
-pub trait ReadonlyEnrichmentStrategy
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [read(inner, tree, query)](#rust-readonlyenrichmentstrategy-read-inner-tree-query) | Reads through `inner`, then enriches. |
-| [enrich(tree, items)](#rust-readonlyenrichmentstrategy-enrich-tree-items) | Fills `items` from the tree. |
-
-###### read(inner, tree, query) {#rust-readonlyenrichmentstrategy-read-inner-tree-query}
-
-Reads through `inner`, then enriches.
-
-**Definition**
-
-```rust
-async fn read(&self, inner: &dyn ReadonlyRepository, tree: &RepositoryTree, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ReadonlyRepository](#readonly-repository) |
-| `tree` | [RepositoryTree](#rust-repositorytree) |
-| `query` | optional query, where, or stored procedure |
-
-**Returns**
-
-`Result<Vec<Row>>`
-
-###### enrich(tree, items) {#rust-readonlyenrichmentstrategy-enrich-tree-items}
-
-Fills `items` from the tree.
-
-**Definition**
-
-```rust
-async fn enrich(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `tree` | [RepositoryTree](#rust-repositorytree) |
-| `items` | parents to fill |
-
-**Returns**
-
-`Result<()>`
-
-### Remarks
-
-`AddEnriched` / `addEnriched` / `add_enriched` registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
-
-`AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
-
-```
-childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
-parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
-```
-
-Repository read is convert, then map. See [Type Converters](#type-converters) and [Mappers](#mappers).
-
-`read` and `read_single` accept a query, a where, or an [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement). Result rows still convert, then map. Procedure argument names are not rewritten as columns.
-
-### Examples
-
-#### Read users by id and by username
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L29-L53)
-
-```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, "minimal-users", """
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    """);
-var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
-{
-    EntityMapper = new PluralizerMapper(),
-});
-
-var byId = await repo.ReadSingle(new Where("id", eq, 1));
-var disabled = new List<User>();
-await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
-    disabled.Add(row);
-```
-
-**After: by id**
-
-```
-{
-  id: 1,
-  username: 'ada',
-  is_enabled: true
-}
-```
-
-**After: disabled**
-
-```
-[
-  {
-    id: 2,
-    username: 'grace',
-    is_enabled: false
-  }
-]
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L47-L85)
-
-```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "minimal-users",
-    "
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    ",
-)
-.await;
-let mut options = create_crud_repository_options::<User>();
-options.entity_mapper = Box::new(PluralizerMapper::new());
-let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
-let by_id = repo
-    .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
-    .await
-    .unwrap()
-    .unwrap();
-let disabled = repo
-    .read(
-        Some(&Where::binary("username", eq, "grace").and(
-            "is_enabled",
-            eq,
-            0_i64,
-        )),
-        None,
-    )
-    .await
-    .unwrap();
-```
-
-**After: by id**
-
-```
-{
-  id: 1,
-  username: 'ada',
-  is_enabled: 1
-}
-```
-
-**After: disabled**
-
-```
-[
-  {
-    id: 2,
-    username: 'grace',
-    is_enabled: 0
-  }
-]
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L37-L55)
-
-```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, "minimal-users", `
-  INSERT INTO users (id, username, is_enabled) VALUES
-    (1, 'ada', 1),
-    (2, 'grace', 0);
-`);
-const repo = ds.createReadonlyRepository(User, connection, {
-  entityMapper: new PluralizerMapper(),
-});
-const byId = await repo.readSingle(new Where("id", eq, 1));
-const disabled: User[] = [];
-for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
-  disabled.push(row);
-```
-
-**After: by id**
-
-```
-{
-  id: 1,
-  username: 'ada',
-  is_enabled: 1
-}
-```
-
-**After: disabled**
-
-```
-[
-  {
-    id: 2,
-    username: 'grace',
-    is_enabled: 0
-  }
-]
-```
-
-#### Read a user by guid, username, and created
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L55-L92)
-
-```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, "user-account", $"""
-    INSERT INTO user (id, username, is_enabled, created) VALUES
-        ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
-        ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
-        ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
-    """);
-var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
-{
-    Entity = "user",
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-    {
-        ["Key"] = "id",
-        ["Login"] = "username",
-        ["Active"] = "is_enabled",
-        ["Opened"] = "created",
-    }),
-});
-
-var opened = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-var byId = await repo.ReadSingle(new Where("Key", eq, Ada));
-var byLogin = new List<UserAccount>();
-await foreach (var row in repo.Read(new Where("Login", eq, "ada").And("Active", eq, true)))
-    byLogin.Add(row);
-var later = new List<UserAccount>();
-await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", gt, opened)))
-    later.Add(row);
-```
-
-**After: by id**
-
-```
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: true,
-  Opened: '2020-01-01T00:00:00.000Z'
-}
-```
-
-**After: by login**
-
-```
-[
-  {
-    Key: '11111111-1111-1111-1111-111111111111',
-    Login: 'ada',
-    Active: true,
-    Opened: '2020-01-01T00:00:00.000Z'
-  }
-]
-```
-
-**After: later**
-
-```
-[
-  {
-    Key: '22222222-2222-2222-2222-222222222222',
-    Login: 'grace',
-    Active: true,
-    Opened: '2024-06-01T00:00:00.000Z'
-  }
-]
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L87-L151)
-
-```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "user-account",
-    &format!(
-        "
-    INSERT INTO user (id, username, is_enabled, created) VALUES
-        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
-        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
-        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z');
-    "
-    ),
-)
-.await;
-let mut options = create_crud_repository_options::<UserAccount>();
-options.entity = "user".into();
-options.column_mappings = Box::new(DictionaryMapper::new([
-    ("Key".to_string(), "id".to_string()),
-    ("Login".to_string(), "username".to_string()),
-    ("Active".to_string(), "is_enabled".to_string()),
-    ("Opened".to_string(), "created".to_string()),
-]));
-let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
-let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-let by_id = repo
-    .read_single(
-        Some(&Where::binary(
-            "Key",
-            eq,
-            Uuid::parse_str(ADA).unwrap(),
-        )),
-        None,
-    )
-    .await
-    .unwrap()
-    .unwrap();
-let by_login = repo
-    .read(
-        Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-        None,
-    )
-    .await
-    .unwrap();
-let later = repo
-    .read(
-        Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-        None,
-    )
-    .await
-    .unwrap();
-```
-
-**After: by id**
-
-```
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: 1,
-  Opened: '2020-01-01T00:00:00.000Z'
-}
-```
-
-**After: by login**
-
-```
-[
-  {
-    Key: '11111111-1111-1111-1111-111111111111',
-    Login: 'ada',
-    Active: 1,
-    Opened: '2020-01-01T00:00:00.000Z'
-  }
-]
-```
-
-**After: later**
-
-```
-[
-  {
-    Key: '22222222-2222-2222-2222-222222222222',
-    Login: 'grace',
-    Active: 1,
-    Opened: '2024-06-01T00:00:00.000Z'
-  }
-]
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L58-L90)
-
-```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, "user-account", `
-  INSERT INTO user (id, username, is_enabled, created) VALUES
-    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
-    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
-    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
-`);
-const repo = ds.createReadonlyRepository(UserAccount, connection, {
-  entity: "user",
-  columnMappings: new DictionaryMapper([
-    ["Key", "id"],
-    ["Login", "username"],
-    ["Active", "is_enabled"],
-    ["Opened", "created"],
-  ]),
-});
-const opened = new Date("2024-01-01T00:00:00.000Z");
-const byId = await repo.readSingle(new Where("Key", eq, ada));
-const byLogin: UserAccount[] = [];
-for await (const row of repo.read(new Where("Login", eq, "ada").and("Active", eq, true)))
-  byLogin.push(row);
-const later: UserAccount[] = [];
-for await (const row of repo.read(new Where("Active", eq, true).and("Opened", gt, opened)))
-  later.push(row);
-```
-
-**After: by id**
-
-```
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: 1,
-  Opened: '2020-01-01T00:00:00.000Z'
-}
-```
-
-**After: by login**
-
-```
-[
-  {
-    Key: '11111111-1111-1111-1111-111111111111',
-    Login: 'ada',
-    Active: 1,
-    Opened: '2020-01-01T00:00:00.000Z'
-  }
-]
-```
-
-**After: later**
-
-```
-[
-  {
-    Key: '22222222-2222-2222-2222-222222222222',
-    Login: 'grace',
-    Active: 1,
-    Opened: '2024-06-01T00:00:00.000Z'
-  }
-]
-```
-
-#### Call a stored procedure
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L107-L116)
-
-```csharp
-Parameter[] parameters = [new("id", 9)];
-var call = new ExecuteStoredProcedureStatement("get_user", parameters);
-var rows = new List<UserRow>();
-await foreach (var row in repo.Read(call, parameters))
-    rows.Add(row);
-```
-
-**After: rows**
-
-```
-[
-  { id: 1, name: 'a' }
-]
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1438-L1454)
-
-```rust
-        &row
-    ),
-    no
-);
-```
-
-**After: rows**
-
-```
-[
-  { id: 1, name: 'a' }
-]
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L102-L109)
-
-```typescript
-command.reader = new MockReader([{ id: 1, name: "a" }]);
-const parameters = [{ name: "id", value: 9 }];
-const call = new ExecuteStoredProcedureStatement("get_user", parameters);
-const rows: Cells[] = [];
-for await (const row of repo.read(call, parameters)) rows.push(row);
-```
-
-**After: rows**
-
-```
-[
-  { id: 1, name: 'a' }
-]
-```
-
-#### Read and read single
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L69-L76)
-
-```csharp
-await foreach (var row in repo.Read())
-    rows.Add(row);
-Assert.Single(rows);
-```
-
-**After: read**
-
-```
-[
-  { id: 1, name: 'a' }
-]
-```
-
-**After: read single**
-
-```
-{ id: 1, name: 'a' }
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1475-L1481)
-
-```rust
-
-```
-
-**After: read**
-
-```
-[
-  { id: 1, name: 'a' }
-]
-```
-
-**After: read single**
-
-```
-{ id: 1, name: 'a' }
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
-
-```typescript
-const { repo, command } = create();
-repo.addMiddleware({ beforeCommand() {}, afterCommand() {} });
-command.reader = new MockReader([
-  { id: 1, name: "a" },
-]);
-const rows: Cells[] = [];
-for await (const row of repo.read()) rows.push(row);
-```
-
-**After: read**
-
-```
-[
-  { id: 1, name: 'a' }
-]
-```
-
-**After: read single**
-
-```
-{ id: 1, name: 'a' }
-```
-
-#### Fill a lookup
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
-
-```csharp
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L112-L118)
-
-```rust
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
-parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
-    types_repo,
-    None,
-);
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
-
-```typescript
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
-```
-
-#### Fill user type on a user view
-
-`UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L129-L169)
-
-```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, "user-type-lookup", $"""
-    INSERT INTO user_type (id, name) VALUES
-        (1, 'admin'),
-        (2, 'user'),
-        (3, 'service');
-    INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
-        ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
-        ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
-        ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-    """);
-var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
-{
-    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-    {
-        ["Key"] = "id",
-        ["Login"] = "username",
-        ["Active"] = "is_enabled",
-        ["Opened"] = "created",
-        ["UserType"] = "user_type_id",
-    }),
-});
-var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
-{
-    EntityMapper = casing,
-    ColumnMappings = casing,
-});
-usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo);
-var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
-```
-
-**User view**
-
-```
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: true,
-  Opened: '2020-01-01T00:00:00.000Z',
-  UserType: 'admin'
-}
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L204-L272)
-
-```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "user-type-lookup",
-    &format!(
-        "
-    INSERT INTO user_type (id, name) VALUES
-        (1, 'admin'),
-        (2, 'user'),
-        (3, 'service');
-    INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
-        ('{ADA}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
-        ('{GRACE}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
-        ('{LIN}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-    "
-    ),
-)
-.await;
-let mut users_options = create_crud_repository_options::<UserAccount>();
-users_options.entity = "user".into();
-users_options.column_mappings = Box::new(DictionaryMapper::new([
-    ("Key".to_string(), "id".to_string()),
-    ("Login".to_string(), "username".to_string()),
-    ("Active".to_string(), "is_enabled".to_string()),
-    ("Opened".to_string(), "created".to_string()),
-    ("UserTypeId".to_string(), "user_type_id".to_string()),
-]));
-let mut type_options = create_crud_repository_options::<UserType>();
-type_options.entity = "UserType".into();
-type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-let mut users_repo = ReadonlyRepository::new(
-    connection.clone(),
-    users_options.read,
-)
-.unwrap();
-let types =
-    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
-users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), types, None);
-let account = users_repo
-    .read_single(
-        Some(&Where::binary(
-            "Key",
-            eq,
-            Uuid::parse_str(ADA).unwrap(),
-        )),
-        None,
-    )
-    .await
-    .unwrap()
-    .unwrap();
-let mut users_view = account.clone();
-users_view.remove("UserTypeId");
-```
-
-**User view**
-
-```
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: 1,
-  Opened: '2020-01-01T00:00:00.000Z',
-  UserType: 'admin'
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L108-L143)
-
-```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, "user-type-lookup", `
-  INSERT INTO user_type (id, name) VALUES
-    (1, 'admin'),
-    (2, 'user'),
-    (3, 'service');
-  INSERT INTO user (id, username, is_enabled, created, user_type_id) VALUES
-    ('${ada}', 'ada', 1, '2020-01-01T00:00:00.000Z', 1),
-    ('${grace}', 'grace', 1, '2024-06-01T00:00:00.000Z', 2),
-    ('${lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
-`);
-const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
-  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
-    ["Key", "id"],
-    ["Login", "username"],
-    ["Active", "is_enabled"],
-    ["Opened", "created"],
-    ["UserType", "user_type_id"],
-  ]),
-}) as ReadonlyRepository<UsersView>;
-const typesRepo = ds.createReadonlyRepository(UserType, connection, {
-  entityMapper: casing,
-  columnMappings: casing,
-});
-usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
-const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
-```
-
-**User view**
-
-```
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: 1,
-  Opened: '2020-01-01T00:00:00.000Z',
-  UserType: 'admin'
-}
-```
-
-#### Fill roles from one join
-
-The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](#flat-to-nested-mapper) groups each user's `Roles`.
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L266-L340)
-
-```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, "user-roles-read", Seed());
-var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
-{
-    ["Key"] = "id",
-    ["Login"] = "username",
-    ["Active"] = "is_enabled",
-    ["Opened"] = "created",
-    ["UserType"] = "user_type.name",
-    ["UserId"] = "user_id",
-    ["RoleId"] = "role_id",
-    ["Name"] = "roles.name",
-});
-var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
-{
-    ColumnMappings = mappings,
-});
-usersRepo.AddEnriched(
-    new("Roles", "Key", "UserId", Many: true),
-    usersRepo,
-    new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
-    {
-        Key = "Key",
-        Fields = new Dictionary<string, TypeMapField>
-        {
-            ["Key"] = "Key",
-            ["Login"] = "Login",
-            ["Active"] = "Active",
-            ["Opened"] = "Opened",
-            ["UserType"] = "UserType",
-            ["Roles"] = new TypeMapGroup
-            {
-                Key = "RoleId",
-                Fields = new Dictionary<string, TypeMapField>
-                {
-                    ["RoleId"] = "RoleId",
-                    ["UserId"] = "UserId",
-                    ["Name"] = "Name",
-                }
-            }
-        }
-    }));
-var items = new List<UsersView>();
-await foreach (var item in usersRepo.Read(new SelectStatement(new()
-{
-    Table = "user",
-    Fields =
-    [
-        "user.id",
-        "user.username",
-        "user.is_enabled",
-        "user.created",
-        "user_type.name",
-        "user_roles.user_id",
-        "user_roles.role_id",
-        "roles.name",
-    ],
-    Joins =
-    [
-        new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
-        new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
-        new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
-    ],
-})))
-    items.Add(item);
-var ada = Assert.Single(items, item => item.Login == "ada");
-var grace = Assert.Single(items, item => item.Login == "grace");
-var lin = Assert.Single(items, item => item.Login == "lin");
-```
-
-**Users with roles**
-
-```
-[
-  {
-    Key: '11111111-1111-1111-1111-111111111111',
-    Login: 'ada',
-    Active: true,
-    Opened: '2020-01-01T00:00:00.000Z',
-    UserType: 'admin',
-    Roles: [
-      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
-      { UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
-    ]
-  },
-  {
-    Key: '22222222-2222-2222-2222-222222222222',
-    Login: 'grace',
-    Active: true,
-    Opened: '2024-06-01T00:00:00.000Z',
-    UserType: 'user',
-    Roles: [
-      { UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
-    ]
-  },
-  {
-    Key: '33333333-3333-3333-3333-333333333333',
-    Login: 'lin',
-    Active: false,
-    Opened: '2024-06-01T00:00:00.000Z',
-    UserType: 'service',
-    Roles: []
-  }
-]
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L435-L496)
-
-```rust
-            "user.is_enabled AS Active",
-            "user.created AS Opened",
-            "user_type.name AS UserType",
-            "user.id AS UserId",
-            "user_roles.role_id AS RoleId",
-            "roles.name AS RoleName",
-        ],
-    )
-}));
-let options = ReadonlyRepositoryOptions::default();
-let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
-users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
-    Arc::new(ReadonlyRepository::memory(vec![])),
-    Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
-        TypeMap::new(
-            "Key",
-            vec![
-                ("Key".into(), TypeMapField::column("Key")),
-                ("Login".into(), TypeMapField::column("Login")),
-                ("Active".into(), TypeMapField::column("Active")),
-                ("Opened".into(), TypeMapField::column("Opened")),
-                ("UserType".into(), TypeMapField::column("UserType")),
-                (
-                    "Roles".into(),
-                    TypeMapField::Group(TypeMapGroup::new(
-                        "RoleId",
-                        vec![
-                            ("RoleId".into(), TypeMapField::column("RoleId")),
-                            ("UserId".into(), TypeMapField::column("UserId")),
-                            ("Name".into(), TypeMapField::column("RoleName")),
-                        ],
-                    )),
-                ),
-            ],
-        ),
-    ))),
-);
-let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
-let view = |login: &str| {
-    items
-        .iter()
-        .find(|item| item.get("Login") == Some(&Value::from(login)))
-        .unwrap()
-        .clone()
-};
-let ada = view("ada");
-let grace = view("grace");
-let lin = view("lin");
-```
-
-**Users with roles**
-
-```
-[
-  {
-    Key: '11111111-1111-1111-1111-111111111111',
-    Login: 'ada',
-    Active: 1,
-    Opened: '2020-01-01T00:00:00.000Z',
-    UserType: 'admin',
-    Roles: 'Name=admin,UserId=11111111-1111-1111-1111-111111111111|Name=editor,UserId=11111111-1111-1111-1111-111111111111'
-  },
-  {
-    Key: '22222222-2222-2222-2222-222222222222',
-    Login: 'grace',
-    Active: 1,
-    Opened: '2024-06-01T00:00:00.000Z',
-    UserType: 'user',
-    Roles: 'Name=viewer,UserId=22222222-2222-2222-2222-222222222222'
-  },
-  {
-    Key: '33333333-3333-3333-3333-333333333333',
-    Login: 'lin',
-    Active: 0,
-    Opened: '2024-06-01T00:00:00.000Z',
-    UserType: 'service',
-    Roles: ''
-  }
-]
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L114-L166)
-
-```typescript
-const usersRepo = new ReadonlyRepository(connection, {
-  type: UsersView,
-  columnMappings: new DictionaryMapper([
-    ["Key", "id"],
-    ["Login", "username"],
-    ["Active", "is_enabled"],
-    ["Opened", "created"],
-    ["UserType", "user_type.name"],
-    ["UserId", "user_id"],
-    ["RoleId", "role_id"],
-    ["Name", "roles.name"],
-  ]),
-});
-usersRepo.addEnriched(
-  { into: "Roles", from: "Key", by: "UserId", many: true },
-  usersRepo,
-  new NestedToObjectEnrichmentStrategy<UsersView>({
-    key: "Key",
-    fields: {
-      Key: "Key",
-      Login: "Login",
-      Active: "Active",
-      Opened: "Opened",
-      UserType: "UserType",
-      Roles: {
-        key: "RoleId",
-        fields: { RoleId: "RoleId", UserId: "UserId", Name: "Name" },
-      },
-    },
-  }),
-);
-const items: UsersView[] = [];
-for await (const item of usersRepo.read(
-  new SelectStatement({
-    table: "user",
-    fields: [
-      "user.id",
-      "user.username",
-      "user.is_enabled",
-      "user.created",
-      "user_type.name",
-      "user_roles.user_id",
-      "user_roles.role_id",
-      "roles.name",
-    ],
-    joins: [
-      Join.left("user_type", "user_type.id", "user.user_type_id"),
-      Join.left("user_roles", "user_roles.user_id", "user.id"),
-      Join.left("roles", "roles.id", "user_roles.role_id"),
-    ],
-  }),
-))
-  items.push(item);
-```
-
-**Users with roles**
-
-```
-[
-  {
-    Key: '11111111-1111-1111-1111-111111111111',
-    Login: 'ada',
-    Active: 1,
-    Opened: '2020-01-01T00:00:00.000Z',
-    UserType: 'admin',
-    Roles: [
-      { RoleId: 1, UserId: '11111111-1111-1111-1111-111111111111', Name: 'admin' },
-      { RoleId: 2, UserId: '11111111-1111-1111-1111-111111111111', Name: 'editor' }
-    ]
-  },
-  {
-    Key: '22222222-2222-2222-2222-222222222222',
-    Login: 'grace',
-    Active: 1,
-    Opened: '2024-06-01T00:00:00.000Z',
-    UserType: 'user',
-    Roles: [
-      { RoleId: 3, UserId: '22222222-2222-2222-2222-222222222222', Name: 'viewer' }
-    ]
-  },
-  {
-    Key: '33333333-3333-3333-3333-333333333333',
-    Login: 'lin',
-    Active: 0,
-    Opened: '2024-06-01T00:00:00.000Z',
-    UserType: 'service',
-    Roles: []
-  }
-]
-```
-
-## CRUD repository
-
-[Readonly repository](#readonly-repository) plus `create`, `update`, and `delete`. SQL providers typically build a table `CRUDRepository` from `RepositoryBuilder` and a [RowTypeConverter](#row-type-converter).
-
-Read is convert, then map. Writes reverse-map, then reverse-convert.
-
-### Classes
-
-##### TypeScript
-
-##### ICRUDRepository {#typescript-icrudrepository}
-
-```typescript
-interface ICRUDRepository<T = unknown> extends IReadonlyRepository<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [create(item)](#typescript-icrudrepository-create-item) | Inserts one item. |
-| [update(item, byWhere?)](#typescript-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
-| [delete(item, byWhere?)](#typescript-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
-| [readSingleById(id)](#typescript-icrudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`. |
-
-###### create(item) {#typescript-icrudrepository-create-item}
-
-Inserts one item.
-
-**Definition**
-
-```typescript
-create(item: T): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to insert |
-
-**Returns**
-
-`Promise<Response>`
-
-###### update(item, byWhere?) {#typescript-icrudrepository-update-item-bywhere}
-
-Updates one item. Omitted `byWhere` uses id columns.
-
-**Definition**
-
-```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to update |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Promise<Response>`
-
-###### delete(item, byWhere?) {#typescript-icrudrepository-delete-item-bywhere}
-
-Deletes one item. Omitted `byWhere` uses id columns.
-
-**Definition**
-
-```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to delete |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Promise<Response>`
-
-###### readSingleById(id) {#typescript-icrudrepository-readsinglebyid-id}
-
-Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`.
-
-**Definition**
-
-```typescript
-readSingleById(id: Scalar | Cells): Promise<T | undefined>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | value of the single id column, or a row keyed by each id column |
-
-**Returns**
-
-`Promise<T | undefined>`
-
-##### CRUDRepository {#typescript-crudrepository}
-
-```typescript
-class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T>, IEnriched<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [CRUDRepository(type, connection)](#typescript-crudrepository-crudrepository-type-connection) | Builds a table repository from a type and [IConnection](#connection). |
-| [CRUDRepository(connection, options)](#typescript-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions). |
-| [CRUDRepository(inner, strategy?)](#typescript-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| ids | Configured id property names. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [addMiddleware(middleware)](#typescript-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
-| [read(query?)](#typescript-crudrepository-read-query) | Reads rows. Convert the database row, then map it. |
-| [create(item)](#typescript-crudrepository-create-item) | Inserts one item. |
-| [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
-| [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
-| [readSingleById(id)](#typescript-crudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. |
-| [addEnriched(enrichment, via, strategy?)](#typescript-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
-| [addLinked(enrichment, via, link, strategy?)](#typescript-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
-
-###### CRUDRepository(type, connection) {#typescript-crudrepository-crudrepository-type-connection}
-
-Builds a table repository from a type and [IConnection](#connection).
-
-**Definition**
-
-```typescript
-constructor(type: Constructable<T>, connection: IConnection)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `type` | item constructor |
-| `connection` | open [IConnection](#connection) |
-
-###### CRUDRepository(connection, options) {#typescript-crudrepository-crudrepository-connection-options}
-
-Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#typescript-crudrepositoryoptions).
-
-**Definition**
-
-```typescript
-constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open [IConnection](#connection) |
-| `options` | [CRUDRepositoryOptions](#typescript-crudrepositoryoptions) |
-
-###### CRUDRepository(inner, strategy?) {#typescript-crudrepository-crudrepository-inner-strategy}
-
-Wraps an inner [ICRUDRepository](#typescript-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
-
-**Definition**
-
-```typescript
-constructor(inner: ICRUDRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#typescript-icrudrepository) |
-| `strategy` | optional read enrichment strategy |
-
-###### addMiddleware(middleware) {#typescript-crudrepository-addmiddleware-middleware}
-
-Adds command middleware. Returns this repository.
-
-**Definition**
-
-```typescript
-addMiddleware(middleware: ICommandMiddleware): this
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `middleware` | command middleware |
-
-**Returns**
-
-`this`
-
-###### read(query?) {#typescript-crudrepository-read-query}
-
-Reads rows. Convert the database row, then map it.
-
-**Definition**
-
-```typescript
-read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): AsyncIterable<T>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
-
-**Returns**
-
-`AsyncIterable<T>`
-
-###### create(item) {#typescript-crudrepository-create-item}
-
-Inserts one item.
-
-**Definition**
-
-```typescript
-create(item: T): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to insert |
-
-**Returns**
-
-`Promise<Response>`
-
-###### update(item, byWhere?) {#typescript-crudrepository-update-item-bywhere}
-
-Updates one item.
-
-**Definition**
-
-```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to update |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Promise<Response>`
-
-###### delete(item, byWhere?) {#typescript-crudrepository-delete-item-bywhere}
-
-Deletes one item.
-
-**Definition**
-
-```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to delete |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Promise<Response>`
-
-###### readSingleById(id) {#typescript-crudrepository-readsinglebyid-id}
-
-Returns the row for one id column, or for a composite key.
-
-**Definition**
-
-```typescript
-readSingleById(id: Scalar | Cells): Promise<T | undefined>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | value of the single id column, or a row keyed by each id column |
-
-**Returns**
-
-`Promise<T | undefined>`
-
-###### addEnriched(enrichment, via, strategy?) {#typescript-crudrepository-addenriched-enrichment-via-strategy}
-
-Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
-
-**Definition**
-
-```typescript
-addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#typescript-enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`this`
-
-###### addLinked(enrichment, via, link, strategy?) {#typescript-crudrepository-addlinked-enrichment-via-link-strategy}
-
-Registers an association. `via` is read. `link` is the CRUD writer.
-
-**Definition**
-
-```typescript
-addLinked<TRelated extends object, TLink extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#typescript-enrichment) with `association` |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#typescript-icrudrepository) that stores the association rows |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`this`
-
-##### CRUDRepositoryOptions {#typescript-crudrepositoryoptions}
-
-```typescript
-type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| ids | Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field and no `id`. |
-| insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
-| update | Rewrites the finished update. Omitted leaves the statement unchanged. |
-| delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
-| return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
-
-##### BuiltRepository {#typescript-builtrepository}
-
-```typescript
-type BuiltRepository<T = Cells>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| connection | Open [IConnection](#connection). |
-| rowConverter | Row [TypeConverter](#type-converters). |
-| rowsMapper | Read-row [Mapper](#mappers). |
-| statements | SQL fragments. |
-| ids | Id column names. |
-| type | Item constructor. |
-
-##### C#
-
-##### ICRUDRepository {#csharp-icrudrepository}
-
-```csharp
-public interface ICRUDRepository<T> : IReadonlyRepository<T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Create(item)](#csharp-icrudrepository-create-item) | Inserts one item. |
-| [Update(item, byWhere)](#csharp-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
-| [Delete(item, byWhere)](#csharp-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
-| [ReadSingleById(id)](#csharp-icrudrepository-readsinglebyid-id) | Returns the row for the single configured id column. Zero id columns, or more than one, throw. |
-| [ReadSingleById(ids)](#csharp-icrudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`. |
-
-###### Create(item) {#csharp-icrudrepository-create-item}
-
-Inserts one item.
-
-**Definition**
-
-```csharp
-Task<Response> Create(T item)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to insert |
-
-**Returns**
-
-`Task<Response>`
-
-###### Update(item, byWhere) {#csharp-icrudrepository-update-item-bywhere}
-
-Updates one item. Omitted `byWhere` uses id columns.
-
-**Definition**
-
-```csharp
-Task<Response> Update(T item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to update |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Task<Response>`
-
-###### Delete(item, byWhere) {#csharp-icrudrepository-delete-item-bywhere}
-
-Deletes one item. Omitted `byWhere` uses id columns.
-
-**Definition**
-
-```csharp
-Task<Response> Delete(T item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to delete |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Task<Response>`
-
-###### ReadSingleById(id) {#csharp-icrudrepository-readsinglebyid-id}
-
-Returns the row for the single configured id column. Zero id columns, or more than one, throw.
-
-**Definition**
-
-```csharp
-Task<T?> ReadSingleById(Value id)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | value of the single id column |
-
-**Returns**
-
-`Task<T?>`
-
-###### ReadSingleById(ids) {#csharp-icrudrepository-readsinglebyid-ids}
-
-Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`.
-
-**Definition**
-
-```csharp
-Task<T?> ReadSingleById(Row ids)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `ids` | id column names and values |
-
-**Returns**
-
-`Task<T?>`
-
-##### CRUDRepository {#csharp-crudrepository}
-
-```csharp
-public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnriched<T> where T : new()
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [CRUDRepository(connection)](#csharp-crudrepository-crudrepository-connection) | Builds a table repository from an [IConnection](#connection). |
-| [CRUDRepository(connection, options)](#csharp-crudrepository-crudrepository-connection-options) | Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions). |
-| [CRUDRepository(inner, strategy)](#csharp-crudrepository-crudrepository-inner-strategy) | Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Ids | Configured id property names. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [AddMiddleware(middleware)](#csharp-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
-| [Read(query)](#csharp-crudrepository-read-query) | Reads rows. Convert the database row, then map it. |
-| [Create(item)](#csharp-crudrepository-create-item) | Inserts one item. |
-| [Update(item, byWhere)](#csharp-crudrepository-update-item-bywhere) | Updates one item. |
-| [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
-| [ReadSingleById(id)](#csharp-crudrepository-readsinglebyid-id) | Returns the row for the single configured id column. |
-| [ReadSingleById(ids)](#csharp-crudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. |
-| [AddEnriched(enrichment, via, strategy)](#csharp-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
-| [AddLinked(enrichment, via, link, strategy)](#csharp-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
-
-###### CRUDRepository(connection) {#csharp-crudrepository-crudrepository-connection}
-
-Builds a table repository from an [IConnection](#connection).
-
-**Definition**
-
-```csharp
-public Repository(IConnection connection)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open [IConnection](#connection) |
-
-###### CRUDRepository(connection, options) {#csharp-crudrepository-crudrepository-connection-options}
-
-Builds a table repository from an [IConnection](#connection) and [CRUDRepositoryOptions](#csharp-crudrepositoryoptions).
-
-**Definition**
-
-```csharp
-public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | open [IConnection](#connection) |
-| `options` | [CRUDRepositoryOptions](#csharp-crudrepositoryoptions) |
-
-###### CRUDRepository(inner, strategy) {#csharp-crudrepository-crudrepository-inner-strategy}
-
-Wraps an inner [ICRUDRepository](#csharp-icrudrepository). Parent writes delegate to `inner`. Omitted strategy uses the default.
-
-**Definition**
-
-```csharp
-public CRUDRepository(ICRUDRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#csharp-icrudrepository) |
-| `strategy` | optional read enrichment strategy |
-
-###### AddMiddleware(middleware) {#csharp-crudrepository-addmiddleware-middleware}
-
-Adds command middleware. Returns this repository.
-
-**Definition**
-
-```csharp
-public Repository<T> AddMiddleware(ICommandMiddleware middleware)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `middleware` | command middleware |
-
-**Returns**
-
-[CRUDRepository](#csharp-crudrepository)`<T>`
-
-###### Read(query) {#csharp-crudrepository-read-query}
-
-Reads rows. Convert the database row, then map it.
-
-**Definition**
-
-```csharp
-public override IAsyncEnumerable<T> Read(IStatement? query = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `query` | optional statement or where; omitted uses the default select |
-
-**Returns**
-
-`IAsyncEnumerable<T>`
-
-###### Create(item) {#csharp-crudrepository-create-item}
-
-Inserts one item.
-
-**Definition**
-
-```csharp
-public Task<Response> Create(T item)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to insert |
-
-**Returns**
-
-`Task<Response>`
-
-###### Update(item, byWhere) {#csharp-crudrepository-update-item-bywhere}
-
-Updates one item.
-
-**Definition**
-
-```csharp
-public Task<Response> Update(T item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to update |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Task<Response>`
-
-###### Delete(item, byWhere) {#csharp-crudrepository-delete-item-bywhere}
-
-Deletes one item.
-
-**Definition**
-
-```csharp
-public Task<Response> Delete(T item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to delete |
-| `byWhere` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Task<Response>`
-
-###### ReadSingleById(id) {#csharp-crudrepository-readsinglebyid-id}
-
-Returns the row for the single configured id column.
-
-**Definition**
-
-```csharp
-public Task<T?> ReadSingleById(Value id)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | value of the single id column |
-
-**Returns**
-
-`Task<T?>`
-
-###### ReadSingleById(ids) {#csharp-crudrepository-readsinglebyid-ids}
-
-Returns the row whose configured id columns match `ids`.
-
-**Definition**
-
-```csharp
-public Task<T?> ReadSingleById(Row ids)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `ids` | id column names and values |
-
-**Returns**
-
-`Task<T?>`
-
-###### AddEnriched(enrichment, via, strategy) {#csharp-crudrepository-addenriched-enrichment-via-strategy}
-
-Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
-
-**Definition**
-
-```csharp
-public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#csharp-enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-[IEnriched](#csharp-ienriched)`<T>`
-
-###### AddLinked(enrichment, via, link, strategy) {#csharp-crudrepository-addlinked-enrichment-via-link-strategy}
-
-Registers an association. `via` is read. `link` is the CRUD writer.
-
-**Definition**
-
-```csharp
-public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#csharp-enrichment) with `Association` |
-| `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#csharp-icrudrepository) that stores the association rows |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-[IEnriched](#csharp-ienriched)`<T>`
-
-##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
-
-```csharp
-public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> where T : new()
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Ids | Id column names. Default `["id"]`. |
-| Insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
-| Update | Rewrites the finished update. Omitted leaves the statement unchanged. |
-| Delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
-| Return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
-
-##### BuiltRepository {#csharp-builtrepository}
-
-```csharp
-public sealed record BuiltRepository<T> where T : new()
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Connection | Open [IConnection](#connection). |
-| RowConverter | Row [TypeConverter](#type-converters). |
-| RowsMapper | Read-row [Mapper](#mappers). |
-| Statements | SQL fragments. |
-| Ids | Id column names. |
-
-##### Rust
-
-##### ICRUDRepository {#rust-icrudrepository}
-
-```rust
-pub trait ICRUDRepository: IReadonlyRepository
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [create(item)](#rust-icrudrepository-create-item) | Inserts one row. |
-| [update(item, by_where)](#rust-icrudrepository-update-item-by_where) | Updates one row. `None` `by_where` uses id columns. |
-| [delete(item, by_where)](#rust-icrudrepository-delete-item-by_where) | Deletes one row. `None` `by_where` uses id columns. |
-| [read_single_by_id(id)](#rust-icrudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`. |
-
-###### create(item) {#rust-icrudrepository-create-item}
-
-Inserts one row.
-
-**Definition**
-
-```rust
-async fn create(&self, item: &mut Row) -> Result<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to insert |
-
-**Returns**
-
-`Result<Response>`
-
-###### update(item, by_where) {#rust-icrudrepository-update-item-by_where}
-
-Updates one row. `None` `by_where` uses id columns.
-
-**Definition**
-
-```rust
-async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to update |
-| `by_where` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Result<Response>`
-
-###### delete(item, by_where) {#rust-icrudrepository-delete-item-by_where}
-
-Deletes one row. `None` `by_where` uses id columns.
-
-**Definition**
-
-```rust
-async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to delete |
-| `by_where` | optional predicate; omitted uses id values on `item` |
-
-**Returns**
-
-`Result<Response>`
-
-###### read_single_by_id(id) {#rust-icrudrepository-read_single_by_id-id}
-
-Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `None`.
-
-**Definition**
-
-```rust
-async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
-
-**Returns**
-
-`Result<Option<Row>>`
-
-##### CRUDRepository {#rust-crudrepository}
-
-```rust
-pub struct CRUDRepository
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [from_type(connection)](#rust-crudrepository-from_type-connection) | Builds a table repository from `T: ConvertSchema`. |
-| [new(connection, options)](#rust-crudrepository-new-connection-options) | Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions). |
-| [from_repository(inner)](#rust-crudrepository-from_repository-inner) | Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [add_enriched(enrichment, via, strategy)](#rust-crudrepository-add_enriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
-| [add_linked(enrichment, via, link, strategy)](#rust-crudrepository-add_linked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
-| [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
-| [read_single_by_id(id)](#rust-crudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. |
-
-###### from_type(connection) {#rust-crudrepository-from_type-connection}
-
-Builds a table repository from `T: ConvertSchema`.
-
-**Definition**
-
-```rust
-pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | [Connection](#connection) |
-
-**Returns**
-
-`Result<`[CRUDRepository](#rust-crudrepository)`>`
-
-###### new(connection, options) {#rust-crudrepository-new-connection-options}
-
-Builds a table repository from a [Connection](#connection) and [CRUDRepositoryOptions](#rust-crudrepositoryoptions).
-
-**Definition**
-
-```rust
-pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `connection` | [Connection](#connection) |
-| `options` | [CRUDRepositoryOptions](#rust-crudrepositoryoptions) |
-
-**Returns**
-
-`Result<`[CRUDRepository](#rust-crudrepository)`>`
-
-###### from_repository(inner) {#rust-crudrepository-from_repository-inner}
-
-Wraps an inner [ICRUDRepository](#rust-icrudrepository). Parent writes delegate to `inner`.
-
-**Definition**
-
-```rust
-pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#rust-icrudrepository) |
-
-**Returns**
-
-[CRUDRepository](#rust-crudrepository)
-
-###### add_enriched(enrichment, via, strategy) {#rust-crudrepository-add_enriched-enrichment-via-strategy}
-
-Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
-
-**Definition**
-
-```rust
-pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`&mut Self`
-
-###### add_linked(enrichment, via, link, strategy) {#rust-crudrepository-add_linked-enrichment-via-link-strategy}
-
-Registers an association. `via` is read. `link` is the CRUD writer.
-
-**Definition**
-
-```rust
-pub fn add_linked(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, link: Arc<dyn ICRUDRepository>, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) with `association` |
-| `via` | related readonly repository |
-| `link` | [ICRUDRepository](#rust-icrudrepository) that stores the association rows |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`&mut Self`
-
-###### add_middleware(middleware) {#rust-crudrepository-add_middleware-middleware}
-
-Adds command middleware.
-
-**Definition**
-
-```rust
-pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `middleware` | command middleware |
-
-###### read_single_by_id(id) {#rust-crudrepository-read_single_by_id-id}
-
-Returns the row for one id column, or for a composite key.
-
-**Definition**
-
-```rust
-pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `id` | `Value` for the single id column, or a `Row` keyed by each id column |
-
-**Returns**
-
-`Result<Option<Row>>`
-
-##### CRUDRepositoryOptions {#rust-crudrepositoryoptions}
-
-```rust
-pub struct CRUDRepositoryOptions
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| ids | Id column names. Default `["id"]`. |
-| insert | Rewrites finished insert SQL. `None` leaves the statement unchanged. |
-| update | Rewrites finished update SQL. `None` leaves the statement unchanged. |
-| delete | Rewrites finished delete SQL. `None` leaves the statement unchanged. |
-| return_ | Rewrites finished return SQL. `None` leaves it unchanged. |
-| read | The embedded [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
-
-##### BuiltRepository {#rust-builtrepository}
-
-```rust
-pub struct BuiltRepository
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| connection | [Connection](#connection). |
-| row_converter | [RowTypeConverter](#row-type-converter). |
-| rows_mapper | Read-row [Mapper](#mappers). |
-| statements | SQL fragments. |
-| ids | Id column names. |
-
-### Remarks
-
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, maps it, and copies the id onto the entity. The driver statement factory formats that statement. A stored-procedure create reads that id from the `Return` mapper instead. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
-
-`ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
-
-`AddEnriched` registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. `LazyWriteEnrichmentStrategy` skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
-
-`DefaultWriteEnrichmentStrategy` takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
-
-- **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — `DefaultUpdateEnrichmentStrategy` is the default. Write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest). `CascadeDeleteUpdateEnrichmentStrategy` deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
-- **Delete** — `CascadeDeleteEnrichmentStrategy` is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
-
-See [Bulk repository](#bulk-repository) for list writes.
-
-### Examples
-
-#### User from the type
-
-The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L383-L410)
-
-```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, "user-pascal");
-var usersRepo = new CRUDRepository<User>(connection);
-var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
-```
-
-**Created**
-
-```
-id: 1
-```
-
-**Read by id**
-
-```
-{
-  id: 1,
-  username: 'ada',
-  is_enabled: true
-}
-```
-
-**Read by username and enabled**
-
-```
-ada
-```
-
-**After update**
-
-```
-ada-v2
-```
-
-**After delete**
-
-```
-no row
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L604-L707)
-
-```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let connection = open(ds, "user-view-version", "")
-.await;
-let mut users_options = create_crud_repository_options::<UsersView>();
-users_options.ids = vec!["Key".into()];
-users_options.entity_mapper = Box::new(DictionaryMapper::new([(
-    "UsersView".to_string(),
-    "user".to_string(),
-)]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
-    ("Key".to_string(), "id".to_string()),
-    ("Login".to_string(), "username".to_string()),
-    ("Active".to_string(), "is_enabled".to_string()),
-    ("Opened".to_string(), "created".to_string()),
-    ("UserTypeId".to_string(), "user_type_id".to_string()),
-    ("Version".to_string(), "version".to_string()),
-]));
-users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
-let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-let mut type_options = create_crud_repository_options::<UserType>();
-type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings = Box::new(casing);
-type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
-let mut role_options = create_crud_repository_options::<UserRole>();
-role_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.column_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
-let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
-let user_types_repo =
-    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
-let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
-users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
-users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
-let mut admin = datasources::Row::new();
-admin.insert("Name".into(), Value::from("admin"));
-let admin = user_types_repo.create(&mut admin).await.unwrap();
-```
-
-**Created**
-
-```
-id: 1
-```
-
-**Read by id**
-
-```
-{
-  id: 1,
-  username: 'ada',
-  is_enabled: 1
-}
-```
-
-**Read by username and enabled**
-
-```
-ada
-```
-
-**After update**
-
-```
-ada-v2
-```
-
-**After delete**
-
-```
-no row
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L160-L182)
-
-```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, "user-pascal");
-const usersRepo = new CRUDRepository(User, connection);
-const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
-```
-
-**Created**
-
-```
-id: 1
-```
-
-**Read by id**
-
-```
-{
-  id: 1,
-  username: 'ada',
-  is_enabled: 1
-}
-```
-
-**Read by username and enabled**
-
-```
-ada
-```
-
-**After update**
-
-```
-ada-v2
-```
-
-**After delete**
-
-```
-no row
-```
-
-#### Users view with enrichment and a version
-
-`UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L451-L523)
-
-```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["filename"] = ":memory:" });
-var connection = await Open(ds, "user-view-version");
-var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
-{
-    Ids = ["Key"],
-    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-    {
-        ["Key"] = "id",
-        ["Login"] = "username",
-        ["Active"] = "is_enabled",
-        ["Opened"] = "created",
-        ["UserTypeId"] = "user_type_id",
-        ["Version"] = "version",
-    }),
-});
-var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryOptions<UserType>
-{
-    Ids = ["Id"],
-    EntityMapper = casing,
-    ColumnMappings = casing,
-});
-var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
-{
-    Ids = [],
-    EntityMapper = casing,
-    ColumnMappings = casing,
-});
-usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
-usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
-var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
-```
-
-**Created**
-
-```
-{
-  id: 1,
-  Key: 1
-}
-```
-
-**Enriched Ada**
-
-```
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor']
-}
-```
-
-**Versioned update**
-
-```
-{
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
-}
-```
-
-**Stale update**
-
-```
-{
-  rowsAffected: 0
-}
-```
-
-**After delete**
-
-```
-no row
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L641-L689)
-
-```rust
-users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
-users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
-let mut admin = datasources::Row::new();
-admin.insert("Name".into(), Value::from("admin"));
-let admin = user_types_repo.create(&mut admin).await.unwrap();
-```
-
-**Created**
-
-```
-{
-  id: 1,
-  Key: 1
-}
-```
-
-**Enriched Ada**
-
-```
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor']
-}
-```
-
-**Versioned update**
-
-```
-{
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
-}
-```
-
-**Stale update**
-
-```
-{
-  rowsAffected: 0
-}
-```
-
-**After delete**
-
-```
-no row
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L207-L272)
-
-```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
-const connection = await open(ds, "user-view-version");
-const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-const usersRepo = new CRUDRepository(connection, {
-  ...createCRUDRepositoryOptions(UsersView),
-  ids: ["Key"],
-  readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
-    ["Key", "id"],
-    ["Login", "username"],
-    ["Active", "is_enabled"],
-    ["Opened", "created"],
-    ["UserTypeId", "user_type_id"],
-    ["Version", "version"],
-  ]),
-});
-const userTypesRepo = new CRUDRepository(connection, {
-  ...createCRUDRepositoryOptions(UserType),
-  entityMapper: casing,
-  columnMappings: casing,
-});
-const userRolesRepo = new CRUDRepository(connection, {
-  ...createCRUDRepositoryOptions(UserRole),
-  entityMapper: casing,
-  columnMappings: casing,
-});
-usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
-usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
-const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
-```
-
-**Created**
-
-```
-{
-  id: 1,
-  Key: 1
-}
-```
-
-**Enriched Ada**
-
-```
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor']
-}
-```
-
-**Versioned update**
-
-```
-{
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
-}
-```
-
-**Stale update**
-
-```
-{
-  rowsAffected: 0
-}
-```
-
-**After delete**
-
-```
-no row
-```
-
-#### Users with linked roles and groups
-
-`AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L120-L192)
-
-```csharp
-var graph = await GraphAsync();
-var usersRepo = graph.UsersRepo;
-usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), graph.UserTypesRepo);
-usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), graph.RolesRepo, graph.UserRolesRepo);
-usersRepo.AddLinked(new("Groups", "Id", "Id", Association: new("UserId", "GroupId")), graph.GroupsRepo, graph.UserGroupsRepo);
-var created = await usersRepo.Create(new UserView
-{
-    Username = "ada",
-    IsEnabled = true,
-    UserTypeId = graph.AdminType.Id,
-    Roles = [graph.AdminRole, graph.EditorRole],
-    Groups = [graph.Engineering],
-});
-var createdRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
-var createdGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
-var saved = await usersRepo.Update(new UserView
-{
-    Id = created.Id,
-    Username = "ada",
-    IsEnabled = true,
-    UserTypeId = graph.AdminType.Id,
-    Roles = [graph.EditorRole],
-    Groups = [graph.Engineering, graph.Ops],
-});
-var updated = await usersRepo.ReadSingleById(created.Id);
-var updatedRoleLinks = await graph.UserRolesRepo.Read().ToListAsync();
-var updatedGroupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
-var removed = await usersRepo.Delete(new UserView { Id = created.Id });
-```
-
-**Created**
-
-```
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor'],
-  Groups: ['engineering']
-}
-```
-
-**Updated**
-
-```
-{
-  Roles: ['editor'],
-  Groups: ['engineering', 'ops']
-}
-```
-
-**After delete**
-
-```
-no user
-roles and groups remain
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L151-L250)
-
-```rust
-let (mut users, seeded) = open(None).await;
-users
-    .add_enriched(
-        Enrichment::new("user_type", "user_type_id", "id", None, false),
-        seeded.user_types.clone(),
-        None,
-    )
-    .add_linked(
-        Enrichment::new("roles", "id", "id", None, false)
-            .linked(Association::new("user_id", "role_id")),
-        seeded.roles.clone(),
-        seeded.user_roles.clone(),
-        None,
-    )
-    .add_linked(
-        Enrichment::new("groups", "id", "id", None, false)
-            .linked(Association::new("user_id", "group_id")),
-        seeded.groups.clone(),
-        seeded.user_groups.clone(),
-        None,
-    );
-let created = users
-    .create(&mut ada(
-        &seeded,
-        encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
-        encode_rows(&[seeded.engineering.clone()]),
-    ))
-    .await
-    .unwrap();
-let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
-let mut next = ada(
-    &seeded,
-    encode_rows(&[seeded.editor_role.clone()]),
-    encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
-);
-next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(&next, None).await.unwrap();
-let updated = users
-    .read_single_by_id(created.get("id").unwrap())
-    .await
-    .unwrap()
-    .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None).await.unwrap();
-let removed = users
-    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
-    .await
-    .unwrap();
-```
-
-**Created**
-
-```
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor'],
-  Groups: ['engineering']
-}
-```
-
-**Updated**
-
-```
-{
-  Roles: ['editor'],
-  Groups: ['engineering', 'ops']
-}
-```
-
-**After delete**
-
-```
-no user
-roles and groups remain
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/UserViewCRUDRepository.test.ts#L107-L172)
-
-```typescript
-const seeded = await graph();
-const usersRepo = seeded.usersRepo;
-usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
-usersRepo.addLinked(
-  { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
-  seeded.rolesRepo,
-  seeded.userRolesRepo,
-);
-usersRepo.addLinked(
-  { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
-  seeded.groupsRepo,
-  seeded.userGroupsRepo,
-);
-const created = await usersRepo.create(Object.assign(new UserView(), {
-  username: "ada",
-  is_enabled: true,
-  user_type_id: seeded.adminType.id,
-  roles: [seeded.adminRole, seeded.editorRole],
-  groups: [seeded.engineering],
-}));
-const createdRoleLinks = await collectAsync(seeded.userRolesRepo.read());
-const createdGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
-const saved = await usersRepo.update(Object.assign(new UserView(), {
-  id: created.id,
-  username: "ada",
-  is_enabled: true,
-  user_type_id: seeded.adminType.id,
-  roles: [seeded.editorRole],
-  groups: [seeded.engineering, seeded.ops],
-}));
-const updated = await usersRepo.readSingleById(created.id);
-const updatedRoleLinks = await collectAsync(seeded.userRolesRepo.read());
-const updatedGroupLinks = await collectAsync(seeded.userGroupsRepo.read());
-const removed = await usersRepo.delete(Object.assign(new UserView(), { id: created.id }));
-```
-
-**Created**
-
-```
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor'],
-  Groups: ['engineering']
-}
-```
-
-**Updated**
-
-```
-{
-  Roles: ['editor'],
-  Groups: ['engineering', 'ops']
-}
-```
-
-**After delete**
-
-```
-no user
-roles and groups remain
-```
-
-#### Null datetime and version
-
-Create and update leave a null `created` and `version` out of the statement. SQLite fills `2020-01-01T00:00:00.000Z` and `X'0102'`. An update of `name` leaves those defaults in place. A later create that sets both stores those values.
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/NullWriteTests.cs#L17-L46)
-
-```csharp
-var connection = await Open("null-write-item");
-var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
-var omitted = await repo.Create(new Item { name = "ada" });
-```
-
-**Stored default**
-
-```
-{
-  name: 'ada-v2',
-  created: '2020-01-01T00:00:00.000Z',
-  version: '0102'
-}
-```
-
-**Explicit values**
-
-```
-{
-  name: 'grace',
-  created: '2024-06-01T00:00:00.000Z',
-  version: '0909'
-}
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/null_write.rs#L24-L81)
-
-```rust
-let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
-conn.open().await.unwrap();
-let command = SqliteCommand::new(conn.clone());
-for statement in datasources_sql_specs::schema_tables("null-write-item", quote_ident, None) {
-    command.execute_statement(&statement, None).await.unwrap();
-}
-let mut options = CRUDRepositoryOptions::default();
-options.entity = "item".into();
-options.row_converter = Some(item_converter());
-let repo = CRUDRepository::new(conn, options).unwrap();
-let mut omitted = Row::new();
-omitted.insert("name".into(), Value::from("ada"));
-omitted.insert("created".into(), Value::Null);
-omitted.insert("version".into(), Value::Null);
-let mut omitted = repo.create(&mut omitted).await.unwrap();
-assert!(matches!(omitted.get("id"), Some(Value::Int(id)) if *id > 0));
-let stored = repo
-    .read_single_by_id(omitted.get("id").unwrap())
-    .await
-    .unwrap()
-    .unwrap();
-omitted.insert("name".into(), Value::from("ada-v2"));
-let updated = repo.update(&omitted, None).await.unwrap();
-```
-
-**Stored default**
-
-```
-{
-  name: 'ada-v2',
-  created: '2020-01-01T00:00:00.000Z',
-  version: '0102'
-}
-```
-
-**Explicit values**
-
-```
-{
-  name: 'grace',
-  created: '2024-06-01T00:00:00.000Z',
-  version: '0909'
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#L28-L54)
-
-```typescript
-const connection = await open();
-const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
-const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
-```
-
-**Stored default**
-
-```
-{
-  name: 'ada-v2',
-  created: '2020-01-01T00:00:00.000Z',
-  version: '0102'
-}
-```
-
-**Explicit values**
-
-```
-{
-  name: 'grace',
-  created: '2024-06-01T00:00:00.000Z',
-  version: '0909'
-}
-```
-
-## Bulk repository
-
-[CRUDRepository](#crud-repository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
-
-### Classes
-
-##### TypeScript
-
-##### BulkCRUDRepository {#typescript-bulkcrudrepository}
-
-```typescript
-class BulkCRUDRepository<T extends object> extends CRUDRepository<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [BulkCRUDRepository(inner)](#typescript-bulkcrudrepository-bulkcrudrepository-inner) | Wraps an inner [ICRUDRepository](#crud-repository). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [createBulk(items)](#typescript-bulkcrudrepository-createbulk-items) | Creates each item, including nested `many` children. |
-| [updateBulk(items, byWhere?)](#typescript-bulkcrudrepository-updatebulk-items-bywhere) | Updates each item, then replace-syncs nested `many` lists. |
-| [deleteBulk(items, byWhere?)](#typescript-bulkcrudrepository-deletebulk-items-bywhere) | Deletes nested `many` rows for each item, then the parents. |
-
-###### BulkCRUDRepository(inner) {#typescript-bulkcrudrepository-bulkcrudrepository-inner}
-
-Wraps an inner [ICRUDRepository](#crud-repository).
-
-**Definition**
-
-```typescript
-constructor(inner: ICRUDRepository<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#crud-repository) |
-
-###### createBulk(items) {#typescript-bulkcrudrepository-createbulk-items}
-
-Creates each item, including nested `many` children.
-
-**Definition**
-
-```typescript
-createBulk(items: T[]): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to insert |
-
-**Returns**
-
-`Promise<Response>`
-
-###### updateBulk(items, byWhere?) {#typescript-bulkcrudrepository-updatebulk-items-bywhere}
-
-Updates each item, then replace-syncs nested `many` lists.
-
-**Definition**
-
-```typescript
-updateBulk(items: T[], byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to update |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Promise<Response>`
-
-###### deleteBulk(items, byWhere?) {#typescript-bulkcrudrepository-deletebulk-items-bywhere}
-
-Deletes nested `many` rows for each item, then the parents.
-
-**Definition**
-
-```typescript
-deleteBulk(items: T[], byWhere?: IWhere): Promise<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to delete |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Promise<Response>`
-
-##### C#
-
-##### BulkCRUDRepository {#csharp-bulkcrudrepository}
-
-```csharp
-public class BulkCRUDRepository<T> : CRUDRepository<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [BulkCRUDRepository(inner)](#csharp-bulkcrudrepository-bulkcrudrepository-inner) | Wraps an inner [ICRUDRepository](#crud-repository). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Create(items)](#csharp-bulkcrudrepository-create-items) | Creates each item, including nested `many` children. |
-| [Update(items, byWhere)](#csharp-bulkcrudrepository-update-items-bywhere) | Updates each item, then replace-syncs nested `many` lists. |
-| [Delete(items, byWhere)](#csharp-bulkcrudrepository-delete-items-bywhere) | Deletes nested `many` rows for each item, then the parents. |
-| [BulkCreate(items)](#csharp-bulkcrudrepository-bulkcreate-items) | Alias of [Create](#csharp-bulkcrudrepository-create-items). |
-| [BulkUpdate(items, byWhere)](#csharp-bulkcrudrepository-bulkupdate-items-bywhere) | Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere). |
-| [BulkDelete(items, byWhere)](#csharp-bulkcrudrepository-bulkdelete-items-bywhere) | Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere). |
-
-###### BulkCRUDRepository(inner) {#csharp-bulkcrudrepository-bulkcrudrepository-inner}
-
-Wraps an inner [ICRUDRepository](#crud-repository).
-
-**Definition**
-
-```csharp
-public BulkCRUDRepository(ICRUDRepository<T> inner)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [ICRUDRepository](#crud-repository) |
-
-###### Create(items) {#csharp-bulkcrudrepository-create-items}
-
-Creates each item, including nested `many` children.
-
-**Definition**
-
-```csharp
-public Task<Response> Create(IReadOnlyList<T> items)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to insert |
-
-**Returns**
-
-`Task<Response>`
-
-###### Update(items, byWhere) {#csharp-bulkcrudrepository-update-items-bywhere}
-
-Updates each item, then replace-syncs nested `many` lists.
-
-**Definition**
-
-```csharp
-public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to update |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Task<Response>`
-
-###### Delete(items, byWhere) {#csharp-bulkcrudrepository-delete-items-bywhere}
-
-Deletes nested `many` rows for each item, then the parents.
-
-**Definition**
-
-```csharp
-public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to delete |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Task<Response>`
-
-###### BulkCreate(items) {#csharp-bulkcrudrepository-bulkcreate-items}
-
-Alias of [Create](#csharp-bulkcrudrepository-create-items).
-
-**Definition**
-
-```csharp
-public Task<Response> BulkCreate(IReadOnlyList<T> items)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to insert |
-
-**Returns**
-
-`Task<Response>`
-
-###### BulkUpdate(items, byWhere) {#csharp-bulkcrudrepository-bulkupdate-items-bywhere}
-
-Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere).
-
-**Definition**
-
-```csharp
-public Task<Response> BulkUpdate(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to update |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Task<Response>`
-
-###### BulkDelete(items, byWhere) {#csharp-bulkcrudrepository-bulkdelete-items-bywhere}
-
-Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere).
-
-**Definition**
-
-```csharp
-public Task<Response> BulkDelete(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to delete |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Task<Response>`
-
-##### Rust
-
-##### BulkCRUDRepository {#rust-bulkcrudrepository}
-
-```rust
-pub struct BulkCRUDRepository
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(inner)](#rust-bulkcrudrepository-new-inner) | Wraps an inner [CRUDRepository](#crud-repository). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [add_enriched(enrichment, via, strategy)](#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy) | Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written. |
-| [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `many` children. |
-| [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `many` lists. |
-| [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `many` rows for each item, then the parents. |
-
-###### new(inner) {#rust-bulkcrudrepository-new-inner}
-
-Wraps an inner [CRUDRepository](#crud-repository).
-
-**Definition**
-
-```rust
-pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `inner` | [CRUDRepository](#crud-repository) |
-
-**Returns**
-
-[BulkCRUDRepository](#rust-bulkcrudrepository)
-
-###### add_enriched(enrichment, via, strategy) {#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy}
-
-Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written.
-
-**Definition**
-
-```rust
-pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#rust-enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
-| `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
-
-**Returns**
-
-`&mut Self`
-
-###### create_bulk(items) {#rust-bulkcrudrepository-create_bulk-items}
-
-Creates each item, including nested `many` children.
-
-**Definition**
-
-```rust
-pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to insert |
-
-**Returns**
-
-`Result<Response>`
-
-###### update_bulk(items, by_where) {#rust-bulkcrudrepository-update_bulk-items-by_where}
-
-Updates each item, then replace-syncs nested `many` lists.
-
-**Definition**
-
-```rust
-pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to update |
-| `by_where` | optional predicate applied to each item |
-
-**Returns**
-
-`Result<Response>`
-
-###### delete_bulk(items, by_where) {#rust-bulkcrudrepository-delete_bulk-items-by_where}
-
-Deletes nested `many` rows for each item, then the parents.
-
-**Definition**
-
-```rust
-pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to delete |
-| `by_where` | optional predicate applied to each item |
-
-**Returns**
-
-`Result<Response>`
-
-### Remarks
-
-> **TypeScript**
->
-> Bulk writes use `createBulk` only.
-
-> **C#**
->
-> List overloads are `Create(IReadOnlyList<T>)`, with `Bulk*` aliases.
-
-> **Rust**
->
-> Bulk writes use `create_bulk` only.
-
-Each item still runs the same deep persist as [CRUDRepository](#crud-repository). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
-
-### Examples
-
-#### Create parents and children
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L23-L30)
-
-```csharp
-var connection = await Setup();
-var parentsRepo = new BulkCRUDRepository<Parent>(connection);
-var childrenRepo = new BulkCRUDRepository<Child>(connection);
-var response = await Repo(parentsRepo, childrenRepo).Create(
-[
-    new Parent { children = [new Child { label = "a" }] },
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1897-L1911)
-
-```rust
-let command = Arc::new(MockCommand::new());
-command.reader_rows.lock().unwrap().push(record(&[
-    ("id", Value::Int(1)),
-    ("username", Value::from("bobby")),
-    ("email", Value::from("bob@asdf.com")),
-    ("contact_name1", Value::from("bob")),
-    ("contact_name2", Value::from("roberta")),
-]));
-let connection = MockConnection::with_command_provider(command.clone(), "memory");
-let mut options = CRUDRepositoryOptions::default();
-options.entity = "users".into();
-options.row_converter = Some(RowTypeConverter::of::<UserRow>());
-options.rows_mapper = Box::new(user_contacts_mapper());
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L39)
-
-```typescript
-const connection = await setup();
-const parentsRepo = new BulkCRUDRepository(Parent, connection);
-const childrenRepo = new BulkCRUDRepository(Child, connection);
-const response = await relate(parentsRepo, childrenRepo).createBulk([
-  Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
-  Object.assign(new Parent(), {
-```
-
-## Mappers
-
-Bidirectional `Map` / `map` / `map` and `ReverseMap` / `reverseMap` / `reverse_map`. Column names pass through unless a mapper rewrites them. Repository read is convert, then map.
-
-### Classes
-
-##### TypeScript
-
-##### IMapper {#typescript-imapper}
-
-```typescript
-interface IMapper<TFrom, TTo>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-imapper-map-value) | Maps `TFrom` to `TTo`. |
-| [reverseMap(value)](#typescript-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
-
-###### map(value) {#typescript-imapper-map-value}
-
-Maps `TFrom` to `TTo`.
-
-**Definition**
-
-```typescript
-map(value: TFrom): TTo
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### reverseMap(value) {#typescript-imapper-reversemap-value}
-
-Maps `TTo` back to `TFrom`.
-
-**Definition**
-
-```typescript
-reverseMap(value: TTo): TFrom
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-##### C#
-
-##### IMapper {#csharp-imapper}
-
-```csharp
-public interface IMapper<TFrom, TTo>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-imapper-map-value) | Maps `TFrom` to `TTo`. |
-| [ReverseMap(value)](#csharp-imapper-reversemap-value) | Maps `TTo` back to `TFrom`. |
-
-###### Map(value) {#csharp-imapper-map-value}
-
-Maps `TFrom` to `TTo`.
-
-**Definition**
-
-```csharp
-TTo Map(TFrom value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### ReverseMap(value) {#csharp-imapper-reversemap-value}
-
-Maps `TTo` back to `TFrom`.
-
-**Definition**
-
-```csharp
-TFrom ReverseMap(TTo value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-##### Rust
-
-##### Mapper {#rust-mapper}
-
-```rust
-pub trait Mapper<TFrom, TTo>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-mapper-map-value) | Maps `TFrom` to `TTo`. |
-| [reverse_map(value)](#rust-mapper-reverse_map-value) | Maps `TTo` back to `TFrom`. |
-
-###### map(value) {#rust-mapper-map-value}
-
-Maps `TFrom` to `TTo`.
-
-**Definition**
-
-```rust
-fn map(&self, value: TFrom) -> TTo
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### reverse_map(value) {#rust-mapper-reverse_map-value}
-
-Maps `TTo` back to `TFrom`.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: TTo) -> TFrom
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-### Remarks
-
-Repository read is convert, then map. [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper) is the read-row mapper.
-
-### See also
-
-- [IdentityMapper](#identity-mapper)
-- [DictionaryMapper](#dictionary-mapper)
-- [PluralizerMapper](#pluralizer-mapper)
-- [ChangeCasingMapper](#change-casing-mapper)
-- [TransformMapper](#transform-mapper)
-- [FlatToNestedMapper](#flat-to-nested-mapper)
-- [ReadonlyRepositoryOptions](#readonlyrepositoryoptions)
-
-## IdentityMapper
-
-Mapper that returns the value unchanged.
-
-### Classes
-
-##### TypeScript
-
-##### IdentityMapper {#typescript-identitymapper}
-
-```typescript
-class IdentityMapper<T> implements IMapper<T, T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-identitymapper-map-value) | Returns `value`. |
-| [reverseMap(value)](#typescript-identitymapper-reversemap-value) | Returns `value`. |
-
-###### map(value) {#typescript-identitymapper-map-value}
-
-Returns `value`.
-
-**Definition**
-
-```typescript
-map(value: T): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`T`
-
-###### reverseMap(value) {#typescript-identitymapper-reversemap-value}
-
-Returns `value`.
-
-**Definition**
-
-```typescript
-reverseMap(value: T): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`T`
-
-##### C#
-
-##### IdentityMapper {#csharp-identitymapper}
-
-```csharp
-public class IdentityMapper<T> : IMapper<T, T>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-identitymapper-map-value) | Returns `value`. |
-| [ReverseMap(value)](#csharp-identitymapper-reversemap-value) | Returns `value`. |
-
-###### Map(value) {#csharp-identitymapper-map-value}
-
-Returns `value`.
-
-**Definition**
-
-```csharp
-T Map(T value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`T`
-
-###### ReverseMap(value) {#csharp-identitymapper-reversemap-value}
-
-Returns `value`.
-
-**Definition**
-
-```csharp
-T ReverseMap(T value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`T`
-
-##### Rust
-
-##### IdentityMapper {#rust-identitymapper}
-
-```rust
-pub struct IdentityMapper<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new()](#rust-identitymapper-new) | Builds an identity mapper. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-identitymapper-map-value) | Returns `value`. |
-| [reverse_map(value)](#rust-identitymapper-reverse_map-value) | Returns `value`. |
-
-###### new() {#rust-identitymapper-new}
-
-Builds an identity mapper.
-
-**Definition**
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns**
-
-[IdentityMapper](#rust-identitymapper)
-
-###### map(value) {#rust-identitymapper-map-value}
-
-Returns `value`.
-
-**Definition**
-
-```rust
-fn map(&self, value: T) -> T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`T`
-
-###### reverse_map(value) {#rust-identitymapper-reverse_map-value}
-
-Returns `value`.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: T) -> T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`T`
-
-### Examples
-
-#### Map and reverse map
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/IdentityMapperTests.cs#L10-L12)
-
-```csharp
-var mapper = new IdentityMapper<string>();
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/identity_mapper.rs#L39-L41)
-
-```rust
-let mapper = IdentityMapper::<String>::new();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/IdentityMapper.test.ts#L6-L8)
-
-```typescript
-const mapper = new IdentityMapper<string>();
-```
-
-## DictionaryMapper
-
-Mapper that rewrites known keys and passes the rest through. Reverse lookup uses the mapped value. When two keys share a value, the first one wins on reverse.
-
-### Classes
-
-##### TypeScript
-
-##### DictionaryMapper {#typescript-dictionarymapper}
-
-```typescript
-class DictionaryMapper<T extends string | number> implements IMapper<T, T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [DictionaryMapper(map)](#typescript-dictionarymapper-dictionarymapper-map) | Builds the forward map and its reverse. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
-| [reverseMap(value)](#typescript-dictionarymapper-reversemap-value) | Returns the source key for a stored name, or `value`. |
-
-###### DictionaryMapper(map) {#typescript-dictionarymapper-dictionarymapper-map}
-
-Builds the forward map and its reverse.
-
-**Definition**
-
-```typescript
-constructor(map: readonly (readonly [T, T])[])
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `map` | pairs of source key and stored name |
-
-**Returns**
-
-[DictionaryMapper](#typescript-dictionarymapper)
-
-###### map(value) {#typescript-dictionarymapper-map-value}
-
-Returns the stored name for a known key, or `value`.
-
-**Definition**
-
-```typescript
-map(value: T): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source key |
-
-**Returns**
-
-`T`
-
-###### reverseMap(value) {#typescript-dictionarymapper-reversemap-value}
-
-Returns the source key for a stored name, or `value`.
-
-**Definition**
-
-```typescript
-reverseMap(value: T): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | stored name |
-
-**Returns**
-
-`T`
-
-##### C#
-
-##### DictionaryMapper {#csharp-dictionarymapper}
-
-```csharp
-public sealed class DictionaryMapper<T> : IMapper<T, T> where T : notnull
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [DictionaryMapper(map)](#csharp-dictionarymapper-dictionarymapper-map) | Builds the forward map and its reverse. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
-| [ReverseMap(value)](#csharp-dictionarymapper-reversemap-value) | Returns the source key for a stored name, or `value`. |
-
-###### DictionaryMapper(map) {#csharp-dictionarymapper-dictionarymapper-map}
-
-Builds the forward map and its reverse.
-
-**Definition**
-
-```csharp
-public DictionaryMapper(IReadOnlyDictionary<T, T> map)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `map` | pairs of source key and stored name |
-
-###### Map(value) {#csharp-dictionarymapper-map-value}
-
-Returns the stored name for a known key, or `value`.
-
-**Definition**
-
-```csharp
-T Map(T value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source key |
-
-**Returns**
-
-`T`
-
-###### ReverseMap(value) {#csharp-dictionarymapper-reversemap-value}
-
-Returns the source key for a stored name, or `value`.
-
-**Definition**
-
-```csharp
-T ReverseMap(T value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | stored name |
-
-**Returns**
-
-`T`
-
-##### Rust
-
-##### DictionaryMapper {#rust-dictionarymapper}
-
-```rust
-pub struct DictionaryMapper<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(map)](#rust-dictionarymapper-new-map) | Builds the forward map and its reverse. `T: Clone + Eq + Hash`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-dictionarymapper-map-value) | Returns the stored name for a known key, or `value`. |
-| [reverse_map(value)](#rust-dictionarymapper-reverse_map-value) | Returns the source key for a stored name, or `value`. |
-
-###### new(map) {#rust-dictionarymapper-new-map}
-
-Builds the forward map and its reverse. `T: Clone + Eq + Hash`.
-
-**Definition**
-
-```rust
-pub fn new(map: impl IntoIterator<Item = (T, T)>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `map` | pairs of source key and stored name, in first-wins order |
-
-**Returns**
-
-[DictionaryMapper](#rust-dictionarymapper)
-
-###### map(value) {#rust-dictionarymapper-map-value}
-
-Returns the stored name for a known key, or `value`.
-
-**Definition**
-
-```rust
-fn map(&self, value: T) -> T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source key |
-
-**Returns**
-
-`T`
-
-###### reverse_map(value) {#rust-dictionarymapper-reverse_map-value}
-
-Returns the source key for a stored name, or `value`.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: T) -> T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | stored name |
-
-**Returns**
-
-`T`
-
-### Remarks
-
-Use this for [ColumnMappings](#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list, where identifiers, and write parameters. `ReverseMap` restores property names on each result key before the row converter.
-
-### Examples
-
-#### Map and reverse map
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DictionaryMapperTests.cs#L14-L25)
-
-```csharp
-var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
-{
-    ["Key"] = "id",
-    ["Login"] = "username",
-});
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L51-L61)
-
-```rust
-let mapper = DictionaryMapper::new([
-    ("Key".to_string(), "id".to_string()),
-    ("Login".to_string(), "username".to_string()),
-]);
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/DictionaryMapper.test.ts#L14-L23)
-
-```typescript
-const mapper = new DictionaryMapper([
-  ["Key", "id"],
-  ["Login", "username"],
-]);
-```
-
-## PluralizerMapper
-
-Mapper that pluralizes a name and lowercases it. Reverse singularizes and keeps the first letter's case.
-
-### Classes
-
-##### TypeScript
-
-##### PluralizerMapper {#typescript-pluralizermapper}
-
-```typescript
-class PluralizerMapper implements IMapper<string, string>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-pluralizermapper-map-value) | Pluralizes `value` and lowercases it. `User` becomes `users`. |
-| [reverseMap(value)](#typescript-pluralizermapper-reversemap-value) | Singularizes `value`. `users` becomes `user`. |
-
-###### map(value) {#typescript-pluralizermapper-map-value}
-
-Pluralizes `value` and lowercases it. `User` becomes `users`.
-
-**Definition**
-
-```typescript
-map(value: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source name |
-
-**Returns**
-
-`string`
-
-###### reverseMap(value) {#typescript-pluralizermapper-reversemap-value}
-
-Singularizes `value`. `users` becomes `user`.
-
-**Definition**
-
-```typescript
-reverseMap(value: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | plural name |
-
-**Returns**
-
-`string`
-
-##### C#
-
-##### PluralizerMapper {#csharp-pluralizermapper}
-
-```csharp
-public sealed class PluralizerMapper : IMapper<string, string>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-pluralizermapper-map-value) | Pluralizes `value` and lowercases it. `User` becomes `users`. |
-| [ReverseMap(value)](#csharp-pluralizermapper-reversemap-value) | Singularizes `value`. `users` becomes `user`. |
-
-###### Map(value) {#csharp-pluralizermapper-map-value}
-
-Pluralizes `value` and lowercases it. `User` becomes `users`.
-
-**Definition**
-
-```csharp
-string Map(string value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source name |
-
-**Returns**
-
-`string`
-
-###### ReverseMap(value) {#csharp-pluralizermapper-reversemap-value}
-
-Singularizes `value`. `users` becomes `user`.
-
-**Definition**
-
-```csharp
-string ReverseMap(string value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | plural name |
-
-**Returns**
-
-`string`
-
-##### Rust
-
-##### PluralizerMapper {#rust-pluralizermapper}
-
-```rust
-pub struct PluralizerMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new()](#rust-pluralizermapper-new) | Builds a pluralizer mapper. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-pluralizermapper-map-value) | Pluralizes `value` and lowercases it. `User` becomes `users`. |
-| [reverse_map(value)](#rust-pluralizermapper-reverse_map-value) | Singularizes `value`. `users` becomes `user`. |
-
-###### new() {#rust-pluralizermapper-new}
-
-Builds a pluralizer mapper.
-
-**Definition**
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns**
-
-[PluralizerMapper](#rust-pluralizermapper)
-
-###### map(value) {#rust-pluralizermapper-map-value}
-
-Pluralizes `value` and lowercases it. `User` becomes `users`.
-
-**Definition**
-
-```rust
-fn map(&self, value: String) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source name |
-
-**Returns**
-
-`String`
-
-###### reverse_map(value) {#rust-pluralizermapper-reverse_map-value}
-
-Singularizes `value`. `users` becomes `user`.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: String) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | plural name |
-
-**Returns**
-
-`String`
-
-### Remarks
-
-Use this as [EntityMapper](#entitymapper) when the type name is singular and the table name is a lowercase plural. Setting `Entity` / `entity` / `entity` skips the mapper.
-
-### Examples
-
-#### Pluralize and lowercase
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/PluralizerMapperTests.cs#L8-L13)
-
-```csharp
-var mapper = new PluralizerMapper();
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/pluralizer_mapper.rs#L37-L42)
-
-```rust
-let mapper = PluralizerMapper::new();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/PluralizerMapper.test.ts#L5-L9)
-
-```typescript
-const mapper = new PluralizerMapper();
-```
-
-## ChangeCasingMapper
-
-Mapper that rewrites a name from one casing to another through `ChangeCasingConverter`. `Map` writes the stored casing. `ReverseMap` restores the application casing.
-
-### Classes
-
-##### TypeScript
-
-##### ChangeCasingMapper {#typescript-changecasingmapper}
-
-```typescript
-class ChangeCasingMapper implements IMapper<string, string>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [ChangeCasingMapper(from, to)](#typescript-changecasingmapper-changecasingmapper-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `snakeCase` becomes `user_type`. |
-| [reverseMap(value)](#typescript-changecasingmapper-reversemap-value) | Rewrites `value` into the application casing. `user_type` with `pascalCase` becomes `UserType`. |
-
-###### ChangeCasingMapper(from, to) {#typescript-changecasingmapper-changecasingmapper-from-to}
-
-Maps names from `from` to `to`. Reverse maps back to `from`.
-
-**Definition**
-
-```typescript
-constructor(from: Casing, to: Casing)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | application casing, such as `pascalCase` |
-| `to` | stored casing, such as `snakeCase` |
-
-**Returns**
-
-[ChangeCasingMapper](#typescript-changecasingmapper)
-
-###### map(value) {#typescript-changecasingmapper-map-value}
-
-Rewrites `value` into the stored casing. `UserType` with `snakeCase` becomes `user_type`.
-
-**Definition**
-
-```typescript
-map(value: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | application name |
-
-**Returns**
-
-`string`
-
-###### reverseMap(value) {#typescript-changecasingmapper-reversemap-value}
-
-Rewrites `value` into the application casing. `user_type` with `pascalCase` becomes `UserType`.
-
-**Definition**
-
-```typescript
-reverseMap(value: string): string
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | stored name |
-
-**Returns**
-
-`string`
-
-##### C#
-
-##### ChangeCasingMapper {#csharp-changecasingmapper}
-
-```csharp
-public sealed class ChangeCasingMapper : IMapper<string, string>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [ChangeCasingMapper(from, to)](#csharp-changecasingmapper-changecasingmapper-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`. |
-| [ReverseMap(value)](#csharp-changecasingmapper-reversemap-value) | Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`. |
-
-###### ChangeCasingMapper(from, to) {#csharp-changecasingmapper-changecasingmapper-from-to}
-
-Maps names from `from` to `to`. Reverse maps back to `from`.
-
-**Definition**
-
-```csharp
-public ChangeCasingMapper(Casing from, Casing to)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | application casing, such as `Pascal` |
-| `to` | stored casing, such as `Snake` |
-
-**Returns**
-
-[ChangeCasingMapper](#csharp-changecasingmapper)
-
-###### Map(value) {#csharp-changecasingmapper-map-value}
-
-Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`.
-
-**Definition**
-
-```csharp
-string Map(string value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | application name |
-
-**Returns**
-
-`string`
-
-###### ReverseMap(value) {#csharp-changecasingmapper-reversemap-value}
-
-Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`.
-
-**Definition**
-
-```csharp
-string ReverseMap(string value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | stored name |
-
-**Returns**
-
-`string`
-
-##### Rust
-
-##### ChangeCasingMapper {#rust-changecasingmapper}
-
-```rust
-pub struct ChangeCasingMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(from, to)](#rust-changecasingmapper-new-from-to) | Maps names from `from` to `to`. Reverse maps back to `from`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-changecasingmapper-map-value) | Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`. |
-| [reverse_map(value)](#rust-changecasingmapper-reverse_map-value) | Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`. |
-
-###### new(from, to) {#rust-changecasingmapper-new-from-to}
-
-Maps names from `from` to `to`. Reverse maps back to `from`.
-
-**Definition**
-
-```rust
-pub fn new(from: Casing, to: Casing) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | application casing, such as `Pascal` |
-| `to` | stored casing, such as `Snake` |
-
-**Returns**
-
-[ChangeCasingMapper](#rust-changecasingmapper)
-
-###### map(value) {#rust-changecasingmapper-map-value}
-
-Rewrites `value` into the stored casing. `UserType` with `Snake` becomes `user_type`.
-
-**Definition**
-
-```rust
-fn map(&self, value: String) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | application name |
-
-**Returns**
-
-`String`
-
-###### reverse_map(value) {#rust-changecasingmapper-reverse_map-value}
-
-Rewrites `value` into the application casing. `user_type` with `Pascal` becomes `UserType`.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: String) -> String
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | stored name |
-
-**Returns**
-
-`String`
-
-### Remarks
-
-Use this as [EntityMapper](#entitymapper) and [ColumnMappings](#columnmappings) when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
-
-### Examples
-
-#### Map Pascal to snake case
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ChangeCasingMapperTests.cs#L7-L15)
-
-```csharp
-var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/change_casing_mapper.rs#L34-L41)
-
-```rust
-let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/ChangeCasingMapper.test.ts#L5-L11)
-
-```typescript
-const mapper = new ChangeCasingMapper("pascalCase", "snakeCase");
-```
-
-## TransformMapper
-
-Mapper built from a pair of functions.
-
-### Classes
-
-##### TypeScript
-
-##### TransformMapper {#typescript-transformmapper}
-
-```typescript
-class TransformMapper<TFrom, TTo> implements IMapper<TFrom, TTo>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [TransformMapper(map, reverseMap)](#typescript-transformmapper-transformmapper-map-reversemap) | Builds a mapper from a pair of functions. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#typescript-transformmapper-map-value) | Runs the map function. |
-| [reverseMap(value)](#typescript-transformmapper-reversemap-value) | Runs the reverse-map function. |
-
-###### TransformMapper(map, reverseMap) {#typescript-transformmapper-transformmapper-map-reversemap}
-
-Builds a mapper from a pair of functions.
-
-**Definition**
-
-```typescript
-constructor(map: (value: TFrom) => TTo, reverseMap: (value: TTo) => TFrom)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `map` | `TFrom` to `TTo` |
-| `reverseMap` | `TTo` to `TFrom` |
-
-###### map(value) {#typescript-transformmapper-map-value}
-
-Runs the map function.
-
-**Definition**
-
-```typescript
-map(value: TFrom): TTo
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### reverseMap(value) {#typescript-transformmapper-reversemap-value}
-
-Runs the reverse-map function.
-
-**Definition**
-
-```typescript
-reverseMap(value: TTo): TFrom
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-##### C#
-
-##### TransformMapper {#csharp-transformmapper}
-
-```csharp
-public class TransformMapper<TFrom, TTo> : IMapper<TFrom, TTo>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [TransformMapper(map, reverseMap)](#csharp-transformmapper-transformmapper-map-reversemap) | Builds a mapper from a pair of functions. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(value)](#csharp-transformmapper-map-value) | Runs the map function. |
-| [ReverseMap(value)](#csharp-transformmapper-reversemap-value) | Runs the reverse-map function. |
-
-###### TransformMapper(map, reverseMap) {#csharp-transformmapper-transformmapper-map-reversemap}
-
-Builds a mapper from a pair of functions.
-
-**Definition**
-
-```csharp
-public TransformMapper(Func<TFrom, TTo> map, Func<TTo, TFrom> reverseMap)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `map` | `TFrom` to `TTo` |
-| `reverseMap` | `TTo` to `TFrom` |
-
-###### Map(value) {#csharp-transformmapper-map-value}
-
-Runs the map function.
-
-**Definition**
-
-```csharp
-TTo Map(TFrom value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### ReverseMap(value) {#csharp-transformmapper-reversemap-value}
-
-Runs the reverse-map function.
-
-**Definition**
-
-```csharp
-TFrom ReverseMap(TTo value)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-##### Rust
-
-##### TransformMapper {#rust-transformmapper}
-
-```rust
-pub struct TransformMapper<TFrom, TTo>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(map, reverse_map)](#rust-transformmapper-new-map-reverse_map) | Builds a mapper from a pair of functions. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(value)](#rust-transformmapper-map-value) | Runs the map function. |
-| [reverse_map(value)](#rust-transformmapper-reverse_map-value) | Runs the reverse-map function. |
-
-###### new(map, reverse_map) {#rust-transformmapper-new-map-reverse_map}
-
-Builds a mapper from a pair of functions.
-
-**Definition**
-
-```rust
-pub fn new(map: impl Fn(TFrom) -> TTo + Send + Sync + 'static, reverse_map: impl Fn(TTo) -> TFrom + Send + Sync + 'static) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `map` | `TFrom` to `TTo` |
-| `reverse_map` | `TTo` to `TFrom` |
-
-**Returns**
-
-[TransformMapper](#rust-transformmapper)
-
-###### map(value) {#rust-transformmapper-map-value}
-
-Runs the map function.
-
-**Definition**
-
-```rust
-fn map(&self, value: TFrom) -> TTo
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | source value |
-
-**Returns**
-
-`TTo`
-
-###### reverse_map(value) {#rust-transformmapper-reverse_map-value}
-
-Runs the reverse-map function.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, value: TTo) -> TFrom
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `value` | mapped value |
-
-**Returns**
-
-`TFrom`
-
-### Remarks
-
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryOptions](#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](#identity-mapper).
-
-### Examples
-
-#### Flatten with TransformMapper
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/TransformMapperTests.cs#L13-L24)
-
-```csharp
-var nested = new Nested(new User(1, "Ada"), new Contacts("ada@x.dev", "555"));
-var mapper = new TransformMapper<Nested, Flat>(
-    map: n => new Flat(n.User.Id, n.User.Name, n.Contacts.Email, n.Contacts.Phone),
-    reverseMap: f => new Nested(new User(f.UserId, f.UserName), new Contacts(f.ContactEmail, f.ContactPhone)));
-var flat = mapper.Map(nested);
-```
-
-**Before: nested value**
-
-```
-{
-  user: { id: 1, name: 'Ada' },
-  contacts: { email: 'ada@x.dev', phone: '555' }
-}
-```
-
-**After: flat value**
-
-```
-{
-  userId: 1,
-  userName: 'Ada',
-  contactEmail: 'ada@x.dev',
-  contactPhone: '555'
-}
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L74-L94)
-
-```rust
-let nested = Nested {
-    user: User {
-        id: 1,
-        name: "Ada".into(),
-    },
-    contacts: Contacts {
-        email: "ada@x.dev".into(),
-        phone: "555".into(),
-    },
-};
-let mapper = TransformMapper::new(
-    |n: Nested| Flat {
-        user_id: n.user.id,
-        user_name: n.user.name,
-        contact_email: n.contacts.email,
-        contact_phone: n.contacts.phone,
-    },
-    |f: Flat| Nested {
-        user: User {
-```
-
-**Before: nested value**
-
-```
-{
-  user: { id: 1, name: 'Ada' },
-  contacts: { email: 'ada@x.dev', phone: '555' }
-}
-```
-
-**After: flat value**
-
-```
-{
-  userId: 1,
-  userName: 'Ada',
-  contactEmail: 'ada@x.dev',
-  contactPhone: '555'
-}
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/transformMapper.test.ts#L16-L40)
-
-```typescript
-const nested: Nested = {
-  user: { id: 1, name: "Ada" },
-  contacts: { email: "ada@x.dev", phone: "555" },
-};
-const mapper = new TransformMapper<Nested, Flat>(
-  (n) => ({
-    userId: n.user.id,
-    userName: n.user.name,
-    contactEmail: n.contacts.email,
-    contactPhone: n.contacts.phone,
-  }),
-  (f) => ({
-    user: { id: f.userId, name: f.userName },
-    contacts: { email: f.contactEmail, phone: f.contactPhone },
-  }),
-);
-const flat = mapper.map(nested);
-```
-
-**Before: nested value**
-
-```
-{
-  user: { id: 1, name: 'Ada' },
-  contacts: { email: 'ada@x.dev', phone: '555' }
-}
-```
-
-**After: flat value**
-
-```
-{
-  userId: 1,
-  userName: 'Ada',
-  contactEmail: 'ada@x.dev',
-  contactPhone: '555'
-}
-```
-
-## FlatToNestedMapper
-
-Collapses denormalized join rows into unique parents with unique children. Scalars map column to field; groups collect children by key.
-
-### Classes
-
-##### TypeScript
-
-##### IFlatToNestedMapper {#typescript-iflattonestedmapper}
-
-```typescript
-interface IFlatToNestedMapper<T> extends IMapper<Iterable<T | Cells>, T[]>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| spec | The [TypeMap](#typescript-typemap) used to collapse join rows. |
-
-##### FlatToNestedMapper {#typescript-flattonestedmapper}
-
-```typescript
-class FlatToNestedMapper<T> implements IFlatToNestedMapper<T>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [FlatToNestedMapper(spec)](#typescript-flattonestedmapper-flattonestedmapper-spec) | Builds a collapse mapper from a [TypeMap](#typescript-typemap). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| spec | The [TypeMap](#typescript-typemap) used to collapse join rows. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(rows)](#typescript-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
-| [reverseMap(values)](#typescript-flattonestedmapper-reversemap-values) | Flattens nested parents back to denormalized join rows. |
-
-###### FlatToNestedMapper(spec) {#typescript-flattonestedmapper-flattonestedmapper-spec}
-
-Builds a collapse mapper from a [TypeMap](#typescript-typemap).
-
-**Definition**
-
-```typescript
-constructor(spec: TypeMap<T>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `spec` | [TypeMap](#typescript-typemap); scalars map column to field, groups collect unique children by key |
-
-###### map(rows) {#typescript-flattonestedmapper-map-rows}
-
-Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
-
-**Definition**
-
-```typescript
-map(rows: Iterable<T | Cells>): T[]
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | denormalized join rows, or already-mapped `T` |
-
-**Returns**
-
-`T[]`
-
-###### reverseMap(values) {#typescript-flattonestedmapper-reversemap-values}
-
-Flattens nested parents back to denormalized join rows.
-
-**Definition**
-
-```typescript
-reverseMap(values: T[]): Cells[]
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `values` | nested parents |
-
-**Returns**
-
-`Cells[]`
-
-##### TypeMap {#typescript-typemap}
-
-```typescript
-type TypeMap<T>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| key | Parent key column. |
-| fields | Column or group per destination field. |
-
-##### TypeMapGroup {#typescript-typemapgroup}
-
-```typescript
-type TypeMapGroup<E>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| key | Child key column used to unique children. |
-| fields | Column names for the child. |
-
-##### TypeMapFields {#typescript-typemapfields}
-
-```typescript
-type TypeMapFields<T>
-```
-
-##### C#
-
-##### IFlatToNestedMapper {#csharp-iflattonestedmapper}
-
-```csharp
-public interface IFlatToNestedMapper : IMapper<IEnumerable<Row>, IReadOnlyList<Dictionary<string, MappedValue>>>
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Spec | The [TypeMap](#csharp-typemap) used to collapse join rows. |
-
-##### FlatToNestedMapper {#csharp-flattonestedmapper}
-
-```csharp
-public sealed class FlatToNestedMapper : IFlatToNestedMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [FlatToNestedMapper(spec)](#csharp-flattonestedmapper-flattonestedmapper-spec) | Builds a collapse mapper from a [TypeMap](#csharp-typemap). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Spec | The [TypeMap](#csharp-typemap) used to collapse join rows. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Map(rows)](#csharp-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
-| [ReverseMap(values)](#csharp-flattonestedmapper-reversemap-values) | Flattens nested parents back to denormalized join rows. |
-
-###### FlatToNestedMapper(spec) {#csharp-flattonestedmapper-flattonestedmapper-spec}
-
-Builds a collapse mapper from a [TypeMap](#csharp-typemap).
-
-**Definition**
-
-```csharp
-public FlatToNestedMapper(TypeMap spec)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `spec` | [TypeMap](#csharp-typemap); scalars map column to field, groups collect unique children by key |
-
-###### Map(rows) {#csharp-flattonestedmapper-map-rows}
-
-Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
-
-**Definition**
-
-```csharp
-IReadOnlyList<Dictionary<string, MappedValue>> Map(IEnumerable<Row> rows)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | denormalized join rows |
-
-**Returns**
-
-`IReadOnlyList<Dictionary<string, `[MappedValue](#csharp-mappedvalue)`>>`
-
-###### ReverseMap(values) {#csharp-flattonestedmapper-reversemap-values}
-
-Flattens nested parents back to denormalized join rows.
-
-**Definition**
-
-```csharp
-IReadOnlyList<Row> ReverseMap(IReadOnlyList<Dictionary<string, MappedValue>> values)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `values` | nested parents |
-
-**Returns**
-
-`IReadOnlyList<`[Row](#repositories)`>`
-
-##### TypeMap {#csharp-typemap}
-
-```csharp
-public sealed class TypeMap
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Key | Parent key column. |
-| Fields | Column or group per destination field. |
-
-##### TypeMapGroup {#csharp-typemapgroup}
-
-```csharp
-public sealed class TypeMapGroup
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Key | Child key column used to unique children. |
-| Fields | Column or group per child field. |
-
-##### TypeMapField {#csharp-typemapfield}
-
-```csharp
-public abstract record TypeMapField
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Column | Maps a destination field to a source column. |
-| Group | Maps a destination field to a child [TypeMapGroup](#csharp-typemapgroup). |
-
-##### MappedValue {#csharp-mappedvalue}
-
-```csharp
-public abstract record MappedValue
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Cell | A scalar cell. |
-| Many | A child collection. |
-
-##### Rust
-
-##### FlatToNestedMapperTrait {#rust-flattonestedmappertrait}
-
-```rust
-pub trait FlatToNestedMapper: Mapper<Vec<Row>, Vec<MappedRow>>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [spec()](#rust-flattonestedmappertrait-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
-
-###### spec() {#rust-flattonestedmappertrait-spec}
-
-The [TypeMap](#rust-typemap) used to collapse join rows.
-
-**Definition**
-
-```rust
-fn spec(&self) -> &TypeMap
-```
-
-**Returns**
-
-`&`[TypeMap](#rust-typemap)
-
-##### FlatToNestedMapper {#rust-flattonestedmapper}
-
-```rust
-pub struct FlatToNestedMapper
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(spec)](#rust-flattonestedmapper-new-spec) | Builds a collapse mapper from a [TypeMap](#rust-typemap). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [map(rows)](#rust-flattonestedmapper-map-rows) | Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted. |
-| [reverse_map(values)](#rust-flattonestedmapper-reverse_map-values) | Flattens nested parents back to denormalized join rows. |
-| [spec()](#rust-flattonestedmapper-spec) | The [TypeMap](#rust-typemap) used to collapse join rows. |
-
-###### new(spec) {#rust-flattonestedmapper-new-spec}
-
-Builds a collapse mapper from a [TypeMap](#rust-typemap).
-
-**Definition**
-
-```rust
-pub fn new(spec: TypeMap) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `spec` | [TypeMap](#rust-typemap); scalars map column to field, groups collect unique children by key |
-
-**Returns**
-
-[FlatToNestedMapper](#rust-flattonestedmapper)
-
-###### map(rows) {#rust-flattonestedmapper-map-rows}
-
-Maps join rows to unique parents with unique children. Nested group fields on a collection are omitted.
-
-**Definition**
-
-```rust
-fn map(&self, rows: Vec<Row>) -> Vec<MappedRow>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `rows` | denormalized join rows |
-
-**Returns**
-
-`Vec<`[MappedRow](#rust-mappedrow)`>`
-
-###### reverse_map(values) {#rust-flattonestedmapper-reverse_map-values}
-
-Flattens nested parents back to denormalized join rows.
-
-**Definition**
-
-```rust
-fn reverse_map(&self, values: Vec<MappedRow>) -> Vec<Row>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `values` | nested parents |
-
-**Returns**
-
-`Vec<Row>`
-
-###### spec() {#rust-flattonestedmapper-spec}
-
-The [TypeMap](#rust-typemap) used to collapse join rows.
-
-**Definition**
-
-```rust
-fn spec(&self) -> &TypeMap
-```
-
-**Returns**
-
-`&`[TypeMap](#rust-typemap)
-
-##### TypeMap {#rust-typemap}
-
-```rust
-pub struct TypeMap
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(key, fields)](#rust-typemap-new-key-fields) | Builds a collapse spec. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| key | Parent key column. |
-| fields | Column or group per destination field. |
-
-###### new(key, fields) {#rust-typemap-new-key-fields}
-
-Builds a collapse spec.
-
-**Definition**
-
-```rust
-pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `key` | parent key column |
-| `fields` | destination name and [TypeMapField](#rust-typemapfield) pairs |
-
-**Returns**
-
-[TypeMap](#rust-typemap)
-
-##### TypeMapGroup {#rust-typemapgroup}
-
-```rust
-pub struct TypeMapGroup
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(key, fields)](#rust-typemapgroup-new-key-fields) | Builds a child-group spec. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| key | Child key column used to unique children. |
-| fields | Column or group per child field. |
-
-###### new(key, fields) {#rust-typemapgroup-new-key-fields}
-
-Builds a child-group spec.
-
-**Definition**
-
-```rust
-pub fn new(key: impl Into<String>, fields: Vec<(String, TypeMapField)>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `key` | child key column |
-| `fields` | destination name and [TypeMapField](#rust-typemapfield) pairs |
-
-**Returns**
-
-[TypeMapGroup](#rust-typemapgroup)
-
-##### TypeMapField {#rust-typemapfield}
-
-```rust
-pub enum TypeMapField
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Column | Maps a destination field to a source column. |
-| Group | Maps a destination field to a child [TypeMapGroup](#rust-typemapgroup). |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [column(source)](#rust-typemapfield-column-source) | Builds a [Column](#rust-typemapfield-column) field. |
-
-###### column(source) {#rust-typemapfield-column-source}
-
-Builds a [Column](#rust-typemapfield-column) field.
-
-**Definition**
-
-```rust
-pub fn column(source: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `source` | source column name |
-
-**Returns**
-
-[TypeMapField](#rust-typemapfield)
-
-##### MappedValue {#rust-mappedvalue}
-
-```rust
-pub enum MappedValue
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Cell | A scalar cell. |
-| Many | A child collection. |
-
-##### MappedRow {#rust-mappedrow}
-
-```rust
-pub type MappedRow = HashMap<String, MappedValue>
-```
-
-### Remarks
-
-> **TypeScript**
->
-> Map to generic `T`.
-
-> **C#**
->
-> Map to a [MappedValue](#mappedvalue) graph.
-
-> **Rust**
->
-> Map to a [MappedValue](#mappedvalue) graph.
-
-Nested group fields on a collection are omitted.
-
-This is a collapse mapper, not enrichment. Related fills after read use [Readonly repository](#ienriched).
-
-### Examples
-
-#### Map join rows to a nested contact
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/FlatToNestedMapperTests.cs#L101-L164)
-
-```csharp
-var mapper = new FlatToNestedMapper(new TypeMap
-{
-    Key = "id",
-    Fields = new Dictionary<string, TypeMapField>
-    {
-        ["id"] = "id",
-        ["first_name"] = "first_name",
-        ["last_name"] = "last_name",
-        ["email"] = "email",
-        ["contact_source_name"] = "contact_source_name",
-        ["contact_type_name"] = "contact_type_name",
-        ["addresses"] = new TypeMapGroup
-        {
-            Key = "address_id",
-            Fields = new Dictionary<string, TypeMapField>
-            {
-                ["id"] = "address_id",
-                ["line1"] = "address_line1",
-                ["city"] = "address_city",
-                ["address_type_name"] = "address_type_name",
-            },
-        },
-        ["phones"] = new TypeMapGroup
-        {
-            Key = "phone_id",
-            Fields = new Dictionary<string, TypeMapField>
-            {
-                ["id"] = "phone_id",
-                ["number"] = "phone_number",
-                ["phone_type_name"] = "phone_type_name",
-            },
-        },
-    },
-});
-var adaHome = new Row(
-[
-    new("id", 7),
-    new("first_name", "Ada"),
-    new("last_name", "Lovelace"),
-    new("email", "ada@ex.com"),
-    new("contact_source_name", "Web"),
-    new("contact_type_name", "Person"),
-    new("address_id", 101),
-    new("address_line1", "10 Downing St"),
-    new("address_city", "London"),
-    new("address_type_name", "Home"),
-    new("phone_id", 201),
-    new("phone_number", "+44"),
-    new("phone_type_name", "Mobile"),
-]);
-var adaWork = new Row(adaHome)
-{
-    ["address_id"] = 102,
-    ["address_line1"] = "1 Parliament Sq"
-};
-var nested = mapper.Map([adaHome, adaWork]);
-var flat = mapper.ReverseMap(nested);
-```
-
-**After: nested contact**
-
-```
-{
-  id: 7,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  email: "ada@ex.com",
-  contact_source_name: "Web",
-  contact_type_name: "Person",
-  addresses: [
-    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
-    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
-  ],
-  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
-}
-```
-
-**After: reverseMap join rows**
-
-```
-[
-  {
-    id: 7,
-    first_name: "Ada",
-    last_name: "Lovelace",
-    email: "ada@ex.com",
-    contact_source_name: "Web",
-    contact_type_name: "Person",
-    address_id: 101,
-    address_line1: "10 Downing St",
-    address_city: "London",
-    address_type_name: "Home",
-    phone_id: 201,
-    phone_number: "+44",
-    phone_type_name: "Mobile"
-  },
-  {
-    id: 7,
-    first_name: "Ada",
-    last_name: "Lovelace",
-    email: "ada@ex.com",
-    contact_source_name: "Web",
-    contact_type_name: "Person",
-    address_id: 102,
-    address_line1: "1 Parliament Sq",
-    address_city: "London",
-    address_type_name: "Home",
-    phone_id: 201,
-    phone_number: "+44",
-    phone_type_name: "Mobile"
-  }
-]
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/flat_to_nested_mapper.rs#L385-L453)
-
-```rust
-let mapper = FlatToNestedMapper::new(TypeMap::new(
-    "id",
-    vec![
-        ("id".into(), TypeMapField::column("id")),
-        ("first_name".into(), TypeMapField::column("first_name")),
-        ("last_name".into(), TypeMapField::column("last_name")),
-        ("email".into(), TypeMapField::column("email")),
-        (
-            "contact_source_name".into(),
-            TypeMapField::column("contact_source_name"),
-        ),
-        (
-            "contact_type_name".into(),
-            TypeMapField::column("contact_type_name"),
-        ),
-        (
-            "addresses".into(),
-            TypeMapField::Group(TypeMapGroup::new(
-                "address_id",
-                vec![
-                    ("id".into(), TypeMapField::column("address_id")),
-                    ("line1".into(), TypeMapField::column("address_line1")),
-                    ("city".into(), TypeMapField::column("address_city")),
-                    (
-                        "address_type_name".into(),
-                        TypeMapField::column("address_type_name"),
-                    ),
-                ],
-            )),
-        ),
-        (
-            "phones".into(),
-            TypeMapField::Group(TypeMapGroup::new(
-                "phone_id",
-                vec![
-                    ("id".into(), TypeMapField::column("phone_id")),
-                    ("number".into(), TypeMapField::column("phone_number")),
-                    (
-                        "phone_type_name".into(),
-                        TypeMapField::column("phone_type_name"),
-                    ),
-                ],
-            )),
-        ),
-    ],
-));
-let ada_home = cell(&[
-    ("id", Value::Int(7)),
-    ("first_name", Value::from("Ada")),
-    ("last_name", Value::from("Lovelace")),
-    ("email", Value::from("ada@ex.com")),
-    ("contact_source_name", Value::from("Web")),
-    ("contact_type_name", Value::from("Person")),
-    ("address_id", Value::Int(101)),
-    ("address_line1", Value::from("10 Downing St")),
-    ("address_city", Value::from("London")),
-    ("address_type_name", Value::from("Home")),
-    ("phone_id", Value::Int(201)),
-    ("phone_number", Value::from("+44")),
-    ("phone_type_name", Value::from("Mobile")),
-]);
-let mut ada_work = ada_home.clone();
-ada_work.insert("address_id".into(), Value::Int(102));
-ada_work.insert("address_line1".into(), Value::from("1 Parliament Sq"));
-let nested = Mapper::map(&mapper, vec![ada_home.clone(), ada_work.clone()]);
-let flat = Mapper::reverse_map(&mapper, nested.clone());
-```
-
-**After: nested contact**
-
-```
-{
-  id: 7,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  email: "ada@ex.com",
-  contact_source_name: "Web",
-  contact_type_name: "Person",
-  addresses: [
-    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
-    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
-  ],
-  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
-}
-```
-
-**After: reverseMap join rows**
-
-```
-[
-  {
-    id: 7,
-    first_name: "Ada",
-    last_name: "Lovelace",
-    email: "ada@ex.com",
-    contact_source_name: "Web",
-    contact_type_name: "Person",
-    address_id: 101,
-    address_line1: "10 Downing St",
-    address_city: "London",
-    address_type_name: "Home",
-    phone_id: 201,
-    phone_number: "+44",
-    phone_type_name: "Mobile"
-  },
-  {
-    id: 7,
-    first_name: "Ada",
-    last_name: "Lovelace",
-    email: "ada@ex.com",
-    contact_source_name: "Web",
-    contact_type_name: "Person",
-    address_id: 102,
-    address_line1: "1 Parliament Sq",
-    address_city: "London",
-    address_type_name: "Home",
-    phone_id: 201,
-    phone_number: "+44",
-    phone_type_name: "Mobile"
-  }
-]
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/mappers/FlatToNestedMapper.test.ts#L90-L155)
-
-```typescript
-const mapper = new FlatToNestedMapper<Contact>({
-  key: "id",
-  fields: {
-    id: "id",
-    first_name: "first_name",
-    last_name: "last_name",
-    email: "email",
-    contact_source_name: "contact_source_name",
-    contact_type_name: "contact_type_name",
-    addresses: {
-      key: "address_id",
-      fields: {
-        id: "address_id",
-        line1: "address_line1",
-        city: "address_city",
-        address_type_name: "address_type_name",
-      },
-    },
-    phones: {
-      key: "phone_id",
-      fields: {
-        id: "phone_id",
-        number: "phone_number",
-        phone_type_name: "phone_type_name",
-      },
-    },
-  },
-});
-const adaHome: Cells = {
-  id: 7,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  email: "ada@ex.com",
-  contact_source_name: "Web",
-  contact_type_name: "Person",
-  address_id: 101,
-  address_line1: "10 Downing St",
-  address_city: "London",
-  address_type_name: "Home",
-  phone_id: 201,
-  phone_number: "+44",
-  phone_type_name: "Mobile",
-};
-const adaWork = {
-  ...adaHome,
-  address_id: 102,
-  address_line1: "1 Parliament Sq",
-};
-const nested = mapper.map([adaHome, adaWork]);
-const flat = mapper.reverseMap(nested);
-```
-
-**After: nested contact**
-
-```
-{
-  id: 7,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  email: "ada@ex.com",
-  contact_source_name: "Web",
-  contact_type_name: "Person",
-  addresses: [
-    { id: 101, line1: "10 Downing St", city: "London", address_type_name: "Home" },
-    { id: 102, line1: "1 Parliament Sq", city: "London", address_type_name: "Home" }
-  ],
-  phones: [{ id: 201, number: "+44", phone_type_name: "Mobile" }]
-}
-```
-
-**After: reverseMap join rows**
-
-```
-[
-  {
-    id: 7,
-    first_name: "Ada",
-    last_name: "Lovelace",
-    email: "ada@ex.com",
-    contact_source_name: "Web",
-    contact_type_name: "Person",
-    address_id: 101,
-    address_line1: "10 Downing St",
-    address_city: "London",
-    address_type_name: "Home",
-    phone_id: 201,
-    phone_number: "+44",
-    phone_type_name: "Mobile"
-  },
-  {
-    id: 7,
-    first_name: "Ada",
-    last_name: "Lovelace",
-    email: "ada@ex.com",
-    contact_source_name: "Web",
-    contact_type_name: "Person",
-    address_id: 102,
-    address_line1: "1 Parliament Sq",
-    address_city: "London",
-    address_type_name: "Home",
-    phone_id: 201,
-    phone_number: "+44",
-    phone_type_name: "Mobile"
-  }
-]
-```
-
-## Type Converters
-
-`TypeConverter` is only `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert`. A dialect adds a converter when the native provider cannot map the type. Core does not ship bool / datetime / uuid / decimal / binary converters.
-
-### Classes
-
-##### TypeScript
-
-##### TypeConverter {#typescript-typeconverter}
-
-```typescript
-abstract class TypeConverter<To = Cells, From = Cells>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [convert(from)](#typescript-typeconverter-convert-from) | Converts `From` to `To`. |
-| [reverseConvert(to)](#typescript-typeconverter-reverseconvert-to) | Converts `To` back to `From`. |
-
-###### convert(from) {#typescript-typeconverter-convert-from}
-
-Converts `From` to `To`.
-
-**Definition**
-
-```typescript
-abstract convert(from: From): To
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | source value |
-
-**Returns**
-
-`To`
-
-###### reverseConvert(to) {#typescript-typeconverter-reverseconvert-to}
-
-Converts `To` back to `From`.
-
-**Definition**
-
-```typescript
-abstract reverseConvert(to: To): From
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `to` | converted value |
-
-**Returns**
-
-`From`
-
-##### C#
-
-##### ITypeConverter {#csharp-itypeconverter}
-
-```csharp
-public interface ITypeConverter<To, From>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Convert(from)](#csharp-itypeconverter-convert-from) | Converts `From` to `To`. |
-| [ReverseConvert(to)](#csharp-itypeconverter-reverseconvert-to) | Converts `To` back to `From`. |
-
-###### Convert(from) {#csharp-itypeconverter-convert-from}
-
-Converts `From` to `To`.
-
-**Definition**
-
-```csharp
-To Convert(From from)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | source value |
-
-**Returns**
-
-`To`
-
-###### ReverseConvert(to) {#csharp-itypeconverter-reverseconvert-to}
-
-Converts `To` back to `From`.
-
-**Definition**
-
-```csharp
-From ReverseConvert(To to)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `to` | converted value |
-
-**Returns**
-
-`From`
-
-##### TypeConverter {#csharp-typeconverter}
-
-```csharp
-public abstract class TypeConverter<To, From> : ITypeConverter<To, From>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Convert(from)](#csharp-typeconverter-convert-from) | Converts `From` to `To`. |
-| [ReverseConvert(to)](#csharp-typeconverter-reverseconvert-to) | Converts `To` back to `From`. |
-
-###### Convert(from) {#csharp-typeconverter-convert-from}
-
-Converts `From` to `To`.
-
-**Definition**
-
-```csharp
-public abstract To Convert(From from)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | source value |
-
-**Returns**
-
-`To`
-
-###### ReverseConvert(to) {#csharp-typeconverter-reverseconvert-to}
-
-Converts `To` back to `From`.
-
-**Definition**
-
-```csharp
-public abstract From ReverseConvert(To to)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `to` | converted value |
-
-**Returns**
-
-`From`
-
-##### Rust
-
-##### TypeConverter {#rust-typeconverter}
-
-```rust
-pub trait TypeConverter<To, From>
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [convert(from)](#rust-typeconverter-convert-from) | Converts `From` to `To`. |
-| [reverse_convert(to)](#rust-typeconverter-reverse_convert-to) | Converts `To` back to `From`. |
-
-###### convert(from) {#rust-typeconverter-convert-from}
-
-Converts `From` to `To`.
-
-**Definition**
-
-```rust
-fn convert(&self, from: &From) -> Result<To>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | source value |
-
-**Returns**
-
-`Result<To>`
-
-###### reverse_convert(to) {#rust-typeconverter-reverse_convert-to}
-
-Converts `To` back to `From`.
-
-**Definition**
-
-```rust
-fn reverse_convert(&self, to: &To) -> Result<From>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `to` | converted value |
-
-**Returns**
-
-`Result<From>`
-
-### Remarks
-
-Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [Repositories](#repositories).
-
-### See also
-
-- [RowTypeConverter](#row-type-converter)
-
-## RowTypeConverter
-
-TypeConverter for a row. Holds `Types` / `types` / `types` and `Fields` / `fields` / `fields`. `Convert` / `convert` / `convert` uses `Fields[name]` / `fields[name]` / `fields[name]`. `Types` / `types` / `types` is the provider catalog merge and is unused at convert time.
-
-### Classes
-
-##### TypeScript
-
-##### RowTypeConverter {#typescript-rowtypeconverter}
-
-```typescript
-class RowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [RowTypeConverter(types, fields)](#typescript-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| types | Provider type catalog. Convert does not read this map. |
-| fields | Per-column converters. Convert uses `fields[name]`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [convert(row, type?)](#typescript-rowtypeconverter-convert-row-type) | Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance. |
-| [reverseConvert(row)](#typescript-rowtypeconverter-reverseconvert-row) | Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values. |
-
-###### RowTypeConverter(types, fields) {#typescript-rowtypeconverter-rowtypeconverter-types-fields}
-
-Builds a row converter. Convert uses [fields](#typescript-rowtypeconverter-fields), not [types](#typescript-rowtypeconverter-types).
-
-**Definition**
-
-```typescript
-constructor(types?: Record<string, TypeConverter<Cell, Cell>>, fields?: Record<string, TypeConverter<Cell, Cell>>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `types` | provider catalog; unused at convert time |
-| `fields` | per-column TypeConverter |
-
-###### convert(row, type?) {#typescript-rowtypeconverter-convert-row-type}
-
-Converts each cell through [fields](#typescript-rowtypeconverter-fields). Optional `type` constructs a destination instance.
-
-**Definition**
-
-```typescript
-convert(row: Cells, type?: Constructable<T>): T
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `row` | source cells |
-| `type` | optional `new () => T` |
-
-**Returns**
-
-`T`
-
-###### reverseConvert(row) {#typescript-rowtypeconverter-reverseconvert-row}
-
-Reverse-converts each cell through [fields](#typescript-rowtypeconverter-fields). Skips array values.
-
-**Definition**
-
-```typescript
-reverseConvert(row: T): Cells
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `row` | converted object |
-
-**Returns**
-
-`Cells`
-
-##### C#
-
-##### RowTypeConverter {#csharp-rowtypeconverter}
-
-```csharp
-public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [RowTypeConverter(types, fields)](#csharp-rowtypeconverter-rowtypeconverter-types-fields) | Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types). |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Types | Provider type catalog. Convert does not read this map. |
-| Fields | Per-column converters. Convert uses `Fields[name]`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Convert(from)](#csharp-rowtypeconverter-convert-from) | Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys). |
-| [ReverseConvert(to)](#csharp-rowtypeconverter-reverseconvert-to) | Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields). |
-
-###### RowTypeConverter(types, fields) {#csharp-rowtypeconverter-rowtypeconverter-types-fields}
-
-Builds a row converter. Convert uses [Fields](#csharp-rowtypeconverter-fields), not [Types](#csharp-rowtypeconverter-types).
-
-**Definition**
-
-```csharp
-public RowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null, IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `types` | provider catalog; unused at convert time |
-| `fields` | per-column TypeConverter |
-
-###### Convert(from) {#csharp-rowtypeconverter-convert-from}
-
-Converts a row to `T`. Applies [Fields](#csharp-rowtypeconverter-fields), then assigns writable scalar properties (or dictionary keys).
-
-**Definition**
-
-```csharp
-public override T Convert(Row from)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `from` | source row |
-
-**Returns**
-
-`T`
-
-###### ReverseConvert(to) {#csharp-rowtypeconverter-reverseconvert-to}
-
-Reverse-converts `T` to a row through [Fields](#csharp-rowtypeconverter-fields).
-
-**Definition**
-
-```csharp
-public override Row ReverseConvert(T to)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `to` | converted object |
-
-**Returns**
-
-`Row`
-
-##### Rust
-
-##### RowTypeConverter {#rust-rowtypeconverter}
-
-```rust
-pub struct RowTypeConverter
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new(columns)](#rust-rowtypeconverter-new-columns) | Builds a row converter for the given columns. |
-| [of()](#rust-rowtypeconverter-of) | Builds a converter from `T: ConvertSchema`. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| types | Provider type catalog. Convert does not read this map. |
-| fields | Per-column converters. Convert uses `fields[name]`. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [with_types(types)](#rust-rowtypeconverter-with_types-types) | Merges a provider catalog into [types](#rust-rowtypeconverter-types). |
-| [with_fields(fields)](#rust-rowtypeconverter-with_fields-fields) | Merges per-column converters into [fields](#rust-rowtypeconverter-fields). |
-| [convert(row)](#rust-rowtypeconverter-convert-row) | Converts each cell through [fields](#rust-rowtypeconverter-fields). |
-| [reverse_convert(row)](#rust-rowtypeconverter-reverse_convert-row) | Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields). |
-
-###### new(columns) {#rust-rowtypeconverter-new-columns}
-
-Builds a row converter for the given columns.
-
-**Definition**
-
-```rust
-pub fn new(columns: Vec<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `columns` | column names |
-
-**Returns**
-
-[RowTypeConverter](#rust-rowtypeconverter)
-
-###### of() {#rust-rowtypeconverter-of}
-
-Builds a converter from `T: ConvertSchema`.
-
-**Definition**
-
-```rust
-pub fn of<T: ConvertSchema>() -> Self
-```
-
-**Returns**
-
-[RowTypeConverter](#rust-rowtypeconverter)
-
-###### with_types(types) {#rust-rowtypeconverter-with_types-types}
-
-Merges a provider catalog into [types](#rust-rowtypeconverter-types).
-
-**Definition**
-
-```rust
-pub fn with_types(self, types: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `types` | provider catalog; unused at convert time |
-
-**Returns**
-
-[RowTypeConverter](#rust-rowtypeconverter)
-
-###### with_fields(fields) {#rust-rowtypeconverter-with_fields-fields}
-
-Merges per-column converters into [fields](#rust-rowtypeconverter-fields).
-
-**Definition**
-
-```rust
-pub fn with_fields(self, fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `fields` | per-column TypeConverter |
-
-**Returns**
-
-[RowTypeConverter](#rust-rowtypeconverter)
-
-###### convert(row) {#rust-rowtypeconverter-convert-row}
-
-Converts each cell through [fields](#rust-rowtypeconverter-fields).
-
-**Definition**
-
-```rust
-pub fn convert(&self, row: &Row) -> Result<Row>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `row` | source row |
-
-**Returns**
-
-`Result<Row>`
-
-###### reverse_convert(row) {#rust-rowtypeconverter-reverse_convert-row}
-
-Reverse-converts each cell through [fields](#rust-rowtypeconverter-fields).
-
-**Definition**
-
-```rust
-pub fn reverse_convert(&self, row: &Row) -> Result<Row>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `row` | converted row |
-
-**Returns**
-
-`Result<Row>`
-
-### Remarks
-
-`Types` / `types` / `types` is the provider catalog merge. `Convert` / `convert` / `convert` and `ReverseConvert` / `reverseConvert` / `reverse_convert` only consult `Fields` / `fields` / `fields`.
-
-Repository read is convert, then map. See [TransformMapper](#transform-mapper) and [CRUD repository](#crud-repository).
-
-### Examples
-
-#### Convert a row
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L46)
-
-```csharp
-var converter = new RowTypeConverter<User>();
-var user = converter.Convert(new Row
-{
-    ["Id"] = 7,
-    ["Username"] = "ada",
-    ["IsEnabled"] = 1,
-    ["Created"] = "2020-01-02T03:04:05.000Z"
-});
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L101-L108)
-
-```rust
-let converter = RowTypeConverter::new(vec!["id".into(), "name".into()]);
-let row = record(&[("id", Value::Int(7)), ("name", Value::from("ada"))]);
-let dest = converter.convert(&row).unwrap();
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L18)
-
-```typescript
-const converter = new RowTypeConverter();
-const item = converter.convert({ id: 7, username: "ada" });
-const row = converter.reverseConvert(item);
-```
-
-#### Field converter
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L91-L102)
-
-```csharp
-var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
-{
-    ["flag"] = new OnlyOne()
-});
-var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L125-L143)
-
-```rust
-let converter =
-    RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
-        "is_enabled".into(),
-        Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-    )]));
-let row = record(&[("is_enabled", Value::Int(2))]);
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L26)
-
-```typescript
-const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
-const dest = converter.convert({ flag: 1, name: "a" });
 ```
 
 ## Other
