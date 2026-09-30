@@ -11,10 +11,15 @@ const references = new DictionaryMapper<string>([
   ["ContactType", "contact_type_id"],
   ["ContactSource", "contact_source_id"],
   ["PhoneType", "phone_type_id"],
+  ["Line1", "line1"],
+  ["Line2", "line2"],
 ]);
 
 export const columns: IMapper<string, string> = new TransformMapper(
-  (name) => snake.map(references.map(name)),
+  (name) => {
+    const mapped = references.map(name);
+    return mapped !== name ? mapped : snake.map(name);
+  },
   (name) => {
     const from = references.reverseMap(name);
     return from !== name ? from : snake.reverseMap(name);

@@ -304,6 +304,8 @@ fn contact_columns() -> TransformMapper<String, String> {
         ("ContactType".to_string(), "contact_type_id".to_string()),
         ("ContactSource".to_string(), "contact_source_id".to_string()),
         ("PhoneType".to_string(), "phone_type_id".to_string()),
+        ("Line1".to_string(), "line1".to_string()),
+        ("Line2".to_string(), "line2".to_string()),
     ]));
     let snake = std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
     let forward_references = references.clone();
@@ -312,10 +314,12 @@ fn contact_columns() -> TransformMapper<String, String> {
     let reverse_snake = snake;
     TransformMapper::new(
         move |name: String| {
-            Mapper::map(
-                forward_snake.as_ref(),
-                Mapper::map(forward_references.as_ref(), name),
-            )
+            let mapped = Mapper::map(forward_references.as_ref(), name.clone());
+            if mapped != name {
+                mapped
+            } else {
+                Mapper::map(forward_snake.as_ref(), name)
+            }
         },
         move |name: String| {
             let from = Mapper::reverse_map(reverse_references.as_ref(), name.clone());
