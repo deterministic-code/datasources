@@ -38,6 +38,27 @@ async function fillOutputParameter(command: MysqlCommand) {
   expect(call.parameters?.[1]?.value).toBe(5);
 }
 
+async function callProcedureReturnsTwoResults(command: MysqlCommand) {
+  await command.executeNative(new Native(`
+    CREATE PROCEDURE two_ids()
+    BEGIN
+      SELECT 1 AS id;
+      SELECT 2 AS id;
+    END
+  `));
+  await using reader = await command.executeReaderStatement(new ExecuteStoredProcedureStatement("two_ids", []));
+  const first: { id: number }[] = [];
+  while (await reader.next()) first.push(reader.current as { id: number });
+  const moved = await reader.nextResult();
+  const second: { id: number }[] = [];
+  while (await reader.next()) second.push(reader.current as { id: number });
+  const again = await reader.nextResult();
+  expect(moved).toBe(true);
+  expect(again).toBe(false);
+  expect(first[0]?.id).toBe(1);
+  expect(second[0]?.id).toBe(2);
+}
+
 const replaceDatabase = (base: string, name: string): string => {
   const parsed = new URL(base);
   parsed.pathname = `/${name}`;
@@ -95,6 +116,7 @@ describe("return and output parameters", () => {
       await connection.open();
       const command = new MysqlCommand(connection);
       await fillOutputParameter(command);
+      await callProcedureReturnsTwoResults(command);
       await command.executeNative(new Native(`
         CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC
         RETURN n + 1

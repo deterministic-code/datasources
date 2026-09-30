@@ -3518,7 +3518,7 @@ while (await reader.next()) user = mapper.map(converter.convert(reader.current!,
 
 #### Fill an output parameter
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L66-L78)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L67-L79)
 
 ```csharp
 await command.Execute(Native.N("""
@@ -4336,6 +4336,124 @@ const again = await reader.nextResult();
 > **Rust**
 >
 > There is no `using`. The reader is dropped at the end of the scope.
+
+#### Call a stored procedure that returns two results
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L81-L103)
+
+```csharp
+await command.Execute(Native.N("""
+    CREATE PROCEDURE two_ids()
+    BEGIN
+      SELECT 1 AS id;
+      SELECT 2 AS id;
+    END
+    """));
+await using var reader = await command.ExecuteReader(new ExecuteStoredProcedureStatement("two_ids", []));
+var first = new List<Row>();
+while (await reader.Next())
+    first.Add(reader.Current!);
+var moved = await reader.NextResult();
+var second = new List<Row>();
+while (await reader.Next())
+    second.Add(reader.Current!);
+var again = await reader.NextResult();
+```
+
+**First result**
+
+```
+{
+  id: 1
+}
+```
+
+**Second result**
+
+```
+{
+  id: 2
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L372-L399)
+
+```rust
+use datasources::ExecuteStoredProcedureStatement;
+command
+    .execute_native(
+        &Native::new("CREATE PROCEDURE two_ids() BEGIN SELECT 1 AS id; SELECT 2 AS id; END"),
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader_statement(&ExecuteStoredProcedureStatement::new("two_ids", &[]), None)
+    .await
+    .unwrap();
+let mut first = Vec::new();
+while reader.next().await.unwrap() {
+    first.push(reader.current());
+}
+let moved = reader.next_result().await.unwrap();
+let mut second = Vec::new();
+while reader.next().await.unwrap() {
+    second.push(reader.current());
+}
+let again = reader.next_result().await.unwrap();
+```
+
+**First result**
+
+```
+{
+  id: 1
+}
+```
+
+**Second result**
+
+```
+{
+  id: 2
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L41-L60)
+
+```typescript
+async function callProcedureReturnsTwoResults(command: MysqlCommand) {
+  await command.executeNative(new Native(`
+    CREATE PROCEDURE two_ids()
+    BEGIN
+      SELECT 1 AS id;
+      SELECT 2 AS id;
+    END
+  `));
+  await using reader = await command.executeReaderStatement(new ExecuteStoredProcedureStatement("two_ids", []));
+  const first: { id: number }[] = [];
+  while (await reader.next()) first.push(reader.current as { id: number });
+  const moved = await reader.nextResult();
+  const second: { id: number }[] = [];
+  while (await reader.next()) second.push(reader.current as { id: number });
+  const again = await reader.nextResult();
+```
+
+**First result**
+
+```
+{
+  id: 1
+}
+```
+
+**Second result**
+
+```
+{
+  id: 2
+}
+```
 
 ## Repositories
 
