@@ -1,0 +1,4 @@
+var (repo, command) = Repo(new StoredProcedureBulkWriteStrategy<Parent>(
+    "bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"));
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+Assert.Single(command.ExecuteCalls);

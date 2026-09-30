@@ -1,0 +1,5 @@
+var (repo, command) = Repo(new SingleCommandIBulkWriteStrategy<Parent>());
+command.Response = new Response(new Value.Int(9), 1);
+await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
+await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
+await repo.Delete([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);

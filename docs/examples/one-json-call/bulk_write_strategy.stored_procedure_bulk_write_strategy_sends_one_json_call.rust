@@ -1,0 +1,29 @@
+let (repo, command) = parents(Arc::new(StoredProcedureBulkWriteStrategy::new(
+    "bulk_create_parent",
+    "bulk_update_parent",
+    "bulk_delete_parent",
+)));
+let mut created = [
+    row(&[("label", Value::from("a"))]),
+    row(&[("label", Value::from("b"))]),
+];
+repo.create_bulk(&mut created).await.unwrap();
+repo.update_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+repo.delete_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from(""))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from(""))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();

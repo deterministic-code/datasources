@@ -58,7 +58,7 @@ constructor(type: Constructable<T>)
 
 ##### ReadonlyRepository(inner, strategy?)
 
-Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#ienriched).
+Wraps an inner repository. `read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](./i-enriched.md).
 
 ```typescript
 constructor(inner: IReadonlyRepository<T>, strategy?: IReadonlyEnrichmentStrategy<T>)
@@ -185,28 +185,6 @@ SELECT column names. When omitted, public fields of `type` are used.
 readColumns?: string[]
 ```
 
-#### IEnriched
-
-```typescript
-interface IEnriched<T>
-```
-
-**Methods**
-
-##### addEnriched(enrichment, via, strategy?)
-
-Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
-
-```typescript
-addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepository<TRelated>, strategy?: IReadonlyEnrichmentStrategy<T & object>): this
-```
-
-- `enrichment` — [Enrichment](#enrichment)
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
-
-**Returns** `this`
-
 #### IRepositoryTree
 
 ```typescript
@@ -265,7 +243,7 @@ readonly items: IRepositoryTreeNode[]
 
 ##### enrichment
 
-[Enrichment](#enrichment) for this node.
+[Enrichment](./enrichment.md) for this node.
 
 ```typescript
 readonly enrichment?: Enrichment
@@ -299,95 +277,6 @@ enrichFrom(parents: object[]): Promise<void>
 ```
 
 - `parents` — parent objects
-
-#### Enrichment
-
-```typescript
-type Enrichment
-```
-
-One related fill.
-
-**Properties**
-
-##### into
-
-Destination property.
-
-```typescript
-into: string
-```
-
-##### from
-
-Parent key.
-
-```typescript
-from: string
-```
-
-##### by
-
-Related key.
-
-```typescript
-by: string
-```
-
-##### select
-
-Optional related property to copy.
-
-```typescript
-select?: string
-```
-
-##### many
-
-Collect a list.
-
-```typescript
-many?: boolean
-```
-
-#### IReadonlyEnrichmentStrategy
-
-```typescript
-interface IReadonlyEnrichmentStrategy<T extends object>
-```
-
-**Methods**
-
-##### apply(via, enrichment, parents, sources?)
-
-Fills each parent from the related repository.
-
-```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
-```
-
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `enrichment` — [Enrichment](#enrichment)
-- `parents` — parents to fill
-- `sources` — optional source rows aligned with `parents`
-
-**Returns** `Promise<void>`
-
-##### applyLinked(via, link, enrichment, parents, sources?)
-
-Fills each parent by reading the link table, then the related repository.
-
-```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
-```
-
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
-- `enrichment` — [Enrichment](#enrichment)
-- `parents` — parents to fill
-- `sources` — optional source rows aligned with `parents`
-
-**Returns** `Promise<void>`
 
 ### csharp
 #### IReadonlyRepository
@@ -432,7 +321,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>
 
 ##### ReadonlyRepository(inner, strategy)
 
-Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](#ienriched).
+Wraps an inner repository. `Read` reads that repository, then fills related fields. Omitted strategy uses the default. See [IEnriched](./i-enriched.md).
 
 ```csharp
 public ReadonlyRepository(IReadonlyRepository<T> inner, IReadonlyEnrichmentStrategy<T>? strategy = null)
@@ -551,28 +440,6 @@ SELECT column names. When omitted, public properties of `T` are used.
 IReadOnlyList<string>? ReadColumns { get; init; }
 ```
 
-#### IEnriched
-
-```csharp
-public interface IEnriched<T>
-```
-
-**Methods**
-
-##### AddEnriched(enrichment, via, strategy)
-
-Adds a related fill. Fluent for siblings. A related repository fills its own fields. Does not write.
-
-```csharp
-IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
-```
-
-- `enrichment` — [Enrichment](#enrichment)
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
-
-**Returns** [IEnriched](#ienriched)`<T>`
-
 #### IRepositoryTree
 
 ```csharp
@@ -629,132 +496,6 @@ Child nodes.
 IReadOnlyList<IRepositoryTreeNode> Items { get; }
 ```
 
-##### Enrichment
-
-[Enrichment](#enrichment) for this node.
-
-```csharp
-Enrichment? Enrichment { get; }
-```
-
-**Methods**
-
-##### Include(via, into, from, by, select, many)
-
-Adds a child node.
-
-```csharp
-IRepositoryTreeNode Include<TRelated>(IReadonlyRepository<TRelated> via, string into, string from, string by, string? select = null, bool many = false)
-```
-
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `into` — destination property
-- `from` — parent key
-- `by` — related key
-- `select` — optional related property to copy
-- `many` — collect a list
-
-**Returns** [IRepositoryTreeNode](#irepositorytreenode)
-
-##### EnrichFrom(parents)
-
-Fills `parents` from this node.
-
-```csharp
-Task EnrichFrom(IReadOnlyList<object> parents)
-```
-
-- `parents` — parent objects
-
-#### Enrichment
-
-```csharp
-public sealed record Enrichment
-```
-
-One related fill.
-
-**Properties**
-
-##### Into
-
-Destination property.
-
-```csharp
-string Into { get; }
-```
-
-##### From
-
-Parent key.
-
-```csharp
-string From { get; }
-```
-
-##### By
-
-Related key.
-
-```csharp
-string By { get; }
-```
-
-##### Select
-
-Optional related property to copy.
-
-```csharp
-string? Select { get; }
-```
-
-##### Many
-
-Collect a list.
-
-```csharp
-bool Many { get; }
-```
-
-#### IReadonlyEnrichmentStrategy
-
-```csharp
-public interface IReadonlyEnrichmentStrategy<T>
-```
-
-**Methods**
-
-##### Apply(via, enrichment, parents, sources)
-
-Fills each parent from the related repository.
-
-```csharp
-Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
-```
-
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `enrichment` — [Enrichment](#enrichment)
-- `parents` — parents to fill
-- `sources` — optional source rows aligned with `parents`
-
-**Returns** `Task`
-
-##### ApplyLinked(via, link, enrichment, parents, sources)
-
-Fills each parent by reading the link table, then the related repository.
-
-```csharp
-Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
-```
-
-- `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
-- `enrichment` — [Enrichment](#enrichment)
-- `parents` — parents to fill
-- `sources` — optional source rows aligned with `parents`
-
-**Returns** `Task`
-
 ### rust
 #### IReadonlyRepository
 
@@ -798,7 +539,7 @@ pub struct ReadonlyRepository
 
 ##### from_repository(inner)
 
-Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](#ienriched).
+Wraps an inner repository. `read` reads that repository, then fills related fields. Uses the default strategy. See [IEnriched](./i-enriched.md).
 
 ```rust
 pub fn from_repository(inner: Arc<dyn IReadonlyRepository>) -> Self
@@ -817,25 +558,9 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 ```
 
 - `inner` — [IReadonlyRepository](#ireadonlyrepository)
-- `strategy` — enrichment strategy
+- `strategy` — [ReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md)
 
 **Returns** [ReadonlyRepository](#readonlyrepository)
-
-**Methods**
-
-##### add_enriched(enrichment, via, strategy)
-
-Adds a related fill. A related repository fills its own fields. Does not write.
-
-```rust
-pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
-```
-
-- `enrichment` — [Enrichment](#enrichment)
-- `via` — related [IReadonlyRepository](#ireadonlyrepository). The readonly path keeps the read repository only
-- `strategy` — optional read strategy for this edge. Omitted uses the default strategy
-
-**Returns** `&mut Self`
 
 #### ReadonlyRepositoryOptions
 
@@ -953,7 +678,7 @@ pub items: Vec<RepositoryTreeNode>
 
 ##### enrichment
 
-[Enrichment](#enrichment) for this node.
+[Enrichment](./enrichment.md) for this node.
 
 ```rust
 pub enrichment: Option<Enrichment>
@@ -978,119 +703,12 @@ pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from
 
 **Returns** `&mut Self`
 
-#### Enrichment
-
-```rust
-pub struct Enrichment
-```
-
-One related fill.
-
-**Constructor**
-
-##### new(into, from, by, select, many)
-
-Builds an enrichment.
-
-```rust
-pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
-```
-
-- `into` — destination field
-- `from` — parent key
-- `by` — related key
-- `select` — optional related field to copy
-- `many` — collect a list
-
-**Returns** [Enrichment](#enrichment)
-
-**Properties**
-
-##### into
-
-Destination field.
-
-```rust
-pub into: String
-```
-
-##### from
-
-Parent key.
-
-```rust
-pub from: String
-```
-
-##### by
-
-Related key.
-
-```rust
-pub by: String
-```
-
-##### select
-
-Optional related field to copy.
-
-```rust
-pub select: Option<String>
-```
-
-##### many
-
-Collect a list.
-
-```rust
-pub many: bool
-```
-
-#### ReadonlyEnrichmentStrategy
-
-```rust
-pub trait ReadonlyEnrichmentStrategy
-```
-
-**Methods**
-
-##### apply(via, enrichment, parents, sources)
-
-Fills each parent from the related repository.
-
-```rust
-async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
-```
-
-- `via` — related [IReadonlyRepository](#ireadonlyrepository)
-- `enrichment` — [Enrichment](#enrichment)
-- `parents` — parents to fill
-- `sources` — optional source rows aligned with `parents`
-
-**Returns** `Result<()>`
-
-##### apply_linked(via, link, enrichment, parents, sources)
-
-Fills each parent by reading the link table, then the related repository.
-
-```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
-```
-
-- `via` — related [IReadonlyRepository](#ireadonlyrepository)
-- `link` — [ICRUDRepository](./crud-repository.md)
-- `enrichment` — [Enrichment](#enrichment)
-- `parents` — parents to fill
-- `sources` — optional source rows aligned with `parents`
-
-**Returns** `Result<()>`
-
 
 :::
 
 ## Remarks
 
-{{AddEnriched|addEnriched|add_enriched}} registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
+{{AddEnriched|addEnriched|add_enriched}} on [IEnriched](./i-enriched.md) registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 

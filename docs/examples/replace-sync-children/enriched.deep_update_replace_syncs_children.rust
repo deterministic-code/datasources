@@ -1,0 +1,50 @@
+let connection = setup(&mut []).await;
+let mut parents = crud(connection.clone(), "Parent");
+let children = Arc::new(crud(connection, "Child"));
+let parent = parents
+    .create(&mut record(&[("label", Value::from("p"))]))
+    .await
+    .unwrap();
+assert!(num(&parent, "id") > 0);
+let parent_id = parent.get("id").unwrap().clone();
+let kept = children
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("a")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&kept, "id") > 0);
+let dropped = children
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("b")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&dropped, "id") > 0);
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+let updated = parents
+    .update(
+        &record(&[
+            ("id", parent_id.clone()),
+            ("label", Value::from("p")),
+            (
+                "children",
+                encode_rows(&[
+                    record(&[
+                        ("id", kept.get("id").unwrap().clone()),
+                        ("label", Value::from("aa")),
+                    ]),
+                    record(&[("label", Value::from("c"))]),
+                ]),
+            ),
+        ]),
+        None,
+    )
+    .await
+    .unwrap();

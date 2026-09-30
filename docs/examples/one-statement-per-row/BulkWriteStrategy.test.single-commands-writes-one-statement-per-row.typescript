@@ -1,0 +1,15 @@
+const { repo, command } = open(Parent, new SingleCommandIBulkWriteStrategy<Parent>());
+command.response = { result: 9, rowsAffected: 1 };
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+await repo.updateBulk([
+  Object.assign(new Parent(), { id: 1, label: "a" }),
+  Object.assign(new Parent(), { id: 2, label: "b" }),
+]);
+await repo.deleteBulk([
+  Object.assign(new Parent(), { id: 1, label: "a" }),
+  Object.assign(new Parent(), { id: 2, label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(6);

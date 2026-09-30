@@ -1,0 +1,9 @@
+const { repo, command } = open(
+  Parent,
+  new StoredProcedureBulkWriteStrategy<Parent>("bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+);
+await repo.createBulk([
+  Object.assign(new Parent(), { label: "a" }),
+  Object.assign(new Parent(), { label: "b" }),
+]);
+expect(command.executeCalls).toHaveLength(1);

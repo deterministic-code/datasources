@@ -1,0 +1,51 @@
+let connection = setup(&mut []).await;
+let parents = crud(connection.clone(), "Parent");
+let mut children_repo = crud(connection.clone(), "Child");
+let notes = Arc::new(crud(connection, "Note"));
+let parent = parents
+    .create(&mut record(&[("label", Value::from("p"))]))
+    .await
+    .unwrap();
+assert!(num(&parent, "id") > 0);
+let parent_id = parent.get("id").unwrap().clone();
+let child = children_repo
+    .create(&mut record(&[
+        ("parent_id", parent_id.clone()),
+        ("label", Value::from("a")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&child, "id") > 0);
+let child_id = child.get("id").unwrap().clone();
+let note = notes
+    .create(&mut record(&[
+        ("child_id", child_id),
+        ("text", Value::from("n")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&note, "id") > 0);
+let other = notes
+    .create(&mut record(&[
+        ("text", Value::from("other")),
+        ("label", Value::from("keep")),
+    ]))
+    .await
+    .unwrap();
+assert!(num(&other, "id") > 0);
+children_repo.add_enriched(
+    Enrichment::new("notes", "id", "child_id", None, true),
+    notes.clone(),
+    None,
+);
+let children = Arc::new(children_repo);
+let mut parents = parents;
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, true),
+    children.clone(),
+    None,
+);
+let removed = parents
+    .delete(&record(&[("id", parent_id)]), None)
+    .await
+    .unwrap();

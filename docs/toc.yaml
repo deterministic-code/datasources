@@ -134,6 +134,82 @@ pages:
     title: Datasource URL
     group: Code Reference
     parent: Other
+  - path: sections/advanced.md
+    title: Advanced
+    group: Code Reference
+    collapsed: true
+  - path: sections/i-enriched.md
+    title: IEnriched
+    group: Code Reference
+    parent: Advanced
+  - path: sections/enrichment.md
+    title: Enrichment
+    group: Code Reference
+    parent: Advanced
+  - path: sections/i-readonly-enrichment-strategy.md
+    title: IReadonlyEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/default-readonly-enrichment-strategy.md
+    title: DefaultReadonlyEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/hashset-optimized-readonly-enrichment-strategy.md
+    title: HashsetOptimizedReadonlyEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/nested-to-object-enrichment-strategy.md
+    title: NestedToObjectEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/i-write-enrichment-strategy.md
+    title: IWriteEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/default-write-enrichment-strategy.md
+    title: DefaultWriteEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/lazy-write-enrichment-strategy.md
+    title: LazyWriteEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/update-enrichment-strategy.md
+    title: UpdateEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/default-update-enrichment-strategy.md
+    title: DefaultUpdateEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/cascade-delete-update-enrichment-strategy.md
+    title: CascadeDeleteUpdateEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/delete-enrichment-strategy.md
+    title: DeleteEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/cascade-delete-enrichment-strategy.md
+    title: CascadeDeleteEnrichmentStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/i-bulk-write-strategy.md
+    title: IBulkWriteStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/single-command-i-bulk-write-strategy.md
+    title: SingleCommandIBulkWriteStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/batch-command-i-bulk-write-strategy.md
+    title: BatchCommandIBulkWriteStrategy
+    group: Code Reference
+    parent: Advanced
+  - path: sections/stored-procedure-bulk-write-strategy.md
+    title: StoredProcedureBulkWriteStrategy
+    group: Code Reference
+    parent: Advanced
   - path: cli.md
     title: Setup
     group: Command Line (CLI)
@@ -153,3 +229,4 @@ pages:
   - path: writing-providers.md
     title: Driver
     group: Writing Providers
+

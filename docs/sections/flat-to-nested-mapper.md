@@ -558,7 +558,7 @@ Map to a [MappedValue](#mappedvalue) graph.
 
 Nested group fields on a collection are omitted.
 
-This is a collapse mapper, not enrichment. Related fills after read use [Readonly repository](./readonly-repository.md#ienriched).
+This is a collapse mapper, not enrichment. Related fills after read use [IEnriched](./i-enriched.md).
 
 ## Examples
 

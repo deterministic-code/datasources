@@ -1,0 +1,63 @@
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-roles-read", &seed()).await;
+let command = Arc::new(SelectStatement::new(SelectStatementOptions {
+    joins: &[
+        Join::left("user_type", "user_type.id", "user.user_type_id"),
+        Join::left("user_roles", "user_roles.user_id", "user.id"),
+        Join::left("roles", "roles.id", "user_roles.role_id"),
+    ],
+    ..SelectStatementOptions::new(
+        "user",
+        &[
+            "user.id AS Key",
+            "user.username AS Login",
+            "user.is_enabled AS Active",
+            "user.created AS Opened",
+            "user_type.name AS UserType",
+            "user.id AS UserId",
+            "user_roles.role_id AS RoleId",
+            "roles.name AS RoleName",
+        ],
+    )
+}));
+let options = ReadonlyRepositoryOptions::default();
+let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    Arc::new(ReadonlyRepository::memory(vec![])),
+    Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+        TypeMap::new(
+            "Key",
+            vec![
+                ("Key".into(), TypeMapField::column("Key")),
+                ("Login".into(), TypeMapField::column("Login")),
+                ("Active".into(), TypeMapField::column("Active")),
+                ("Opened".into(), TypeMapField::column("Opened")),
+                ("UserType".into(), TypeMapField::column("UserType")),
+                (
+                    "Roles".into(),
+                    TypeMapField::Group(TypeMapGroup::new(
+                        "RoleId",
+                        vec![
+                            ("RoleId".into(), TypeMapField::column("RoleId")),
+                            ("UserId".into(), TypeMapField::column("UserId")),
+                            ("Name".into(), TypeMapField::column("RoleName")),
+                        ],
+                    )),
+                ),
+            ],
+        ),
+    ))),
+);
+let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
+let view = |login: &str| {
+    items
+        .iter()
+        .find(|item| item.get("Login") == Some(&Value::from(login)))
+        .unwrap()
+        .clone()
+};
+let ada = view("ada");
+let grace = view("grace");
+let lin = view("lin");

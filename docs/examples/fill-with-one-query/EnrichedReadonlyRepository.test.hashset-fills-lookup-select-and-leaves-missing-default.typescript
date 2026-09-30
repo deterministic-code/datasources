@@ -1,0 +1,13 @@
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = new ReadonlyRepository(Parent, connection);
+const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+parentsRepo.addEnriched(
+  { into: "type_name", from: "type_id", by: "id", select: "name" },
+  typesRepo,
+  new HashsetOptimizedReadonlyEnrichmentStrategy(),
+);
+const items = await collectAsync(parentsRepo.read());

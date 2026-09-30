@@ -1,0 +1,26 @@
+let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+*command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
+let mut created = [
+    row(&[("label", Value::from("a"))]),
+    row(&[("label", Value::from("b"))]),
+];
+repo.create_bulk(&mut created).await.unwrap();
+repo.update_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+repo.delete_bulk(
+    &[
+        row(&[("id", Value::Int(1)), ("label", Value::from("a"))]),
+        row(&[("id", Value::Int(2)), ("label", Value::from("b"))]),
+    ],
+    None,
+)
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
