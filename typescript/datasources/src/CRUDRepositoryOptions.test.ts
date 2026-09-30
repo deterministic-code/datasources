@@ -13,7 +13,7 @@ import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 describe("CRUDRepositoryOptions", () => {
   it("defaults are identity", () => {
     const built = parts(new MockConnection(), { ids: ["id"], entity: "users", readProperties: ["id"] });
-    expect(built.statements.query().getText()).toBe("SELECT id FROM users");
+    expect(built.statements.select().getText()).toBe("SELECT id FROM users");
     expect(built.rowsMapper.map("x")).toBe("x");
     expect(built.rowsMapper.reverseMap("x")).toBe("x");
     expect(parts(new MockConnection(), { insert: undefined }).ids).toEqual(["id"]);
@@ -49,7 +49,7 @@ describe("CRUDRepositoryOptions", () => {
         (remove) => remove,
       ),
     );
-    expect(statements.query().getText()).toBe("SELECT id, name FROM users LIMIT 1");
+    expect(statements.select().getText()).toBe("SELECT id, name FROM users LIMIT 1");
     expect(statements.insert([{ name: "id", value: 1 }]).getText()).toBe(
       "INSERT INTO users (id) VALUES ($id) RETURNING id",
     );

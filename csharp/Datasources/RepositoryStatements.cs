@@ -4,7 +4,7 @@ public sealed class RepositoryStatements
 {
     readonly string table;
     readonly IReadOnlyList<string> columns;
-    readonly IMapper<ISelectStatement, ISelectStatement>? query;
+    readonly IMapper<ISelectStatement, ISelectStatement>? select;
     readonly IMapper<IInsertStatement, IInsertStatement>? insert;
     readonly IMapper<IUpdateStatement, IUpdateStatement>? update;
     readonly IMapper<IDeleteStatement, IDeleteStatement>? delete;
@@ -15,14 +15,14 @@ public sealed class RepositoryStatements
     public RepositoryStatements(
         string table,
         IReadOnlyList<string> columns,
-        IMapper<ISelectStatement, ISelectStatement>? query,
+        IMapper<ISelectStatement, ISelectStatement>? select,
         IMapper<IInsertStatement, IInsertStatement>? insert,
         IMapper<IUpdateStatement, IUpdateStatement>? update,
         IMapper<IDeleteStatement, IDeleteStatement>? delete)
     {
         this.table = table;
         this.columns = columns;
-        this.query = query;
+        this.select = select;
         this.insert = insert;
         this.update = update;
         this.delete = delete;
@@ -30,8 +30,8 @@ public sealed class RepositoryStatements
 
     public IReadOnlyList<string> ReadColumns => columns;
 
-    public ISelectStatement Query(IWhere? where = null) =>
-        Mapped(new SelectStatement(new() { Table = table, Fields = columns, Where = where }), query);
+    public ISelectStatement Select(IWhere? where = null) =>
+        Mapped(new SelectStatement(new() { Table = table, Fields = columns, Where = where }), select);
     public IInsertStatement Insert(IReadOnlyList<Parameter> fields) =>
         Mapped(new InsertStatement(table, fields), insert);
     public IUpdateStatement Update(IReadOnlyList<Parameter> fields, IWhere? where = null) =>

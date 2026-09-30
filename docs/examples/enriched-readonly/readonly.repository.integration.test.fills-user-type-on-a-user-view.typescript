@@ -1,4 +1,4 @@
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
 const connection = await open(ds, "user-type-lookup", `
   INSERT INTO user_type (id, name) VALUES
     (1, 'admin'),

@@ -38,6 +38,10 @@ pages:
     title: Bulk Repository
     group: Code Reference
     parent: Repositories
+  - path: sections/repository-factories.md
+    title: Repository Factories
+    group: Code Reference
+    parent: Repositories
   - path: sections/mappers.md
     title: Mappers
     group: Code Reference

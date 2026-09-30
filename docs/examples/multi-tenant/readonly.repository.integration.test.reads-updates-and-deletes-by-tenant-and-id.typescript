@@ -1,0 +1,18 @@
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const connection = await open(ds, "multi-tenant", `
+  INSERT INTO account (tenant_id, id, name) VALUES
+    (1, 1, 'ada'),
+    (2, 1, 'grace');
+`);
+const accountsRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(Account),
+  entity: "account",
+  ids: ["tenant_id", "id"],
+});
+const ada = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+ada!.name = "ada-v2";
+const updated = await accountsRepo.update(ada!);
+const renamed = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+const removed = await accountsRepo.delete(ada!);
+const gone = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+const graceRow = await accountsRepo.readSingleById({ tenant_id: 2, id: 1 });

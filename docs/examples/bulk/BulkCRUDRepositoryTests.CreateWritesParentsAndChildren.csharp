@@ -1,0 +1,10 @@
+var connection = await Setup();
+var parentsRepo = new BulkCRUDRepository<Parent>(connection);
+var childrenRepo = new BulkCRUDRepository<Child>(connection);
+var response = await Repo(parentsRepo, childrenRepo).Create(
+[
+    new Parent { children = [new Child { label = "a" }] },
+    new Parent { children = [new Child { label = "b" }, new Child { label = "c" }] }
+]);
+var parents = await parentsRepo.Read().ToListAsync();
+var children = await childrenRepo.Read().ToListAsync();

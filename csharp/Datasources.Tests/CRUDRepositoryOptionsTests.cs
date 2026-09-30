@@ -73,7 +73,7 @@ public class CRUDRepositoryOptionsTests
             new TransformMapper<IDeleteStatement, IDeleteStatement>(
                 delete => DeleteStatement.Raw($"{delete.GetText()} RETURNING id", delete.Where),
                 delete => delete));
-        Assert.Equal("SELECT id, name FROM users LIMIT 1", statements.Query().GetText());
+        Assert.Equal("SELECT id, name FROM users LIMIT 1", statements.Select().GetText());
         Assert.Equal(
             "INSERT INTO users (id) VALUES ($id) RETURNING id",
             statements.Insert([new Parameter("id", 1)]).GetText());
@@ -128,7 +128,7 @@ public class CRUDRepositoryOptionsTests
             Entity = "users",
             EntityMapper = Entity(),
             ColumnMappings = Columns(),
-            Query = new TransformMapper<ISelectStatement, ISelectStatement>(
+            Select = new TransformMapper<ISelectStatement, ISelectStatement>(
                 query => new SelectStatement($"{query.GetText()} LIMIT 1", query.Where),
                 query => query),
             Insert = new TransformMapper<IInsertStatement, IInsertStatement>(

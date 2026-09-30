@@ -113,7 +113,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
 
     private async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
-        var reader = await Command().ExecuteReader(query ?? Statements.Query(), parameters);
+        var reader = await Command().ExecuteReader(query ?? Statements.Select(), parameters);
         try
         {
             while (await reader.Next())
@@ -164,7 +164,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     }
 
     private ISelectStatement Compiled(IWhere where) =>
-        statements is { } sql ? sql.Query(where) : new SelectStatement(where.GetText(), where);
+        statements is { } sql ? sql.Select(where) : new SelectStatement(where.GetText(), where);
 
     private Row Renamed(Row row) =>
         new(row.Select(pair => KeyValuePair.Create(columns.ReverseMap(pair.Key), pair.Value)));

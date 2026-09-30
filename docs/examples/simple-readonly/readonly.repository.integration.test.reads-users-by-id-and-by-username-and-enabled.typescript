@@ -1,4 +1,4 @@
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
 const connection = await open(ds, "minimal-users", `
   INSERT INTO users (id, username, is_enabled) VALUES
     (1, 'ada', 1),

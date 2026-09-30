@@ -1,0 +1,30 @@
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const connection = await open(ds, "user-view-version");
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UsersView),
+  ids: ["Key"],
+  readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  columnMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserTypeId", "user_type_id"],
+    ["Version", "version"],
+  ]),
+});
+const userTypesRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UserType),
+  entityMapper: casing,
+  columnMappings: casing,
+});
+const userRolesRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UserRole),
+  entityMapper: casing,
+  columnMappings: casing,
+});
+usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));

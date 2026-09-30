@@ -1,0 +1,53 @@
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-view-version", "").await;
+let mut users_options = create_crud_repository_options::<UsersView>();
+users_options.ids = vec!["Key".into()];
+users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+    "UsersView".to_string(),
+    "user".to_string(),
+)]));
+users_options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".to_string(), "id".to_string()),
+    ("Login".to_string(), "username".to_string()),
+    ("Active".to_string(), "is_enabled".to_string()),
+    ("Opened".to_string(), "created".to_string()),
+    ("UserTypeId".to_string(), "user_type_id".to_string()),
+    ("Version".to_string(), "version".to_string()),
+]));
+users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let mut type_options = create_crud_repository_options::<UserType>();
+type_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+type_options.column_mappings = Box::new(casing);
+type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+let mut role_options = create_crud_repository_options::<UserRole>();
+role_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+role_options.column_mappings =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
+let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+let user_types_repo =
+    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
+let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+users_repo.add_enriched(
+    datasources::Enrichment::new(
+        "UserType",
+        "UserTypeId",
+        "Id",
+        Some("Name".into()),
+        false,
+    ),
+    user_types_repo.clone(),
+    None,
+);
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    user_roles_repo.clone(),
+    None,
+);
+let mut admin = datasources::Row::new();
+admin.insert("Name".into(), Value::from("admin"));
+let admin = user_types_repo.create(&mut admin).await.unwrap();

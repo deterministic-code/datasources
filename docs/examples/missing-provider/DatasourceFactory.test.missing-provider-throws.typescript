@@ -1,1 +1,1 @@
-DatasourceFactory.create({ provider: "missing" });
+DatasourceFactory.create({ PROVIDER: "missing" });

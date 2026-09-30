@@ -1,0 +1,33 @@
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var connection = await Open(ds, "user-view-version");
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+{
+    Ids = ["Key"],
+    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
+    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserTypeId"] = "user_type_id",
+        ["Version"] = "version",
+    }),
+});
+var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryOptions<UserType>
+{
+    Ids = ["Id"],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
+{
+    Ids = [],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+});
+usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
+usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
+var admin = await userTypesRepo.Create(new UserType { Name = "admin" });

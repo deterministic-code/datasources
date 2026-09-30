@@ -1,4 +1,4 @@
-const ds = new Datasource("sqlite", new SqliteDriver(), { filename: ":memory:" });
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
 const connection = await open(ds, "user-view-version");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {

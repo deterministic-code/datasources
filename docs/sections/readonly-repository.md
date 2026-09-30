@@ -1,8 +1,6 @@
 # Readonly repository
 
-Read-only typed read over a connection. {{ReadSingle|readSingle|read_single}} returns the first row or none. {{Read|read|read}} yields every row.
-
-Construct it with a connection, then register each fill with {{AddEnriched|addEnriched|add_enriched}}. That fill runs after convert-then-map. Lookups use {{ReadSingle|readSingle|read_single}} (cached per distinct key). Lists use {{Read|read|read}}. Missing lookups leave the destination default. This type does not write. Writes are [CRUDRepository](./crud-repository.md).
+Runs readonly select commands and can enrich those datasource objects. Writes are [CRUD repository](./crud-repository.md).
 
 ## Classes
 
@@ -139,12 +137,12 @@ Maps property names to stored columns. Default is [IdentityMapper](./identity-ma
 columnMappings?: IMapper<string, string>
 ```
 
-##### query
+##### select
 
 Rewrites the finished select. Omitted leaves the statement unchanged.
 
 ```typescript
-query?: IMapper<ISelectStatement, ISelectStatement>
+select?: IMapper<ISelectStatement, ISelectStatement>
 ```
 
 ##### rowsMapper
@@ -513,12 +511,12 @@ Maps property names to stored columns. Default is [IdentityMapper](./identity-ma
 IMapper<string, string> ColumnMappings { get; init; }
 ```
 
-##### Query
+##### Select
 
 Rewrites the finished select. Omitted leaves the statement unchanged.
 
 ```csharp
-IMapper<ISelectStatement, ISelectStatement>? Query { get; init; }
+IMapper<ISelectStatement, ISelectStatement>? Select { get; init; }
 ```
 
 ##### RowsMapper
@@ -873,12 +871,12 @@ Maps property names to stored columns. Default is [IdentityMapper](./identity-ma
 pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>
 ```
 
-##### query
+##### select
 
 Rewrites finished select SQL. `None` leaves the statement unchanged.
 
 ```rust
-pub query: Option<Arc<TransformMapper<String, String>>>
+pub select: Option<Arc<TransformMapper<String, String>>>
 ```
 
 ##### rows_mapper
@@ -1107,7 +1105,7 @@ Repository read is convert, then map. See [Type Converters](./type-converters.md
 
 ## Examples
 
-### Read users by id and by username
+### Simple readonly
 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUsersByIdAndByUsernameAndEnabled
@@ -1169,6 +1167,49 @@ Repository read is convert, then map. See [Type Converters](./type-converters.md
     is_enabled: 0
   }
 ]
+```
+:::
+
+### Enriched readonly
+
+`UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](./change-casing-mapper.md) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#FillsUserTypeOnUsersView
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#fills_user_type_on_user_view
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#fills-user-type-on-a-user-view
+```
+
+```output [User view]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: true,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+```output:typescript [User view]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
+```
+
+```output:rust [User view]
+{
+  Key: '11111111-1111-1111-1111-111111111111',
+  Login: 'ada',
+  Active: 1,
+  Opened: '2020-01-01T00:00:00.000Z',
+  UserType: 'admin'
+}
 ```
 :::
 
@@ -1322,49 +1363,6 @@ Repository read is convert, then map. See [Type Converters](./type-converters.md
 ```rust rust/datasources/tests/enriched.rs#enriched_fills_lookup_select_and_leaves_missing_default
 ```
 ```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#fills-lookup-select-and-leaves-missing-default
-```
-:::
-
-### Fill user type on a user view
-
-`UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](./change-casing-mapper.md) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
-
-::: example
-```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#FillsUserTypeOnUsersView
-```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#fills_user_type_on_user_view
-```
-```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#fills-user-type-on-a-user-view
-```
-
-```output [User view]
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: true,
-  Opened: '2020-01-01T00:00:00.000Z',
-  UserType: 'admin'
-}
-```
-
-```output:typescript [User view]
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: 1,
-  Opened: '2020-01-01T00:00:00.000Z',
-  UserType: 'admin'
-}
-```
-
-```output:rust [User view]
-{
-  Key: '11111111-1111-1111-1111-111111111111',
-  Login: 'ada',
-  Active: 1,
-  Opened: '2020-01-01T00:00:00.000Z',
-  UserType: 'admin'
-}
 ```
 :::
 

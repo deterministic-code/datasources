@@ -1,1 +1,1 @@
-DatasourceFactory.Create(new Dictionary<string, string?> { ["provider"] = "missing" });
+DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "missing" });

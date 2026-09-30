@@ -1,0 +1,4 @@
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const connection = await open(ds, "user-pascal");
+const usersRepo = new CRUDRepository(User, connection);
+const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));

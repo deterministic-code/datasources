@@ -8,6 +8,7 @@ export const parseToc = (text) => {
       group: field("group"),
       hash: field("hash"),
       parent: field("parent"),
+      collapsed: field("collapsed") === "true",
     };
   });
   return { title, pages };
@@ -32,6 +33,8 @@ export const nestSidebar = (pages, toItem) => {
   return pages.flatMap((page) => {
     if (page.parent) return [];
     const items = kids.get(page.title);
-    return items ? [{ ...toItem(page), items: items.map(toItem) }] : [toItem(page)];
+    return items
+      ? [{ ...toItem(page), collapsed: page.collapsed === true, items: items.map(toItem) }]
+      : [toItem(page)];
   });
 };

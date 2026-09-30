@@ -1,7 +1,6 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(ds, "user-view-version", "")
-.await;
+let connection = open(ds, "user-view-version", "").await;
 let mut users_options = create_crud_repository_options::<UsersView>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
@@ -33,8 +32,22 @@ let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwr
 let user_types_repo =
     Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
 let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
-users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), user_types_repo.clone(), None);
-users_repo.add_enriched(datasources::Enrichment::new("Roles", "Key", "UserId", None, true), user_roles_repo.clone(), None);
+users_repo.add_enriched(
+    datasources::Enrichment::new(
+        "UserType",
+        "UserTypeId",
+        "Id",
+        Some("Name".into()),
+        false,
+    ),
+    user_types_repo.clone(),
+    None,
+);
+users_repo.add_enriched(
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    user_roles_repo.clone(),
+    None,
+);
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
 let admin = user_types_repo.create(&mut admin).await.unwrap();

@@ -1,3 +1,0 @@
-const connection = await open();
-const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
-const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));

@@ -13,11 +13,8 @@ public sealed class NestedToObjectEnrichmentStrategy<T>(TypeMap typeMap) : Defau
         IReadOnlyList<Row?>? sources = null)
     {
         parents.Clear();
-        foreach (var item in nested.Map(Rows(sources)))
+        foreach (var item in nested.Map(sources?.OfType<Row>() ?? []))
             parents.Add(values.Map(item)!);
         return Task.CompletedTask;
     }
-
-    static IEnumerable<Row> Rows(IReadOnlyList<Row?>? sources) =>
-        sources?.OfType<Row>() ?? [];
 }

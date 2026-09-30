@@ -1,0 +1,15 @@
+let command = Arc::new(MockCommand::new());
+command.reader_rows.lock().unwrap().push(record(&[
+    ("id", Value::Int(1)),
+    ("username", Value::from("bobby")),
+    ("email", Value::from("bob@asdf.com")),
+    ("contact_name1", Value::from("bob")),
+    ("contact_name2", Value::from("roberta")),
+]));
+let connection = MockConnection::with_command_provider(command.clone(), "memory");
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "users".into();
+options.row_converter = Some(RowTypeConverter::of::<UserRow>());
+options.rows_mapper = Box::new(user_contacts_mapper());
+let repo = CRUDRepository::new(connection, options).unwrap();
+let mut user = repo.read_single(None, None).await.unwrap().unwrap();

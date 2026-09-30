@@ -537,6 +537,7 @@ const samplesIn = (markdown) => {
       let cursor = offset;
       let heading = null;
       let inCode = false;
+      let skipHeading = 0;
       for (const line of lines) {
         if (line.startsWith("```")) {
           if (!inCode) {
@@ -550,7 +551,11 @@ const samplesIn = (markdown) => {
               });
           }
           inCode = !inCode;
-        } else if (!inCode) {
+        } else if (!inCode && (line.startsWith("::: prose") || line.startsWith("::: reference"))) {
+          skipHeading++;
+        } else if (!inCode && line.trim() === ":::" && skipHeading) {
+          skipHeading--;
+        } else if (!inCode && !skipHeading) {
           const title = line.match(/^###\s+(.+?)\s*$/);
           if (title) heading = title[1];
         }

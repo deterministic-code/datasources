@@ -1960,7 +1960,7 @@ async fn table_repository_crud_mapper() {
         },
         |name| name,
     ));
-    options.query = Some(Arc::new(TransformMapper::new(
+    options.select = Some(Arc::new(TransformMapper::new(
         |text: String| format!("{text} LIMIT 1"),
         |text| text,
     )));

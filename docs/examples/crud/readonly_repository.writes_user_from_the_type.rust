@@ -1,0 +1,8 @@
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+let connection = open(ds, "user-pascal", "").await;
+let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
+let mut created = datasources::Row::new();
+created.insert("username".into(), Value::from("ada"));
+created.insert("is_enabled".into(), Value::Bool(true));
+let mut created = users_repo.create(&mut created).await.unwrap();

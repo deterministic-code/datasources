@@ -8,7 +8,7 @@ export type ReadonlyRepositoryOptions<T = Cells> = {
   entity?: string;
   entityMapper?: IMapper<string, string>;
   columnMappings?: IMapper<string, string>;
-  query?: IMapper<ISelectStatement, ISelectStatement>;
+  select?: IMapper<ISelectStatement, ISelectStatement>;
   rowsMapper?: IMapper<T, T>;
   rowConverter?: TypeConverter<T, Cells>;
   type?: Constructable<T>;

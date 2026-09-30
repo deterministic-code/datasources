@@ -31,7 +31,7 @@ public static class RepositoryBuilder<T> where T : new()
             rowConverter,
             options.RowsMapper,
             options.ColumnMappings,
-            new RepositoryStatements(entity, columns, options.Query, insert, update, delete),
+            new RepositoryStatements(entity, columns, options.Select, insert, update, delete),
             ids);
     }
 

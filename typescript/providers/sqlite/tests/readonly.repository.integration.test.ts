@@ -272,3 +272,39 @@ describe("users view crud", () => {
     expect(roles).toEqual([]);
   });
 });
+
+describe("multi-tenant account", () => {
+  class Account {
+    tenant_id = 0;
+    id = 0;
+    name = "";
+  }
+
+  it("reads updates and deletes by tenant and id", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const connection = await open(ds, "multi-tenant", `
+      INSERT INTO account (tenant_id, id, name) VALUES
+        (1, 1, 'ada'),
+        (2, 1, 'grace');
+    `);
+    const accountsRepo = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(Account),
+      entity: "account",
+      ids: ["tenant_id", "id"],
+    });
+    const ada = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+    ada!.name = "ada-v2";
+    const updated = await accountsRepo.update(ada!);
+    const renamed = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+    const removed = await accountsRepo.delete(ada!);
+    const gone = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+    const graceRow = await accountsRepo.readSingleById({ tenant_id: 2, id: 1 });
+    expect(updated.rowsAffected).toBe(1);
+    expect(removed.rowsAffected).toBe(1);
+    expect(renamed?.name).toBe("ada-v2");
+    expect(renamed?.tenant_id).toBe(1);
+    expect(gone).toBeUndefined();
+    expect(graceRow?.name).toBe("grace");
+    expect(graceRow?.tenant_id).toBe(2);
+  });
+});
