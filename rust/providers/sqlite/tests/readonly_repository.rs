@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_crud_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
-    DictionaryMapper, Native, PluralizerMapper, Value, Where,
+    DictionaryMapper, Native, PluralizerMapper, Result, Row, TypeConverter, Value, Where,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -81,6 +81,60 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     assert_eq!(disabled.len(), 1);
     assert_eq!(disabled[0].get("id"), Some(&Value::Int(2)));
     assert_eq!(disabled[0].get("is_enabled"), Some(&Value::Int(0)));
+}
+
+struct UserConverter;
+
+impl TypeConverter<Row, Row> for UserConverter {
+    fn convert(&self, from: &Row) -> Result<Row> {
+        let mut row = from.clone();
+        let enabled = match row.get("is_enabled") {
+            Some(Value::Int(flag)) => Value::Bool(*flag != 0),
+            Some(value) => value.clone(),
+            None => Value::Null,
+        };
+        row.insert("is_enabled".into(), enabled);
+        Ok(row)
+    }
+
+    fn reverse_convert(&self, to: &Row) -> Result<Row> {
+        let mut row = to.clone();
+        let enabled = match row.get("is_enabled") {
+            Some(Value::Bool(flag)) => Value::Int(if *flag { 1 } else { 0 }),
+            Some(value) => value.clone(),
+            None => Value::Null,
+        };
+        row.insert("is_enabled".into(), enabled);
+        Ok(row)
+    }
+}
+
+#[tokio::test]
+async fn maps_an_object_explicitly() {
+    let built = datasource();
+    let ds: &dyn Datasource = &*built;
+    let connection = open(
+        ds,
+        "minimal-users",
+        "
+        INSERT INTO users (id, username, is_enabled) VALUES
+            (1, 'ada', 1),
+            (2, 'grace', 0);
+        ",
+    )
+    .await;
+    let mut options = create_crud_repository_options::<User>();
+    options.entity_mapper = Box::new(PluralizerMapper::new());
+    options.object_converter = Some(Box::new(UserConverter));
+    let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+    let user = users_repo
+        .read_single(Some(&Where::binary("id", eq, 1_i64)), None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(user.get("id"), Some(&Value::Int(1)));
+    assert_eq!(user.get("username"), Some(&Value::from("ada")));
+    assert_eq!(user.get("is_enabled"), Some(&Value::Bool(true)));
 }
 
 #[tokio::test]

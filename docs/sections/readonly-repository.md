@@ -638,10 +638,10 @@ pub row_converter: Option<RowTypeConverter>
 
 ##### object_converter
 
-`Row` to `Row`, after `row_converter`. Omitted copies every cell. `of::<T>()` copies the `ConvertSchema` columns.
+`Row` to `Row`, after `row_converter`. Omitted copies every cell. A handwritten converter assigns each column.
 
 ```rust
-pub object_converter: Option<MetaDataRowTypeConverter>
+pub object_converter: Option<Box<dyn TypeConverter<Row, Row> + Send + Sync>>
 ```
 
 ##### row_type_converters
@@ -809,6 +809,33 @@ Repository read is convert, then map. See [Type Converters](./type-converters.md
     is_enabled: 0
   }
 ]
+```
+:::
+
+### Map an object explicitly
+
+A handwritten object converter assigns each column. {{ObjectConverter|objectConverter|object_converter}} replaces [MetaDataRowTypeConverter](./metadata-row-type-converter.md), so the read does not reflect.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#UserConverter
+```
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#MapsAnObjectExplicitly
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#TypeConverterForUserConverter
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#maps_an_object_explicitly
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#UserConverter
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#maps-an-object-explicitly
+```
+
+```output [After: by id]
+{
+  id: 1,
+  username: 'ada',
+  is_enabled: true
+}
 ```
 :::
 

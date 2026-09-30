@@ -919,10 +919,10 @@ pub row_converter: Option<RowTypeConverter>
 
 ##### object_converter
 
-`Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](./metadata-row-type-converter.md).
+`Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](./metadata-row-type-converter.md). A handwritten converter assigns each column.
 
 ```rust
-pub object_converter: MetaDataRowTypeConverter
+pub object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>
 ```
 
 ##### rows_mapper

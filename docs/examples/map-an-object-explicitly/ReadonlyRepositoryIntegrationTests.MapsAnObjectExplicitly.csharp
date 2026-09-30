@@ -1,0 +1,15 @@
+var driver = new SqliteDriver();
+var ds = new Datasource("sqlite", driver, new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var connection = await Open(ds, "minimal-users", """
+    INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    """);
+var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+{
+    EntityMapper = new PluralizerMapper(),
+    ReadProperties = ["id", "username", "is_enabled"],
+    ObjectConverter = new UserConverter()
+});
+
+var user = await usersRepo.ReadSingle(new Where("id", eq, 1));

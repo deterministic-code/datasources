@@ -5,7 +5,9 @@ import {
   DictionaryMapper,
   PluralizerMapper,
   ReadonlyRepository,
+  TypeConverter,
   Where,
+  type Cells,
   createCRUDRepositoryOptions,
   eq,
   execute,
@@ -25,6 +27,28 @@ class User {
   id = 0;
   username = "";
   is_enabled = 0;
+}
+
+class MappedUser {
+  id = 0;
+  username = "";
+  is_enabled = false;
+}
+
+class UserConverter extends TypeConverter<MappedUser, Cells> {
+  convert = (from: Cells): MappedUser => {
+    const user = new MappedUser();
+    user.id = from.id as number;
+    user.username = from.username as string;
+    user.is_enabled = from.is_enabled === 1;
+    return user;
+  };
+
+  reverseConvert = (to: MappedUser): Cells => ({
+    id: to.id,
+    username: to.username,
+    is_enabled: to.is_enabled ? 1 : 0,
+  });
 }
 
 class UserAccount {
@@ -54,6 +78,25 @@ describe("readonly repository", () => {
     expect(disabled.length).toBe(1);
     expect(disabled[0]?.id).toBe(2);
     expect(disabled[0]?.is_enabled).toBe(0);
+  });
+
+  it("maps an object explicitly", async () => {
+    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const connection = await open(ds, "minimal-users", `
+      INSERT INTO users (id, username, is_enabled) VALUES
+        (1, 'ada', 1),
+        (2, 'grace', 0);
+    `);
+    const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
+      entity: "User",
+      entityMapper: new PluralizerMapper(),
+      readProperties: ["id", "username", "is_enabled"],
+      objectConverter: new UserConverter(),
+    });
+    const user = await usersRepo.readSingle(new Where("id", eq, 1));
+    expect(user?.id).toBe(1);
+    expect(user?.username).toBe("ada");
+    expect(user?.is_enabled).toBe(true);
   });
 
   it("reads user by guid username and created", async () => {
