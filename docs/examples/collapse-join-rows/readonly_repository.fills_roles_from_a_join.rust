@@ -1,27 +1,26 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
-let command = Arc::new(SelectStatement::new(SelectStatementOptions {
-    joins: &[
-        Join::left("user_type", "user_type.id", "user.user_type_id"),
-        Join::left("user_roles", "user_roles.user_id", "user.id"),
-        Join::left("roles", "roles.id", "user_roles.role_id"),
-    ],
-    ..SelectStatementOptions::new(
-        "user",
-        &[
-            "user.id AS Key",
-            "user.username AS Login",
-            "user.is_enabled AS Active",
-            "user.created AS Opened",
-            "user_type.name AS UserType",
-            "user.id AS UserId",
-            "user_roles.role_id AS RoleId",
-            "roles.name AS RoleName",
-        ],
-    )
-}));
-let options = ReadonlyRepositoryOptions::default();
+let mut options = ReadonlyRepositoryOptions::default();
+options.entity = "UsersView".into();
+options.entity_mapper = Box::new(DictionaryMapper::new([
+    ("UsersView".into(), "user".into()),
+    ("UserType".into(), "user_type".into()),
+    ("UserRole".into(), "user_roles".into()),
+    ("Role".into(), "roles".into()),
+]));
+options.column_mappings = Box::new(DictionaryMapper::new([
+    ("Key".into(), "id".into()),
+    ("Login".into(), "username".into()),
+    ("Active".into(), "is_enabled".into()),
+    ("Opened".into(), "created".into()),
+    ("UserType".into(), "user_type.name".into()),
+    ("UserId".into(), "user_id".into()),
+    ("RoleId".into(), "role_id".into()),
+    ("Name".into(), "roles.name".into()),
+    ("Id".into(), "id".into()),
+]));
+options.select = Some(Arc::new(TransformMapper::new(joined_users, |query| query)));
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
     datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
@@ -42,7 +41,7 @@ users_repo.add_enriched(
                         vec![
                             ("RoleId".into(), TypeMapField::column("RoleId")),
                             ("UserId".into(), TypeMapField::column("UserId")),
-                            ("Name".into(), TypeMapField::column("RoleName")),
+                            ("Name".into(), TypeMapField::column("Name")),
                         ],
                     )),
                 ),
@@ -50,7 +49,7 @@ users_repo.add_enriched(
         ),
     ))),
 );
-let items = users_repo.read(Some(command.as_ref()), None).await.unwrap();
+let items = users_repo.read(None, None).await.unwrap();
 let view = |login: &str| {
     items
         .iter()

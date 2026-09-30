@@ -1961,8 +1961,10 @@ async fn table_repository_crud_mapper() {
         |name| name,
     ));
     options.select = Some(Arc::new(TransformMapper::new(
-        |text: String| format!("{text} LIMIT 1"),
-        |text| text,
+        |statement: SelectStatement| {
+            SelectStatement::text(format!("{} LIMIT 1", statement.get_text()))
+        },
+        |statement| statement,
     )));
     let returning = |text: String| format!("{text} RETURNING id");
     options.insert = Some(Arc::new(TransformMapper::new(returning, |text| text)));

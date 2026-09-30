@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub struct RepositoryStatements {
     table: String,
     columns: Vec<String>,
-    select: Option<Arc<TransformMapper<String, String>>>,
+    select: Option<Arc<TransformMapper<SelectStatement, SelectStatement>>>,
     insert: Option<Arc<TransformMapper<String, String>>>,
     update: Option<Arc<TransformMapper<String, String>>>,
     delete: Option<Arc<TransformMapper<String, String>>>,
@@ -26,7 +26,7 @@ impl RepositoryStatements {
     pub fn with_mappers(
         table: impl Into<String>,
         columns: Vec<String>,
-        select: Option<Arc<TransformMapper<String, String>>>,
+        select: Option<Arc<TransformMapper<SelectStatement, SelectStatement>>>,
         insert: Option<Arc<TransformMapper<String, String>>>,
         update: Option<Arc<TransformMapper<String, String>>>,
         delete: Option<Arc<TransformMapper<String, String>>>,
@@ -51,18 +51,19 @@ impl RepositoryStatements {
             where_clause,
             ..SelectStatementOptions::new(&self.table, &refs)
         });
-        let text = map_sql(&self.select, built.get_text());
-        match where_clause.and_then(|clause| clause.as_any().downcast_ref::<crate::Where>()) {
-            Some(clause) => {
-                let mut statement = SelectStatement::with_where(text, clause.clone());
-                statement.table = self.table.clone();
-                statement
-            }
-            None => match where_clause {
-                Some(predicate) => {
-                    SelectStatement::with_where(text, WhereText::new(predicate.get_text()))
-                }
-                None => SelectStatement::text(text),
+        match &self.select {
+            Some(map) => Mapper::map(map.as_ref(), built),
+            None => match where_clause
+                .and_then(|clause| clause.as_any().downcast_ref::<crate::Where>())
+            {
+                Some(clause) => SelectStatement::with_where(built.get_text(), clause.clone()),
+                None => match where_clause {
+                    Some(predicate) => SelectStatement::with_where(
+                        built.get_text(),
+                        WhereText::new(predicate.get_text()),
+                    ),
+                    None => SelectStatement::text(built.get_text()),
+                },
             },
         }
     }

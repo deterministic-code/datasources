@@ -9,7 +9,9 @@ pub struct ReadonlyRepositoryOptions {
     pub entity: String,
     pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>,
     pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
-    pub select: Option<Arc<crate::mappers::TransformMapper<String, String>>>,
+    pub select: Option<
+        Arc<crate::mappers::TransformMapper<crate::SelectStatement, crate::SelectStatement>>,
+    >,
     pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
     pub row_converter: Option<RowTypeConverter>,
     pub object_converter: Option<Box<dyn TypeConverter<Row, Row> + Send + Sync>>,

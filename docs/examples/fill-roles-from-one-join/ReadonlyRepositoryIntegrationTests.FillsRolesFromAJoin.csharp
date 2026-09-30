@@ -1,19 +1,50 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
 await Execute(connection, Seed());
-var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
-{
-    ["Key"] = "id",
-    ["Login"] = "username",
-    ["Active"] = "is_enabled",
-    ["Opened"] = "created",
-    ["UserType"] = "user_type.name",
-    ["UserId"] = "user_id",
-    ["RoleId"] = "role_id",
-    ["Name"] = "roles.name",
-});
 var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
 {
-    ColumnMappings = mappings,
+    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["UsersView"] = "user",
+        ["UserType"] = "user_type",
+        ["UserRole"] = "user_roles",
+        ["Role"] = "roles",
+    }),
+    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    {
+        ["Key"] = "id",
+        ["Login"] = "username",
+        ["Active"] = "is_enabled",
+        ["Opened"] = "created",
+        ["UserType"] = "user_type.name",
+        ["UserId"] = "user_id",
+        ["RoleId"] = "role_id",
+        ["Name"] = "roles.name",
+        ["Id"] = "id",
+    }),
+    Select = new TransformMapper<ISelectStatement, ISelectStatement>(
+        query => new SelectStatement(new()
+        {
+            Table = "UsersView",
+            Fields =
+            [
+                "UsersView.Key",
+                "UsersView.Login",
+                "UsersView.Active",
+                "UsersView.Opened",
+                "UsersView.UserType",
+                "UserRole.UserId",
+                "UserRole.RoleId",
+                "Role.Name",
+            ],
+            Where = query.Where,
+            Joins =
+            [
+                new Join(JoinKind.Left, "UserType", "UserType.Id", "user.user_type_id"),
+                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "UsersView.Key"),
+                new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
+            ],
+        }),
+        query => query),
 });
 usersRepo.AddEnriched(
     new("Roles", "Key", "UserId", Many: true),
@@ -41,27 +72,7 @@ usersRepo.AddEnriched(
         }
     }));
 var items = new List<UsersView>();
-await foreach (var item in usersRepo.Read(new SelectStatement(new()
-{
-    Table = "user",
-    Fields =
-    [
-        "user.id",
-        "user.username",
-        "user.is_enabled",
-        "user.created",
-        "user_type.name",
-        "user_roles.user_id",
-        "user_roles.role_id",
-        "roles.name",
-    ],
-    Joins =
-    [
-        new Join(JoinKind.Left, "user_type", "user_type.id", "user.user_type_id"),
-        new Join(JoinKind.Left, "user_roles", "user_roles.user_id", "user.id"),
-        new Join(JoinKind.Left, "roles", "roles.id", "user_roles.role_id"),
-    ],
-})))
+await foreach (var item in usersRepo.Read())
     items.Add(item);
 var ada = Assert.Single(items, item => item.Login == "ada");
 var grace = Assert.Single(items, item => item.Login == "grace");

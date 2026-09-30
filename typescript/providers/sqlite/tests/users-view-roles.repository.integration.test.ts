@@ -117,6 +117,12 @@ describe("users view roles", () => {
     await executeSql(connection, seed());
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
+      entityMapper: new DictionaryMapper([
+        ["UsersView", "user"],
+        ["UserType", "user_type"],
+        ["UserRole", "user_roles"],
+        ["Role", "roles"],
+      ]),
       columnMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
@@ -126,7 +132,31 @@ describe("users view roles", () => {
         ["UserId", "user_id"],
         ["RoleId", "role_id"],
         ["Name", "roles.name"],
+        ["Id", "id"],
       ]),
+      select: new TransformMapper(
+        (query) =>
+          new SelectStatement({
+            table: "UsersView",
+            fields: [
+              "UsersView.Key",
+              "UsersView.Login",
+              "UsersView.Active",
+              "UsersView.Opened",
+              "UsersView.UserType",
+              "UserRole.UserId",
+              "UserRole.RoleId",
+              "Role.Name",
+            ],
+            where: query.where,
+            joins: [
+              Join.left("UserType", "UserType.Id", "user.user_type_id"),
+              Join.left("UserRole", "UserRole.UserId", "UsersView.Key"),
+              Join.left("Role", "Role.Id", "UserRole.RoleId"),
+            ],
+          }),
+        (query) => query,
+      ),
     });
     usersRepo.addEnriched(
       { into: "Roles", from: "Key", by: "UserId", many: true },
@@ -147,27 +177,7 @@ describe("users view roles", () => {
       }),
     );
     const items: UsersView[] = [];
-    for await (const item of usersRepo.read(
-      new SelectStatement({
-        table: "user",
-        fields: [
-          "user.id",
-          "user.username",
-          "user.is_enabled",
-          "user.created",
-          "user_type.name",
-          "user_roles.user_id",
-          "user_roles.role_id",
-          "roles.name",
-        ],
-        joins: [
-          Join.left("user_type", "user_type.id", "user.user_type_id"),
-          Join.left("user_roles", "user_roles.user_id", "user.id"),
-          Join.left("roles", "roles.id", "user_roles.role_id"),
-        ],
-      }),
-    ))
-      items.push(item);
+    for await (const item of usersRepo.read()) items.push(item);
     const found = (login: string) => items.find((item) => item.Login === login);
     const adaView = found("ada");
     const graceView = found("grace");

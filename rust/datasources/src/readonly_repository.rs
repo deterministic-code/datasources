@@ -1,3 +1,4 @@
+use crate::builders::Join;
 use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
@@ -18,12 +19,11 @@ use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
-use crate::builders::Join;
 use crate::select_statement::SelectStatement;
-use crate::statements::{OrderBy, SelectStatementOptions};
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
+use crate::statements::{OrderBy, SelectStatementOptions};
 use crate::stored_enrichment::StoredEnrichment;
 use crate::stubs::StubConnection;
 use crate::stubs::StubRepository;
@@ -287,8 +287,8 @@ impl ReadonlyRepository {
                 }
             },
             None => {
-                let (statement, params) = self.query_of(None);
-                self.fetch_sources(&statement, parameters.unwrap_or(&params).to_vec())
+                let statement = self.own(self.statements.select(None))?;
+                self.fetch_sources(&statement, parameters.unwrap_or(&[]).to_vec())
                     .await
             }
         }
@@ -380,9 +380,17 @@ impl ReadonlyRepository {
 
     fn mapped_select(&self, select: &SelectStatement) -> Result<SelectStatement> {
         let table = self.entity(&select.table);
-        let fields: Vec<String> = select.fields.iter().map(|field| self.column(field)).collect();
+        let fields: Vec<String> = select
+            .fields
+            .iter()
+            .map(|field| self.column(field))
+            .collect();
         let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
-        let group: Vec<String> = select.group_by.iter().map(|column| self.column(column)).collect();
+        let group: Vec<String> = select
+            .group_by
+            .iter()
+            .map(|column| self.column(column))
+            .collect();
         let group_refs: Vec<&str> = group.iter().map(String::as_str).collect();
         let order: Vec<OrderBy> = select
             .order_by
@@ -398,7 +406,10 @@ impl ReadonlyRepository {
             .map(|join| Join {
                 kind: join.kind,
                 table: self.entity(&join.table),
-                on: join.on.as_ref().map(|on| map_on(on, |name| self.column(name))),
+                on: join
+                    .on
+                    .as_ref()
+                    .map(|on| map_on(on, |name| self.column(name))),
             })
             .collect();
         let mapped_where = self.mapped_where(select.predicate())?;
@@ -432,11 +443,21 @@ impl ReadonlyRepository {
         }
     }
 
+    fn own(&self, select: SelectStatement) -> Result<SelectStatement> {
+        match select.table.is_empty() {
+            true => Ok(select),
+            false => self.mapped_select(&select),
+        }
+    }
+
     fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(SelectStatement, Vec<Parameter>)> {
         match self.store_where(where_clause, false)? {
-            Some(stored) => Ok((self.statements.select(Some(&stored)), stored.parameters())),
+            Some(stored) => Ok((
+                self.own(self.statements.select(Some(&stored)))?,
+                stored.parameters(),
+            )),
             None => Ok((
-                self.statements.select(Some(where_clause)),
+                self.own(self.statements.select(Some(where_clause)))?,
                 where_clause.parameters(),
             )),
         }

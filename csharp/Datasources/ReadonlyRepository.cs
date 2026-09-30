@@ -157,7 +157,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
 
     private async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
-        var reader = await Command().ExecuteReader(query ?? Statements.Select(), parameters);
+        var reader = await Command().ExecuteReader(query ?? Own(Statements.Select()), parameters);
         try
         {
             while (await reader.Next())
@@ -206,6 +206,9 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         await foreach (var (item, _) in pairs)
             yield return item;
     }
+
+    private IStatement Own(ISelectStatement select) =>
+        select is SelectStatement typed ? Mapped(typed)! : select;
 
     private ISelectStatement Compiled(IWhere where) =>
         statements is { } sql ? sql.Select(where) : new SelectStatement(where.GetText(), where);

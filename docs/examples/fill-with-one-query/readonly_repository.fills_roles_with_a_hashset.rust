@@ -27,7 +27,7 @@ role_options.column_mappings = Box::new(DictionaryMapper::new([
     ("UserId".to_string(), "user_id".to_string()),
     ("Name".to_string(), "name".to_string()),
 ]));
-role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
+role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |statement| statement)));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
