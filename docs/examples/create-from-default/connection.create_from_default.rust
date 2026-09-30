@@ -1,2 +1,6 @@
-let ds = default().expect("default");
+let ds = {
+    let _guard = super::env_lock();
+    clear_env();
+    default().expect("default")
+};
 let connection = ds.create_connection().await.expect("connection");

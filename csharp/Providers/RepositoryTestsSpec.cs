@@ -194,7 +194,7 @@ public static class RepositoryTestsSpec
                 name => quote(type.CRUDMapper?.Entity ?? name),
                 name => name),
             RowsMapper = MappingsMapper<T>(type.Mappings),
-            Query = Suffix<ISelectStatement>(
+            Select = Suffix<ISelectStatement>(
                 (text, query) => new SelectStatement(text, query.Where),
                 type.CRUDMapper?.QuerySuffix),
             Insert = Suffix<IInsertStatement>(

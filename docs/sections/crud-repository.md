@@ -1,6 +1,6 @@
 # CRUD repository
 
-[Readonly repository](./readonly-repository.md) plus `create`, `update`, and `delete`. SQL providers typically build a table `CRUDRepository` from `RepositoryBuilder` and a [RowTypeConverter](./row-type-converter.md).
+Builds on the [readonly repository](./readonly-repository.md) and adds create, update, and delete. The object needs a unique id in one or more fields. Custom property names use the repository mappers.
 
 Read is convert, then map. Writes reverse-map, then reverse-convert.
 
@@ -952,14 +952,14 @@ See [Bulk repository](./bulk-repository.md) for list writes.
 
 ## Examples
 
-### User from the type
+### Simple CRUD
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#WritesUserFromTheType
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
+```rust rust/providers/sqlite/tests/readonly_repository.rs#writes_user_from_the_type
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#writes-a-user-from-the-type
 ```
@@ -1005,9 +1005,85 @@ no row
 ```
 :::
 
-### Users view with enrichment and a version
+### Enriched CRUD
 
-`UsersView` maps onto `user`. `UserTypeId` is written to `user_type_id`. `UserType` is the enriched name from `user_type` and is not a column. `Roles` is a `many` list from `user_role`. Create writes the generated id back onto `Key`. `Update` passes a where on `Key` and `Version`, so a stale version changes no row. Delete removes the user and its roles.
+`AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#CreateUpdateAndDeleteSyncsLinkRows
+```
+```rust rust/datasources/tests/user_view.rs#create_update_and_delete_syncs_link_rows
+```
+```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#creates-updates-and-deletes-through-link-rows
+```
+
+```output [Created]
+{
+  UserType: 'admin',
+  Roles: ['admin', 'editor'],
+  Groups: ['engineering']
+}
+```
+
+```output [Updated]
+{
+  Roles: ['editor'],
+  Groups: ['engineering', 'ops']
+}
+```
+
+```output [After delete]
+no user
+roles and groups remain
+```
+:::
+
+### Multi-tenant
+
+`account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. {{ReadSingleById|readSingleById|read_single_by_id}}, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUpdatesAndDeletesByTenantAndId
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#reads_updates_and_deletes_by_tenant_and_id
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#reads-updates-and-deletes-by-tenant-and-id
+```
+
+```output [Tenant 1]
+ada-v2
+```
+
+```output [Tenant 2]
+grace
+```
+:::
+
+### Enriched contacts write
+
+{{AddEnriched|addEnriched|add_enriched}} fills the contact type and source names, and writes the address and phone lists with the contact.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ContactsRepositoryTests.cs#WritesEnrichedContact
+```
+```rust rust/providers/sqlite/tests/contacts.rs#writes_enriched_contact
+```
+```typescript typescript/providers/sqlite/tests/contacts.repository.integration.test.ts#writes-enriched-contact
+```
+
+```output [Created]
+{
+  first_name: 'Extra',
+  contact_type_name: 'Person',
+  addresses: ['9 Extra'],
+  phones: ['555-extra']
+}
+```
+:::
+
+### Type mapping
+
+`UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#UpdatesUsersViewWhenTheVersionMatches
@@ -1047,67 +1123,5 @@ no row
 
 ```output [After delete]
 no row
-```
-:::
-
-### Users with linked roles and groups
-
-`AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
-
-::: example
-```csharp csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#CreateUpdateAndDeleteSyncsLinkRows
-```
-```rust rust/datasources/tests/user_view.rs#create_update_and_delete_syncs_link_rows
-```
-```typescript typescript/datasources/src/UserViewCRUDRepository.test.ts#creates-updates-and-deletes-through-link-rows
-```
-
-```output [Created]
-{
-  UserType: 'admin',
-  Roles: ['admin', 'editor'],
-  Groups: ['engineering']
-}
-```
-
-```output [Updated]
-{
-  Roles: ['editor'],
-  Groups: ['engineering', 'ops']
-}
-```
-
-```output [After delete]
-no user
-roles and groups remain
-```
-:::
-
-### Null datetime and version
-
-Create and update leave a null `created` and `version` out of the statement. SQLite fills `2020-01-01T00:00:00.000Z` and `X'0102'`. An update of `name` leaves those defaults in place. A later create that sets both stores those values.
-
-::: example
-```csharp csharp/Providers/Sqlite.Tests/NullWriteTests.cs#OmitsNullDatetimeAndVersion
-```
-```rust rust/providers/sqlite/tests/null_write.rs#omits_null_datetime_and_version
-```
-```typescript typescript/providers/sqlite/tests/null-write.repository.integration.test.ts#omits-null-datetime-and-version
-```
-
-```output [Stored default]
-{
-  name: 'ada-v2',
-  created: '2020-01-01T00:00:00.000Z',
-  version: '0102'
-}
-```
-
-```output [Explicit values]
-{
-  name: 'grace',
-  created: '2024-06-01T00:00:00.000Z',
-  version: '0909'
-}
 ```
 :::

@@ -1,0 +1,12 @@
+const connection = await setup();
+const parentsRepo = new BulkCRUDRepository(Parent, connection);
+const childrenRepo = new BulkCRUDRepository(Child, connection);
+const response = await relate(parentsRepo, childrenRepo).createBulk([
+  Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
+  Object.assign(new Parent(), {
+    children: [Object.assign(new Child(), { label: "b" }), Object.assign(new Child(), { label: "c" })],
+  }),
+]);
+const parents = await collectAsync(parentsRepo.read());
+const children = await collectAsync(childrenRepo.read());
+expect(parents).toHaveLength(2);

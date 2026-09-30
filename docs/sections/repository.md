@@ -1,8 +1,8 @@
 # Repositories
 
-Typed item marker and instance registry. {{Type|type|entity_type}} is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name. Register a repository, then create by that type.
+Repositories map datasource commands to a domain object. They mediate reading and modifying objects in a datasource, and they can enrich those objects into view objects with extra properties. That abstraction removes boilerplate datasource code.
 
-Registering CRUD also registers readonly. Registering readonly-only makes CRUD `create` throw.
+{{Type|type|entity_type}} is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name.
 
 ## Classes
 
@@ -24,134 +24,6 @@ Item constructor the repository exposes.
 readonly type: Constructable<T>
 ```
 
-#### IRepositoryFactory
-
-```typescript
-interface IRepositoryFactory
-```
-
-**Methods**
-
-##### register(repository)
-
-Registers a readonly repository by [type](#irepository-type).
-
-```typescript
-register(repository: IRepository): void
-```
-
-- `repository` — [IRepository](#irepository) to look up by `type`
-
-##### create(type)
-
-Creates a readonly repository.
-
-```typescript
-create<T>(type: Constructable<T>): IReadonlyRepository<T>
-```
-
-- `type` — item constructor
-
-**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
-
-#### ICRUDRepositoryFactory
-
-```typescript
-interface ICRUDRepositoryFactory
-```
-
-**Methods**
-
-##### register(repository)
-
-Registers a CRUD repository by [type](#irepository-type).
-
-```typescript
-register(repository: IRepository): void
-```
-
-- `repository` — [IRepository](#irepository) to look up by `type`
-
-##### create(type)
-
-Creates a CRUD repository.
-
-```typescript
-create<T>(type: Constructable<T>): ICRUDRepository<T>
-```
-
-- `type` — item constructor
-
-**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
-
-#### RepositoryFactory
-
-```typescript
-class RepositoryFactory implements ICRUDRepositoryFactory
-```
-
-**Properties**
-
-##### asReadonly
-
-Readonly factory view. `register` / `create` call [IRepositoryFactory](#irepositoryfactory).
-
-```typescript
-readonly asReadonly: IRepositoryFactory
-```
-
-**Methods**
-
-##### register(repository)
-
-Registers CRUD and readonly for the same repository.
-
-```typescript
-register(repository: IRepository): void
-```
-
-- `repository` — [IRepository](#irepository) to look up by `type`
-
-##### create(type)
-
-Creates a CRUD repository.
-
-```typescript
-create<T>(type: Constructable<T>): ICRUDRepository<T>
-```
-
-- `type` — item constructor
-
-**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
-
-#### RepositoryNotRegisteredError
-
-```typescript
-class RepositoryNotRegisteredError extends Error
-```
-
-**Constructor**
-
-##### RepositoryNotRegisteredError(entityTypeName)
-
-Thrown when [create](#repositoryfactory-create-type) cannot find a repository.
-
-```typescript
-constructor(entityTypeName: string)
-```
-
-- `entityTypeName` — missing entity type name
-
-**Properties**
-
-##### entityTypeName
-
-Missing entity type name.
-
-```typescript
-readonly entityTypeName: string
-```
-
 ### csharp
 #### IRepository
 
@@ -167,120 +39,6 @@ Item CLR type the repository exposes.
 
 ```csharp
 Type Type { get; }
-```
-
-#### IRepositoryFactory
-
-```csharp
-public interface IRepositoryFactory
-```
-
-**Methods**
-
-##### Register(repository)
-
-Registers a readonly repository by [Type](#irepository-type).
-
-```csharp
-void Register(IRepository repository)
-```
-
-- `repository` — [IRepository](#irepository) to look up by `Type`
-
-##### Create()
-
-Creates a readonly repository by `T`.
-
-```csharp
-IReadonlyRepository<T> Create<T>()
-```
-
-- `connection` — optional open [IConnection](./connection.md)
-
-**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
-
-#### ICRUDRepositoryFactory
-
-```csharp
-public interface ICRUDRepositoryFactory
-```
-
-**Methods**
-
-##### Register(repository)
-
-Registers a CRUD repository by [Type](#irepository-type).
-
-```csharp
-void Register(IRepository repository)
-```
-
-- `repository` — [IRepository](#irepository) to look up by `Type`
-
-##### Create()
-
-Creates a CRUD repository by `T`.
-
-```csharp
-ICRUDRepository<T> Create<T>()
-```
-
-**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
-
-#### RepositoryFactory
-
-```csharp
-public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFactory
-```
-
-**Methods**
-
-##### Register(repository)
-
-Registers CRUD and readonly for the same repository.
-
-```csharp
-public void Register(IRepository repository)
-```
-
-- `repository` — [IRepository](#irepository) to look up by `Type`
-
-##### Create()
-
-Creates a CRUD repository by `T`.
-
-```csharp
-public ICRUDRepository<T> Create<T>()
-```
-
-**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
-
-#### RepositoryNotRegisteredException
-
-```csharp
-public sealed class RepositoryNotRegisteredException : DatasourceException
-```
-
-**Constructor**
-
-##### RepositoryNotRegisteredException(entityTypeName)
-
-Thrown when [Create](#repositoryfactory-create) cannot find a repository.
-
-```csharp
-public RepositoryNotRegisteredException(string entityTypeName)
-```
-
-- `entityTypeName` — missing entity type name
-
-**Properties**
-
-##### EntityTypeName
-
-Missing entity type name.
-
-```csharp
-string EntityTypeName { get; }
 ```
 
 ### rust
@@ -321,129 +79,63 @@ pub fn as_readonly(repo: Arc<dyn ICRUDRepository>) -> Arc<dyn IReadonlyRepositor
 - `repo` — [ICRUDRepository](./crud-repository.md)
 
 **Returns** `Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>`
-
-#### ReadonlyRepositoryFactory
-
-```rust
-pub trait ReadonlyRepositoryFactory
-```
-
-**Methods**
-
-##### register(repository)
-
-Registers a readonly repository by [entity_type](#irepository-entity_type).
-
-```rust
-fn register(&self, repository: Arc<dyn IReadonlyRepository>)
-```
-
-- `repository` — [IReadonlyRepository](./readonly-repository.md) to look up by `entity_type`
-
-##### create()
-
-Creates a readonly repository by `T`.
-
-```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>
-```
-
-**Returns** `Result<Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>>`
-
-#### CRUDRepositoryFactory
-
-```rust
-pub trait CRUDRepositoryFactory
-```
-
-**Methods**
-
-##### register(repository)
-
-Registers a CRUD repository by [entity_type](#irepository-entity_type).
-
-```rust
-fn register(&self, repository: Arc<dyn ICRUDRepository>)
-```
-
-- `repository` — [ICRUDRepository](./crud-repository.md) to look up by `entity_type`
-
-##### create()
-
-Creates a CRUD repository by `T`.
-
-```rust
-fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
-```
-
-**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
-
-#### RepositoryFactory
-
-```rust
-pub struct RepositoryFactory
-```
-
-**Constructor**
-
-##### new()
-
-Empty registry.
-
-```rust
-pub fn new() -> Self
-```
-
-**Returns** [RepositoryFactory](#repositoryfactory)
-
-**Methods**
-
-##### register(repository)
-
-Registers CRUD and readonly for the same repository.
-
-```rust
-pub fn register(&self, repository: Arc<dyn ICRUDRepository>)
-```
-
-- `repository` — [ICRUDRepository](./crud-repository.md) to look up by `entity_type`
-
-##### create()
-
-Creates a CRUD repository by `T`.
-
-```rust
-pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
-```
-
-**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
 :::
 
 ## Remarks
 
 SQL provider default repositories report the row or dictionary type (`Row`, `Dictionary<string, Value>`, or `Object`), not a closed entity generic.
 
-::: prose
-### typescript
-A missing repository throws [RepositoryNotRegisteredError](#repositorynotregisterederror).
-### csharp
-A missing repository throws [RepositoryNotRegisteredException](#repositorynotregisteredexception).
-### rust
-A missing repository throws `DatasourceError`.
-:::
-
-See [Datasource](./datasource.md) for {{CreateRepository|createRepository|create_repository}}.
-
 ## Examples
 
-### Register and create
+### Simple readonly
+
+{{ReadSingle|readSingle|read_single}} returns the first matching user. {{Read|read|read}} yields every user that matches the where.
 
 ::: example
-```csharp csharp/Datasources.Tests/RepositoryFactoryTests.cs#RegistersAndCreates
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUsersByIdAndByUsernameAndEnabled
 ```
-```rust rust/datasources/src/repository_factory.rs#registers_and_creates
+```rust rust/providers/sqlite/tests/readonly_repository.rs#reads_users_by_id_and_by_username_and_enabled
 ```
-```typescript typescript/datasources/src/RepositoryFactory.test.ts#registers-and-creates
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#reads-users-by-id-and-by-username-and-enabled
+```
+:::
+
+### CRUD
+
+Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#WritesUserFromTheType
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#writes_user_from_the_type
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#writes-a-user-from-the-type
+```
+:::
+
+### Enriched CRUD
+
+`UsersView` maps onto `user`. Create writes the user and its roles. Read fills `UserType` and `Roles`.
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#UpdatesUsersViewWhenTheVersionMatches
+```
+```rust rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
+```
+```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#updates-a-user-view-when-the-version-matches
+```
+:::
+
+### Bulk
+
+Each parent is created with its nested children. Responses sum `rowsAffected`.
+
+::: example
+```csharp csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#CreateWritesParentsAndChildren
+```
+```rust rust/datasources/src/tests/mod.rs#table_repository_maps_flat_row_into_contacts
+```
+```typescript typescript/datasources/src/BulkCRUDRepository.test.ts#creates-parents-and-children
 ```
 :::
 
@@ -452,3 +144,4 @@ See [Datasource](./datasource.md) for {{CreateRepository|createRepository|create
 - [Readonly repository](./readonly-repository.md)
 - [CRUD repository](./crud-repository.md)
 - [Bulk repository](./bulk-repository.md)
+- [Repository factories](./repository-factories.md)

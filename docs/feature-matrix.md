@@ -19,6 +19,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | [Readonly Repository](./sections/readonly-repository.md) | ✅ | ✅ | ✅ |
 | [CRUD Repository](./sections/crud-repository.md) | ✅ | ✅ | ✅ |
 | [Bulk Repository](./sections/bulk-repository.md) | ✅ | ✅ | ✅ |
+| [Repository Factories](./sections/repository-factories.md) | ✅ | ✅ | ✅ |
 
 ## Providers
 

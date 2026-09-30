@@ -241,7 +241,7 @@ public class UsersViewRoleTests
                 ["UserId"] = "user_id",
                 ["Name"] = "name",
             }),
-            Query = new TransformMapper<ISelectStatement, ISelectStatement>(
+            Select = new TransformMapper<ISelectStatement, ISelectStatement>(
                 query => new SelectStatement(new()
                 {
                     Table = "user_roles",
@@ -407,6 +407,59 @@ public class UserCrudTests
         Assert.Equal("ada", Assert.Single(matches).username);
         Assert.Equal("ada-v2", renamed!.username);
         Assert.Null(gone);
+    }
+
+    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    {
+        var connection = await ds.CreateConnection();
+        await connection.Open();
+        var command = connection.CreateCommand();
+        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
+            await command.Execute(statement);
+        foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            await command.Execute(new Native(statement));
+        return connection;
+    }
+}
+
+public class MultiTenantAccountTests
+{
+    sealed class Account
+    {
+        public int tenant_id { get; set; }
+        public int id { get; set; }
+        public string name { get; set; } = "";
+    }
+
+    [Fact]
+    public async Task ReadsUpdatesAndDeletesByTenantAndId()
+    {
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds, "multi-tenant", """
+            INSERT INTO account (tenant_id, id, name) VALUES
+                (1, 1, 'ada'),
+                (2, 1, 'grace');
+            """);
+        var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
+        {
+            Entity = "account",
+            Ids = ["tenant_id", "id"],
+        });
+        var ada = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+        ada!.name = "ada-v2";
+        var updated = await accountsRepo.Update(ada);
+        var renamed = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+        var removed = await accountsRepo.Delete(ada);
+        var gone = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+        var grace = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 2, ["id"] = 1 });
+
+        Assert.Equal(1, updated.RowsAffected);
+        Assert.Equal(1, removed.RowsAffected);
+        Assert.Equal("ada-v2", renamed!.name);
+        Assert.Equal(1, renamed.tenant_id);
+        Assert.Null(gone);
+        Assert.Equal("grace", grace!.name);
+        Assert.Equal(2, grace.tenant_id);
     }
 
     static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")

@@ -158,7 +158,7 @@ const crudFieldsOf = (
       (name: string) => name,
     ),
     rowsMapper: rows,
-    query: suffix((text, query) => new SelectStatement(text, query.where), mapper.querySuffix),
+    select: suffix((text, query) => new SelectStatement(text, query.where), mapper.querySuffix),
     insert: suffix((text) => new InsertStatement(text), mapper.writeSuffix),
     update: suffix(
       (text, update) => new UpdateStatement(text, update.where),

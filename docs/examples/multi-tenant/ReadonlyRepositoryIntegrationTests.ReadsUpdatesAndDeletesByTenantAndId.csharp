@@ -1,0 +1,18 @@
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var connection = await Open(ds, "multi-tenant", """
+    INSERT INTO account (tenant_id, id, name) VALUES
+        (1, 1, 'ada'),
+        (2, 1, 'grace');
+    """);
+var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
+{
+    Entity = "account",
+    Ids = ["tenant_id", "id"],
+});
+var ada = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+ada!.name = "ada-v2";
+var updated = await accountsRepo.Update(ada);
+var renamed = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+var removed = await accountsRepo.Delete(ada);
+var gone = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+var grace = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 2, ["id"] = 1 });

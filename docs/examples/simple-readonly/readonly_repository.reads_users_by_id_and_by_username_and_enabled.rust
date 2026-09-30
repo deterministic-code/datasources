@@ -20,11 +20,7 @@ let by_id = repo
     .unwrap();
 let disabled = repo
     .read(
-        Some(&Where::binary("username", eq, "grace").and(
-            "is_enabled",
-            eq,
-            0_i64,
-        )),
+        Some(&Where::binary("username", eq, "grace").and("is_enabled", eq, 0_i64)),
         None,
     )
     .await

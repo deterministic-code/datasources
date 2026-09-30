@@ -90,7 +90,7 @@ describe("users view roles", () => {
         ["UserId", "user_id"],
         ["Name", "name"],
       ]),
-      query: new TransformMapper(
+      select: new TransformMapper(
         (query) =>
           new SelectStatement({
             table: "user_roles",

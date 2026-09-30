@@ -1,3 +1,0 @@
-var connection = await Open("null-write-item");
-var repo = new CRUDRepository<Item>(connection, new CRUDRepositoryOptions<Item> { Entity = "item" });
-var omitted = await repo.Create(new Item { name = "ada" });

@@ -1,4 +1,3 @@
 register("sqlite", MockDriver::arc());
 std::env::set_var("PROVIDER", "sqlite");
-std::env::set_var("DATASOURCE_URL", "sqlite:///:memory:");
 let ds = default().expect("default");

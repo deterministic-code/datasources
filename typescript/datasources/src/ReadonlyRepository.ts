@@ -171,7 +171,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   }
 
   private async *readSources(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Cells> {
-    const reader = await executeReader(this.command(), query ?? this.statements!.query(), parameters);
+    const reader = await executeReader(this.command(), query ?? this.statements!.select(), parameters);
     try {
       while (await reader.next()) {
         yield this.renamed(
@@ -218,10 +218,10 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
 
   private readQuery = (query?: ISelectStatement | IWhere): ISelectStatement | undefined =>
     !query
-      ? this.statements?.query()
+      ? this.statements?.select()
       : "where" in query
         ? query
         : this.statements
-          ? this.statements.query(this.stored(query))
+          ? this.statements.select(this.stored(query))
           : new SelectStatement(query.getText(), query);
 }

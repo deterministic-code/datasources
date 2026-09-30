@@ -41,7 +41,7 @@ export const parts = <T>(
     rowConverter,
     rowsMapper,
     columnMappings,
-    statements: statementsOf(entity, columns, options.query, crud?.insert, crud?.update, crud?.delete),
+    statements: statementsOf(entity, columns, options.select, crud?.insert, crud?.update, crud?.delete),
     readColumns: columns,
     ids,
     type: options.type ?? (Object as never as Constructable<T>),

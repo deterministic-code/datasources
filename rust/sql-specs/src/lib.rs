@@ -467,7 +467,7 @@ fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &Rep
     }
     if let Some(suffix) = &cfg.query_suffix {
         let suffix = suffix.clone();
-        options.query = Some(Arc::new(TransformMapper::new(
+        options.select = Some(Arc::new(TransformMapper::new(
             move |text| format!("{text}{suffix}"),
             |text| text,
         )));

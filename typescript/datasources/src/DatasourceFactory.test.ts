@@ -13,7 +13,7 @@ import {
 
 class SelectText extends ReadonlyRepository<object> {
   static of(repo: object): string | undefined {
-    return (repo as SelectText).statements?.query().getText();
+    return (repo as SelectText).statements?.select().getText();
   }
 }
 

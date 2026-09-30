@@ -32,21 +32,24 @@ type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.column_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-let mut users_repo = ReadonlyRepository::new(
-    connection.clone(),
-    users_options.read,
-)
-.unwrap();
+let mut users_repo =
+    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
 let types =
     ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
-users_repo.add_enriched(datasources::Enrichment::new("UserType", "UserTypeId", "Id", Some("Name".into()), false), types, None);
+users_repo.add_enriched(
+    datasources::Enrichment::new(
+        "UserType",
+        "UserTypeId",
+        "Id",
+        Some("Name".into()),
+        false,
+    ),
+    types,
+    None,
+);
 let account = users_repo
     .read_single(
-        Some(&Where::binary(
-            "Key",
-            eq,
-            Uuid::parse_str(ADA).unwrap(),
-        )),
+        Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
         None,
     )
     .await

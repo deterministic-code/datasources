@@ -386,7 +386,7 @@ mod users_view_roles {
             ("UserId".to_string(), "user_id".to_string()),
             ("Name".to_string(), "name".to_string()),
         ]));
-        role_options.query = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
+        role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |sql| sql)));
         let mut users_repo =
             ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
@@ -722,5 +722,62 @@ mod user_crud {
         assert_eq!(stale.rows_affected, 0);
         assert!(gone.is_none());
         assert!(roles.is_empty());
+    }
+
+    struct Account;
+
+    impl ConvertSchema for Account {
+        fn schema() -> Vec<(&'static str, &'static str)> {
+            vec![
+                ("tenant_id", "INTEGER"),
+                ("id", "INTEGER"),
+                ("name", "TEXT"),
+            ]
+        }
+    }
+
+    #[tokio::test]
+    async fn reads_updates_and_deletes_by_tenant_and_id() {
+        let built = datasource();
+        let ds: &dyn Datasource = &*built;
+        let connection = open(
+            ds,
+            "multi-tenant",
+            "
+            INSERT INTO account (tenant_id, id, name) VALUES
+                (1, 1, 'ada'),
+                (2, 1, 'grace');
+            ",
+        )
+        .await;
+        let mut options = create_crud_repository_options::<Account>();
+        options.entity = "account".into();
+        options.ids = vec!["tenant_id".into(), "id".into()];
+        options.row_converter = Some(RowTypeConverter::of::<Account>());
+        let accounts_repo = CRUDRepository::new(connection, options).unwrap();
+        let mut key = datasources::Row::new();
+        key.insert("tenant_id".into(), Value::Int(1));
+        key.insert("id".into(), Value::Int(1));
+        let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
+        ada.insert("name".into(), Value::from("ada-v2"));
+        let updated = accounts_repo.update(&ada, None).await.unwrap();
+        let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
+        let removed = accounts_repo.delete(&ada, None).await.unwrap();
+        let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
+        let mut other = datasources::Row::new();
+        other.insert("tenant_id".into(), Value::Int(2));
+        other.insert("id".into(), Value::Int(1));
+        let grace = accounts_repo
+            .read_single_by_id(&other)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.rows_affected, 1);
+        assert_eq!(removed.rows_affected, 1);
+        assert_eq!(renamed.get("name"), Some(&Value::from("ada-v2")));
+        assert_eq!(renamed.get("tenant_id"), Some(&Value::Int(1)));
+        assert!(gone.is_none());
+        assert_eq!(grace.get("name"), Some(&Value::from("grace")));
+        assert_eq!(grace.get("tenant_id"), Some(&Value::Int(2)));
     }
 }

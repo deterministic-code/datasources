@@ -116,6 +116,15 @@ schemas:
       constraints:
         - { kind: primaryKey, name: pk_user_groups, columns: [user_id, group_id] }
 
+  multi-tenant:
+    - name: account
+      columns:
+        - { name: tenant_id, type: int, notNull: true }
+        - { name: id, type: int, notNull: true }
+        - { name: name, type: string, notNull: true }
+      constraints:
+        - { kind: primaryKey, name: pk_account, columns: [tenant_id, id] }
+
   null-write-item:
     - name: item
       columns:

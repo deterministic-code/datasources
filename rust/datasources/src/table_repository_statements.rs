@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub struct RepositoryStatements {
     table: String,
     columns: Vec<String>,
-    query: Option<Arc<TransformMapper<String, String>>>,
+    select: Option<Arc<TransformMapper<String, String>>>,
     insert: Option<Arc<TransformMapper<String, String>>>,
     update: Option<Arc<TransformMapper<String, String>>>,
     delete: Option<Arc<TransformMapper<String, String>>>,
@@ -26,7 +26,7 @@ impl RepositoryStatements {
     pub fn with_mappers(
         table: impl Into<String>,
         columns: Vec<String>,
-        query: Option<Arc<TransformMapper<String, String>>>,
+        select: Option<Arc<TransformMapper<String, String>>>,
         insert: Option<Arc<TransformMapper<String, String>>>,
         update: Option<Arc<TransformMapper<String, String>>>,
         delete: Option<Arc<TransformMapper<String, String>>>,
@@ -34,7 +34,7 @@ impl RepositoryStatements {
         Self {
             table: table.into(),
             columns,
-            query,
+            select,
             insert,
             update,
             delete,
@@ -45,13 +45,13 @@ impl RepositoryStatements {
         &self.columns
     }
 
-    pub fn query(&self, where_clause: Option<&dyn IWhere>) -> SelectStatement {
+    pub fn select(&self, where_clause: Option<&dyn IWhere>) -> SelectStatement {
         let refs: Vec<&str> = self.columns.iter().map(String::as_str).collect();
         let built = SelectStatement::new(SelectStatementOptions {
             where_clause,
             ..SelectStatementOptions::new(&self.table, &refs)
         });
-        let text = map_sql(&self.query, built.get_text());
+        let text = map_sql(&self.select, built.get_text());
         match where_clause.and_then(|clause| clause.as_any().downcast_ref::<crate::Where>()) {
             Some(clause) => {
                 let mut statement = SelectStatement::with_where(text, clause.clone());

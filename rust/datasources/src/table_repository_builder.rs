@@ -49,7 +49,7 @@ fn assemble(
         entity,
         entity_mapper,
         column_mappings,
-        query,
+        select,
         rows_mapper,
         row_converter,
         row_type_converters,
@@ -73,7 +73,7 @@ fn assemble(
         statements: RepositoryStatements::with_mappers(
             Mapper::map(&entity_mapper, entity),
             names,
-            query,
+            select,
             insert,
             update,
             delete,

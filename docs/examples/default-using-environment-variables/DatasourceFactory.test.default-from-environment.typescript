@@ -1,4 +1,3 @@
 DatasourceFactory.register("sqlite", new MockDriver());
 process.env.PROVIDER = "sqlite";
-process.env.DATASOURCE_URL = "sqlite:///:memory:";
 const ds = Datasource.default;

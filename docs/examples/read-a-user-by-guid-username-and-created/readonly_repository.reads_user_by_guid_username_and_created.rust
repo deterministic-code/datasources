@@ -25,11 +25,7 @@ let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(o
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
     .read_single(
-        Some(&Where::binary(
-            "Key",
-            eq,
-            Uuid::parse_str(ADA).unwrap(),
-        )),
+        Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
         None,
     )
     .await

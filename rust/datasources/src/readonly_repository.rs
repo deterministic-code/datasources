@@ -153,7 +153,7 @@ impl ReadonlyRepository {
             };
             (statement, params)
         } else {
-            (self.statements.query(None), Vec::new())
+            (self.statements.select(None), Vec::new())
         }
     }
 
@@ -309,9 +309,9 @@ impl ReadonlyRepository {
 
     fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(SelectStatement, Vec<Parameter>)> {
         match self.store_where(where_clause, false)? {
-            Some(stored) => Ok((self.statements.query(Some(&stored)), stored.parameters())),
+            Some(stored) => Ok((self.statements.select(Some(&stored)), stored.parameters())),
             None => Ok((
-                self.statements.query(Some(where_clause)),
+                self.statements.select(Some(where_clause)),
                 where_clause.parameters(),
             )),
         }

@@ -404,8 +404,8 @@ describe("CRUDRepository", () => {
     expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
     expect(RepositoryBuilder.from(connection, fromId).parts().connection).toBe(connection);
     expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
-    expect(parts(connection, {}).statements.query().getText()).toBe("SELECT * FROM ");
-    expect(parts(connection, { type: asType(Item) }).statements.query().getText()).toBe(
+    expect(parts(connection, {}).statements.select().getText()).toBe("SELECT * FROM ");
+    expect(parts(connection, { type: asType(Item) }).statements.select().getText()).toBe(
       "SELECT id, name FROM Item",
     );
   });
@@ -422,7 +422,7 @@ describe("CRUDRepository", () => {
     const { repo, command } = create({
       entityMapper: entity,
       columnMappings,
-      query: new TransformMapper(
+      select: new TransformMapper(
         (query) => new SelectStatement(`${query.getText()} LIMIT 1`, query.where),
         (query) => query,
       ),
