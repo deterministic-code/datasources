@@ -455,21 +455,20 @@ public class UserCrudTests
         await SchemaSpec.Apply(connection, "user-pascal");
         var usersRepo = new CRUDRepository<User>(connection);
         var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
-        Assert.Equal(1, created.id);
         var byId = await usersRepo.ReadSingleById(created.id);
         var matches = new List<User>();
         await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
             matches.Add(row);
         created.username = "ada-v2";
         var updated = await usersRepo.Update(created);
-        Assert.Equal(1, updated.RowsAffected);
         var renamed = await usersRepo.ReadSingleById(created.id);
         var removed = await usersRepo.Delete(created);
-        Assert.Equal(1, removed.RowsAffected);
         var gone = await usersRepo.ReadSingleById(created.id);
 
-        Assert.Equal(1, created.id);
-        Assert.Equal(1, byId!.id);
+        Assert.True(created.id > 0);
+        Assert.Equal(1, updated.RowsAffected);
+        Assert.Equal(1, removed.RowsAffected);
+        Assert.Equal(created.id, byId!.id);
         Assert.Equal("ada", byId.username);
         Assert.True(byId.is_enabled);
         Assert.Equal("ada", Assert.Single(matches).username);

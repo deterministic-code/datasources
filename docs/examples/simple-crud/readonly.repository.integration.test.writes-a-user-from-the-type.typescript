@@ -1,3 +1,12 @@
 const ds = Datasource.default;
 const usersRepo = new CRUDRepository(User, connection);
 const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
+const byId = await usersRepo.readSingleById(created.id);
+const matches: User[] = [];
+for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
+  matches.push(row);
+created.username = "ada-v2";
+const updated = await usersRepo.update(created);
+const renamed = await usersRepo.readSingleById(created.id);
+const removed = await usersRepo.delete(created);
+const gone = await usersRepo.readSingleById(created.id);

@@ -8,6 +8,7 @@ import type { IConnection } from "../../IConnection.ts";
 import type { Scalar } from "../../builders/Scalar.ts";
 import { Address } from "./Address.ts";
 import { AddressType } from "./AddressType.ts";
+import { columns, contactEntity, snake } from "./contactColumns.ts";
 import { Contact } from "./Contact.ts";
 import { ContactSource } from "./ContactSource.ts";
 import { ContactType } from "./ContactType.ts";
@@ -30,9 +31,24 @@ describe("ContactsService", () => {
     const phoneTypes = await setup([work]);
     const phoneTypesRepo = createLookupRepo(PhoneType, phoneTypes);
     const connection = await setup();
-    const contactsRepo = new CRUDRepository(Contact, connection);
-    const addressesRepo = new CRUDRepository(Address, connection);
-    const phonesRepo = new CRUDRepository(Phone, connection);
+    const contactsRepo = new CRUDRepository(connection, {
+      type: Contact,
+      entityMapper: contactEntity,
+      columnMappings: columns,
+      ids: ["Id"],
+    });
+    const addressesRepo = new CRUDRepository(connection, {
+      type: Address,
+      entityMapper: snake,
+      columnMappings: columns,
+      ids: ["Id"],
+    });
+    const phonesRepo = new CRUDRepository(connection, {
+      type: Phone,
+      entityMapper: snake,
+      columnMappings: columns,
+      ids: ["Id"],
+    });
     const service = ContactsService.open(
       contactsRepo,
       typesRepo,
@@ -43,47 +59,50 @@ describe("ContactsService", () => {
       phonesRepo,
     );
     const other = await service.create(Object.assign(new Contact(), {
-      first_name: "Other",
-      contact_type_id: person.id,
-      contact_source_id: source.id,
+      FirstName: "Other",
+      ContactType: Object.assign(new ContactType(), { Id: person.id }),
+      ContactSource: Object.assign(new ContactSource(), { Id: source.id }),
     }));
-    expect(other.id).toBeGreaterThan(0);
+    expect(other.Id).toBeGreaterThan(0);
     const stray = await addressesRepo.create(Object.assign(new Address(), {
-      contact_id: other.id,
-      line1: "other",
-      city: "x",
-      address_type_id: home.id,
+      Contact: Object.assign(new Contact(), { Id: other.Id }),
+      Line1: "other",
+      City: "x",
+      AddressType: Object.assign(new AddressType(), { Id: home.id }),
     }));
-    expect(stray.id).toBeGreaterThan(0);
+    expect(stray.Id).toBeGreaterThan(0);
     const created = await service.create(Object.assign(new Contact(), {
-      contact_type_id: person.id,
-      contact_source_id: source.id,
-      first_name: "Ada",
-      addresses: [Object.assign(new Address(), {
-        line1: "1 Main",
-        city: "Paris",
-        address_type_id: home.id,
+      ContactType: Object.assign(new ContactType(), { Id: person.id }),
+      ContactSource: Object.assign(new ContactSource(), { Id: source.id }),
+      FirstName: "Ada",
+      Addresses: [Object.assign(new Address(), {
+        Line1: "1 Main",
+        City: "Paris",
+        AddressType: Object.assign(new AddressType(), { Id: home.id }),
       })],
-      phones: [Object.assign(new Phone(), { number: "555", phone_type_id: work.id })],
+      Phones: [Object.assign(new Phone(), {
+        Number: "555",
+        PhoneType: Object.assign(new PhoneType(), { Id: work.id }),
+      })],
     }));
-    expect(created.id).toBeGreaterThan(0);
-    const contact = (await collectAsync(service.read())).find((item) => item.first_name === "Ada");
-    expect(contact?.id).toBe(created.id);
-    expect(contact?.id).not.toBe(other.id);
-    expect(contact?.contact_type_name).toBe("person");
-    expect(contact?.contact_source_name).toBe("import");
-    expect(contact?.addresses).toHaveLength(1);
-    expect(contact?.addresses[0]?.id).toBeGreaterThan(0);
-    expect(contact?.addresses[0]?.line1).toBe("1 Main");
-    expect(contact?.addresses[0]?.address_type_name).toBe("Home");
-    expect(contact?.phones[0]?.id).toBeGreaterThan(0);
-    expect(contact?.phones[0]?.number).toBe("555");
-    expect(contact?.phones[0]?.phone_type_name).toBe("Work");
+    expect(created.Id).toBeGreaterThan(0);
+    const contact = (await collectAsync(service.read())).find((item) => item.FirstName === "Ada");
+    expect(contact?.Id).toBe(created.Id);
+    expect(contact?.Id).not.toBe(other.Id);
+    expect(contact?.ContactType.Name).toBe("person");
+    expect(contact?.ContactSource.Name).toBe("import");
+    expect(contact?.Addresses).toHaveLength(1);
+    expect(contact?.Addresses[0]?.Id).toBeGreaterThan(0);
+    expect(contact?.Addresses[0]?.Line1).toBe("1 Main");
+    expect(contact?.Addresses[0]?.AddressType.Name).toBe("Home");
+    expect(contact?.Phones[0]?.Id).toBeGreaterThan(0);
+    expect(contact?.Phones[0]?.Number).toBe("555");
+    expect(contact?.Phones[0]?.PhoneType.Name).toBe("Work");
   });
 });
 
 const createLookupRepo = <T extends object>(type: Constructable<T>, connection: IConnection) =>
-  new ReadonlyRepository(type, connection);
+  new ReadonlyRepository(connection, { type, entityMapper: snake, columnMappings: columns });
 
 const setup = async (rows: Record<string, Scalar>[] = []): Promise<IConnection> => {
   const connection = new MemoryDriver().connection();

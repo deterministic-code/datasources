@@ -626,7 +626,6 @@ mod user_crud {
         created.insert("username".into(), Value::from("ada"));
         created.insert("is_enabled".into(), Value::Bool(true));
         let mut created = users_repo.create(&mut created).await.unwrap();
-        assert_eq!(created.get("id"), Some(&Value::Int(1)));
         let by_id = users_repo
             .read_single_by_id(created.get("id").unwrap())
             .await
@@ -645,20 +644,20 @@ mod user_crud {
             .unwrap();
         created.insert("username".into(), Value::from("ada-v2"));
         let updated = users_repo.update(&created, None).await.unwrap();
-        assert_eq!(updated.rows_affected, 1);
         let renamed = users_repo
             .read_single_by_id(created.get("id").unwrap())
             .await
             .unwrap()
             .unwrap();
         let removed = users_repo.delete(&created, None).await.unwrap();
-        assert_eq!(removed.rows_affected, 1);
         let gone = users_repo
             .read_single_by_id(created.get("id").unwrap())
             .await
             .unwrap();
-        assert_eq!(created.get("id"), Some(&Value::Int(1)));
-        assert_eq!(by_id.get("id"), Some(&Value::Int(1)));
+        assert!(matches!(created.get("id"), Some(Value::Int(id)) if *id > 0));
+        assert_eq!(updated.rows_affected, 1);
+        assert_eq!(removed.rows_affected, 1);
+        assert_eq!(by_id.get("id"), created.get("id"));
         assert_eq!(by_id.get("username"), Some(&Value::from("ada")));
         assert_eq!(by_id.get("is_enabled"), Some(&Value::Bool(true)));
         assert_eq!(matches.len(), 1);

@@ -32,14 +32,22 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
         foreach (var (key, value) in from)
         {
             var prop = typeof(T).GetProperty(key);
-            if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0
-                || !IsColumn(prop.PropertyType)) continue;
+            if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0) continue;
+            if (References.Contains(prop.Name))
+            {
+                SetReferenceId(target, prop, Converted(key, value, reverse: false));
+                continue;
+            }
+            if (!IsColumn(prop.PropertyType)) continue;
             var cell = Converted(key, value, reverse: false);
             var underlying = Nullable.GetUnderlyingType(prop.PropertyType);
             var type = underlying ?? prop.PropertyType;
             var raw = cell.ToObject();
-            if (raw is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(raw))
-                prop.SetValue(target, raw);
+            var fitted = raw is long number && type == typeof(int) && number is >= int.MinValue and <= int.MaxValue
+                ? (int)number
+                : raw;
+            if (fitted is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(fitted))
+                prop.SetValue(target, fitted);
         }
         return target;
     }
@@ -61,6 +69,19 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
         }
         if (!IsColumn(prop.PropertyType) || prop.GetValue(source) is not { } raw) yield break;
         yield return new(prop.Name, Converted(prop.Name, Value.From(raw), reverse: true));
+    }
+
+    static void SetReferenceId(T target, PropertyInfo prop, Value cell)
+    {
+        if (cell.ToObject() is not { } raw) return;
+        var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+        var current = prop.GetValue(target) ?? Activator.CreateInstance(type);
+        if (current is null) return;
+        var id = type.GetProperty("Id") ?? type.GetProperty("id");
+        if (id is null) return;
+        var idType = Nullable.GetUnderlyingType(id.PropertyType) ?? id.PropertyType;
+        id.SetValue(current, idType.IsInstanceOfType(raw) ? raw : System.Convert.ChangeType(raw, idType));
+        prop.SetValue(target, current);
     }
 
     static Value? ReferenceId(object? value)

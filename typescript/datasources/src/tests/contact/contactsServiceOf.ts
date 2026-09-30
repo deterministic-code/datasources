@@ -2,11 +2,11 @@ import type { ICommandMiddleware } from "../../ICommandMiddleware.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";
 import type { Constructable } from "../../converters/Constructable.ts";
-import { fieldNamesOf } from "../../createCRUDRepositoryOptions.ts";
+import type { IMapper } from "../../mappers/IMapper.ts";
 import { Address } from "./Address.ts";
 import { AddressType } from "./AddressType.ts";
+import { columns, contactEntity, snake } from "./contactColumns.ts";
 import { Contact } from "./Contact.ts";
-import { ContactBase } from "./ContactBase.ts";
 import { ContactSource } from "./ContactSource.ts";
 import { ContactType } from "./ContactType.ts";
 import { ContactsService } from "./ContactsService.ts";
@@ -17,40 +17,22 @@ export const contactsServiceOf = (
   connection: IConnection,
   middleware?: ICommandMiddleware,
 ) => {
-  const of = <T>(type: Constructable<T>, entity: string, readProperties?: string[]) => {
-    const repo = new CRUDRepository(connection, { type, entity, readProperties });
+  const of = <T>(type: Constructable<T>, entity?: IMapper<string, string>) => {
+    const repo = new CRUDRepository(connection, {
+      type,
+      entityMapper: entity ?? snake,
+      columnMappings: columns,
+      ids: ["Id"],
+    });
     return middleware ? repo.addMiddleware(middleware) : repo;
   };
   return ContactsService.open(
-    of(Contact, "contacts_base", fieldNamesOf(ContactBase)),
-    of(ContactType, "contact_type"),
-    of(ContactSource, "contact_source"),
-    of(AddressType, "address_type"),
-    of(PhoneType, "phone_type"),
-    of(Address, "address", [
-      "id",
-      "uuid",
-      "created",
-      "updated",
-      "version",
-      "contact_id",
-      "address_type_id",
-      "line1",
-      "line2",
-      "city",
-      "region",
-      "postal_code",
-      "country",
-    ]),
-    of(Phone, "phone", [
-      "id",
-      "uuid",
-      "created",
-      "updated",
-      "version",
-      "contact_id",
-      "phone_type_id",
-      "number",
-    ]),
+    of(Contact, contactEntity),
+    of(ContactType),
+    of(ContactSource),
+    of(AddressType),
+    of(PhoneType),
+    of(Address),
+    of(Phone),
   );
 };

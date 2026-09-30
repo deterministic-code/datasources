@@ -1,13 +1,14 @@
+import { AddressType } from "./AddressType.ts";
 import { Base } from "./Base.ts";
+import { Contact } from "./Contact.ts";
 
 export class Address extends Base {
-  contact_id = 0;
-  address_type_id = 0;
-  address_type_name = "";
-  line1 = "";
-  line2: string | null = null;
-  city = "";
-  region: string | null = null;
-  postal_code: string | null = null;
-  country: string | null = null;
+  Contact = new Contact();
+  AddressType = new AddressType();
+  Line1 = "";
+  Line2: string | null = null;
+  City = "";
+  Region: string | null = null;
+  PostalCode: string | null = null;
+  Country: string | null = null;
 }

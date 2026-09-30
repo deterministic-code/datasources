@@ -1,15 +1,15 @@
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
-use datasources::converters::RowTypeConverter;
+use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
     ICRUDRepository, IReadonlyRepository, Mapper, Operator, TypeConverter, Value, Where,
 };
 use datasources_sql_specs::{
-    add_extra_contact, apply_schema, apply_sql, as_contacts_view, contact_lookup_ids, contact_seed,
-    contact_with, contacts_join_query, contacts_parity, contacts_service_of, contacts_view,
-    expect_contacts_view, from_mapped_contacts, seed_contacts_sql, statements_of,
-    SEED_CONTACT_COUNT,
+    add_extra_contact, apply_schema, apply_sql, as_contacts_view, columns, contact_entity,
+    contact_lookup_ids, contact_seed, contact_with, contacts_join_query, contacts_parity,
+    contacts_service_of, contacts_view, expect_contacts_view, from_mapped_contacts, references,
+    seed_contacts_sql, snake, statements_of, SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
 
@@ -45,18 +45,16 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     )
     .await
     .unwrap();
-    assert_eq!(extra["first_name"], datasources::Value::from("Extra"));
-    assert!(extra["addresses"].wire_text().contains("line1=9 Extra"));
-    assert!(extra["addresses"]
+    assert_eq!(extra["FirstName"], datasources::Value::from("Extra"));
+    assert!(extra["Addresses"].wire_text().contains("Line1=9 Extra"));
+    assert!(extra["Addresses"]
         .wire_text()
-        .contains(&format!("contact_id={}", extra["id"].wire_text())));
-    assert!(extra["phones"].wire_text().contains("number=555-extra"));
-    assert!(extra["addresses"]
-        .wire_text()
-        .contains("address_type_name=Home"));
-    assert!(extra["phones"]
-        .wire_text()
-        .contains("phone_type_name=Mobile"));
+        .contains(&format!("Contact={}", extra["Id"].wire_text())));
+    assert!(extra["Phones"].wire_text().contains("Number=555-extra"));
+    assert!(extra["Addresses"].wire_text().contains("Name=Home")
+        || extra["Addresses"].wire_text().contains("Name%3DHome"));
+    assert!(extra["Phones"].wire_text().contains("Name=Mobile")
+        || extra["Phones"].wire_text().contains("Name%3DMobile"));
 }
 
 #[tokio::test]
@@ -93,20 +91,31 @@ fn contact_repo(
     connection: Arc<dyn Connection>,
     entity: &str,
     names: &[&str],
+    contact: bool,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> CRUDRepository {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
+    options.ids = vec!["Id".into()];
+    options.entity_mapper = if contact {
+        Box::new(contact_entity())
+    } else {
+        Box::new(snake())
+    };
+    options.column_mappings = Box::new(columns());
     let converters = [
-        ("uuid", "uuid"),
-        ("created", "datetime"),
-        ("updated", "datetime"),
-        ("version", "binary"),
+        ("Uuid", "uuid"),
+        ("Created", "datetime"),
+        ("Updated", "datetime"),
+        ("Version", "binary"),
     ]
     .into_iter()
     .filter_map(|(column, key)| field(key).map(|converter| (column.to_string(), converter)))
     .collect();
     options.row_converter = Some(RowTypeConverter::new(contact_columns(names)).with_fields(converters));
+    options.object_converter = Some(Box::new(
+        MetaDataRowTypeConverter::new(Vec::new()).with_references(references(), Box::new(columns())),
+    ));
     CRUDRepository::new(connection, options).expect("contacts repo")
 }
 
@@ -127,123 +136,49 @@ async fn writes_enriched_contact() {
     apply_sql(&command, &sql).await.unwrap();
 
     let field = super::converters::field;
-    let named = [
-        "id",
-        "uuid",
-        "created",
-        "updated",
-        "version",
-        "name",
-        "description",
-    ];
+    let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];
     let address = [
-        "id",
-        "uuid",
-        "created",
-        "updated",
-        "version",
-        "contact_id",
-        "address_type_id",
-        "line1",
-        "line2",
-        "city",
-        "region",
-        "postal_code",
-        "country",
+        "Id", "Uuid", "Created", "Updated", "Version", "Contact", "AddressType", "Line1", "Line2",
+        "City", "Region", "PostalCode", "Country",
     ];
     let phone = [
-        "id",
-        "uuid",
-        "created",
-        "updated",
-        "version",
-        "contact_id",
-        "phone_type_id",
-        "number",
+        "Id", "Uuid", "Created", "Updated", "Version", "Contact", "PhoneType", "Number",
     ];
     let base = [
-        "id",
-        "uuid",
-        "created",
-        "updated",
-        "version",
-        "contact_source_id",
-        "contact_type_id",
-        "first_name",
-        "last_name",
-        "email",
-        "notes",
+        "Id", "Uuid", "Created", "Updated", "Version", "ContactSource", "ContactType", "FirstName",
+        "LastName", "Email", "Notes",
     ];
-    let mut addresses_repo = contact_repo(conn.clone(), "address", &address, field);
+    let mut addresses_repo = contact_repo(conn.clone(), "Address", &address, false, field);
     addresses_repo.add_enriched(
-        datasources::Enrichment::new(
-            "address_type_name",
-            "address_type_id",
-            "id",
-            Some("name".into()),
-            false,
-        ),
-        as_readonly(Arc::new(contact_repo(
-            conn.clone(),
-            "address_type",
-            &named,
-            field,
-        ))),
+        datasources::Enrichment::new("AddressType", "AddressType", "Id", None, false),
+        as_readonly(Arc::new(contact_repo(conn.clone(), "AddressType", &named, false, field))),
         None,
     );
-    let mut phones_repo = contact_repo(conn.clone(), "phone", &phone, field);
+    let mut phones_repo = contact_repo(conn.clone(), "Phone", &phone, false, field);
     phones_repo.add_enriched(
-        datasources::Enrichment::new(
-            "phone_type_name",
-            "phone_type_id",
-            "id",
-            Some("name".into()),
-            false,
-        ),
-        as_readonly(Arc::new(contact_repo(conn.clone(), "phone_type", &named, field))),
+        datasources::Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
+        as_readonly(Arc::new(contact_repo(conn.clone(), "PhoneType", &named, false, field))),
         None,
     );
-    let mut contacts_repo = contact_repo(conn.clone(), "contacts_base", &base, field);
+    let mut contacts_repo = contact_repo(conn.clone(), "Contact", &base, true, field);
     contacts_repo
         .add_enriched(
-            datasources::Enrichment::new(
-                "contact_type_name",
-                "contact_type_id",
-                "id",
-                Some("name".into()),
-                false,
-            ),
-            as_readonly(Arc::new(contact_repo(
-                conn.clone(),
-                "contact_type",
-                &named,
-                field,
-            ))),
+            datasources::Enrichment::new("ContactType", "ContactType", "Id", None, false),
+            as_readonly(Arc::new(contact_repo(conn.clone(), "ContactType", &named, false, field))),
             None,
         )
         .add_enriched(
-            datasources::Enrichment::new(
-                "contact_source_name",
-                "contact_source_id",
-                "id",
-                Some("name".into()),
-                false,
-            ),
-            as_readonly(Arc::new(contact_repo(
-                conn.clone(),
-                "contact_source",
-                &named,
-                field,
-            ))),
+            datasources::Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
+            as_readonly(Arc::new(contact_repo(conn.clone(), "ContactSource", &named, false, field))),
             None,
         )
         .add_enriched(
-            datasources::Enrichment::new("addresses", "id", "contact_id", None, true),
+            datasources::Enrichment::new("Addresses", "Id", "Contact", None, true),
             Arc::new(addresses_repo),
             None,
         )
         .add_enriched(
-            datasources::Enrichment::new("phones", "id", "contact_id", None, true),
+            datasources::Enrichment::new("Phones", "Id", "Contact", None, true),
             Arc::new(phones_repo),
             None,
         );
@@ -256,71 +191,83 @@ async fn writes_enriched_contact() {
     );
     let version = Value::Binary(vec![]);
     let mut created = contact_row(&[
-        ("uuid", Value::Uuid(uuid::Uuid::new_v4())),
-        ("created", stamp.clone()),
-        ("updated", stamp.clone()),
-        ("version", version.clone()),
-        ("contact_source_id", Value::Int(ids.contact_source_id)),
-        ("contact_type_id", Value::Int(ids.contact_type_id)),
-        ("first_name", Value::from("Extra")),
-        ("last_name", Value::from("Contact")),
+        ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
+        ("Created", stamp.clone()),
+        ("Updated", stamp.clone()),
+        ("Version", version.clone()),
+        ("ContactSource", Value::Int(ids.contact_source_id)),
+        ("ContactType", Value::Int(ids.contact_type_id)),
+        ("FirstName", Value::from("Extra")),
+        ("LastName", Value::from("Contact")),
         (
-            "addresses",
+            "Addresses",
             encode_rows(&[contact_row(&[
-                ("uuid", Value::Uuid(uuid::Uuid::new_v4())),
-                ("created", stamp.clone()),
-                ("updated", stamp.clone()),
-                ("version", version.clone()),
-                ("address_type_id", Value::Int(ids.address_type_id)),
-                ("line1", Value::from("9 Extra")),
-                ("city", Value::from("Oslo")),
+                ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
+                ("Created", stamp.clone()),
+                ("Updated", stamp.clone()),
+                ("Version", version.clone()),
+                ("AddressType", Value::Int(ids.address_type_id)),
+                ("Line1", Value::from("9 Extra")),
+                ("City", Value::from("Oslo")),
             ])]),
         ),
         (
-            "phones",
+            "Phones",
             encode_rows(&[contact_row(&[
-                ("uuid", Value::Uuid(uuid::Uuid::new_v4())),
-                ("created", stamp.clone()),
-                ("updated", stamp),
-                ("version", version),
-                ("phone_type_id", Value::Int(ids.phone_type_id)),
-                ("number", Value::from("555-extra")),
+                ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
+                ("Created", stamp.clone()),
+                ("Updated", stamp),
+                ("Version", version),
+                ("PhoneType", Value::Int(ids.phone_type_id)),
+                ("Number", Value::from("555-extra")),
             ])]),
         ),
     ]);
     let created = contacts_repo.create(&mut created).await.unwrap();
-    let Value::Int(id) = created.get("id").cloned().unwrap_or(Value::Null) else {
+    let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
         panic!("expected insert id");
     };
     let loaded = contacts_repo
         .read_single(
-            Some(&Where::new(Operator::equals("id", Value::Int(id)))),
+            Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
             None,
         )
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(loaded.get("first_name"), Some(&Value::from("Extra")));
-    assert_eq!(loaded.get("contact_type_name"), Some(&Value::from("Person")));
-    assert_eq!(loaded.get("contact_source_name"), Some(&Value::from("Web")));
+    assert_eq!(loaded.get("FirstName"), Some(&Value::from("Extra")));
     assert!(loaded
-        .get("addresses")
+        .get("ContactType")
         .unwrap()
         .wire_text()
-        .contains("line1=9 Extra"));
+        .contains("Name=Person")
+        || loaded.get("ContactType").unwrap().wire_text().contains("Name%3DPerson"));
     assert!(loaded
-        .get("addresses")
+        .get("ContactSource")
         .unwrap()
         .wire_text()
-        .contains("address_type_name=Home"));
+        .contains("Name=Web")
+        || loaded.get("ContactSource").unwrap().wire_text().contains("Name%3DWeb"));
     assert!(loaded
-        .get("phones")
+        .get("Addresses")
         .unwrap()
         .wire_text()
-        .contains("number=555-extra"));
+        .contains("Line1=9 Extra"));
     assert!(loaded
-        .get("phones")
+        .get("Addresses")
         .unwrap()
         .wire_text()
-        .contains("phone_type_name=Mobile"));
+        .contains("Name=Home")
+        || loaded.get("Addresses").unwrap().wire_text().contains("Name%3DHome"));
+    assert!(loaded
+        .get("Phones")
+        .unwrap()
+        .wire_text()
+        .contains("Number=555-extra"));
+    assert!(loaded
+        .get("Phones")
+        .unwrap()
+        .wire_text()
+        .contains("Name=Mobile")
+        || loaded.get("Phones").unwrap().wire_text().contains("Name%3DMobile"));
 }

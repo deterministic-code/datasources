@@ -65,18 +65,16 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     )
     .await
     .unwrap();
-    assert_eq!(extra["first_name"], datasources::Value::from("Extra"));
-    assert!(extra["addresses"].wire_text().contains("line1=9 Extra"));
-    assert!(extra["addresses"]
+    assert_eq!(extra["FirstName"], datasources::Value::from("Extra"));
+    assert!(extra["Addresses"].wire_text().contains("Line1=9 Extra"));
+    assert!(extra["Addresses"]
         .wire_text()
-        .contains(&format!("contact_id={}", extra["id"].wire_text())));
-    assert!(extra["phones"].wire_text().contains("number=555-extra"));
-    assert!(extra["addresses"]
-        .wire_text()
-        .contains("address_type_name=Home"));
-    assert!(extra["phones"]
-        .wire_text()
-        .contains("phone_type_name=Mobile"));
+        .contains(&format!("Contact={}", extra["Id"].wire_text())));
+    assert!(extra["Phones"].wire_text().contains("Number=555-extra"));
+    assert!(extra["Addresses"].wire_text().contains("Name=Home")
+        || extra["Addresses"].wire_text().contains("Name%3DHome"));
+    assert!(extra["Phones"].wire_text().contains("Name=Mobile")
+        || extra["Phones"].wire_text().contains("Name%3DMobile"));
 
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))

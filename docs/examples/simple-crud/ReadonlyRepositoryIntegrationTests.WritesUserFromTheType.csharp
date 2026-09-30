@@ -1,3 +1,12 @@
 var ds = Datasource.Default;
 var usersRepo = new CRUDRepository<User>(connection);
 var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
+var byId = await usersRepo.ReadSingleById(created.id);
+var matches = new List<User>();
+await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
+    matches.Add(row);
+created.username = "ada-v2";
+var updated = await usersRepo.Update(created);
+var renamed = await usersRepo.ReadSingleById(created.id);
+var removed = await usersRepo.Delete(created);
+var gone = await usersRepo.ReadSingleById(created.id);

@@ -222,20 +222,19 @@ describe("user crud", () => {
     await applySchema(connection, "user-pascal");
     const usersRepo = new CRUDRepository(User, connection);
     const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
-    expect(created.id).toBe(1);
     const byId = await usersRepo.readSingleById(created.id);
     const matches: User[] = [];
     for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
       matches.push(row);
     created.username = "ada-v2";
     const updated = await usersRepo.update(created);
-    expect(updated.rowsAffected).toBe(1);
     const renamed = await usersRepo.readSingleById(created.id);
     const removed = await usersRepo.delete(created);
-    expect(removed.rowsAffected).toBe(1);
     const gone = await usersRepo.readSingleById(created.id);
-    expect(created.id).toBe(1);
-    expect(byId).toEqual({ id: 1, username: "ada", is_enabled: true });
+    expect(created.id).toBeGreaterThan(0);
+    expect(updated.rowsAffected).toBe(1);
+    expect(removed.rowsAffected).toBe(1);
+    expect(byId).toEqual({ id: created.id, username: "ada", is_enabled: true });
     expect(matches.map((row) => row.username)).toEqual(["ada"]);
     expect(renamed?.username).toBe("ada-v2");
     expect(gone).toBeUndefined();

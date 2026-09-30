@@ -16,6 +16,25 @@ fn id_of(row: &Row, key: &str) -> i64 {
     }
 }
 
+fn nested_text(row: &Row, key: &str, field: &str) -> String {
+    let raw = text(row, key);
+    let prefix = format!("{field}=");
+    raw.split(',')
+        .find_map(|pair| pair.strip_prefix(&prefix))
+        .unwrap_or("")
+        .replace("%7C", "|")
+        .replace("%2C", ",")
+        .replace("%3D", "=")
+        .replace("%25", "%")
+}
+
+fn unescape(text: &str) -> String {
+    text.replace("%7C", "|")
+        .replace("%2C", ",")
+        .replace("%3D", "=")
+        .replace("%25", "%")
+}
+
 fn parse_rows(encoded: &str) -> Vec<Row> {
     if encoded.is_empty() {
         return Vec::new();
@@ -27,7 +46,7 @@ fn parse_rows(encoded: &str) -> Vec<Row> {
             part.split(',')
                 .filter_map(|pair| {
                     let (key, value) = pair.split_once('=')?;
-                    Some((key.to_string(), Value::from(value)))
+                    Some((key.to_string(), Value::from(unescape(value))))
                 })
                 .collect()
         })
@@ -37,27 +56,27 @@ fn parse_rows(encoded: &str) -> Vec<Row> {
 pub fn from_enriched_contacts(rows: &[Row]) -> Vec<ContactView> {
     rows.iter()
         .map(|row| ContactView {
-            id: id_of(row, "id"),
-            first_name: text(row, "first_name"),
-            last_name: text(row, "last_name"),
-            email: text(row, "email"),
-            contact_source_name: text(row, "contact_source_name"),
-            contact_type_name: text(row, "contact_type_name"),
-            addresses: parse_rows(&text(row, "addresses"))
+            id: id_of(row, "Id"),
+            first_name: text(row, "FirstName"),
+            last_name: text(row, "LastName"),
+            email: text(row, "Email"),
+            contact_source_name: nested_text(row, "ContactSource", "Name"),
+            contact_type_name: nested_text(row, "ContactType", "Name"),
+            addresses: parse_rows(&text(row, "Addresses"))
                 .into_iter()
                 .map(|child| AddressView {
-                    id: id_of(&child, "id"),
-                    line1: text(&child, "line1"),
-                    city: text(&child, "city"),
-                    address_type_name: text(&child, "address_type_name"),
+                    id: id_of(&child, "Id"),
+                    line1: text(&child, "Line1"),
+                    city: text(&child, "City"),
+                    address_type_name: nested_text(&child, "AddressType", "Name"),
                 })
                 .collect(),
-            phones: parse_rows(&text(row, "phones"))
+            phones: parse_rows(&text(row, "Phones"))
                 .into_iter()
                 .map(|child| PhoneView {
-                    id: id_of(&child, "id"),
-                    number: text(&child, "number"),
-                    phone_type_name: text(&child, "phone_type_name"),
+                    id: id_of(&child, "Id"),
+                    number: text(&child, "Number"),
+                    phone_type_name: nested_text(&child, "PhoneType", "Name"),
                 })
                 .collect(),
         })

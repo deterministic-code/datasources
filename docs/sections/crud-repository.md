@@ -981,7 +981,7 @@ The table, columns, and id come from `User`. Create omits `id`. The repository r
 ```
 
 ```output [Created]
-id: 1
+id > 0
 ```
 
 ```output [Read by id]
