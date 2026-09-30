@@ -2,7 +2,6 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.executeNative(new Native("CREATE TABLE settings (name TEXT, value TEXT)"));
 await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)", [
   { name: "name", value: "theme" },
   { name: "value", value: "dark" },

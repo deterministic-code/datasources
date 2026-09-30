@@ -1,5 +1,6 @@
 import { blobUrl, sourceHref, SOURCE_ICON } from "./example.mjs";
 import { renderClassReference } from "./reference.mjs";
+import { schemaText } from "./schema-sql.mjs";
 import { readSnippet } from "./sync-examples.mjs";
 
 /** @typedef {{ lang: string, label?: string, code: string }} DialectFence */
@@ -75,6 +76,20 @@ const renderOutputs = (outputs) =>
     ? `<ExampleOutputs items="${escapeAttr(JSON.stringify(outputs.map(({ title, value }) => ({ title, value }))))}" />`
     : "";
 
+const schemaOf = (resolved, heading) => {
+  const names = [...new Set(resolved.map((item) => item.schema).filter(Boolean))];
+  if (names.length > 1) throw new Error(`${heading} schemas differ: ${names.join(", ")}`);
+  return names[0] ?? null;
+};
+
+const renderSchema = (name) =>
+  name
+    ? `<ExampleSchema items="${escapeAttr(JSON.stringify([{ name, href: `../examples.md#${name}`, sql: schemaText(name) }]))}" />\n\n`
+    : "";
+
+const readmeSchema = (name) =>
+  name ? `Schema: [${name}](../examples.md#${name})\n\n\`\`\`sql\n${schemaText(name)}\n\`\`\`\n\n` : "";
+
 const lastHeading = (prefix) => {
   let heading = "";
   for (const line of prefix.split("\n")) {
@@ -91,7 +106,7 @@ const resolveExamples = (body, heading, files) =>
       files.push(snippet.file);
       if (!files.includes(snippet.linesFile)) files.push(snippet.linesFile);
     }
-    return { lang, code: snippet.body, href: blobUrl(snippet), source: sourceHref(snippet) };
+    return { lang, code: snippet.body, href: blobUrl(snippet), source: sourceHref(snippet), schema: snippet.schema };
   });
 
 const sourceLink = (href) => `<ExampleSource href="${href.replaceAll("&", "&amp;")}" />`;
@@ -254,34 +269,42 @@ const readmeOutput = (outputs) =>
 
 const toReadmeExamples = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
-  return groupedExamples(resolveExamples(body, heading, files))
+  const resolved = resolveExamples(body, heading, files);
+  const schema = readmeSchema(schemaOf(resolved, heading));
+  const samples = groupedExamples(resolved)
     .map(({ lang, code, hrefs }) => {
       const boxes = readmeOutput(outputsFor(outputs, lang));
       const links = hrefs.map((href) => `[${SOURCE_ICON}](${href})`).join(" ");
       return `#### ${labelFor(lang)} ${links}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`;
     })
     .join("\n\n");
+  return `${samples}${schema ? `\n\n${schema.trimEnd()}` : ""}`;
 };
 
 const toVitePressExamplePanels = (body, heading, files) => {
   const outputs = parseExampleOutputs(body);
-  return groupedExamples(resolveExamples(body, heading, files))
+  const resolved = resolveExamples(body, heading, files);
+  const panels = groupedExamples(resolved)
     .map(({ lang, code, sources }) => {
       const boxes = renderOutputs(outputsFor(outputs, lang));
       const links = sources.map(sourceLink).join("\n");
       return toPanel(lang, `${links}\n\n\`\`\`${lang}\n${code}\n\`\`\`${boxes ? `\n\n${boxes}` : ""}`);
     })
     .join("\n\n");
+  const schema = renderSchema(schemaOf(resolved, heading));
+  return `${panels}${schema ? `\n\n${schema.trimEnd()}` : ""}`;
 };
 
 const toVitePressExamples = (body, heading, files) => {
-  const resolved = groupedExamples(resolveExamples(body, heading, files));
+  const loaded = resolveExamples(body, heading, files);
+  const resolved = groupedExamples(loaded);
   const boxes = renderOutputs(labeledOutputs(parseExampleOutputs(body)));
   const group = resolved
     .map(({ lang, code }) => `\`\`\`${lang} [${labelFor(lang)}]\n${code}\n\`\`\``)
     .join("\n\n");
   const links = resolved.flatMap(({ sources }) => sources.map(sourceLink)).join("\n");
-  return `${links}\n\n::: code-group\n\n${group}\n\n:::${boxes ? `\n\n${boxes}` : ""}`;
+  const schema = renderSchema(schemaOf(loaded, heading));
+  return `${links}\n\n::: code-group\n\n${group}\n\n:::${schema ? `\n\n${schema.trimEnd()}` : ""}${boxes ? `\n\n${boxes}` : ""}`;
 };
 
 export const transformDialects = (markdown, style, files) => {

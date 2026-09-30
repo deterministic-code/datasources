@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CRUDRepository, Datasource, createCRUDRepositoryOptions, execute, type IConnection } from "@datasources/core";
-import { tables } from "../../../schema-spec.ts";
+import { CRUDRepository, Datasource, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
+import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 class Item {
@@ -10,15 +10,10 @@ class Item {
   version: Uint8Array | null = null;
 }
 
-const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
-
 const open = async (): Promise<IConnection> => {
   const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
   const connection = await ds.createConnection();
   await connection.open();
-  const command = connection.createCommand();
-  for (const statement of tables("null-write-item", quote))
-    await execute(command, statement);
   return connection;
 };
 
@@ -27,6 +22,7 @@ const bytes = (value: Uint8Array | null): number[] => [...(value ?? new Uint8Arr
 describe("null write", () => {
   it("omits null datetime and version", async () => {
     const connection = await open();
+    await applySchema(connection, "null-write-item");
     const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(Item), entity: "item" });
     const omitted = await repo.create(Object.assign(new Item(), { name: "ada" }));
     expect(omitted.id).toBeGreaterThan(0);

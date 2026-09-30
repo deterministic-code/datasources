@@ -77,7 +77,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("CREATE TABLE flags (enabled BOOLEAN, count INTEGER)"));
+        await SchemaSpec.Apply(connection, "flags");
         await command.Execute("INSERT INTO flags (enabled, count) VALUES (1, 1)");
         await using var reader = await command.ExecuteReader(Native.N("SELECT enabled, count, 1 AS one FROM flags"));
         Assert.True(await reader.Next());
@@ -94,7 +94,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+        await SchemaSpec.Apply(connection, "items");
         await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
         await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
         Row? row = null;
@@ -111,7 +111,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"));
+        await SchemaSpec.Apply(connection, "case-contacts");
         await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
         await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
@@ -134,13 +134,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("""
-            CREATE TABLE users (
-                id INTEGER,
-                username TEXT,
-                contact_name TEXT
-            )
-            """));
+        await SchemaSpec.Apply(connection, "flat-users");
         await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
         await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
         await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
@@ -175,7 +169,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("CREATE TABLE settings (name TEXT, value TEXT)"));
+        await SchemaSpec.Apply(connection, "settings");
         await command.Execute(
             "INSERT INTO settings (name, value) VALUES ($name, $value)",
             [new Parameter("name", "theme"), new Parameter("value", "dark")]);
@@ -195,7 +189,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+        await SchemaSpec.Apply(connection, "items");
         await command.Execute(
             "INSERT INTO items (id, name) VALUES ($id, $name)",
             [new Parameter("id", 1), new Parameter("name", "a")]);
@@ -232,15 +226,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute(Native.N("""
-            CREATE TABLE users (
-                id INTEGER PRIMARY KEY,
-                username TEXT,
-                email TEXT,
-                contact_name1 TEXT,
-                contact_name2 TEXT
-            )
-            """));
+        await SchemaSpec.Apply(connection, "flat-contact-users");
         await command.Execute(
             "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
         await using var reader = await command.ExecuteReader(

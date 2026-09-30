@@ -30,7 +30,9 @@ public class ReadonlyRepositoryIntegrationTests
     public async Task ReadsUsersByIdAndByUsernameAndEnabled()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "minimal-users", """
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "minimal-users");
+        await Execute(connection, """
             INSERT INTO users (id, username, is_enabled) VALUES
                 (1, 'ada', 1),
                 (2, 'grace', 0);
@@ -74,7 +76,9 @@ public class ReadonlyRepositoryIntegrationTests
     {
         var driver = new SqliteDriver();
         var ds = new Datasource("sqlite", driver, new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "minimal-users", """
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "minimal-users");
+        await Execute(connection, """
             INSERT INTO users (id, username, is_enabled) VALUES
                 (1, 'ada', 1),
                 (2, 'grace', 0);
@@ -97,7 +101,9 @@ public class ReadonlyRepositoryIntegrationTests
     public async Task ReadsUserByGuidUsernameAndCreated()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-account", $"""
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-account");
+        await Execute(connection, $"""
             INSERT INTO user (id, username, is_enabled, created) VALUES
                 ('{Ada}', 'ada', 1, '2020-01-01T00:00:00.000Z'),
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
@@ -132,16 +138,18 @@ public class ReadonlyRepositoryIntegrationTests
         Assert.Equal("grace", Assert.Single(later).Login);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
+        return connection;
+    }
+
+    static async Task Execute(IConnection connection, string sql)
+    {
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(new Native(statement));
-        return connection;
     }
 }
 
@@ -170,7 +178,9 @@ public class UserViewEnrichmentTests
     public async Task FillsUserTypeOnUsersView()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-type-lookup", $"""
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-type-lookup");
+        await Execute(connection, $"""
             INSERT INTO user_type (id, name) VALUES
                 (1, 'admin'),
                 (2, 'user'),
@@ -209,16 +219,18 @@ public class UserViewEnrichmentTests
         Assert.Null(typeof(UsersView).GetProperty("UserTypeId"));
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
+        return connection;
+    }
+
+    static async Task Execute(IConnection connection, string sql)
+    {
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(new Native(statement));
-        return connection;
     }
 }
 
@@ -254,7 +266,9 @@ public class UsersViewRoleTests
     public async Task FillsRolesWithHashset()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-roles-read", Seed());
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-roles-read");
+        await Execute(connection, Seed());
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
@@ -305,7 +319,9 @@ public class UsersViewRoleTests
     public async Task FillsRolesFromAJoin()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-roles-read", Seed());
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-roles-read");
+        await Execute(connection, Seed());
         var mappings = new DictionaryMapper<string>(new Dictionary<string, string>
         {
             ["Key"] = "id",
@@ -399,16 +415,18 @@ public class UsersViewRoleTests
             ('{Grace}', 3);
         """;
 
-    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
+        return connection;
+    }
+
+    static async Task Execute(IConnection connection, string sql)
+    {
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(new Native(statement));
-        return connection;
     }
 }
 
@@ -425,7 +443,8 @@ public class UserCrudTests
     public async Task WritesUserFromTheType()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-pascal");
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-pascal");
         var usersRepo = new CRUDRepository<User>(connection);
         var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
         Assert.Equal(1, created.id);
@@ -450,16 +469,18 @@ public class UserCrudTests
         Assert.Null(gone);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
+        return connection;
+    }
+
+    static async Task Execute(IConnection connection, string sql)
+    {
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(new Native(statement));
-        return connection;
     }
 }
 
@@ -476,7 +497,9 @@ public class MultiTenantAccountTests
     public async Task ReadsUpdatesAndDeletesByTenantAndId()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "multi-tenant", """
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "multi-tenant");
+        await Execute(connection, """
             INSERT INTO account (tenant_id, id, name) VALUES
                 (1, 1, 'ada'),
                 (2, 1, 'grace');
@@ -503,16 +526,18 @@ public class MultiTenantAccountTests
         Assert.Equal(2, grace.tenant_id);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
+        return connection;
+    }
+
+    static async Task Execute(IConnection connection, string sql)
+    {
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(new Native(statement));
-        return connection;
     }
 }
 
@@ -546,7 +571,8 @@ public class UsersViewCrudTests
     public async Task UpdatesUsersViewWhenTheVersionMatches()
     {
         var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-view-version");
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-version");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
         {
@@ -616,15 +642,17 @@ public class UsersViewCrudTests
         Assert.Empty(roles);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string schema, string sql = "")
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
+        return connection;
+    }
+
+    static async Task Execute(IConnection connection, string sql)
+    {
         var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         foreach (var statement in sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             await command.Execute(new Native(statement));
-        return connection;
     }
 }

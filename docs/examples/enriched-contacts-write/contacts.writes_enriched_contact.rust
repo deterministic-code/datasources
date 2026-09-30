@@ -1,7 +1,7 @@
 let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
 conn.open().await.unwrap();
 let command = SqliteCommand::new(conn.clone());
-let sql = statements_of(&contact_schema("sqlite", render));
+let sql = statements_of(&contact_seed("sqlite"));
 apply_sql(&command, &sql).await.unwrap();
 
 let field = super::converters::field;

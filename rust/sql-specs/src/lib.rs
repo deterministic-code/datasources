@@ -37,11 +37,12 @@ pub use contact_lookup_ids::contact_lookup_ids;
 pub use contact_lookups::ContactLookups;
 pub use contact_view::{AddressView, ContactView, PhoneView};
 pub use contacts_join_query::contacts_join_query;
-pub use contacts_parity::{apply_sql, contact_schema, contacts_parity, statements_of};
+pub use contacts_parity::{apply_sql, contact_schema, contact_seed, contacts_parity, statements_of};
 pub use contacts_service_of::contacts_service_of;
 pub use contacts_view::contacts_view;
 pub use expect_contacts_view::{contact_with, expect_contacts_view};
 pub use from_mapped_contacts::from_mapped_contacts;
+pub use schema_spec::apply_schema;
 pub use schema_spec::tables as schema_tables;
 pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
 

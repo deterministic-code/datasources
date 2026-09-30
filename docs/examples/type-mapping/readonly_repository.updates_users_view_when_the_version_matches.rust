@@ -1,6 +1,5 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(ds, "user-view-version", "").await;
 let mut users_options = create_crud_repository_options::<UsersView>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(

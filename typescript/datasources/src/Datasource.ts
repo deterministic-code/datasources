@@ -1,3 +1,4 @@
+import type { Cell } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { ICommand } from "./ICommand.ts";
@@ -36,8 +37,9 @@ export class Datasource implements IDatasource {
   ): CRUDRepositoryOptions<T> => {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
+    const rows = options?.rowConverter ?? this.driver.rowConverter(columnsOf(type));
     return options === undefined
-      ? { ...built, rowTypeConverters: types }
+      ? { ...built, rowTypeConverters: types, rowConverter: rows }
       : "ids" in options ||
           "insert" in options ||
           "update" in options ||
@@ -50,7 +52,7 @@ export class Datasource implements IDatasource {
             columnMappings: options.columnMappings,
             select: options.select,
             rowsMapper: options.rowsMapper,
-            rowConverter: options.rowConverter,
+            rowConverter: rows,
             objectConverter: options.objectConverter,
             readProperties: options.readProperties,
             rowTypeConverters: types,
@@ -68,7 +70,7 @@ export class Datasource implements IDatasource {
             columnMappings: options.columnMappings,
             select: options.select,
             rowsMapper: options.rowsMapper,
-            rowConverter: options.rowConverter,
+            rowConverter: rows,
             objectConverter: options.objectConverter,
             readProperties: options.readProperties,
             rowTypeConverters: types,
@@ -103,3 +105,23 @@ export class Datasource implements IDatasource {
     return Datasource.create();
   }
 }
+
+const columnsOf = <T>(type: Constructable<T>): Record<string, string> => {
+  const instance = new type() as Record<string, Cell | object>;
+  const columns: Record<string, string> = {};
+  for (const [name, value] of Object.entries(instance)) {
+    if (Array.isArray(value)) continue;
+    const canonical = canonicalOf(value);
+    if (canonical) columns[name] = canonical;
+  }
+  return columns;
+};
+
+const canonicalOf = (value: Cell | object): string | undefined =>
+  typeof value === "boolean"
+    ? "bool"
+    : value instanceof Date
+      ? "datetime"
+      : value instanceof Uint8Array
+        ? "binary"
+        : undefined;

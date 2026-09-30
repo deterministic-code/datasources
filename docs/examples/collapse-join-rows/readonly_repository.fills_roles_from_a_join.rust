@@ -1,6 +1,6 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(ds, "user-roles-read", &seed()).await;
+execute_sql(&connection, &seed()).await;
 let command = Arc::new(SelectStatement::new(SelectStatementOptions {
     joins: &[
         Join::left("user_type", "user_type.id", "user.user_type_id"),

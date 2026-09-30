@@ -1,5 +1,6 @@
 import {
   columnType as identityColumnType,
+  RowTypeConverter,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -15,6 +16,7 @@ import { OracleConnection } from "./connection.ts";
 export class OracleDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
+  rowConverter = (columns: Record<string, string>) => RowTypeConverter.from(this, columns);
   connection = (options?: DatasourceOptions): IConnection =>
     OracleConnection.from(options);
   command = (connection: IConnection): ICommand => connection.createCommand();

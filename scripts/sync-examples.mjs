@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { exampleCode } from "./example.mjs";
+import { exampleCode, exampleSchema } from "./example.mjs";
+import { catalogSchemas } from "./schema-sql.mjs";
 import { parseToc, uniquePages } from "./toc.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -53,7 +54,14 @@ export const EXAMPLES_PAGE = "docs/examples.md";
 const EXAMPLES_INTRO =
   "Samples from the code reference. Open a link for the explanation and the C#, Rust, and TypeScript code.";
 
-export const renderExamplesPage = ({ pages, headings }) => {
+const schemaSection = (schemas) =>
+  schemas.length
+    ? `\n\n## Schemas\n\n${schemas
+        .map(({ name, sql }) => `### ${name}\n\n\`\`\`sql\n${sql}\n\`\`\``)
+        .join("\n\n")}`
+    : "";
+
+export const renderExamplesPage = ({ pages, headings, schemas = catalogSchemas() }) => {
   const byDoc = new Map();
   for (const heading of headings) {
     const items = byDoc.get(heading.doc) ?? [];
@@ -82,7 +90,7 @@ export const renderExamplesPage = ({ pages, headings }) => {
           .join("\n")}`,
     )
     .join("\n\n");
-  return `# Examples\n\n${EXAMPLES_INTRO}\n\n${sections}\n`;
+  return `# Examples\n\n${EXAMPLES_INTRO}\n\n${sections}${schemaSection(schemas)}\n`;
 };
 
 const parseSnippet = (text) => {
@@ -98,7 +106,14 @@ const parseSnippet = (text) => {
 
 export const formatLines = (records) => {
   const lines = [...records].sort((a, b) => a.file.localeCompare(b.file)).map((record) =>
-    JSON.stringify({ file: record.file, test: record.test, from: record.from, to: record.to, raw: record.raw }),
+    JSON.stringify({
+      file: record.file,
+      test: record.test,
+      from: record.from,
+      to: record.to,
+      ...(record.schema ? { schema: record.schema } : {}),
+      raw: record.raw,
+    }),
   );
   return lines.length ? `${lines.join("\n")}\n` : "";
 };
@@ -501,6 +516,7 @@ export const readSnippet = (heading, lang, spec, base = root) => {
     from: record.from,
     to: record.to,
     body: readFileSync(file, "utf8").replace(/\n$/, ""),
+    schema: record.schema ?? null,
     file,
     linesFile: join(base, LINES),
   };
@@ -748,7 +764,8 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
       const name = region.name;
       const test = `${pointer.path}#${name}`;
       const relSnippet = snippetFile({ heading: sample.heading, sourcePath: pointer.path, name, lang });
-      const record = { file: relSnippet, test, from, to, raw: body };
+      const schema = exampleSchema(body);
+      const record = { file: relSnippet, test, from, to, raw: body, ...(schema ? { schema } : {}) };
       const previous = lineRecords.get(relSnippet);
       if (previous && JSON.stringify(previous) !== JSON.stringify(record))
         errors.push(`${where}: snippet ${relSnippet} already holds a different slice`);
@@ -770,6 +787,8 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
     const pageErrors = directoryErrorsFor(headings, exampleDirectories(base));
     if (readOptional(join(base, EXAMPLES_PAGE)) !== pageText)
       pageErrors.push("docs/examples.md is stale. Run npm run docs:examples.");
+    if (!only && readOptional(join(base, LINES)) !== formatLines(lineRecords.values()))
+      pageErrors.push("docs/examples/lines is stale. Run npm run docs:examples.");
     return { errors: pageErrors, count, changed: 0 };
   }
   let changed = 0;

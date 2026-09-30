@@ -23,14 +23,13 @@ import { fieldNamesOf } from "../../../datasources/src/createCRUDRepositoryOptio
 import { Operator, Where } from "@datasources/core";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { execute, Native } from "@datasources/core";
-import { tables } from "../../../schema-spec.ts";
+import { Native } from "@datasources/core";
+import { applySchema } from "../../../schema-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 
-const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
 const seedPath = join(repoRoot(), "specs/contacts/sqlite.sql");
 
 const statementsOf = (sql: string) =>
@@ -44,8 +43,7 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const statement of tables("contacts", quote))
-      await execute(command, statement);
+    await applySchema(connection, "contacts");
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.executeNative(new Native(sql));
 
@@ -78,8 +76,7 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const statement of tables("contacts", quote))
-      await execute(command, statement);
+    await applySchema(connection, "contacts");
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.executeNative(new Native(sql));
 
@@ -97,8 +94,7 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    for (const statement of tables("contacts", quote))
-      await execute(command, statement);
+    await applySchema(connection, "contacts");
     for (const sql of statementsOf(readFileSync(seedPath, "utf8")))
       await command.executeNative(new Native(sql));
 

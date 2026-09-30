@@ -10,7 +10,7 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toMysql } from "./bind.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
@@ -245,6 +245,9 @@ describe("Mysql datasource", () => {
         new MysqlTransaction(c as MysqlConnection, isolation),
       rowTypeConverters: MysqlRowTypeConverters,
       columnType,
+      rowConverter(columns) {
+        return RowTypeConverter.from(this, columns);
+      },
     });
     const ds = new Datasource("mysql", of());
     expect(ds.provider).toBe("mysql");
@@ -280,5 +283,25 @@ describe("Mysql datasource", () => {
     expect(() => provider.columnType("xml")).toThrow('Unknown mysql type "xml"');
     expect(provider.command(connection)).toBeInstanceOf(MysqlCommand);
     expect(provider.transaction(connection as MysqlConnection).isolation).toBe("readCommitted");
+  });
+
+  it("maps uuid and boolean and leaves unknown text", () => {
+    const provider = new MysqlDriver();
+    const converter = provider.rowConverter({ Key: "uuid", Active: "TINYINT", Login: "XML" });
+    const row = converter.convert({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: 1,
+      Login: "ada",
+    });
+    expect(row).toEqual({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: true,
+      Login: "ada",
+    });
+    expect(converter.reverseConvert(row)).toEqual({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: 1,
+      Login: "ada",
+    });
   });
 });

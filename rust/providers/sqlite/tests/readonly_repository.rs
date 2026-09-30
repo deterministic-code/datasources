@@ -1,8 +1,9 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_crud_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
-    DictionaryMapper, Native, PluralizerMapper, Result, Row, TypeConverter, Value, Where,
+    create_crud_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema,
+    Datasource, DictionaryMapper, Native, PluralizerMapper, Result, Row, TypeConverter, Value, Where,
 };
+use datasources_sql_specs::apply_schema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -51,9 +52,10 @@ fn datasource() -> Arc<BuiltDatasource> {
 async fn reads_users_by_id_and_by_username_and_enabled() {
     let built = datasource();
     let ds: &dyn Datasource = &*built;
-    let connection = open(
-        ds,
-        "minimal-users",
+    let connection = open(ds).await;
+    apply_schema(connection.as_ref(), "minimal-users").await.unwrap();
+    execute_sql(
+        &connection,
         "
         INSERT INTO users (id, username, is_enabled) VALUES
             (1, 'ada', 1),
@@ -113,9 +115,10 @@ impl TypeConverter<Row, Row> for UserConverter {
 async fn maps_an_object_explicitly() {
     let built = datasource();
     let ds: &dyn Datasource = &*built;
-    let connection = open(
-        ds,
-        "minimal-users",
+    let connection = open(ds).await;
+    apply_schema(connection.as_ref(), "minimal-users").await.unwrap();
+    execute_sql(
+        &connection,
         "
         INSERT INTO users (id, username, is_enabled) VALUES
             (1, 'ada', 1),
@@ -141,9 +144,10 @@ async fn maps_an_object_explicitly() {
 async fn reads_user_by_guid_username_and_created() {
     let built = datasource();
     let ds: &dyn Datasource = &*built;
-    let connection = open(
-        ds,
-        "user-account",
+    let connection = open(ds).await;
+    apply_schema(connection.as_ref(), "user-account").await.unwrap();
+    execute_sql(
+        &connection,
         &format!(
             "
         INSERT INTO user (id, username, is_enabled, created) VALUES
@@ -199,17 +203,14 @@ async fn reads_user_by_guid_username_and_created() {
     assert_eq!(later[0].get("Login"), Some(&Value::from("grace")));
 }
 
-fn quote_ident(id: &str) -> String {
-    format!("\"{}\"", id.replace('"', "\"\""))
-}
-
-async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connection> {
+async fn open(ds: &dyn Datasource) -> Arc<dyn Connection> {
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
-    let command = ds.create_command(Some(connection.clone()));
-    for statement in datasources_sql_specs::schema_tables(schema, quote_ident, None) {
-        command.execute_statement(&statement, None).await.unwrap();
-    }
+    connection
+}
+
+async fn execute_sql(connection: &Arc<dyn Connection>, sql: &str) {
+    let command = connection.create_command();
     for statement in sql
         .split(';')
         .map(str::trim)
@@ -220,11 +221,10 @@ async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connectio
             .await
             .unwrap();
     }
-    connection
 }
 
 mod user_view {
-    use super::{datasource, open, ADA, GRACE, LIN};
+    use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
         create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Value, Where,
@@ -257,9 +257,10 @@ mod user_view {
     async fn fills_user_type_on_user_view() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(
-            ds,
-            "user-type-lookup",
+        let connection = open(ds).await;
+        apply_schema(connection.as_ref(), "user-type-lookup").await.unwrap();
+        execute_sql(
+            &connection,
             &format!(
                 "
             INSERT INTO user_type (id, name) VALUES
@@ -328,7 +329,7 @@ mod user_view {
 }
 
 mod users_view_roles {
-    use super::{datasource, open, ADA, GRACE, LIN};
+    use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
         create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
@@ -416,7 +417,9 @@ mod users_view_roles {
     async fn fills_roles_with_a_hashset() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, "user-roles-read", &seed()).await;
+        let connection = open(ds).await;
+        apply_schema(connection.as_ref(), "user-roles-read").await.unwrap();
+        execute_sql(&connection, &seed()).await;
         let mut users_options = create_crud_repository_options::<UsersView>();
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UsersView".to_string(),
@@ -480,7 +483,9 @@ mod users_view_roles {
     async fn fills_roles_from_a_join() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, "user-roles-read", &seed()).await;
+        let connection = open(ds).await;
+        apply_schema(connection.as_ref(), "user-roles-read").await.unwrap();
+        execute_sql(&connection, &seed()).await;
         let command = Arc::new(SelectStatement::new(SelectStatementOptions {
             joins: &[
                 Join::left("user_type", "user_type.id", "user.user_type_id"),
@@ -557,7 +562,7 @@ mod users_view_roles {
 }
 
 mod user_crud {
-    use super::{datasource, open, User};
+    use super::{apply_schema, datasource, execute_sql, open, User};
     use datasources::{
         create_crud_repository_options, encode_rows, eq, CRUDRepository, Casing,
         ChangeCasingMapper, ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository,
@@ -613,7 +618,8 @@ mod user_crud {
     async fn writes_user_from_the_type() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, "user-pascal", "").await;
+        let connection = open(ds).await;
+        apply_schema(connection.as_ref(), "user-pascal").await.unwrap();
         let users_repo = CRUDRepository::from_type::<User>(connection).unwrap();
         let mut created = datasources::Row::new();
         created.insert("username".into(), Value::from("ada"));
@@ -664,7 +670,8 @@ mod user_crud {
     async fn updates_users_view_when_the_version_matches() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(ds, "user-view-version", "").await;
+        let connection = open(ds).await;
+        apply_schema(connection.as_ref(), "user-view-version").await.unwrap();
         let mut users_options = create_crud_repository_options::<UsersView>();
         users_options.ids = vec!["Key".into()];
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
@@ -794,9 +801,10 @@ mod user_crud {
     async fn reads_updates_and_deletes_by_tenant_and_id() {
         let built = datasource();
         let ds: &dyn Datasource = &*built;
-        let connection = open(
-            ds,
-            "multi-tenant",
+        let connection = open(ds).await;
+        apply_schema(connection.as_ref(), "multi-tenant").await.unwrap();
+        execute_sql(
+            &connection,
             "
             INSERT INTO account (tenant_id, id, name) VALUES
                 (1, 1, 'ada'),

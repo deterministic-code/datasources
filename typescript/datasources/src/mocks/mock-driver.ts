@@ -1,4 +1,5 @@
 import { columnType as identityColumnType } from "../IDriver.ts";
+import { RowTypeConverter } from "../converters/RowTypeConverter.ts";
 import type { DatasourceOptions } from "../DatasourceOptions.ts";
 import type { ICommand } from "../ICommand.ts";
 import type { IConnection } from "../IConnection.ts";
@@ -14,6 +15,7 @@ import { MockTransaction } from "./mock-transaction.ts";
 export class MockDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   columnType = identityColumnType;
+  rowConverter = (columns: Record<string, string>) => RowTypeConverter.from(this, columns);
   connection = (_options?: DatasourceOptions): IConnection => new MockConnection();
   command = (connection: IConnection): ICommand => new MockCommand(connection);
   transaction = (

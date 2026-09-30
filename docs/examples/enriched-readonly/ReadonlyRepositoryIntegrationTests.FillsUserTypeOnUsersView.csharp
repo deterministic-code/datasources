@@ -1,5 +1,5 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-var connection = await Open(ds, "user-type-lookup", $"""
+await Execute(connection, $"""
     INSERT INTO user_type (id, name) VALUES
         (1, 'admin'),
         (2, 'user'),

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { exampleCode } from "./example.mjs";
+import { exampleCode, exampleSchema } from "./example.mjs";
 import {
   applyEdits,
   findRegions,
@@ -99,6 +99,23 @@ test("keeps source lines apart from the usage sample", () => {
   assert.equal(exampleCode(record.raw), "var ds = DatasourceFactory.Default;");
 });
 
+test("drops open and apply and keeps the schema name", () => {
+  const raw = [
+    "public async Task ReadsUsers()",
+    "{",
+    '    var ds = Datasource.Default;',
+    "    var connection = await Open(ds);",
+    '    await SchemaSpec.Apply(connection, "minimal-users");',
+    '    await Execute(connection, "INSERT INTO users (id) VALUES (1)");',
+    "}",
+  ].join("\n");
+  assert.equal(
+    exampleCode(raw),
+    'var ds = Datasource.Default;\nawait Execute(connection, "INSERT INTO users (id) VALUES (1)");',
+  );
+  assert.equal(exampleSchema(raw), "minimal-users");
+});
+
 test("drops a leading env lock and arrange", () => {
   const raw = [
     "fn create_default_from_env_settings() {",
@@ -167,7 +184,7 @@ test("lists examples in toc order with heading links", () => {
     { doc: "docs/sections/repository.md", title: "CRUD" },
   ];
   assert.equal(
-    renderExamplesPage({ pages, headings }),
+    renderExamplesPage({ pages, headings, schemas: [] }),
     [
       "# Examples",
       "",

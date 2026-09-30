@@ -89,6 +89,8 @@ A new fence may use `path#Lstart-Lend` once. The command rewrites it to the regi
 
 Optional `output` fences after the sample fences become titled textboxes under the sample. Use a shared fence for every dialect, or `output:typescript` / `output:csharp` / `output:rust` to replace a same-title box for one language.
 
+A test loads a catalog schema with `SchemaSpec.Apply`, `applySchema`, or `apply_schema` after `Open` / `open` and before the usage that becomes the sample. Those two calls are left out of the sample. The schema name is stored on the example line record. The page shows that schema, as `CREATE TABLE` text, outside the code sample and links it to the matching heading under Schemas on the Examples page. Seed SQL stays in the sample. All three languages for one sample name the same schema.
+
 `::: dialects` stays for install or CLI snippets that are not tests.
 
 ~~~~markdown

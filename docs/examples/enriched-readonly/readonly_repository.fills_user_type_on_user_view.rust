@@ -1,8 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
-let connection = open(
-    ds,
-    "user-type-lookup",
+execute_sql(
+    &connection,
     &format!(
         "
     INSERT INTO user_type (id, name) VALUES

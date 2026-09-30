@@ -11,6 +11,7 @@ import {
   type Cells,
   columnType,
   type IDriver,
+  RowTypeConverter,
   CreateTableStatement,
   Native,
   ReturnStatement,
@@ -231,6 +232,9 @@ describe("Sqlite datasource", () => {
         new SqliteTransaction(c as SqliteConnection, isolation),
       rowTypeConverters: SqliteRowTypeConverters,
       columnType,
+      rowConverter(columns) {
+        return RowTypeConverter.from(this, columns);
+      },
     });
     const ds = new Datasource("sqlite", of());
     expect(ds.provider).toBe("sqlite");
@@ -266,5 +270,25 @@ describe("Sqlite datasource", () => {
     expect(() => provider.columnType("xml")).toThrow(DatasourceError);
     expect(provider.command(connection)).toBeInstanceOf(SqliteCommand);
     expect(provider.transaction(connection as SqliteConnection).isolation).toBe("readCommitted");
+  });
+
+  it("maps uuid and boolean and leaves shared text", () => {
+    const provider = new SqliteDriver();
+    const converter = provider.rowConverter({ Key: "uuid", Active: "BOOLEAN", Login: "TEXT" });
+    const row = converter.convert({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: 1,
+      Login: "ada",
+    });
+    expect(row).toEqual({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: true,
+      Login: "ada",
+    });
+    expect(converter.reverseConvert(row)).toEqual({
+      Key: "11111111-1111-1111-1111-111111111111",
+      Active: 1,
+      Login: "ada",
+    });
   });
 });

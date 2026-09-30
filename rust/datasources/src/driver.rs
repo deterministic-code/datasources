@@ -22,4 +22,12 @@ pub trait Driver: Send + Sync {
     fn column_type(&self, name: &str) -> crate::Result<String> {
         Ok(name.to_string())
     }
+
+    fn row_converter(&self, columns: &HashMap<String, String>) -> crate::converters::RowTypeConverter {
+        crate::converters::RowTypeConverter::from_catalog(
+            || self.row_type_converters(),
+            columns,
+            |name| self.column_type(name),
+        )
+    }
 }

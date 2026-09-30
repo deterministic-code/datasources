@@ -1,4 +1,5 @@
-var graph = await GraphAsync(new LazyWriteEnrichmentStrategy<UserView>());
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var graph = await GraphAsync(connection, new LazyWriteEnrichmentStrategy<UserView>());
 var userViewRepo = Enrich(graph.UsersRepo, graph);
 
 var created = await userViewRepo.Create(new UserView

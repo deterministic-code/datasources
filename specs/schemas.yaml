@@ -386,3 +386,43 @@ schemas:
       columns:
         - { name: id, type: int }
         - { name: name, type: string }
+
+  items:
+    - name: items
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: name, type: string }
+
+  settings:
+    - name: settings
+      columns:
+        - { name: name, type: string }
+        - { name: value, type: string }
+
+  case-contacts:
+    - name: contacts
+      columns:
+        - { name: user_id, type: int, primaryKey: true }
+        - { name: first_name, type: string }
+
+  flat-users:
+    - name: users
+      columns:
+        - { name: id, type: int }
+        - { name: username, type: string }
+        - { name: contact_name, type: string }
+
+  flat-contact-users:
+    - name: users
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: username, type: string }
+        - { name: email, type: string }
+        - { name: contact_name1, type: string }
+        - { name: contact_name2, type: string }
+
+  flags:
+    - name: flags
+      columns:
+        - { name: enabled, type: bool }
+        - { name: count, type: int }

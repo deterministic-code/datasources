@@ -19,6 +19,7 @@ import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 import { SqliteStatementFactory } from "../src/SqliteStatementFactory.ts";
+import { applySchema } from "../../../schema-spec.ts";
 
 const dialect = loadDialect("sqlite", (statement) => new SqliteStatementFactory().transform(statement).getText());
 
@@ -93,7 +94,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(new Native("CREATE TABLE flags (enabled BOOLEAN, count INTEGER)"));
+    await applySchema(connection, "flags");
     await command.execute("INSERT INTO flags (enabled, count) VALUES (1, 1)");
     await using reader = await command.executeReaderNative(new Native("SELECT enabled, count, 1 AS one FROM flags"));
     expect(await reader.next()).toBe(true);
@@ -105,7 +106,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+    await applySchema(connection, "items");
     await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
     await using reader = await command.executeReader("SELECT id, name FROM items");
     let row: Cells | undefined;
@@ -119,9 +120,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(
-      new Native("CREATE TABLE contacts (user_id INTEGER PRIMARY KEY, first_name TEXT)"),
-    );
+    await applySchema(connection, "case-contacts");
     await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
     await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
@@ -139,9 +138,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(
-      new Native("CREATE TABLE users (id INTEGER, username TEXT, contact_name TEXT)"),
-    );
+    await applySchema(connection, "flat-users");
     await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
     await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
     await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
@@ -170,7 +167,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(new Native("CREATE TABLE settings (name TEXT, value TEXT)"));
+    await applySchema(connection, "settings");
     await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)", [
       { name: "name", value: "theme" },
       { name: "value", value: "dark" },
@@ -188,7 +185,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(new Native("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
+    await applySchema(connection, "items");
     await command.execute("INSERT INTO items (id, name) VALUES ($id, $name)", [
       { name: "id", value: 1 },
       { name: "name", value: "a" },
@@ -223,13 +220,7 @@ describe("command", () => {
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
-    await command.executeNative(new Native(`CREATE TABLE users (
-      id INTEGER PRIMARY KEY,
-      username TEXT,
-      email TEXT,
-      contact_name1 TEXT,
-      contact_name2 TEXT
-    )`));
+    await applySchema(connection, "flat-contact-users");
     await command.execute(
       "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
     );

@@ -62,10 +62,8 @@ public class UserViewCRUDRepositoryTests
         Group Engineering,
         Group Ops);
 
-    static async Task<Graph> GraphAsync(IWriteEnrichmentStrategy<UserView>? write = null)
+    static async Task<Graph> GraphAsync(IConnection connection, IWriteEnrichmentStrategy<UserView>? write = null)
     {
-        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-        var connection = await Open(ds, "user-view-links");
         var usersRepo = BuildRepo<UserView>(connection, "Users", write);
         var userTypesRepo = BuildRepo<UserType>(connection, "UserTypes");
         var rolesRepo = BuildRepo<Role>(connection, "Roles");
@@ -120,7 +118,10 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task CreateUpdateAndDeleteSyncsLinkRows()
     {
-        var graph = await GraphAsync();
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-links");
+        var graph = await GraphAsync(connection);
         var usersRepo = graph.UsersRepo;
         usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id"), graph.UserTypesRepo);
         usersRepo.AddLinked(new("Roles", "Id", "Id", Association: new("UserId", "RoleId")), graph.RolesRepo, graph.UserRolesRepo);
@@ -194,7 +195,10 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task NullListClearsThatAssociation()
     {
-        var graph = await GraphAsync();
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-links");
+        var graph = await GraphAsync(connection);
         var created = await CreateAda(graph, [graph.AdminRole, graph.EditorRole], [graph.Engineering]);
         var saved = await graph.UsersRepo.Update(new UserView
         {
@@ -229,7 +233,10 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task EmptyListClearsThatAssociation()
     {
-        var graph = await GraphAsync();
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-links");
+        var graph = await GraphAsync(connection);
         var created = await CreateAda(graph, [graph.AdminRole, graph.EditorRole], [graph.Engineering]);
         var saved = await graph.UsersRepo.Update(new UserView
         {
@@ -264,7 +271,10 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task DuplicateRelatedIdsInsertOneRow()
     {
-        var graph = await GraphAsync();
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-links");
+        var graph = await GraphAsync(connection);
         var created = await CreateAda(graph, [graph.AdminRole, graph.AdminRole], [graph.Engineering]);
         var roleLinks = await graph.UserRolesRepo.Read().ToListAsync();
         var groupLinks = await graph.UserGroupsRepo.Read().ToListAsync();
@@ -280,7 +290,10 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task MissingRelatedIdThrows()
     {
-        var graph = await GraphAsync();
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-links");
+        var graph = await GraphAsync(connection);
         var usersRepo = Enrich(graph.UsersRepo, graph);
         var error = await Assert.ThrowsAsync<DatasourceException>(() => usersRepo.Create(new UserView
         {
@@ -301,7 +314,10 @@ public class UserViewCRUDRepositoryTests
     [Fact]
     public async Task LazyCreateAndUpdateSkipUnloadedCollectionsAndDeleteCascades()
     {
-        var graph = await GraphAsync(new LazyWriteEnrichmentStrategy<UserView>());
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-view-links");
+        var graph = await GraphAsync(connection, new LazyWriteEnrichmentStrategy<UserView>());
         var userViewRepo = Enrich(graph.UsersRepo, graph);
 
         var created = await userViewRepo.Create(new UserView
@@ -365,13 +381,10 @@ public class UserViewCRUDRepositoryTests
         Assert.Equal("admin", Assert.Single(await graph.UserTypesRepo.Read().ToListAsync()).Name);
     }
 
-    static async Task<IConnection> Open(IDatasource ds, string schema)
+    static async Task<IConnection> Open(IDatasource ds)
     {
         var connection = await ds.CreateConnection();
         await connection.Open();
-        var command = connection.CreateCommand();
-        foreach (var statement in SchemaSpec.Tables(schema, static id => $"\"{id.Replace("\"", "\"\"")}\""))
-            await command.Execute(statement);
         return connection;
     }
 }

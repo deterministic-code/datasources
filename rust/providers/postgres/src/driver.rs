@@ -79,4 +79,34 @@ mod tests {
             .to_string()
             .contains("Unknown postgres type \"xml\""));
     }
+
+    #[test]
+    fn row_converter_maps_uuid_and_boolean_and_leaves_text() {
+        use datasources::Value;
+        use std::collections::HashMap;
+
+        let driver = PostgresDriver;
+        let columns = HashMap::from([
+            ("Key".into(), "UUID".into()),
+            ("Active".into(), "BOOLEAN".into()),
+            ("Login".into(), "TEXT".into()),
+        ]);
+        let converter = driver.row_converter(&columns);
+        let row = HashMap::from([
+            (
+                "Key".into(),
+                Value::from("11111111-1111-1111-1111-111111111111"),
+            ),
+            ("Active".into(), Value::Int(1)),
+            ("Login".into(), Value::from("ada")),
+        ]);
+        let converted = converter.convert(&row).unwrap();
+        assert!(matches!(converted.get("Key"), Some(Value::Uuid(_))));
+        assert_eq!(converted.get("Active"), Some(&Value::Bool(true)));
+        assert_eq!(converted.get("Login"), Some(&Value::from("ada")));
+        let stored = converter.reverse_convert(&converted).unwrap();
+        assert!(matches!(stored.get("Key"), Some(Value::Uuid(_))));
+        assert_eq!(stored.get("Active"), Some(&Value::Bool(true)));
+        assert_eq!(stored.get("Login"), Some(&Value::from("ada")));
+    }
 }

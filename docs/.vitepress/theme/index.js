@@ -5,6 +5,7 @@ import DialectName from "./DialectName.vue";
 import DialectPanel from "./DialectPanel.vue";
 import DialectSelector from "./DialectSelector.vue";
 import ExampleOutputs from "./ExampleOutputs.vue";
+import ExampleSchema from "./ExampleSchema.vue";
 import ExampleSource from "./ExampleSource.vue";
 import FontSize from "./FontSize.vue";
 import { loadFontSize } from "./fontSizeState.js";
@@ -24,6 +25,7 @@ export default {
     app.component("DialectPanel", DialectPanel);
     app.component("DialectSelector", DialectSelector);
     app.component("ExampleOutputs", ExampleOutputs);
+    app.component("ExampleSchema", ExampleSchema);
     app.component("ExampleSource", ExampleSource);
   },
 };

@@ -215,8 +215,71 @@ const stripHarness = (body) => {
   return lines.join("\n");
 };
 
+const OPEN_CALL =
+  /^(?:(?:await using|using)\s+)?(?:var|const|let)\s+\w+\s*=\s*(?:await\s+)?(?:Open|open)\s*\(/;
+const APPLY_CALL =
+  /^(?:await\s+)?(?:[\w.]+\.)?(?:[\w]+::)?(?:SchemaSpec\.Apply|applySchema|apply_schema)\s*\(/;
+
+const skipLineString = (line, i) => {
+  const quote = line[i];
+  if (quote !== '"' && quote !== "'" && quote !== "`") return null;
+  let j = i + 1;
+  while (j < line.length) {
+    if (line[j] === "\\") {
+      j += 2;
+      continue;
+    }
+    if (line[j] === quote) return j + 1;
+    j++;
+  }
+  return line.length;
+};
+
+const statementEnd = (lines, start) => {
+  let depth = 0;
+  for (let i = start; i < lines.length; i++) {
+    const line = lines[i];
+    for (let j = 0; j < line.length; j++) {
+      const skipped = skipLineString(line, j);
+      if (skipped != null) {
+        j = skipped - 1;
+        continue;
+      }
+      const c = line[j];
+      if (c === "(" || c === "[" || c === "{") depth++;
+      else if (c === ")" || c === "]" || c === "}") depth = Math.max(0, depth - 1);
+      else if (c === ";" && depth === 0) return i + 1;
+    }
+  }
+  return lines.length;
+};
+
+export const stripSchema = (body) => {
+  const lines = body.replace(/^\n+/, "").split("\n");
+  const kept = [];
+  let schema = null;
+  for (let i = 0; i < lines.length; ) {
+    const trimmed = lines[i].trim();
+    if (OPEN_CALL.test(trimmed) || APPLY_CALL.test(trimmed)) {
+      const end = statementEnd(lines, i);
+      if (APPLY_CALL.test(trimmed)) {
+        const name = lines.slice(i, end).join("\n").match(/["']([A-Za-z0-9-]+)["']/);
+        if (name) schema = name[1];
+      }
+      i = end;
+      continue;
+    }
+    kept.push(lines[i]);
+    i++;
+  }
+  return { body: kept.join("\n"), schema };
+};
+
 export const pertinent = (code) =>
-  dedent(unwrapThrows(stripTrailingValueAsserts(stripHarness(extractBody(code)))));
+  dedent(unwrapThrows(stripTrailingValueAsserts(stripSchema(stripHarness(extractBody(code))).body)));
+
+export const exampleSchema = (code) =>
+  stripSchema(stripHarness(extractBody(code))).schema;
 
 export const exampleCode = (slice) => pertinent(dedent(Array.isArray(slice) ? slice.join("\n") : slice));
 

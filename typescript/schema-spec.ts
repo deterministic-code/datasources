@@ -6,11 +6,13 @@ import {
   CheckConstraint,
   ColumnDefault,
   CreateTableStatement,
+  execute,
   ForeignKey,
   NotNull,
   PrimaryKey,
   UniqueConstraint,
   type Column,
+  type IConnection,
   type ITableConstraint,
 } from "@datasources/core";
 
@@ -106,4 +108,12 @@ export const tables = (
   const schemas = file().schemas[name];
   if (!schemas) throw new Error(`unknown schema ${name}`);
   return schemas.map((table) => statementOf(table, quote, rename));
+};
+
+const quoteIdent = (id: string): string => `"${id.replaceAll('"', '""')}"`;
+
+export const applySchema = async (connection: IConnection, name: string): Promise<void> => {
+  const command = connection.createCommand();
+  for (const statement of tables(name, quoteIdent))
+    await execute(command, statement);
 };
