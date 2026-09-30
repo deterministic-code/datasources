@@ -9,7 +9,7 @@ await command.Execute(
 await command.Execute(
     "UPDATE items SET name = $name WHERE id = $id",
     [new Parameter("id", 1), new Parameter("name", "A")]);
-var converter = new RowTypeConverter<Item>();
+var converter = new MetaDataRowTypeConverter<Item>();
 Item? updated = null;
 {
     await using var reader = await command.ExecuteReader(

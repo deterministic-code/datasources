@@ -10,7 +10,8 @@ export type ReadonlyRepositoryOptions<T = Cells> = {
   columnMappings?: IMapper<string, string>;
   select?: IMapper<ISelectStatement, ISelectStatement>;
   rowsMapper?: IMapper<T, T>;
-  rowConverter?: TypeConverter<T, Cells>;
+  rowConverter?: TypeConverter<Cells, Cells>;
+  objectConverter?: TypeConverter<T, Cells>;
   type?: Constructable<T>;
   rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>;
   readProperties?: string[];

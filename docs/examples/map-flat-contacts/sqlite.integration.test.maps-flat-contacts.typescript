@@ -15,7 +15,7 @@ await command.execute(
 await using reader = await command.executeReader(
   "SELECT contact_name1, contact_name2, email, id, username FROM users",
 );
-const converter = new RowTypeConverter<User>();
+const converter = new MetaDataRowTypeConverter<User>();
 const mapper = userContactsMapper();
 let user: User | undefined;
 while (await reader.next()) user = mapper.map(converter.convert(reader.current!, User));

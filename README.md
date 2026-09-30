@@ -2975,7 +2975,7 @@ await command.Execute(
     "INSERT INTO settings (name, value) VALUES ($name, $value)",
     [new Parameter("name", "theme"), new Parameter("value", "dark")]);
 await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
-var converter = new RowTypeConverter<NameValue>();
+var converter = new MetaDataRowTypeConverter<NameValue>();
 var items = new List<NameValue>();
 while (await reader.Next())
     items.Add(converter.Convert(reader.Current!));
@@ -3056,7 +3056,7 @@ await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)
   { name: "value", value: "dark" },
 ]);
 await using reader = await command.executeReader("SELECT name, value FROM settings");
-const converter = new RowTypeConverter<NameValue>();
+const converter = new MetaDataRowTypeConverter<NameValue>();
 const items: NameValue[] = [];
 while (await reader.next()) items.push(converter.convert(reader.current!, NameValue));
 ```
@@ -3092,7 +3092,7 @@ await command.Execute(
 await command.Execute(
     "UPDATE items SET name = $name WHERE id = $id",
     [new Parameter("id", 1), new Parameter("name", "A")]);
-var converter = new RowTypeConverter<Item>();
+var converter = new MetaDataRowTypeConverter<Item>();
 Item? updated = null;
 {
     await using var reader = await command.ExecuteReader(
@@ -3238,7 +3238,7 @@ await command.execute("UPDATE items SET name = $name WHERE id = $id", [
   { name: "id", value: 1 },
   { name: "name", value: "A" },
 ]);
-const converter = new RowTypeConverter<Item>();
+const converter = new MetaDataRowTypeConverter<Item>();
 let updated: Item | undefined;
 {
   await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
@@ -3320,7 +3320,7 @@ await command.Execute(
     "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
 await using var reader = await command.ExecuteReader(
     "SELECT contact_name1, contact_name2, email, id, username FROM users");
-var converter = new RowTypeConverter<User>();
+var converter = new MetaDataRowTypeConverter<User>();
 var mapper = UserContactsMapper();
 User? user = null;
 while (await reader.Next())
@@ -3499,7 +3499,7 @@ await command.execute(
 await using reader = await command.executeReader(
   "SELECT contact_name1, contact_name2, email, id, username FROM users",
 );
-const converter = new RowTypeConverter<User>();
+const converter = new MetaDataRowTypeConverter<User>();
 const mapper = userContactsMapper();
 let user: User | undefined;
 while (await reader.next()) user = mapper.map(converter.convert(reader.current!, User));
@@ -4636,7 +4636,7 @@ for await (const row of repo.read(new Where("username", eq, "grace").and("is_ena
 
 Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L383-L410)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L428-L455)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -4671,7 +4671,7 @@ const created = await usersRepo.create(Object.assign(new User(), { username: "ad
 
 `UsersView` maps onto `user`. Create writes the user and its roles. Read fills `UserType` and `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L504-L576)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L549-L621)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -5273,8 +5273,9 @@ public class ReadonlyRepositoryOptions<T> where T : new()
 | ColumnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | Select | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | RowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
-| RowConverter | Row [TypeConverter](#type-converters). |
-| RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
+| RowConverter | `Row` to `Row`. Omitted leaves each cell unchanged. |
+| ObjectConverter | `Row` to `T`, after `RowConverter`. Omitted assigns public properties. A handwritten converter assigns each column and does not reflect. |
+| RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`. The driver applies its converters when it binds a parameter. A field converter on the object converter reverse-converts that property in the repository. |
 | ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
 
 ##### IRepositoryTree {#csharp-irepositorytree}
@@ -5648,7 +5649,7 @@ for await (const row of repo.read(new Where("username", eq, "grace").and("is_ena
 
 `UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L128-L169)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L173-L214)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -5819,7 +5820,7 @@ const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
 
 #### Read a user by guid, username, and created
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L55-L92)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L100-L137)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -6202,7 +6203,7 @@ parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: 
 
 The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](#flat-to-nested-mapper) groups each user's `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L263-L340)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L308-L385)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -7623,7 +7624,7 @@ See [Bulk repository](#bulk-repository) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L383-L410)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L428-L455)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -7968,7 +7969,7 @@ roles and groups remain
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L434-L463)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L479-L508)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -8437,7 +8438,7 @@ const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("id",
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L504-L576)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L549-L621)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -13994,7 +13995,7 @@ Repository read is convert, then map. See [TransformMapper](#transform-mapper) a
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L46)
 
 ```csharp
-var converter = new RowTypeConverter<User>();
+var converter = new MetaDataRowTypeConverter<User>();
 var user = converter.Convert(new Row
 {
     ["Id"] = 7,
@@ -14015,7 +14016,7 @@ let dest = converter.convert(&row).unwrap();
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L18)
 
 ```typescript
-const converter = new RowTypeConverter();
+const converter = new MetaDataRowTypeConverter();
 const item = converter.convert({ id: 7, username: "ada" });
 const row = converter.reverseConvert(item);
 ```
@@ -14025,7 +14026,7 @@ const row = converter.reverseConvert(item);
 ##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L91-L102)
 
 ```csharp
-var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
 {
     ["flag"] = new OnlyOne()
 });
@@ -14046,7 +14047,7 @@ let row = record(&[("is_enabled", Value::Int(2))]);
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L26)
 
 ```typescript
-const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
+const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
 const dest = converter.convert({ flag: 1, name: "a" });
 ```
 

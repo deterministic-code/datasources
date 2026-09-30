@@ -1,4 +1,4 @@
-var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
 {
     ["flag"] = new OnlyOne()
 });

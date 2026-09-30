@@ -7,7 +7,8 @@ import type { RepositoryStatements } from "./RepositoryStatements.ts";
 
 export type BuiltRepository<T = Cells> = {
   connection: IConnection;
-  rowConverter: TypeConverter<T, Cells>;
+  rowConverter?: TypeConverter<Cells, Cells>;
+  objectConverter: TypeConverter<T, Cells>;
   rowsMapper: IMapper<T, T>;
   columnMappings: IMapper<string, string>;
   statements: RepositoryStatements;

@@ -19,7 +19,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         BuiltRepository<T> built,
         IWriteEnrichmentStrategy<T>? write = null,
         IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(
-        built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
+        built.Connection, built.RowConverter, built.ObjectConverter, built.RowsMapper, built.ColumnMappings, built.Statements)
     {
         ids = built.Ids;
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
@@ -143,7 +143,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         {
             if (!await reader.Next()) return;
             var row = Identified(Named(reader.Current ?? throw new DatasourceException("Reader current must be a row"), column, sqlColumn), column);
-            WriteId(target, IdValue(Mapper!.Map(RowConverter.Convert(row))));
+            WriteId(target, IdValue(Mapper!.Map(ObjectConverter.Convert(RowConverter?.Convert(row) ?? row))));
         }
         finally
         {
@@ -216,13 +216,18 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     protected bool EnrichmentInto(string name) =>
         ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.Into == name);
 
-    Row ReverseConvert(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
+    Row ReverseConvert(T item)
+    {
+        var row = ObjectConverter.ReverseConvert(Mapper!.ReverseMap(item));
+        return RowConverter?.ReverseConvert(row) ?? row;
+    }
 
     void WriteId(T target, Value id)
     {
         if (ids.Count != 1 || id is Value.Null) return;
         var name = ids[0];
-        var patch = RowConverter.Convert(new Row { [name] = id });
+        var row = new Row { [name] = id };
+        var patch = ObjectConverter.Convert(RowConverter?.Convert(row) ?? row);
         if (target is IDictionary dest && patch is IDictionary src && src.Contains(name))
         {
             dest[name] = src[name];

@@ -1,7 +1,7 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
+import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { createCRUDRepositoryOptions, defaultId, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
@@ -22,9 +22,10 @@ export const parts = <T>(
   options: ReadonlyRepositoryOptions<T>,
 ): BuiltRepository<T> => {
   const types = { ...options.rowTypeConverters };
-  const rowConverter = options.rowConverter ?? new RowTypeConverter<T>(types);
-  if (rowConverter instanceof RowTypeConverter && Object.keys(rowConverter.types).length === 0)
-    Object.assign(rowConverter.types, types);
+  const rowConverter = options.rowConverter;
+  const objectConverter = options.objectConverter ?? new MetaDataRowTypeConverter<T>(types);
+  if (objectConverter instanceof MetaDataRowTypeConverter && Object.keys(objectConverter.types).length === 0)
+    Object.assign(objectConverter.types, types);
   const entityMapper = options.entityMapper ?? new IdentityMapper<string>();
   const columnMappings = options.columnMappings ?? new IdentityMapper<string>();
   const rowsMapper = options.rowsMapper ?? new IdentityMapper<T>();
@@ -39,6 +40,7 @@ export const parts = <T>(
   return {
     connection,
     rowConverter,
+    objectConverter,
     rowsMapper,
     columnMappings,
     statements: statementsOf(entity, columns, options.select, crud?.insert, crud?.update, crud?.delete),

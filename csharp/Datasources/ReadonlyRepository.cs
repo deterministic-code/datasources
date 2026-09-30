@@ -5,7 +5,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly IConnection? connection;
     readonly List<StoredEnrichment> enrichments = [];
     readonly List<ICommandMiddleware> middlewares = [];
-    readonly TypeConverter<T, Row>? rowConverter;
+    readonly TypeConverter<Row, Row>? rowConverter;
+    readonly TypeConverter<T, Row>? objectConverter;
     readonly IMapper<string, string> columns = new IdentityMapper<string>();
     readonly RepositoryStatements? statements;
 
@@ -22,20 +23,22 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         this(RepositoryBuilder<T>.Parts(connection, options)) { }
 
     public ReadonlyRepository(BuiltRepository<T> built) :
-        this(built.Connection, built.RowConverter, built.RowsMapper, built.ColumnMappings, built.Statements) { }
+        this(built.Connection, built.RowConverter, built.ObjectConverter, built.RowsMapper, built.ColumnMappings, built.Statements) { }
 
     protected ReadonlyRepository() =>
         Tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
 
     protected ReadonlyRepository(
         IConnection connection,
-        TypeConverter<T, Row> rowConverter,
+        TypeConverter<Row, Row>? rowConverter,
+        TypeConverter<T, Row> objectConverter,
         IMapper<T, T> mapper,
         IMapper<string, string> columns,
         RepositoryStatements statements)
     {
         this.connection = connection;
         this.rowConverter = rowConverter;
+        this.objectConverter = objectConverter;
         Mapper = mapper;
         this.columns = columns;
         this.statements = statements;
@@ -84,17 +87,19 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     protected RepositoryStatements Statements =>
         statements ?? throw new DatasourceException("Statements required");
 
-    protected TypeConverter<T, Row> RowConverter =>
-        rowConverter ?? throw new DatasourceException("Row converter required");
+    protected TypeConverter<Row, Row>? RowConverter => rowConverter;
+
+    protected TypeConverter<T, Row> ObjectConverter =>
+        objectConverter ?? throw new DatasourceException("Object converter required");
 
     protected string Column(string property) => columns.Map(property);
 
     protected Value Cell(string property, Value value, bool fieldsApplied) =>
-        rowConverter is RowTypeConverter<T> typed
-        && !fieldsApplied
-        && typed.Fields.TryGetValue(property, out var field)
-            ? field.ReverseConvert(value)
-            : value;
+        fieldsApplied ? value : Field(property)?.ReverseConvert(value) ?? value;
+
+    TypeConverter<Value, Value>? Field(string property) =>
+        objectConverter is MetaDataRowTypeConverter<T> typed && typed.Fields.TryGetValue(property, out var field) ? field
+        : null;
 
     private IWhere Stored(IWhere where, bool fieldsApplied = false) =>
         where is Where clause
@@ -129,7 +134,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     private async IAsyncEnumerable<(T Item, Row? Source)> ReadRows(IStatement? query, IReadOnlyList<Parameter>? parameters)
     {
         await foreach (var renamed in ReadSources(query, parameters))
-            yield return (Mapper!.Map(RowConverter.Convert(renamed)), renamed);
+            yield return (Mapper!.Map(ObjectConverter.Convert(rowConverter?.Convert(renamed) ?? renamed)), renamed);
     }
 
     private async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)

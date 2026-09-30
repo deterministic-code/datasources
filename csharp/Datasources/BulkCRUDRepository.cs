@@ -122,7 +122,11 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         return row;
     }
 
-    Row Reverse(T item) => RowConverter.ReverseConvert(Mapper!.ReverseMap(item));
+    Row Reverse(T item)
+    {
+        var row = ObjectConverter.ReverseConvert(Mapper!.ReverseMap(item));
+        return RowConverter?.ReverseConvert(row) ?? row;
+    }
 
     IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include) =>
         [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)

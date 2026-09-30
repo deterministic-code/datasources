@@ -1,15 +1,14 @@
 using System.Collections;
-using System.Globalization;
 using System.Reflection;
 
 namespace Datasources;
 
-public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
+public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T : new()
 {
     public Dictionary<string, TypeConverter<Value, Value>> Types { get; set; } = [];
     public Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; } = [];
 
-    public RowTypeConverter(
+    public MetaDataRowTypeConverter(
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null,
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
     {
@@ -34,8 +33,11 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
             if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0
                 || !IsColumn(prop.PropertyType)) continue;
             var cell = Converted(key, value, reverse: false);
-            if (prop.PropertyType == typeof(string) && cell.ToObject() is not string) continue;
-            prop.SetValue(target, Assign(cell, prop.PropertyType));
+            var underlying = Nullable.GetUnderlyingType(prop.PropertyType);
+            var type = underlying ?? prop.PropertyType;
+            var raw = cell.ToObject();
+            if (raw is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(raw))
+                prop.SetValue(target, raw);
         }
         return target;
     }
@@ -76,18 +78,4 @@ public sealed class RowTypeConverter<T> : TypeConverter<T, Row> where T : new()
             ? []
             : [.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)];
-
-    static object? Assign(Value value, Type type)
-    {
-        type = Nullable.GetUnderlyingType(type) ?? type;
-        var raw = value.ToObject();
-        return raw switch
-        {
-            null => null,
-            _ when type.IsInstanceOfType(raw) => raw,
-            string text when type == typeof(Guid) => Guid.Parse(text),
-            string text when type == typeof(DateTime) => DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-            _ => System.Convert.ChangeType(raw, type, CultureInfo.InvariantCulture)
-        };
-    }
 }

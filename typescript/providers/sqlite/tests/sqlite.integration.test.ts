@@ -6,7 +6,7 @@ import {
   FlatToNestedMapper,
   Native,
   ReturnStatement,
-  RowTypeConverter,
+  MetaDataRowTypeConverter,
   TransformMapper,
   type Cells,
 } from "@datasources/core";
@@ -164,7 +164,7 @@ describe("command", () => {
       { name: "value", value: "dark" },
     ]);
     await using reader = await command.executeReader("SELECT name, value FROM settings");
-    const converter = new RowTypeConverter<NameValue>();
+    const converter = new MetaDataRowTypeConverter<NameValue>();
     const items: NameValue[] = [];
     while (await reader.next()) items.push(converter.convert(reader.current!, NameValue));
     expect(items[0]?.name).toBe("theme");
@@ -185,7 +185,7 @@ describe("command", () => {
       { name: "id", value: 1 },
       { name: "name", value: "A" },
     ]);
-    const converter = new RowTypeConverter<Item>();
+    const converter = new MetaDataRowTypeConverter<Item>();
     let updated: Item | undefined;
     {
       await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
@@ -224,7 +224,7 @@ describe("command", () => {
     await using reader = await command.executeReader(
       "SELECT contact_name1, contact_name2, email, id, username FROM users",
     );
-    const converter = new RowTypeConverter<User>();
+    const converter = new MetaDataRowTypeConverter<User>();
     const mapper = userContactsMapper();
     let user: User | undefined;
     while (await reader.next()) user = mapper.map(converter.convert(reader.current!, User));

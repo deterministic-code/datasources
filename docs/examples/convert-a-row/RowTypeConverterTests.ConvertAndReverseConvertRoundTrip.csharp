@@ -1,8 +1,9 @@
-var converter = new RowTypeConverter<User>();
+var created = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+var converter = new MetaDataRowTypeConverter<User>();
 var user = converter.Convert(new Row
 {
-    ["Id"] = 7,
+    ["Id"] = 7L,
     ["Username"] = "ada",
-    ["IsEnabled"] = 1,
-    ["Created"] = "2020-01-02T03:04:05.000Z"
+    ["IsEnabled"] = true,
+    ["Created"] = created
 });
