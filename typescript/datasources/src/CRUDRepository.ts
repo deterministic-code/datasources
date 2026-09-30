@@ -205,25 +205,11 @@ export class CRUDRepository<T = Cells>
         this.objectConverter instanceof MetaDataRowTypeConverter
           ? this.objectConverter.convert(cells, this.type)
           : this.objectConverter!.convert(cells);
-      this.writeId(target, this.idValue(this.mapper!.map(converted)));
+      const value = scalarOf((this.mapper!.map(converted) as Props)[column]);
+      if (value !== undefined) (target as Props)[column] = value;
     } finally {
       await reader.dispose();
     }
-  };
-
-  private writeId = (item: T, id: Scalar | undefined): void => {
-    const scalar = scalarOf(id);
-    if (this.ids.length !== 1 || scalar === undefined || !this.objectConverter) return;
-    const name = this.ids[0]!;
-    const cells = this.rowConverter ? this.rowConverter.convert({ [name]: scalar }) : { [name]: scalar };
-    const patch = (
-      this.objectConverter instanceof MetaDataRowTypeConverter
-        ? this.objectConverter.convert(cells, this.type)
-        : this.objectConverter.convert(cells)
-    ) as Props;
-    const value = patch[name];
-    if (value !== undefined && value !== null && typeof value !== "object")
-      (item as Props)[name] = value;
   };
 
   private idValue = (item: T): Scalar | undefined =>

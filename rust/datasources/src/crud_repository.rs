@@ -180,8 +180,11 @@ impl CRUDRepository {
         if let Some(memory) = self.readonly.memory_items().cloned() {
             let mut stored = self.without_enrichment(item);
             let created = memory.insert(&mut stored);
-            let id = self.id_value(&created);
-            self.write_id(item, &id)?;
+            if let [column] = self.ids.as_slice() {
+                if let Some(id) = created.get(column).filter(|id| **id != Value::Null) {
+                    item.insert(column.clone(), id.clone());
+                }
+            }
         } else {
             let stored = item.clone();
             self.execute_insert(&stored, item).await?;
@@ -329,7 +332,10 @@ impl CRUDRepository {
             &self.readonly.rows_mapper,
             self.readonly.object_converter.convert(&cells)?,
         );
-        self.write_id(item, &self.id_value(&mapped))
+        if let Some(value) = mapped.get(&column).filter(|value| **value != Value::Null) {
+            item.insert(column, value.clone());
+        }
+        Ok(())
     }
 
     fn id_value(&self, item: &Row) -> Value {
@@ -337,26 +343,6 @@ impl CRUDRepository {
             return Value::Null;
         }
         item.get(&self.ids[0]).cloned().unwrap_or(Value::Null)
-    }
-
-    fn write_id(&self, item: &mut Row, id: &Value) -> Result<()> {
-        if self.ids.len() != 1 || *id == Value::Null {
-            return Ok(());
-        }
-        let name = self.ids[0].clone();
-        let mut patch = Row::new();
-        patch.insert(name.clone(), id.clone());
-        let cells = match &self.readonly.row_converter {
-            Some(converter) => converter.convert(&patch)?,
-            None => patch,
-        };
-        let converted = self.readonly.object_converter.convert(&cells)?;
-        if let Some(value) = converted.get(&name) {
-            if *value != Value::Null {
-                item.insert(name, value.clone());
-            }
-        }
-        Ok(())
     }
 
     fn without_enrichment(&self, item: &Row) -> Row {
