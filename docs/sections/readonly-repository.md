@@ -1037,7 +1037,7 @@ A handwritten object converter assigns each column. {{ObjectConverter|objectConv
 
 ### Fill roles from one join
 
-The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`. [FlatToNestedMapper](./flat-to-nested-mapper.md) groups each user's `Roles`.
+The repository type is `UsersView`. The select reads `User`, joined to `UserType`, `UserRole`, and `Role`. Nested enrichment groups each user's `Roles`.
 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#FillsRolesFromAJoin
@@ -1086,7 +1086,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
   {
     Key: '11111111-1111-1111-1111-111111111111',
     Login: 'ada',
-    Active: 1,
+    Active: true,
     Opened: '2020-01-01T00:00:00.000Z',
     UserType: 'admin',
     Roles: [
@@ -1097,7 +1097,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
   {
     Key: '22222222-2222-2222-2222-222222222222',
     Login: 'grace',
-    Active: 1,
+    Active: true,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'user',
     Roles: [
@@ -1107,7 +1107,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
   {
     Key: '33333333-3333-3333-3333-333333333333',
     Login: 'lin',
-    Active: 0,
+    Active: false,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'service',
     Roles: []
@@ -1120,7 +1120,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
   {
     Key: '11111111-1111-1111-1111-111111111111',
     Login: 'ada',
-    Active: 1,
+    Active: true,
     Opened: '2020-01-01T00:00:00.000Z',
     UserType: 'admin',
     Roles: 'Name=admin,UserId=11111111-1111-1111-1111-111111111111|Name=editor,UserId=11111111-1111-1111-1111-111111111111'
@@ -1128,7 +1128,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
   {
     Key: '22222222-2222-2222-2222-222222222222',
     Login: 'grace',
-    Active: 1,
+    Active: true,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'user',
     Roles: 'Name=viewer,UserId=22222222-2222-2222-2222-222222222222'
@@ -1136,7 +1136,7 @@ The repository reads one join of `user`, `user_type`, `user_roles`, and `roles`.
   {
     Key: '33333333-3333-3333-3333-333333333333',
     Login: 'lin',
-    Active: 0,
+    Active: false,
     Opened: '2024-06-01T00:00:00.000Z',
     UserType: 'service',
     Roles: ''

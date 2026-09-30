@@ -2,9 +2,9 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
 let mut options = ReadonlyRepositoryOptions::default();
-options.entity = "UsersView".into();
+options.entity = "User".into();
 options.entity_mapper = Box::new(DictionaryMapper::new([
-    ("UsersView".into(), "user".into()),
+    ("User".into(), "user".into()),
     ("UserType".into(), "user_type".into()),
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
@@ -15,6 +15,7 @@ options.column_mappings = Box::new(DictionaryMapper::new([
     ("Active".into(), "is_enabled".into()),
     ("Opened".into(), "created".into()),
     ("UserType".into(), "user_type.name".into()),
+    ("UserTypeId".into(), "user_type_id".into()),
     ("UserId".into(), "user_id".into()),
     ("RoleId".into(), "role_id".into()),
     ("Name".into(), "roles.name".into()),

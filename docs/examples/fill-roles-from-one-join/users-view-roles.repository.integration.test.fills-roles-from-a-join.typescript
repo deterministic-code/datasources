@@ -1,7 +1,8 @@
 const usersRepo = new ReadonlyRepository(connection, {
   type: UsersView,
+  entity: "User",
   entityMapper: new DictionaryMapper([
-    ["UsersView", "user"],
+    ["User", "user"],
     ["UserType", "user_type"],
     ["UserRole", "user_roles"],
     ["Role", "roles"],
@@ -12,6 +13,7 @@ const usersRepo = new ReadonlyRepository(connection, {
     ["Active", "is_enabled"],
     ["Opened", "created"],
     ["UserType", "user_type.name"],
+    ["UserTypeId", "user_type_id"],
     ["UserId", "user_id"],
     ["RoleId", "role_id"],
     ["Name", "roles.name"],
@@ -20,21 +22,21 @@ const usersRepo = new ReadonlyRepository(connection, {
   select: new TransformMapper(
     (query) =>
       new SelectStatement({
-        table: "UsersView",
+        table: "User",
         fields: [
-          "UsersView.Key",
-          "UsersView.Login",
-          "UsersView.Active",
-          "UsersView.Opened",
-          "UsersView.UserType",
+          "User.Key",
+          "User.Login",
+          "User.Active",
+          "User.Opened",
+          "User.UserType",
           "UserRole.UserId",
           "UserRole.RoleId",
           "Role.Name",
         ],
         where: query.where,
         joins: [
-          Join.left("UserType", "UserType.Id", "user.user_type_id"),
-          Join.left("UserRole", "UserRole.UserId", "UsersView.Key"),
+          Join.left("UserType", "UserType.Id", "User.UserTypeId"),
+          Join.left("UserRole", "UserRole.UserId", "User.Key"),
           Join.left("Role", "Role.Id", "UserRole.RoleId"),
         ],
       }),

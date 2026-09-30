@@ -117,8 +117,9 @@ describe("users view roles", () => {
     await executeSql(connection, seed());
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
+      entity: "User",
       entityMapper: new DictionaryMapper([
-        ["UsersView", "user"],
+        ["User", "user"],
         ["UserType", "user_type"],
         ["UserRole", "user_roles"],
         ["Role", "roles"],
@@ -129,6 +130,7 @@ describe("users view roles", () => {
         ["Active", "is_enabled"],
         ["Opened", "created"],
         ["UserType", "user_type.name"],
+        ["UserTypeId", "user_type_id"],
         ["UserId", "user_id"],
         ["RoleId", "role_id"],
         ["Name", "roles.name"],
@@ -137,21 +139,21 @@ describe("users view roles", () => {
       select: new TransformMapper(
         (query) =>
           new SelectStatement({
-            table: "UsersView",
+            table: "User",
             fields: [
-              "UsersView.Key",
-              "UsersView.Login",
-              "UsersView.Active",
-              "UsersView.Opened",
-              "UsersView.UserType",
+              "User.Key",
+              "User.Login",
+              "User.Active",
+              "User.Opened",
+              "User.UserType",
               "UserRole.UserId",
               "UserRole.RoleId",
               "Role.Name",
             ],
             where: query.where,
             joins: [
-              Join.left("UserType", "UserType.Id", "user.user_type_id"),
-              Join.left("UserRole", "UserRole.UserId", "UsersView.Key"),
+              Join.left("UserType", "UserType.Id", "User.UserTypeId"),
+              Join.left("UserRole", "UserRole.UserId", "User.Key"),
               Join.left("Role", "Role.Id", "UserRole.RoleId"),
             ],
           }),
@@ -183,11 +185,32 @@ describe("users view roles", () => {
     const graceView = found("grace");
     const linView = found("lin");
     expect(items).toHaveLength(3);
-    expect(adaView?.UserType).toBe("admin");
+    expect(adaView).toMatchObject({
+      Key: ada,
+      Login: "ada",
+      Active: true,
+      Opened: "2020-01-01T00:00:00.000Z",
+      UserType: "admin",
+    });
     expect(names(adaView?.Roles ?? [])).toEqual(["admin", "editor"]);
     expect(adaView?.Roles.every((role) => role.UserId === ada)).toBe(true);
+    expect(graceView).toMatchObject({
+      Key: grace,
+      Login: "grace",
+      Active: true,
+      Opened: "2024-06-01T00:00:00.000Z",
+      UserType: "user",
+    });
     expect(names(graceView?.Roles ?? [])).toEqual(["viewer"]);
-    expect(linView?.Roles ?? []).toEqual([]);
+    expect(graceView?.Roles.every((role) => role.UserId === grace)).toBe(true);
+    expect(linView).toMatchObject({
+      Key: lin,
+      Login: "lin",
+      Active: false,
+      Opened: "2024-06-01T00:00:00.000Z",
+      UserType: "service",
+      Roles: [],
+    });
   });
 });
 
