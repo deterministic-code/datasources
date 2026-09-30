@@ -20668,9 +20668,6 @@ Strategies that fill related fields on read and write nested rows or bulk lists.
 - [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy) — reads each related key, and caches lookups
 - [HashsetOptimizedReadonlyEnrichmentStrategy](#hashsetoptimizedreadonlyenrichmentstrategy) — one `IN` query for the key set
 - [NestedToObjectEnrichmentStrategy](#nestedtoobjectenrichmentstrategy) — collapses join rows
-
-### Write
-
 - [IWriteEnrichmentStrategy](#iwriteenrichmentstrategy) — writes nested rows with the parent
 - [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) — cascade delete and replace-sync, with an optional transaction
 - [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) — skips a null list on create and update
@@ -20680,7 +20677,7 @@ Strategies that fill related fields on read and write nested rows or bulk lists.
 - [DeleteEnrichmentStrategy](#deleteenrichmentstrategy) — how a delete removes children and links
 - [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) — deletes nested rows, then children, then the parent
 
-### Bulk write
+### Bulk
 
 - [IBulkWriteStrategy](#ibulkwritestrategy) — writes a list through a [Bulk repository](#bulk-repository)
 - [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) — one statement per row

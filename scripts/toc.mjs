@@ -30,11 +30,12 @@ export const nestSidebar = (pages, toItem) => {
     if (!page.parent) continue;
     kids.set(page.parent, [...(kids.get(page.parent) ?? []), page]);
   }
-  return pages.flatMap((page) => {
-    if (page.parent) return [];
-    const items = kids.get(page.title);
+  const nest = (page) => {
+    const items = page.parent === page.title ? undefined : kids.get(page.title);
+    const item = toItem(page);
     return items
-      ? [{ ...toItem(page), collapsed: page.collapsed === true, items: items.map(toItem) }]
-      : [toItem(page)];
-  });
+      ? { ...item, collapsed: page.collapsed === true, items: items.map(nest) }
+      : item;
+  };
+  return pages.filter((page) => !page.parent).map(nest);
 };
