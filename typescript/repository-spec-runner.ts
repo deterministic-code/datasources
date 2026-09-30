@@ -8,7 +8,7 @@ import {
   SelectStatement,
   CreateTableStatement,
   CRUDRepository,
-  RowTypeConverter,
+  MetaDataRowTypeConverter,
   TransformMapper,
   UpdateStatement,
   Literal,
@@ -74,7 +74,7 @@ const unquoteSql = (text: string): string =>
 type SpecValue = Cell | SpecRow;
 type SpecRow = { [key: string]: SpecValue };
 
-const whereOf = (mapping: RowTypeConverter<SpecRow>, row: RepositoryRow) => {
+const whereOf = (mapping: MetaDataRowTypeConverter<SpecRow>, row: RepositoryRow) => {
   const parts = Object.entries(mapping.reverseConvert(row)).map(
     ([name, value]) => new Operator.Equals(name, value as Scalar),
   );
@@ -246,12 +246,12 @@ export const runRepositorySpec = async (
   for (const statement of tables(spec.schema, dialect.quote, rename))
     await execute(statement);
   const catalog = types;
-  const mapping = new RowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
+  const mapping = new MetaDataRowTypeConverter<SpecRow>(catalog, fieldsOf(spec.type, catalog));
   const repo = new CRUDRepository<SpecRow>(connection, {
     ids: spec.type.ids,
     type: typeOf(spec.type),
     entity: spec.type.table,
-    rowConverter: mapping,
+    objectConverter: mapping,
     ...crudFieldsOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
     readProperties: Object.keys(spec.type.fields),
   });

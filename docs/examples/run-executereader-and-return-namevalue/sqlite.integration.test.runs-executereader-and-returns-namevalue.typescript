@@ -8,6 +8,6 @@ await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)
   { name: "value", value: "dark" },
 ]);
 await using reader = await command.executeReader("SELECT name, value FROM settings");
-const converter = new RowTypeConverter<NameValue>();
+const converter = new MetaDataRowTypeConverter<NameValue>();
 const items: NameValue[] = [];
 while (await reader.next()) items.push(converter.convert(reader.current!, NameValue));

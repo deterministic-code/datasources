@@ -7,31 +7,28 @@ public static class RepositoryBuilder<T> where T : new()
 {
     public static BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryOptions<T> options)
     {
-        var types = options.RowTypeConverters ?? new Dictionary<string, TypeConverter<Value, Value>>();
-        var rowConverter = options.RowConverter ?? new RowTypeConverter<T>(types);
-        if (rowConverter is RowTypeConverter<T> { Types.Count: 0 } row)
-            foreach (var (key, converter) in types)
-                row.Types[key] = converter;
-        var entity = options.EntityMapper.Map(options.Entity ?? typeof(T).Name);
+        var (ids, insert, update, delete) = options switch
+        {
+            CRUDRepositoryOptions<T> crud => (crud.Ids, crud.Insert, crud.Update, crud.Delete),
+            _ => (Array.Empty<string>(), null, null, null)
+        };
         var columns = (options.ReadProperties is { Count: > 0 } listed ? listed : Columns())
             .Select(options.ColumnMappings.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
-        var (ids, insert, update, delete) = options switch
-        {
-            CRUDRepositoryOptions<T> crud => (
-                crud.Ids,
-                crud.Insert,
-                crud.Update,
-                crud.Delete),
-            _ => (Array.Empty<string>(), null, null, null)
-        };
         return new(
             connection,
-            rowConverter,
+            options.RowConverter,
+            options.ObjectConverter ?? new MetaDataRowTypeConverter<T>(),
             options.RowsMapper,
             options.ColumnMappings,
-            new RepositoryStatements(entity, columns, options.Select, insert, update, delete),
+            new RepositoryStatements(
+                options.EntityMapper.Map(options.Entity ?? typeof(T).Name),
+                columns,
+                options.Select,
+                insert,
+                update,
+                delete),
             ids);
     }
 
@@ -46,10 +43,8 @@ public static class RepositoryBuilder<T> where T : new()
                 .Select(prop => prop.Name)
                 .OrderBy(name => name)];
 
-    static bool IsColumn(Type type)
-    {
-        type = Nullable.GetUnderlyingType(type) ?? type;
-        return type == typeof(string) || type == typeof(byte[])
-            || type.IsValueType && !typeof(IEnumerable).IsAssignableFrom(type);
-    }
+    static bool IsColumn(Type type) =>
+        (Nullable.GetUnderlyingType(type) ?? type) is { } kind
+        && (kind == typeof(string) || kind == typeof(byte[])
+            || kind.IsValueType && !typeof(IEnumerable).IsAssignableFrom(kind));
 }

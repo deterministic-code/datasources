@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { Cell } from "./Cell.ts";
 import { TypeConverter } from "./TypeConverter.ts";
-import { RowTypeConverter } from "./RowTypeConverter.ts";
+import { MetaDataRowTypeConverter } from "./MetaDataRowTypeConverter.ts";
 
 class OnlyOne extends TypeConverter<Cell, Cell> {
   convert = (value: Cell): Cell => value === 1;
   reverseConvert = (value: Cell): Cell => value;
 }
 
-describe("RowTypeConverter", () => {
+describe("MetaDataRowTypeConverter", () => {
   it("convert and reverseConvert round trip", () => {
-    const converter = new RowTypeConverter();
+    const converter = new MetaDataRowTypeConverter();
     const item = converter.convert({ id: 7, username: "ada" });
     const row = converter.reverseConvert(item);
     expect(item).toEqual({ id: 7, username: "ada" });
@@ -18,7 +18,7 @@ describe("RowTypeConverter", () => {
   });
 
   it("lets field converters override", () => {
-    const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
+    const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
     const dest = converter.convert({ flag: 1, name: "a" });
     expect(dest.flag).toBe(true);
     expect(dest.name).toBe("a");
@@ -26,7 +26,7 @@ describe("RowTypeConverter", () => {
   });
 
   it("can construct a typed destination", () => {
-    const converter = new RowTypeConverter({}, { flag: new OnlyOne() });
+    const converter = new MetaDataRowTypeConverter({}, { flag: new OnlyOne() });
     class Item {
       flag = false;
     }
@@ -37,7 +37,7 @@ describe("RowTypeConverter", () => {
     class Item {
       name = "";
     }
-    const converter = new RowTypeConverter<Item>();
+    const converter = new MetaDataRowTypeConverter<Item>();
     expect(converter.convert({ name: null }, Item).name).toBeNull();
   });
 });

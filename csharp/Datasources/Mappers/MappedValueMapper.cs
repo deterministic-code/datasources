@@ -15,7 +15,7 @@ public sealed class MappedValueMapper<T> : IMapper<Dictionary<string, MappedValu
         foreach (var (key, mapped) in value)
             if (mapped is MappedValue.Cell(var cell))
                 row[key] = cell;
-        var item = new RowTypeConverter<TItem>().Convert(row);
+        var item = new MetaDataRowTypeConverter<TItem>().Convert(row);
         foreach (var (key, mapped) in value)
             if (mapped is MappedValue.Many(var items)
                 && typeof(TItem).GetProperty(key) is { CanWrite: true } prop

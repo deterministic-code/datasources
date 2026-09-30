@@ -6,7 +6,7 @@ public class RowTypeConverterTests
 {
     public class User
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string Username { get; set; } = "";
         public bool IsEnabled { get; set; }
         public DateTime Created { get; set; }
@@ -21,25 +21,26 @@ public class RowTypeConverterTests
 
     public class WriteOnly
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public int Secret { set { } }
     }
 
     [Fact]
     public void ConvertAndReverseConvertRoundTrip()
     {
-        var converter = new RowTypeConverter<User>();
+        var created = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var converter = new MetaDataRowTypeConverter<User>();
         var user = converter.Convert(new Row
         {
-            ["Id"] = 7,
+            ["Id"] = 7L,
             ["Username"] = "ada",
-            ["IsEnabled"] = 1,
-            ["Created"] = "2020-01-02T03:04:05.000Z"
+            ["IsEnabled"] = true,
+            ["Created"] = created
         });
-        Assert.Equal(7, user.Id);
+        Assert.Equal(7L, user.Id);
         Assert.Equal("ada", user.Username);
         Assert.True(user.IsEnabled);
-        Assert.Equal(2020, user.Created.Year);
+        Assert.Equal(created, user.Created);
         var row = converter.ReverseConvert(user);
         Assert.Equal(new Value.Int(7), row["Id"]);
         Assert.Equal(new Value.Text("ada"), row["Username"]);
@@ -48,7 +49,7 @@ public class RowTypeConverterTests
     [Fact]
     public void MapsDictionaryRows()
     {
-        var converter = new RowTypeConverter<Dictionary<string, Value>>();
+        var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>();
         var dest = converter.Convert(new Row { ["display_name"] = "a" });
         Assert.Equal(new Value.Text("a"), dest["display_name"]);
         Assert.Equal(new Value.Text("a"), converter.ReverseConvert(dest)["display_name"]);
@@ -57,11 +58,11 @@ public class RowTypeConverterTests
     [Fact]
     public void SkipsIndexersAndWriteOnlyProperties()
     {
-        var mixed = new RowTypeConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
+        var mixed = new MetaDataRowTypeConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
         Assert.Equal("x", mixed.Label);
         Assert.Equal(1, mixed.Count);
-        var obj = new RowTypeConverter<WriteOnly>().Convert(new Row { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
-        Assert.Equal(1, obj.Id);
+        var obj = new MetaDataRowTypeConverter<WriteOnly>().Convert(new Row { ["Id"] = 1, ["missing"] = 2, ["Secret"] = 3 });
+        Assert.Equal(1L, obj.Id);
     }
 
     sealed class OnlyOne : TypeConverter<Value, Value>
@@ -78,10 +79,9 @@ public class RowTypeConverterTests
             ["Id"] = 1,
             ["Username"] = "a",
             ["IsEnabled"] = 2,
-            ["Created"] = "2020-01-02T00:00:00.000Z"
+            ["Created"] = new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc)
         };
-        Assert.True(new RowTypeConverter<User>().Convert(row).IsEnabled);
-        var converter = new RowTypeConverter<User>(null, new Dictionary<string, TypeConverter<Value, Value>>
+        var converter = new MetaDataRowTypeConverter<User>(null, new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["IsEnabled"] = new OnlyOne()
         });
@@ -91,7 +91,7 @@ public class RowTypeConverterTests
     [Fact]
     public void AppliesFieldOverrideOnDictionaryRows()
     {
-        var converter = new RowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
+        var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(null, new Dictionary<string, TypeConverter<Value, Value>>
         {
             ["flag"] = new OnlyOne()
         });

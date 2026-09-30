@@ -35,7 +35,7 @@ use std::sync::{Arc, Mutex};
 pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
-    pub(crate) row_converter: RowTypeConverter,
+    pub(crate) row_converter: Option<RowTypeConverter>,
     pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
     pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub(crate) statements: RepositoryStatements,
@@ -88,7 +88,7 @@ impl ReadonlyRepository {
         Self {
             connection: Arc::new(StubConnection::new("memory")),
             middlewares: Vec::new(),
-            row_converter: RowTypeConverter::new(Vec::new()),
+            row_converter: None,
             rows_mapper: Box::new(IdentityMapper::<Row>::new()),
             column_mappings: Box::new(IdentityMapper::<String>::new()),
             statements: RepositoryStatements::new("", Vec::new()),
@@ -158,8 +158,11 @@ impl ReadonlyRepository {
     }
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        self.row_converter
-            .reverse_convert(&Mapper::reverse_map(&self.rows_mapper, item.clone()))
+        let row = Mapper::reverse_map(&self.rows_mapper, item.clone());
+        match &self.row_converter {
+            Some(converter) => converter.reverse_convert(&row),
+            None => Ok(row),
+        }
     }
 
     fn store_where(
@@ -202,9 +205,12 @@ impl ReadonlyRepository {
         value: &Value,
         fields_applied: bool,
     ) -> Result<Value> {
-        match self.row_converter.fields.get(property) {
-            Some(field) if !fields_applied => field.reverse_convert(value),
-            _ => Ok(value.clone()),
+        match &self.row_converter {
+            Some(converter) => match converter.fields.get(property) {
+                Some(field) if !fields_applied => field.reverse_convert(value),
+                _ => Ok(value.clone()),
+            },
+            None => Ok(value.clone()),
         }
     }
 
@@ -280,7 +286,11 @@ impl ReadonlyRepository {
         }
         let mut pairs = Vec::new();
         for renamed in self.read_sources(query, parameters).await? {
-            let item = Mapper::map(&self.rows_mapper, self.row_converter.convert(&renamed)?);
+            let converted = match &self.row_converter {
+                Some(converter) => converter.convert(&renamed)?,
+                None => renamed.clone(),
+            };
+            let item = Mapper::map(&self.rows_mapper, converted);
             pairs.push((item, Some(renamed)));
         }
         Ok(pairs)

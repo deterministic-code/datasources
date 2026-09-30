@@ -158,7 +158,10 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     return row;
   };
 
-  private reverse = (item: T): Cells => this.rowConverter!.reverseConvert(this.mapper!.reverseMap(item));
+  private reverse = (item: T): Cells => {
+    const row = this.objectConverter!.reverseConvert(this.mapper!.reverseMap(item));
+    return this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
+  };
 
   private map = (where: IWhere, fieldsApplied: boolean): IWhere =>
     where instanceof Where ? where.map(this.column, (name, cell) => this.cell(name, cell, fieldsApplied)) : where;

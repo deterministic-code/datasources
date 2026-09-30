@@ -163,7 +163,7 @@ public class SqliteCommandIntegrationTests
             "INSERT INTO settings (name, value) VALUES ($name, $value)",
             [new Parameter("name", "theme"), new Parameter("value", "dark")]);
         await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
-        var converter = new RowTypeConverter<NameValue>();
+        var converter = new MetaDataRowTypeConverter<NameValue>();
         var items = new List<NameValue>();
         while (await reader.Next())
             items.Add(converter.Convert(reader.Current!));
@@ -185,7 +185,7 @@ public class SqliteCommandIntegrationTests
         await command.Execute(
             "UPDATE items SET name = $name WHERE id = $id",
             [new Parameter("id", 1), new Parameter("name", "A")]);
-        var converter = new RowTypeConverter<Item>();
+        var converter = new MetaDataRowTypeConverter<Item>();
         Item? updated = null;
         {
             await using var reader = await command.ExecuteReader(
@@ -228,7 +228,7 @@ public class SqliteCommandIntegrationTests
             "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
         await using var reader = await command.ExecuteReader(
             "SELECT contact_name1, contact_name2, email, id, username FROM users");
-        var converter = new RowTypeConverter<User>();
+        var converter = new MetaDataRowTypeConverter<User>();
         var mapper = UserContactsMapper();
         User? user = null;
         while (await reader.Next())

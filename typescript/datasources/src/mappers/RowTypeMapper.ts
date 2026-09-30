@@ -1,5 +1,5 @@
 import type { Cells } from "../converters/Cell.ts";
-import { RowTypeConverter } from "../converters/RowTypeConverter.ts";
+import { MetaDataRowTypeConverter as RowTypeConverter } from "../converters/MetaDataRowTypeConverter.ts";
 import type { TypeConverter } from "../converters/TypeConverter.ts";
 import { TransformMapper } from "./TransformMapper.ts";
 

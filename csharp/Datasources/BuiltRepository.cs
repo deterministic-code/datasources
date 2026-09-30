@@ -2,7 +2,8 @@ namespace Datasources;
 
 public sealed record BuiltRepository<T>(
     IConnection Connection,
-    TypeConverter<T, Row> RowConverter,
+    TypeConverter<Row, Row>? RowConverter,
+    TypeConverter<T, Row> ObjectConverter,
     IMapper<T, T> RowsMapper,
     IMapper<string, string> ColumnMappings,
     RepositoryStatements Statements,

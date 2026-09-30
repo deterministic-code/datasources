@@ -138,7 +138,7 @@ export { DatasourceError } from "./DatasourceError.ts";
 export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";
 export { TypeConverter } from "./converters/TypeConverter.ts";
-export { RowTypeConverter } from "./converters/RowTypeConverter.ts";
+export { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 export { ToLowerCaseConverter } from "./converters/ToLowerCaseConverter.ts";
 export { ToUpperCaseConverter } from "./converters/ToUpperCaseConverter.ts";
 export { ChangeCasingConverter, type Casing } from "./converters/ChangeCasingConverter.ts";

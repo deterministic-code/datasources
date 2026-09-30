@@ -3,7 +3,7 @@ import {
   CRUDRepository,
   ExecuteStoredProcedureStatement,
   SelectStatement,
-  RowTypeConverter,
+  MetaDataRowTypeConverter,
   TransformMapper,
   WhereText,
   Where,
@@ -53,7 +53,7 @@ const create = (overrides: Partial<CRUDRepositoryOptions<Cells>> = {}) => {
     ...overrides,
     type,
     entity: overrides.entity ?? "users",
-    rowConverter: overrides.rowConverter ?? new RowTypeConverter(),
+    objectConverter: overrides.objectConverter ?? new MetaDataRowTypeConverter(),
   };
   const repo = new CRUDRepository<Cells>(connection, options);
   return { repo, command };
@@ -274,7 +274,7 @@ describe("CRUDRepository", () => {
     const typed = new CRUDRepository(connection, {
       type: asType(Item),
       entity: "users",
-      rowConverter: new RowTypeConverter(),
+      objectConverter: new MetaDataRowTypeConverter(),
     });
     command.response = { result: undefined, rowsAffected: 1 };
     const created = await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
@@ -332,7 +332,7 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<User>(connection, {
       type: User,
       entity: "users",
-      rowConverter: new RowTypeConverter<User>(),
+      objectConverter: new MetaDataRowTypeConverter<User>(),
       rowsMapper: userContactsMapper(),
     });
     const flat = {
@@ -359,7 +359,7 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<User>(connection, {
       type: User,
       entity: "users",
-      rowConverter: new RowTypeConverter<User>(),
+      objectConverter: new MetaDataRowTypeConverter<User>(),
       rowsMapper: userContactsMapper(),
     });
     const user = Object.assign(new User(), {
@@ -480,7 +480,7 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<Row>(connection, {
       type: Row,
       entity: "rows",
-      rowConverter: new RowTypeConverter<Row>({}, { on: new Flag() }),
+      objectConverter: new MetaDataRowTypeConverter<Row>({}, { on: new Flag() }),
     });
     command.response = { result: undefined, rowsAffected: 1 };
     const created = await repo.create(Object.assign(new Row(), { id: 1, on: true }));
@@ -504,7 +504,7 @@ describe("CRUDRepository", () => {
     const repo = new CRUDRepository<Item>(connection, {
       type: Item,
       entity: "items",
-      rowConverter: new Plain(),
+      objectConverter: new Plain(),
     });
     command.response = { result: undefined, rowsAffected: 1 };
     const updated = await repo.update(

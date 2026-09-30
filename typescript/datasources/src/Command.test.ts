@@ -4,7 +4,7 @@ import {
   Native,
   MockConnection,
   MockReader,
-  RowTypeConverter,
+  MetaDataRowTypeConverter,
   TransformMapper,
 } from "./index.ts";
 
@@ -47,7 +47,7 @@ describe("Command", () => {
     const command = new MockCommand(new MockConnection());
     command.reader = new MockReader([{ name: "theme", value: "dark" }]);
     const reader = await command.executeReader("SELECT name, value FROM settings");
-    const converter = new RowTypeConverter<NameValue>();
+    const converter = new MetaDataRowTypeConverter<NameValue>();
     const items: NameValue[] = [];
     while (await reader.next()) {
       items.push(converter.convert(reader.current!, NameValue));
@@ -92,7 +92,7 @@ describe("Command", () => {
     const reader = await command.executeReader(
       "SELECT contact_name1, contact_name2, email, id, username FROM users",
     );
-    const converter = new RowTypeConverter<User>();
+    const converter = new MetaDataRowTypeConverter<User>();
     const mapper = userContactsMapper();
     let user: User | undefined;
     while (await reader.next()) {

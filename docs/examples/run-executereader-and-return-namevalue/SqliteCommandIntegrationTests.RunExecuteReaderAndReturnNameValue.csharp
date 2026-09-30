@@ -7,7 +7,7 @@ await command.Execute(
     "INSERT INTO settings (name, value) VALUES ($name, $value)",
     [new Parameter("name", "theme"), new Parameter("value", "dark")]);
 await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
-var converter = new RowTypeConverter<NameValue>();
+var converter = new MetaDataRowTypeConverter<NameValue>();
 var items = new List<NameValue>();
 while (await reader.Next())
     items.Add(converter.Convert(reader.Current!));

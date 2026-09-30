@@ -52,6 +52,47 @@ public class ReadonlyRepositoryIntegrationTests
         Assert.False(grace.is_enabled);
     }
 
+    sealed class UserConverter : TypeConverter<User, Row>
+    {
+        public override User Convert(Row from) => new()
+        {
+            id = (int)(long)from["id"].ToObject()!,
+            username = (string)from["username"].ToObject()!,
+            is_enabled = (long)from["is_enabled"].ToObject()! != 0
+        };
+
+        public override Row ReverseConvert(User to) => new()
+        {
+            ["id"] = to.id,
+            ["username"] = to.username,
+            ["is_enabled"] = to.is_enabled
+        };
+    }
+
+    [Fact]
+    public async Task MapsAnObjectExplicitly()
+    {
+        var driver = new SqliteDriver();
+        var ds = new Datasource("sqlite", driver, new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await Open(ds, "minimal-users", """
+            INSERT INTO users (id, username, is_enabled) VALUES
+                (1, 'ada', 1),
+                (2, 'grace', 0);
+            """);
+        var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+        {
+            EntityMapper = new PluralizerMapper(),
+            ReadProperties = ["id", "username", "is_enabled"],
+            ObjectConverter = new UserConverter()
+        });
+
+        var user = await usersRepo.ReadSingle(new Where("id", eq, 1));
+
+        Assert.Equal(1, user!.id);
+        Assert.Equal("ada", user.username);
+        Assert.True(user.is_enabled);
+    }
+
     [Fact]
     public async Task ReadsUserByGuidUsernameAndCreated()
     {

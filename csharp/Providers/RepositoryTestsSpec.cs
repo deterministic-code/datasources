@@ -33,16 +33,16 @@ public static class RepositoryTestsSpec
         if (Verbose()) Console.WriteLine($"\n--- {spec.Name} ({session.Connection.Provider}) ---");
         var logs = new List<string>();
         if (spec.Type.Mappings.Count == 0)
-            await Run(spec, session, new RowTypeConverter<SpecUser>(types, fields), logs, quote);
+            await Run(spec, session, new MetaDataRowTypeConverter<SpecUser>(types, fields), logs, quote);
         else
-            await Run(spec, session, new RowTypeConverter<MappedUser>(types, fields), logs, quote);
+            await Run(spec, session, new MetaDataRowTypeConverter<MappedUser>(types, fields), logs, quote);
         SqlSpec.AssertConsoleLogs(
             spec.Name,
             Queries(spec, session.Connection.Provider),
             [.. logs.Where(line => line.Contains("[Start]") || line.Contains("[Finish]")).Select(Unquote)]);
     }
 
-    static async Task Run<T>(Spec spec, Session session, RowTypeConverter<T> mapping, List<string> logs, Func<string, string> quote)
+    static async Task Run<T>(Spec spec, Session session, MetaDataRowTypeConverter<T> mapping, List<string> logs, Func<string, string> quote)
         where T : new()
     {
         var repo = new CRUDRepository<T>(session.Connection, OptionsOf(spec.Type, mapping, quote)).AddMiddleware(new ConsoleCommandMiddleware(line =>
@@ -182,12 +182,12 @@ public static class RepositoryTestsSpec
     static string Unquote(string text) =>
         Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
 
-    static CRUDRepositoryOptions<T> OptionsOf<T>(TypeSpec type, RowTypeConverter<T> mapping, Func<string, string> quote)
+    static CRUDRepositoryOptions<T> OptionsOf<T>(TypeSpec type, MetaDataRowTypeConverter<T> mapping, Func<string, string> quote)
         where T : new() =>
         new()
         {
             Entity = type.Table,
-            RowConverter = mapping,
+            ObjectConverter = mapping,
             Ids = type.Ids,
             ReadProperties = [.. type.Fields.Keys],
             EntityMapper = new TransformMapper<string, string>(
@@ -266,7 +266,7 @@ public static class RepositoryTestsSpec
         row.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Value.From(Coerce(pair.Value)))).ToArray();
 
-    static IWhere Where<T>(RowTypeConverter<T> mapping, Dictionary<string, object?> row, TypeSpec type)
+    static IWhere Where<T>(MetaDataRowTypeConverter<T> mapping, Dictionary<string, object?> row, TypeSpec type)
         where T : new() =>
         new Where(row.Select(pair =>
         {
@@ -284,7 +284,7 @@ public static class RepositoryTestsSpec
         ).DefaultIfEmpty(new Operator.Equals(new Literal(1), new Literal(1)))
          .Aggregate((left, right) => new Operator.And(left, right)));
 
-    static T ToEntity<T>(Dictionary<string, object?> row, TypeSpec type, RowTypeConverter<T> mapping)
+    static T ToEntity<T>(Dictionary<string, object?> row, TypeSpec type, MetaDataRowTypeConverter<T> mapping)
         where T : new()
     {
         var flat = row.Where(pair => pair.Value is not IDictionary)

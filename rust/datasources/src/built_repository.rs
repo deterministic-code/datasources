@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 pub struct BuiltRepository {
     pub connection: Arc<dyn Connection>,
-    pub row_converter: RowTypeConverter,
+    pub row_converter: Option<RowTypeConverter>,
     pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
     pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
     pub statements: RepositoryStatements,

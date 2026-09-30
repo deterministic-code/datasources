@@ -323,7 +323,10 @@ impl CRUDRepository {
         let row = identified(named(current, &column, &sql_column), &column);
         let mapped = Mapper::map(
             &self.readonly.rows_mapper,
-            self.readonly.row_converter.convert(&row)?,
+            match &self.readonly.row_converter {
+                Some(converter) => converter.convert(&row)?,
+                None => row,
+            },
         );
         self.write_id(item, &self.id_value(&mapped))
     }
@@ -342,7 +345,10 @@ impl CRUDRepository {
         let name = self.ids[0].clone();
         let mut patch = Row::new();
         patch.insert(name.clone(), id.clone());
-        let converted = self.readonly.row_converter.convert(&patch)?;
+        let converted = match &self.readonly.row_converter {
+            Some(converter) => converter.convert(&patch)?,
+            None => patch,
+        };
         if let Some(value) = converted.get(&name) {
             if *value != Value::Null {
                 item.insert(name, value.clone());

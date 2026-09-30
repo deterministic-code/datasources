@@ -1,6 +1,5 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
-use crate::converters::{Cells, RowTypeConverter};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::mappers::{Mapper, TransformMapper};
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
@@ -54,16 +53,17 @@ fn assemble(
         row_converter,
         row_type_converters,
     } = options;
-    let row_converter = match row_converter {
-        Some(mapping) => mapping,
-        None => RowTypeConverter::of::<Cells>(),
-    }
-    .with_types(row_type_converters);
+    let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
     let mut names: Vec<String> = row_converter
-        .column_names()
-        .iter()
-        .map(|name| Mapper::map(&column_mappings, name.clone()))
-        .collect();
+        .as_ref()
+        .map(|converter| {
+            converter
+                .column_names()
+                .iter()
+                .map(|name| Mapper::map(&column_mappings, name.clone()))
+                .collect()
+        })
+        .unwrap_or_default();
     names.sort();
     Ok(BuiltRepository {
         connection,

@@ -51,7 +51,7 @@ public class CommandTests
             Reader = new MockReader<Row>([new Row { ["Name"] = "theme", ["Value"] = "dark" }])
         };
         var reader = await command.ExecuteReader("SELECT Name, Value FROM settings");
-        var converter = new RowTypeConverter<NameValue>();
+        var converter = new MetaDataRowTypeConverter<NameValue>();
         var items = new List<NameValue>();
         while (await reader.Next())
             items.Add(converter.Convert(reader.Current!));
@@ -86,7 +86,7 @@ public class CommandTests
         };
         var reader = await command.ExecuteReader(
             "SELECT contact_name1, contact_name2, email, id, username FROM users");
-        var converter = new RowTypeConverter<User>();
+        var converter = new MetaDataRowTypeConverter<User>();
         var mapper = UserContactsMapper();
         User? user = null;
         while (await reader.Next())

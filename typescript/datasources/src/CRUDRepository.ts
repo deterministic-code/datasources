@@ -15,7 +15,7 @@ import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { createCRUDRepositoryOptions, defaultId, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
 import { parts } from "./RepositoryBuilder.ts";
-import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
+import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -200,11 +200,11 @@ export class CRUDRepository<T = Cells>
       const current = reader.current;
       if (!current) throw new DatasourceError("Reader current must be a row");
       const row = identified(named(current, column, sqlColumn), column);
-      const converted = (
-        this.rowConverter instanceof RowTypeConverter
-          ? this.rowConverter.convert(row, this.type)
-          : this.rowConverter!.convert(row)
-      ) as T;
+      const cells = this.rowConverter ? this.rowConverter.convert(row) : row;
+      const converted =
+        this.objectConverter instanceof MetaDataRowTypeConverter
+          ? this.objectConverter.convert(cells, this.type)
+          : this.objectConverter!.convert(cells);
       this.writeId(target, this.idValue(this.mapper!.map(converted)));
     } finally {
       await reader.dispose();
@@ -213,12 +213,13 @@ export class CRUDRepository<T = Cells>
 
   private writeId = (item: T, id: Scalar | undefined): void => {
     const scalar = scalarOf(id);
-    if (this.ids.length !== 1 || scalar === undefined || !this.rowConverter) return;
+    if (this.ids.length !== 1 || scalar === undefined || !this.objectConverter) return;
     const name = this.ids[0]!;
+    const cells = this.rowConverter ? this.rowConverter.convert({ [name]: scalar }) : { [name]: scalar };
     const patch = (
-      this.rowConverter instanceof RowTypeConverter
-        ? this.rowConverter.convert({ [name]: scalar }, this.type)
-        : this.rowConverter.convert({ [name]: scalar })
+      this.objectConverter instanceof MetaDataRowTypeConverter
+        ? this.objectConverter.convert(cells, this.type)
+        : this.objectConverter.convert(cells)
     ) as Props;
     const value = patch[name];
     if (value !== undefined && value !== null && typeof value !== "object")
@@ -262,8 +263,10 @@ export class CRUDRepository<T = Cells>
     return this.idWhere({ [this.ids[0]!]: id });
   };
 
-  private reverseConvert = (item: T): Cells =>
-    this.rowConverter!.reverseConvert(this.mapper!.reverseMap(item));
+  private reverseConvert = (item: T): Cells => {
+    const row = this.objectConverter!.reverseConvert(this.mapper!.reverseMap(item));
+    return this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
+  };
 
   private idWhere = (record: Cells): IWhere => {
     const parts: IExpression[] = this.ids.map((col) => {

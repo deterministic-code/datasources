@@ -418,15 +418,23 @@ IMapper<T, T> RowsMapper { get; init; }
 
 ##### RowConverter
 
-Row [TypeConverter](./type-converters.md).
+`Row` to `Row`. Omitted leaves each cell unchanged.
 
 ```csharp
-TypeConverter<T, Row>? RowConverter { get; init; }
+TypeConverter<Row, Row>? RowConverter { get; init; }
+```
+
+##### ObjectConverter
+
+`Row` to `T`, after `RowConverter`. Omitted assigns public properties. A handwritten converter assigns each column and does not reflect.
+
+```csharp
+TypeConverter<T, Row>? ObjectConverter { get; init; }
 ```
 
 ##### RowTypeConverters
 
-Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository.
+Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`. The driver applies its converters when it binds a parameter. A field converter on the object converter reverse-converts that property in the repository.
 
 ```csharp
 IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }

@@ -12,7 +12,7 @@ import type { IWhere } from "./statements/IWhere.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
+import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
 import { Where } from "./statements/Where.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
@@ -61,7 +61,8 @@ export const builtOf = <T>(
 export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<T> {
   readonly type: Constructable<T>;
   private connection?: IConnection;
-  protected rowConverter?: TypeConverter<T, Cells>;
+  protected rowConverter?: TypeConverter<Cells, Cells>;
+  protected objectConverter?: TypeConverter<T, Cells>;
   protected mapper?: IMapper<T, T>;
   private readonly columnMappings: IMapper<string, string> = new IdentityMapper();
   protected statements?: RepositoryStatements;
@@ -91,6 +92,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.type = built.type;
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
+    this.objectConverter = built.objectConverter;
     this.mapper = built.rowsMapper;
     this.columnMappings = built.columnMappings;
     this.statements = built.statements;
@@ -143,7 +145,9 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
 
   protected cell = (property: string, value: Cell, fieldsApplied: boolean): Cell => {
     const field =
-      this.rowConverter instanceof RowTypeConverter ? this.rowConverter.fields[property] : undefined;
+      this.objectConverter instanceof MetaDataRowTypeConverter
+        ? this.objectConverter.fields[property]
+        : undefined;
     return field && !fieldsApplied ? field.reverseConvert(value) : value;
   };
 
@@ -186,10 +190,15 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     }
   }
 
+  private convertObject = (row: Cells): T =>
+    this.objectConverter instanceof MetaDataRowTypeConverter
+      ? this.objectConverter.convert(row, this.type)
+      : this.objectConverter!.convert(row);
+
   private async *readRows(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
     for await (const renamed of this.readSources(query, parameters))
       yield {
-        item: this.mapper!.map(this.rowConverter!.convert(renamed)),
+        item: this.mapper!.map(this.convertObject(this.rowConverter ? this.rowConverter.convert(renamed) : renamed)),
         source: renamed,
       };
   }
