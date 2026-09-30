@@ -280,27 +280,262 @@ Package names per language are on [Quick Start](#installation).
 
 ## Examples
 
-Short recipes for the usual paths. Add samples here as Repository and related types land.
+Samples from the code reference. Open a link for the explanation and the C#, Rust, and TypeScript code.
 
-### Create a repository
+### Datasource
 
-TODO: register a provider, create a connection, `createRepository`, then `create` / `read` / `update` / `delete`.
+- [Create default from .env settings](#create-default-from-env-settings)
+- [Default using environment variables](#default-using-environment-variables)
+- [Create from a driver](#create-from-a-driver)
 
-### Run a command
+### Connection
 
-TODO: open a connection, `createCommand`, `execute` / `executeReader`. See [Command](#command) for the current samples.
+- [Create from Default](#create-from-default)
+- [Open and close](#open-and-close)
+- [Create and run a command](#create-and-run-a-command)
+- [Close with using](#close-with-using)
+- [Start a transaction](#start-a-transaction)
 
-### Run a transaction
+### Transaction
 
-TODO: `startTransaction`, work, then `commit` or `abort`. See [Transaction](#transaction).
+- [Commit or abort](#commit-or-abort)
+- [Two commands running together](#two-commands-running-together)
 
-### Map a row
+### Command
 
-TODO: `TransformMapper` flatten, pass-through names, or rewrite a statement. See [Mappers](#mappers).
+- [Run raw SQL](#run-raw-sql)
+- [Run ExecuteReader and return NameValue](#run-executereader-and-return-namevalue)
+- [Execute insert, update, and delete](#execute-insert-update-and-delete)
+- [Map flat contacts](#map-flat-contacts)
+- [Fill an output parameter](#fill-an-output-parameter)
+- [Read a return value](#read-a-return-value)
 
-### Convert a row
+### Reader
 
-TODO: `MetaDataRowTypeConverter` convert / reverse-convert, or attach a field converter. See [MetaDataRowTypeConverter](#metadata-row-type-converter).
+- [Read a row](#read-a-row)
+- [Read with case mapping](#read-with-case-mapping)
+- [Type conversion and flat to nested](#type-conversion-and-flat-to-nested)
+- [Read multiple results returned in a single command](#read-multiple-results-returned-in-a-single-command)
+- [Call a stored procedure that returns two results](#call-a-stored-procedure-that-returns-two-results)
+
+### Repositories
+
+- [Simple readonly](#simple-readonly)
+- [CRUD](#crud)
+- [Enriched CRUD](#enriched-crud)
+- [Bulk](#bulk)
+
+### Readonly Repository
+
+- [Simple readonly](#simple-readonly)
+- [Map an object explicitly](#map-an-object-explicitly)
+- [Enriched readonly](#enriched-readonly)
+- [Read a user by guid, username, and created](#read-a-user-by-guid-username-and-created)
+- [Call a stored procedure](#call-a-stored-procedure)
+- [Read and read single](#read-and-read-single)
+- [Fill a lookup](#fill-a-lookup)
+- [Fill roles from one join](#fill-roles-from-one-join)
+
+### CRUD Repository
+
+- [Simple CRUD](#simple-crud)
+- [Enriched CRUD](#enriched-crud)
+- [Multi-tenant](#multi-tenant)
+- [Enriched contacts write](#enriched-contacts-write)
+- [Type mapping](#type-mapping)
+
+### Bulk Repository
+
+- [Create parents and children](#create-parents-and-children)
+
+### Repository Factories
+
+- [Register and create](#register-and-create)
+
+### Mappers
+
+- [Transform a contact](#transform-a-contact)
+- [Change casing](#change-casing)
+- [Lowercase plural](#lowercase-plural)
+- [Flat to nested](#flat-to-nested)
+
+### Identity Mapper
+
+- [Map and reverse map](#map-and-reverse-map)
+
+### Dictionary Mapper
+
+- [Map and reverse map](#map-and-reverse-map)
+- [First key wins on reverse](#first-key-wins-on-reverse)
+
+### Pluralizer Mapper
+
+- [Map contacts](#map-contacts)
+- [Reverse map contacts](#reverse-map-contacts)
+- [Lowercase plural](#lowercase-plural)
+
+### Change Casing Mapper
+
+- [Map contacts](#map-contacts)
+- [Reverse map contacts](#reverse-map-contacts)
+
+### Transform Mapper
+
+- [Flatten with TransformMapper](#flatten-with-transformmapper)
+- [Prefix a contact field](#prefix-a-contact-field)
+- [Map a contact name and email](#map-a-contact-name-and-email)
+
+### Flat To Nested Mapper
+
+- [Map join rows to a nested contact](#map-join-rows-to-a-nested-contact)
+
+### Metadata Row Type Converter
+
+- [Convert a row](#convert-a-row)
+- [Field converter](#field-converter)
+
+### Select Statement
+
+- [Wrap query text and an optional where](#wrap-query-text-and-an-optional-where)
+- [Compile a SELECT](#compile-a-select)
+- [Group, aggregate, order, and limit](#group-aggregate-order-and-limit)
+- [Group rows](#group-rows)
+- [Aggregate without grouping](#aggregate-without-grouping)
+- [Order rows](#order-rows)
+- [Limit rows](#limit-rows)
+
+### Insert Statement
+
+- [Compile an INSERT](#compile-an-insert)
+
+### Update Statement
+
+- [Compile an UPDATE](#compile-an-update)
+
+### Delete Statement
+
+- [Compile a DELETE](#compile-a-delete)
+
+### Create Table Statement
+
+- [Compile a CREATE TABLE](#compile-a-create-table)
+- [Compile named constraints](#compile-named-constraints)
+
+### Create Index Statement
+
+- [Compile a CREATE INDEX](#compile-a-create-index)
+- [Compile a CREATE UNIQUE INDEX](#compile-a-create-unique-index)
+
+### Execute Stored Procedure Statement
+
+- [Compile a CALL](#compile-a-call)
+
+### Return Statement
+
+- [Compile a SELECT function call](#compile-a-select-function-call)
+
+### Where
+
+- [Compare, groups, not, and in](#compare-groups-not-and-in)
+- [Column, alias, literal](#column-alias-literal)
+- [Attach to a query](#attach-to-a-query)
+
+### Expressions
+
+- [Compare tree](#compare-tree)
+- [Column, alias, literal](#column-alias-literal)
+
+### Statement Evaluator
+
+- [Match and miss](#match-and-miss)
+
+### Datasource Factory
+
+- [Register and Create](#register-and-create)
+- [Missing provider](#missing-provider)
+
+### Datasource URL
+
+- [Postgres URL](#postgres-url)
+- [SQLite file](#sqlite-file)
+- [Not a URL](#not-a-url)
+
+### IEnriched
+
+- [Register a fill](#register-a-fill)
+
+### Enrichment
+
+- [Fill a lookup](#fill-a-lookup)
+
+### IReadonlyEnrichmentStrategy
+
+- [Fill a lookup](#fill-a-lookup)
+
+### DefaultReadonlyEnrichmentStrategy
+
+- [Fill a lookup](#fill-a-lookup)
+
+### HashsetOptimizedReadonlyEnrichmentStrategy
+
+- [Fill with one query](#fill-with-one-query)
+
+### NestedToObjectEnrichmentStrategy
+
+- [Collapse join rows](#collapse-join-rows)
+
+### IWriteEnrichmentStrategy
+
+- [Roll back a bulk update](#roll-back-a-bulk-update)
+
+### DefaultWriteEnrichmentStrategy
+
+- [Roll back a bulk update](#roll-back-a-bulk-update)
+
+### LazyWriteEnrichmentStrategy
+
+- [Skip unloaded lists](#skip-unloaded-lists)
+
+### UpdateEnrichmentStrategy
+
+- [Replace children](#replace-children)
+
+### DefaultUpdateEnrichmentStrategy
+
+- [Replace-sync children](#replace-sync-children)
+
+### CascadeDeleteUpdateEnrichmentStrategy
+
+- [Recreate children](#recreate-children)
+
+### DeleteEnrichmentStrategy
+
+- [Skip child deletes](#skip-child-deletes)
+
+### CascadeDeleteEnrichmentStrategy
+
+- [Cascade delete](#cascade-delete)
+
+### IBulkWriteStrategy
+
+- [One statement per row](#one-statement-per-row)
+
+### SingleCommandIBulkWriteStrategy
+
+- [One statement per row](#one-statement-per-row)
+
+### BatchCommandIBulkWriteStrategy
+
+- [Join statements](#join-statements)
+
+### StoredProcedureBulkWriteStrategy
+
+- [One JSON call](#one-json-call)
+
+### Driver
+
+- [Register and Create](#register-and-create)
+- [Mock driver](#mock-driver)
 
 ## Datasource
 
