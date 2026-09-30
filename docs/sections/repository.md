@@ -2,8 +2,6 @@
 
 Repositories map datasource commands to a domain object. They mediate reading and modifying objects in a datasource, and they can enrich those objects into view objects with extra properties. That abstraction removes boilerplate datasource code.
 
-{{Type|type|entity_type}} is the item CLR type, constructor, or `TypeId` the repository exposes, not the table `entity` name.
-
 ## Classes
 
 ::: reference
