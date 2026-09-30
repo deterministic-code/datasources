@@ -11,7 +11,7 @@ vi.mock("pg", () => {
   return { Client, default: { Client } };
 });
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@datasources/core";
 import { bindParameters, toPostgres } from "./bind.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresConnection } from "./connection.ts";
@@ -126,7 +126,7 @@ describe("PostgresConnection", () => {
     await connection.close();
     expect(client.ended).toBe(true);
     await expect(connection.exec("SELECT 1")).rejects.toThrow("not open");
-    await expect(command.execute("x")).rejects.toThrow("not open");
+    await expect(command.executeNative(new Native("x"))).rejects.toThrow("not open");
   });
 
   it("loads the pg client from a module", async () => {
@@ -199,7 +199,7 @@ describe("PostgresCommand", () => {
     expect(reader.current).toEqual({ id: 5 });
     const empty = await command.executeReader("");
     expect(await empty.next()).toBe(false);
-    expect(await (await command.executeReader(";")).next()).toBe(false);
+    expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
     client.result = { rowCount: 1, rows: [{ add_one: 5 }] };
     const n = { name: "n", value: 4 };
     expect(await command.executeStatement(new ReturnStatement("add_one", [n]), [n]))
@@ -212,15 +212,15 @@ describe("PostgresCommand", () => {
     client.result = { rowCount: 1, rows: [{}] };
     expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
     client.result = { rowCount: 0, rows: [] };
-    expect(await command.execute("SELECT 1")).toEqual({
+    expect(await command.executeNative(new Native("SELECT 1"))).toEqual({
       result: null,
       rowsAffected: 0,
       parameters: undefined,
     });
     client.result = { rowCount: 1, rows: [{ id: null }] };
-    expect(await command.execute("SELECT flag($b)", [{ name: "b", value: true }])).toMatchObject({ result: null });
-    expect(await command.execute("SELECT when($d)", [{ name: "d", value: new Date("2026-09-22T00:00:00.000Z") }])).toMatchObject({ result: null });
-    expect(await command.execute("SELECT blob($b)", [{ name: "b", value: new Uint8Array([1, 2, 3]) }])).toMatchObject({ result: null });
+    expect(await command.executeNative(new Native("SELECT flag($b)"), [{ name: "b", value: true }])).toMatchObject({ result: null });
+    expect(await command.executeNative(new Native("SELECT when($d)"), [{ name: "d", value: new Date("2026-09-22T00:00:00.000Z") }])).toMatchObject({ result: null });
+    expect(await command.executeNative(new Native("SELECT blob($b)"), [{ name: "b", value: new Uint8Array([1, 2, 3]) }])).toMatchObject({ result: null });
     const inout = { name: "result", value: 4, direction: ParameterDirection.InputOutput };
     client.result = { rowCount: 1, rows: [{ result: 5 }] };
     expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [inout]), [inout])).toMatchObject({
@@ -229,14 +229,14 @@ describe("PostgresCommand", () => {
     });
     client.result = { rowCount: 1, rows: [{ id: 1 }] };
     expect(
-      await command.execute("CALL noop($n)", [
+      await command.executeNative(new Native("CALL noop($n)"), [
         { name: "n", value: 1, direction: ParameterDirection.Input },
       ]),
     ).toMatchObject({ rowsAffected: 1 });
-    expect(await command.execute("CALL noop()")).toMatchObject({ rowsAffected: 1 });
+    expect(await command.executeNative(new Native("CALL noop()"))).toMatchObject({ rowsAffected: 1 });
     client.result = { rowCount: 1, rows: [{ other: 9 }] };
     expect(
-      await command.execute("CALL bump($missing)", [
+      await command.executeNative(new Native("CALL bump($missing)"), [
         { name: "missing", value: 1, direction: ParameterDirection.Output },
       ]),
     ).toMatchObject({
@@ -266,12 +266,12 @@ describe("Postgres datasource", () => {
     expect(command).toBeInstanceOf(PostgresCommand);
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
-    await command.executeReader("SELECT 1");
+    await command.executeReaderNative(new Native("SELECT 1"));
     const implicit = ds.createCommand();
     expect(implicit).toBeInstanceOf(PostgresCommand);
     expect(implicit.connection).toBeInstanceOf(PostgresConnection);
     await implicit.execute("DELETE FROM items");
-    await implicit.executeReader("SELECT 1");
+    await implicit.executeReaderNative(new Native("SELECT 1"));
     const repo = ds.createRepository(untyped(), connection);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);

@@ -77,7 +77,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+        await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
         await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
         await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
         Row? row = null;
@@ -94,7 +94,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute("CREATE TABLE settings (name TEXT, value TEXT)");
+        await command.Execute(Native.N("CREATE TABLE settings (name TEXT, value TEXT)"));
         await command.Execute(
             "INSERT INTO settings (name, value) VALUES ($name, $value)",
             [new Parameter("name", "theme"), new Parameter("value", "dark")]);
@@ -114,7 +114,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+        await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
         await command.Execute(
             "INSERT INTO items (id, name) VALUES ($id, $name)",
             [new Parameter("id", 1), new Parameter("name", "a")]);
@@ -151,7 +151,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await command.Execute("""
+        await command.Execute(Native.N("""
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 username TEXT,
@@ -159,7 +159,7 @@ public class SqliteCommandIntegrationTests
                 contact_name1 TEXT,
                 contact_name2 TEXT
             )
-            """);
+            """));
         await command.Execute(
             "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
         await using var reader = await command.ExecuteReader(
@@ -181,7 +181,7 @@ public class SqliteCommandIntegrationTests
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
-        await using var reader = await command.ExecuteReader("SELECT 1 AS id; SELECT 2 AS id");
+        await using var reader = await command.ExecuteReader(Native.N("SELECT 1 AS id; SELECT 2 AS id"));
         var first = new List<Row>();
         while (await reader.Next())
             first.Add(reader.Current!);

@@ -8,15 +8,15 @@ public static class Migrate
     {
         var provider = command.Connection.Provider;
         if (provider == "sqlite")
-            await command.Execute("PRAGMA foreign_keys = ON");
+            await command.Execute(Native.N("PRAGMA foreign_keys = ON"));
         foreach (var table in Schema.Tables(provider))
             await (provider == "sqlite"
-                ? command.Execute(IfNotExists(table.GetText()))
+                ? command.Execute(Native.N(IfNotExists(table.GetText())))
                 : command.Execute(table));
         await Seed(command, provider);
         if (provider == "mysql")
             foreach (var sql in MysqlProcedures.Statements())
-                await command.Execute(sql);
+                await command.Execute(Native.N(sql));
     }
 
     public static string IfNotExists(string sql) =>

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  Native,
   ParameterDirection,
   ReturnStatement,
   ExecuteStoredProcedureStatement,
@@ -22,12 +23,12 @@ const url = (process.env.MYSQL_URL ??=
 beforeAll(() => ensureCompose("mysql"), 120_000);
 
 async function fillOutputParameter(command: MysqlCommand) {
-  await command.execute(`
+  await command.executeNative(new Native(`
     CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
     BEGIN
       SET result = start_n + 1;
     END
-  `);
+  `));
   const start = { name: "start_n", value: 4 };
   const result = { name: "result", direction: ParameterDirection.Output };
   const call = await command.executeStatement(
@@ -94,10 +95,10 @@ describe("return and output parameters", () => {
       await connection.open();
       const command = new MysqlCommand(connection);
       await fillOutputParameter(command);
-      await command.execute(`
+      await command.executeNative(new Native(`
         CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC
         RETURN n + 1
-      `);
+      `));
       const n = { name: "n", value: 4 };
       const ret = await command.executeStatement(
         new ReturnStatement("add_one", [n]),

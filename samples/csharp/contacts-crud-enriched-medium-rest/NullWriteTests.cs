@@ -19,7 +19,7 @@ public sealed class NullWriteTests
     {
         var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         await connection.Open();
-        await connection.CreateCommand().Execute("""
+        await connection.CreateCommand().Execute(Native.N("""
             CREATE TABLE contact (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -27,7 +27,7 @@ public sealed class NullWriteTests
                 updated TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
                 version BLOB NOT NULL DEFAULT X'0102'
             )
-            """);
+            """));
         var repo = new CRUDRepository<ContactStamp>(connection, new CRUDRepositoryOptions<ContactStamp> { Entity = "contact" });
         var omitted = new ContactStamp { name = "ada" };
         await repo.Create(omitted);

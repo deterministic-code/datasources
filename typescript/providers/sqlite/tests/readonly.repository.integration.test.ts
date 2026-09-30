@@ -10,6 +10,7 @@ import {
   eq,
   execute,
   gt,
+  Native,
   type IConnection,
   type IDatasource,
 } from "@datasources/core";
@@ -152,7 +153,7 @@ const open = async (ds: IDatasource, schema: string, sql = ""): Promise<IConnect
   for (const statement of tables(schema, quote))
     await execute(command, statement);
   for (const statement of sql.split(";").map((part) => part.trim()).filter(Boolean))
-    await command.execute(statement);
+    await command.executeNative(new Native(statement));
   return connection;
 };
 

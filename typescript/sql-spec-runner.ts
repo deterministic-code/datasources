@@ -8,6 +8,7 @@ import {
   ConsoleCommandMiddleware,
   CreateTableStatement,
   DatasourceError,
+  Native,
   IsolationLevel,
   type ICommand,
   type IConnection,
@@ -221,14 +222,14 @@ export const runSpec = async (
       : session(op.connection).command;
     try {
       if (step.execute) {
-        const response = await command.execute(op.sql, params(op.parameters));
+        const response = await command.executeNative(new Native(op.sql), params(op.parameters));
         if (op.expect?.error) throw new Error(`${spec.name}: expected ${op.expect.error}`);
         if (op.expect?.rowsAffected !== undefined)
           expect(response.rowsAffected).toBe(op.expect.rowsAffected);
         if (op.expect?.result !== undefined)
           expect(norm(response.result as Scalar)).toBe(norm(op.expect.result));
       } else {
-        const rows = await collect(await command.executeReader(op.sql, params(op.parameters)));
+        const rows = await collect(await command.executeReaderNative(new Native(op.sql), params(op.parameters)));
         if (op.expect?.error) throw new Error(`${spec.name}: expected ${op.expect.error}`);
         if (op.expect?.rows)
           expect(rows.map(cells)).toEqual((op.expect.rows as Cells[]).map(cells));

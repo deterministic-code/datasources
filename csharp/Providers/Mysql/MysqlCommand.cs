@@ -10,8 +10,8 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     MysqlConnection Typed => (MysqlConnection)Connection;
 
-    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, async (query, paramsList) =>
+    public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(text.Text, parameters, async (query, paramsList) =>
         {
             if (string.IsNullOrWhiteSpace(query))
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
@@ -20,8 +20,8 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             return (reader, (IReadOnlyList<Row>)[]);
         });
 
-    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, async (query, paramsList) =>
+    public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(text.Text, parameters, async (query, paramsList) =>
         {
             if (string.IsNullOrWhiteSpace(query))
                 return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);
@@ -31,7 +31,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(new MysqlStatementFactory().Transform(statement).GetText(), parameters);
+        ExecuteReader(new Native(new MysqlStatementFactory().Transform(statement).GetText()), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
@@ -39,7 +39,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
             ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
                 ExecuteProcedure(name, parameters),
-            _ => Execute(new MysqlStatementFactory().Transform(statement).GetText(), parameters)
+            _ => Execute(new Native(new MysqlStatementFactory().Transform(statement).GetText()), parameters)
         };
 
     async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)

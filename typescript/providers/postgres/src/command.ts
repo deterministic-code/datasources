@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DatasourceError,
+  Native,
   ParameterDirection,
   ReturnStatement,
   SelectStatement,
@@ -25,11 +26,11 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     super();
   }
 
-  async executeReader(
-    text: string,
+  async executeReaderNative(
+    text: Native,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.run(text, parameters, async (query, params) => {
+    return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new ArrayReader([]), rows: [] };
       this.connection.ensureOpen();
       const statements = splitStatements(query);
@@ -46,8 +47,8 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReader(
-      new PostgresStatementFactory().transform(statement).getText(),
+    return this.executeReaderNative(
+      new Native(new PostgresStatementFactory().transform(statement).getText()),
       parameters,
     );
   }
@@ -55,7 +56,10 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     return statement instanceof SelectStatement || statement instanceof ReturnStatement
       ? this.firstCell(statement, parameters)
-      : this.execute(new PostgresStatementFactory().transform(statement).getText(), parameters);
+      : this.executeNative(
+          new Native(new PostgresStatementFactory().transform(statement).getText()),
+          parameters,
+        );
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -72,11 +76,8 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     }
   }
 
-  async execute(
-    text: string,
-    parameters?: Parameter[],
-  ): Promise<Response> {
-    return this.run(text, parameters, async (query, params) => {
+  async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
+    return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim())
         return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();

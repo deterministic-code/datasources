@@ -100,6 +100,8 @@ export {
   OrderBy,
   SelectStatement,
   StatementParser,
+  Native,
+  n,
   Subquery,
   ReferentialAction,
   StatementEvaluator,

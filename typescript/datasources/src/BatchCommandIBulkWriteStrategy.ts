@@ -2,6 +2,7 @@ import type { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { BulkCommand } from "./BulkCommand.ts";
+import { Native } from "./statements/Native.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
@@ -9,8 +10,8 @@ const empty = (): Response => ({ result: null, rowsAffected: 0 });
 const send = <T extends object>(repo: BulkCRUDRepository<T>, commands: BulkCommand[]): Promise<Response> => {
   if (commands.length === 0) return Promise.resolve(empty());
   const renamed = commands.map(rename);
-  return repo.command().execute(
-    renamed.map((command) => command.text).join("; "),
+  return repo.command().executeNative(
+    new Native(renamed.map((command) => command.text).join("; ")),
     renamed.flatMap((command) => command.parameters),
   );
 };

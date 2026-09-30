@@ -1,7 +1,12 @@
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
+import type { IReader } from "./IReader.ts";
 import type { Parameter } from "./Parameter.ts";
+import type { Response } from "./Response.ts";
 import type { Row } from "./Row.ts";
-import type { Cell } from "./converters/Cell.ts";
+import type { Cell, Cells } from "./converters/Cell.ts";
+import type { IStatement } from "./statements/IStatement.ts";
+import { Native } from "./statements/Native.ts";
+import { StatementParser } from "./statements/StatementParser.ts";
 
 const asError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
@@ -33,6 +38,37 @@ export class CommandMiddlewareHost {
   addMiddleware(middleware: ICommandMiddleware): this {
     this.middlewares.push(middleware);
     return this;
+  }
+
+  execute(text: string, parameters?: Parameter[]): Promise<Response> {
+    return text.trim()
+      ? this.executeStatement(StatementParser.parse(text), parameters)
+      : this.executeNative(new Native(text), parameters);
+  }
+
+  executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>> {
+    return text.trim()
+      ? this.executeReaderStatement(StatementParser.parse(text), parameters)
+      : this.executeReaderNative(new Native(text), parameters);
+  }
+
+  executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
+    return this.executeNative(new Native(statement.getText()), parameters);
+  }
+
+  executeReaderStatement(
+    statement: IStatement,
+    parameters?: Parameter[],
+  ): Promise<IReader<Cells>> {
+    return this.executeReaderNative(new Native(statement.getText()), parameters);
+  }
+
+  executeNative(_text: Native, _parameters?: Parameter[]): Promise<Response> {
+    throw new Error("executeNative");
+  }
+
+  executeReaderNative(_text: Native, _parameters?: Parameter[]): Promise<IReader<Cells>> {
+    throw new Error("executeReaderNative");
   }
 
   async run<T>(

@@ -1,5 +1,5 @@
 use crate::schema;
-use datasources::{Command, Result, Text};
+use datasources::{Command, Native, Result, Text};
 
 pub fn if_not_exists(sql: &str) -> String {
     match sql.strip_prefix("CREATE TABLE ") {
@@ -12,7 +12,7 @@ pub async fn apply(command: &dyn Command, provider: &str) -> Result<()> {
     for table in schema::tables(provider)? {
         if provider == "sqlite" {
             command
-                .execute(&if_not_exists(&table.get_text()), None)
+                .execute_native(&Native::new(if_not_exists(&table.get_text())), None)
                 .await?;
         } else {
             command.execute_statement(&table, None).await?;
@@ -20,7 +20,7 @@ pub async fn apply(command: &dyn Command, provider: &str) -> Result<()> {
     }
     if provider == "mysql" {
         for sql in schema::mysql_procedures() {
-            command.execute(sql, None).await?;
+            command.execute_native(&Native::new(sql), None).await?;
         }
     }
     Ok(())

@@ -1,5 +1,5 @@
 use datasources::{
-    default, ConvertSchema, Mapper, Parameter, Row, RowTypeConverter, TransformMapper, Value,
+    default, ConvertSchema, Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, Value,
 };
 
 struct NameValue;
@@ -103,8 +103,8 @@ async fn run_raw_sql() {
     connection.open().await.unwrap();
     let command = connection.create_command();
     command
-        .execute(
-            "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+        .execute_native(
+            &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
             None,
         )
         .await
@@ -132,7 +132,7 @@ async fn run_execute_reader_and_return_name_value() {
     connection.open().await.unwrap();
     let command = connection.create_command();
     command
-        .execute("CREATE TABLE settings (name TEXT, value TEXT)", None)
+        .execute_native(&Native::new("CREATE TABLE settings (name TEXT, value TEXT)"), None)
         .await
         .unwrap();
     let parameters = [
@@ -167,8 +167,8 @@ async fn execute_insert_update_and_delete() {
     connection.open().await.unwrap();
     let command = connection.create_command();
     command
-        .execute(
-            "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)",
+        .execute_native(
+            &Native::new("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"),
             None,
         )
         .await
@@ -239,14 +239,14 @@ async fn execute_reader_maps_flat_contacts() {
     connection.open().await.unwrap();
     let command = connection.create_command();
     command
-        .execute(
-            "CREATE TABLE users (
+        .execute_native(
+            &Native::new("CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 username TEXT,
                 email TEXT,
                 contact_name1 TEXT,
                 contact_name2 TEXT
-            )",
+            )"),
             None,
         )
         .await
@@ -292,7 +292,7 @@ async fn read_multiple_results() {
     connection.open().await.unwrap();
     let command = connection.create_command();
     let reader = command
-        .execute_reader("SELECT 1 AS id; SELECT 2 AS id", None)
+        .execute_reader_native(&Native::new("SELECT 1 AS id; SELECT 2 AS id"), None)
         .await
         .unwrap();
     let mut first = Vec::new();

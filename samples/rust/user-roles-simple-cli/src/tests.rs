@@ -590,13 +590,13 @@ async fn omits_null_created_and_updated() {
     connection.open().await.unwrap();
     connection
         .create_command()
-        .execute(
-            "CREATE TABLE users (
+        .execute_native(
+            &datasources::Native::new("CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 username TEXT NOT NULL,
                 created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
                 updated BLOB NOT NULL DEFAULT X'0102'
-            )",
+            )"),
             None,
         )
         .await

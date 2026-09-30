@@ -1,7 +1,7 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_crud_repository_options, eq, gt, BuiltDatasource, Connection, ConvertSchema, Datasource,
-    DictionaryMapper, PluralizerMapper, Value, Where,
+    DictionaryMapper, Native, PluralizerMapper, Value, Where,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -158,7 +158,7 @@ async fn open(ds: &dyn Datasource, schema: &str, sql: &str) -> Arc<dyn Connectio
         .map(str::trim)
         .filter(|part| !part.is_empty())
     {
-        command.execute(statement, None).await.unwrap();
+        command.execute_native(&Native::new(statement), None).await.unwrap();
     }
     connection
 }

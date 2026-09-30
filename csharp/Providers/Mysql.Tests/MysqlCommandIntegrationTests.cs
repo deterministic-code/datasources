@@ -22,10 +22,10 @@ public class MysqlCommandIntegrationTests
             await conn.Open();
             var command = new MysqlCommand(conn);
             await FillOutputParameter(command);
-            await command.Execute("""
+            await command.Execute(Native.N("""
                 CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC
                 RETURN n + 1
-                """);
+                """));
             var n = new Parameter("n", 4);
             var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
             Assert.Equal(new Value.Int(5), ret.Result);
@@ -65,12 +65,12 @@ public class MysqlCommandIntegrationTests
 
     static async Task FillOutputParameter(ICommand command)
     {
-        await command.Execute("""
+        await command.Execute(Native.N("""
             CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
             BEGIN
               SET result = start_n + 1;
             END
-            """);
+            """));
         var start = new Parameter("start_n", 4);
         var result = new Parameter("result", ParameterDirection.Output);
         var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]), [start, result]);

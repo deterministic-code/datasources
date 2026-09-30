@@ -6,7 +6,7 @@ use crate::statement_factory::MysqlStatementFactory;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Parameter, Reader, Response, Result, ReturnStatement,
+    CommandMiddlewareHost, DatasourceError, Native, Parameter, Reader, Response, Result, ReturnStatement,
     Statement, StatementKind, Value,
 };
 use mysql_async::prelude::Queryable;
@@ -62,14 +62,14 @@ impl Command for MysqlCommand {
         self.host.add_middleware(middleware);
     }
 
-    async fn execute_reader(
+    async fn execute_reader_native(
         &self,
-        text: &str,
+        text: &Native,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         let connection = self.connection.clone();
         self.host
-            .run(text, parameters, move |sql, params| {
+            .run(text.text(), parameters, move |sql, params| {
                 let connection = connection.clone();
                 async move {
                     if sql.trim().is_empty() {
@@ -102,10 +102,14 @@ impl Command for MysqlCommand {
             .await
     }
 
-    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
+    async fn execute_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
         let connection = self.connection.clone();
         self.host
-            .run(text, parameters, move |sql, params| {
+            .run(text.text(), parameters, move |sql, params| {
                 let connection = connection.clone();
                 async move {
                     if sql.trim().is_empty() {
@@ -136,7 +140,7 @@ impl Command for MysqlCommand {
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         let text = MysqlStatementFactory.transform(statement).get_text();
-        self.execute_reader(&text, parameters).await
+        self.execute_reader_native(&Native::new(text), parameters).await
     }
 
     async fn execute_statement(
@@ -148,7 +152,7 @@ impl Command for MysqlCommand {
             return self.first_cell(statement, parameters).await;
         }
         let text = MysqlStatementFactory.transform(statement).get_text();
-        self.execute(&text, parameters).await
+        self.execute_native(&Native::new(text), parameters).await
     }
 }
 

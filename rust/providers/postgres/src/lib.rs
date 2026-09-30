@@ -130,7 +130,7 @@ mod tests {
         ds.create_repository::<Cells>(None, None);
         let closed = Arc::new(PostgresConnection::new(None, None));
         assert!(PostgresCommand::new(closed)
-            .execute("x", None)
+            .execute_native(&datasources::Native::new("x"), None)
             .await
             .is_err());
     }

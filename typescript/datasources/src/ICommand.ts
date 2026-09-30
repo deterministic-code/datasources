@@ -1,4 +1,5 @@
 import type { IStatement } from "./statements/IStatement.ts";
+import { Native } from "./statements/Native.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { Cells } from "./converters/Cell.ts";
@@ -11,6 +12,8 @@ export interface ICommand {
   addMiddleware(middleware: ICommandMiddleware): this;
   executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>>;
   execute(text: string, parameters?: Parameter[]): Promise<Response>;
+  executeNative(text: Native, parameters?: Parameter[]): Promise<Response>;
+  executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cells>>;
   executeStatement?(statement: IStatement, parameters?: Parameter[]): Promise<Response>;
   executeReaderStatement?(
     statement: IStatement,
@@ -24,7 +27,7 @@ export const execute = (
   parameters?: Parameter[],
 ): Promise<Response> =>
   command.executeStatement?.(statement, parameters) ??
-  command.execute(statement.getText(), parameters);
+  command.executeNative(new Native(statement.getText()), parameters);
 
 export const executeReader = (
   command: ICommand,
@@ -32,4 +35,4 @@ export const executeReader = (
   parameters?: Parameter[],
 ): Promise<IReader<Cells>> =>
   command.executeReaderStatement?.(statement, parameters) ??
-  command.executeReader(statement.getText(), parameters);
+  command.executeReaderNative(new Native(statement.getText()), parameters);

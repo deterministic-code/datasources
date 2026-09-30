@@ -6,6 +6,7 @@ use crate::converters::TypeConverter;
 use crate::datasource_error::DatasourceError;
 use crate::driver::Driver;
 use crate::isolation_level::IsolationLevel;
+use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::response::Response;
@@ -225,17 +226,17 @@ impl Command for LoadedCommand {
         self.host.add_middleware(middleware);
     }
 
-    async fn execute_reader(
+    async fn execute_reader_native(
         &self,
-        text: &str,
+        text: &Native,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let query = text.to_string();
+        let query = text.text().to_string();
         let params = parameters.map(<[Parameter]>::to_vec);
         let sabi = self.sabi.clone();
         let library = Arc::clone(&self.library);
         self.host
-            .run(text, parameters, move |_query, _params| {
+            .run(text.text(), parameters, move |_query, _params| {
                 let sabi = sabi.clone();
                 let library = Arc::clone(&library);
                 async move {
@@ -256,12 +257,16 @@ impl Command for LoadedCommand {
             .await
     }
 
-    async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
-        let query = text.to_string();
+    async fn execute_native(
+        &self,
+        text: &Native,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let query = text.text().to_string();
         let params = parameters.map(<[Parameter]>::to_vec);
         let sabi = Arc::clone(&self.sabi);
         self.host
-            .run(text, parameters, move |_query, _params| {
+            .run(text.text(), parameters, move |_query, _params| {
                 let sabi = sabi.clone();
                 async move {
                     let response = block(move || {

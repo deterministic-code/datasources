@@ -14,19 +14,19 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement is SelectInsertedIdStatement inserted
-            ? ExecuteReader($"{inserted.Table}.{inserted.Column}", parameters)
-            : ExecuteReader(statement.GetText(), parameters);
+            ? ExecuteReader(new Native($"{inserted.Table}.{inserted.Column}"), parameters)
+            : ExecuteReader(new Native(statement.GetText()), parameters);
 
-    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, (query, paramsList) =>
+    public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(text.Text, parameters, (query, paramsList) =>
         {
             ExecuteReaderCalls.Add((query, paramsList));
             if (ExecuteReaderError is not null) throw ExecuteReaderError;
             return Task.FromResult((Reader, (IReadOnlyList<Row>)[]));
         });
 
-    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, (query, paramsList) =>
+    public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(text.Text, parameters, (query, paramsList) =>
         {
             ExecuteCalls.Add((query, paramsList));
             if (ExecuteError is not null) throw ExecuteError;

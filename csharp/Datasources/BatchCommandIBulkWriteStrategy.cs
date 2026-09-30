@@ -19,7 +19,7 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         for (var index = 0; index < commands.Count; index++)
             renamed[index] = Rename(commands[index], index);
         return repo.Command().Execute(
-            string.Join("; ", renamed.Select(command => command.Text)),
+            new Native(string.Join("; ", renamed.Select(command => command.Text))),
             renamed.SelectMany(command => command.Parameters).ToArray());
     }
 

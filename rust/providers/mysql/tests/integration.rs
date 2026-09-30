@@ -1,7 +1,7 @@
 use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
 use datasources::{
-    utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
+    utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Native,
     IsolationLevel, Parameter, Reader, Transaction, Value,
 };
 use mysql_async::prelude::Queryable;
@@ -265,7 +265,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
         let args = params(&op.parameters);
         let expected_error = op.expect.as_ref().and_then(|e| e.error.as_deref());
         if step.execute.is_some() {
-            match target.execute(&sql, Some(&args)).await {
+            match target.execute_native(&Native::new(&sql), Some(&args)).await {
                 Ok(response) => {
                     assert!(expected_error.is_none(), "{}", spec.name);
                     if let Some(rows) = op.expect.as_ref().and_then(|e| e.rows_affected) {
@@ -281,7 +281,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
                 }
             }
         } else {
-            match target.execute_reader(&sql, Some(&args)).await {
+            match target.execute_reader_native(&Native::new(&sql), Some(&args)).await {
                 Ok(reader) => {
                     assert!(expected_error.is_none(), "{}", spec.name);
                     if let Some(expected) = expected_rows {
@@ -346,8 +346,8 @@ fn uuid_name() -> String {
 async fn fill_output_parameter(command: &dyn Command) {
     use datasources::{ExecuteStoredProcedureStatement, Parameter};
     command
-        .execute(
-            "CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END",
+        .execute_native(
+            &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
             None,
         )
         .await
@@ -411,8 +411,8 @@ async fn return_statement_selects_scalar() {
     conn.open().await.unwrap();
     let command = MysqlCommand::new(conn);
     command
-        .execute(
-            "CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC RETURN n + 1",
+        .execute_native(
+            &Native::new("CREATE FUNCTION add_one(n INT) RETURNS INT DETERMINISTIC RETURN n + 1"),
             None,
         )
         .await

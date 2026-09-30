@@ -7,6 +7,7 @@ import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { Row } from "../Row.ts";
 import type { IStatement } from "../statements/IStatement.ts";
+import { Native } from "../statements/Native.ts";
 import { SelectInsertedIdStatement } from "../statements/SelectInsertedIdStatement.ts";
 import { MockReader } from "./mock-reader.ts";
 
@@ -26,18 +27,20 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> =>
-    this.executeReader(
-      statement instanceof SelectInsertedIdStatement
-        ? `${statement.table}.${statement.column}`
-        : statement.getText(),
+    this.executeReaderNative(
+      new Native(
+        statement instanceof SelectInsertedIdStatement
+          ? `${statement.table}.${statement.column}`
+          : statement.getText(),
+      ),
       parameters,
     );
 
-  async executeReader(
-    text: string,
+  async executeReaderNative(
+    text: Native,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.run(text, parameters, async (query, params) => {
+    return this.run(text.text, parameters, async (query, params) => {
       this.executeReaderCalls.push({ text: query, parameters: params });
       if (this.executeReaderError) {
         throw this.executeReaderError;
@@ -50,11 +53,8 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
     });
   }
 
-  async execute(
-    text: string,
-    parameters?: Parameter[],
-  ): Promise<Response> {
-    return this.run(text, parameters, async (query, params) => {
+  async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
+    return this.run(text.text, parameters, async (query, params) => {
       this.executeCalls.push({ text: query, parameters: params });
       if (this.executeError) {
         throw this.executeError;

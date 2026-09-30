@@ -9,6 +9,7 @@ import {
   StubReader,
   StubRepository,
   StubTransaction,
+  Native,
   untyped,
   WhereText,
 } from "../index.ts";
@@ -30,7 +31,7 @@ describe("StubDatasource", () => {
     const command = ds.createCommand();
     expect(command).toBeInstanceOf(StubCommand);
     await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
-    await expect(command.executeReader("select", [])).rejects.toThrow(
+    await expect(command.executeReaderNative(new Native("select"), [])).rejects.toThrow(
       ProviderNotImplementedError,
     );
 

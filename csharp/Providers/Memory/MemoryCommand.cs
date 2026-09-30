@@ -9,7 +9,13 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     private MemoryConnection Typed => (MemoryConnection)Connection;
 
-    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+    public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        ExecuteReader(text.Text, parameters);
+
+    public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Execute(text.Text, parameters);
+
+    public override Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
@@ -55,7 +61,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             _ => Execute(statement.GetText(), parameters)
         };
 
-    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
+    public override Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();

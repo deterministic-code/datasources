@@ -8,7 +8,7 @@ use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ConsoleCommandMiddleware,
-    CreateTableStatement, FlatToNestedMapper, IReadonlyRepository, Mapper, TypeConverter, Value,
+    CreateTableStatement, FlatToNestedMapper, IReadonlyRepository, Mapper, Native, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -39,7 +39,7 @@ pub fn statements_of(sql: &str) -> Vec<String> {
 
 pub async fn apply_sql(command: &dyn Command, statements: &[String]) -> datasources::Result<()> {
     for sql in statements {
-        command.execute(sql, None).await?;
+        command.execute_native(&Native::new(sql.as_str()), None).await?;
     }
     Ok(())
 }

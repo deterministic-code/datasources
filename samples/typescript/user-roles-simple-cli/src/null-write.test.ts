@@ -1,4 +1,4 @@
-import { CRUDRepository, Datasource, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
+import { CRUDRepository, Datasource, Native, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
 import { SqliteDriver } from "@datasources/sqlite";
 import { describe, expect, it } from "vitest";
 
@@ -15,14 +15,14 @@ const open = async (): Promise<IConnection> => {
   const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
   const connection = await ds.createConnection();
   await connection.open();
-  await connection.createCommand().execute(`
+  await connection.createCommand().executeNative(new Native(`
     CREATE TABLE users (
       id INTEGER PRIMARY KEY,
       username TEXT NOT NULL,
       created TEXT NOT NULL DEFAULT '2020-01-01T00:00:00.000Z',
       updated BLOB NOT NULL DEFAULT X'0102'
     )
-  `);
+  `));
   return connection;
 };
 

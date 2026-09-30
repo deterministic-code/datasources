@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DeleteStatement,
+  Native,
   InsertStatement,
   SelectInsertedIdStatement,
   UpdateStatement,
@@ -24,6 +25,14 @@ import {
 export class JsonCommand extends CommandMiddlewareHost implements ICommand {
   constructor(readonly connection: JsonConnection) {
     super();
+  }
+
+  executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cells>> {
+    return this.executeReader(text.text, parameters);
+  }
+
+  executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
+    return this.execute(text.text, parameters);
   }
 
   async executeReader(

@@ -577,7 +577,7 @@ public class CoreTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.StartTransaction());
         var command = ds.CreateCommand();
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(""));
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader("select", Array.Empty<Parameter>()));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader(Native.N("select"), Array.Empty<Parameter>()));
         var provided = new StubConnection("text");
         Assert.Same(provided, ds.CreateCommand(provided).Connection);
         var repo = ds.CreateRepository<object>(provided);
@@ -629,12 +629,12 @@ public class CoreTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => txn.Abort());
 
         var command = new MockCommand(connection) { Response = new Response(1, 2), Reader = new MockReader<Row>([new Row { ["id"] = 1 }]) };
-        Assert.Equal(2, (await command.Execute("insert", new[] { new Parameter("id", 1) })).RowsAffected);
+        Assert.Equal(2, (await command.Execute(Native.N("insert"), new[] { new Parameter("id", 1) })).RowsAffected);
         await command.ExecuteReader("");
         command.ExecuteError = new InvalidOperationException("exec");
         await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute(""));
         command.ExecuteReaderError = new InvalidOperationException("read");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => command.ExecuteReader("x"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => command.ExecuteReader(Native.N("x")));
 
         command.ExecuteError = null;
         command.ExecuteReaderError = null;
@@ -705,7 +705,7 @@ public class CoreTests
             (query, _) => { seen.Add($"before:{query}"); return Task.FromResult<(string, IReadOnlyList<Parameter>?)?>(null); },
             (query, _, _, _, _) => { seen.Add($"after:{query}"); return Task.CompletedTask; }));
         command.ExecuteError = null;
-        await command.Execute("insert");
+        await command.Execute(Native.N("insert"));
         Assert.Equal(new[] { "before:insert", "after:insert" }, seen);
     }
 
@@ -716,9 +716,9 @@ public class CoreTests
     private sealed class RecordingCommand : CommandMiddlewareHost, ICommand
     {
         public IConnection Connection { get; } = new MockConnection();
-        public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
-        public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
+        public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
             throw new NotSupportedException();
     }
 

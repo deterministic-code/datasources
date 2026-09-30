@@ -56,8 +56,8 @@ public class PostgresTests
         Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "postgres" }).Provider);
 
         var closed = new PostgresConnection();
-        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute("x"));
-        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).ExecuteReader("x"));
+        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).Execute(Native.N("x")));
+        await Assert.ThrowsAsync<DatasourceException>(() => new PostgresCommand(closed).ExecuteReader(Native.N("x")));
     }
 
     [Fact]

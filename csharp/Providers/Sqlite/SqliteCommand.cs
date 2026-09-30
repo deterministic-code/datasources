@@ -6,8 +6,8 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
     public IConnection Connection { get; }
     SqliteConnection Typed => (SqliteConnection)Connection;
 
-    public Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, async (query, paramsList) =>
+    public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(text.Text, parameters, async (query, paramsList) =>
         {
             if (string.IsNullOrWhiteSpace(query))
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
@@ -17,13 +17,13 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(new SqliteStatementFactory().Transform(statement).GetText(), parameters);
+        ExecuteReader(new Native(new SqliteStatementFactory().Transform(statement).GetText()), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
         {
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
-            _ => Execute(new SqliteStatementFactory().Transform(statement).GetText(), parameters)
+            _ => Execute(new Native(new SqliteStatementFactory().Transform(statement).GetText()), parameters)
         };
 
     async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
@@ -44,8 +44,8 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         }
     }
 
-    public Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, async (query, paramsList) =>
+    public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>
+        Run(text.Text, parameters, async (query, paramsList) =>
         {
             if (string.IsNullOrWhiteSpace(query))
                 return (new Response(Value.Null.Instance, 0, paramsList), (IReadOnlyList<Row>)[]);

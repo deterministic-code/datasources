@@ -2,7 +2,7 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)");
+await command.Execute(Native.N("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"));
 await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
 Row? row = null;

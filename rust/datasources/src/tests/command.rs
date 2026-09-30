@@ -1,5 +1,5 @@
 use crate::{
-    Command, ConvertSchema, Mapper, MockCommand, Parameter, Row, RowTypeConverter, TransformMapper,
+    Command, ConvertSchema, Mapper, MockCommand, Native, Parameter, Row, RowTypeConverter, TransformMapper,
     Value,
 };
 
@@ -81,21 +81,21 @@ async fn execute_reader_returns_name_value_objects() {
 async fn execute_insert_update_delete() {
     let command = MockCommand::new();
     command
-        .execute(
-            "insert",
+        .execute_native(
+            &Native::new("insert"),
             Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "a")]),
         )
         .await
         .unwrap();
     command
-        .execute(
-            "update",
+        .execute_native(
+            &Native::new("update"),
             Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
         )
         .await
         .unwrap();
     command
-        .execute("delete", Some(&[Parameter::new("id", 1_i64)]))
+        .execute_native(&Native::new("delete"), Some(&[Parameter::new("id", 1_i64)]))
         .await
         .unwrap();
     assert_eq!(command.execute_logs.lock().unwrap()[0].0, "insert");

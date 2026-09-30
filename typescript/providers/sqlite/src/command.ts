@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DatasourceError,
+  Native,
   ReturnStatement,
   SelectStatement,
   parametersToRecord,
@@ -33,11 +34,11 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     super();
   }
 
-  async executeReader(
-    text: string,
+  async executeReaderNative(
+    text: Native,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.run(text, parameters, async (query, params) => {
+    return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new ArrayReader([]), rows: [] };
       this.connection.ensureOpen();
       const statements = splitStatements(query);
@@ -72,13 +73,19 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReader(new SqliteStatementFactory().transform(statement).getText(), parameters);
+    return this.executeReaderNative(
+      new Native(new SqliteStatementFactory().transform(statement).getText()),
+      parameters,
+    );
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     return statement instanceof SelectStatement || statement instanceof ReturnStatement
       ? this.firstCell(statement, parameters)
-      : this.execute(new SqliteStatementFactory().transform(statement).getText(), parameters);
+      : this.executeNative(
+          new Native(new SqliteStatementFactory().transform(statement).getText()),
+          parameters,
+        );
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
@@ -95,8 +102,8 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     }
   }
 
-  async execute(text: string, parameters?: Parameter[]): Promise<Response> {
-    return this.run(text, parameters, async (query, params) => {
+  async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
+    return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
       const info = this.connection.require().prepare(query).run(bound(params));

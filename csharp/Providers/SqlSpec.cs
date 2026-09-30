@@ -70,13 +70,13 @@ public static class SqlSpec
             {
                 if (step.Execute is not null)
                 {
-                    var response = await cmd.Execute(op.Sql, Params(op.Parameters));
+                    var response = await cmd.Execute(new Native(op.Sql), Params(op.Parameters));
                     if (op.Expect?.Error is { } error) throw new InvalidOperationException($"{label}: expected {error}");
                     if (op.Expect?.RowsAffected is { } rows) Eq(rows, response.RowsAffected);
                     if (op.Expect?.Result is not null) Eq(op.Expect.Result, response.Result);
                     return;
                 }
-                var reader = await cmd.ExecuteReader(op.Sql, Params(op.Parameters));
+                var reader = await cmd.ExecuteReader(new Native(op.Sql), Params(op.Parameters));
                 try
                 {
                     if (op.Expect?.Error is { } err) throw new InvalidOperationException($"{label}: expected {err}");

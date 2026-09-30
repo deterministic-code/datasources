@@ -1,7 +1,7 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
 use datasources::{
-    utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware,
+    utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Native,
     IsolationLevel, Parameter, Reader, Transaction, Value,
 };
 use serde::Deserialize;
@@ -256,7 +256,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
         let args = params(&op.parameters);
         let expected_error = op.expect.as_ref().and_then(|e| e.error.as_deref());
         if step.execute.is_some() {
-            match target.execute(&sql, Some(&args)).await {
+            match target.execute_native(&Native::new(&sql), Some(&args)).await {
                 Ok(response) => {
                     assert!(expected_error.is_none(), "{}", spec.name);
                     if let Some(rows) = op.expect.as_ref().and_then(|e| e.rows_affected) {
@@ -272,7 +272,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
                 }
             }
         } else {
-            match target.execute_reader(&sql, Some(&args)).await {
+            match target.execute_reader_native(&Native::new(&sql), Some(&args)).await {
                 Ok(reader) => {
                     assert!(expected_error.is_none(), "{}", spec.name);
                     if let Some(expected) = expected_rows {
@@ -333,8 +333,8 @@ async fn shared_specs() {
 async fn read_return_value(command: &dyn Command) {
     use datasources::{Parameter, ReturnStatement};
     command
-        .execute(
-            "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
+        .execute_native(
+            &Native::new("CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$"),
             None,
         )
         .await
@@ -378,8 +378,8 @@ async fn return_and_output_parameters() {
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn);
     command
-        .execute(
-            "CREATE PROCEDURE bump(INOUT result INT) LANGUAGE plpgsql AS $$ BEGIN result := result + 1; END; $$",
+        .execute_native(
+            &Native::new("CREATE PROCEDURE bump(INOUT result INT) LANGUAGE plpgsql AS $$ BEGIN result := result + 1; END; $$"),
             None,
         )
         .await

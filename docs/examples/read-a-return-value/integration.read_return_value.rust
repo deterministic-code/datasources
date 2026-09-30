@@ -1,7 +1,7 @@
 use datasources::{Parameter, ReturnStatement};
 command
-    .execute(
-        "CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$",
+    .execute_native(
+        &Native::new("CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$"),
         None,
     )
     .await

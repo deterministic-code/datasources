@@ -5,6 +5,7 @@ import type { IReader } from "../IReader.ts";
 import type { Response } from "../Response.ts";
 import type { Parameter } from "../Parameter.ts";
 import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
+import { Native } from "../statements/Native.ts";
 import { notImplemented } from "./notImplemented.ts";
 
 export class StubCommand extends CommandMiddlewareHost implements ICommand {
@@ -15,15 +16,15 @@ export class StubCommand extends CommandMiddlewareHost implements ICommand {
     super();
   }
 
-  executeReader = (
-    text: string,
+  executeReaderNative = (
+    text: Native,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> =>
-    this.run(text, parameters, async () => notImplemented(this.provider));
+    this.run(text.text, parameters, async () => notImplemented(this.provider));
 
-  execute = (
-    text: string,
+  executeNative = (
+    text: Native,
     parameters?: Parameter[],
   ): Promise<Response> =>
-    this.run(text, parameters, async () => notImplemented(this.provider));
+    this.run(text.text, parameters, async () => notImplemented(this.provider));
 }

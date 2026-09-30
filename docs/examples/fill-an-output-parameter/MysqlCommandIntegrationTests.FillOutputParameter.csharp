@@ -1,9 +1,9 @@
-await command.Execute("""
+await command.Execute(Native.N("""
     CREATE PROCEDURE bump(IN start_n INT, OUT result INT)
     BEGIN
       SET result = start_n + 1;
     END
-    """);
+    """));
 var start = new Parameter("start_n", 4);
 var result = new Parameter("result", ParameterDirection.Output);
 var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [start, result]), [start, result]);
