@@ -25,7 +25,7 @@ public class NullWriteTests
         var repo = ds.CreateRepository<Item>(connection, new CRUDRepositoryOptions<Item>
         {
             EntityMapper = casing,
-            ColumnMappings = casing,
+            PropertyMappings = casing,
             Ids = ["Id"],
         });
         var omitted = await repo.Create(new Item { Name = "ada" });

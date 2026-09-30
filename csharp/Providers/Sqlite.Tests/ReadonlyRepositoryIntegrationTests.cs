@@ -47,7 +47,7 @@ public class ReadonlyRepositoryIntegrationTests
         var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
         {
             EntityMapper = SnakeThenPlural(),
-            ColumnMappings = Snake,
+            PropertyMappings = Snake,
         });
 
         var byId = await repo.ReadSingle(new Where("Id", eq, 1));
@@ -94,7 +94,7 @@ public class ReadonlyRepositoryIntegrationTests
         var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
         {
             EntityMapper = SnakeThenPlural(),
-            ColumnMappings = Snake,
+            PropertyMappings = Snake,
             ObjectConverter = new UserConverter()
         });
 
@@ -120,7 +120,7 @@ public class ReadonlyRepositoryIntegrationTests
         var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",
@@ -202,7 +202,7 @@ public class UserViewEnrichmentTests
         var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",
@@ -214,7 +214,7 @@ public class UserViewEnrichmentTests
         var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
         {
             EntityMapper = casing,
-            ColumnMappings = casing,
+            PropertyMappings = casing,
         });
         usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo);
         var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
@@ -281,7 +281,7 @@ public class UsersViewRoleTests
         var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",
@@ -294,25 +294,16 @@ public class UsersViewRoleTests
         var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
         {
             EntityMapper = casing,
-            ColumnMappings = casing,
+            PropertyMappings = casing,
         });
         var rolesRepo = ds.CreateReadonlyRepository<UserRole>(connection, new ReadonlyRepositoryOptions<UserRole>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserRole"] = "user_roles" }),
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["UserId"] = "user_id",
                 ["Name"] = "name",
             }),
-            Select = new TransformMapper<ISelectStatement, ISelectStatement>(
-                query => new SelectStatement(new()
-                {
-                    Table = "user_roles",
-                    Fields = ["user_roles.user_id", "roles.name"],
-                    Where = query.Where,
-                    Joins = [new Join(JoinKind.Inner, "roles", "roles.id", "user_roles.role_id")],
-                }),
-                query => query),
         });
         usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo, strategy);
         usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), rolesRepo, strategy);
@@ -340,7 +331,7 @@ public class UsersViewRoleTests
                 ["UserRole"] = "user_roles",
                 ["Role"] = "roles",
             }),
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",
@@ -353,30 +344,27 @@ public class UsersViewRoleTests
                 ["Name"] = "roles.name",
                 ["Id"] = "id",
             }),
-            Select = new TransformMapper<ISelectStatement, ISelectStatement>(
-                query => new SelectStatement(new()
-                {
-                    Table = "User",
-                    Fields =
-                    [
-                        "User.Key",
-                        "User.Login",
-                        "User.Active",
-                        "User.Opened",
-                        "User.UserType",
-                        "UserRole.UserId",
-                        "UserRole.RoleId",
-                        "Role.Name",
-                    ],
-                    Where = query.Where,
-                    Joins =
-                    [
-                        new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
-                        new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
-                        new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
-                    ],
-                }),
-                query => query),
+        });
+        var joined = new SelectStatement(new()
+        {
+            Table = "User",
+            Fields =
+            [
+                "User.Key",
+                "User.Login",
+                "User.Active",
+                "User.Opened",
+                "User.UserType",
+                "UserRole.UserId",
+                "UserRole.RoleId",
+                "Role.Name",
+            ],
+            Joins =
+            [
+                new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
+                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
+                new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
+            ],
         });
         usersRepo.AddEnriched(
             new("Roles", "Key", "UserId", Many: true),
@@ -404,7 +392,7 @@ public class UsersViewRoleTests
                 }
             }));
         var items = new List<UsersView>();
-        await foreach (var item in usersRepo.Read())
+        await foreach (var item in usersRepo.Read(joined))
             items.Add(item);
         var ada = Assert.Single(items, item => item.Login == "ada");
         var grace = Assert.Single(items, item => item.Login == "grace");
@@ -485,7 +473,7 @@ public class UserCrudTests
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
         {
-            ColumnMappings = casing,
+            PropertyMappings = casing,
             Ids = ["Id"],
         });
         var created = await usersRepo.Create(new User { Username = "ada", IsEnabled = true });
@@ -549,7 +537,7 @@ public class MultiTenantAccountTests
         var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
         {
             EntityMapper = casing,
-            ColumnMappings = casing,
+            PropertyMappings = casing,
             Ids = ["TenantId", "Id"],
         });
         var ada = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
@@ -622,7 +610,7 @@ public class UsersViewCrudTests
             Ids = ["Key"],
             ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",
@@ -636,13 +624,13 @@ public class UsersViewCrudTests
         {
             Ids = ["Id"],
             EntityMapper = casing,
-            ColumnMappings = casing,
+            PropertyMappings = casing,
         });
         var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
         {
             Ids = [],
             EntityMapper = casing,
-            ColumnMappings = casing,
+            PropertyMappings = casing,
         });
         usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
         usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);

@@ -55,7 +55,7 @@ describe("DictionaryMapper", () => {
     const repo = new ReadonlyRepository(connection, {
       type: Account,
       entity: "user",
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
       ]),

@@ -81,8 +81,11 @@ pub mod statements;
 mod stored_enrichment;
 mod stored_procedure_bulk_write_strategy;
 pub mod stubs;
-mod table_repository_builder;
-mod table_repository_statements;
+mod crud_repository_builder;
+mod crud_repository_statements;
+mod readonly_repository_builder;
+mod readonly_repository_statements;
+mod statement_mappings;
 mod transaction;
 mod unit_of_work_transaction;
 mod update_enrichment_strategy;
@@ -194,8 +197,11 @@ pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,
     StubRepository, StubTransaction,
 };
-pub use table_repository_builder::RepositoryBuilder;
-pub use table_repository_statements::RepositoryStatements;
+pub use crud_repository_builder::CRUDRepositoryBuilder;
+pub use crud_repository_statements::CRUDRepositoryStatements;
+pub use readonly_repository_builder::ReadonlyRepositoryBuilder;
+pub use readonly_repository_statements::ReadonlyRepositoryStatements;
+pub use statement_mappings::StatementMappings;
 pub use transaction::Transaction;
 pub use unit_of_work_transaction::UnitOfWorkTransaction;
 pub use update_enrichment_strategy::UpdateEnrichmentStrategy;

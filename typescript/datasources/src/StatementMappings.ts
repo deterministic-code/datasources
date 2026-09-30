@@ -1,0 +1,73 @@
+import type { Cell } from "./converters/Cell.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
+import type { IStatement } from "./statements/IStatement.ts";
+import type { IWhere } from "./statements/IWhere.ts";
+import { SelectStatement } from "./statements/SelectStatement.ts";
+import { Where } from "./statements/Where.ts";
+
+export class StatementMappings {
+  constructor(
+    private readonly entityMappers: IMapper<string, string>,
+    private readonly propertyMappers: IMapper<string, string>,
+  ) {}
+
+  column = (property: string): string => {
+    const dot = lastDot(property);
+    if (dot < 0) return this.propertyMappers.map(property);
+    const qualifier = property.slice(0, dot);
+    const name = property.slice(dot + 1);
+    const mapped = this.propertyMappers.map(name);
+    if (mapped !== name && mapped.includes(".")) return mapped;
+    const table = this.entityMappers.map(qualifier);
+    return table === qualifier && mapped === name ? property : `${table}.${mapped}`;
+  };
+
+  property = (key: string): string => {
+    const reversed = this.propertyMappers.reverseMap(key);
+    if (reversed !== key && this.propertyMappers.map(reversed) === key) return reversed;
+    const dot = lastDot(key);
+    if (dot < 0) return reversed;
+    const column = key.slice(dot + 1);
+    const name = this.propertyMappers.reverseMap(column);
+    return name !== column && this.propertyMappers.map(name) === column ? name : reversed;
+  };
+
+  apply = (
+    query: IStatement | undefined,
+    cell: (property: string, value: Cell) => Cell,
+  ): IStatement | undefined =>
+    query instanceof SelectStatement && query.table
+      ? new SelectStatement({
+          distinct: query.distinct,
+          table: this.entityMappers.map(query.table),
+          fields: query.fields.map(this.column),
+          where: query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
+          joins: query.joins.map((join) => ({
+            kind: join.kind,
+            table: this.entityMappers.map(join.table),
+            on: join.on ? new Where(join.on).map(this.column, cell).condition : undefined,
+          })),
+          groupBy: query.groupBy.map(this.column),
+          having: query.having instanceof Where ? this.applyWhere(query.having, cell) : query.having,
+          orderBy: query.orderBy.map((order) => ({ column: this.column(order.column), direction: order.direction })),
+          limit: query.limit,
+          offset: query.offset,
+        })
+      : query;
+
+  applyWhere = (
+    where: IWhere | undefined,
+    cell: (property: string, value: Cell) => Cell,
+  ): IWhere | undefined =>
+    where instanceof Where ? where.map(this.column, cell) : where;
+}
+
+const lastDot = (name: string): number => {
+  let quoted = false;
+  let dot = -1;
+  for (let i = 0; i < name.length; i++) {
+    if (name[i] === '"') quoted = !quoted;
+    if (name[i] === "." && !quoted) dot = i;
+  }
+  return dot;
+};

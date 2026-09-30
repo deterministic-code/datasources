@@ -8,7 +8,6 @@ import {
   Join,
   ReadonlyRepository,
   SelectStatement,
-  TransformMapper,
   Where,
   eq,
   Native,
@@ -73,7 +72,7 @@ describe("users view roles", () => {
     const usersRepo = new ReadonlyRepository(connection, {
       type: UsersView,
       entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
@@ -83,24 +82,14 @@ describe("users view roles", () => {
     });
     const typesRepo = ds.createReadonlyRepository(UserType, connection, {
       entityMapper: casing,
-      columnMappings: casing,
+      propertyMappings: casing,
     });
     const rolesRepo = ds.createReadonlyRepository(UserRole, connection, {
       entityMapper: new DictionaryMapper([["UserRole", "user_roles"]]),
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["UserId", "user_id"],
         ["Name", "name"],
       ]),
-      select: new TransformMapper(
-        (query) =>
-          new SelectStatement({
-            table: "user_roles",
-            fields: ["user_roles.user_id AS user_id", "roles.name AS name"],
-            where: query.where,
-            joins: [Join.inner("roles", "roles.id", "user_roles.role_id")],
-          }),
-        (query) => query,
-      ),
     });
     usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo, strategy);
     usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, rolesRepo, strategy);
@@ -124,7 +113,7 @@ describe("users view roles", () => {
         ["UserRole", "user_roles"],
         ["Role", "roles"],
       ]),
-      columnMappings: new DictionaryMapper([
+      propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
@@ -136,29 +125,24 @@ describe("users view roles", () => {
         ["Name", "roles.name"],
         ["Id", "id"],
       ]),
-      select: new TransformMapper(
-        (query) =>
-          new SelectStatement({
-            table: "User",
-            fields: [
-              "User.Key",
-              "User.Login",
-              "User.Active",
-              "User.Opened",
-              "User.UserType",
-              "UserRole.UserId",
-              "UserRole.RoleId",
-              "Role.Name",
-            ],
-            where: query.where,
-            joins: [
-              Join.left("UserType", "UserType.Id", "User.UserTypeId"),
-              Join.left("UserRole", "UserRole.UserId", "User.Key"),
-              Join.left("Role", "Role.Id", "UserRole.RoleId"),
-            ],
-          }),
-        (query) => query,
-      ),
+    });
+    const joined = new SelectStatement({
+      table: "User",
+      fields: [
+        "User.Key",
+        "User.Login",
+        "User.Active",
+        "User.Opened",
+        "User.UserType",
+        "UserRole.UserId",
+        "UserRole.RoleId",
+        "Role.Name",
+      ],
+      joins: [
+        Join.left("UserType", "UserType.Id", "User.UserTypeId"),
+        Join.left("UserRole", "UserRole.UserId", "User.Key"),
+        Join.left("Role", "Role.Id", "UserRole.RoleId"),
+      ],
     });
     usersRepo.addEnriched(
       { into: "Roles", from: "Key", by: "UserId", many: true },
@@ -179,7 +163,7 @@ describe("users view roles", () => {
       }),
     );
     const items: UsersView[] = [];
-    for await (const item of usersRepo.read()) items.push(item);
+    for await (const item of usersRepo.read(joined)) items.push(item);
     const found = (login: string) => items.find((item) => item.Login === login);
     const adaView = found("ada");
     const graceView = found("grace");

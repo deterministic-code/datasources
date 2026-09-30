@@ -8,7 +8,7 @@ public sealed class ContactTypeRepository : CRUDRepository<Lookup>
     {
         Entity = "contact_type",
         EntityMapper = Names.Tables,
-        ColumnMappings = Names.Columns,
+        PropertyMappings = Names.Columns,
         ReadProperties = ["id", "uuid", "created", "updated", "version", "name", "description"]
     })
     { }

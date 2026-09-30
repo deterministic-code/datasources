@@ -83,10 +83,12 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
             : Value.Null.Instance;
     }
 
+    CRUDRepositoryStatements Writes => (CRUDRepositoryStatements)Statements;
+
     BulkCommand Insert(T item)
     {
         var fields = Fields(Reverse(item), col => !Ids.Contains(col));
-        return new(Statements.Insert(fields).GetText(), fields);
+        return new(Writes.Insert(fields).GetText(), fields);
     }
 
     BulkCommand UpdateCommand(T item, IWhere? byWhere)
@@ -96,14 +98,14 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         var fields = Fields(record, col => !Ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        return new(Statements.Update(fields, where).GetText(), UpdateStatement.ParameterList(fields, where));
+        return new(Writes.Update(fields, where).GetText(), UpdateStatement.ParameterList(fields, where));
     }
 
     BulkCommand DeleteCommand(T item, IWhere? byWhere)
     {
         var record = Reverse(item);
         var where = byWhere is null ? Map(IdWhere(record), fieldsApplied: true) : Map(byWhere, fieldsApplied: false);
-        var statement = Statements.Delete(where);
+        var statement = Writes.Delete(where);
         var parameters = where.Parameters is { Count: > 0 } listed
             ? listed
             : statement.GetText().Contains('$') ? Fields(record, _ => true) : [];
@@ -124,7 +126,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 
     Row Reverse(T item)
     {
-        var row = ObjectConverter.ReverseConvert(Mapper!.ReverseMap(item));
+        var row = ObjectConverter.ReverseConvert(item);
         return RowConverter?.ReverseConvert(row) ?? row;
     }
 

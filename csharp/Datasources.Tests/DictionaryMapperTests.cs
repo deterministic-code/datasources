@@ -62,7 +62,7 @@ public class DictionaryMapperTests
         var repo = new ReadonlyRepository<Account>(connection, new ReadonlyRepositoryOptions<Account>
         {
             Entity = "user",
-            ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+            PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
                 ["Login"] = "username",

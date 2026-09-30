@@ -17,7 +17,7 @@ const of = async <T extends { Id: number }>(
   const row = await new CRUDRepository(connection, {
     type,
     entityMapper: snake,
-    columnMappings: columns,
+    propertyMappings: columns,
     ids: ["Id"],
   }).readSingle(new Where(new Operator.Equals("Name", name)));
   if (!row) throw new Error(`${type.name} '${name}' missing`);

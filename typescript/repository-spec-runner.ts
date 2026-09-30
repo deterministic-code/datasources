@@ -3,14 +3,10 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import {
   ConsoleCommandMiddleware,
-  DeleteStatement,
-  InsertStatement,
-  SelectStatement,
   CreateTableStatement,
   CRUDRepository,
   MetaDataRowTypeConverter,
   TransformMapper,
-  UpdateStatement,
   Literal,
   Operator,
   Where,
@@ -26,7 +22,6 @@ import {
   physicalTableOf,
   type AffectedExpect,
   type CanonicalType,
-  type RepositoryMappings,
   type RepositoryRow,
   type RepositorySpec,
   type RepositoryTypeSpec,
@@ -138,59 +133,15 @@ const fieldsOf = (
     }),
   );
 
-const suffix = <T extends { getText: () => string }>(
-  rewrite: (text: string, value: T) => T,
-  value: string | undefined,
-) =>
-  value
-    ? new TransformMapper<T, T>((built) => rewrite(`${built.getText()}${value}`, built), (built) => built)
-    : undefined;
-
-const crudFieldsOf = (
-  type: RepositoryTypeSpec,
-  rows: TransformMapper<SpecRow, SpecRow>,
-  quote: (id: string) => string,
-) => {
+const crudFieldsOf = (type: RepositoryTypeSpec, quote: (id: string) => string) => {
   const mapper: CRUDMapperSpec = type.crudMapper ?? {};
   return {
     entityMapper: new TransformMapper(
       (name: string) => quote(mapper.entity ?? name),
       (name: string) => name,
     ),
-    rowsMapper: rows,
-    select: suffix((text, query) => new SelectStatement(text, query.where), mapper.querySuffix),
-    insert: suffix((text) => new InsertStatement(text), mapper.writeSuffix),
-    update: suffix(
-      (text, update) => new UpdateStatement(text, update.where),
-      mapper.writeSuffix,
-    ),
-    delete: suffix((text, remove) => DeleteStatement.raw(text, remove.where), mapper.writeSuffix),
   };
 };
-
-const mappingsMapper = (mappings: RepositoryMappings = {}) =>
-  new TransformMapper<SpecRow, SpecRow>(
-    (row) => {
-      const dest: SpecRow = { ...row };
-      for (const [nested, cols] of Object.entries(mappings)) {
-        dest[nested] = Object.fromEntries(
-          Object.entries(cols).map(([field, col]) => [field, dest[col]]),
-        );
-        for (const col of Object.values(cols)) delete dest[col];
-      }
-      return dest;
-    },
-    (row) => {
-      const dest: SpecRow = { ...row };
-      for (const [nested, cols] of Object.entries(mappings)) {
-        const value = dest[nested];
-        if (isRow(value))
-          for (const [field, col] of Object.entries(cols)) dest[col] = value[field];
-        delete dest[nested];
-      }
-      return dest;
-    },
-  );
 
 const numeric = (value: Scalar) =>
   typeof value === "number" || (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value));
@@ -251,7 +202,7 @@ export const runRepositorySpec = async (
     type: typeOf(spec.type),
     entity: spec.type.table,
     objectConverter: mapping,
-    ...crudFieldsOf(spec.type, mappingsMapper(spec.type.mappings), dialect.quote),
+    ...crudFieldsOf(spec.type, dialect.quote),
     readProperties: Object.keys(spec.type.fields),
   });
   const logs: string[] = [];

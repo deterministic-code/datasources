@@ -141,7 +141,7 @@ const back = mapper.reverseMap(flat);
 ```
 :::
 
-See [Mappers](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](./sections/readonly-repository.md#rowsmapper).
+See [Mappers](./sections/mappers.md) for `TransformMapper`, `FlatToNestedMapper`, and [DictionaryMapper](./sections/dictionary-mapper.md).
 
 ## Type Converters
 

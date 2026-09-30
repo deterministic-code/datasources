@@ -8,7 +8,7 @@ public sealed class AddressTypeRepository : CRUDRepository<Lookup>
     {
         Entity = "address_type",
         EntityMapper = Names.Tables,
-        ColumnMappings = Names.Columns,
+        PropertyMappings = Names.Columns,
         ReadProperties = ["id", "uuid", "created", "updated", "version", "name", "description"]
     })
     { }

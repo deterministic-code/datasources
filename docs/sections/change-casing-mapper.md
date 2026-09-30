@@ -152,7 +152,7 @@ fn reverse_map(&self, value: String) -> String
 
 ## Remarks
 
-Use this as [EntityMapper](./readonly-repository.md#entitymapper) and [ColumnMappings](./readonly-repository.md#columnmappings) when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
+Use this as [EntityMapper](./readonly-repository.md#entitymapper) and {{[PropertyMappings](./readonly-repository.md#propertymappings)|[propertyMappings](./readonly-repository.md#propertymappings)|[property_mappings](./readonly-repository.md#property_mappings)}} when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
 
 ## Examples
 

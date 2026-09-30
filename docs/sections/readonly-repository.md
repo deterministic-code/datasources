@@ -129,28 +129,12 @@ Maps the table name when the repository is built. Default is [IdentityMapper](./
 entityMapper?: IMapper<string, string>
 ```
 
-##### columnMappings
+##### propertyMappings
 
 Maps property names to stored columns. Default is [IdentityMapper](./identity-mapper.md). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter.
 
 ```typescript
-columnMappings?: IMapper<string, string>
-```
-
-##### select
-
-Rewrites the finished select. Omitted leaves the statement unchanged.
-
-```typescript
-select?: IMapper<ISelectStatement, ISelectStatement>
-```
-
-##### rowsMapper
-
-Maps each converted item. Default is [IdentityMapper](./identity-mapper.md).
-
-```typescript
-rowsMapper?: IMapper<T, T>
+propertyMappings?: IMapper<string, string>
 ```
 
 ##### rowConverter
@@ -400,28 +384,12 @@ Maps the table name when the repository is built. Default is [IdentityMapper](./
 IMapper<string, string> EntityMapper { get; init; }
 ```
 
-##### ColumnMappings
+##### PropertyMappings
 
 Maps property names to stored columns. Default is [IdentityMapper](./identity-mapper.md). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter.
 
 ```csharp
-IMapper<string, string> ColumnMappings { get; init; }
-```
-
-##### Select
-
-Rewrites the finished select. Omitted leaves the statement unchanged.
-
-```csharp
-IMapper<ISelectStatement, ISelectStatement>? Select { get; init; }
-```
-
-##### RowsMapper
-
-Maps each converted item. Default is [IdentityMapper](./identity-mapper.md).
-
-```csharp
-IMapper<T, T> RowsMapper { get; init; }
+IMapper<string, string> PropertyMappings { get; init; }
 ```
 
 ##### RowConverter
@@ -604,28 +572,12 @@ Maps the table name when the repository is built. Default is [IdentityMapper](./
 pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>
 ```
 
-##### column_mappings
+##### property_mappings
 
 Maps property names to stored columns. Default is [IdentityMapper](./identity-mapper.md). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter.
 
 ```rust
-pub column_mappings: Box<dyn Mapper<String, String> + Send + Sync>
-```
-
-##### select
-
-Rewrites finished select SQL. `None` leaves the statement unchanged.
-
-```rust
-pub select: Option<Arc<TransformMapper<String, String>>>
-```
-
-##### rows_mapper
-
-Maps each converted row. Default is [IdentityMapper](./identity-mapper.md).
-
-```rust
-pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>
+pub property_mappings: Box<dyn Mapper<String, String> + Send + Sync>
 ```
 
 ##### row_converter

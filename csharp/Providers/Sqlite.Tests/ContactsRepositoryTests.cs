@@ -86,43 +86,43 @@ public class ContactsRepositoryTests
         var contactsRepo = new CRUDRepository<Contact>(conn, new CRUDRepositoryOptions<Contact>
         {
             EntityMapper = ContactColumns.ContactEntity,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         var typesRepo = new CRUDRepository<ContactType>(conn, new CRUDRepositoryOptions<ContactType>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         var sourcesRepo = new CRUDRepository<ContactSource>(conn, new CRUDRepositoryOptions<ContactSource>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         var addressTypesRepo = new CRUDRepository<AddressType>(conn, new CRUDRepositoryOptions<AddressType>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         var phoneTypesRepo = new CRUDRepository<PhoneType>(conn, new CRUDRepositoryOptions<PhoneType>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         var addressesRepo = new CRUDRepository<Address>(conn, new CRUDRepositoryOptions<Address>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         var phonesRepo = new CRUDRepository<Phone>(conn, new CRUDRepositoryOptions<Phone>
         {
             EntityMapper = ContactColumns.Snake,
-            ColumnMappings = ContactColumns.Columns,
+            PropertyMappings = ContactColumns.Columns,
             Ids = ["Id"],
         });
         addressesRepo.AddEnriched(new("AddressType", "AddressType", "Id"), addressTypesRepo);

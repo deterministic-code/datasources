@@ -4893,7 +4893,7 @@ execute_sql(
 .await;
 let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
-options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
@@ -4920,7 +4920,7 @@ await executeSql(connection, `
 `);
 const repo = ds.createReadonlyRepository(User, connection, {
   entityMapper: snakeThenPlural,
-  columnMappings: snake,
+  propertyMappings: snake,
 });
 const byId = await repo.readSingle(new Where("Id", eq, 1));
 const disabled: User[] = [];
@@ -4966,7 +4966,7 @@ var gone = await usersRepo.ReadSingleById(created.Id);
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 let mut options = create_crud_repository_options::<User>();
-options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.ids = vec!["Id".into()];
 let users_repo = CRUDRepository::new(connection, options).unwrap();
 let mut created = datasources::Row::new();
@@ -5011,7 +5011,7 @@ const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlit
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(User),
-  columnMappings: casing,
+  propertyMappings: casing,
   ids: ["Id"],
 });
 const created = await usersRepo.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
@@ -5084,7 +5084,7 @@ users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
 )]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -5097,12 +5097,12 @@ let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings = Box::new(casing);
+type_options.property_mappings = Box::new(casing);
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.column_mappings =
+role_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
@@ -5140,7 +5140,7 @@ const usersRepo = new CRUDRepository(connection, {
   ids: ["Key"],
   readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -5152,12 +5152,12 @@ const usersRepo = new CRUDRepository(connection, {
 const userTypesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserType),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserRole),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
 usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
 usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
@@ -5407,7 +5407,7 @@ type ReadonlyRepositoryOptions<T = Cells>
 | --- | --- |
 | entity | Table or entity name. |
 | entityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| columnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
+| propertyMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | select | Rewrites the finished select. Omitted leaves the statement unchanged. |
 | rowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
 | rowConverter | `Cells` to `Cells`. Omitted leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
@@ -5797,7 +5797,7 @@ pub struct ReadonlyRepositoryOptions
 | --- | --- |
 | entity | Table or entity name. Default `"items"`. |
 | entity_mapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| column_mappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
+| property_mappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | select | Rewrites finished select SQL. `None` leaves the statement unchanged. |
 | rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
@@ -5940,7 +5940,7 @@ execute_sql(
 .await;
 let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
-options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
@@ -5989,7 +5989,7 @@ await executeSql(connection, `
 `);
 const repo = ds.createReadonlyRepository(User, connection, {
   entityMapper: snakeThenPlural,
-  columnMappings: snake,
+  propertyMappings: snake,
 });
 const byId = await repo.readSingle(new Where("Id", eq, 1));
 const disabled: User[] = [];
@@ -6116,7 +6116,7 @@ execute_sql(
 .await;
 let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
-options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let user = users_repo
@@ -6163,7 +6163,7 @@ await executeSql(connection, `
 `);
 const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
   entityMapper: snakeThenPlural,
-  columnMappings: snake,
+  propertyMappings: snake,
   objectConverter: new UserConverter(),
 });
 const user = await usersRepo.readSingle(new Where("Id", eq, 1));
@@ -6260,7 +6260,7 @@ execute_sql(
 .await;
 let mut users_options = create_crud_repository_options::<UserAccount>();
 users_options.entity = "user".into();
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -6271,7 +6271,7 @@ let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings =
+type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
@@ -6329,7 +6329,7 @@ await executeSql(connection, `
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -6339,7 +6339,7 @@ const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
 }) as ReadonlyRepository<UsersView>;
 const typesRepo = ds.createReadonlyRepository(UserType, connection, {
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
 usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
 const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
@@ -6457,7 +6457,7 @@ options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserAccount".to_string(),
     "user".to_string(),
 )]));
-options.column_mappings = Box::new(DictionaryMapper::new([
+options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -6538,7 +6538,7 @@ await executeSql(connection, `
 `);
 const repo = ds.createReadonlyRepository(UserAccount, connection, {
   entityMapper: new DictionaryMapper([["UserAccount", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -6889,7 +6889,7 @@ options.entity_mapper = Box::new(DictionaryMapper::new([
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
 ]));
-options.column_mappings = Box::new(DictionaryMapper::new([
+options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".into(), "id".into()),
     ("Login".into(), "username".into()),
     ("Active".into(), "is_enabled".into()),
@@ -6986,7 +6986,7 @@ const usersRepo = new ReadonlyRepository(connection, {
     ["UserRole", "user_roles"],
     ["Role", "roles"],
   ]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -8286,7 +8286,7 @@ no row
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 let mut options = create_crud_repository_options::<User>();
-options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.ids = vec!["Id".into()];
 let users_repo = CRUDRepository::new(connection, options).unwrap();
 let mut created = datasources::Row::new();
@@ -8365,7 +8365,7 @@ const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlit
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(User),
-  columnMappings: casing,
+  propertyMappings: casing,
   ids: ["Id"],
 });
 const created = await usersRepo.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
@@ -8698,7 +8698,7 @@ execute_sql(
 let mut options = create_crud_repository_options::<Account>();
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-options.column_mappings = Box::new(casing);
+options.property_mappings = Box::new(casing);
 options.ids = vec!["TenantId".into(), "Id".into()];
 options.row_converter = Some(RowTypeConverter::of::<Account>());
 let accounts_repo = CRUDRepository::new(connection, options).unwrap();
@@ -8746,7 +8746,7 @@ const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const accountsRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(Account),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
   ids: ["TenantId", "Id"],
 });
 const ada = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
@@ -8990,15 +8990,15 @@ for (const sql of statementsOf(readFileSync(seedPath, "utf8")))
 const contactsRepo = new CRUDRepository(connection, {
   type: Contact,
   entityMapper: contactEntity,
-  columnMappings: columns,
+  propertyMappings: columns,
   ids: ["Id"],
 });
-const typesRepo = new CRUDRepository(connection, { type: ContactType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
-const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, columnMappings: columns, ids: ["Id"] });
+const typesRepo = new CRUDRepository(connection, { type: ContactType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+const sourcesRepo = new CRUDRepository(connection, { type: ContactSource, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
+const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
 addressesRepo.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypesRepo);
 phonesRepo.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypesRepo);
 contactsRepo.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, typesRepo);
@@ -9131,7 +9131,7 @@ users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
 )]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -9144,12 +9144,12 @@ let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings = Box::new(casing);
+type_options.property_mappings = Box::new(casing);
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.column_mappings =
+role_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
@@ -9229,7 +9229,7 @@ const usersRepo = new CRUDRepository(connection, {
   ids: ["Key"],
   readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -9241,12 +9241,12 @@ const usersRepo = new CRUDRepository(connection, {
 const userTypesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserType),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserRole),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
 usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
 usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
@@ -22472,7 +22472,7 @@ users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
 )]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -22482,14 +22482,14 @@ users_options.column_mappings = Box::new(DictionaryMapper::new([
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings =
+type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserRole".to_string(),
     "user_roles".to_string(),
 )]));
-role_options.column_mappings = Box::new(DictionaryMapper::new([
+role_options.property_mappings = Box::new(DictionaryMapper::new([
     ("UserId".to_string(), "user_id".to_string()),
     ("Name".to_string(), "name".to_string()),
 ]));
@@ -22780,7 +22780,7 @@ options.entity_mapper = Box::new(DictionaryMapper::new([
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
 ]));
-options.column_mappings = Box::new(DictionaryMapper::new([
+options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".into(), "id".into()),
     ("Login".into(), "username".into()),
     ("Active".into(), "is_enabled".into()),

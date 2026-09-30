@@ -240,36 +240,12 @@ Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field 
 ids?: string[]
 ```
 
-##### insert
+##### write
 
-Rewrites the finished insert. Omitted leaves the statement unchanged.
-
-```typescript
-insert?: IMapper<IInsertStatement, IInsertStatement>
-```
-
-##### update
-
-Rewrites the finished update. Omitted leaves the statement unchanged.
+Write enrichment strategy. Omitted uses the default strategy.
 
 ```typescript
-update?: IMapper<IUpdateStatement, IUpdateStatement>
-```
-
-##### delete
-
-Rewrites the finished delete. Omitted leaves the statement unchanged.
-
-```typescript
-delete?: IMapper<IDeleteStatement, IDeleteStatement>
-```
-
-##### return
-
-Rewrites a finished [ReturnStatement](./return-statement.md). Omitted leaves it unchanged.
-
-```typescript
-return?: IMapper<IReturnStatement, IReturnStatement>
+write?: IWriteEnrichmentStrategy<T>
 ```
 
 #### BuiltRepository
@@ -306,12 +282,20 @@ rowConverter?: TypeConverter<Cells, Cells>
 objectConverter: TypeConverter<T, Cells>
 ```
 
-##### rowsMapper
+##### propertyMappings
 
-Read-row [Mapper](./mappers.md).
+Property name [Mapper](./mappers.md).
 
 ```typescript
-rowsMapper: IMapper<T, T>
+propertyMappings: IMapper<string, string>
+```
+
+##### entityMapper
+
+Entity name [Mapper](./mappers.md).
+
+```typescript
+entityMapper: IMapper<string, string>
 ```
 
 ##### statements
@@ -319,7 +303,7 @@ rowsMapper: IMapper<T, T>
 SQL fragments.
 
 ```typescript
-statements: RepositoryStatements
+statements: ReadonlyRepositoryStatements
 ```
 
 ##### ids
@@ -594,36 +578,12 @@ Id column names. Default `["id"]`.
 IReadOnlyList<string> Ids { get; init; }
 ```
 
-##### Insert
+##### Write
 
-Rewrites the finished insert. Omitted leaves the statement unchanged.
-
-```csharp
-IMapper<IInsertStatement, IInsertStatement>? Insert { get; init; }
-```
-
-##### Update
-
-Rewrites the finished update. Omitted leaves the statement unchanged.
+Write enrichment strategy. Omitted uses the default strategy.
 
 ```csharp
-IMapper<IUpdateStatement, IUpdateStatement>? Update { get; init; }
-```
-
-##### Delete
-
-Rewrites the finished delete. Omitted leaves the statement unchanged.
-
-```csharp
-IMapper<IDeleteStatement, IDeleteStatement>? Delete { get; init; }
-```
-
-##### Return
-
-Rewrites a finished [ReturnStatement](./return-statement.md). Omitted leaves it unchanged.
-
-```csharp
-IMapper<IReturnStatement, IReturnStatement>? Return { get; init; }
+IWriteEnrichmentStrategy<T>? Write { get; init; }
 ```
 
 #### BuiltRepository
@@ -652,12 +612,20 @@ Row [TypeConverter](./type-converters.md).
 TypeConverter<T, Row> RowConverter { get; init; }
 ```
 
-##### RowsMapper
+##### PropertyMappings
 
-Read-row [Mapper](./mappers.md).
+Property name [Mapper](./mappers.md).
 
 ```csharp
-IMapper<T, T> RowsMapper { get; init; }
+IMapper<string, string> PropertyMappings { get; init; }
+```
+
+##### EntityMapper
+
+Entity name [Mapper](./mappers.md).
+
+```csharp
+IMapper<string, string> EntityMapper { get; init; }
 ```
 
 ##### Statements
@@ -665,7 +633,7 @@ IMapper<T, T> RowsMapper { get; init; }
 SQL fragments.
 
 ```csharp
-RepositoryStatements Statements { get; init; }
+ReadonlyRepositoryStatements Statements { get; init; }
 ```
 
 ##### Ids
@@ -851,36 +819,12 @@ Id column names. Default `["id"]`.
 pub ids: Vec<String>
 ```
 
-##### insert
+##### write
 
-Rewrites finished insert SQL. `None` leaves the statement unchanged.
-
-```rust
-pub insert: Option<Arc<TransformMapper<String, String>>>
-```
-
-##### update
-
-Rewrites finished update SQL. `None` leaves the statement unchanged.
+Write enrichment strategy. `None` uses the default strategy.
 
 ```rust
-pub update: Option<Arc<TransformMapper<String, String>>>
-```
-
-##### delete
-
-Rewrites finished delete SQL. `None` leaves the statement unchanged.
-
-```rust
-pub delete: Option<Arc<TransformMapper<String, String>>>
-```
-
-##### return_
-
-Rewrites finished return SQL. `None` leaves it unchanged.
-
-```rust
-pub return_: Option<Arc<TransformMapper<String, String>>>
+pub write: Option<Arc<dyn WriteEnrichmentStrategy>>
 ```
 
 ##### read
@@ -925,12 +869,20 @@ pub row_converter: Option<RowTypeConverter>
 pub object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>
 ```
 
-##### rows_mapper
+##### property_mappings
 
-Read-row [Mapper](./mappers.md).
+Property name [Mapper](./mappers.md).
 
 ```rust
-pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>
+pub property_mappings: Box<dyn Mapper<String, String> + Send + Sync>
+```
+
+##### entity_mapper
+
+Entity name [Mapper](./mappers.md).
+
+```rust
+pub entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>
 ```
 
 ##### statements
@@ -938,7 +890,7 @@ pub rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>
 SQL fragments.
 
 ```rust
-pub statements: RepositoryStatements
+pub statements: ReadonlyRepositoryStatements
 ```
 
 ##### ids
@@ -952,7 +904,7 @@ pub ids: Vec<String>
 
 ## Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, maps it, and copies the id onto the entity. The driver statement factory formats that statement. A stored-procedure create reads that id from the `Return` mapper instead. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 
 {{ReadSingleById|readSingleById|read_single_by_id}} takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 

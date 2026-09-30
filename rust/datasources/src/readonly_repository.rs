@@ -1,4 +1,3 @@
-use crate::builders::Join;
 use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
@@ -9,7 +8,7 @@ use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrate
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
-use crate::mappers::{IdentityMapper, Mapper};
+use crate::mappers::IdentityMapper;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -23,12 +22,12 @@ use crate::select_statement::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
-use crate::statements::{OrderBy, SelectStatementOptions};
+use crate::statement_mappings::StatementMappings;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::stubs::StubConnection;
 use crate::stubs::StubRepository;
-use crate::table_repository_builder::RepositoryBuilder;
-use crate::table_repository_statements::RepositoryStatements;
+use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
+use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::any::TypeId;
@@ -39,10 +38,8 @@ pub struct ReadonlyRepository {
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: Option<RowTypeConverter>,
     pub(crate) object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>,
-    pub(crate) rows_mapper: Box<dyn Mapper<Row, Row> + Send + Sync>,
-    pub(crate) column_mappings: Box<dyn Mapper<String, String> + Send + Sync>,
-    entity_mapper: Box<dyn Mapper<String, String> + Send + Sync>,
-    pub(crate) statements: RepositoryStatements,
+    statement_mappings: StatementMappings,
+    pub(crate) statements: ReadonlyRepositoryStatements,
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
@@ -62,7 +59,7 @@ impl ReadonlyRepository {
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryOptions,
     ) -> Result<Self> {
-        Ok(Self::from_built(RepositoryBuilder::parts(
+        Ok(Self::from_built(ReadonlyRepositoryBuilder::parts(
             connection, options,
         )?))
     }
@@ -74,9 +71,7 @@ impl ReadonlyRepository {
             middlewares: Vec::new(),
             row_converter: built.row_converter,
             object_converter: built.object_converter,
-            rows_mapper: built.rows_mapper,
-            column_mappings: built.column_mappings,
-            entity_mapper: built.entity_mapper,
+            statement_mappings: StatementMappings::new(built.entity_mapper, built.property_mappings),
             statements: built.statements,
             entity_type: TypeId::of::<Row>(),
             memory: None,
@@ -96,10 +91,11 @@ impl ReadonlyRepository {
             middlewares: Vec::new(),
             row_converter: None,
             object_converter: Box::new(MetaDataRowTypeConverter::new(Vec::new())),
-            rows_mapper: Box::new(IdentityMapper::<Row>::new()),
-            column_mappings: Box::new(IdentityMapper::<String>::new()),
-            entity_mapper: Box::new(IdentityMapper::<String>::new()),
-            statements: RepositoryStatements::new("", Vec::new()),
+            statement_mappings: StatementMappings::new(
+                Box::new(IdentityMapper::<String>::new()),
+                Box::new(IdentityMapper::<String>::new()),
+            ),
+            statements: ReadonlyRepositoryStatements::new("", Vec::new()),
             entity_type: TypeId::of::<Row>(),
             memory: Some(SharedItems::new(items)),
             tree: RepositoryTree::new(RepositoryTreeNode::new(
@@ -166,8 +162,7 @@ impl ReadonlyRepository {
     }
 
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
-        let mapped = Mapper::reverse_map(&self.rows_mapper, item.clone());
-        let row = self.object_converter.reverse_convert(&mapped)?;
+        let row = self.object_converter.reverse_convert(item)?;
         match &self.row_converter {
             Some(converter) => converter.reverse_convert(&row),
             None => Ok(row),
@@ -186,32 +181,12 @@ impl ReadonlyRepository {
     }
 
     fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
-        clause.map(
-            |name| self.column(name),
-            |name, cell| self.cell(name, cell, fields_applied),
-        )
+        self.statement_mappings
+            .apply_where(clause, &|name, cell| self.cell(name, cell, fields_applied))
     }
 
     pub(crate) fn column(&self, property: &str) -> String {
-        let Some(dot) = last_dot(property) else {
-            return Mapper::map(&self.column_mappings, property.to_string());
-        };
-        let qualifier = &property[..dot];
-        let name = &property[dot + 1..];
-        let mapped = Mapper::map(&self.column_mappings, name.to_string());
-        if mapped != name && mapped.contains('.') {
-            return mapped;
-        }
-        let table = self.entity(qualifier);
-        if table == qualifier && mapped == name {
-            property.to_string()
-        } else {
-            format!("{table}.{mapped}")
-        }
-    }
-
-    fn entity(&self, name: &str) -> String {
-        Mapper::map(&self.entity_mapper, name.to_string())
+        self.statement_mappings.column(property)
     }
 
     pub(crate) async fn fill(
@@ -334,7 +309,7 @@ impl ReadonlyRepository {
                 Some(converter) => converter.convert(&renamed)?,
                 None => renamed.clone(),
             };
-            let item = Mapper::map(&self.rows_mapper, self.object_converter.convert(&cells)?);
+            let item = self.object_converter.convert(&cells)?;
             pairs.push((item, Some(renamed)));
         }
         Ok(pairs)
@@ -362,85 +337,12 @@ impl ReadonlyRepository {
     }
 
     fn property(&self, key: &str) -> String {
-        let reversed = Mapper::reverse_map(&self.column_mappings, key.to_string());
-        if reversed != key && Mapper::map(&self.column_mappings, reversed.clone()) == key {
-            return reversed;
-        }
-        let Some(dot) = last_dot(key) else {
-            return reversed;
-        };
-        let column = &key[dot + 1..];
-        let name = Mapper::reverse_map(&self.column_mappings, column.to_string());
-        if name != column && Mapper::map(&self.column_mappings, name.clone()) == column {
-            name
-        } else {
-            reversed
-        }
+        self.statement_mappings.property(key)
     }
 
     fn mapped_select(&self, select: &SelectStatement) -> Result<SelectStatement> {
-        let table = self.entity(&select.table);
-        let fields: Vec<String> = select
-            .fields
-            .iter()
-            .map(|field| self.column(field))
-            .collect();
-        let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
-        let group: Vec<String> = select
-            .group_by
-            .iter()
-            .map(|column| self.column(column))
-            .collect();
-        let group_refs: Vec<&str> = group.iter().map(String::as_str).collect();
-        let order: Vec<OrderBy> = select
-            .order_by
-            .iter()
-            .map(|item| OrderBy {
-                column: self.column(&item.column),
-                direction: item.direction,
-            })
-            .collect();
-        let joins: Vec<Join> = select
-            .joins
-            .iter()
-            .map(|join| Join {
-                kind: join.kind,
-                table: self.entity(&join.table),
-                on: join
-                    .on
-                    .as_ref()
-                    .map(|on| map_on(on, |name| self.column(name))),
-            })
-            .collect();
-        let mapped_where = self.mapped_where(select.predicate())?;
-        let mapped_having = self.mapped_where(select.having.as_deref())?;
-        let where_clause = mapped_where
-            .as_ref()
-            .map(|clause| clause as &dyn IWhere)
-            .or(select.predicate());
-        let having = mapped_having
-            .as_ref()
-            .map(|clause| clause as &dyn IWhere)
-            .or(select.having.as_deref());
-        Ok(SelectStatement::new(SelectStatementOptions {
-            table: &table,
-            fields: &field_refs,
-            where_clause,
-            joins: &joins,
-            group_by: &group_refs,
-            order_by: &order,
-            limit: select.limit,
-            distinct: select.distinct,
-            having,
-            offset: select.offset,
-        }))
-    }
-
-    fn mapped_where(&self, predicate: Option<&dyn IWhere>) -> Result<Option<Where>> {
-        match predicate.and_then(|item| item.as_any().downcast_ref::<Where>()) {
-            Some(clause) => Ok(Some(self.store_clause(clause, false)?)),
-            None => Ok(None),
-        }
+        self.statement_mappings
+            .apply_select(select, &|name, cell| self.cell(name, cell, false))
     }
 
     fn own(&self, select: SelectStatement) -> Result<SelectStatement> {
@@ -492,27 +394,4 @@ impl IReadonlyRepository for ReadonlyRepository {
             .map(|(item, _)| item)
             .collect())
     }
-}
-
-fn map_on(on: &str, column: impl Fn(&str) -> String) -> String {
-    match on.split_once(" = ") {
-        Some((left, right)) if !left.contains(' ') && !right.contains(' ') => {
-            format!("{} = {}", column(left), column(right))
-        }
-        _ => on.to_string(),
-    }
-}
-
-fn last_dot(name: &str) -> Option<usize> {
-    let mut quoted = false;
-    let mut dot = None;
-    for (index, ch) in name.char_indices() {
-        if ch == '"' {
-            quoted = !quoted;
-        }
-        if ch == '.' && !quoted {
-            dot = Some(index);
-        }
-    }
-    dot
 }

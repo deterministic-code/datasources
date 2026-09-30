@@ -176,9 +176,6 @@ public static class RepositoryTestsSpec
     static string PhysicalTable(TypeSpec type) =>
         type.CRUDMapper?.Entity ?? type.Table;
 
-    static string WithStatementSql(string sql, bool write, TypeSpec type) =>
-        $"{sql}{(write ? type.CRUDMapper?.WriteSuffix : type.CRUDMapper?.QuerySuffix) ?? ""}";
-
     static string Unquote(string text) =>
         Regex.Replace(Regex.Replace(text, "`([^`]+)`", "$1"), "\"([^\"]+)\"", "$1");
 
@@ -192,27 +189,8 @@ public static class RepositoryTestsSpec
             ReadProperties = [.. type.Fields.Keys],
             EntityMapper = new TransformMapper<string, string>(
                 name => quote(type.CRUDMapper?.Entity ?? name),
-                name => name),
-            RowsMapper = MappingsMapper<T>(type.Mappings),
-            Select = Suffix<ISelectStatement>(
-                (text, query) => new SelectStatement(text, query.Where),
-                type.CRUDMapper?.QuerySuffix),
-            Insert = Suffix<IInsertStatement>(
-                (text, _) => new InsertStatement(text),
-                type.CRUDMapper?.WriteSuffix),
-            Update = Suffix<IUpdateStatement>(
-                (text, update) => new UpdateStatement(text, update.Where),
-                type.CRUDMapper?.WriteSuffix),
-            Delete = Suffix<IDeleteStatement>(
-                (text, delete) => DeleteStatement.Raw(text, delete.Where),
-                type.CRUDMapper?.WriteSuffix)
+                name => name)
         };
-
-    static IMapper<T, T>? Suffix<T>(Func<string, T, T> rewrite, string? suffix)
-        where T : IStatement =>
-        suffix is null
-            ? null
-            : new TransformMapper<T, T>(built => rewrite($"{built.GetText()}{suffix}", built), built => built);
 
     static IEnumerable<string> Queries(Spec spec, string provider)
     {
@@ -223,14 +201,14 @@ public static class RepositoryTestsSpec
         {
             var sql = step switch
             {
-                { Create: { } create } => WithStatementSql(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(), true, spec.Type),
-                { Read: { } read } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(), false, spec.Type),
-                { Query: { } query } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(), false, spec.Type),
-                { ReadBy: { } readBy } => WithStatementSql(new SelectStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(), false, spec.Type),
-                { Update: { } update } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new Where(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(), true, spec.Type),
-                { UpdateBy: { } updateBy } => WithStatementSql(new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(), true, spec.Type),
-                { Delete: { } delete } => WithStatementSql(new DeleteStatement(table, new Where(new Operator.Equals("id", Value.From(delete.Id)))).GetText(), true, spec.Type),
-                { DeleteBy: { } deleteBy } => WithStatementSql(new DeleteStatement(table, SqlWhere(deleteBy.Where)).GetText(), true, spec.Type),
+                { Create: { } create } => new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(),
+                { Read: { } read } => new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(),
+                { Query: { } query } => new SelectStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(),
+                { ReadBy: { } readBy } => new SelectStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(),
+                { Update: { } update } => new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new Where(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(),
+                { UpdateBy: { } updateBy } => new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(),
+                { Delete: { } delete } => new DeleteStatement(table, new Where(new Operator.Equals("id", Value.From(delete.Id)))).GetText(),
+                { DeleteBy: { } deleteBy } => new DeleteStatement(table, SqlWhere(deleteBy.Where)).GetText(),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
             yield return sql;
@@ -310,42 +288,6 @@ public static class RepositoryTestsSpec
         }
         return entity;
     }
-
-    static IMapper<T, T> MappingsMapper<T>(Dictionary<string, Dictionary<string, string>> mappings)
-        where T : new() =>
-        mappings.Count == 0
-            ? new IdentityMapper<T>()
-            : new TransformMapper<T, T>(
-                row =>
-                {
-                    foreach (var (nested, cols) in mappings)
-                    {
-                        var dest = typeof(T).GetProperty(nested);
-                        if (dest is null) continue;
-                        var child = Activator.CreateInstance(dest.PropertyType)
-                            ?? throw new InvalidOperationException($"Cannot create {dest.PropertyType}");
-                        foreach (var (field, col) in cols)
-                        {
-                            var source = typeof(T).GetProperty(col)?.GetValue(row);
-                            dest.PropertyType.GetProperty(field)?.SetValue(child, source);
-                        }
-                        dest.SetValue(row, child);
-                    }
-                    return row;
-                },
-                user =>
-                {
-                    foreach (var (nested, cols) in mappings)
-                    {
-                        var child = typeof(T).GetProperty(nested)?.GetValue(user);
-                        foreach (var (field, col) in cols)
-                        {
-                            var value = child?.GetType().GetProperty(field)?.GetValue(child);
-                            typeof(T).GetProperty(col)?.SetValue(user, value);
-                        }
-                    }
-                    return user;
-                });
 
     static Dictionary<string, TypeConverter<Value, Value>> FieldsOf(
         TypeSpec type, IReadOnlyDictionary<string, TypeConverter<Value, Value>> types)

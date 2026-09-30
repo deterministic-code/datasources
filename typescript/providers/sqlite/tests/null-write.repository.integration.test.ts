@@ -27,7 +27,7 @@ describe("null write", () => {
     const repo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(Item),
       entityMapper: casing,
-      columnMappings: casing,
+      propertyMappings: casing,
       ids: ["Id"],
     });
     const omitted = await repo.create(Object.assign(new Item(), { Name: "ada" }));

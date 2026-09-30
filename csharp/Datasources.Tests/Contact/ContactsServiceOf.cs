@@ -11,7 +11,7 @@ internal static class ContactsServiceOf
             var repo = new CRUDRepository<T>(connection, new CRUDRepositoryOptions<T>
             {
                 EntityMapper = entity ?? ContactColumns.Snake,
-                ColumnMappings = ContactColumns.Columns,
+                PropertyMappings = ContactColumns.Columns,
                 Ids = ["Id"],
             });
             return middleware is null ? repo : repo.AddMiddleware(middleware);

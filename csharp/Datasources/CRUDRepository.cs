@@ -7,22 +7,17 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 {
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
-    readonly IMapper<IReturnStatement, IReturnStatement>? returnMapper;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateCRUDRepositoryOptions.FromType<T>()) { }
 
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
-        this(RepositoryBuilder<T>.Parts(connection, options), options.Write, options.Return) { }
+        this(new CRUDRepositoryBuilder<T>().Parts(connection, options), options.Write) { }
 
-    private CRUDRepository(
-        BuiltRepository<T> built,
-        IWriteEnrichmentStrategy<T>? write = null,
-        IMapper<IReturnStatement, IReturnStatement>? returnMapper = null) : base(built)
+    private CRUDRepository(BuiltRepository<T> built, IWriteEnrichmentStrategy<T>? write = null) : base(built)
     {
         ids = built.Ids;
         this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
-        this.returnMapper = returnMapper;
     }
 
     public IReadOnlyList<string> Ids => ids;
@@ -121,10 +116,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return await ReadSingle(IdWhere(key));
     }
 
+    CRUDRepositoryStatements Writes => (CRUDRepositoryStatements)Statements;
+
     async Task<Response> Insert(T item)
     {
         var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
-        var response = await Command().Execute(Statements.Insert(fields), fields);
+        var response = await Command().Execute(Writes.Insert(fields), fields);
         if (ids.Count == 1)
             await CopyInsertedId(item, fields);
         return response;
@@ -134,15 +131,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var column = ids[0];
         var sqlColumn = Column(column);
-        IStatement statement = returnMapper is { } map
-            ? map.Map(new ReturnStatement(sqlColumn, fields))
-            : Statements.SelectInsertedId(sqlColumn);
+        IStatement statement = Writes.SelectInsertedId(sqlColumn);
         var reader = await Command().ExecuteReader(statement, statement is IReturnStatement ? fields : null);
         try
         {
             if (!await reader.Next()) return;
             var row = Identified(Named(reader.Current ?? throw new DatasourceException("Reader current must be a row"), column, sqlColumn), column);
-            var source = Mapper!.Map(ObjectConverter.Convert(RowConverter?.Convert(row) ?? row));
+            var source = ObjectConverter.Convert(RowConverter?.Convert(row) ?? row);
             if (target is IDictionary dest && source is IDictionary src && src.Contains(column) && src[column] is { } cell && cell is not Value.Null)
                 dest[column] = cell;
             else if (typeof(T).GetProperty(column) is { CanWrite: true } prop && prop.GetValue(source) is { } value)
@@ -175,7 +170,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        var statement = Statements.Update(fields, where);
+        var statement = Writes.Update(fields, where);
         return await Command().Execute(statement, UpdateStatement.ParameterList(fields, where));
     }
 
@@ -183,7 +178,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var record = ReverseConvert(item);
         var where = byWhere is null ? Mapped(IdWhere(record), fieldsApplied: true) : Mapped(byWhere, fieldsApplied: false);
-        var statement = Statements.Delete(where);
+        var statement = Writes.Delete(where);
         var parameters = where.Parameters is { Count: > 0 } listed
             ? listed
             : statement.GetText().Contains('$') ? Params(record, _ => true) : [];
@@ -221,7 +216,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     Row ReverseConvert(T item)
     {
-        var row = ObjectConverter.ReverseConvert(Mapper!.ReverseMap(item));
+        var row = ObjectConverter.ReverseConvert(item);
         return RowConverter?.ReverseConvert(row) ?? row;
     }
 

@@ -34,19 +34,19 @@ describe("ContactsService", () => {
     const contactsRepo = new CRUDRepository(connection, {
       type: Contact,
       entityMapper: contactEntity,
-      columnMappings: columns,
+      propertyMappings: columns,
       ids: ["Id"],
     });
     const addressesRepo = new CRUDRepository(connection, {
       type: Address,
       entityMapper: snake,
-      columnMappings: columns,
+      propertyMappings: columns,
       ids: ["Id"],
     });
     const phonesRepo = new CRUDRepository(connection, {
       type: Phone,
       entityMapper: snake,
-      columnMappings: columns,
+      propertyMappings: columns,
       ids: ["Id"],
     });
     const service = ContactsService.open(
@@ -102,7 +102,7 @@ describe("ContactsService", () => {
 });
 
 const createLookupRepo = <T extends object>(type: Constructable<T>, connection: IConnection) =>
-  new ReadonlyRepository(connection, { type, entityMapper: snake, columnMappings: columns });
+  new ReadonlyRepository(connection, { type, entityMapper: snake, propertyMappings: columns });
 
 const setup = async (rows: Record<string, Scalar>[] = []): Promise<IConnection> => {
   const connection = new MemoryDriver().connection();

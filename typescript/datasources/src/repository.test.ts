@@ -8,12 +8,9 @@ import {
   WhereText,
   Where,
   Operator,
-  RepositoryBuilder,
+  CRUDRepositoryBuilder,
+  ReadonlyRepositoryBuilder,
   createCRUDRepositoryOptions,
-  parts,
-  InsertStatement,
-  UpdateStatement,
-  DeleteStatement,
 } from "./index.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
@@ -285,114 +282,6 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[1]?.text).toBe("DELETE FROM users WHERE name = $name");
   });
 
-  class Contact {
-    name = "";
-  }
-
-  class User {
-    id = 0;
-    username = "";
-    email = "";
-    contact_name1 = "";
-    contact_name2 = "";
-    contacts: Contact[] = [];
-  }
-
-  const userContactsMapper = () =>
-    new TransformMapper<User, User>(
-      (row) => {
-        row.contacts = [
-          Object.assign(new Contact(), { name: row.contact_name1 }),
-          Object.assign(new Contact(), { name: row.contact_name2 }),
-        ];
-        return row;
-      },
-      (user) => {
-        user.contact_name1 = user.contacts[0]?.name ?? "";
-        user.contact_name2 = user.contacts[1]?.name ?? "";
-        return user;
-      },
-    );
-
-  it("applies mapper after row converter", async () => {
-    const { repo, command } = create({
-      rowsMapper: new TransformMapper<Cells, Cells>(
-        (row) => ({ ...row, name: String(row.name).toUpperCase() }),
-        (row) => ({ ...row, name: String(row.name).toLowerCase() }),
-      ),
-    });
-    command.reader = new MockReader([{ id: 1, name: "a" }]);
-    expect(await repo.readSingle()).toEqual({ id: 1, name: "A" });
-  });
-
-  it("maps a flat row into nested user contacts", async () => {
-    const connection = new MockConnection(undefined, "memory");
-    const command = new MockCommand(connection);
-    connection.command = command;
-    const repo = new CRUDRepository<User>(connection, {
-      type: User,
-      entity: "users",
-      objectConverter: new MetaDataRowTypeConverter<User>(),
-      rowsMapper: userContactsMapper(),
-    });
-    const flat = {
-      id: 1,
-      username: "bobby",
-      email: "bob@asdf.com",
-      contact_name1: "bob",
-      contact_name2: "roberta",
-    };
-    command.reader = new MockReader([flat]);
-    const user = await repo.readSingle();
-    expect(user?.username).toBe("bobby");
-    expect(user?.email).toBe("bob@asdf.com");
-    expect(user?.contacts.map((contact) => contact.name)).toEqual(["bob", "roberta"]);
-    expect(command.executeReaderCalls[0]?.text).toBe(
-      "SELECT contact_name1, contact_name2, email, id, username FROM users",
-    );
-  });
-
-  it("reverse maps nested user on add update and delete", async () => {
-    const connection = new MockConnection(undefined, "memory");
-    const command = new MockCommand(connection);
-    connection.command = command;
-    const repo = new CRUDRepository<User>(connection, {
-      type: User,
-      entity: "users",
-      objectConverter: new MetaDataRowTypeConverter<User>(),
-      rowsMapper: userContactsMapper(),
-    });
-    const user = Object.assign(new User(), {
-      id: 1,
-      username: "bobby",
-      email: "bob@asdf.com",
-      contacts: [
-        Object.assign(new Contact(), { name: "bob" }),
-        Object.assign(new Contact(), { name: "roberta" }),
-      ],
-    });
-    command.response = { result: undefined, rowsAffected: 1 };
-    const created = await repo.create(user);
-    expect(created.id).toBe(1);
-    expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO users (contact_name1, contact_name2, email, username) VALUES ($contact_name1, $contact_name2, $email, $username)",
-    );
-    const values = Object.fromEntries(
-      (command.executeCalls[0]?.parameters ?? []).map((parameter) => [
-        parameter.name,
-        parameter.value,
-      ]),
-    );
-    expect(values.contact_name1).toBe("bob");
-    expect(values.contact_name2).toBe("roberta");
-    const updated = await repo.update(user);
-    expect(updated.rowsAffected).toBe(1);
-    expect(command.executeCalls[1]?.text).not.toContain("contacts");
-    const removed = await repo.delete(user);
-    expect(removed.rowsAffected).toBe(1);
-    expect(command.executeCalls[2]?.text).toBe("DELETE FROM users WHERE id = $id");
-  });
-
   it("builds repository options from a type", () => {
     const connection = new MockConnection();
     const fromId = createCRUDRepositoryOptions(asType(Item));
@@ -402,66 +291,48 @@ describe("CRUDRepository", () => {
     expect(createCRUDRepositoryOptions(asType(PascalId)).ids).toEqual(["Id"]);
     expect(new CRUDRepository(connection, fromId)).toBeInstanceOf(CRUDRepository);
     expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
-    expect(RepositoryBuilder.from(connection, fromId).parts().connection).toBe(connection);
-    expect(RepositoryBuilder.from(asType(Item), connection).parts().ids).toEqual(["id"]);
-    expect(parts(connection, {}).statements.select().getText()).toBe("SELECT * FROM ");
-    expect(parts(connection, { type: asType(Item) }).statements.select().getText()).toBe(
+    expect(new CRUDRepositoryBuilder().parts(connection, fromId).connection).toBe(connection);
+    expect(new CRUDRepositoryBuilder().parts(connection, createCRUDRepositoryOptions(asType(Item))).ids).toEqual(["id"]);
+    expect(new ReadonlyRepositoryBuilder().parts(connection, {}).statements.select().getText()).toBe("SELECT * FROM ");
+    expect(new ReadonlyRepositoryBuilder().parts(connection, { type: asType(Item) }).statements.select().getText()).toBe(
       "SELECT id, name FROM Item",
     );
   });
 
-  it("builder maps entity and columns; statement mapper rewrites query", async () => {
+  it("builder maps entity and columns", async () => {
     const entity = new TransformMapper<string, string>(
       (name) => (name === "users" ? "people" : name),
       (name) => name,
     );
-    const columnMappings = new TransformMapper<string, string>(
+    const propertyMappings = new TransformMapper<string, string>(
       (name) => ({ id: "user_id", name: "full_name" }[name] ?? name),
       (name) => name,
     );
     const { repo, command } = create({
       entityMapper: entity,
-      columnMappings,
-      select: new TransformMapper(
-        (query) => new SelectStatement(`${query.getText()} LIMIT 1`, query.where),
-        (query) => query,
-      ),
-      insert: new TransformMapper(
-        (insert) => new InsertStatement(`${insert.getText()} RETURNING id`),
-        (insert) => insert,
-      ),
-      update: new TransformMapper(
-        (update) =>
-          new UpdateStatement(`${update.getText()} RETURNING id`, update.where),
-        (update) => update,
-      ),
-      delete: new TransformMapper(
-        (remove) =>
-          DeleteStatement.raw(`${remove.getText()} RETURNING id`, remove.where),
-        (remove) => remove,
-      ),
+      propertyMappings,
     });
     command.reader = new MockReader([]);
     await repo.readSingle();
     expect(command.executeReaderCalls[0]?.text).toBe(
-      "SELECT full_name, user_id FROM people LIMIT 1",
+      "SELECT full_name, user_id FROM people",
     );
     command.response = { result: undefined, rowsAffected: 1 };
     const row = { id: 1, name: "a" };
     const created = await repo.create(row);
     expect(created.id).toBe(1);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO people (full_name) VALUES ($full_name) RETURNING id",
+      "INSERT INTO people (full_name) VALUES ($full_name)",
     );
     const updated = await repo.update(row);
     expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toBe(
-      "UPDATE people SET full_name = $full_name WHERE user_id = $user_id RETURNING id",
+      "UPDATE people SET full_name = $full_name WHERE user_id = $user_id",
     );
     const removed = await repo.delete(row);
     expect(removed.rowsAffected).toBe(1);
     expect(command.executeCalls[2]?.text).toBe(
-      "DELETE FROM people WHERE user_id = $user_id RETURNING id",
+      "DELETE FROM people WHERE user_id = $user_id",
     );
   });
 

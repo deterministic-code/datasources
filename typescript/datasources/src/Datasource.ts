@@ -39,45 +39,23 @@ export class Datasource implements IDatasource {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
+    const crud = options !== undefined && ("ids" in options || "write" in options)
+      ? (options as CRUDRepositoryOptions<T>)
+      : undefined;
     return options === undefined
       ? { ...built, rowTypeConverters: types, rowConverter: rows }
-      : "ids" in options ||
-          "insert" in options ||
-          "update" in options ||
-          "delete" in options ||
-          "return" in options ||
-          "write" in options
-        ? {
-            entity: options.entity ?? built.entity,
-            entityMapper: options.entityMapper,
-            columnMappings: options.columnMappings,
-            select: options.select,
-            rowsMapper: options.rowsMapper,
-            rowConverter: rows,
-            objectConverter: options.objectConverter,
-            readProperties: options.readProperties,
-            rowTypeConverters: types,
-            type,
-            ids: (options as CRUDRepositoryOptions<T>).ids ?? built.ids,
-            insert: (options as CRUDRepositoryOptions<T>).insert,
-            update: (options as CRUDRepositoryOptions<T>).update,
-            delete: (options as CRUDRepositoryOptions<T>).delete,
-            return: (options as CRUDRepositoryOptions<T>).return,
-            write: (options as CRUDRepositoryOptions<T>).write,
-          }
-        : {
-            entity: options.entity ?? built.entity,
-            entityMapper: options.entityMapper,
-            columnMappings: options.columnMappings,
-            select: options.select,
-            rowsMapper: options.rowsMapper,
-            rowConverter: rows,
-            objectConverter: options.objectConverter,
-            readProperties: options.readProperties,
-            rowTypeConverters: types,
-            type,
-            ids: built.ids,
-          };
+      : {
+          entity: options.entity ?? built.entity,
+          entityMapper: options.entityMapper,
+          propertyMappings: options.propertyMappings,
+          rowConverter: rows,
+          objectConverter: options.objectConverter,
+          readProperties: options.readProperties,
+          rowTypeConverters: types,
+          type,
+          ids: crud?.ids ?? built.ids,
+          write: crud?.write,
+        };
   };
 
   createRepository = <T>(

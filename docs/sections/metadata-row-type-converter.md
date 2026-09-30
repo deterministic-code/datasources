@@ -1,6 +1,6 @@
 # Metadata Row Type Converter
 
-Default object converter. Read order is the renamed row, then {{RowConverter|rowConverter|row_converter}} when one is set, then this converter, then the rows mapper.
+Default object converter. Read order is the renamed row, then {{RowConverter|rowConverter|row_converter}} when one is set, then this converter.
 
 {{RowConverter|rowConverter|row_converter}} is the `Row` to `Row` cell step. Omitted, that step is skipped and the renamed row is passed through. This converter still runs. It assigns the row onto `T`. A handwritten object converter assigns each column and does not reflect.
 

@@ -61,9 +61,12 @@ export { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStra
 export { RepositoryTree } from "./RepositoryTree.ts";
 export { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 export { CRUDRepository } from "./CRUDRepository.ts";
-export { RepositoryBuilder, parts } from "./RepositoryBuilder.ts";
+export { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
+export { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
+export { StatementMappings } from "./StatementMappings.ts";
+export { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
+export { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
-export type { RepositoryStatements } from "./RepositoryStatements.ts";
 export { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 export type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 export type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";

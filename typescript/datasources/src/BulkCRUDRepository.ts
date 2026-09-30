@@ -2,6 +2,7 @@ import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
+import type { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { Response } from "./Response.ts";
 import type { Field } from "./builders/Field.ts";
@@ -124,7 +125,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
       this.cell,
       this.enrichmentInto,
     );
-    return { text: this.statements!.insert(fields).getText(), parameters: fields };
+    return { text: (this.statements as CRUDRepositoryStatements).insert(fields).getText(), parameters: fields };
   };
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
@@ -132,13 +133,13 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.column, this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    return { text: this.statements!.update(fields, where).getText(), parameters: UpdateStatement.parameterList(fields, where) };
+    return { text: (this.statements as CRUDRepositoryStatements).update(fields, where).getText(), parameters: UpdateStatement.parameterList(fields, where) };
   };
 
   private deleteCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
     const where = byWhere ? this.map(byWhere, false) : this.map(this.idsWhere(record), true);
-    const statement = this.statements!.delete(where);
+    const statement = (this.statements as CRUDRepositoryStatements).delete(where);
     const listed = where.parameters ?? [];
     const parameters: Parameter[] = listed.length
       ? listed
@@ -151,7 +152,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   private rowOf = (item: T): Cells => {
     const stored = this.reverse(item);
     const row: Cells = {};
-    for (const name of this.statements?.columns ?? []) {
+    for (const name of this.statements?.readColumns ?? []) {
       const match = Object.entries(stored).find(([key]) => this.column(key) === name && !this.enrichmentInto(key));
       row[name] = match?.[1] ?? null;
     }
@@ -159,7 +160,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   };
 
   private reverse = (item: T): Cells => {
-    const row = this.objectConverter!.reverseConvert(this.mapper!.reverseMap(item));
+    const row = this.objectConverter!.reverseConvert(item);
     return this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
   };
 

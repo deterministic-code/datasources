@@ -3,25 +3,20 @@ using System.Reflection;
 
 namespace Datasources;
 
-public static class RepositoryBuilder<T> where T : new()
+public class ReadonlyRepositoryBuilder<T> where T : new()
 {
-    public static BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryOptions<T> options)
+    public BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryOptions<T> options)
     {
-        var (ids, insert, update, delete) = options switch
-        {
-            CRUDRepositoryOptions<T> crud => (crud.Ids, crud.Insert, crud.Update, crud.Delete),
-            _ => (Array.Empty<string>(), null, null, null)
-        };
         var names = options.ReadProperties is { Count: > 0 } listed ? listed : Columns();
         var columns = names
-            .Select(options.ColumnMappings.Map)
+            .Select(options.PropertyMappings.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
         var converter = options.ObjectConverter ?? new MetaDataRowTypeConverter<T>();
         if (converter is MetaDataRowTypeConverter<T> meta)
         {
             meta.References.Clear();
-            meta.ReferenceColumns = options.ColumnMappings;
+            meta.ReferenceColumns = options.PropertyMappings;
             foreach (var name in names)
                 if (typeof(T).GetProperty(name) is { } prop && IsReference(prop.PropertyType))
                     meta.References.Add(name);
@@ -30,21 +25,16 @@ public static class RepositoryBuilder<T> where T : new()
             connection,
             options.RowConverter,
             converter,
-            options.RowsMapper,
-            options.ColumnMappings,
+            options.PropertyMappings,
             options.EntityMapper,
-            new RepositoryStatements(
-                options.EntityMapper.Map(options.Entity ?? typeof(T).Name),
-                columns,
-                options.Select,
-                insert,
-                update,
-                delete),
-            ids);
+            Statements(options.EntityMapper.Map(options.Entity ?? typeof(T).Name), columns),
+            Ids(options));
     }
 
-    public static CRUDRepository<T> Build(IConnection connection, CRUDRepositoryOptions<T> options) =>
-        new(connection, options);
+    protected virtual IReadOnlyList<string> Ids(ReadonlyRepositoryOptions<T> options) => [];
+
+    protected virtual ReadonlyRepositoryStatements Statements(string table, IReadOnlyList<string> columns) =>
+        new(table, columns);
 
     static string[] Columns() =>
         typeof(IDictionary).IsAssignableFrom(typeof(T))

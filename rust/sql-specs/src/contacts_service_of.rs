@@ -41,7 +41,7 @@ fn open(
     } else {
         Box::new(snake())
     };
-    options.column_mappings = Box::new(columns());
+    options.property_mappings = Box::new(columns());
     options.row_converter =
         Some(RowTypeConverter::new(name_list(names)).with_fields(stamp_fields(field)));
     options.object_converter = Some(Box::new(
