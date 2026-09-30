@@ -32,6 +32,7 @@ public static class RepositoryBuilder<T> where T : new()
             converter,
             options.RowsMapper,
             options.ColumnMappings,
+            options.EntityMapper,
             new RepositoryStatements(
                 options.EntityMapper.Map(options.Entity ?? typeof(T).Name),
                 columns,

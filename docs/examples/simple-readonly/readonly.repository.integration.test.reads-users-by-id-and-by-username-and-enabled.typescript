@@ -5,9 +5,10 @@ await executeSql(connection, `
     (2, 'grace', 0);
 `);
 const repo = ds.createReadonlyRepository(User, connection, {
-  entityMapper: new PluralizerMapper(),
+  entityMapper: snakeThenPlural,
+  columnMappings: snake,
 });
-const byId = await repo.readSingle(new Where("id", eq, 1));
+const byId = await repo.readSingle(new Where("Id", eq, 1));
 const disabled: User[] = [];
-for await (const row of repo.read(new Where("username", eq, "grace").and("is_enabled", eq, 0)))
+for await (const row of repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)))
   disabled.push(row);

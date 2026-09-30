@@ -6,5 +6,6 @@ public sealed record BuiltRepository<T>(
     TypeConverter<T, Row> ObjectConverter,
     IMapper<T, T> RowsMapper,
     IMapper<string, string> ColumnMappings,
+    IMapper<string, string> EntityMapper,
     RepositoryStatements Statements,
     IReadOnlyList<string> Ids) where T : new();

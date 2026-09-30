@@ -5,9 +5,8 @@ await executeSql(connection, `
     (2, 'grace', 0);
 `);
 const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
-  entity: "User",
-  entityMapper: new PluralizerMapper(),
-  readProperties: ["id", "username", "is_enabled"],
+  entityMapper: snakeThenPlural,
+  columnMappings: snake,
   objectConverter: new UserConverter(),
 });
-const user = await usersRepo.readSingle(new Where("id", eq, 1));
+const user = await usersRepo.readSingle(new Where("Id", eq, 1));

@@ -13,10 +13,17 @@ public class ReadonlyRepositoryIntegrationTests
 
     sealed class User
     {
-        public int id { get; set; }
-        public string username { get; set; } = "";
-        public bool is_enabled { get; set; }
+        public int Id { get; set; }
+        public string Username { get; set; } = "";
+        public bool IsEnabled { get; set; }
     }
+
+    static readonly IMapper<string, string> Snake = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+
+    static IMapper<string, string> SnakeThenPlural() =>
+        new TransformMapper<string, string>(
+            name => new PluralizerMapper().Map(Snake.Map(name)),
+            name => Snake.ReverseMap(new PluralizerMapper().ReverseMap(name)));
 
     sealed class UserAccount
     {
@@ -39,35 +46,36 @@ public class ReadonlyRepositoryIntegrationTests
             """);
         var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
         {
-            EntityMapper = new PluralizerMapper(),
+            EntityMapper = SnakeThenPlural(),
+            ColumnMappings = Snake,
         });
 
-        var byId = await repo.ReadSingle(new Where("id", eq, 1));
+        var byId = await repo.ReadSingle(new Where("Id", eq, 1));
         var disabled = new List<User>();
-        await foreach (var row in repo.Read(new Where("username", eq, "grace").And("is_enabled", eq, 0)))
+        await foreach (var row in repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)))
             disabled.Add(row);
 
-        Assert.Equal("ada", byId!.username);
-        Assert.True(byId.is_enabled);
+        Assert.Equal("ada", byId!.Username);
+        Assert.True(byId.IsEnabled);
         var grace = Assert.Single(disabled);
-        Assert.Equal(2, grace.id);
-        Assert.False(grace.is_enabled);
+        Assert.Equal(2, grace.Id);
+        Assert.False(grace.IsEnabled);
     }
 
     sealed class UserConverter : TypeConverter<User, Row>
     {
         public override User Convert(Row from) => new()
         {
-            id = (int)(long)from["id"].ToObject()!,
-            username = (string)from["username"].ToObject()!,
-            is_enabled = (bool)from["is_enabled"].ToObject()!
+            Id = (int)(long)from["Id"].ToObject()!,
+            Username = (string)from["Username"].ToObject()!,
+            IsEnabled = (bool)from["IsEnabled"].ToObject()!
         };
 
         public override Row ReverseConvert(User to) => new()
         {
-            ["id"] = to.id,
-            ["username"] = to.username,
-            ["is_enabled"] = to.is_enabled
+            ["Id"] = to.Id,
+            ["Username"] = to.Username,
+            ["IsEnabled"] = to.IsEnabled
         };
     }
 
@@ -85,16 +93,16 @@ public class ReadonlyRepositoryIntegrationTests
             """);
         var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
         {
-            EntityMapper = new PluralizerMapper(),
-            ReadProperties = ["id", "username", "is_enabled"],
+            EntityMapper = SnakeThenPlural(),
+            ColumnMappings = Snake,
             ObjectConverter = new UserConverter()
         });
 
-        var user = await usersRepo.ReadSingle(new Where("id", eq, 1));
+        var user = await usersRepo.ReadSingle(new Where("Id", eq, 1));
 
-        Assert.Equal(1, user!.id);
-        Assert.Equal("ada", user.username);
-        Assert.True(user.is_enabled);
+        Assert.Equal(1, user!.Id);
+        Assert.Equal("ada", user.Username);
+        Assert.True(user.IsEnabled);
     }
 
     [Fact]
@@ -111,7 +119,7 @@ public class ReadonlyRepositoryIntegrationTests
             """);
         var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
         {
-            Entity = "user",
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
             ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Key"] = "id",
@@ -290,7 +298,7 @@ public class UsersViewRoleTests
         });
         var rolesRepo = ds.CreateReadonlyRepository<UserRole>(connection, new ReadonlyRepositoryOptions<UserRole>
         {
-            Entity = "user_roles",
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserRole"] = "user_roles" }),
             ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["UserId"] = "user_id",
@@ -432,47 +440,44 @@ public class UsersViewRoleTests
 
 public class UserCrudTests
 {
-    public UserCrudTests()
-    {
-        DatasourceFactory.Reset();
-        Environment.SetEnvironmentVariable("PROVIDER", "sqlite");
-        Environment.SetEnvironmentVariable("DATASOURCE_URL", "sqlite:///:memory:");
-        Environment.SetEnvironmentVariable("INSTALLED_PROVIDERS", "sqlite");
-    }
-
     sealed class User
     {
-        public int id { get; set; }
-        public string username { get; set; } = "";
-        public bool is_enabled { get; set; }
+        public int Id { get; set; }
+        public string Username { get; set; } = "";
+        public bool IsEnabled { get; set; }
     }
 
     [Fact]
     public async Task WritesUserFromTheType()
     {
-        var ds = Datasource.Default;
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-pascal");
-        var usersRepo = new CRUDRepository<User>(connection);
-        var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
-        var byId = await usersRepo.ReadSingleById(created.id);
+        var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+        var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
+        {
+            ColumnMappings = casing,
+            Ids = ["Id"],
+        });
+        var created = await usersRepo.Create(new User { Username = "ada", IsEnabled = true });
+        var byId = await usersRepo.ReadSingleById(created.Id);
         var matches = new List<User>();
-        await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
+        await foreach (var row in usersRepo.Read(new Where("Username", eq, "ada").And("IsEnabled", eq, true)))
             matches.Add(row);
-        created.username = "ada-v2";
+        created.Username = "ada-v2";
         var updated = await usersRepo.Update(created);
-        var renamed = await usersRepo.ReadSingleById(created.id);
+        var renamed = await usersRepo.ReadSingleById(created.Id);
         var removed = await usersRepo.Delete(created);
-        var gone = await usersRepo.ReadSingleById(created.id);
+        var gone = await usersRepo.ReadSingleById(created.Id);
 
-        Assert.True(created.id > 0);
+        Assert.True(created.Id > 0);
         Assert.Equal(1, updated.RowsAffected);
         Assert.Equal(1, removed.RowsAffected);
-        Assert.Equal(created.id, byId!.id);
-        Assert.Equal("ada", byId.username);
-        Assert.True(byId.is_enabled);
-        Assert.Equal("ada", Assert.Single(matches).username);
-        Assert.Equal("ada-v2", renamed!.username);
+        Assert.Equal(created.Id, byId!.Id);
+        Assert.Equal("ada", byId.Username);
+        Assert.True(byId.IsEnabled);
+        Assert.Equal("ada", Assert.Single(matches).Username);
+        Assert.Equal("ada-v2", renamed!.Username);
         Assert.Null(gone);
     }
 
@@ -495,9 +500,9 @@ public class MultiTenantAccountTests
 {
     sealed class Account
     {
-        public int tenant_id { get; set; }
-        public int id { get; set; }
-        public string name { get; set; } = "";
+        public int TenantId { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
     }
 
     [Fact]
@@ -511,26 +516,28 @@ public class MultiTenantAccountTests
                 (1, 1, 'ada'),
                 (2, 1, 'grace');
             """);
+        var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
         {
-            Entity = "account",
-            Ids = ["tenant_id", "id"],
+            EntityMapper = casing,
+            ColumnMappings = casing,
+            Ids = ["TenantId", "Id"],
         });
-        var ada = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
-        ada!.name = "ada-v2";
+        var ada = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
+        ada!.Name = "ada-v2";
         var updated = await accountsRepo.Update(ada);
-        var renamed = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+        var renamed = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
         var removed = await accountsRepo.Delete(ada);
-        var gone = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
-        var grace = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 2, ["id"] = 1 });
+        var gone = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
+        var grace = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 2, ["Id"] = 1 });
 
         Assert.Equal(1, updated.RowsAffected);
         Assert.Equal(1, removed.RowsAffected);
-        Assert.Equal("ada-v2", renamed!.name);
-        Assert.Equal(1, renamed.tenant_id);
+        Assert.Equal("ada-v2", renamed!.Name);
+        Assert.Equal(1, renamed.TenantId);
         Assert.Null(gone);
-        Assert.Equal("grace", grace!.name);
-        Assert.Equal(2, grace.tenant_id);
+        Assert.Equal("grace", grace!.Name);
+        Assert.Equal(2, grace.TenantId);
     }
 
     static async Task<IConnection> Open(IDatasource ds)

@@ -75,12 +75,8 @@ impl SelectStatement {
             bound("LIMIT", options.limit),
             bound("OFFSET", options.offset),
         );
-        let mut statement = match options.where_clause {
-            Some(predicate) => {
-                Self::with_where(sql, crate::where_text::WhereText::new(predicate.get_text()))
-            }
-            None => Self::text(sql),
-        };
+        let mut statement = Self::text(sql);
+        statement.where_clause = options.where_clause.map(box_where);
         statement.distinct = options.distinct;
         statement.table = options.table.to_string();
         statement.fields = options
@@ -94,9 +90,7 @@ impl SelectStatement {
             .iter()
             .map(|column| (*column).to_string())
             .collect();
-        statement.having = options.having.map(|predicate| {
-            Box::new(crate::where_text::WhereText::new(predicate.get_text())) as Box<dyn IWhere>
-        });
+        statement.having = options.having.map(box_where);
         statement.order_by = options.order_by.to_vec();
         statement.limit = options.limit;
         statement.offset = options.offset;
@@ -142,6 +136,15 @@ impl ISelectStatement for SelectStatement {
     fn where_clause(&self) -> Option<&dyn IWhere> {
         self.where_clause.as_deref()
     }
+}
+
+fn box_where(predicate: &dyn IWhere) -> Box<dyn IWhere> {
+    predicate
+        .as_any()
+        .downcast_ref::<crate::statements::Where>()
+        .cloned()
+        .map(|clause| Box::new(clause) as Box<dyn IWhere>)
+        .unwrap_or_else(|| Box::new(crate::where_text::WhereText::new(predicate.get_text())))
 }
 
 fn with_where(sql: String, where_clause: Option<&dyn IWhere>) -> String {

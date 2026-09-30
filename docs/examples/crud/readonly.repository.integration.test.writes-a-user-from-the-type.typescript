@@ -1,12 +1,17 @@
-const ds = Datasource.default;
-const usersRepo = new CRUDRepository(User, connection);
-const created = await usersRepo.create(Object.assign(new User(), { username: "ada", is_enabled: true }));
-const byId = await usersRepo.readSingleById(created.id);
+const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(User),
+  columnMappings: casing,
+  ids: ["Id"],
+});
+const created = await usersRepo.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
+const byId = await usersRepo.readSingleById(created.Id);
 const matches: User[] = [];
-for await (const row of usersRepo.read(new Where("username", eq, "ada").and("is_enabled", eq, true)))
+for await (const row of usersRepo.read(new Where("Username", eq, "ada").and("IsEnabled", eq, true)))
   matches.push(row);
-created.username = "ada-v2";
+created.Username = "ada-v2";
 const updated = await usersRepo.update(created);
-const renamed = await usersRepo.readSingleById(created.id);
+const renamed = await usersRepo.readSingleById(created.Id);
 const removed = await usersRepo.delete(created);
-const gone = await usersRepo.readSingleById(created.id);
+const gone = await usersRepo.readSingleById(created.Id);

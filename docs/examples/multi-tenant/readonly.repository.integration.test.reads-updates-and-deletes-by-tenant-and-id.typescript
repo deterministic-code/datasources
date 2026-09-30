@@ -4,15 +4,17 @@ await executeSql(connection, `
     (1, 1, 'ada'),
     (2, 1, 'grace');
 `);
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const accountsRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(Account),
-  entity: "account",
-  ids: ["tenant_id", "id"],
+  entityMapper: casing,
+  columnMappings: casing,
+  ids: ["TenantId", "Id"],
 });
-const ada = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
-ada!.name = "ada-v2";
+const ada = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
+ada!.Name = "ada-v2";
 const updated = await accountsRepo.update(ada!);
-const renamed = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
+const renamed = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
 const removed = await accountsRepo.delete(ada!);
-const gone = await accountsRepo.readSingleById({ tenant_id: 1, id: 1 });
-const graceRow = await accountsRepo.readSingleById({ tenant_id: 2, id: 1 });
+const gone = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });
+const graceRow = await accountsRepo.readSingleById({ TenantId: 2, Id: 1 });

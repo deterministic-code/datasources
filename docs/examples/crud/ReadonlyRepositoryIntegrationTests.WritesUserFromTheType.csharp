@@ -1,12 +1,17 @@
-var ds = Datasource.Default;
-var usersRepo = new CRUDRepository<User>(connection);
-var created = await usersRepo.Create(new User { username = "ada", is_enabled = true });
-var byId = await usersRepo.ReadSingleById(created.id);
+var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
+{
+    ColumnMappings = casing,
+    Ids = ["Id"],
+});
+var created = await usersRepo.Create(new User { Username = "ada", IsEnabled = true });
+var byId = await usersRepo.ReadSingleById(created.Id);
 var matches = new List<User>();
-await foreach (var row in usersRepo.Read(new Where("username", eq, "ada").And("is_enabled", eq, true)))
+await foreach (var row in usersRepo.Read(new Where("Username", eq, "ada").And("IsEnabled", eq, true)))
     matches.Add(row);
-created.username = "ada-v2";
+created.Username = "ada-v2";
 var updated = await usersRepo.Update(created);
-var renamed = await usersRepo.ReadSingleById(created.id);
+var renamed = await usersRepo.ReadSingleById(created.Id);
 var removed = await usersRepo.Delete(created);
-var gone = await usersRepo.ReadSingleById(created.id);
+var gone = await usersRepo.ReadSingleById(created.Id);

@@ -1,23 +1,23 @@
 impl TypeConverter<Row, Row> for UserConverter {
     fn convert(&self, from: &Row) -> Result<Row> {
         let mut row = from.clone();
-        let enabled = match row.get("is_enabled") {
+        let enabled = match row.get("IsEnabled") {
             Some(Value::Bool(flag)) => Value::Bool(*flag),
             Some(value) => value.clone(),
             None => Value::Null,
         };
-        row.insert("is_enabled".into(), enabled);
+        row.insert("IsEnabled".into(), enabled);
         Ok(row)
     }
 
     fn reverse_convert(&self, to: &Row) -> Result<Row> {
         let mut row = to.clone();
-        let enabled = match row.get("is_enabled") {
+        let enabled = match row.get("IsEnabled") {
             Some(Value::Bool(flag)) => Value::Int(if *flag { 1 } else { 0 }),
             Some(value) => value.clone(),
             None => Value::Null,
         };
-        row.insert("is_enabled".into(), enabled);
+        row.insert("IsEnabled".into(), enabled);
         Ok(row)
     }
 }

@@ -4,15 +4,17 @@ await Execute(connection, """
         (1, 1, 'ada'),
         (2, 1, 'grace');
     """);
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
 {
-    Entity = "account",
-    Ids = ["tenant_id", "id"],
+    EntityMapper = casing,
+    ColumnMappings = casing,
+    Ids = ["TenantId", "Id"],
 });
-var ada = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
-ada!.name = "ada-v2";
+var ada = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
+ada!.Name = "ada-v2";
 var updated = await accountsRepo.Update(ada);
-var renamed = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
+var renamed = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
 var removed = await accountsRepo.Delete(ada);
-var gone = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 1, ["id"] = 1 });
-var grace = await accountsRepo.ReadSingleById(new Row { ["tenant_id"] = 2, ["id"] = 1 });
+var gone = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
+var grace = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 2, ["Id"] = 1 });

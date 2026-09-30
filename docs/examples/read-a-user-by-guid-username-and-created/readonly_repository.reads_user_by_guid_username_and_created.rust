@@ -13,7 +13,10 @@ execute_sql(
 )
 .await;
 let mut options = create_crud_repository_options::<UserAccount>();
-options.entity = "user".into();
+options.entity_mapper = Box::new(DictionaryMapper::new([(
+    "UserAccount".to_string(),
+    "user".to_string(),
+)]));
 options.column_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),

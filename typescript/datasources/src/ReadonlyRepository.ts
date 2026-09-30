@@ -38,6 +38,42 @@ export type Sourced<T> = { item: T; source?: Row };
 
 const storedEnrichments = new WeakMap<object, StoredEnrichment[]>();
 
+const mappedStatement = (
+  query: IStatement | undefined,
+  column: (property: string) => string,
+  entity: (name: string) => string,
+  stored: (where: IWhere) => IWhere,
+  cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
+): IStatement | undefined =>
+  query instanceof SelectStatement && query.table
+    ? new SelectStatement({
+        distinct: query.distinct,
+        table: entity(query.table),
+        fields: query.fields.map(column),
+        where: query.where instanceof Where ? stored(query.where) : query.where,
+        joins: query.joins.map((join) => ({
+          kind: join.kind,
+          table: entity(join.table),
+          on: join.on ? new Where(join.on).map(column, (name, value) => cell(name, value, false)).condition : undefined,
+        })),
+        groupBy: query.groupBy.map(column),
+        having: query.having instanceof Where ? stored(query.having) : query.having,
+        orderBy: query.orderBy.map((order) => ({ column: column(order.column), direction: order.direction })),
+        limit: query.limit,
+        offset: query.offset,
+      })
+    : query;
+
+const lastDot = (name: string): number => {
+  let quoted = false;
+  let dot = -1;
+  for (let i = 0; i < name.length; i++) {
+    if (name[i] === '"') quoted = !quoted;
+    if (name[i] === "." && !quoted) dot = i;
+  }
+  return dot;
+};
+
 export const enrichmentsOf = (host: object): readonly StoredEnrichment[] | undefined =>
   storedEnrichments.get(host);
 
@@ -65,6 +101,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   protected objectConverter?: TypeConverter<T, Cells>;
   protected mapper?: IMapper<T, T>;
   private readonly columnMappings: IMapper<string, string> = new IdentityMapper();
+  private entityMapper: IMapper<string, string> = new IdentityMapper();
   protected statements?: RepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
   protected readonly tree: IRepositoryTree;
@@ -95,6 +132,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.objectConverter = built.objectConverter;
     this.mapper = built.rowsMapper;
     this.columnMappings = built.columnMappings;
+    this.entityMapper = built.entityMapper;
     this.statements = built.statements;
   }
 
@@ -141,7 +179,16 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       this.connection!.createCommand(),
     );
 
-  protected column = (property: string): string => this.columnMappings.map(property);
+  protected column = (property: string): string => {
+    const dot = lastDot(property);
+    if (dot < 0) return this.columnMappings.map(property);
+    const qualifier = property.slice(0, dot);
+    const name = property.slice(dot + 1);
+    const mapped = this.columnMappings.map(name);
+    if (mapped !== name && mapped.includes(".")) return mapped;
+    const table = this.entityMapper.map(qualifier);
+    return table === qualifier && mapped === name ? property : `${table}.${mapped}`;
+  };
 
   protected cell = (property: string, value: Cell, fieldsApplied: boolean): Cell => {
     const field =
@@ -159,7 +206,13 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   private entries = (): StoredEnrichment[] => storedEnrichments.get(this) ?? [];
 
   private async *readTracked(query?: ReadQuery, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
-    const statement = query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query);
+    const statement = mappedStatement(
+      query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query),
+      this.column,
+      (name) => this.entityMapper.map(name),
+      this.stored,
+      this.cell,
+    );
     const listed =
       parameters ??
       (statement instanceof ExecuteStoredProcedureStatement ? undefined : statement?.where?.parameters);
@@ -221,9 +274,17 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   };
 
   private renamed = (row: Cells): Cells =>
-    Object.fromEntries(
-      Object.entries(row).map(([key, value]) => [this.columnMappings.reverseMap(key), value]),
-    );
+    Object.fromEntries(Object.entries(row).map(([key, value]) => [this.property(key), value]));
+
+  private property = (key: string): string => {
+    const reversed = this.columnMappings.reverseMap(key);
+    if (reversed !== key && this.columnMappings.map(reversed) === key) return reversed;
+    const dot = lastDot(key);
+    if (dot < 0) return reversed;
+    const column = key.slice(dot + 1);
+    const name = this.columnMappings.reverseMap(column);
+    return name !== column && this.columnMappings.map(name) === column ? name : reversed;
+  };
 
   private readQuery = (query?: ISelectStatement | IWhere): ISelectStatement | undefined =>
     !query

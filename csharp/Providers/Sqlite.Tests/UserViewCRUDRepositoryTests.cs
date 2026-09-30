@@ -71,12 +71,12 @@ public class UserViewCRUDRepositoryTests
 
     static async Task<Graph> GraphAsync(IConnection connection, IWriteEnrichmentStrategy<UserView>? write = null)
     {
-        var usersRepo = BuildRepo<UserView>(connection, "Users", write);
-        var userTypesRepo = BuildRepo<UserType>(connection, "UserTypes");
-        var rolesRepo = BuildRepo<Role>(connection, "Roles");
-        var groupsRepo = BuildRepo<Group>(connection, "Groups");
-        var userRolesRepo = BuildRepo<UserRole>(connection, "UserRoles");
-        var userGroupsRepo = BuildRepo<UserGroup>(connection, "UserGroups");
+        var usersRepo = BuildRepo<UserView>(connection, write);
+        var userTypesRepo = BuildRepo<UserType>(connection);
+        var rolesRepo = BuildRepo<Role>(connection);
+        var groupsRepo = BuildRepo<Group>(connection);
+        var userRolesRepo = BuildRepo<UserRole>(connection);
+        var userGroupsRepo = BuildRepo<UserGroup>(connection);
         return new Graph(
             usersRepo,
             userTypesRepo,
@@ -91,15 +91,25 @@ public class UserViewCRUDRepositoryTests
             await groupsRepo.Create(new Group { Name = "ops" }));
     }
 
-    static CRUDRepository<T> BuildRepo<T>(IConnection connection, string entity, IWriteEnrichmentStrategy<T>? write = null) where T : new() =>
-        new(connection, new CRUDRepositoryOptions<T>
+    static readonly IMapper<string, string> Plural = new TransformMapper<string, string>(
+        name => new PluralizerMapper().Map(Snake.Map(name)),
+        name => Snake.ReverseMap(new PluralizerMapper().ReverseMap(name)));
+
+    static CRUDRepository<T> BuildRepo<T>(IConnection connection, IWriteEnrichmentStrategy<T>? write = null) where T : new()
+    {
+        return new(connection, new CRUDRepositoryOptions<T>
         {
-            Entity = entity,
-            EntityMapper = Snake,
+            EntityMapper = typeof(T) == typeof(UserView)
+                ? new DictionaryMapper<string>(new Dictionary<string, string> { ["UserView"] = "users" })
+                : Plural,
             ColumnMappings = Snake,
             Ids = CreateCRUDRepositoryOptions.FromType<T>().Ids,
+            ReadProperties = typeof(T) == typeof(UserView)
+                ? ["Id", "Username", "IsEnabled", "UserTypeId"]
+                : null,
             Write = write,
         });
+    }
 
     static CRUDRepository<UserView> Enrich(CRUDRepository<UserView> users, Graph graph)
     {

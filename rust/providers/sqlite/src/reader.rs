@@ -167,11 +167,7 @@ fn drive(
     loop {
         let bound = as_params(&pairs);
         let mut stmt = conn.prepare(&statements[index]).map_err(map_err)?;
-        let names: Vec<String> = stmt
-            .column_names()
-            .into_iter()
-            .map(ToOwned::to_owned)
-            .collect();
+        let names = qualified(&statements[index], &stmt.column_names());
         let declared: Vec<Option<String>> = stmt
             .columns()
             .into_iter()
@@ -216,6 +212,89 @@ fn idle(ask_rx: &mpsc::Receiver<Ask>, ans_tx: &mpsc::Sender<Answer>) -> Result<(
             _ => return Ok(()),
         }
     }
+}
+
+fn qualified(sql: &str, names: &[&str]) -> Vec<String> {
+    let mut counts = std::collections::HashMap::<&str, usize>::new();
+    for name in names {
+        *counts.entry(name).or_insert(0) += 1;
+    }
+    let fields = select_items(sql);
+    names
+        .iter()
+        .enumerate()
+        .map(|(index, name)| {
+            let field = fields.get(index).map(String::as_str).map(str::trim);
+            match (counts[name] > 1, field) {
+                (true, Some(field)) if field.rsplit('.').next() == Some(*name) => field.to_string(),
+                _ => (*name).to_string(),
+            }
+        })
+        .collect()
+}
+
+fn select_items(sql: &str) -> Vec<String> {
+    let upper = sql.to_ascii_uppercase();
+    let Some(select_at) = upper.find("SELECT") else {
+        return Vec::new();
+    };
+    let mut rest = &sql[select_at + 6..];
+    if rest.trim_start().len() != rest.len() {
+        rest = rest.trim_start();
+    }
+    if rest.to_ascii_uppercase().starts_with("DISTINCT") {
+        rest = rest[8..].trim_start();
+    }
+    let end = top_from(rest);
+    split_commas(&rest[..end])
+}
+
+fn top_from(sql: &str) -> usize {
+    let mut depth = 0;
+    let bytes = sql.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'(' => depth += 1,
+            b')' if depth > 0 => depth -= 1,
+            b'F' | b'f' if depth == 0 && from_word(sql, index) => return index,
+            _ => {}
+        }
+        index += 1;
+    }
+    sql.len()
+}
+
+fn from_word(sql: &str, index: usize) -> bool {
+    let end = index + 4;
+    if end > sql.len() || !sql[index..end].eq_ignore_ascii_case("FROM") {
+        return false;
+    }
+    let before = index == 0 || !sql.as_bytes()[index - 1].is_ascii_alphanumeric();
+    let after = end == sql.len() || !sql.as_bytes()[end].is_ascii_alphanumeric();
+    before && after
+}
+
+fn split_commas(list: &str) -> Vec<String> {
+    let mut items = Vec::new();
+    let mut start = 0;
+    let mut depth = 0;
+    for (index, ch) in list.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' if depth > 0 => depth -= 1,
+            ',' if depth == 0 => {
+                items.push(list[start..index].trim().to_string());
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    let tail = list[start..].trim();
+    if !tail.is_empty() {
+        items.push(tail.to_string());
+    }
+    items
 }
 
 fn map_row(row: &rusqlite::Row<'_>, names: &[String], declared: &[Option<String>]) -> Result<Row> {
