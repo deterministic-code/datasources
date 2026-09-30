@@ -5,8 +5,8 @@
   border-left: 1px solid var(--vp-c-divider);
 }
 
-.VPSidebarItem.level-1.collapsible > .items,
-.VPSidebarItem.level-1.has-items > .items {
+.VPSidebarItem.level-1.collapsible:not(.collapsed) > .items,
+.VPSidebarItem.level-1.has-items:not(.collapsed) > .items {
   display: block;
 }
 
