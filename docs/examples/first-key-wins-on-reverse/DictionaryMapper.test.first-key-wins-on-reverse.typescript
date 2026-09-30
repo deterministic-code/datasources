@@ -1,0 +1,7 @@
+const mapper = new DictionaryMapper([
+  ["Home", "address"],
+  ["Work", "address"],
+]);
+const home = mapper.map("Home");
+const work = mapper.map("Work");
+const address = mapper.reverseMap("address");

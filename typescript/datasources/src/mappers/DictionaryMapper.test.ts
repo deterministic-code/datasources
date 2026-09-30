@@ -35,6 +35,19 @@ describe("DictionaryMapper", () => {
     expect(fromPhone).toBe("Phone");
   });
 
+  it("first key wins on reverse", () => {
+    const mapper = new DictionaryMapper([
+      ["Home", "address"],
+      ["Work", "address"],
+    ]);
+    const home = mapper.map("Home");
+    const work = mapper.map("Work");
+    const address = mapper.reverseMap("address");
+    expect(home).toBe("address");
+    expect(work).toBe("address");
+    expect(address).toBe("Home");
+  });
+
   it("read reverse-maps column names", async () => {
     const connection = new MockConnection(undefined, "memory");
     const command = new MockCommand(connection);

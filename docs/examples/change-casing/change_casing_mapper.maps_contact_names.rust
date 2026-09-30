@@ -1,0 +1,4 @@
+let mapper = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
+let contact = mapper.map("Contact".into());
+let first_name = mapper.map("FirstName".into());
+let email_address = mapper.map("EmailAddress".into());

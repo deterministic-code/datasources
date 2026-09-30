@@ -73,6 +73,20 @@ mod tests {
         assert_eq!(from_phone, "Phone");
     }
 
+    #[test]
+    fn first_key_wins_on_reverse() {
+        let mapper = DictionaryMapper::new([
+            ("Home".to_string(), "address".to_string()),
+            ("Work".to_string(), "address".to_string()),
+        ]);
+        let home = mapper.map("Home".into());
+        let work = mapper.map("Work".into());
+        let address = mapper.reverse_map("address".into());
+        assert_eq!(home, "address");
+        assert_eq!(work, "address");
+        assert_eq!(address, "Home");
+    }
+
     struct Account;
 
     impl ConvertSchema for Account {

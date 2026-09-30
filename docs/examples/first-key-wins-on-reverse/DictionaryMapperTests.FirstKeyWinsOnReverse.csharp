@@ -1,0 +1,8 @@
+var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+    ["Home"] = "address",
+    ["Work"] = "address",
+});
+var home = mapper.Map("Home");
+var work = mapper.Map("Work");
+var address = mapper.ReverseMap("address");

@@ -38,6 +38,22 @@ public class DictionaryMapperTests
     }
 
     [Fact]
+    public void FirstKeyWinsOnReverse()
+    {
+        var mapper = new DictionaryMapper<string>(new Dictionary<string, string>
+        {
+            ["Home"] = "address",
+            ["Work"] = "address",
+        });
+        var home = mapper.Map("Home");
+        var work = mapper.Map("Work");
+        var address = mapper.ReverseMap("address");
+        Assert.Equal("address", home);
+        Assert.Equal("address", work);
+        Assert.Equal("Home", address);
+    }
+
+    [Fact]
     public async Task ReadReverseMapsColumnNames()
     {
         var connection = new MockConnection { Provider = "memory" };

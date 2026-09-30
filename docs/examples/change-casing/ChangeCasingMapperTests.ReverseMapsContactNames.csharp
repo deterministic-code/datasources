@@ -1,0 +1,4 @@
+var mapper = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var contact = mapper.ReverseMap("contact");
+var firstName = mapper.ReverseMap("first_name");
+var emailAddress = mapper.ReverseMap("email_address");

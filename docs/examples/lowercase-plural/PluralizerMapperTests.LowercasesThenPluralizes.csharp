@@ -1,0 +1,6 @@
+var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+var pluralizer = new PluralizerMapper();
+var contact = pluralizer.Map(casing.Map("Contact"));
+var address = pluralizer.Map(casing.Map("Address"));
+var contactName = casing.ReverseMap(pluralizer.ReverseMap(contact));
+var addressName = casing.ReverseMap(pluralizer.ReverseMap(address));

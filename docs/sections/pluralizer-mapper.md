@@ -1,6 +1,6 @@
 # PluralizerMapper
 
-Mapper that pluralizes a name and lowercases it. Reverse singularizes and keeps the first letter's case.
+Mapper that pluralizes a name and keeps its case. Reverse singularizes and keeps the first letter's case.
 
 ## Classes
 
@@ -16,7 +16,7 @@ class PluralizerMapper implements IMapper<string, string>
 
 ##### map(value)
 
-Pluralizes `value` and lowercases it. `User` becomes `users`.
+Pluralizes `value` and keeps its case. `User` becomes `Users`.
 
 ```typescript
 map(value: string): string
@@ -28,7 +28,7 @@ map(value: string): string
 
 ##### reverseMap(value)
 
-Singularizes `value`. `users` becomes `user`.
+Singularizes `value` and keeps the first letter's case. `Users` becomes `User`.
 
 ```typescript
 reverseMap(value: string): string
@@ -49,7 +49,7 @@ public sealed class PluralizerMapper : IMapper<string, string>
 
 ##### Map(value)
 
-Pluralizes `value` and lowercases it. `User` becomes `users`.
+Pluralizes `value` and keeps its case. `User` becomes `Users`.
 
 ```csharp
 string Map(string value)
@@ -61,7 +61,7 @@ string Map(string value)
 
 ##### ReverseMap(value)
 
-Singularizes `value`. `users` becomes `user`.
+Singularizes `value` and keeps the first letter's case. `Users` becomes `User`.
 
 ```csharp
 string ReverseMap(string value)
@@ -94,7 +94,7 @@ pub fn new() -> Self
 
 ##### map(value)
 
-Pluralizes `value` and lowercases it. `User` becomes `users`.
+Pluralizes `value` and keeps its case. `User` becomes `Users`.
 
 ```rust
 fn map(&self, value: String) -> String
@@ -106,7 +106,7 @@ fn map(&self, value: String) -> String
 
 ##### reverse_map(value)
 
-Singularizes `value`. `users` becomes `user`.
+Singularizes `value` and keeps the first letter's case. `Users` becomes `User`.
 
 ```rust
 fn reverse_map(&self, value: String) -> String
@@ -119,7 +119,7 @@ fn reverse_map(&self, value: String) -> String
 
 ## Remarks
 
-Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type name is singular and the table name is a lowercase plural. Setting {{Entity|entity|entity}} skips the mapper.
+Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type name is singular and the table name is its plural. A lowercase plural table is [ChangeCasingMapper](./change-casing-mapper.md) then `PluralizerMapper`. Setting {{Entity|entity|entity}} skips the mapper.
 
 ## Examples
 
@@ -134,8 +134,8 @@ Use this as [EntityMapper](./readonly-repository.md#entitymapper) when the type 
 ```
 
 ```output [Map]
-contacts
-addresses
+Contacts
+Addresses
 ```
 :::
 
@@ -150,7 +150,28 @@ addresses
 ```
 
 ```output [Reverse map]
-contact
-address
+Contact
+Address
+```
+:::
+
+### Lowercase plural
+
+::: example
+```csharp csharp/Datasources.Tests/PluralizerMapperTests.cs#LowercasesThenPluralizes
+```
+```rust rust/datasources/src/mappers/pluralizer_mapper.rs#lowercases_then_pluralizes
+```
+```typescript typescript/datasources/src/mappers/PluralizerMapper.test.ts#lowercases-then-pluralizes
+```
+
+```output [Map]
+contacts
+addresses
+```
+
+```output [Reverse map]
+Contact
+Address
 ```
 :::

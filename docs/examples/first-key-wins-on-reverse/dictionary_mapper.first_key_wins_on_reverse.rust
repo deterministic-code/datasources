@@ -1,0 +1,7 @@
+let mapper = DictionaryMapper::new([
+    ("Home".to_string(), "address".to_string()),
+    ("Work".to_string(), "address".to_string()),
+]);
+let home = mapper.map("Home".into());
+let work = mapper.map("Work".into());
+let address = mapper.reverse_map("address".into());

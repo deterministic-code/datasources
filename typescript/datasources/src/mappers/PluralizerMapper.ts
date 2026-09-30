@@ -4,6 +4,6 @@ import type { IMapper } from "./IMapper.ts";
 export class PluralizerMapper implements IMapper<string, string> {
   private readonly pluralizer = new PluralizerConverter();
 
-  map = (value: string): string => this.pluralizer.convert(value).toLowerCase();
+  map = (value: string): string => this.pluralizer.convert(value);
   reverseMap = (value: string): string => this.pluralizer.reverseConvert(value);
 }

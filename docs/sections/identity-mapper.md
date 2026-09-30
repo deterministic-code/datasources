@@ -1,6 +1,6 @@
 # IdentityMapper
 
-Mapper that returns the value unchanged, in both directions. This is the default entity, column, and row mapper on [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions).
+Mapper that returns the value unchanged.
 
 ## Classes
 
