@@ -19,10 +19,13 @@ use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::repository_tree::RepositoryTree;
+use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::stored_enrichment::StoredEnrichment;
+use crate::stubs::StubRepository;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
@@ -37,7 +40,16 @@ pub struct CRUDRepository {
     readonly: ReadonlyRepository,
     ids: Vec<String>,
     crud_statements: CRUDRepositoryStatements,
+    tree: RepositoryTree,
     write: Arc<dyn WriteEnrichmentStrategy>,
+}
+
+fn tree_for(readonly: &ReadonlyRepository) -> RepositoryTree {
+    RepositoryTree::new(RepositoryTreeNode::new(
+        Arc::new(StubRepository::new("crud")),
+        "",
+        readonly.enrichments.clone(),
+    ))
 }
 
 pub(crate) fn open_for_bulk(
@@ -80,10 +92,13 @@ impl CRUDRepository {
         crud_statements: CRUDRepositoryStatements,
     ) -> Result<Self> {
         let id = built.ids.clone();
+        let readonly = ReadonlyRepository::from_built(built);
+        let tree = tree_for(&readonly);
         Ok(Self {
-            readonly: ReadonlyRepository::from_built(built),
+            readonly,
             crud_statements,
             ids: id,
+            tree,
             write: Arc::new(DefaultWriteEnrichmentStrategy::default()),
         })
     }
@@ -94,10 +109,13 @@ impl CRUDRepository {
 
     pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
         let ids = vec!["id".into()];
+        let readonly = ReadonlyRepository::memory(items);
+        let tree = tree_for(&readonly);
         Self {
-            readonly: ReadonlyRepository::memory(items),
+            readonly,
             crud_statements: CRUDRepositoryStatements::empty(),
             ids,
+            tree,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
         }
     }
@@ -198,11 +216,7 @@ impl CRUDRepository {
             self.execute_insert(&stored, item).await?;
         }
         self.write
-            .persist(
-                &self.readonly.tree,
-                std::slice::from_mut(item),
-                WriteMode::Create,
-            )
+            .persist(&self.tree, std::slice::from_mut(item), WriteMode::Create)
             .await?;
         let id = self.id_value(item);
         if self.ids.len() != 1 || matches!(id, Value::Null) {
@@ -220,7 +234,7 @@ impl CRUDRepository {
             let mut parent = item.clone();
             self.write
                 .persist(
-                    &self.readonly.tree,
+                    &self.tree,
                     std::slice::from_mut(&mut parent),
                     WriteMode::Update,
                 )
@@ -234,7 +248,7 @@ impl CRUDRepository {
             let mut parent = item.clone();
             self.write
                 .persist(
-                    &self.readonly.tree,
+                    &self.tree,
                     std::slice::from_mut(&mut parent),
                     WriteMode::Delete,
                 )

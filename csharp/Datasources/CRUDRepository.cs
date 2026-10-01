@@ -8,6 +8,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
     readonly CRUDRepositoryStatements crudStatements;
+    readonly IRepositoryTree tree;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateCRUDRepositoryOptions.FromType<T>()) { }
@@ -32,6 +33,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         ids = composed.Built.Ids;
         crudStatements = composed.Statements;
         write = composed.Write ?? new DefaultWriteEnrichmentStrategy<T>();
+        tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     }
 
     public IReadOnlyList<string> Ids => ids;
@@ -99,7 +101,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         await Insert(item);
         if (!Enriched) return item;
-        await write.Persist(Tree, [item!], WriteMode.Create);
+        await write.Persist(tree, [item!], WriteMode.Create);
         if (ids.Count != 1) return item;
         var id = IdValue(item);
         return id is Value.Null ? item : await ReadSingleById(id) ?? item;
@@ -109,14 +111,14 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var response = await Save(item, byWhere);
         if (Enriched)
-            await write.Persist(Tree, [item!], WriteMode.Update);
+            await write.Persist(tree, [item!], WriteMode.Update);
         return response;
     }
 
     async Task<Response> DeleteCore(T item, IWhere? byWhere = null)
     {
         if (Enriched)
-            await write.Persist(Tree, [item!], WriteMode.Delete);
+            await write.Persist(tree, [item!], WriteMode.Delete);
         return await Remove(item, byWhere);
     }
 

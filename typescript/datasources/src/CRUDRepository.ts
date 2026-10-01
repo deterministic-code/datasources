@@ -24,6 +24,9 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
+import type { IRepositoryTree } from "./IRepositoryTree.ts";
+import { RepositoryTree } from "./RepositoryTree.ts";
+import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -61,6 +64,7 @@ export class CRUDRepository<T = Cells>
 {
   readonly ids: readonly string[];
   private readonly crudStatements: CRUDRepositoryStatements;
+  private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
   private get useTransaction(): boolean {
     return this.write.useTransaction;
@@ -77,6 +81,7 @@ export class CRUDRepository<T = Cells>
     super(opened.built);
     this.ids = opened.built.ids;
     this.crudStatements = opened.statements;
+    this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
   }
 
