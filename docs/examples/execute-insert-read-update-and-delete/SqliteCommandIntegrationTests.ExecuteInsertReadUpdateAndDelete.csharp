@@ -1,0 +1,24 @@
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute(
+    "INSERT INTO items (id, name) VALUES ($id, $name)",
+    [new Parameter("id", 1), new Parameter("name", "a")]);
+var converter = new MetaDataRowTypeConverter<Item>();
+await using var createdReader = await command.ExecuteReader(
+    "SELECT id, name FROM items WHERE id = $id",
+    [new Parameter("id", 1)]);
+var created = await createdReader.Read().Select(row => converter.Convert(row)).ToListAsync();
+var response = await command.Execute(
+    "UPDATE items SET name = $name WHERE id = $id",
+    [new Parameter("id", 1), new Parameter("name", "A")]);
+await using var updatedReader = await command.ExecuteReader(
+    "SELECT id, name FROM items WHERE id = $id",
+    [new Parameter("id", 1)]);
+var updated = await updatedReader.Read().Select(row => converter.Convert(row)).ToListAsync();
+await command.Execute("DELETE FROM items WHERE id = $id", [new Parameter("id", 1)]);
+await using var goneReader = await command.ExecuteReader(
+    "SELECT id, name FROM items WHERE id = $id",
+    [new Parameter("id", 1)]);
+var gone = await goneReader.Read().Select(row => converter.Convert(row)).ToListAsync();

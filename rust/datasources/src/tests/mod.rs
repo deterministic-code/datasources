@@ -12,6 +12,7 @@ mod transaction;
 mod unit_of_work_transaction;
 
 use crate::converters::{Cells, RowTypeConverter};
+use futures_util::TryStreamExt;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
@@ -97,7 +98,9 @@ async fn readers() {
     assert!(reader.current().is_some());
     assert!(!reader.next().await.unwrap());
     assert!(!reader.next_result().await.unwrap());
-    let collected = collect_reader(&ArrayReader::new(vec![record(&[("id", Value::Int(2))])]))
+    let collected: Vec<_> = ArrayReader::new(vec![record(&[("id", Value::Int(2))])])
+        .read()
+        .try_collect()
         .await
         .unwrap();
     assert_eq!(collected.len(), 1);
@@ -130,9 +133,11 @@ async fn readers() {
         }
     }
     let _ = SkipReader;
-    let items = collect_reader(&OnceSkip {
+    let items: Vec<_> = OnceSkip {
         called: Mutex::new(false),
-    })
+    }
+    .read()
+    .try_collect()
     .await
     .unwrap();
     assert!(items.is_empty());
@@ -142,7 +147,9 @@ async fn readers() {
     assert_eq!(typed.current().as_deref(), Some("x"));
     assert!(typed.next().await.unwrap());
     assert!(!typed.next().await.unwrap());
-    let collected = collect_reader(&ArrayReader::new(vec!["z".to_string()]))
+    let collected: Vec<_> = ArrayReader::new(vec!["z".to_string()])
+        .read()
+        .try_collect()
         .await
         .unwrap();
     assert_eq!(collected, vec!["z".to_string()]);

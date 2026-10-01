@@ -78,6 +78,7 @@ describe("StubDatasource", () => {
     const reader = new StubReader("text");
     expect(reader.current).toBeUndefined();
     await expect(reader.next()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(Array.fromAsync(reader.read())).rejects.toThrow(ProviderNotImplementedError);
     await expect(reader.nextResult()).rejects.toThrow(ProviderNotImplementedError);
     await reader.dispose();
     await reader[Symbol.asyncDispose]();

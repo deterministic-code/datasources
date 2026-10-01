@@ -101,21 +101,25 @@ describe("command", () => {
     expect(reader.current).toEqual({ enabled: true, count: 1, one: 1 });
   });
 
-  it("runs raw sql", async () => {
+  it("run executeReader on a simple list", async () => {
     const ds = Datasource.default;
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
     await applySchema(connection, "items");
     await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+    await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
+    await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
     await using reader = await command.executeReader("SELECT id, name FROM items");
-    let row: Cells | undefined;
-    if (await reader.next()) row = reader.current;
-    expect(row).toEqual({ id: 1, name: "ada" });
-    expect(await reader.next()).toBe(false);
+    const rows = await Array.fromAsync(reader.read());
+    expect(rows).toEqual([
+      { id: 1, name: "ada" },
+      { id: 2, name: "grace" },
+      { id: 3, name: "bea" },
+    ]);
   });
 
-  it("reads with case mapping", async () => {
+  it("read and apply case mappings", async () => {
     const ds = Datasource.default;
     await using connection = await ds.createConnection();
     await connection.open();
@@ -124,13 +128,10 @@ describe("command", () => {
     await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
     await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-    let mapped: Cells | undefined;
-    while (await reader.next()) {
-      const row: Cells = {};
-      for (const [key, value] of Object.entries(reader.current!)) row[casing.reverseMap(key)] = value;
-      mapped = row;
-    }
-    expect(mapped).toEqual({ UserId: 1, FirstName: "Ada" });
+    const mapped = await Array.fromAsync(reader.read(), (source) =>
+      Object.fromEntries(Object.entries(source).map(([key, value]) => [casing.reverseMap(key), value])),
+    );
+    expect(mapped).toEqual([{ UserId: 1, FirstName: "Ada" }]);
   });
 
   it("reads flat rows to nested", async () => {
@@ -162,25 +163,26 @@ describe("command", () => {
     ]);
   });
 
-  it("runs executeReader and returns NameValue", async () => {
+  it("run executeReader and return NameValues", async () => {
     const ds = Datasource.default;
     await using connection = await ds.createConnection();
     await connection.open();
     const command = connection.createCommand();
     await applySchema(connection, "settings");
-    await command.execute("INSERT INTO settings (name, value) VALUES ($name, $value)", [
-      { name: "name", value: "theme" },
-      { name: "value", value: "dark" },
-    ]);
+    await command.execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
+    await command.execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
+    await command.execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
     await using reader = await command.executeReader("SELECT name, value FROM settings");
     const converter = new MetaDataRowTypeConverter<NameValue>();
-    const items: NameValue[] = [];
-    while (await reader.next()) items.push(converter.convert(reader.current!, NameValue));
-    expect(items[0]?.name).toBe("theme");
-    expect(items[0]?.value).toBe("dark");
+    const items = await Array.fromAsync(reader.read(), (row) => converter.convert(row, NameValue));
+    expect(items).toEqual([
+      { name: "theme", value: "dark" },
+      { name: "lang", value: "en" },
+      { name: "size", value: "lg" },
+    ]);
   });
 
-  it("executes insert update and delete", async () => {
+  it("execute, insert, read, update, and delete", async () => {
     const ds = Datasource.default;
     await using connection = await ds.createConnection();
     await connection.open();
@@ -190,29 +192,28 @@ describe("command", () => {
       { name: "id", value: 1 },
       { name: "name", value: "a" },
     ]);
-    await command.execute("UPDATE items SET name = $name WHERE id = $id", [
+    const converter = new MetaDataRowTypeConverter<Item>();
+    await using createdReader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+      { name: "id", value: 1 },
+    ]);
+    const created = await Array.fromAsync(createdReader.read(), (row) => converter.convert(row, Item));
+    const response = await command.execute("UPDATE items SET name = $name WHERE id = $id", [
       { name: "id", value: 1 },
       { name: "name", value: "A" },
     ]);
-    const converter = new MetaDataRowTypeConverter<Item>();
-    let updated: Item | undefined;
-    {
-      await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
-        { name: "id", value: 1 },
-      ]);
-      if (await reader.next()) updated = converter.convert(reader.current!, Item);
-    }
+    await using updatedReader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+      { name: "id", value: 1 },
+    ]);
+    const updated = await Array.fromAsync(updatedReader.read(), (row) => converter.convert(row, Item));
     await command.execute("DELETE FROM items WHERE id = $id", [{ name: "id", value: 1 }]);
-    let gone: Item | undefined;
-    {
-      await using reader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
-        { name: "id", value: 1 },
-      ]);
-      if (await reader.next()) gone = converter.convert(reader.current!, Item);
-    }
-    expect(updated?.id).toBe(1);
-    expect(updated?.name).toBe("A");
-    expect(gone).toBeUndefined();
+    await using goneReader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+      { name: "id", value: 1 },
+    ]);
+    const gone = await Array.fromAsync(goneReader.read(), (row) => converter.convert(row, Item));
+    expect(created).toEqual([{ id: 1, name: "a" }]);
+    expect(response.rowsAffected).toBe(1);
+    expect(updated).toEqual([{ id: 1, name: "A" }]);
+    expect(gone).toEqual([]);
   });
 
   it("maps flat contacts", async () => {

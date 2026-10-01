@@ -1,0 +1,26 @@
+const ds = Datasource.default;
+await using connection = await ds.createConnection();
+await connection.open();
+const command = connection.createCommand();
+await command.execute("INSERT INTO items (id, name) VALUES ($id, $name)", [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+]);
+const converter = new MetaDataRowTypeConverter<Item>();
+await using createdReader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+  { name: "id", value: 1 },
+]);
+const created = await Array.fromAsync(createdReader.read(), (row) => converter.convert(row, Item));
+const response = await command.execute("UPDATE items SET name = $name WHERE id = $id", [
+  { name: "id", value: 1 },
+  { name: "name", value: "A" },
+]);
+await using updatedReader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+  { name: "id", value: 1 },
+]);
+const updated = await Array.fromAsync(updatedReader.read(), (row) => converter.convert(row, Item));
+await command.execute("DELETE FROM items WHERE id = $id", [{ name: "id", value: 1 }]);
+await using goneReader = await command.executeReader("SELECT id, name FROM items WHERE id = $id", [
+  { name: "id", value: 1 },
+]);
+const gone = await Array.fromAsync(goneReader.read(), (row) => converter.convert(row, Item));

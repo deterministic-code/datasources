@@ -6,6 +6,13 @@ public interface IReader<out T> : IAsyncDisposable
     Task<bool> Next();
     Task<bool> NextResult() => Task.FromResult(false);
     ValueTask IAsyncDisposable.DisposeAsync() => ValueTask.CompletedTask;
+
+    async IAsyncEnumerable<T> Read()
+    {
+        while (await Next())
+            if (Current is { } current)
+                yield return current;
+    }
 }
 
 public interface IReader : IReader<object>;

@@ -1,19 +1,24 @@
 import type { Cells } from "./converters/Cell.ts";
 import type { IReader } from "./IReader.ts";
+import { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 
 export class StreamingReader implements IReader<Cells> {
   current: Cells | undefined = undefined;
   private closed = false;
 
   constructor(
-    private readonly read: () => Promise<Cells | undefined>,
+    private readonly pull: () => Promise<Cells | undefined>,
     private readonly advance: () => Promise<boolean>,
     private readonly close: () => Promise<void> = async () => {},
   ) {}
 
   async next(): Promise<boolean> {
-    this.current = await this.read();
+    this.current = await this.pull();
     return this.current !== undefined;
+  }
+
+  read(): AsyncIterable<Cells> {
+    return readerToAsyncIterable(this);
   }
 
   async nextResult(): Promise<boolean> {

@@ -22,9 +22,9 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 ## Command
 
-- [Run raw SQL](./sections/command.md#run-raw-sql)
-- [Run ExecuteReader and return NameValue](./sections/command.md#run-executereader-and-return-namevalue)
-- [Execute insert, update, and delete](./sections/command.md#execute-insert-update-and-delete)
+- [Run executeReader on a simple list](./sections/command.md#run-executereader-on-a-simple-list)
+- [Run ExecuteReader and return NameValues](./sections/command.md#run-executereader-and-return-namevalues)
+- [Execute, Insert, Read, Update, and Delete](./sections/command.md#execute-insert-read-update-and-delete)
 - [Map flat contacts](./sections/command.md#map-flat-contacts)
 - [Fill an output parameter](./sections/command.md#fill-an-output-parameter)
 - [Read a return value](./sections/command.md#read-a-return-value)
@@ -32,7 +32,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## Reader
 
 - [Read a row](./sections/reader.md#read-a-row)
-- [Read with case mapping](./sections/reader.md#read-with-case-mapping)
+- [Read and apply case mappings](./sections/reader.md#read-and-apply-case-mappings)
 - [Type conversion and flat to nested](./sections/reader.md#type-conversion-and-flat-to-nested)
 - [Read multiple results returned in a single command](./sections/reader.md#read-multiple-results-returned-in-a-single-command)
 - [Call a stored procedure that returns two results](./sections/reader.md#call-a-stored-procedure-that-returns-two-results)

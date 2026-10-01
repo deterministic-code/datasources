@@ -1,0 +1,36 @@
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
+connection.open().await.unwrap();
+let command = connection.create_command();
+command
+    .execute(
+        "INSERT INTO settings (name, value) VALUES ('theme', 'dark')",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO settings (name, value) VALUES ('lang', 'en')",
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        "INSERT INTO settings (name, value) VALUES ('size', 'lg')",
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader("SELECT name, value FROM settings", None)
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<NameValue>();
+let items: Vec<_> = reader
+    .read()
+    .map_ok(|row| converter.convert(&row).unwrap())
+    .try_collect()
+    .await
+    .unwrap();

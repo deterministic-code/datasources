@@ -14,10 +14,14 @@ let reader = command
     .await
     .unwrap();
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-let mut mapped = Row::new();
-while reader.next().await.unwrap() {
-    mapped.clear();
-    for (key, value) in reader.current().unwrap() {
-        mapped.insert(Mapper::reverse_map(&casing, key), value);
-    }
-}
+let mapped: Vec<Row> = reader
+    .read()
+    .map_ok(|source| {
+        source
+            .into_iter()
+            .map(|(key, value)| (Mapper::reverse_map(&casing, key), value))
+            .collect()
+    })
+    .try_collect()
+    .await
+    .unwrap();

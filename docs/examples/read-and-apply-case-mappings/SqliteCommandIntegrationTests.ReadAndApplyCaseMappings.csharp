@@ -5,11 +5,5 @@ var command = connection.CreateCommand();
 await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
 await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-Row? mapped = null;
-while (await reader.Next())
-{
-    var row = new Row();
-    foreach (var (key, value) in reader.Current!)
-        row[casing.ReverseMap(key)] = value;
-    mapped = row;
-}
+var mapped = await reader.Read().Select(source =>
+    new Row(source.ToDictionary(cell => casing.ReverseMap(cell.Key), cell => cell.Value))).ToListAsync();

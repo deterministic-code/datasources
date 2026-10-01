@@ -361,6 +361,8 @@ public class CoreTests
         Assert.True(await typed.Next());
         Assert.False(await typed.Next());
         Assert.False(await ((IReader<string>)typed).NextResult());
+        IReader<string?> rows = new ArrayReader<string?>(["a", null, "b"]);
+        Assert.Equal(["a", "b"], await rows.Read().ToListAsync());
 
         var reads = 0;
         var sets = new[] { new[] { new Row { ["id"] = 1 } }, new[] { new Row { ["id"] = 2 } } };
