@@ -15,7 +15,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     protected bool Enriched => enrichments.Count > 0;
 
     public ReadonlyRepository(IConnection connection) :
-        this(connection, CreateCRUDRepositoryOptions.FromType<T>()) { }
+        this(connection, CreateReadonlyRepositoryOptions.FromType<T>()) { }
 
     public ReadonlyRepository(IConnection connection, ReadonlyRepositoryOptions<T> options) :
         this(new ReadonlyRepositoryBuilder<T>().Parts(connection, options)) { }

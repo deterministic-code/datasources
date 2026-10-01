@@ -17,6 +17,7 @@ mod console_command_middleware;
 pub mod converters;
 mod create;
 mod create_crud_repository_options;
+mod create_readonly_repository_options;
 mod crud_repository;
 mod crud_repository_options;
 mod datasource;
@@ -116,6 +117,7 @@ pub use converters::{
 };
 pub use create::{create, default};
 pub use create_crud_repository_options::create_crud_repository_options;
+pub use create_readonly_repository_options::create_readonly_repository_options;
 pub use crud_repository::CRUDRepository;
 pub use crud_repository_options::CRUDRepositoryOptions;
 pub use datasource::{BuiltDatasource, Datasource};

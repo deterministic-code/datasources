@@ -272,6 +272,7 @@ public class RepositoryTests
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Equal(nameof(Item), fromId.Entity);
         Assert.Empty(CreateCRUDRepositoryOptions.FromType<Label>().Ids);
+        Assert.Equal(nameof(Item), CreateReadonlyRepositoryOptions.FromType<Item>().Entity);
         Assert.NotNull(new CRUDRepository<Item>(connection, fromId));
         Assert.NotNull(new CRUDRepository<Item>(connection));
         Assert.NotNull(new ReadonlyRepository<Item>(connection, fromId));

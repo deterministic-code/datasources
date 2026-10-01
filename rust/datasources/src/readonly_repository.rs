@@ -3,7 +3,7 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
-use crate::create_crud_repository_options::create_crud_repository_options;
+use crate::create_readonly_repository_options::create_readonly_repository_options;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
@@ -44,9 +44,9 @@ pub struct ReadonlyRepository {
 
 impl ReadonlyRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_crud_repository_options::<T>();
+        let mut options = create_readonly_repository_options::<T>();
         options.row_converter = Some(RowTypeConverter::of::<T>());
-        let mut repo = Self::new(connection, options.read)?;
+        let mut repo = Self::new(connection, options)?;
         repo.entity_type = TypeId::of::<T>();
         Ok(repo)
     }

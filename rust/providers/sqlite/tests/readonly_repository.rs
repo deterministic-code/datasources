@@ -1,6 +1,6 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_crud_repository_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
+    create_crud_repository_options, create_readonly_repository_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
     Connection, ConvertSchema, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper,
     Result, Row, TransformMapper, TypeConverter, Value, Where,
 };
@@ -86,10 +86,10 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
         "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
     )
     .await;
-    let mut options = create_crud_repository_options::<User>();
+    let mut options = create_readonly_repository_options::<User>();
     options.entity_mapper = Box::new(snake_then_plural());
     options.property_mappings = Box::new(snake());
-    let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+    let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
     let by_id = repo
         .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
         .await
@@ -153,11 +153,11 @@ async fn maps_an_object_explicitly() {
         ",
     )
     .await;
-    let mut options = create_crud_repository_options::<User>();
+    let mut options = create_readonly_repository_options::<User>();
     options.entity_mapper = Box::new(snake_then_plural());
     options.property_mappings = Box::new(snake());
     options.object_converter = Some(Box::new(UserConverter));
-    let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+    let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
     let user = users_repo
         .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
         .await
@@ -186,7 +186,7 @@ async fn reads_user_by_guid_username_and_created() {
         ),
     )
     .await;
-    let mut options = create_crud_repository_options::<UserAccount>();
+    let mut options = create_readonly_repository_options::<UserAccount>();
     options.entity_mapper = Box::new(DictionaryMapper::new([(
         "UserAccount".to_string(),
         "user".to_string(),
@@ -197,7 +197,7 @@ async fn reads_user_by_guid_username_and_created() {
         ("Active".to_string(), "is_enabled".to_string()),
         ("Opened".to_string(), "created".to_string()),
     ]));
-    let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
+    let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
         .read_single(
@@ -257,7 +257,7 @@ async fn execute_sql(connection: &Arc<dyn Connection>, sql: &str) {
 mod user_view {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
-        create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_crud_repository_options, create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Value, Where,
     };
     use uuid::Uuid;
@@ -306,7 +306,7 @@ mod user_view {
             ),
         )
         .await;
-        let mut users_options = create_crud_repository_options::<UserAccount>();
+        let mut users_options = create_readonly_repository_options::<UserAccount>();
         users_options.entity = "user".into();
         users_options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
@@ -315,16 +315,16 @@ mod user_view {
             ("Opened".to_string(), "created".to_string()),
             ("UserTypeId".to_string(), "user_type_id".to_string()),
         ]));
-        let mut type_options = create_crud_repository_options::<UserType>();
+        let mut type_options = create_readonly_repository_options::<UserType>();
         type_options.entity = "UserType".into();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         type_options.property_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         let mut users_repo =
-            ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+            ReadonlyRepository::new(connection.clone(), users_options).unwrap();
         let types =
-            ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
+            ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
         users_repo.add_enriched(
             datasources::Enrichment::new(
                 "UserType",
@@ -362,7 +362,7 @@ mod user_view {
 mod users_view_roles {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
-        create_crud_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_crud_repository_options, create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
         SelectStatement, SelectStatementOptions, TypeMap,
@@ -469,7 +469,7 @@ mod users_view_roles {
             .await
             .unwrap();
         execute_sql(&connection, &seed()).await;
-        let mut users_options = create_crud_repository_options::<UsersView>();
+        let mut users_options = create_readonly_repository_options::<UsersView>();
         users_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UsersView".to_string(),
             "user".to_string(),
@@ -481,12 +481,12 @@ mod users_view_roles {
             ("Opened".to_string(), "created".to_string()),
             ("UserType".to_string(), "user_type_id".to_string()),
         ]));
-        let mut type_options = create_crud_repository_options::<UserType>();
+        let mut type_options = create_readonly_repository_options::<UserType>();
         type_options.entity_mapper =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         type_options.property_mappings =
             Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        let mut role_options = create_crud_repository_options::<UserRole>();
+        let mut role_options = create_readonly_repository_options::<UserRole>();
         role_options.entity_mapper = Box::new(DictionaryMapper::new([(
             "UserRole".to_string(),
             "user_roles".to_string(),
@@ -496,13 +496,13 @@ mod users_view_roles {
             ("Name".to_string(), "name".to_string()),
         ]));
         let mut users_repo =
-            ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+            ReadonlyRepository::new(connection.clone(), users_options).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
             Some(connection.clone()),
-            Some(type_options.read),
+            Some(type_options),
         );
         let roles =
-            ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
+            ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options));
         let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
         users_repo.add_enriched(
             datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),

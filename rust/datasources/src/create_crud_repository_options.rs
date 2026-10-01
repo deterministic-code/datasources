@@ -1,14 +1,11 @@
 use crate::converters::ConvertSchema;
+use crate::create_readonly_repository_options::create_readonly_repository_options;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 
 pub fn create_crud_repository_options<T: ConvertSchema>() -> CRUDRepositoryOptions {
     let mut options = CRUDRepositoryOptions::default();
+    options.read = create_readonly_repository_options::<T>();
     options.ids = default_id::<T>();
-    options.entity = std::any::type_name::<T>()
-        .rsplit("::")
-        .next()
-        .unwrap_or_default()
-        .into();
     options
 }
 

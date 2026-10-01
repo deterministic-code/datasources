@@ -13,13 +13,16 @@ public static class CreateCRUDRepositoryOptions
     public static CRUDRepositoryOptions<T> FromType<T>(
         Type type,
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)
-        where T : new() =>
-        new()
+        where T : new()
+    {
+        var read = CreateReadonlyRepositoryOptions.FromType<T>(type, types);
+        return new()
         {
             Ids = DefaultId(type),
-            Entity = type.Name,
-            RowTypeConverters = types
+            Entity = read.Entity,
+            RowTypeConverters = read.RowTypeConverters
         };
+    }
 
     static IReadOnlyList<string> DefaultId(Type type)
     {

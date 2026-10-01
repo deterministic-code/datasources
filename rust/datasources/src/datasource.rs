@@ -3,6 +3,7 @@ use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
 use crate::create_crud_repository_options::create_crud_repository_options;
+use crate::create_readonly_repository_options::create_readonly_repository_options;
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::driver::Driver;
@@ -49,7 +50,7 @@ impl dyn Datasource {
         options: Option<CRUDRepositoryOptions>,
     ) -> Arc<dyn ICRUDRepository> {
         let bound = self.bind_connection(connection);
-        self.repository_from(bound, repository_options::<T>(self, options))
+        self.repository_from(bound, apply_crud::<T>(self, options))
     }
 
     pub fn create_readonly_repository<T: ConvertSchema + 'static>(
@@ -57,16 +58,12 @@ impl dyn Datasource {
         connection: Option<Arc<dyn Connection>>,
         options: Option<ReadonlyRepositoryOptions>,
     ) -> Arc<dyn IReadonlyRepository> {
-        let custom = options.map(|read| CRUDRepositoryOptions {
-            read,
-            ..create_crud_repository_options::<T>()
-        });
         let bound = self.bind_connection(connection);
-        self.readonly_repository_from(bound, repository_options::<T>(self, custom).read)
+        self.readonly_repository_from(bound, apply_readonly::<T>(self, options))
     }
 }
 
-fn repository_options<T: ConvertSchema + 'static>(
+fn apply_crud<T: ConvertSchema + 'static>(
     datasource: &dyn Datasource,
     custom: Option<CRUDRepositoryOptions>,
 ) -> CRUDRepositoryOptions {
@@ -93,6 +90,37 @@ fn repository_options<T: ConvertSchema + 'static>(
             }
             crud.row_type_converters = types;
             crud
+        }
+    }
+}
+
+fn apply_readonly<T: ConvertSchema + 'static>(
+    datasource: &dyn Datasource,
+    custom: Option<ReadonlyRepositoryOptions>,
+) -> ReadonlyRepositoryOptions {
+    let built = create_readonly_repository_options::<T>();
+    let types = datasource.row_type_converters();
+    let columns = T::schema()
+        .into_iter()
+        .map(|(name, ty)| (name.to_string(), ty.to_string()))
+        .collect();
+    let rows = datasource.row_converter(&columns);
+    match custom {
+        None => {
+            let mut options = built;
+            options.row_converter = Some(rows);
+            options.row_type_converters = types;
+            options
+        }
+        Some(mut read) => {
+            if read.entity.is_empty() {
+                read.entity = built.entity.clone();
+            }
+            if read.row_converter.is_none() {
+                read.row_converter = Some(rows);
+            }
+            read.row_type_converters = types;
+            read
         }
     }
 }
