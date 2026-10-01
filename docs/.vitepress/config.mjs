@@ -2,6 +2,7 @@ import { readFileSync, utimesSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
+import { withMermaid } from "vitepress-plugin-mermaid";
 import { dialectsVitePlugin, transformDialects } from "../../scripts/dialects.mjs";
 import { viewSourceMiddleware } from "../../scripts/view-source.mjs";
 import { nestSidebar, parseToc, sidebarTitle } from "../../scripts/toc.mjs";
@@ -27,8 +28,9 @@ const groups = [...new Set(pages.map((page) => page.group).filter(Boolean))].map
 }));
 const sidebar = [
   ...pages.filter((page) => !page.group).map(toItem),
+  ...groups.filter((group) => group.text === "Articles"),
   ...groups.filter((group) => group.text === "Code Reference"),
-  ...groups.filter((group) => group.text !== "Code Reference"),
+  ...groups.filter((group) => group.text !== "Articles" && group.text !== "Code Reference"),
 ];
 
 const redirects = {
@@ -64,7 +66,7 @@ const watchToc = () => ({
   },
 });
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: "Datasources",
   description: "Data-access and object-relational mapper with parity across languages and providers.",
   cleanUrls: true,
@@ -86,5 +88,8 @@ export default defineConfig({
   },
   vite: {
     plugins: [dialectsVitePlugin(), watchToc()],
+    optimizeDeps: {
+      include: ["mermaid", "fastdom"],
+    },
   },
-});
+}));

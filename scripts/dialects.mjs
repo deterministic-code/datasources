@@ -309,14 +309,18 @@ const toVitePressExamples = (body, heading, files) => {
 
 export const transformDialects = (markdown, style, files) => {
   const page = hasReference(markdown);
+  const showSelector = page || hasProse(markdown) || hasNames(markdown);
   const dialects =
     style === "vitepress" ? (page ? toVitePressDialectPanels : toVitePressDialects) : toReadmeDialects;
   const examples =
-    style === "vitepress" ? (page ? toVitePressExamplePanels : toVitePressExamples) : toReadmeExamples;
+    style === "vitepress"
+      ? showSelector
+        ? toVitePressExamplePanels
+        : toVitePressExamples
+      : toReadmeExamples;
   const packages = style === "vitepress" ? toVitePressPackages : toReadmePackages;
   const reference = style === "vitepress" ? toVitePressReference : toReadmeReference;
   const prose = style === "vitepress" ? toVitePressProse : toReadmeProse;
-  const showSelector = page || hasProse(markdown) || hasNames(markdown);
   const next = transformOutsideDocFences(markdown, (chunk) =>
     transformOutsideCodeFences(
       chunk

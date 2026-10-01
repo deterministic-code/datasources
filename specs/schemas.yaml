@@ -17,6 +17,15 @@ schemas:
         - { name: username, type: string, notNull: true }
         - { name: is_enabled, type: bool, notNull: true }
 
+  pipeline-users:
+    - name: users
+      columns:
+        - { name: id, type: int, primaryKey: true }
+        - { name: uuid, type: uuid, notNull: true }
+        - { name: name, type: string, notNull: true }
+        - { name: is_enabled, type: bool, notNull: true }
+        - { name: created, type: datetime, notNull: true }
+
   user-account:
     - name: user
       columns:

@@ -20,6 +20,9 @@
     "cli": "node --experimental-strip-types cli/src/main.ts"
   },
   "devDependencies": {
-    "vitepress": "^1.6.4"
+    "debug": "^4.4.3",
+    "mermaid": "^11.17.2",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17"
   }
 }

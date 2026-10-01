@@ -1,0 +1,7 @@
+class User {
+  Id = 0;
+  Uuid = "";
+  Username = "";
+  IsEnabled = false;
+  Created = new Date(0);
+}
