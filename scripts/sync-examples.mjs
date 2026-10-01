@@ -387,6 +387,11 @@ const collectCsharp = (lines, events, starts, regions, owners) => {
 
 const collectRust = (lines, events, starts, regions, owners) => {
   for (let i = 0; i < lines.length; i++) {
+    const struct = lines[i].match(/^\s*(?:pub(?:\([^)]*\))?\s+)?struct\s+(\w+)[^{]*\{/);
+    if (struct) {
+      const to = closeLine(events, starts, i + 1);
+      if (to != null) regions.push({ name: struct[1], from: i + 1, to, kind: "type" });
+    }
     const impl = lines[i].match(/^\s*impl(?:\s*<[^;{]*>)?\s+([\w:]+)(?:<[^;{]*>)?(?:\s+for\s+([\w:]+))?/);
     if (impl) {
       const name = impl[2] ? `${impl[1].split("::").pop()}For${impl[2].split("::").pop()}` : impl[1].split("::").pop();

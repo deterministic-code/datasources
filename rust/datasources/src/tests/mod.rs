@@ -579,7 +579,8 @@ async fn stubs_throw() {
         .start_transaction(None)
         .await
         .is_err());
-    let command = ds.create_command(None);
+    assert!(ds.create_command(None).await.is_err());
+    let command = closed.create_command();
     assert!(command.execute("", None).await.is_err());
     assert!(command
         .execute_reader_native(&Native::new("select"), Some(&[Parameter::new("id", 1_i64)]))
@@ -738,7 +739,7 @@ async fn published_mocks() {
     let ds: &dyn Datasource = &ds;
     assert_eq!(Datasource::provider(ds), "mock");
     ds.create_connection().await.unwrap();
-    let command = ds.create_command(None);
+    let command = ds.create_command(None).await.unwrap();
     command.execute("", None).await.unwrap();
     command.execute_reader("", None).await.unwrap();
     ds.create_repository::<Cells>(None, None);

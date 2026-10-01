@@ -2,6 +2,7 @@ use super::mock_command::MockCommand;
 use super::mock_connection::MockConnection;
 use super::mock_repository::MockRepository;
 use crate::command::Command;
+use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::TypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
@@ -42,8 +43,17 @@ impl Datasource for MockDatasource {
         Ok(self.connection.clone())
     }
 
-    fn create_command(&self, _connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        self.command.clone()
+    async fn create_command(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Result<Arc<dyn Command>> {
+        if connection.is_none() {
+            if self.connection.is_open() {
+                return Err(DatasourceError::message("Connection is already open"));
+            }
+            self.connection.open().await?;
+        }
+        Ok(self.command.clone())
     }
 
     fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection> {

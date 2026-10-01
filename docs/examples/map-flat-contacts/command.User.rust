@@ -1,0 +1,8 @@
+struct User {
+    id: i64,
+    username: String,
+    email: String,
+    contact_name1: String,
+    contact_name2: String,
+    contacts: Vec<Contact>,
+}

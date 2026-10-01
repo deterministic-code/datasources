@@ -12,18 +12,20 @@ describe("MockDatasource", () => {
     const ds = new MockDatasource();
     expect(ds.provider).toBe("mock");
     expect(await ds.createConnection()).toBe(ds.connection);
-    const mockCommand = ds.createCommand();
+    const mockCommand = await ds.createCommand();
     expect(mockCommand).toBeInstanceOf(MockCommand);
     await mockCommand.execute("");
     await mockCommand.executeReader("");
     const provided = new MockConnection();
-    expect(ds.createCommand(provided).connection).toBe(provided);
+    expect((await ds.createCommand(provided)).connection).toBe(provided);
     expect(ds.createRepository(untyped(), provided)).toBeInstanceOf(MockRepository);
     expect(ds.createRepository(untyped())).toBeInstanceOf(MockRepository);
 
+    await ds.connection.close();
     ds.command = new MockCommand(ds.connection);
     ds.repository = new MockRepository(ds.connection);
-    expect(ds.createCommand()).toBe(ds.command);
+    expect(await ds.createCommand()).toBe(ds.command);
+    await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
     expect(ds.createRepository(untyped())).toBe(ds.repository);
     expect(ds.createReadonlyRepository(untyped())).toBe(ds.repository);
 

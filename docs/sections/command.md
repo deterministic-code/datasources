@@ -1001,19 +1001,17 @@ The `Command` trait has no connection getter. Stub `create_command` stores the o
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#User
 ```
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#UserContactsMapper
-```
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteReaderMapsFlatContacts
 ```
-```rust rust/providers/sqlite/tests/command.rs#user_contacts_mapper
+```rust rust/providers/sqlite/tests/command.rs#Contact
+```
+```rust rust/providers/sqlite/tests/command.rs#User
 ```
 ```rust rust/providers/sqlite/tests/command.rs#execute_reader_maps_flat_contacts
 ```
 ```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#Contact
 ```
 ```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#User
-```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#userContactsMapper
 ```
 ```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#maps-flat-contacts
 ```

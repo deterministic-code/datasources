@@ -1,7 +1,5 @@
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
 await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");

@@ -336,16 +336,12 @@ describe("Memory datasource", () => {
     const connection = (await ds.createConnection()) as MemoryConnection;
     await connection.open();
     expect(connection.createCommand()).toBeInstanceOf(MemoryCommand);
-    const command = ds.createCommand(connection);
+    const command = await ds.createCommand(connection);
     expect(command).toBeInstanceOf(MemoryCommand);
     expect(command.connection).toBe(connection);
     await command.execute("insert", [{ name: "id", value: 99 }]);
     await command.executeReader("");
-    const implicit = ds.createCommand();
-    expect(implicit).toBeInstanceOf(MemoryCommand);
-    expect(implicit.connection).toBeInstanceOf(MemoryConnection);
-    await implicit.execute("insert", [{ name: "id", value: 1 }]);
-    await implicit.executeReader("");
+    await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
     const repo = ds.createRepository(untyped(), connection);
     expect(repo).toBeInstanceOf(CRUDRepository);
     expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);

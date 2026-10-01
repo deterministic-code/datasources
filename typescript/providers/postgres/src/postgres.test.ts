@@ -262,16 +262,12 @@ describe("Postgres datasource", () => {
     expect(ds.provider).toBe("postgres");
     const connection = await ds.createConnection();
     await (connection as PostgresConnection).open();
-    const command = ds.createCommand(connection);
+    const command = await ds.createCommand(connection);
     expect(command).toBeInstanceOf(PostgresCommand);
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
     await command.executeReaderNative(new Native("SELECT 1"));
-    const implicit = ds.createCommand();
-    expect(implicit).toBeInstanceOf(PostgresCommand);
-    expect(implicit.connection).toBeInstanceOf(PostgresConnection);
-    await implicit.execute("DELETE FROM items");
-    await implicit.executeReaderNative(new Native("SELECT 1"));
+    await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
     const repo = ds.createRepository(untyped(), connection);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);

@@ -122,11 +122,7 @@ mod tests {
         )])))
         .unwrap();
         assert_eq!(ds.provider(), "postgres");
-        assert!(ds
-            .create_command(None)
-            .execute("DELETE FROM items", None)
-            .await
-            .is_err());
+        assert!(ds.create_command(None).await.is_err());
         ds.create_repository::<Cells>(None, None);
         let closed = Arc::new(PostgresConnection::new(None, None));
         assert!(PostgresCommand::new(closed)

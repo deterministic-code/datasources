@@ -47,7 +47,7 @@ public class PostgresTests
         Assert.Equal("postgres", ds.Provider);
         var provided = Assert.IsType<PostgresConnection>(await ds.CreateConnection());
         Assert.Equal("postgres", provided.Provider);
-        var bound = Assert.IsType<PostgresCommand>(ds.CreateCommand(provided));
+        var bound = Assert.IsType<PostgresCommand>(await ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
         await bound.Execute("");
         await bound.ExecuteReader("");

@@ -17,15 +17,12 @@ describe("yaml", () => {
     const connection = await ds.createConnection();
     expect(connection).toBeInstanceOf(YamlConnection);
     await expect(connection.open()).rejects.toThrow(ProviderNotImplementedError);
-    const command = ds.createCommand(connection);
+    const command = await ds.createCommand(connection);
     expect(command).toBeInstanceOf(StubCommand);
     expect(command.connection).toBe(connection);
     await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(command.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
-    const implicit = ds.createCommand();
-    expect(implicit).toBeInstanceOf(StubCommand);
-    await expect(implicit.execute("")).rejects.toThrow(ProviderNotImplementedError);
-    await expect(implicit.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
+    await expect(ds.createCommand()).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository(untyped());
     ds.createRepository(untyped(), connection);
     ds.createReadonlyRepository(untyped());

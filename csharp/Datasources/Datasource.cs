@@ -13,8 +13,17 @@ public sealed class Datasource(
     public string Provider { get; } = provider;
     IConnection DefaultConnection() => _connection ??= driver.Connection(options);
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
-    public ICommand CreateCommand(IConnection? connection = null) =>
-        driver.Command(connection ?? DefaultConnection());
+    public async Task<ICommand> CreateCommand(IConnection? connection = null)
+    {
+        if (connection is null)
+        {
+            connection = DefaultConnection();
+            if (connection.IsOpen)
+                throw new DatasourceException("Connection is already open");
+            await connection.Open();
+        }
+        return driver.Command(connection);
+    }
     public ICRUDRepository<T> CreateRepository<T>(
         IConnection? connection = null,
         CRUDRepositoryOptions<T>? options = null) where T : new() =>

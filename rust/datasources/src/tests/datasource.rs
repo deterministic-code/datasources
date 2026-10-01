@@ -10,12 +10,12 @@ fn arrange() {
     std::env::set_var("PROVIDER", "sqlite");
 }
 
-#[test]
-fn create_default_from_env_settings() {
+#[tokio::test]
+async fn create_default_from_env_settings() {
     let _guard = super::env_lock();
     arrange();
     let ds = default().expect("default");
-    let command = ds.create_command(None);
+    let command = ds.create_command(None).await.unwrap();
     assert_eq!(Datasource::provider(&*ds), "sqlite");
     assert_eq!(Arc::strong_count(&command) > 0, true);
 }

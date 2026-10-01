@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, MockDriver } from "./index.ts";
+import { Datasource, DatasourceFactory, MockConnection, MockDriver } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -24,11 +24,12 @@ afterAll(() => {
 });
 
 describe("Datasource", () => {
-  it("create default from env settings", () => {
+  it("create default from env settings", async () => {
     const ds = Datasource.default;
-    const command = ds.createCommand();
+    const command = await ds.createCommand();
     expect(ds.provider).toBe("sqlite");
-    expect(command.connection).toBe(ds.createCommand().connection);
+    expect(command.connection).toBe(await ds.createConnection());
+    expect(command.connection.isOpen).toBe(true);
     class Wide {
       id = 0;
       on = false;
@@ -38,5 +39,14 @@ describe("Datasource", () => {
       name = "";
     }
     expect(ds.createRepository(Wide)).toBeTruthy();
+  });
+
+  it("leaves a passed connection closed", async () => {
+    const ds = Datasource.default;
+    const given = new MockConnection();
+    expect((await ds.createCommand(given)).connection).toBe(given);
+    expect(given.isOpen).toBe(false);
+    await ds.createCommand();
+    await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
   });
 });

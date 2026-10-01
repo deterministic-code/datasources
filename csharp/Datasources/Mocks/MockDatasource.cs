@@ -20,8 +20,16 @@ public sealed class MockDatasource : IDatasource
         return Task.FromResult(Connection);
     }
 
-    public ICommand CreateCommand(IConnection? connection = null) =>
-        Command ?? new MockCommand(connection ?? Connection);
+    public async Task<ICommand> CreateCommand(IConnection? connection = null)
+    {
+        if (connection is null)
+        {
+            if (Connection.IsOpen)
+                throw new DatasourceException("Connection is already open");
+            await Connection.Open();
+        }
+        return Command ?? new MockCommand(connection ?? Connection);
+    }
 
     public ICRUDRepository<T> CreateRepository<T>(
         IConnection? connection = null,

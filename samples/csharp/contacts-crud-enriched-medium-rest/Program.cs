@@ -6,7 +6,7 @@ using Datasources;
 var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
-await Migrate.Apply(ds.CreateCommand(connection));
+await Migrate.Apply(await ds.CreateCommand(connection));
 var api = new Api(new ContactsRepository(connection), new LegacyContactRepository(connection));
 var port = int.TryParse(Env("PORT"), out var parsed) ? parsed : 8080;
 using var listener = new HttpListener();

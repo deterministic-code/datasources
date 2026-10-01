@@ -21,7 +21,7 @@ const run = async (args: string[]): Promise<number> => {
     const ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();
-    const command = ds.createCommand(connection);
+    const command = await ds.createCommand(connection);
     await migrate(command);
     const frozen = env("CLI_NOW");
     const now = frozen ? () => new Date(frozen) : () => new Date();

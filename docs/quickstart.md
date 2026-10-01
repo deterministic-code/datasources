@@ -38,7 +38,7 @@ var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 
-var command = ds.CreateCommand(connection);
+var command = await ds.CreateCommand(connection);
 var reader = await command.ExecuteReader(
     "SELECT id, name FROM item WHERE id = $id",
     [new Parameter("id", 1)]);
@@ -52,7 +52,7 @@ let ds = default()?;
 let connection = ds.create_connection().await?;
 connection.open().await?;
 
-let command = ds.create_command(Some(connection));
+let command = ds.create_command(Some(connection)).await?;
 let reader = command
     .execute_reader("SELECT id, name FROM item WHERE id = $id", Some(&[Parameter::new("id", 1)]))
     .await?;
@@ -67,7 +67,7 @@ const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 
-const command = ds.createCommand(connection);
+const command = await ds.createCommand(connection);
 const reader = await command.executeReader("SELECT id, name FROM item WHERE id = $id", [
   { name: "id", value: 1 },
 ]);

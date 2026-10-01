@@ -1,7 +1,5 @@
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute(
         "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
@@ -20,10 +18,7 @@ let reader = command
     .execute_reader("SELECT id, username, contact_name FROM users", None)
     .await
     .unwrap();
-let mut rows = Vec::new();
-while reader.next().await.unwrap() {
-    rows.push(reader.current().unwrap());
-}
+let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 let mapper = FlatToNestedMapper::new(TypeMap::new(
     "id",
     vec![

@@ -144,12 +144,15 @@ mod tests {
         let ds = create(Some(&HashMap::from([("PROVIDER".into(), "json".into())]))).unwrap();
         assert_eq!(ds.provider(), "json");
         ds.create_connection().await.unwrap();
-        let command = ds.create_command(None);
-        assert!(command.execute("insert", None).await.is_err());
-        assert!(command.execute_reader("", None).await.is_err());
-        let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
-        assert!(bound.execute("insert", None).await.is_err());
-        assert!(bound.execute_reader("", None).await.is_err());
+        let command = ds.create_command(None).await.unwrap();
+        command.execute("insert", None).await.unwrap();
+        command.execute_reader("", None).await.unwrap();
+        let bound = ds
+            .create_command(Some(ds.create_connection().await.unwrap()))
+            .await
+            .unwrap();
+        bound.execute("insert", None).await.unwrap();
+        bound.execute_reader("", None).await.unwrap();
         ds.create_repository::<Cells>(None, None);
         ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);
 

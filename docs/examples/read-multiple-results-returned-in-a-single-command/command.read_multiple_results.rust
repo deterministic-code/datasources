@@ -1,7 +1,5 @@
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 let reader = command
     .execute_reader_native(&Native::new("SELECT 1 AS id; SELECT 2 AS id"), None)
     .await

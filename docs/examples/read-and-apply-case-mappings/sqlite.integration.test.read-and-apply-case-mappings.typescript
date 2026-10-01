@@ -1,7 +1,5 @@
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
 await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");

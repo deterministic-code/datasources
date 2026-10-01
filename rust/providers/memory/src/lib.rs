@@ -274,11 +274,14 @@ mod tests {
         let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
         assert_eq!(ds.provider(), "memory");
         ds.create_connection().await.unwrap();
-        let command = ds.create_command(None);
-        assert!(command.execute("insert", None).await.is_err());
+        let command = ds.create_command(None).await.unwrap();
+        command.execute("insert", None).await.unwrap();
         assert!(command.execute_reader("", None).await.is_err());
-        let bound = ds.create_command(Some(ds.create_connection().await.unwrap()));
-        assert!(bound.execute("insert", None).await.is_err());
+        let bound = ds
+            .create_command(Some(ds.create_connection().await.unwrap()))
+            .await
+            .unwrap();
+        bound.execute("insert", None).await.unwrap();
         assert!(bound.execute_reader("", None).await.is_err());
         ds.create_repository::<Cells>(None, None);
         ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);

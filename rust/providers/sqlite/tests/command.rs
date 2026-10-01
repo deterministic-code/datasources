@@ -48,58 +48,6 @@ impl ConvertSchema for User {
     }
 }
 
-fn user_contacts_mapper() -> TransformMapper<Row, User> {
-    fn text_of(row: &Row, key: &str) -> String {
-        match row.get(key) {
-            Some(Value::Text(text)) => text.clone(),
-            _ => String::new(),
-        }
-    }
-    TransformMapper::new(
-        |row| {
-            let contact_name1 = text_of(&row, "contact_name1");
-            let contact_name2 = text_of(&row, "contact_name2");
-            User {
-                id: match row.get("id") {
-                    Some(Value::Int(id)) => *id,
-                    _ => 0,
-                },
-                username: text_of(&row, "username"),
-                email: text_of(&row, "email"),
-                contacts: vec![
-                    Contact {
-                        name: contact_name1.clone(),
-                    },
-                    Contact {
-                        name: contact_name2.clone(),
-                    },
-                ],
-                contact_name1,
-                contact_name2,
-            }
-        },
-        |mut user| {
-            user.contact_name1 = user
-                .contacts
-                .first()
-                .map(|contact| contact.name.clone())
-                .unwrap_or_default();
-            user.contact_name2 = user
-                .contacts
-                .get(1)
-                .map(|contact| contact.name.clone())
-                .unwrap_or_default();
-            let mut row = Row::new();
-            row.insert("id".into(), Value::Int(user.id));
-            row.insert("username".into(), Value::from(user.username));
-            row.insert("email".into(), Value::from(user.email));
-            row.insert("contact_name1".into(), Value::from(user.contact_name1));
-            row.insert("contact_name2".into(), Value::from(user.contact_name2));
-            row
-        },
-    )
-}
-
 #[tokio::test]
 async fn reads_boolean_as_bool_and_leaves_integer() {
     let _guard = super::env_lock();
@@ -130,10 +78,8 @@ async fn reads_boolean_as_bool_and_leaves_integer() {
 async fn run_execute_reader_on_a_simple_list() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
-    let connection = ds.create_connection().await.unwrap();
-    connection.open().await.unwrap();
-    apply_schema(connection.as_ref(), "items").await.unwrap();
-    let command = connection.create_command();
+    let command = ds.create_command(None).await.unwrap();
+    apply_schema(ds.create_connection().await.unwrap().as_ref(), "items").await.unwrap();
     command
         .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
         .await
@@ -164,10 +110,8 @@ async fn run_execute_reader_on_a_simple_list() {
 async fn read_and_apply_case_mappings() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
-    let connection = ds.create_connection().await.unwrap();
-    connection.open().await.unwrap();
-    apply_schema(connection.as_ref(), "case-contacts").await.unwrap();
-    let command = connection.create_command();
+    let command = ds.create_command(None).await.unwrap();
+    apply_schema(ds.create_connection().await.unwrap().as_ref(), "case-contacts").await.unwrap();
     command
         .execute(
             "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
@@ -196,13 +140,11 @@ async fn read_and_apply_case_mappings() {
 }
 
 #[tokio::test]
-async fn read_flat_rows_to_nested() {
+async fn execute_reader_then_apply_flat_to_nested_mapper() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
-    let connection = ds.create_connection().await.unwrap();
-    connection.open().await.unwrap();
-    apply_schema(connection.as_ref(), "flat-users").await.unwrap();
-    let command = connection.create_command();
+    let command = ds.create_command(None).await.unwrap();
+    apply_schema(ds.create_connection().await.unwrap().as_ref(), "flat-users").await.unwrap();
     command
         .execute(
             "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
@@ -221,10 +163,7 @@ async fn read_flat_rows_to_nested() {
         .execute_reader("SELECT id, username, contact_name FROM users", None)
         .await
         .unwrap();
-    let mut rows = Vec::new();
-    while reader.next().await.unwrap() {
-        rows.push(reader.current().unwrap());
-    }
+    let rows: Vec<_> = reader.read().try_collect().await.unwrap();
     let mapper = FlatToNestedMapper::new(TypeMap::new(
         "id",
         vec![
@@ -386,10 +325,13 @@ async fn execute_insert_read_update_and_delete() {
 async fn execute_reader_maps_flat_contacts() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
-    let connection = ds.create_connection().await.unwrap();
-    connection.open().await.unwrap();
-    apply_schema(connection.as_ref(), "flat-contact-users").await.unwrap();
-    let command = connection.create_command();
+    let command = ds.create_command(None).await.unwrap();
+    apply_schema(
+        ds.create_connection().await.unwrap().as_ref(),
+        "flat-contact-users",
+    )
+    .await
+    .unwrap();
     command
         .execute(
             "INSERT INTO users (id, username, email, contact_name1, contact_name2)
@@ -406,16 +348,69 @@ async fn execute_reader_maps_flat_contacts() {
         .await
         .unwrap();
     let converter = RowTypeConverter::of::<User>();
-    let mapper = user_contacts_mapper();
-    let mut user = None;
-    while reader.next().await.unwrap() {
-        user = Some(mapper.map(converter.convert(&reader.current().unwrap()).unwrap()));
+    fn user_contacts_mapper() -> TransformMapper<Row, User> {
+        fn text_of(row: &Row, key: &str) -> String {
+            match row.get(key) {
+                Some(Value::Text(text)) => text.clone(),
+                _ => String::new(),
+            }
+        }
+        TransformMapper::new(
+            |row| {
+                let contact_name1 = text_of(&row, "contact_name1");
+                let contact_name2 = text_of(&row, "contact_name2");
+                User {
+                    id: match row.get("id") {
+                        Some(Value::Int(id)) => *id,
+                        _ => 0,
+                    },
+                    username: text_of(&row, "username"),
+                    email: text_of(&row, "email"),
+                    contacts: vec![
+                        Contact {
+                            name: contact_name1.clone(),
+                        },
+                        Contact {
+                            name: contact_name2.clone(),
+                        },
+                    ],
+                    contact_name1,
+                    contact_name2,
+                }
+            },
+            |mut user| {
+                user.contact_name1 = user
+                    .contacts
+                    .first()
+                    .map(|contact| contact.name.clone())
+                    .unwrap_or_default();
+                user.contact_name2 = user
+                    .contacts
+                    .get(1)
+                    .map(|contact| contact.name.clone())
+                    .unwrap_or_default();
+                let mut row = Row::new();
+                row.insert("id".into(), Value::Int(user.id));
+                row.insert("username".into(), Value::from(user.username));
+                row.insert("email".into(), Value::from(user.email));
+                row.insert("contact_name1".into(), Value::from(user.contact_name1));
+                row.insert("contact_name2".into(), Value::from(user.contact_name2));
+                row
+            },
+        )
     }
-    let user = user.unwrap();
-    assert_eq!(user.username, "bobby");
-    assert_eq!(user.email, "bob@asdf.com");
+    let mapper = user_contacts_mapper();
+    let users: Vec<_> = reader
+        .read()
+        .map_ok(|row| mapper.map(converter.convert(&row).unwrap()))
+        .try_collect()
+        .await
+        .unwrap();
+    assert_eq!(users[0].username, "bobby");
+    assert_eq!(users[0].email, "bob@asdf.com");
     assert_eq!(
-        user.contacts
+        users[0]
+            .contacts
             .iter()
             .map(|contact| contact.name.as_str())
             .collect::<Vec<_>>(),
@@ -427,9 +422,7 @@ async fn execute_reader_maps_flat_contacts() {
 async fn read_multiple_results() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
-    let connection = ds.create_connection().await.unwrap();
-    connection.open().await.unwrap();
-    let command = connection.create_command();
+    let command = ds.create_command(None).await.unwrap();
     let reader = command
         .execute_reader_native(&Native::new("SELECT 1 AS id; SELECT 2 AS id"), None)
         .await

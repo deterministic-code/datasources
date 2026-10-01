@@ -227,20 +227,53 @@ Dispose the reader with `await using`. Rust drops it.
 ```
 :::
 
-### Type conversion and flat to nested
+### ExecuteReader, then apply flat to nested mapper.
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ReadFlatRowsToNested
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteReaderThenApplyFlatToNestedMapper
 ```
-```rust rust/providers/sqlite/tests/command.rs#read_flat_rows_to_nested
+```rust rust/providers/sqlite/tests/command.rs#execute_reader_then_apply_flat_to_nested_mapper
 ```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#reads-flat-rows-to-nested
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#executereader-then-apply-flat-to-nested-mapper
+```
+
+```output [Contact]
+{
+  id: 1,
+  username: 'bobby',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+:::
+
+### ExecuteReader maps flat contacts
+
+::: example
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#User
+```
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteReaderMapsFlatContacts
+```
+```rust rust/providers/sqlite/tests/command.rs#Contact
+```
+```rust rust/providers/sqlite/tests/command.rs#User
+```
+```rust rust/providers/sqlite/tests/command.rs#execute_reader_maps_flat_contacts
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#Contact
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#User
+```
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#maps-flat-contacts
 ```
 
 ```output [User]
 {
   id: 1,
   username: 'bobby',
+  email: 'bob@asdf.com',
   contacts: [
     { name: 'bob' },
     { name: 'roberta' }

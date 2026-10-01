@@ -28,7 +28,13 @@ describe("StubDatasource", () => {
       ProviderNotImplementedError,
     );
 
-    const command = ds.createCommand();
+    await expect(ds.createCommand()).rejects.toThrow(ProviderNotImplementedError);
+    connection.open = async () => {
+      connection.isOpen = true;
+    };
+    expect((await ds.createCommand()).connection).toBe(connection);
+    await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
+    const command = connection.createCommand();
     expect(command).toBeInstanceOf(StubCommand);
     await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
     await expect(command.executeReaderNative(new Native("select"), [])).rejects.toThrow(
@@ -36,7 +42,7 @@ describe("StubDatasource", () => {
     );
 
     const provided = new StubConnection("text");
-    const bound = ds.createCommand(provided);
+    const bound = await ds.createCommand(provided);
     expect(bound.connection).toBe(provided);
 
     const repo = ds.createRepository(untyped(), provided);
@@ -84,6 +90,6 @@ describe("StubDatasource", () => {
     await reader[Symbol.asyncDispose]();
 
     const named = new StubDatasource("yaml");
-    expect(named.createCommand().connection).toBeInstanceOf(StubConnection);
+    await expect(named.createCommand()).rejects.toThrow(ProviderNotImplementedError);
   });
 });

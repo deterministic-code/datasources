@@ -1,13 +1,9 @@
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
 await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
 await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
-var rows = new List<Row>();
-while (await reader.Next())
-    rows.Add(reader.Current!);
+var rows = await reader.Read().ToListAsync();
 var mapper = new FlatToNestedMapper(new TypeMap
 {
     Key = "id",

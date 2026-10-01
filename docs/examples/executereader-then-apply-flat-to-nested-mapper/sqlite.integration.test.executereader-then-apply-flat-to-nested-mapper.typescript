@@ -1,12 +1,9 @@
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
 await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
 await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
-const rows: Cells[] = [];
-while (await reader.next()) rows.push(reader.current!);
+const rows = await Array.fromAsync(reader.read());
 const mapper = new FlatToNestedMapper<{
   id: number;
   username: string;

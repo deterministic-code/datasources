@@ -184,7 +184,7 @@ mod tests {
         let ds = create(Some(&HashMap::from([("PROVIDER".into(), "sqlite".into())]))).unwrap();
         assert_eq!(ds.provider(), "sqlite");
         ds.create_connection().await.unwrap();
-        let command = ds.create_command(None);
+        let command = ds.create_command(None).await.unwrap();
         assert!(command.execute("DELETE FROM items", None).await.is_err());
         assert!(command
             .execute_reader_native(&datasources::Native::new("SELECT 1"), None)
@@ -193,7 +193,10 @@ mod tests {
         ds.create_repository::<Cells>(None, None);
         let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();
-        let bound = factory.create_command(Some(factory.create_connection().await.unwrap()));
+        let bound = factory
+            .create_command(Some(factory.create_connection().await.unwrap()))
+            .await
+            .unwrap();
         assert!(bound.execute("DELETE FROM items", None).await.is_err());
         assert!(bound
             .execute_reader_native(&datasources::Native::new("SELECT 1"), None)

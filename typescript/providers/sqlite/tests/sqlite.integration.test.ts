@@ -8,7 +8,6 @@ import {
   ReturnStatement,
   MetaDataRowTypeConverter,
   TransformMapper,
-  type Cells,
 } from "@datasources/core";
 import {
   loadDialect,
@@ -44,23 +43,6 @@ class User {
   contact_name1 = "";
   contact_name2 = "";
   contacts: Contact[] = [];
-}
-
-function userContactsMapper() {
-  return new TransformMapper<User, User>(
-    (row) => {
-      row.contacts = [
-        Object.assign(new Contact(), { name: row.contact_name1 }),
-        Object.assign(new Contact(), { name: row.contact_name2 }),
-      ];
-      return row;
-    },
-    (user) => {
-      user.contact_name1 = user.contacts[0]?.name ?? "";
-      user.contact_name2 = user.contacts[1]?.name ?? "";
-      return user;
-    },
-  );
 }
 
 describe("shared sql specs", () => {
@@ -103,10 +85,8 @@ describe("command", () => {
 
   it("run executeReader on a simple list", async () => {
     const ds = Datasource.default;
-    await using connection = await ds.createConnection();
-    await connection.open();
-    const command = connection.createCommand();
-    await applySchema(connection, "items");
+    const command = await ds.createCommand();
+    await applySchema(command.connection, "items");
     await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
     await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
     await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
@@ -121,10 +101,8 @@ describe("command", () => {
 
   it("read and apply case mappings", async () => {
     const ds = Datasource.default;
-    await using connection = await ds.createConnection();
-    await connection.open();
-    const command = connection.createCommand();
-    await applySchema(connection, "case-contacts");
+    const command = await ds.createCommand();
+    await applySchema(command.connection, "case-contacts");
     await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
     await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
@@ -134,17 +112,14 @@ describe("command", () => {
     expect(mapped).toEqual([{ UserId: 1, FirstName: "Ada" }]);
   });
 
-  it("reads flat rows to nested", async () => {
+  it("executeReader, then apply flat to nested mapper", async () => {
     const ds = Datasource.default;
-    await using connection = await ds.createConnection();
-    await connection.open();
-    const command = connection.createCommand();
-    await applySchema(connection, "flat-users");
+    const command = await ds.createCommand();
+    await applySchema(command.connection, "flat-users");
     await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
     await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
     await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
-    const rows: Cells[] = [];
-    while (await reader.next()) rows.push(reader.current!);
+    const rows = await Array.fromAsync(reader.read());
     const mapper = new FlatToNestedMapper<{
       id: number;
       username: string;
@@ -218,10 +193,8 @@ describe("command", () => {
 
   it("maps flat contacts", async () => {
     const ds = Datasource.default;
-    await using connection = await ds.createConnection();
-    await connection.open();
-    const command = connection.createCommand();
-    await applySchema(connection, "flat-contact-users");
+    const command = await ds.createCommand();
+    await applySchema(command.connection, "flat-contact-users");
     await command.execute(
       "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
     );
@@ -229,19 +202,31 @@ describe("command", () => {
       "SELECT contact_name1, contact_name2, email, id, username FROM users",
     );
     const converter = new MetaDataRowTypeConverter<User>();
+    const userContactsMapper = () =>
+      new TransformMapper<User, User>(
+        (row) => {
+          row.contacts = [
+            Object.assign(new Contact(), { name: row.contact_name1 }),
+            Object.assign(new Contact(), { name: row.contact_name2 }),
+          ];
+          return row;
+        },
+        (user) => {
+          user.contact_name1 = user.contacts[0]?.name ?? "";
+          user.contact_name2 = user.contacts[1]?.name ?? "";
+          return user;
+        },
+      );
     const mapper = userContactsMapper();
-    let user: User | undefined;
-    while (await reader.next()) user = mapper.map(converter.convert(reader.current!, User));
-    expect(user?.username).toBe("bobby");
-    expect(user?.email).toBe("bob@asdf.com");
-    expect(user?.contacts.map((contact) => contact.name)).toEqual(["bob", "roberta"]);
+    const users = await Array.fromAsync(reader.read(), (row) => mapper.map(converter.convert(row, User)));
+    expect(users[0]?.username).toBe("bobby");
+    expect(users[0]?.email).toBe("bob@asdf.com");
+    expect(users[0]?.contacts.map((contact) => contact.name)).toEqual(["bob", "roberta"]);
   });
 
   it("reads multiple results returned in a single command", async () => {
     const ds = Datasource.default;
-    await using connection = await ds.createConnection();
-    await connection.open();
-    const command = connection.createCommand();
+    const command = await ds.createCommand();
     await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
     const first: { id: number }[] = [];
     while (await reader.next()) first.push(reader.current as { id: number });
