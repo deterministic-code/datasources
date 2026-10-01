@@ -169,9 +169,9 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 - [Compare tree](./sections/expressions.md#compare-tree)
 - [Column, alias, literal](./sections/expressions.md#column-alias-literal)
 
-## Statement Evaluator
+## Expression Evaluator
 
-- [Match and miss](./sections/statement-evaluator.md#match-and-miss)
+- [Match and miss](./sections/expression-evaluator.md#match-and-miss)
 
 ## Datasource Factory
 

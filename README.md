@@ -449,7 +449,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 - [Compare tree](#compare-tree)
 - [Column, alias, literal](#column-alias-literal)
 
-### Statement Evaluator
+### Expression Evaluator
 
 - [Match and miss](#match-and-miss)
 
@@ -499,10 +499,6 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ### LazyWriteEnrichmentStrategy
 
 - [Skip unloaded lists](#skip-unloaded-lists)
-
-### CreateEnrichmentStrategy
-
-### DefaultCreateEnrichmentStrategy
 
 ### UpdateEnrichmentStrategy
 
@@ -16381,6 +16377,7 @@ Bound values live on [Where](#where). [IStatement](#istatement) is not an [IExpr
 - [ReturnStatement](#return-statement)
 - [Where](#where)
 - [Expressions](#expressions)
+- [ExpressionEvaluator](#expression-evaluator)
 - [StatementEvaluator](#statement-evaluator)
 
 ## Select Statement
@@ -21240,7 +21237,7 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](#select-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [StatementEvaluator](#statement-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
+Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](#select-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [ExpressionEvaluator](#expression-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ### Examples
 
@@ -21978,7 +21975,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-## StatementEvaluator
+## ExpressionEvaluator
 
 Interprets an [IExpression](#expressions) against a name→value map. [Where.GetText](#where) materializes SQL; this type evaluates.
 
@@ -21986,19 +21983,19 @@ Interprets an [IExpression](#expressions) against a name→value map. [Where.Get
 
 ##### TypeScript
 
-##### StatementEvaluator {#typescript-statementevaluator}
+##### ExpressionEvaluator {#typescript-expressionevaluator}
 
 ```typescript
-class StatementEvaluator
+class ExpressionEvaluator
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [evaluate(expression, parameters?)](#typescript-statementevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns a boolean. |
+| [evaluate(expression, parameters?)](#typescript-expressionevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns a boolean. |
 
-###### evaluate(expression, parameters?) {#typescript-statementevaluator-evaluate-expression-parameters}
+###### evaluate(expression, parameters?) {#typescript-expressionevaluator-evaluate-expression-parameters}
 
 Resolves identifiers from `parameters`. A where condition returns a boolean.
 
@@ -22021,19 +22018,19 @@ evaluate(expression: IExpression, parameters?: Record<string, Scalar>): Scalar
 
 ##### C#
 
-##### StatementEvaluator {#csharp-statementevaluator}
+##### ExpressionEvaluator {#csharp-expressionevaluator}
 
 ```csharp
-public sealed class StatementEvaluator
+public sealed class ExpressionEvaluator
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Evaluate(expression, parameters)](#csharp-statementevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns a [Value](#command) bool. |
+| [Evaluate(expression, parameters)](#csharp-expressionevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns a [Value](#command) bool. |
 
-###### Evaluate(expression, parameters) {#csharp-statementevaluator-evaluate-expression-parameters}
+###### Evaluate(expression, parameters) {#csharp-expressionevaluator-evaluate-expression-parameters}
 
 Resolves identifiers from `parameters`. A where condition returns a [Value](#command) bool.
 
@@ -22056,19 +22053,19 @@ public Value Evaluate(IExpression expression, IReadOnlyDictionary<string, Value>
 
 ##### Rust
 
-##### StatementEvaluator {#rust-statementevaluator}
+##### ExpressionEvaluator {#rust-expressionevaluator}
 
 ```rust
-pub struct StatementEvaluator
+pub struct ExpressionEvaluator
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [evaluate(expression, parameters)](#rust-statementevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns `Value::Bool`. |
+| [evaluate(expression, parameters)](#rust-expressionevaluator-evaluate-expression-parameters) | Resolves identifiers from `parameters`. A where condition returns `Value::Bool`. |
 
-###### evaluate(expression, parameters) {#rust-statementevaluator-evaluate-expression-parameters}
+###### evaluate(expression, parameters) {#rust-expressionevaluator-evaluate-expression-parameters}
 
 Resolves identifiers from `parameters`. A where condition returns `Value::Bool`.
 
@@ -22097,24 +22094,132 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 #### Match and miss
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L244-L245)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L266-L345)
 
 ```csharp
-var ret = new ReturnStatement("add", fields);
+var evaluator = new ExpressionEvaluator();
+IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1175-L1179)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1333-L1518)
 
 ```rust
-    &[],
-);
+let evaluator = ExpressionEvaluator;
+let row = record(&[
+    ("id", Value::Int(1)),
+    ("age", Value::Int(21)),
+    ("name", Value::Text("a".into())),
+]);
+let yes = Value::Bool(true);
+let no = Value::Bool(false);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L101-L102)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L111-L188)
 
 ```typescript
-
+const evaluator = new ExpressionEvaluator();
+const row = { id: 1, age: 21, name: "a" };
 ```
+
+## StatementEvaluator
+
+Evaluates an [IStatement](#istatement). Expression trees use [ExpressionEvaluator](#expression-evaluator).
+
+### Classes
+
+##### TypeScript
+
+##### StatementEvaluator {#typescript-statementevaluator}
+
+```typescript
+class StatementEvaluator
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [evaluate(statement)](#typescript-statementevaluator-evaluate-statement) | Takes a statement. Body is empty until statement-level evaluation is defined. |
+
+###### evaluate(statement) {#typescript-statementevaluator-evaluate-statement}
+
+Takes a statement. Body is empty until statement-level evaluation is defined.
+
+**Definition**
+
+```typescript
+evaluate(statement: IStatement): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [IStatement](#typescript-istatement) |
+
+##### C#
+
+##### StatementEvaluator {#csharp-statementevaluator}
+
+```csharp
+public sealed class StatementEvaluator
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Evaluate(statement)](#csharp-statementevaluator-evaluate-statement) | Takes a statement. Body is empty until statement-level evaluation is defined. |
+
+###### Evaluate(statement) {#csharp-statementevaluator-evaluate-statement}
+
+Takes a statement. Body is empty until statement-level evaluation is defined.
+
+**Definition**
+
+```csharp
+public void Evaluate(IStatement statement)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [IStatement](#csharp-istatement) |
+
+##### Rust
+
+##### StatementEvaluator {#rust-statementevaluator}
+
+```rust
+pub struct StatementEvaluator
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [evaluate(statement)](#rust-statementevaluator-evaluate-statement) | Takes a statement. Body is empty until statement-level evaluation is defined. |
+
+###### evaluate(statement) {#rust-statementevaluator-evaluate-statement}
+
+Takes a statement. Body is empty until statement-level evaluation is defined.
+
+**Definition**
+
+```rust
+pub fn evaluate(&self, statement: &dyn Statement)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [Statement](#rust-statement) |
+
+### Remarks
+
+For predicates and operators against a row map, use [ExpressionEvaluator](#expression-evaluator).
 
 ## Other
 

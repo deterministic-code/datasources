@@ -8,7 +8,7 @@ import {
   Literal,
   Operator,
   SelectStatement,
-  StatementEvaluator,
+  ExpressionEvaluator,
   StatementParser,
   Subquery,
   UpdateStatement,
@@ -111,7 +111,7 @@ describe("StatementParser", () => {
 
   it("evaluates the new predicates", () => {
     const row = { name: "ada", age: 30, id: null };
-    const evaluator = new StatementEvaluator();
+    const evaluator = new ExpressionEvaluator();
     expect(evaluator.evaluate(new Operator.IsNull(new Identifier("id")), row)).toBe(true);
     expect(evaluator.evaluate(new Operator.Like("name", "a%"), row)).toBe(true);
     expect(evaluator.evaluate(new Operator.NotLike("name", "a%"), row)).toBe(false);
@@ -276,7 +276,7 @@ describe("StatementParser", () => {
 
   it("evaluates null patterns and rejects a subquery", () => {
     const row = { name: "ada", age: 30, id: null };
-    const evaluator = new StatementEvaluator();
+    const evaluator = new ExpressionEvaluator();
     expect(evaluator.evaluate(new Operator.Like("name", null), row)).toBe(false);
     expect(evaluator.evaluate(new Operator.NotLike("name", null), row)).toBe(true);
     expect(evaluator.evaluate(new Operator.IsNotNull(new Identifier("name")), row)).toBe(true);

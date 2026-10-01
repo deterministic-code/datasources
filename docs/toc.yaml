@@ -122,6 +122,10 @@ pages:
     title: Expressions
     group: Code Reference
     parent: Statements
+  - path: sections/expression-evaluator.md
+    title: Expression Evaluator
+    group: Code Reference
+    parent: Statements
   - path: sections/statement-evaluator.md
     title: Statement Evaluator
     group: Code Reference

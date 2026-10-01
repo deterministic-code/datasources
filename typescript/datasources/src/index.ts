@@ -108,6 +108,7 @@ export {
   n,
   Subquery,
   ReferentialAction,
+  ExpressionEvaluator,
   StatementEvaluator,
   ExecuteStoredProcedureStatement,
   SelectInsertedIdStatement,

@@ -1,0 +1,2 @@
+var evaluator = new ExpressionEvaluator();
+IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };

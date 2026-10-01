@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
     DatasourceError, IWhere, Native, Parameter, Reader, Response, Result, Row, SelectInsertedIdStatement,
-    Statement, StatementEvaluator, StatementKind, Value, Where,
+    Statement, ExpressionEvaluator, StatementKind, Value, Where,
 };
 use std::sync::Arc;
 
@@ -183,7 +183,7 @@ impl Command for MemoryCommand {
                     let table = table.clone();
                     async move {
                         connection.ensure_open()?;
-                        let evaluator = StatementEvaluator;
+                        let evaluator = ExpressionEvaluator;
                         let rows = connection.with_rows(table.as_deref(), false, |items| {
                             items
                                 .iter()
@@ -405,7 +405,7 @@ fn row_matches(
     condition: Option<&datasources::Expression>,
 ) -> bool {
     if let Some(condition) = condition {
-        return StatementEvaluator.evaluate(condition, row) == Value::Bool(true);
+        return ExpressionEvaluator.evaluate(condition, row) == Value::Bool(true);
     }
     let filter = match predicate_text {
         Some(text) if text.trim_start().starts_with('{') => {

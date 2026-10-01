@@ -190,9 +190,9 @@ pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,
     CreateIndexStatement, CreateTableStatement, CreateTableStatementRenderer, DeleteStatement,
-    ExecuteStoredProcedureStatement, Expression, ForeignKey, Identifier, InsertStatement, Literal,
-    NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction, ReturnStatement,
-    SelectInsertedIdStatement, SelectStatementOptions, SortDirection, Statement,
+    ExecuteStoredProcedureStatement, Expression, ExpressionEvaluator, ForeignKey, Identifier,
+    InsertStatement, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
+    ReturnStatement, SelectInsertedIdStatement, SelectStatementOptions, SortDirection, Statement,
     StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint, UpdateStatement,
     Where,
 };

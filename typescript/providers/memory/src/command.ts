@@ -5,7 +5,7 @@ import {
   Native,
   InsertStatement,
   SelectInsertedIdStatement,
-  StatementEvaluator,
+  ExpressionEvaluator,
   UpdateStatement,
   Where,
   type Cells,
@@ -67,7 +67,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     if (clause) {
       return this.run(statement.getText(), parameters, async () => {
         this.connection.ensureOpen();
-        const evaluator = new StatementEvaluator();
+        const evaluator = new ExpressionEvaluator();
         const rows = this.connection
           .rows(tableOf(statement), false)
           .filter((row) => evaluator.evaluate(clause, row as Record<string, Scalar>) === true);
@@ -164,7 +164,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     parameters: Parameter[] | undefined,
   ): Response => {
     if (where instanceof Where) {
-      const evaluator = new StatementEvaluator();
+      const evaluator = new ExpressionEvaluator();
       const names = setNames(parameters, where);
       let rowsAffected = 0;
       for (const row of rows) {
@@ -186,7 +186,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     where: IWhere | undefined,
   ): Response => {
     if (where instanceof Where) {
-      const evaluator = new StatementEvaluator();
+      const evaluator = new ExpressionEvaluator();
       const remaining = rows.filter(
         (row) => evaluator.evaluate(where, row as Record<string, Scalar>) !== true,
       );

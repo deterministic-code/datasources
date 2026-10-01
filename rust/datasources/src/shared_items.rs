@@ -5,7 +5,7 @@ use crate::read_input::{where_of, ReadInput};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::{Operator, StatementEvaluator, Where};
+use crate::statements::{Operator, ExpressionEvaluator, Where};
 use crate::value::Value;
 use std::sync::{Arc, Mutex};
 
@@ -36,7 +36,7 @@ impl SharedItems {
         match where_clause {
             None => items.clone(),
             Some(predicate) => {
-                let evaluator = StatementEvaluator;
+                let evaluator = ExpressionEvaluator;
                 items
                     .iter()
                     .filter(|row| {
@@ -81,7 +81,7 @@ impl SharedItems {
     pub fn remove(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Response {
         let mut items = self.items.lock().expect("items");
         if let Some(predicate) = by_where {
-            let evaluator = StatementEvaluator;
+            let evaluator = ExpressionEvaluator;
             items.retain(|row| {
                 !predicate
                     .as_any()

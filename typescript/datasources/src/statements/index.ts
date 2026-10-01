@@ -25,6 +25,7 @@ export { Identifier } from "./Identifier.ts";
 export { Literal } from "./Literal.ts";
 export { ArrayExpression } from "./ArrayExpression.ts";
 export { Where } from "./Where.ts";
+export { ExpressionEvaluator } from "./ExpressionEvaluator.ts";
 export { StatementEvaluator } from "./StatementEvaluator.ts";
 export { WhereText } from "./WhereText.ts";
 export { SelectStatement } from "./SelectStatement.ts";

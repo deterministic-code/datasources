@@ -266,7 +266,7 @@ public class CoreTests
     [Fact]
     public void EvaluatesWhere()
     {
-        var evaluator = new StatementEvaluator();
+        var evaluator = new ExpressionEvaluator();
         IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Where(new Operator.Equals("id", 1)), row));
         Assert.Equal(new Value.Bool(false), evaluator.Evaluate(new Where(new Operator.Equals("id", 2)), row));

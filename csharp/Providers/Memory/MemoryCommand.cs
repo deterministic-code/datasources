@@ -37,7 +37,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             ISelectStatement { Where: Where clause } => Run(statement.GetText(), parameters, (_, _) =>
             {
                 Typed.EnsureOpen();
-                var evaluator = new StatementEvaluator();
+                var evaluator = new ExpressionEvaluator();
                 IReadOnlyList<Row> rows = [.. Rows(TableOf(statement), create: false).Where(row =>
                     evaluator.Evaluate(clause, row) is Value.Bool(true))];
                 return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
@@ -137,7 +137,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     {
         if (where is Where clause)
         {
-            var evaluator = new StatementEvaluator();
+            var evaluator = new ExpressionEvaluator();
             var names = SetNames(parameters, where);
             var affected = 0;
             foreach (var row in rows.Where(row => evaluator.Evaluate(clause, row) is Value.Bool(true)))
@@ -160,7 +160,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
     {
         if (where is Where clause)
         {
-            var evaluator = new StatementEvaluator();
+            var evaluator = new ExpressionEvaluator();
             var affected = rows.RemoveAll(row => evaluator.Evaluate(clause, row) is Value.Bool(true));
             return new Response(Value.Null.Instance, affected, parameters);
         }
