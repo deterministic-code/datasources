@@ -1,0 +1,11 @@
+fn snake_then_plural() -> TransformMapper<String, String> {
+    let snake = Arc::new(snake());
+    let forward = snake.clone();
+    let reverse = snake;
+    TransformMapper::new(
+        move |name: String| PluralizerMapper::new().map(Mapper::map(forward.as_ref(), name)),
+        move |name: String| {
+            Mapper::reverse_map(reverse.as_ref(), PluralizerMapper::new().reverse_map(name))
+        },
+    )
+}

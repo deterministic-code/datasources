@@ -1,16 +1,12 @@
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-await Execute(connection, """
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    """);
+var ds = Datasource.Default;
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    PropertyMappings = Snake,
+    PropertyMappings = Snake(),
 });
 
 var byId = await repo.ReadSingle(new Where("Id", eq, 1));
-var disabled = new List<User>();
-await foreach (var row in repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)))
-    disabled.Add(row);
+var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)).SingleAsync();

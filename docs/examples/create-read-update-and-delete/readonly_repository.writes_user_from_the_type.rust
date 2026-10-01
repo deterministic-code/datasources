@@ -1,9 +1,8 @@
-let built = datasource();
-let ds: &dyn Datasource = &*built;
+let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.ids = vec!["Id".into()];
-let users_repo = CRUDRepository::new(connection, options).unwrap();
+let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
@@ -36,4 +35,3 @@ let gone = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
     .unwrap();
-assert!(matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0));

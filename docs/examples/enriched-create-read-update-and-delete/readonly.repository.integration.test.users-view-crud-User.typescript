@@ -1,0 +1,9 @@
+class User {
+  Key = 0;
+  Login = "";
+  Active = false;
+  Opened = "";
+  UserType = new UserType();
+  Version = 0;
+  Roles: UserRole[] = [];
+}

@@ -1,6 +1,6 @@
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var ds = Datasource.Default;
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
+var usersRepo = ds.CreateRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
     PropertyMappings = casing,
     Ids = ["Id"],

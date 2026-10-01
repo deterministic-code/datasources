@@ -1,0 +1,3 @@
+fn snake() -> ChangeCasingMapper {
+    ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)
+}

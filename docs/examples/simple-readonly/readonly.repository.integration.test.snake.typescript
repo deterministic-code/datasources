@@ -1,0 +1,3 @@
+function snake() {
+  return new ChangeCasingMapper("pascalCase", "snakeCase");
+}

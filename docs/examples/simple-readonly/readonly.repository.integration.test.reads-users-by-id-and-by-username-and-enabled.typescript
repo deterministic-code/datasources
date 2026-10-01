@@ -1,14 +1,10 @@
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-await executeSql(connection, `
-  INSERT INTO users (id, username, is_enabled) VALUES
-    (1, 'ada', 1),
-    (2, 'grace', 0);
-`);
+const ds = Datasource.default;
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
 const repo = ds.createReadonlyRepository(User, connection, {
-  entityMapper: snakeThenPlural,
-  propertyMappings: snake,
+  entityMapper: snakeThenPlural(),
+  propertyMappings: snake(),
 });
 const byId = await repo.readSingle(new Where("Id", eq, 1));
-const disabled: User[] = [];
-for await (const row of repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)))
-  disabled.push(row);
+const [row] = await Array.fromAsync(repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)));

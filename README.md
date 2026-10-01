@@ -321,8 +321,8 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ### Repositories
 
 - [Simple readonly](#simple-readonly)
-- [CRUD](#crud)
-- [Enriched CRUD](#enriched-crud)
+- [Create, Read, Update, and Delete](#create-read-update-and-delete)
+- [Enriched Create, Read, Update, and Delete](#enriched-create-read-update-and-delete)
 - [Bulk](#bulk)
 
 ### Readonly Repository
@@ -3908,25 +3908,26 @@ result: 5
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L346-L370)
 
 ```rust
-use datasources::{ExecuteStoredProcedureStatement, Parameter};
-command
-    .execute_native(
-        &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
-        None,
-    )
-    .await
-    .unwrap();
-let parameters = [
-    Parameter::new("start_n", 4_i64),
-    Parameter::output("result"),
-];
-let call = command
-    .execute_statement(
-        &ExecuteStoredProcedureStatement::new("bump", &parameters),
-        Some(&parameters),
-    )
-    .await
-    .unwrap();
+async fn fill_output_parameter(command: &dyn Command) {
+    use datasources::{ExecuteStoredProcedureStatement, Parameter};
+    command
+        .execute_native(
+            &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
+            None,
+        )
+        .await
+        .unwrap();
+    let parameters = [
+        Parameter::new("start_n", 4_i64),
+        Parameter::output("result"),
+    ];
+    let call = command
+        .execute_statement(
+            &ExecuteStoredProcedureStatement::new("bump", &parameters),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();
 ```
 
 **Parameters**
@@ -3982,22 +3983,23 @@ var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L333-L351)
 
 ```rust
-use datasources::{Parameter, ReturnStatement};
-command
-    .execute_native(
-        &Native::new("CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$"),
-        None,
-    )
-    .await
-    .unwrap();
-let parameters = [Parameter::new("n", 4_i64)];
-let ret = command
-    .execute_statement(
-        &ReturnStatement::new("add_one", &parameters),
-        Some(&parameters),
-    )
-    .await
-    .unwrap();
+async fn read_return_value(command: &dyn Command) {
+    use datasources::{Parameter, ReturnStatement};
+    command
+        .execute_native(
+            &Native::new("CREATE FUNCTION add_one(n INT) RETURNS INT LANGUAGE sql AS $$ SELECT n + 1 $$"),
+            None,
+        )
+        .await
+        .unwrap();
+    let parameters = [Parameter::new("n", 4_i64)];
+    let ret = command
+        .execute_statement(
+            &ReturnStatement::new("add_one", &parameters),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();
 ```
 
 **Result**
@@ -4979,28 +4981,29 @@ var again = await reader.NextResult();
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L372-L399)
 
 ```rust
-use datasources::ExecuteStoredProcedureStatement;
-command
-    .execute_native(
-        &Native::new("CREATE PROCEDURE two_ids() BEGIN SELECT 1 AS id; SELECT 2 AS id; END"),
-        None,
-    )
-    .await
-    .unwrap();
-let reader = command
-    .execute_reader_statement(&ExecuteStoredProcedureStatement::new("two_ids", &[]), None)
-    .await
-    .unwrap();
-let mut first = Vec::new();
-while reader.next().await.unwrap() {
-    first.push(reader.current());
-}
-let moved = reader.next_result().await.unwrap();
-let mut second = Vec::new();
-while reader.next().await.unwrap() {
-    second.push(reader.current());
-}
-let again = reader.next_result().await.unwrap();
+async fn call_procedure_returns_two_results(command: &dyn Command) {
+    use datasources::ExecuteStoredProcedureStatement;
+    command
+        .execute_native(
+            &Native::new("CREATE PROCEDURE two_ids() BEGIN SELECT 1 AS id; SELECT 2 AS id; END"),
+            None,
+        )
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader_statement(&ExecuteStoredProcedureStatement::new("two_ids", &[]), None)
+        .await
+        .unwrap();
+    let mut first = Vec::new();
+    while reader.next().await.unwrap() {
+        first.push(reader.current());
+    }
+    let moved = reader.next_result().await.unwrap();
+    let mut second = Vec::new();
+    while reader.next().await.unwrap() {
+        second.push(reader.current());
+    }
+    let again = reader.next_result().await.unwrap();
 ```
 
 **First result**
@@ -5159,76 +5162,168 @@ SQL provider default repositories report the row or dictionary type (`Row`, `Dic
 
 `ReadSingle` / `readSingle` / `read_single` returns the first matching user. `Read` / `read` / `read` yields every user that matches the where.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L36-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L22-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L34-L39) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L29-L32) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L49-L72)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-await Execute(connection, """
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    """);
+sealed class User
+{
+    public long Id { get; set; }
+    public string Username { get; set; } = "";
+    public bool IsEnabled { get; set; }
+}
+
+static IMapper<string, string> SnakeThenPlural()
+{
+    return new TransformMapper<string, string>(
+        name => new PluralizerMapper().Map(Snake().Map(name)),
+        name => Snake().ReverseMap(new PluralizerMapper().ReverseMap(name)));
+}
+
+static IMapper<string, string> Snake()
+{
+    return new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+}
+
+var ds = Datasource.Default;
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    PropertyMappings = Snake,
+    PropertyMappings = Snake(),
 });
 
 var byId = await repo.ReadSingle(new Where("Id", eq, 1));
-var disabled = new List<User>();
-await foreach (var row in repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)))
-    disabled.Add(row);
+var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)).SingleAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L64-L100)
+**Row**
+
+```
+{
+  Id: 2,
+  Username: 'grace',
+  IsEnabled: false
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L18-L26) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L45-L55) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L41-L43) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L68-L113)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
+impl ConvertSchema for User {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("Id", "INTEGER"),
+            ("Username", "TEXT"),
+            ("IsEnabled", "INTEGER"),
+        ]
+    }
+}
+
+fn snake_then_plural() -> TransformMapper<String, String> {
+    let snake = Arc::new(snake());
+    let forward = snake.clone();
+    let reverse = snake;
+    TransformMapper::new(
+        move |name: String| PluralizerMapper::new().map(Mapper::map(forward.as_ref(), name)),
+        move |name: String| {
+            Mapper::reverse_map(reverse.as_ref(), PluralizerMapper::new().reverse_map(name))
+        },
+    )
+}
+
+fn snake() -> ChangeCasingMapper {
+    ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)
+}
+
+let ds = default().unwrap();
 execute_sql(
     &connection,
-    "
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    ",
+    "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)",
+)
+.await;
+execute_sql(
+    &connection,
+    "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)",
+)
+.await;
+execute_sql(
+    &connection,
+    "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
 let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
-options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(snake());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
     .unwrap()
     .unwrap();
-let disabled = repo
+let row = repo
     .read(
         Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
         None,
     )
     .await
+    .unwrap()
+    .into_iter()
+    .next()
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L68-L90)
+**Row**
+
+```
+{
+  Id: 2,
+  Username: 'grace',
+  IsEnabled: false
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L27-L31) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L37-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L33-L35) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L76-L94)
 
 ```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-await executeSql(connection, `
-  INSERT INTO users (id, username, is_enabled) VALUES
-    (1, 'ada', 1),
-    (2, 'grace', 0);
-`);
+class User {
+  Id = 0;
+  Username = "";
+  IsEnabled = false;
+}
+
+function snakeThenPlural() {
+  return new TransformMapper(
+    (name: string) => new PluralizerMapper().map(snake().map(name)),
+    (name: string) => snake().reverseMap(new PluralizerMapper().reverseMap(name)),
+  );
+}
+
+function snake() {
+  return new ChangeCasingMapper("pascalCase", "snakeCase");
+}
+
+const ds = Datasource.default;
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
 const repo = ds.createReadonlyRepository(User, connection, {
-  entityMapper: snakeThenPlural,
-  propertyMappings: snake,
+  entityMapper: snakeThenPlural(),
+  propertyMappings: snake(),
 });
 const byId = await repo.readSingle(new Where("Id", eq, 1));
-const disabled: User[] = [];
-for await (const row of repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)))
-  disabled.push(row);
+const [row] = await Array.fromAsync(repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)));
+```
+
+**Row**
+
+```
+{
+  Id: 2,
+  Username: 'grace',
+  IsEnabled: false
+}
 ```
 
 Schema: [minimal-users](#minimal-users)
@@ -5237,16 +5332,23 @@ Schema: [minimal-users](#minimal-users)
 CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id))
 ```
 
-#### CRUD
+#### Create, Read, Update, and Delete
 
 Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L467-L499)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L22-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L621-L653)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+sealed class User
+{
+    public long Id { get; set; }
+    public string Username { get; set; } = "";
+    public bool IsEnabled { get; set; }
+}
+
+var ds = Datasource.Default;
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
+var usersRepo = ds.CreateRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
     PropertyMappings = casing,
     Ids = ["Id"],
@@ -5263,15 +5365,34 @@ var removed = await usersRepo.Delete(created);
 var gone = await usersRepo.ReadSingleById(created.Id);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L685-L737)
+**After update**
+
+```
+{
+  Id: 1,
+  Username: 'ada-v2',
+  IsEnabled: true
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L18-L26) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L653-L705)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
+impl ConvertSchema for User {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("Id", "INTEGER"),
+            ("Username", "TEXT"),
+            ("IsEnabled", "INTEGER"),
+        ]
+    }
+}
+
+let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.ids = vec!["Id".into()];
-let users_repo = CRUDRepository::new(connection, options).unwrap();
+let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
@@ -5304,15 +5425,30 @@ let gone = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
     .unwrap();
-assert!(matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0));
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L217-L244)
+**After update**
+
+```
+{
+  Id: 1,
+  Username: 'ada-v2',
+  IsEnabled: true
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L27-L31) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L229-L256)
 
 ```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+class User {
+  Id = 0;
+  Username = "";
+  IsEnabled = false;
+}
+
+const ds = Datasource.default;
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-const usersRepo = new CRUDRepository(connection, {
+const usersRepo = ds.createRepository(User, connection, {
   ...createCRUDRepositoryOptions(User),
   propertyMappings: casing,
   ids: ["Id"],
@@ -5329,33 +5465,65 @@ const removed = await usersRepo.delete(created);
 const gone = await usersRepo.readSingleById(created.Id);
 ```
 
+**After update**
+
+```
+{
+  Id: 1,
+  Username: 'ada-v2',
+  IsEnabled: true
+}
+```
+
 Schema: [user-pascal](#user-pascal)
 
 ```sql
 CREATE TABLE User (id int, is_enabled bool NOT NULL, username string NOT NULL, CONSTRAINT pk_User PRIMARY KEY (id))
 ```
 
-#### Enriched CRUD
+#### Enriched Create, Read, Update, and Delete
 
-`UsersView` maps onto `user`. Create writes the user and its roles. Read fills `UserType` and `Roles`.
+`User` maps onto `user`. Create writes each user and its roles. Enrichment fills `UserType` from that row. Update renames ada, switches the type to member, and adds the owner role when the version matches.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L601-L674)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L195-L204) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L183-L187) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L189-L193) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L206-L293)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+record User
+{
+    public long Key { get; set; }
+    public string Login { get; set; } = "";
+    public bool Active { get; set; }
+    public DateTime Opened { get; set; }
+    public UserType UserType { get; set; } = new();
+    public long Version { get; set; }
+    public List<UserRole> Roles { get; set; } = [];
+}
+
+record UserType
+{
+    public long Id { get; set; }
+    public string Name { get; set; } = "";
+}
+
+record UserRole
+{
+    public long UserId { get; set; }
+    public string Name { get; set; } = "";
+}
+
+var ds = Datasource.Default;
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
     Ids = ["Key"],
-    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    EntityMapper = casing,
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
         ["Active"] = "is_enabled",
         ["Opened"] = "created",
-        ["UserTypeId"] = "user_type_id",
+        ["UserType"] = "user_type_id",
         ["Version"] = "version",
     }),
 });
@@ -5371,31 +5539,159 @@ var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryO
     EntityMapper = casing,
     PropertyMappings = casing,
 });
-usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
+usersRepo.AddEnriched(new("UserType", "UserType", "Id"), userTypesRepo);
 usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
+var user = new User
+{
+    Login = "ada",
+    Active = true,
+    Opened = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserType = admin,
+    Version = 1,
+    Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
+};
+var created = await usersRepo.Create(user);
+var grace = await usersRepo.Create(new User
+{
+    Login = "grace",
+    Active = true,
+    Opened = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserType = admin,
+    Version = 1,
+    Roles = [new UserRole { Name = "viewer" }],
+});
+var loaded = await usersRepo.ReadSingle(new Where("Key", eq, user.Key));
+var version = loaded!.Version;
+var member = await userTypesRepo.Create(new UserType { Name = "member" });
+loaded.Login = "ada-v2";
+loaded.UserType = member;
+loaded.Roles.Add(new UserRole { Name = "owner" });
+loaded.Version = version + 1;
+var updated = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var current = await usersRepo.ReadSingle(new Where("Key", eq, loaded.Key));
+var stale = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var removed = await usersRepo.Delete(loaded);
+var gone = await usersRepo.ReadSingleById(loaded.Key);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L856)
+**Loaded**
+
+```
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
+**Updated**
+
+```
+{
+  rowsAffected: 1
+}
+```
+
+**Current**
+
+```
+{
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
+}
+```
+
+**Stale**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**Removed**
+
+```
+{
+  rowsAffected: 1
+}
+```
+
+**Gone**
+
+```
+no row
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L718-L729) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L733-L737) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L741-L745) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L760-L913)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let mut users_options = create_crud_repository_options::<UsersView>();
+impl ConvertSchema for User {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("Key", "INTEGER"),
+            ("Login", "TEXT"),
+            ("Active", "INTEGER"),
+            ("Opened", "TEXT"),
+            ("UserType", "INTEGER"),
+            ("Version", "INTEGER"),
+        ]
+    }
+}
+
+impl ConvertSchema for UserType {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("Id", "INTEGER"), ("Name", "TEXT")]
+    }
+}
+
+impl ConvertSchema for UserRole {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("UserId", "INTEGER"), ("Name", "TEXT")]
+    }
+}
+
+let ds = default().unwrap();
+let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
-users_options.entity_mapper = Box::new(DictionaryMapper::new([(
-    "UsersView".to_string(),
-    "user".to_string(),
-)]));
+users_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
-    ("UserTypeId".to_string(), "user_type_id".to_string()),
+    ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
 ]));
-users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+users_options.row_converter = Some(RowTypeConverter::of::<User>());
+users_options.object_converter = Some(Box::new(
+    MetaDataRowTypeConverter::of::<User>().with_references(
+        vec!["UserType".into()],
+        Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),
+            ("Opened".to_string(), "created".to_string()),
+            ("UserType".to_string(), "user_type_id".to_string()),
+            ("Version".to_string(), "version".to_string()),
+        ])),
+    ),
+));
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
@@ -5415,9 +5711,9 @@ let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unw
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
-        "UserTypeId",
+        "UserType",
         "Id",
-        Some("Name".into()),
+        None,
         datasources::EnrichmentPropertyType::Object,
     ),
     user_types_repo.clone(),
@@ -5431,40 +5727,281 @@ users_repo.add_enriched(
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
 let admin = user_types_repo.create(&mut admin).await.unwrap();
+let mut admin_role = datasources::Row::new();
+admin_role.insert("Name".into(), Value::from("admin"));
+let mut editor_role = datasources::Row::new();
+editor_role.insert("Name".into(), Value::from("editor"));
+let mut user = datasources::Row::new();
+user.insert("Login".into(), Value::from("ada"));
+user.insert("Active".into(), Value::Bool(true));
+user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+user.insert("Version".into(), Value::Int(1));
+user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+let user = users_repo.create(&mut user).await.unwrap();
+let mut viewer_role = datasources::Row::new();
+viewer_role.insert("Name".into(), Value::from("viewer"));
+let mut grace = datasources::Row::new();
+grace.insert("Login".into(), Value::from("grace"));
+grace.insert("Active".into(), Value::Bool(true));
+grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
+grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+grace.insert("Version".into(), Value::Int(1));
+grace.insert("Roles".into(), encode_rows(&[viewer_role]));
+let grace = users_repo.create(&mut grace).await.unwrap();
+let key = user.get("Key").cloned().unwrap();
+let mut loaded = users_repo
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .await
+    .unwrap()
+    .unwrap();
+let version = loaded.get("Version").cloned().unwrap();
+let mut member = datasources::Row::new();
+member.insert("Name".into(), Value::from("member"));
+let member = user_types_repo.create(&mut member).await.unwrap();
+let mut owner_role = datasources::Row::new();
+owner_role.insert("Name".into(), Value::from("owner"));
+let mut kept_admin = datasources::Row::new();
+kept_admin.insert("Name".into(), Value::from("admin"));
+let mut kept_editor = datasources::Row::new();
+kept_editor.insert("Name".into(), Value::from("editor"));
+loaded.insert("Login".into(), Value::from("ada-v2"));
+loaded.insert("UserType".into(), member.get("Id").cloned().unwrap());
+loaded.insert(
+    "Roles".into(),
+    encode_rows(&[kept_admin, kept_editor, owner_role]),
+);
+loaded.insert("Version".into(), Value::Int(2));
+let updated = users_repo
+    .update(
+        &loaded,
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+    )
+    .await
+    .unwrap();
+let current = users_repo
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .await
+    .unwrap()
+    .unwrap();
+let stale = users_repo
+    .update(
+        &loaded,
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+    )
+    .await
+    .unwrap();
+let removed = users_repo.delete(&loaded, None).await.unwrap();
+let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L269-L335)
+**Loaded**
+
+```
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
+**Updated**
+
+```
+{
+  rowsAffected: 1
+}
+```
+
+**Current**
+
+```
+{
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
+}
+```
+
+**Stale**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**Removed**
+
+```
+{
+  rowsAffected: 1
+}
+```
+
+**Gone**
+
+```
+no row
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L278-L286) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L268-L271) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L273-L276) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L288-L369)
 
 ```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+class User {
+  Key = 0;
+  Login = "";
+  Active = false;
+  Opened = "";
+  UserType = new UserType();
+  Version = 0;
+  Roles: UserRole[] = [];
+}
+
+class UserType {
+  Id = 0;
+  Name = "";
+}
+
+class UserRole {
+  UserId = 0;
+  Name = "";
+}
+
+const ds = Datasource.default;
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
-  ...createCRUDRepositoryOptions(UsersView),
+  ...createCRUDRepositoryOptions(User),
   ids: ["Key"],
-  readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  entity: "User",
+  entityMapper: casing,
   propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
     ["Opened", "created"],
-    ["UserTypeId", "user_type_id"],
+    ["UserType", "user_type_id"],
     ["Version", "version"],
   ]),
 });
 const userTypesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserType),
+  entity: "UserType",
   entityMapper: casing,
   propertyMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserRole),
+  entity: "UserRole",
   entityMapper: casing,
   propertyMappings: casing,
 });
-usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id" }, userTypesRepo);
 usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
 const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
+const user = Object.assign(new User(), {
+  Login: "ada",
+  Active: true,
+  Opened: "2020-01-01T00:00:00.000Z",
+  UserType: admin,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
+});
+const created = await usersRepo.create(user);
+const grace = await usersRepo.create(Object.assign(new User(), {
+  Login: "grace",
+  Active: true,
+  Opened: "2024-06-01T00:00:00.000Z",
+  UserType: admin,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "viewer" })],
+}));
+const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
+const version = loaded!.Version;
+const member = await userTypesRepo.create(Object.assign(new UserType(), { Name: "member" }));
+loaded!.Login = "ada-v2";
+loaded!.UserType = member;
+loaded!.Roles.push(Object.assign(new UserRole(), { Name: "owner" }));
+loaded!.Version = version + 1;
+const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
+const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const removed = await usersRepo.delete(loaded!);
+const gone = await usersRepo.readSingleById(loaded!.Key);
+```
+
+**Loaded**
+
+```
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
+**Updated**
+
+```
+{
+  rowsAffected: 1
+}
+```
+
+**Current**
+
+```
+{
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
+}
+```
+
+**Stale**
+
+```
+{
+  rowsAffected: 0
+}
+```
+
+**Removed**
+
+```
+{
+  rowsAffected: 1
+}
+```
+
+**Gone**
+
+```
+no row
 ```
 
 Schema: [user-view-version](#user-view-version)
@@ -6192,25 +6729,21 @@ Repository read is convert, then map. See [Type Converters](#type-converters) an
 
 #### Simple readonly
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L36-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L49-L72)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
-await Execute(connection, """
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    """);
+var ds = Datasource.Default;
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    PropertyMappings = Snake,
+    PropertyMappings = Snake(),
 });
 
 var byId = await repo.ReadSingle(new Where("Id", eq, 1));
-var disabled = new List<User>();
-await foreach (var row in repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)))
-    disabled.Add(row);
+var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq, 0)).SingleAsync();
 ```
 
 **After: by id**
@@ -6235,35 +6768,43 @@ await foreach (var row in repo.Read(new Where("Username", eq, "grace").And("IsEn
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L64-L100)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L68-L113)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
+let ds = default().unwrap();
 execute_sql(
     &connection,
-    "
-    INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    ",
+    "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)",
+)
+.await;
+execute_sql(
+    &connection,
+    "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)",
+)
+.await;
+execute_sql(
+    &connection,
+    "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
 let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
-options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(snake());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let by_id = repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
     .unwrap()
     .unwrap();
-let disabled = repo
+let row = repo
     .read(
         Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
         None,
     )
     .await
+    .unwrap()
+    .into_iter()
+    .next()
     .unwrap();
 ```
 
@@ -6289,23 +6830,19 @@ let disabled = repo
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L68-L90)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L76-L94)
 
 ```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
-await executeSql(connection, `
-  INSERT INTO users (id, username, is_enabled) VALUES
-    (1, 'ada', 1),
-    (2, 'grace', 0);
-`);
+const ds = Datasource.default;
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
 const repo = ds.createReadonlyRepository(User, connection, {
-  entityMapper: snakeThenPlural,
-  propertyMappings: snake,
+  entityMapper: snakeThenPlural(),
+  propertyMappings: snake(),
 });
 const byId = await repo.readSingle(new Where("Id", eq, 1));
-const disabled: User[] = [];
-for await (const row of repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)))
-  disabled.push(row);
+const [row] = await Array.fromAsync(repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)));
 ```
 
 **After: by id**
@@ -6340,14 +6877,14 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 A handwritten object converter assigns each column. `ObjectConverter` / `objectConverter` / `object_converter` replaces [MetaDataRowTypeConverter](#metadata-row-type-converter), so the read does not reflect.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L65-L80) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L82-L106)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L74-L89) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L91-L115)
 
 ```csharp
 sealed class UserConverter : TypeConverter<User, Row>
 {
     public override User Convert(Row from) => new()
     {
-        Id = (int)(long)from["Id"].ToObject()!,
+        Id = (long)from["Id"].ToObject()!,
         Username = (string)from["Username"].ToObject()!,
         IsEnabled = (bool)from["IsEnabled"].ToObject()!
     };
@@ -6370,7 +6907,7 @@ await Execute(connection, """
 var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    PropertyMappings = Snake,
+    PropertyMappings = Snake(),
     ObjectConverter = new UserConverter()
 });
 
@@ -6387,7 +6924,7 @@ var user = await usersRepo.ReadSingle(new Where("Id", eq, 1));
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L104-L126) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L128-L156)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L117-L139) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L141-L169)
 
 ```rust
 impl TypeConverter<Row, Row> for UserConverter {
@@ -6427,7 +6964,7 @@ execute_sql(
 .await;
 let mut options = create_crud_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
-options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(snake());
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
 let user = users_repo
@@ -6447,19 +6984,19 @@ let user = users_repo
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L44-L58) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L92-L110)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L44-L58) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L96-L114)
 
 ```typescript
-class UserConverter extends TypeConverter<MappedUser, Cells> {
-  convert = (from: Cells): MappedUser => {
-    const user = new MappedUser();
+class UserConverter extends TypeConverter<User, Cells> {
+  convert = (from: Cells): User => {
+    const user = new User();
     user.Id = from.Id as number;
     user.Username = from.Username as string;
     user.IsEnabled = from.IsEnabled === true;
     return user;
   };
 
-  reverseConvert = (to: MappedUser): Cells => ({
+  reverseConvert = (to: User): Cells => ({
     Id: to.Id,
     Username: to.Username,
     IsEnabled: to.IsEnabled ? 1 : 0,
@@ -6472,9 +7009,9 @@ await executeSql(connection, `
     (1, 'ada', 1),
     (2, 'grace', 0);
 `);
-const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
-  entityMapper: snakeThenPlural,
-  propertyMappings: snake,
+const usersRepo = ds.createReadonlyRepository(User, connection, {
+  entityMapper: snakeThenPlural(),
+  propertyMappings: snake(),
   objectConverter: new UserConverter(),
 });
 const user = await usersRepo.readSingle(new Where("Id", eq, 1));
@@ -6500,7 +7037,7 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 `UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](#change-casing-mapper) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L185-L228)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L331-L374)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -6548,7 +7085,7 @@ var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L274-L346)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L287-L359)
 
 ```rust
 let built = datasource();
@@ -6623,7 +7160,7 @@ users_view.remove("UserTypeId");
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L164-L201)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L168-L205)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -6677,7 +7214,7 @@ CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, 
 
 #### Read a user by guid, username, and created
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L108-L147)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L117-L156)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -6746,7 +7283,7 @@ await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", 
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L158-L222)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L171-L235)
 
 ```rust
 let built = datasource();
@@ -6837,7 +7374,7 @@ let later = repo
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L112-L147)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L116-L151)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -7082,7 +7619,7 @@ const items = await collectAsync(parentsRepo.read());
 
 The repository type is `UsersView`. The select reads `User`, joined to `UserType`, `UserRole`, and `Role`. Nested enrichment groups each user's `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L317-L399)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L463-L545)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -7201,7 +7738,7 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L530-L588)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L543-L601)
 
 ```rust
 options.entity = "User".into();
@@ -8534,12 +9071,12 @@ See [Bulk repository](#bulk-repository) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L467-L499)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L621-L653)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var ds = Datasource.Default;
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
+var usersRepo = ds.CreateRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
     PropertyMappings = casing,
     Ids = ["Id"],
@@ -8590,15 +9127,14 @@ ada-v2
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L685-L737)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L653-L705)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
+let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.ids = vec!["Id".into()];
-let users_repo = CRUDRepository::new(connection, options).unwrap();
+let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
@@ -8631,7 +9167,6 @@ let gone = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
     .unwrap();
-assert!(matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0));
 ```
 
 **Created**
@@ -8668,12 +9203,12 @@ ada-v2
 no row
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L217-L244)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L229-L256)
 
 ```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const ds = Datasource.default;
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-const usersRepo = new CRUDRepository(connection, {
+const usersRepo = ds.createRepository(User, connection, {
   ...createCRUDRepositoryOptions(User),
   propertyMappings: casing,
   ids: ["Id"],
@@ -8954,7 +9489,7 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L525-L558)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L679-L712)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -8991,7 +9526,7 @@ ada-v2
 grace
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L870-L916)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L928-L974)
 
 ```rust
 let built = datasource();
@@ -9043,7 +9578,7 @@ ada-v2
 grace
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L345-L375)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L379-L409)
 
 ```typescript
 const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
@@ -9351,23 +9886,22 @@ CREATE TABLE contact_change_log (id int, uuid uuid NOT NULL, created datetime NO
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L601-L674)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L206-L293)
 
 ```csharp
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var ds = Datasource.Default;
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
     Ids = ["Key"],
-    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    EntityMapper = casing,
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
         ["Active"] = "is_enabled",
         ["Opened"] = "created",
-        ["UserTypeId"] = "user_type_id",
+        ["UserType"] = "user_type_id",
         ["Version"] = "version",
     }),
 });
@@ -9383,9 +9917,40 @@ var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryO
     EntityMapper = casing,
     PropertyMappings = casing,
 });
-usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
+usersRepo.AddEnriched(new("UserType", "UserType", "Id"), userTypesRepo);
 usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
+var user = new User
+{
+    Login = "ada",
+    Active = true,
+    Opened = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserType = admin,
+    Version = 1,
+    Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
+};
+var created = await usersRepo.Create(user);
+var grace = await usersRepo.Create(new User
+{
+    Login = "grace",
+    Active = true,
+    Opened = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserType = admin,
+    Version = 1,
+    Roles = [new UserRole { Name = "viewer" }],
+});
+var loaded = await usersRepo.ReadSingle(new Where("Key", eq, user.Key));
+var version = loaded!.Version;
+var member = await userTypesRepo.Create(new UserType { Name = "member" });
+loaded.Login = "ada-v2";
+loaded.UserType = member;
+loaded.Roles.Add(new UserRole { Name = "owner" });
+loaded.Version = version + 1;
+var updated = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var current = await usersRepo.ReadSingle(new Where("Key", eq, loaded.Key));
+var stale = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var removed = await usersRepo.Delete(loaded);
+var gone = await usersRepo.ReadSingleById(loaded.Key);
 ```
 
 **Created**
@@ -9406,13 +9971,35 @@ var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 }
 ```
 
+**Loaded**
+
+```
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
 **Versioned update**
 
 ```
 {
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
 }
 ```
 
@@ -9430,26 +10017,36 @@ var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L856)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L760-L913)
 
 ```rust
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let mut users_options = create_crud_repository_options::<UsersView>();
+let ds = default().unwrap();
+let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
-users_options.entity_mapper = Box::new(DictionaryMapper::new([(
-    "UsersView".to_string(),
-    "user".to_string(),
-)]));
+users_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
-    ("UserTypeId".to_string(), "user_type_id".to_string()),
+    ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
 ]));
-users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+users_options.row_converter = Some(RowTypeConverter::of::<User>());
+users_options.object_converter = Some(Box::new(
+    MetaDataRowTypeConverter::of::<User>().with_references(
+        vec!["UserType".into()],
+        Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),
+            ("Opened".to_string(), "created".to_string()),
+            ("UserType".to_string(), "user_type_id".to_string()),
+            ("Version".to_string(), "version".to_string()),
+        ])),
+    ),
+));
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
@@ -9469,9 +10066,9 @@ let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unw
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
-        "UserTypeId",
+        "UserType",
         "Id",
-        Some("Name".into()),
+        None,
         datasources::EnrichmentPropertyType::Object,
     ),
     user_types_repo.clone(),
@@ -9485,6 +10082,72 @@ users_repo.add_enriched(
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
 let admin = user_types_repo.create(&mut admin).await.unwrap();
+let mut admin_role = datasources::Row::new();
+admin_role.insert("Name".into(), Value::from("admin"));
+let mut editor_role = datasources::Row::new();
+editor_role.insert("Name".into(), Value::from("editor"));
+let mut user = datasources::Row::new();
+user.insert("Login".into(), Value::from("ada"));
+user.insert("Active".into(), Value::Bool(true));
+user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+user.insert("Version".into(), Value::Int(1));
+user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+let user = users_repo.create(&mut user).await.unwrap();
+let mut viewer_role = datasources::Row::new();
+viewer_role.insert("Name".into(), Value::from("viewer"));
+let mut grace = datasources::Row::new();
+grace.insert("Login".into(), Value::from("grace"));
+grace.insert("Active".into(), Value::Bool(true));
+grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
+grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+grace.insert("Version".into(), Value::Int(1));
+grace.insert("Roles".into(), encode_rows(&[viewer_role]));
+let grace = users_repo.create(&mut grace).await.unwrap();
+let key = user.get("Key").cloned().unwrap();
+let mut loaded = users_repo
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .await
+    .unwrap()
+    .unwrap();
+let version = loaded.get("Version").cloned().unwrap();
+let mut member = datasources::Row::new();
+member.insert("Name".into(), Value::from("member"));
+let member = user_types_repo.create(&mut member).await.unwrap();
+let mut owner_role = datasources::Row::new();
+owner_role.insert("Name".into(), Value::from("owner"));
+let mut kept_admin = datasources::Row::new();
+kept_admin.insert("Name".into(), Value::from("admin"));
+let mut kept_editor = datasources::Row::new();
+kept_editor.insert("Name".into(), Value::from("editor"));
+loaded.insert("Login".into(), Value::from("ada-v2"));
+loaded.insert("UserType".into(), member.get("Id").cloned().unwrap());
+loaded.insert(
+    "Roles".into(),
+    encode_rows(&[kept_admin, kept_editor, owner_role]),
+);
+loaded.insert("Version".into(), Value::Int(2));
+let updated = users_repo
+    .update(
+        &loaded,
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+    )
+    .await
+    .unwrap();
+let current = users_repo
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .await
+    .unwrap()
+    .unwrap();
+let stale = users_repo
+    .update(
+        &loaded,
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+    )
+    .await
+    .unwrap();
+let removed = users_repo.delete(&loaded, None).await.unwrap();
+let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 
 **Created**
@@ -9505,13 +10168,35 @@ let admin = user_types_repo.create(&mut admin).await.unwrap();
 }
 ```
 
+**Loaded**
+
+```
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
 **Versioned update**
 
 ```
 {
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
 }
 ```
 
@@ -9529,38 +10214,69 @@ let admin = user_types_repo.create(&mut admin).await.unwrap();
 no row
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L269-L335)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#L288-L369)
 
 ```typescript
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const ds = Datasource.default;
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
-  ...createCRUDRepositoryOptions(UsersView),
+  ...createCRUDRepositoryOptions(User),
   ids: ["Key"],
-  readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-  entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+  entity: "User",
+  entityMapper: casing,
   propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
     ["Opened", "created"],
-    ["UserTypeId", "user_type_id"],
+    ["UserType", "user_type_id"],
     ["Version", "version"],
   ]),
 });
 const userTypesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserType),
+  entity: "UserType",
   entityMapper: casing,
   propertyMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserRole),
+  entity: "UserRole",
   entityMapper: casing,
   propertyMappings: casing,
 });
-usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id" }, userTypesRepo);
 usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
 const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
+const user = Object.assign(new User(), {
+  Login: "ada",
+  Active: true,
+  Opened: "2020-01-01T00:00:00.000Z",
+  UserType: admin,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
+});
+const created = await usersRepo.create(user);
+const grace = await usersRepo.create(Object.assign(new User(), {
+  Login: "grace",
+  Active: true,
+  Opened: "2024-06-01T00:00:00.000Z",
+  UserType: admin,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "viewer" })],
+}));
+const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
+const version = loaded!.Version;
+const member = await userTypesRepo.create(Object.assign(new UserType(), { Name: "member" }));
+loaded!.Login = "ada-v2";
+loaded!.UserType = member;
+loaded!.Roles.push(Object.assign(new UserRole(), { Name: "owner" }));
+loaded!.Version = version + 1;
+const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
+const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const removed = await usersRepo.delete(loaded!);
+const gone = await usersRepo.readSingleById(loaded!.Key);
 ```
 
 **Created**
@@ -9581,13 +10297,35 @@ const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "
 }
 ```
 
+**Loaded**
+
+```
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
 **Versioned update**
 
 ```
 {
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
 }
 ```
 
@@ -14916,7 +15654,7 @@ var user = converter.Convert(new Row
 });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L115-L128)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L117-L130)
 
 ```rust
 let converter = MetaDataRowTypeConverter::of::<User>();
@@ -22874,7 +23612,7 @@ parentsRepo.AddEnriched(
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L450-L518)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L463-L531)
 
 ```rust
 let built = datasource();
@@ -23180,7 +23918,7 @@ await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
 var items = parents.Cast<Parent>();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L520-L629)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L533-L642)
 
 ```rust
 let built = datasource();

@@ -173,8 +173,16 @@ const parseTo = (text, stop) => {
 const VALUE_ASSERT =
   /^(Assert\.(Equal|True|False|Same|NotSame|Empty|NotEmpty|Null|NotNull|StartsWith|Contains|IsType)|assert_eq!|assert_ne!|expect\(.+\)\.(toBe|toEqual|toStrictEqual))/;
 
-const extractBody = (code) =>
-  /^(?:pub(?:\([^)]*\))? +)?impl\b/.test(code.trim()) || !leadingWrapper(code) ? code : (interior(code) ?? "");
+const extractBody = (code) => {
+  const trimmed = code.trim();
+  if (/^(?:pub(?:\([^)]*\))? +)?impl\b/.test(trimmed) || !leadingWrapper(code)) return code;
+  const lines = code.split("\n");
+  let i = 0;
+  while (i < lines.length && (!lines[i].trim() || ATTRIBUTE.test(lines[i]))) i++;
+  const attributed = lines.slice(0, i).some((line) => ATTRIBUTE.test(line));
+  if (!attributed && /^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+/.test(lines[i] ?? "")) return code;
+  return interior(code) ?? "";
+};
 
 const stripTrailingValueAsserts = (body) => {
   const lines = body.split("\n");
@@ -207,7 +215,7 @@ const stripHarness = (body) => {
   const lines = body.replace(/^\n+/, "").split("\n");
   while (
     lines[0] &&
-    /^(?:(?:DatasourceFactory\.)?reset|clear_env|arrange)\(\);$|^let _guard = super::env_lock\(\);$/.test(
+    /^(?:(?:DatasourceFactory\.)?reset|clear_env|arrange)\(\);$|^let _guard = super(?:::super)*::env_lock\(\);$/.test(
       lines[0].trim(),
     )
   )

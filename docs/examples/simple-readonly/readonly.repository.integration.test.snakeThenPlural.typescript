@@ -1,0 +1,6 @@
+function snakeThenPlural() {
+  return new TransformMapper(
+    (name: string) => new PluralizerMapper().map(snake().map(name)),
+    (name: string) => snake().reverseMap(new PluralizerMapper().reverseMap(name)),
+  );
+}

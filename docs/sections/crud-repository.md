@@ -1075,11 +1075,31 @@ grace
 }
 ```
 
+```output [Loaded]
+{
+  Key: 1,
+  Login: 'ada',
+  Active: true,
+  UserType: {
+    Id: 1,
+    Name: 'admin'
+  },
+  Roles: ['admin', 'editor'],
+  Version: 1
+}
+```
+
 ```output [Versioned update]
 {
-  rowsAffected: 1,
-  version: 2,
-  Login: 'ada-v2'
+  Key: 1,
+  Login: 'ada-v2',
+  Active: true,
+  UserType: {
+    Id: 2,
+    Name: 'member'
+  },
+  Roles: ['admin', 'editor', 'owner'],
+  Version: 2
 }
 ```
 

@@ -1,0 +1,5 @@
+class User {
+  Id = 0;
+  Username = "";
+  IsEnabled = false;
+}

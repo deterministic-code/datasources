@@ -1,0 +1,4 @@
+static IMapper<string, string> Snake()
+{
+    return new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
+}

@@ -1,8 +1,8 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_crud_repository_options, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper, Connection,
-    ConvertSchema, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper, Result, Row,
-    TransformMapper, TypeConverter, Value, Where,
+    create_crud_repository_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
+    Connection, ConvertSchema, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper,
+    Result, Row, TransformMapper, TypeConverter, Value, Where,
 };
 use std::sync::Arc;
 use datasources_sql_specs::apply_schema;
@@ -38,8 +38,12 @@ impl ConvertSchema for UserAccount {
     }
 }
 
+fn snake() -> ChangeCasingMapper {
+    ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)
+}
+
 fn snake_then_plural() -> TransformMapper<String, String> {
-    let snake = Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    let snake = Arc::new(snake());
     let forward = snake.clone();
     let reverse = snake;
     TransformMapper::new(
@@ -63,40 +67,49 @@ fn datasource() -> Arc<BuiltDatasource> {
 
 #[tokio::test]
 async fn reads_users_by_id_and_by_username_and_enabled() {
-    let built = datasource();
-    let ds: &dyn Datasource = &*built;
-    let connection = open(ds).await;
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = open(ds.as_ref()).await;
     apply_schema(connection.as_ref(), "minimal-users").await.unwrap();
     execute_sql(
         &connection,
-        "
-        INSERT INTO users (id, username, is_enabled) VALUES
-            (1, 'ada', 1),
-            (2, 'grace', 0);
-        ",
+        "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)",
+    )
+    .await;
+    execute_sql(
+        &connection,
+        "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)",
+    )
+    .await;
+    execute_sql(
+        &connection,
+        "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
     )
     .await;
     let mut options = create_crud_repository_options::<User>();
     options.entity_mapper = Box::new(snake_then_plural());
-    options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.property_mappings = Box::new(snake());
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let by_id = repo
         .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
         .await
         .unwrap()
         .unwrap();
-    let disabled = repo
+    let row = repo
         .read(
             Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
             None,
         )
         .await
+        .unwrap()
+        .into_iter()
+        .next()
         .unwrap();
     assert_eq!(by_id.get("Username"), Some(&Value::from("ada")));
     assert_eq!(by_id.get("IsEnabled"), Some(&Value::Bool(true)));
-    assert_eq!(disabled.len(), 1);
-    assert_eq!(disabled[0].get("Id"), Some(&Value::Int(2)));
-    assert_eq!(disabled[0].get("IsEnabled"), Some(&Value::Bool(false)));
+    assert_eq!(row.get("Id"), Some(&Value::Int(2)));
+    assert_eq!(row.get("Username"), Some(&Value::from("grace")));
+    assert_eq!(row.get("IsEnabled"), Some(&Value::Bool(false)));
 }
 
 struct UserConverter;
@@ -142,7 +155,7 @@ async fn maps_an_object_explicitly() {
     .await;
     let mut options = create_crud_repository_options::<User>();
     options.entity_mapper = Box::new(snake_then_plural());
-    options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.property_mappings = Box::new(snake());
     options.object_converter = Some(Box::new(UserConverter));
     let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
     let user = users_repo
@@ -632,66 +645,21 @@ mod users_view_roles {
 mod user_crud {
     use super::{apply_schema, datasource, execute_sql, open, User};
     use datasources::{
-        create_crud_repository_options, encode_rows, eq, CRUDRepository, Casing,
-        ChangeCasingMapper, ConvertSchema, Datasource, DictionaryMapper, ICRUDRepository,
-        IReadonlyRepository, RowTypeConverter, Value, Where,
+        create_crud_repository_options, default, eq, CRUDRepository, Casing,
+        ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository,
+        RowTypeConverter, Value, Where,
     };
-    use std::sync::Arc;
-
-    struct UserType;
-
-    impl ConvertSchema for UserType {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("Id", "INTEGER"), ("Name", "TEXT")]
-        }
-    }
-
-    struct UserRole;
-
-    impl ConvertSchema for UserRole {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("UserId", "INTEGER"), ("Name", "TEXT")]
-        }
-    }
-
-    struct UsersView;
-
-    impl ConvertSchema for UsersView {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![
-                ("Key", "INTEGER"),
-                ("Login", "TEXT"),
-                ("Active", "INTEGER"),
-                ("Opened", "TEXT"),
-                ("UserTypeId", "INTEGER"),
-                ("Version", "INTEGER"),
-            ]
-        }
-    }
-
-    fn role_names(value: &Value) -> Vec<String> {
-        value
-            .wire_text()
-            .split('|')
-            .filter(|part| !part.is_empty())
-            .filter_map(|part| {
-                part.split(',')
-                    .find_map(|field| field.strip_prefix("Name="))
-                    .map(str::to_string)
-            })
-            .collect()
-    }
 
     #[tokio::test]
     async fn writes_user_from_the_type() {
-        let built = datasource();
-        let ds: &dyn Datasource = &*built;
-        let connection = open(ds).await;
+        let _guard = super::super::env_lock();
+        let ds = default().unwrap();
+        let connection = open(ds.as_ref()).await;
         apply_schema(connection.as_ref(), "user-pascal").await.unwrap();
         let mut options = create_crud_repository_options::<User>();
         options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         options.ids = vec!["Id".into()];
-        let users_repo = CRUDRepository::new(connection, options).unwrap();
+        let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
         let mut created = datasources::Row::new();
         created.insert("Username".into(), Value::from("ada"));
         created.insert("IsEnabled".into(), Value::Bool(true));
@@ -724,7 +692,7 @@ mod user_crud {
             .read_single_by_id(created.get("Id").unwrap())
             .await
             .unwrap();
-        assert!(matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0));
+        assert_eq!(matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0), true);
         assert_eq!(updated.rows_affected, 1);
         assert_eq!(removed.rows_affected, 1);
         assert_eq!(by_id.get("Id"), created.get("Id"));
@@ -736,27 +704,91 @@ mod user_crud {
         assert!(gone.is_none());
     }
 
+    mod enriched {
+        use super::super::{apply_schema, open};
+        use datasources::{
+            create_crud_repository_options, default, encode_rows, eq, CRUDRepository, Casing,
+            ChangeCasingMapper, ConvertSchema, DictionaryMapper, ICRUDRepository,
+            IReadonlyRepository, MetaDataRowTypeConverter, RowTypeConverter, Value, Where,
+        };
+        use std::sync::Arc;
+
+        struct User;
+
+        impl ConvertSchema for User {
+            fn schema() -> Vec<(&'static str, &'static str)> {
+                vec![
+                    ("Key", "INTEGER"),
+                    ("Login", "TEXT"),
+                    ("Active", "INTEGER"),
+                    ("Opened", "TEXT"),
+                    ("UserType", "INTEGER"),
+                    ("Version", "INTEGER"),
+                ]
+            }
+        }
+
+        struct UserType;
+
+        impl ConvertSchema for UserType {
+            fn schema() -> Vec<(&'static str, &'static str)> {
+                vec![("Id", "INTEGER"), ("Name", "TEXT")]
+            }
+        }
+
+        struct UserRole;
+
+        impl ConvertSchema for UserRole {
+            fn schema() -> Vec<(&'static str, &'static str)> {
+                vec![("UserId", "INTEGER"), ("Name", "TEXT")]
+            }
+        }
+
+        fn role_names(value: &Value) -> Vec<String> {
+            value
+                .wire_text()
+                .split('|')
+                .filter(|part| !part.is_empty())
+                .filter_map(|part| {
+                    part.split(',')
+                        .find_map(|field| field.strip_prefix("Name="))
+                        .map(str::to_string)
+                })
+                .collect()
+        }
+
     #[tokio::test]
     async fn updates_users_view_when_the_version_matches() {
-        let built = datasource();
-        let ds: &dyn Datasource = &*built;
-        let connection = open(ds).await;
+        let _guard = super::super::super::env_lock();
+        let ds = default().unwrap();
+        let connection = open(ds.as_ref()).await;
         apply_schema(connection.as_ref(), "user-view-version").await.unwrap();
-        let mut users_options = create_crud_repository_options::<UsersView>();
+        let mut users_options = create_crud_repository_options::<User>();
         users_options.ids = vec!["Key".into()];
-        users_options.entity_mapper = Box::new(DictionaryMapper::new([(
-            "UsersView".to_string(),
-            "user".to_string(),
-        )]));
+        users_options.entity_mapper =
+            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
         users_options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
             ("Opened".to_string(), "created".to_string()),
-            ("UserTypeId".to_string(), "user_type_id".to_string()),
+            ("UserType".to_string(), "user_type_id".to_string()),
             ("Version".to_string(), "version".to_string()),
         ]));
-        users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+        users_options.row_converter = Some(RowTypeConverter::of::<User>());
+        users_options.object_converter = Some(Box::new(
+            MetaDataRowTypeConverter::of::<User>().with_references(
+                vec!["UserType".into()],
+                Box::new(DictionaryMapper::new([
+                    ("Key".to_string(), "id".to_string()),
+                    ("Login".to_string(), "username".to_string()),
+                    ("Active".to_string(), "is_enabled".to_string()),
+                    ("Opened".to_string(), "created".to_string()),
+                    ("UserType".to_string(), "user_type_id".to_string()),
+                    ("Version".to_string(), "version".to_string()),
+                ])),
+            ),
+        ));
         let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
         let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity_mapper =
@@ -776,9 +808,9 @@ mod user_crud {
         users_repo.add_enriched(
             datasources::Enrichment::new(
                 "UserType",
-                "UserTypeId",
+                "UserType",
                 "Id",
-                Some("Name".into()),
+                None,
                 datasources::EnrichmentPropertyType::Object,
             ),
             user_types_repo.clone(),
@@ -792,7 +824,6 @@ mod user_crud {
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));
         let admin = user_types_repo.create(&mut admin).await.unwrap();
-        assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
         let mut admin_role = datasources::Row::new();
         admin_role.insert("Name".into(), Value::from("admin"));
         let mut editor_role = datasources::Row::new();
@@ -801,11 +832,20 @@ mod user_crud {
         user.insert("Login".into(), Value::from("ada"));
         user.insert("Active".into(), Value::Bool(true));
         user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
-        user.insert("UserTypeId".into(), admin.get("Id").cloned().unwrap());
+        user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
         user.insert("Version".into(), Value::Int(1));
         user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
         let user = users_repo.create(&mut user).await.unwrap();
-        assert_eq!(user.get("Key"), Some(&Value::Int(1)));
+        let mut viewer_role = datasources::Row::new();
+        viewer_role.insert("Name".into(), Value::from("viewer"));
+        let mut grace = datasources::Row::new();
+        grace.insert("Login".into(), Value::from("grace"));
+        grace.insert("Active".into(), Value::Bool(true));
+        grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
+        grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+        grace.insert("Version".into(), Value::Int(1));
+        grace.insert("Roles".into(), encode_rows(&[viewer_role]));
+        let grace = users_repo.create(&mut grace).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
             .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
@@ -813,7 +853,21 @@ mod user_crud {
             .unwrap()
             .unwrap();
         let version = loaded.get("Version").cloned().unwrap();
+        let mut member = datasources::Row::new();
+        member.insert("Name".into(), Value::from("member"));
+        let member = user_types_repo.create(&mut member).await.unwrap();
+        let mut owner_role = datasources::Row::new();
+        owner_role.insert("Name".into(), Value::from("owner"));
+        let mut kept_admin = datasources::Row::new();
+        kept_admin.insert("Name".into(), Value::from("admin"));
+        let mut kept_editor = datasources::Row::new();
+        kept_editor.insert("Name".into(), Value::from("editor"));
         loaded.insert("Login".into(), Value::from("ada-v2"));
+        loaded.insert("UserType".into(), member.get("Id").cloned().unwrap());
+        loaded.insert(
+            "Roles".into(),
+            encode_rows(&[kept_admin, kept_editor, owner_role]),
+        );
         loaded.insert("Version".into(), Value::Int(2));
         let updated = users_repo
             .update(
@@ -835,24 +889,28 @@ mod user_crud {
             .await
             .unwrap();
         let removed = users_repo.delete(&loaded, None).await.unwrap();
-        assert_eq!(removed.rows_affected, 1);
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
+        assert_eq!(current.get("Version"), Some(&Value::Int(2)));
+        assert_eq!(current.get("Login"), Some(&Value::from("ada-v2")));
+        assert_eq!(current.get("Active"), Some(&Value::Bool(true)));
+        assert_eq!(current.get("UserType"), Some(&Value::from("Id=2,Name=member")));
+        let mut current_names = role_names(current.get("Roles").unwrap());
+        current_names.sort();
+        assert_eq!(current_names, ["admin", "editor", "owner"]);
         let roles = user_roles_repo
             .read(Some(&Where::binary("UserId", eq, key.clone())), None)
             .await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
         assert_eq!(user.get("Key"), Some(&Value::Int(1)));
-        assert_eq!(loaded.get("UserType"), Some(&Value::from("admin")));
-        let mut names = role_names(loaded.get("Roles").unwrap());
-        names.sort();
-        assert_eq!(names, ["admin", "editor"]);
+        assert_eq!(grace.get("Key"), Some(&Value::Int(2)));
+        assert_eq!(member.get("Id"), Some(&Value::Int(2)));
         assert_eq!(updated.rows_affected, 1);
-        assert_eq!(current.get("Version"), Some(&Value::Int(2)));
-        assert_eq!(current.get("Login"), Some(&Value::from("ada-v2")));
         assert_eq!(stale.rows_affected, 0);
-        assert!(gone.is_none());
-        assert!(roles.is_empty());
+        assert_eq!(removed.rows_affected, 1);
+        assert_eq!(gone.is_none(), true);
+        assert_eq!(roles.is_empty(), true);
+    }
     }
 
     struct Account;

@@ -41,8 +41,8 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## Repositories
 
 - [Simple readonly](./sections/repository.md#simple-readonly)
-- [CRUD](./sections/repository.md#crud)
-- [Enriched CRUD](./sections/repository.md#enriched-crud)
+- [Create, Read, Update, and Delete](./sections/repository.md#create-read-update-and-delete)
+- [Enriched Create, Read, Update, and Delete](./sections/repository.md#enriched-create-read-update-and-delete)
 - [Bulk](./sections/repository.md#bulk)
 
 ## Readonly Repository

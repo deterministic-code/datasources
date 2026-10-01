@@ -1,0 +1,4 @@
+class UserRole {
+  UserId = 0;
+  Name = "";
+}

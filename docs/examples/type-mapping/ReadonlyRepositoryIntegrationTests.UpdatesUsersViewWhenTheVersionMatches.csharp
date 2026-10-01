@@ -1,17 +1,16 @@
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+var ds = Datasource.Default;
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOptions<UsersView>
+var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
     Ids = ["Key"],
-    ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-    EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
+    EntityMapper = casing,
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
         ["Active"] = "is_enabled",
         ["Opened"] = "created",
-        ["UserTypeId"] = "user_type_id",
+        ["UserType"] = "user_type_id",
         ["Version"] = "version",
     }),
 });
@@ -27,6 +26,37 @@ var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryO
     EntityMapper = casing,
     PropertyMappings = casing,
 });
-usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
+usersRepo.AddEnriched(new("UserType", "UserType", "Id"), userTypesRepo);
 usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
+var user = new User
+{
+    Login = "ada",
+    Active = true,
+    Opened = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserType = admin,
+    Version = 1,
+    Roles = [new UserRole { Name = "admin" }, new UserRole { Name = "editor" }],
+};
+var created = await usersRepo.Create(user);
+var grace = await usersRepo.Create(new User
+{
+    Login = "grace",
+    Active = true,
+    Opened = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+    UserType = admin,
+    Version = 1,
+    Roles = [new UserRole { Name = "viewer" }],
+});
+var loaded = await usersRepo.ReadSingle(new Where("Key", eq, user.Key));
+var version = loaded!.Version;
+var member = await userTypesRepo.Create(new UserType { Name = "member" });
+loaded.Login = "ada-v2";
+loaded.UserType = member;
+loaded.Roles.Add(new UserRole { Name = "owner" });
+loaded.Version = version + 1;
+var updated = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var current = await usersRepo.ReadSingle(new Where("Key", eq, loaded.Key));
+var stale = await usersRepo.Update(loaded, new Where("Key", eq, loaded.Key).And("Version", eq, version));
+var removed = await usersRepo.Delete(loaded);
+var gone = await usersRepo.ReadSingleById(loaded.Key);

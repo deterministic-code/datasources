@@ -1,0 +1,60 @@
+const ds = Datasource.default;
+const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
+const usersRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(User),
+  ids: ["Key"],
+  entity: "User",
+  entityMapper: casing,
+  propertyMappings: new DictionaryMapper([
+    ["Key", "id"],
+    ["Login", "username"],
+    ["Active", "is_enabled"],
+    ["Opened", "created"],
+    ["UserType", "user_type_id"],
+    ["Version", "version"],
+  ]),
+});
+const userTypesRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UserType),
+  entity: "UserType",
+  entityMapper: casing,
+  propertyMappings: casing,
+});
+const userRolesRepo = new CRUDRepository(connection, {
+  ...createCRUDRepositoryOptions(UserRole),
+  entity: "UserRole",
+  entityMapper: casing,
+  propertyMappings: casing,
+});
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id" }, userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
+const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
+const user = Object.assign(new User(), {
+  Login: "ada",
+  Active: true,
+  Opened: "2020-01-01T00:00:00.000Z",
+  UserType: admin,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
+});
+const created = await usersRepo.create(user);
+const grace = await usersRepo.create(Object.assign(new User(), {
+  Login: "grace",
+  Active: true,
+  Opened: "2024-06-01T00:00:00.000Z",
+  UserType: admin,
+  Version: 1,
+  Roles: [Object.assign(new UserRole(), { Name: "viewer" })],
+}));
+const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
+const version = loaded!.Version;
+const member = await userTypesRepo.create(Object.assign(new UserType(), { Name: "member" }));
+loaded!.Login = "ada-v2";
+loaded!.UserType = member;
+loaded!.Roles.push(Object.assign(new UserRole(), { Name: "owner" }));
+loaded!.Version = version + 1;
+const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
+const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
+const removed = await usersRepo.delete(loaded!);
+const gone = await usersRepo.readSingleById(loaded!.Key);

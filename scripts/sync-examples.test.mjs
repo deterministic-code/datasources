@@ -27,6 +27,27 @@ const csharp = `public class IdentityMapperTests
 }
 `;
 
+test("prefixes a later C# type when the name is already used", () => {
+  const source = `public class First
+{
+    sealed class User
+    {
+        public int Id { get; set; }
+    }
+}
+public class Second
+{
+    record User
+    {
+        public long Key { get; set; }
+    }
+}
+`;
+  const names = findRegions(source, "csharp").map((region) => region.name);
+  assert.ok(names.includes("User"));
+  assert.ok(names.includes("second-User"));
+});
+
 test("names a C# fact and the span of its method", () => {
   const regions = findRegions(csharp, "csharp");
   const fact = regions.find((region) => region.name === "MapsAndReversesTheSameValue");
@@ -118,6 +139,7 @@ test("drops open and apply and keeps the schema name", () => {
 
 test("drops a leading env lock and arrange", () => {
   const raw = [
+    "#[tokio::test]",
     "fn create_default_from_env_settings() {",
     "    let _guard = super::env_lock();",
     "    arrange();",
@@ -130,6 +152,14 @@ test("drops a leading env lock and arrange", () => {
     exampleCode(raw),
     "let ds = default().expect(\"default\");\nlet command = ds.create_command(None);",
   );
+  const nested = [
+    "#[tokio::test]",
+    "fn writes_user_from_the_type() {",
+    "    let _guard = super::super::env_lock();",
+    "    let ds = default().unwrap();",
+    "}",
+  ].join("\n");
+  assert.equal(exampleCode(nested), "let ds = default().unwrap();");
 });
 
 test("drops a truncated tokio test wrapper", () => {
@@ -165,6 +195,13 @@ test("keeps an it() body that contains a template", () => {
     exampleCode(raw),
     "const sql = `\n  INSERT INTO user VALUES ('${ada}', 'ada');\n`;\nconst repo = ds.createReadonlyRepository(User);",
   );
+});
+
+test("keeps a rust helper function", () => {
+  const raw = ["fn snake() -> ChangeCasingMapper {", "    ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)", "}"].join(
+    "\n",
+  );
+  assert.equal(exampleCode(raw), raw);
 });
 
 test("keeps a fn that appears after the sample starts", () => {

@@ -1,20 +1,30 @@
-let built = datasource();
-let ds: &dyn Datasource = &*built;
-let mut users_options = create_crud_repository_options::<UsersView>();
+let ds = default().unwrap();
+let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
-users_options.entity_mapper = Box::new(DictionaryMapper::new([(
-    "UsersView".to_string(),
-    "user".to_string(),
-)]));
+users_options.entity_mapper =
+    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
-    ("UserTypeId".to_string(), "user_type_id".to_string()),
+    ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
 ]));
-users_options.row_converter = Some(RowTypeConverter::of::<UsersView>());
+users_options.row_converter = Some(RowTypeConverter::of::<User>());
+users_options.object_converter = Some(Box::new(
+    MetaDataRowTypeConverter::of::<User>().with_references(
+        vec!["UserType".into()],
+        Box::new(DictionaryMapper::new([
+            ("Key".to_string(), "id".to_string()),
+            ("Login".to_string(), "username".to_string()),
+            ("Active".to_string(), "is_enabled".to_string()),
+            ("Opened".to_string(), "created".to_string()),
+            ("UserType".to_string(), "user_type_id".to_string()),
+            ("Version".to_string(), "version".to_string()),
+        ])),
+    ),
+));
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
@@ -34,9 +44,9 @@ let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unw
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
-        "UserTypeId",
+        "UserType",
         "Id",
-        Some("Name".into()),
+        None,
         datasources::EnrichmentPropertyType::Object,
     ),
     user_types_repo.clone(),
@@ -50,3 +60,69 @@ users_repo.add_enriched(
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
 let admin = user_types_repo.create(&mut admin).await.unwrap();
+let mut admin_role = datasources::Row::new();
+admin_role.insert("Name".into(), Value::from("admin"));
+let mut editor_role = datasources::Row::new();
+editor_role.insert("Name".into(), Value::from("editor"));
+let mut user = datasources::Row::new();
+user.insert("Login".into(), Value::from("ada"));
+user.insert("Active".into(), Value::Bool(true));
+user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
+user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+user.insert("Version".into(), Value::Int(1));
+user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
+let user = users_repo.create(&mut user).await.unwrap();
+let mut viewer_role = datasources::Row::new();
+viewer_role.insert("Name".into(), Value::from("viewer"));
+let mut grace = datasources::Row::new();
+grace.insert("Login".into(), Value::from("grace"));
+grace.insert("Active".into(), Value::Bool(true));
+grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
+grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
+grace.insert("Version".into(), Value::Int(1));
+grace.insert("Roles".into(), encode_rows(&[viewer_role]));
+let grace = users_repo.create(&mut grace).await.unwrap();
+let key = user.get("Key").cloned().unwrap();
+let mut loaded = users_repo
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .await
+    .unwrap()
+    .unwrap();
+let version = loaded.get("Version").cloned().unwrap();
+let mut member = datasources::Row::new();
+member.insert("Name".into(), Value::from("member"));
+let member = user_types_repo.create(&mut member).await.unwrap();
+let mut owner_role = datasources::Row::new();
+owner_role.insert("Name".into(), Value::from("owner"));
+let mut kept_admin = datasources::Row::new();
+kept_admin.insert("Name".into(), Value::from("admin"));
+let mut kept_editor = datasources::Row::new();
+kept_editor.insert("Name".into(), Value::from("editor"));
+loaded.insert("Login".into(), Value::from("ada-v2"));
+loaded.insert("UserType".into(), member.get("Id").cloned().unwrap());
+loaded.insert(
+    "Roles".into(),
+    encode_rows(&[kept_admin, kept_editor, owner_role]),
+);
+loaded.insert("Version".into(), Value::Int(2));
+let updated = users_repo
+    .update(
+        &loaded,
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+    )
+    .await
+    .unwrap();
+let current = users_repo
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .await
+    .unwrap()
+    .unwrap();
+let stale = users_repo
+    .update(
+        &loaded,
+        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+    )
+    .await
+    .unwrap();
+let removed = users_repo.delete(&loaded, None).await.unwrap();
+let gone = users_repo.read_single_by_id(&key).await.unwrap();

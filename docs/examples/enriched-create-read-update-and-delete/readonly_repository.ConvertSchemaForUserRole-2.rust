@@ -1,0 +1,5 @@
+impl ConvertSchema for UserRole {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![("UserId", "INTEGER"), ("Name", "TEXT")]
+    }
+}

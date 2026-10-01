@@ -1,6 +1,6 @@
-const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+const ds = Datasource.default;
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-const usersRepo = new CRUDRepository(connection, {
+const usersRepo = ds.createRepository(User, connection, {
   ...createCRUDRepositoryOptions(User),
   propertyMappings: casing,
   ids: ["Id"],
