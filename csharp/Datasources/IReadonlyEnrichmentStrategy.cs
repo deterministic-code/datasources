@@ -10,7 +10,7 @@ public interface IReadonlyEnrichmentStrategy<T>
 
     Task ApplyLinked<TRelated, TLink>(
         IReadonlyRepository<TRelated> via,
-        ICRUDRepository<TLink> link,
+        IReadonlyRepository<TLink> link,
         Enrichment enrichment,
         IList<T> parents,
         IReadOnlyList<Row?>? sources = null);

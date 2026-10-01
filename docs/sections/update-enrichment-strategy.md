@@ -14,40 +14,12 @@ abstract class UpdateEnrichmentStrategy<T>
 
 **Methods**
 
-##### updateOwned(entry, enrichment, parent)
+##### updateOwned(writer, enrichment, parent)
 
 Writes the owned `List` for one parent.
 
 ```typescript
-abstract updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
-```
-
-- `entry` — [StoredEnrichment](#storedenrichment)
-- `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
-
-**Returns** `Promise<void>`
-
-##### updateLinked(entry, enrichment, parent)
-
-Writes the junction rows for one parent.
-
-```typescript
-abstract updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
-```
-
-- `entry` — [StoredEnrichment](#storedenrichment)
-- `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
-
-**Returns** `Promise<void>`
-
-##### createChildren(writer, enrichment, parent)
-
-Stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates the payload.
-
-```typescript
-createChildren(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -56,70 +28,19 @@ createChildren(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: 
 
 **Returns** `Promise<void>`
 
-##### createLinks(writer, enrichment, parent)
+##### updateLinked(writer, enrichment, parent)
 
-Inserts one junction row per related id.
+Writes the junction rows for one parent.
 
 ```typescript
-createLinks(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
-- `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
+- `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 
 **Returns** `Promise<void>`
-
-#### StoredEnrichment
-
-```typescript
-class StoredEnrichment
-```
-
-One registered edge. Update and delete strategies receive it.
-
-**Constructor**
-
-##### new StoredEnrichment(enrichment, apply, persist?, link?)
-
-Stores one edge.
-
-```typescript
-constructor(enrichment: Enrichment, apply: ApplyEnrichment, persist?: ICRUDRepository<object>, link?: ICRUDRepository<object>)
-```
-
-- `enrichment` — [Enrichment](./enrichment.md)
-- `apply` — read fill for this edge
-- `persist` — child [ICRUDRepository](./crud-repository.md) for an owned list
-- `link` — junction [ICRUDRepository](./crud-repository.md)
-
-**Returns** [StoredEnrichment](#storedenrichment)
-
-**Properties**
-
-##### enrichment
-
-The registered [Enrichment](./enrichment.md).
-
-```typescript
-readonly enrichment: Enrichment
-```
-
-##### persist
-
-Child repository for an owned list.
-
-```typescript
-persist?: ICRUDRepository<object>
-```
-
-##### link
-
-Junction repository for an association.
-
-```typescript
-link?: ICRUDRepository<object>
-```
 
 ### csharp
 #### UpdateEnrichmentStrategy
@@ -130,50 +51,112 @@ public abstract class UpdateEnrichmentStrategy<T>
 
 **Methods**
 
-##### UpdateOwned(entry, enrichment, parent)
+##### UpdateOwned(writer, enrichment, parent)
 
 Writes the owned `List` for one parent.
 
 ```csharp
-public abstract Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
-- `entry` — [StoredEnrichment](#storedenrichment)
+- `writer` — child [IChildPersist](#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 
 **Returns** `Task`
 
-##### UpdateLinked(entry, enrichment, parent)
+##### UpdateLinked(writer, enrichment, parent)
 
 Writes the junction rows for one parent.
 
 ```csharp
-public abstract Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
-- `entry` — [StoredEnrichment](#storedenrichment)
+- `writer` — link [IChildPersist](#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 
 **Returns** `Task`
 
-#### StoredEnrichment
+#### IChildPersist
 
 ```csharp
-public sealed class StoredEnrichment
+public interface IChildPersist
 ```
 
-One registered edge. Update and delete strategies receive it.
+Erased CRUD writer for an owned list or junction.
+
+**Methods**
+
+##### Create(item)
+
+Creates one child or link row.
+
+```csharp
+Task<object> Create(object item)
+```
+
+- `item` — row to create
+
+**Returns** `Task<object>`
+
+##### Update(item, byWhere)
+
+Updates one child or link row.
+
+```csharp
+Task<Response> Update(object item, IWhere? byWhere = null)
+```
+
+- `item` — row to update
+- `byWhere` — optional predicate
+
+**Returns** `Task` of `Response`
+
+##### Delete(item, byWhere)
+
+Deletes one child or link row.
+
+```csharp
+Task<Response> Delete(object item, IWhere? byWhere = null)
+```
+
+- `item` — row to delete
+- `byWhere` — optional predicate
+
+**Returns** `Task` of `Response`
+
+##### Read(where)
+
+Reads child or link rows.
+
+```csharp
+IAsyncEnumerable<object> Read(IWhere where)
+```
+
+- `where` — filter
+
+**Returns** `IAsyncEnumerable<object>`
+
+##### New()
+
+Builds an empty child or link row.
+
+```csharp
+object New()
+```
+
+**Returns** `object`
 
 **Properties**
 
-##### Enrichment
+##### Ids
 
-The registered [Enrichment](./enrichment.md).
+Id property names on the child or link type.
 
 ```csharp
-public Enrichment Enrichment { get; }
+IReadOnlyList<string> Ids { get; }
 ```
 
 ### rust
@@ -185,88 +168,38 @@ pub trait UpdateEnrichmentStrategy: Send + Sync
 
 **Methods**
 
-##### update_owned(entry, enrichment, parent)
+##### update_owned(writer, enrichment, parent)
 
 Writes the owned `List` for one parent.
 
 ```rust
-async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
-- `entry` — [StoredEnrichment](#storedenrichment)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent row
 
 **Returns** `Result<()>`
 
-##### update_linked(entry, enrichment, parent)
+##### update_linked(writer, enrichment, parent)
 
 Writes the junction rows for one parent.
 
 ```rust
-async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
-- `entry` — [StoredEnrichment](#storedenrichment)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent row
 
 **Returns** `Result<()>`
-
-#### StoredEnrichment
-
-```rust
-pub struct StoredEnrichment
-```
-
-One registered edge. Update and delete strategies receive it.
-
-**Properties**
-
-##### enrichment
-
-The registered [Enrichment](./enrichment.md).
-
-```rust
-pub enrichment: Enrichment
-```
-
-##### via
-
-Related read repository.
-
-```rust
-pub via: Arc<dyn IReadonlyRepository>
-```
-
-##### persist
-
-Child repository for an owned list.
-
-```rust
-pub persist: Option<Arc<dyn ICRUDRepository>>
-```
-
-##### link
-
-Junction repository for an association.
-
-```rust
-pub link: Option<Arc<dyn ICRUDRepository>>
-```
-
-##### strategy
-
-Read strategy for this edge.
-
-```rust
-pub strategy: Arc<dyn ReadonlyEnrichmentStrategy>
-```
 :::
 
 ## Remarks
 
-Create uses the same child and link inserts as an update of a new parent. A subclass implements the two update methods. TypeScript also exposes `createChildren` and `createLinks`. Pass a subclass to [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md).
+A subclass implements the two update methods. Pass a subclass to [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md). Create uses [CreateEnrichmentStrategy](./create-enrichment-strategy.md).
 
 ## Examples
 

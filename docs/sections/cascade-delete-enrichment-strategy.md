@@ -26,30 +26,30 @@ constructor()
 
 **Methods**
 
-##### deleteOwned(entry, enrichment, parent, deleteNested)
+##### deleteOwned(writer, enrichment, parent, deleteNested)
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```typescript
-deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 - `deleteNested` — deletes nested rows of the children before the children themselves
 
 **Returns** `Promise<void>`
 
-##### deleteLinked(entry, enrichment, parent)
+##### deleteLinked(writer, enrichment, parent)
 
 Deletes junction rows for the parent key. Related rows stay.
 
 ```typescript
-deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
 - `parent` — parent object
 
@@ -76,30 +76,30 @@ public CascadeDeleteEnrichmentStrategy()
 
 **Methods**
 
-##### DeleteOwned(entry, enrichment, parent, deleteNested)
+##### DeleteOwned(writer, enrichment, parent, deleteNested)
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```csharp
-public override Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 - `deleteNested` — deletes nested rows of the children before the children themselves
 
 **Returns** `Task`
 
-##### DeleteLinked(entry, enrichment, parent)
+##### DeleteLinked(writer, enrichment, parent)
 
 Deletes junction rows for the parent key. Related rows stay.
 
 ```csharp
-public override Task DeleteLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task DeleteLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
 - `parent` — parent object
 
@@ -114,30 +114,30 @@ pub struct CascadeDeleteEnrichmentStrategy
 
 **Methods**
 
-##### delete_owned(entry, enrichment, parent, delete_nested)
+##### delete_owned(writer, enrichment, parent, delete_nested)
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```rust
-async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent row
 - `delete_nested` — deletes nested rows of the children before the children themselves
 
 **Returns** `Result<()>`
 
-##### delete_linked(entry, enrichment, parent)
+##### delete_linked(writer, enrichment, parent)
 
 Deletes junction rows for the parent key. Related rows stay.
 
 ```rust
-async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row) -> Result<()>
+async fn delete_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row) -> Result<()>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
 - `parent` — parent row
 

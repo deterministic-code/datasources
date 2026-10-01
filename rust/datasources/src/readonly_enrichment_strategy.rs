@@ -1,6 +1,6 @@
 use crate::default_write_enrichment_strategy::{encode_row, encode_rows};
 use crate::enrichment::Enrichment;
-use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
@@ -20,10 +20,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
     ) -> Result<()> {
         match enrichment.r#type {
             crate::EnrichmentPropertyType::List => {
-                self.apply_many(via, enrichment, parents, sources).await
+                self.apply_list(via, enrichment, parents, sources).await
             }
             crate::EnrichmentPropertyType::Object => {
-                self.apply_lookup(via, enrichment, parents, sources).await
+                self.apply_object(via, enrichment, parents, sources).await
             }
             crate::EnrichmentPropertyType::Dictionary | crate::EnrichmentPropertyType::Custom => {
                 Err(crate::DatasourceError::message(format!(
@@ -34,7 +34,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
         }
     }
 
-    async fn apply_lookup(
+    async fn apply_object(
         &self,
         via: Arc<dyn IReadonlyRepository>,
         enrichment: &Enrichment,
@@ -74,7 +74,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
         Ok(())
     }
 
-    async fn apply_many(
+    async fn apply_list(
         &self,
         via: Arc<dyn IReadonlyRepository>,
         enrichment: &Enrichment,
@@ -109,7 +109,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
     async fn apply_linked(
         &self,
         via: Arc<dyn IReadonlyRepository>,
-        link: Arc<dyn ICRUDRepository>,
+        link: Arc<dyn IReadonlyRepository>,
         enrichment: &Enrichment,
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,

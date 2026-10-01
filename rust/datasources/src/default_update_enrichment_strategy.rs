@@ -1,17 +1,17 @@
-use crate::datasource_error::DatasourceError;
 use crate::default_write_enrichment_strategy::{
     decode_rows, encode_rows, related_ids, required, row_key,
 };
 use crate::delete_enrichment_strategy::load;
 use crate::enrichment::Enrichment;
+use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 pub struct DefaultUpdateEnrichmentStrategy;
 
@@ -19,16 +19,10 @@ pub struct DefaultUpdateEnrichmentStrategy;
 impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
     async fn update_owned(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()> {
-        let writer = entry.persist.as_ref().ok_or_else(|| {
-            DatasourceError::message(format!(
-                "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.destination_property
-            ))
-        })?;
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         let mut related = decode_rows(parent.get(&enrichment.destination_property));
         if let Some(key) = parent.get(&enrichment.source_property).cloned() {
@@ -71,20 +65,14 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
 
     async fn update_linked(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()> {
         let association = enrichment
             .association
             .as_ref()
-            .ok_or_else(|| DatasourceError::message("Missing association"))?;
-        let writer = entry.link.as_ref().ok_or_else(|| {
-            DatasourceError::message(format!(
-                "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.destination_property
-            ))
-        })?;
+            .ok_or_else(|| crate::DatasourceError::message("Missing association"))?;
         let parent_key = required(
             parent,
             &enrichment.source_property,

@@ -2,7 +2,6 @@ import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
-import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
@@ -21,15 +20,15 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   ): Promise<void> {
     const type = enrichment.type ?? EnrichmentPropertyType.Object;
     const run = {
-      [EnrichmentPropertyType.List]: () => this.applyMany(via, enrichment, parents, sources),
-      [EnrichmentPropertyType.Object]: () => this.applyLookup(via, enrichment, parents, sources),
+      [EnrichmentPropertyType.List]: () => this.applyList(via, enrichment, parents, sources),
+      [EnrichmentPropertyType.Object]: () => this.applyObject(via, enrichment, parents, sources),
     }[type];
     return run ? run() : Promise.reject(new DatasourceError(`Unsupported enrichment type "${type}"`));
   }
 
   async applyLinked<TRelated extends object, TLink extends object>(
     via: IReadonlyRepository<TRelated>,
-    link: ICRUDRepository<TLink>,
+    link: IReadonlyRepository<TLink>,
     enrichment: Enrichment,
     parents: T[],
     sources?: (Row | undefined)[],
@@ -53,7 +52,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     }
   }
 
-  protected async applyLookup<TRelated extends object>(
+  protected async applyObject<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
     parents: T[],
@@ -77,7 +76,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     }
   }
 
-  protected async applyMany<TRelated extends object>(
+  protected async applyList<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
     parents: T[],

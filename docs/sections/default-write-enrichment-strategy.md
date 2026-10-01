@@ -1,6 +1,6 @@
 # DefaultWriteEnrichmentStrategy
 
-Default nested write. Create writes children and links after the parent. Update uses [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md). Delete uses [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md). Both can be replaced.
+Default nested write. Create uses [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md). Update uses [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md). Delete uses [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md). Each can be replaced.
 
 ## Classes
 
@@ -14,16 +14,17 @@ class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrategy<T>
 
 **Constructor**
 
-##### new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?)
+##### new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, createStrategy?, useTransaction?)
 
 Builds the default write strategy.
 
 ```typescript
-constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, useTransaction?: boolean)
+constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, createStrategy?: CreateEnrichmentStrategy<T>, useTransaction?: boolean)
 ```
 
 - `deleteStrategy` — [DeleteEnrichmentStrategy](./delete-enrichment-strategy.md). Omitted uses [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md)
 - `updateStrategy` — [UpdateEnrichmentStrategy](./update-enrichment-strategy.md). Omitted uses [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md)
+- `createStrategy` — [CreateEnrichmentStrategy](./create-enrichment-strategy.md). Omitted uses [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md)
 - `useTransaction` — commit the parent write and nested persist together. Off by default
 
 **Returns** [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy)
@@ -63,16 +64,17 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 
 **Constructor**
 
-##### DefaultWriteEnrichmentStrategy(delete, update, useTransaction)
+##### DefaultWriteEnrichmentStrategy(delete, update, create, useTransaction)
 
 Builds the default write strategy.
 
 ```csharp
-public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, bool useTransaction = false)
+public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, CreateEnrichmentStrategy<T>? create = null, bool useTransaction = false)
 ```
 
 - `delete` — [DeleteEnrichmentStrategy](./delete-enrichment-strategy.md). Omitted uses [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md)
 - `update` — [UpdateEnrichmentStrategy](./update-enrichment-strategy.md). Omitted uses [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md)
+- `create` — [CreateEnrichmentStrategy](./create-enrichment-strategy.md). Omitted uses [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md)
 - `useTransaction` — commit the parent write and nested persist together. Off by default
 
 **Returns** [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy)`<T>`
@@ -112,30 +114,32 @@ pub struct DefaultWriteEnrichmentStrategy
 
 **Constructor**
 
-##### new(delete, update, use_transaction)
+##### new(delete, update, create, use_transaction)
 
 Builds the default write strategy.
 
 ```rust
-pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> Self
+pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, create: Option<Arc<dyn CreateEnrichmentStrategy>>, use_transaction: bool) -> Self
 ```
 
 - `delete` — [DeleteEnrichmentStrategy](./delete-enrichment-strategy.md). Omitted uses [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md)
 - `update` — [UpdateEnrichmentStrategy](./update-enrichment-strategy.md). Omitted uses [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md)
+- `create` — [CreateEnrichmentStrategy](./create-enrichment-strategy.md). Omitted uses [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md)
 - `use_transaction` — commit the parent write and nested persist together
 
 **Returns** [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy)
 
-##### lazy(delete, update, use_transaction)
+##### lazy(delete, update, create, use_transaction)
 
 Builds the same strategy and skips a null list on create and update. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) returns this.
 
 ```rust
-pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> Self
+pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, create: Option<Arc<dyn CreateEnrichmentStrategy>>, use_transaction: bool) -> Self
 ```
 
 - `delete` — [DeleteEnrichmentStrategy](./delete-enrichment-strategy.md). Omitted uses [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md)
 - `update` — [UpdateEnrichmentStrategy](./update-enrichment-strategy.md). Omitted uses [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md)
+- `create` — [CreateEnrichmentStrategy](./create-enrichment-strategy.md). Omitted uses [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md)
 - `use_transaction` — commit the parent write and nested persist together
 
 **Returns** [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy)
@@ -169,7 +173,7 @@ async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMod
 
 ## Remarks
 
-Set it on the repository `write` option. Create writes the parent, stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips that null list. Nested writes join the transaction when they use the same connection.
+Set it on the repository `write` option. Create, update, and delete each delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips that null list. Nested writes join the transaction when they use the same connection.
 
 ## Examples
 

@@ -1,5 +1,5 @@
 const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
   type: Parent,
-  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
+  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, undefined, true),
 });
 const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));

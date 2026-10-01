@@ -500,6 +500,10 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Skip unloaded lists](#skip-unloaded-lists)
 
+### CreateEnrichmentStrategy
+
+### DefaultCreateEnrichmentStrategy
+
 ### UpdateEnrichmentStrategy
 
 - [Replace children](#replace-children)
@@ -656,9 +660,17 @@ CREATE TABLE users (id int, username string, email string, contact_name1 string,
 
 ## The Mapping and Converting Pipelines
 
-`Read` / `read` / `read` on a [readonly repository](#readonly-repository) calls `ExecuteReader` / `executeReader` / `execute_reader`. Each row then passes through three steps: rename datasource column names to property names, convert provider cell types, and assign the row onto the entity.
+We will describe the primary mapping and converting pipelines used in Datasource below. These include:
+
+- [The ReadonlyRepository read mapper and converting pipeline](#the-readonlyrepository-read-mapper-and-converting-pipeline)
+- The statement mapping and converting pipeline (TODO)
+- The SelectedIdMapping pipeline (TODO)
+
+Words are great to describe these steps, but showing an example is worth more than a thousand words.
 
 ### The ReadonlyRepository read mapper and converting pipeline
+
+This is the primary pipeline that maps and converts datasource rows to the entities used in the domain layer. We stop short of [object enrichment](#enrichment) and leave that for another discussion.
 
 ```mermaid
 flowchart LR
@@ -667,11 +679,13 @@ flowchart LR
 
 #### Map datasource column names to object property names
 
-The [reader](#reader) yields a row keyed by datasource column names. The repository renames each key with the property mapper's reverse map.
+The reader returns raw rows (key/value pairs) which are renamed to the object property names using the mapper.
 
 #### Convert row using provider
 
 `RowConverter` / `rowConverter` / `row_converter` converts the renamed row from provider cell types to object cell types. The keys stay the same. A SQLite bool stored as `1` or `0` becomes `true` or `false`. Uuid and datetime text become guid and datetime values where the dialect supports them.
+
+Since the datasource type often can be mapped to multiple object types (string for example) the column type from the entity object must also be passed in.
 
 #### Convert row to entity object
 
@@ -693,7 +707,7 @@ The [reader](#reader) yields a row keyed by datasource column names. The reposit
 
 One walkthrough: seed users, read the raw rows, rename columns, convert cell types, then build entities with `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` or a manual map.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L17-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L26-L102)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L17-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L26-L123)
 
 ```csharp
 public class User
@@ -711,11 +725,32 @@ var lin = Guid.Parse("33333333-3333-3333-3333-333333333333");
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
 await command.Execute(
-    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '{ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')");
+    "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+    [
+        new Parameter("id", 1),
+        new Parameter("uuid", ada.ToString()),
+        new Parameter("name", "ada"),
+        new Parameter("is_enabled", 1),
+        new Parameter("created", "2001-01-01T00:00:00.000Z"),
+    ]);
 await command.Execute(
-    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '{grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')");
+    "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+    [
+        new Parameter("id", 2),
+        new Parameter("uuid", grace.ToString()),
+        new Parameter("name", "grace"),
+        new Parameter("is_enabled", 1),
+        new Parameter("created", "2002-02-02T00:00:00.000Z"),
+    ]);
 await command.Execute(
-    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '{lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')");
+    "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+    [
+        new Parameter("id", 3),
+        new Parameter("uuid", lin.ToString()),
+        new Parameter("name", "lin"),
+        new Parameter("is_enabled", 0),
+        new Parameter("created", "2003-03-03T00:00:00.000Z"),
+    ]);
 
 var propertyToColumnMapper = new DictionaryMapper<string>(new()
 {
@@ -806,7 +841,7 @@ var finalManualEntities = convertedRows.Select(row => new User
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L12-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L24-L148)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L12-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L24-L160)
 
 ```rust
 impl ConvertSchema for User {
@@ -829,28 +864,40 @@ let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
     .execute(
-        &format!(
-            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '{ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')"
-        ),
-        None,
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+        Some(&[
+            Parameter::new("id", 1_i64),
+            Parameter::new("uuid", ada.to_string()),
+            Parameter::new("name", "ada"),
+            Parameter::new("is_enabled", 1_i64),
+            Parameter::new("created", "2001-01-01T00:00:00.000Z"),
+        ]),
     )
     .await
     .unwrap();
 command
     .execute(
-        &format!(
-            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '{grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')"
-        ),
-        None,
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+        Some(&[
+            Parameter::new("id", 2_i64),
+            Parameter::new("uuid", grace.to_string()),
+            Parameter::new("name", "grace"),
+            Parameter::new("is_enabled", 1_i64),
+            Parameter::new("created", "2002-02-02T00:00:00.000Z"),
+        ]),
     )
     .await
     .unwrap();
 command
     .execute(
-        &format!(
-            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '{lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')"
-        ),
-        None,
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+        Some(&[
+            Parameter::new("id", 3_i64),
+            Parameter::new("uuid", lin.to_string()),
+            Parameter::new("name", "lin"),
+            Parameter::new("is_enabled", 0_i64),
+            Parameter::new("created", "2003-03-03T00:00:00.000Z"),
+        ]),
     )
     .await
     .unwrap();
@@ -941,7 +988,7 @@ let final_entities: Vec<Row> = converted_rows
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L12-L18) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L29-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L12-L18) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L29-L122)
 
 ```typescript
 class User {
@@ -958,13 +1005,34 @@ const lin = "33333333-3333-3333-3333-333333333333";
 const ds = Datasource.default;
 const command = await ds.createCommand();
 await command.execute(
-  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '${ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')`,
+  "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+  [
+    { name: "id", value: 1 },
+    { name: "uuid", value: ada },
+    { name: "name", value: "ada" },
+    { name: "is_enabled", value: 1 },
+    { name: "created", value: "2001-01-01T00:00:00.000Z" },
+  ],
 );
 await command.execute(
-  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '${grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')`,
+  "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+  [
+    { name: "id", value: 2 },
+    { name: "uuid", value: grace },
+    { name: "name", value: "grace" },
+    { name: "is_enabled", value: 1 },
+    { name: "created", value: "2002-02-02T00:00:00.000Z" },
+  ],
 );
 await command.execute(
-  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '${lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')`,
+  "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+  [
+    { name: "id", value: 3 },
+    { name: "uuid", value: lin },
+    { name: "name", value: "lin" },
+    { name: "is_enabled", value: 0 },
+    { name: "created", value: "2003-03-03T00:00:00.000Z" },
+  ],
 );
 
 const propertyToColumnMapper = new DictionaryMapper([
@@ -9484,6 +9552,7 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
 
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `RelatedKey` from the parent `SourceProperty`, then create children (and nested lists).
+- **Create** — [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) is the default. Write the parent, stamp each child's related key, then create children and links.
 - **Update** — [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) is the default. Write the parent, then replace-sync each list (delete missing, update matches by the configured id, create the rest). [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
 - **Delete** — [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default. Delete nested list rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
@@ -23331,7 +23400,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -23339,7 +23408,7 @@ applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyReposit
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23393,7 +23462,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```csharp
-Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, IReadonlyRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
@@ -23401,7 +23470,7 @@ Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDReposi
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23422,14 +23491,14 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`. |
-| [apply_lookup(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_lookup-via-enrichment-parents-sources) | Fills a scalar related value. The default reads one related row per distinct key. |
-| [apply_many(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_many-via-enrichment-parents-sources) | Fills a list. The default reads the related rows for each parent key. |
+| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. The default dispatches to `apply_object` or `apply_list`. |
+| [apply_object(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_object-via-enrichment-parents-sources) | Fills a scalar related value. The default reads one related row per distinct key. |
+| [apply_list(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_list-via-enrichment-parents-sources) | Fills a list. The default reads the related rows for each parent key. |
 | [apply_linked(via, link, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
 
 ###### apply(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
 
-Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`.
+Fills each parent from the related repository. The default dispatches to `apply_object` or `apply_list`.
 
 **Definition**
 
@@ -23450,14 +23519,14 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 
 `Result<()>`
 
-###### apply_lookup(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_lookup-via-enrichment-parents-sources}
+###### apply_object(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_object-via-enrichment-parents-sources}
 
 Fills a scalar related value. The default reads one related row per distinct key.
 
 **Definition**
 
 ```rust
-async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_object(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23473,14 +23542,14 @@ async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enr
 
 `Result<()>`
 
-###### apply_many(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_many-via-enrichment-parents-sources}
+###### apply_list(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_list-via-enrichment-parents-sources}
 
 Fills a list. The default reads the related rows for each parent key.
 
 **Definition**
 
 ```rust
-async fn apply_many(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_list(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23503,7 +23572,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23511,7 +23580,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23522,7 +23591,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 
 ### Remarks
 
-Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_lookup` and `apply_many` on this trait.
+Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the object and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_object` and `apply_list` on this trait.
 
 ### Examples
 
@@ -23641,7 +23710,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -23649,7 +23718,7 @@ applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyReposit
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23723,7 +23792,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```csharp
-public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, IReadonlyRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
@@ -23731,7 +23800,7 @@ public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> v
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23785,7 +23854,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23793,7 +23862,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -24654,14 +24723,14 @@ let created = parents
 ```typescript
 const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
   type: Parent,
-  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
+  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, undefined, true),
 });
 const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
 ```
 
 ## DefaultWriteEnrichmentStrategy
 
-Default nested write. Create writes children and links after the parent. Update uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy). Delete uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy). Both can be replaced.
+Default nested write. Create uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy). Update uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy). Delete uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy). Each can be replaced.
 
 ### Classes
 
@@ -24677,7 +24746,7 @@ class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?)](#typescript-defaultwriteenrichmentstrategy-new-defaultwriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction) | Builds the default write strategy. |
+| [new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, createStrategy?, useTransaction?)](#typescript-defaultwriteenrichmentstrategy-new-defaultwriteenrichmentstrategy-deletestrategy-updatestrategy-createstrategy-usetransaction) | Builds the default write strategy. |
 
 **Properties**
 
@@ -24691,14 +24760,14 @@ class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrategy<T>
 | --- | --- |
 | [persist(tree, items, mode)](#typescript-defaultwriteenrichmentstrategy-persist-tree-items-mode) | Walks each enrichment and writes children or links for `mode`. |
 
-###### new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?) {#typescript-defaultwriteenrichmentstrategy-new-defaultwriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction}
+###### new DefaultWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, createStrategy?, useTransaction?) {#typescript-defaultwriteenrichmentstrategy-new-defaultwriteenrichmentstrategy-deletestrategy-updatestrategy-createstrategy-usetransaction}
 
 Builds the default write strategy.
 
 **Definition**
 
 ```typescript
-constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, useTransaction?: boolean)
+constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, createStrategy?: CreateEnrichmentStrategy<T>, useTransaction?: boolean)
 ```
 
 **Parameters**
@@ -24707,6 +24776,7 @@ constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: Updat
 | --- | --- |
 | `deleteStrategy` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `updateStrategy` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `createStrategy` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `useTransaction` | commit the parent write and nested persist together. Off by default |
 
 **Returns**
@@ -24747,7 +24817,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [DefaultWriteEnrichmentStrategy(delete, update, useTransaction)](#csharp-defaultwriteenrichmentstrategy-defaultwriteenrichmentstrategy-delete-update-usetransaction) | Builds the default write strategy. |
+| [DefaultWriteEnrichmentStrategy(delete, update, create, useTransaction)](#csharp-defaultwriteenrichmentstrategy-defaultwriteenrichmentstrategy-delete-update-create-usetransaction) | Builds the default write strategy. |
 
 **Properties**
 
@@ -24761,14 +24831,14 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 | --- | --- |
 | [Persist(tree, items, mode)](#csharp-defaultwriteenrichmentstrategy-persist-tree-items-mode) | Walks each enrichment and writes children or links for `mode`. |
 
-###### DefaultWriteEnrichmentStrategy(delete, update, useTransaction) {#csharp-defaultwriteenrichmentstrategy-defaultwriteenrichmentstrategy-delete-update-usetransaction}
+###### DefaultWriteEnrichmentStrategy(delete, update, create, useTransaction) {#csharp-defaultwriteenrichmentstrategy-defaultwriteenrichmentstrategy-delete-update-create-usetransaction}
 
 Builds the default write strategy.
 
 **Definition**
 
 ```csharp
-public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, bool useTransaction = false)
+public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, CreateEnrichmentStrategy<T>? create = null, bool useTransaction = false)
 ```
 
 **Parameters**
@@ -24777,6 +24847,7 @@ public DefaultWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null
 | --- | --- |
 | `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `create` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `useTransaction` | commit the parent write and nested persist together. Off by default |
 
 **Returns**
@@ -24817,8 +24888,8 @@ pub struct DefaultWriteEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [new(delete, update, use_transaction)](#rust-defaultwriteenrichmentstrategy-new-delete-update-use_transaction) | Builds the default write strategy. |
-| [lazy(delete, update, use_transaction)](#rust-defaultwriteenrichmentstrategy-lazy-delete-update-use_transaction) | Builds the same strategy and skips a null list on create and update. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) returns this. |
+| [new(delete, update, create, use_transaction)](#rust-defaultwriteenrichmentstrategy-new-delete-update-create-use_transaction) | Builds the default write strategy. |
+| [lazy(delete, update, create, use_transaction)](#rust-defaultwriteenrichmentstrategy-lazy-delete-update-create-use_transaction) | Builds the same strategy and skips a null list on create and update. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) returns this. |
 
 **Methods**
 
@@ -24827,14 +24898,14 @@ pub struct DefaultWriteEnrichmentStrategy
 | [use_transaction()](#rust-defaultwriteenrichmentstrategy-use_transaction) | When true, the parent write and nested persist commit together. |
 | [persist(tree, items, mode)](#rust-defaultwriteenrichmentstrategy-persist-tree-items-mode) | Walks each enrichment and writes children or links for `mode`. |
 
-###### new(delete, update, use_transaction) {#rust-defaultwriteenrichmentstrategy-new-delete-update-use_transaction}
+###### new(delete, update, create, use_transaction) {#rust-defaultwriteenrichmentstrategy-new-delete-update-create-use_transaction}
 
 Builds the default write strategy.
 
 **Definition**
 
 ```rust
-pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> Self
+pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, create: Option<Arc<dyn CreateEnrichmentStrategy>>, use_transaction: bool) -> Self
 ```
 
 **Parameters**
@@ -24843,20 +24914,21 @@ pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc
 | --- | --- |
 | `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `create` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `use_transaction` | commit the parent write and nested persist together |
 
 **Returns**
 
 [DefaultWriteEnrichmentStrategy](#rust-defaultwriteenrichmentstrategy)
 
-###### lazy(delete, update, use_transaction) {#rust-defaultwriteenrichmentstrategy-lazy-delete-update-use_transaction}
+###### lazy(delete, update, create, use_transaction) {#rust-defaultwriteenrichmentstrategy-lazy-delete-update-create-use_transaction}
 
 Builds the same strategy and skips a null list on create and update. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) returns this.
 
 **Definition**
 
 ```rust
-pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> Self
+pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, create: Option<Arc<dyn CreateEnrichmentStrategy>>, use_transaction: bool) -> Self
 ```
 
 **Parameters**
@@ -24865,6 +24937,7 @@ pub fn lazy(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Ar
 | --- | --- |
 | `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `create` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `use_transaction` | commit the parent write and nested persist together |
 
 **Returns**
@@ -24909,7 +24982,7 @@ async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMod
 
 ### Remarks
 
-Set it on the repository `write` option. Create writes the parent, stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips that null list. Nested writes join the transaction when they use the same connection.
+Set it on the repository `write` option. Create, update, and delete each delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips that null list. Nested writes join the transaction when they use the same connection.
 
 ### Examples
 
@@ -24950,7 +25023,7 @@ let created = parents
 ```typescript
 const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
   type: Parent,
-  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, true),
+  write: new DefaultWriteEnrichmentStrategy(undefined, undefined, undefined, true),
 });
 const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
 ```
@@ -24973,16 +25046,16 @@ class LazyWriteEnrichmentStrategy<T> extends DefaultWriteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [new LazyWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?)](#typescript-lazywriteenrichmentstrategy-new-lazywriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction) | Builds the lazy write strategy. |
+| [new LazyWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, createStrategy?, useTransaction?)](#typescript-lazywriteenrichmentstrategy-new-lazywriteenrichmentstrategy-deletestrategy-updatestrategy-createstrategy-usetransaction) | Builds the lazy write strategy. |
 
-###### new LazyWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, useTransaction?) {#typescript-lazywriteenrichmentstrategy-new-lazywriteenrichmentstrategy-deletestrategy-updatestrategy-usetransaction}
+###### new LazyWriteEnrichmentStrategy(deleteStrategy?, updateStrategy?, createStrategy?, useTransaction?) {#typescript-lazywriteenrichmentstrategy-new-lazywriteenrichmentstrategy-deletestrategy-updatestrategy-createstrategy-usetransaction}
 
 Builds the lazy write strategy.
 
 **Definition**
 
 ```typescript
-constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, useTransaction?: boolean)
+constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: UpdateEnrichmentStrategy<T>, createStrategy?: CreateEnrichmentStrategy<T>, useTransaction?: boolean)
 ```
 
 **Parameters**
@@ -24991,6 +25064,7 @@ constructor(deleteStrategy?: DeleteEnrichmentStrategy<T>, updateStrategy?: Updat
 | --- | --- |
 | `deleteStrategy` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `updateStrategy` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `createStrategy` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `useTransaction` | commit the parent write and nested persist together. Off by default |
 
 **Returns**
@@ -25009,16 +25083,16 @@ public sealed class LazyWriteEnrichmentStrategy<T> : DefaultWriteEnrichmentStrat
 
 | Name | Description |
 | --- | --- |
-| [LazyWriteEnrichmentStrategy(delete, update, useTransaction)](#csharp-lazywriteenrichmentstrategy-lazywriteenrichmentstrategy-delete-update-usetransaction) | Builds the lazy write strategy. |
+| [LazyWriteEnrichmentStrategy(delete, update, create, useTransaction)](#csharp-lazywriteenrichmentstrategy-lazywriteenrichmentstrategy-delete-update-create-usetransaction) | Builds the lazy write strategy. |
 
-###### LazyWriteEnrichmentStrategy(delete, update, useTransaction) {#csharp-lazywriteenrichmentstrategy-lazywriteenrichmentstrategy-delete-update-usetransaction}
+###### LazyWriteEnrichmentStrategy(delete, update, create, useTransaction) {#csharp-lazywriteenrichmentstrategy-lazywriteenrichmentstrategy-delete-update-create-usetransaction}
 
 Builds the lazy write strategy.
 
 **Definition**
 
 ```csharp
-public LazyWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, bool useTransaction = false)
+public LazyWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, UpdateEnrichmentStrategy<T>? update = null, CreateEnrichmentStrategy<T>? create = null, bool useTransaction = false)
 ```
 
 **Parameters**
@@ -25027,6 +25101,7 @@ public LazyWriteEnrichmentStrategy(DeleteEnrichmentStrategy<T>? delete = null, U
 | --- | --- |
 | `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `create` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `useTransaction` | commit the parent write and nested persist together. Off by default |
 
 **Returns**
@@ -25045,16 +25120,16 @@ pub struct LazyWriteEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [new(delete, update, use_transaction)](#rust-lazywriteenrichmentstrategy-new-delete-update-use_transaction) | Builds a [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) that skips a null list on create and update. |
+| [new(delete, update, create, use_transaction)](#rust-lazywriteenrichmentstrategy-new-delete-update-create-use_transaction) | Builds a [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) that skips a null list on create and update. |
 
-###### new(delete, update, use_transaction) {#rust-lazywriteenrichmentstrategy-new-delete-update-use_transaction}
+###### new(delete, update, create, use_transaction) {#rust-lazywriteenrichmentstrategy-new-delete-update-create-use_transaction}
 
 Builds a [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) that skips a null list on create and update.
 
 **Definition**
 
 ```rust
-pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, use_transaction: bool) -> DefaultWriteEnrichmentStrategy
+pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc<dyn UpdateEnrichmentStrategy>>, create: Option<Arc<dyn CreateEnrichmentStrategy>>, use_transaction: bool) -> DefaultWriteEnrichmentStrategy
 ```
 
 **Parameters**
@@ -25063,6 +25138,7 @@ pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc
 | --- | --- |
 | `delete` | [DeleteEnrichmentStrategy](#deleteenrichmentstrategy). Omitted uses [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) |
 | `update` | [UpdateEnrichmentStrategy](#updateenrichmentstrategy). Omitted uses [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) |
+| `create` | [CreateEnrichmentStrategy](#createenrichmentstrategy). Omitted uses [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) |
 | `use_transaction` | commit the parent write and nested persist together |
 
 **Returns**
@@ -25130,7 +25206,7 @@ var removed = await userViewRepo.Delete(new UserView { Id = created.Id, Roles = 
 
 ```rust
 let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(
-    None, None, false,
+    None, None, None, false,
 ))))
 .await;
 link(&mut users, &seeded);
@@ -25219,6 +25295,420 @@ CREATE TABLE user_roles (user_id int NOT NULL, role_id int NOT NULL, CONSTRAINT 
 CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAINT pk_user_groups PRIMARY KEY (user_id, group_id))
 ```
 
+## CreateEnrichmentStrategy
+
+How a create writes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods after the parent row is created. [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) is the default.
+
+### Classes
+
+##### TypeScript
+
+##### CreateEnrichmentStrategy {#typescript-createenrichmentstrategy}
+
+```typescript
+abstract class CreateEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [createOwned(writer, enrichment, parent)](#typescript-createenrichmentstrategy-createowned-writer-enrichment-parent) | Creates the owned `List` for one parent. |
+| [createLinked(writer, enrichment, parent)](#typescript-createenrichmentstrategy-createlinked-writer-enrichment-parent) | Creates the junction rows for one parent. |
+
+###### createOwned(writer, enrichment, parent) {#typescript-createenrichmentstrategy-createowned-writer-enrichment-parent}
+
+Creates the owned `List` for one parent.
+
+**Definition**
+
+```typescript
+abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### createLinked(writer, enrichment, parent) {#typescript-createenrichmentstrategy-createlinked-writer-enrichment-parent}
+
+Creates the junction rows for one parent.
+
+**Definition**
+
+```typescript
+abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### CreateEnrichmentStrategy {#csharp-createenrichmentstrategy}
+
+```csharp
+public abstract class CreateEnrichmentStrategy<T>
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [CreateOwned(writer, enrichment, parent)](#csharp-createenrichmentstrategy-createowned-writer-enrichment-parent) | Creates the owned `List` for one parent. |
+| [CreateLinked(writer, enrichment, parent)](#csharp-createenrichmentstrategy-createlinked-writer-enrichment-parent) | Creates the junction rows for one parent. |
+
+###### CreateOwned(writer, enrichment, parent) {#csharp-createenrichmentstrategy-createowned-writer-enrichment-parent}
+
+Creates the owned `List` for one parent.
+
+**Definition**
+
+```csharp
+public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+###### CreateLinked(writer, enrichment, parent) {#csharp-createenrichmentstrategy-createlinked-writer-enrichment-parent}
+
+Creates the junction rows for one parent.
+
+**Definition**
+
+```csharp
+public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### CreateEnrichmentStrategy {#rust-createenrichmentstrategy}
+
+```rust
+pub trait CreateEnrichmentStrategy: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create_owned(writer, enrichment, parent)](#rust-createenrichmentstrategy-create_owned-writer-enrichment-parent) | Creates the owned `List` for one parent. |
+| [create_linked(writer, enrichment, parent)](#rust-createenrichmentstrategy-create_linked-writer-enrichment-parent) | Creates the junction rows for one parent. |
+
+###### create_owned(writer, enrichment, parent) {#rust-createenrichmentstrategy-create_owned-writer-enrichment-parent}
+
+Creates the owned `List` for one parent.
+
+**Definition**
+
+```rust
+async fn create_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+###### create_linked(writer, enrichment, parent) {#rust-createenrichmentstrategy-create_linked-writer-enrichment-parent}
+
+Creates the junction rows for one parent.
+
+**Definition**
+
+```rust
+async fn create_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+Pass a subclass as the `create` argument of [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy). The default [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) stamps each child's `RelatedKey` from the parent `SourceProperty`, then inserts children and links.
+
+## DefaultCreateEnrichmentStrategy
+
+Default create fill. Stamps each child's `RelatedKey` from the parent `SourceProperty`, then inserts the payload children and junction rows.
+
+### Classes
+
+##### TypeScript
+
+##### DefaultCreateEnrichmentStrategy {#typescript-defaultcreateenrichmentstrategy}
+
+```typescript
+class DefaultCreateEnrichmentStrategy<T> extends CreateEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new DefaultCreateEnrichmentStrategy()](#typescript-defaultcreateenrichmentstrategy-new-defaultcreateenrichmentstrategy) | Builds the default create strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [createOwned(writer, enrichment, parent)](#typescript-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent) | Stamps each child and creates the payload. |
+| [createLinked(writer, enrichment, parent)](#typescript-defaultcreateenrichmentstrategy-createlinked-writer-enrichment-parent) | Inserts one junction row per related id. |
+
+###### new DefaultCreateEnrichmentStrategy() {#typescript-defaultcreateenrichmentstrategy-new-defaultcreateenrichmentstrategy}
+
+Builds the default create strategy.
+
+**Definition**
+
+```typescript
+constructor()
+```
+
+**Returns**
+
+[DefaultCreateEnrichmentStrategy](#typescript-defaultcreateenrichmentstrategy)
+
+###### createOwned(writer, enrichment, parent) {#typescript-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent}
+
+Stamps each child and creates the payload.
+
+**Definition**
+
+```typescript
+createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+###### createLinked(writer, enrichment, parent) {#typescript-defaultcreateenrichmentstrategy-createlinked-writer-enrichment-parent}
+
+Inserts one junction row per related id.
+
+**Definition**
+
+```typescript
+createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Promise<void>`
+
+##### C#
+
+##### DefaultCreateEnrichmentStrategy {#csharp-defaultcreateenrichmentstrategy}
+
+```csharp
+public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrategy<T>
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DefaultCreateEnrichmentStrategy()](#csharp-defaultcreateenrichmentstrategy-defaultcreateenrichmentstrategy) | Builds the default create strategy. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [CreateOwned(writer, enrichment, parent)](#csharp-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent) | Stamps each child and creates the payload. |
+| [CreateLinked(writer, enrichment, parent)](#csharp-defaultcreateenrichmentstrategy-createlinked-writer-enrichment-parent) | Inserts one junction row per related id. |
+
+###### DefaultCreateEnrichmentStrategy() {#csharp-defaultcreateenrichmentstrategy-defaultcreateenrichmentstrategy}
+
+Builds the default create strategy.
+
+**Definition**
+
+```csharp
+public DefaultCreateEnrichmentStrategy()
+```
+
+**Returns**
+
+[DefaultCreateEnrichmentStrategy](#csharp-defaultcreateenrichmentstrategy)`<T>`
+
+###### CreateOwned(writer, enrichment, parent) {#csharp-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent}
+
+Stamps each child and creates the payload.
+
+**Definition**
+
+```csharp
+public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+###### CreateLinked(writer, enrichment, parent) {#csharp-defaultcreateenrichmentstrategy-createlinked-writer-enrichment-parent}
+
+Inserts one junction row per related id.
+
+**Definition**
+
+```csharp
+public override Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
+| `parent` | parent object |
+
+**Returns**
+
+`Task`
+
+##### Rust
+
+##### DefaultCreateEnrichmentStrategy {#rust-defaultcreateenrichmentstrategy}
+
+```rust
+pub struct DefaultCreateEnrichmentStrategy
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create_owned(writer, enrichment, parent)](#rust-defaultcreateenrichmentstrategy-create_owned-writer-enrichment-parent) | Stamps each child and creates the payload. |
+| [create_linked(writer, enrichment, parent)](#rust-defaultcreateenrichmentstrategy-create_linked-writer-enrichment-parent) | Inserts one junction row per related id. |
+
+###### create_owned(writer, enrichment, parent) {#rust-defaultcreateenrichmentstrategy-create_owned-writer-enrichment-parent}
+
+Stamps each child and creates the payload.
+
+**Definition**
+
+```rust
+async fn create_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | child [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+###### create_linked(writer, enrichment, parent) {#rust-defaultcreateenrichmentstrategy-create_linked-writer-enrichment-parent}
+
+Inserts one junction row per related id.
+
+**Definition**
+
+```rust
+async fn create_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `writer` | link [ICRUDRepository](#crud-repository) |
+| `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
+| `parent` | parent row |
+
+**Returns**
+
+`Result<()>`
+
+### Remarks
+
+This is the create strategy [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) uses when `create` is omitted. [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) reuses the same insert path after it clears existing children.
+
 ## UpdateEnrichmentStrategy
 
 How an update writes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods. [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) replace-syncs. [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes, then inserts.
@@ -25237,63 +25727,17 @@ abstract class UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `List` for one parent. |
-| [updateLinked(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Writes the junction rows for one parent. |
-| [createChildren(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent) | Stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates the payload. |
-| [createLinks(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createlinks-writer-enrichment-parent) | Inserts one junction row per related id. |
+| [updateOwned(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-updateowned-writer-enrichment-parent) | Writes the owned `List` for one parent. |
+| [updateLinked(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Writes the junction rows for one parent. |
 
-###### updateOwned(entry, enrichment, parent) {#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent}
+###### updateOwned(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-updateowned-writer-enrichment-parent}
 
 Writes the owned `List` for one parent.
 
 **Definition**
 
 ```typescript
-abstract updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
-| `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
-
-**Returns**
-
-`Promise<void>`
-
-###### updateLinked(entry, enrichment, parent) {#typescript-updateenrichmentstrategy-updatelinked-entry-enrichment-parent}
-
-Writes the junction rows for one parent.
-
-**Definition**
-
-```typescript
-abstract updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
-| `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
-
-**Returns**
-
-`Promise<void>`
-
-###### createChildren(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent}
-
-Stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates the payload.
-
-**Definition**
-
-```typescript
-createChildren(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
@@ -25308,14 +25752,14 @@ createChildren(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: 
 
 `Promise<void>`
 
-###### createLinks(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-createlinks-writer-enrichment-parent}
+###### updateLinked(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-updatelinked-writer-enrichment-parent}
 
-Inserts one junction row per related id.
+Writes the junction rows for one parent.
 
 **Definition**
 
 ```typescript
-createLinks(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
@@ -25323,55 +25767,12 @@ createLinks(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 | Name | Description |
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
-| `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
+| `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
 **Returns**
 
 `Promise<void>`
-
-##### StoredEnrichment {#typescript-storedenrichment}
-
-```typescript
-class StoredEnrichment
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [new StoredEnrichment(enrichment, apply, persist?, link?)](#typescript-storedenrichment-new-storedenrichment-enrichment-apply-persist-link) | Stores one edge. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| enrichment | The registered [Enrichment](#enrichment). |
-| persist | Child repository for an owned list. |
-| link | Junction repository for an association. |
-
-###### new StoredEnrichment(enrichment, apply, persist?, link?) {#typescript-storedenrichment-new-storedenrichment-enrichment-apply-persist-link}
-
-Stores one edge.
-
-**Definition**
-
-```typescript
-constructor(enrichment: Enrichment, apply: ApplyEnrichment, persist?: ICRUDRepository<object>, link?: ICRUDRepository<object>)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `enrichment` | [Enrichment](#enrichment) |
-| `apply` | read fill for this edge |
-| `persist` | child [ICRUDRepository](#crud-repository) for an owned list |
-| `link` | junction [ICRUDRepository](#crud-repository) |
-
-**Returns**
-
-[StoredEnrichment](#typescript-storedenrichment)
 
 ##### C#
 
@@ -25385,24 +25786,24 @@ public abstract class UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `List` for one parent. |
-| [UpdateLinked(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Writes the junction rows for one parent. |
+| [UpdateOwned(writer, enrichment, parent)](#csharp-updateenrichmentstrategy-updateowned-writer-enrichment-parent) | Writes the owned `List` for one parent. |
+| [UpdateLinked(writer, enrichment, parent)](#csharp-updateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Writes the junction rows for one parent. |
 
-###### UpdateOwned(entry, enrichment, parent) {#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent}
+###### UpdateOwned(writer, enrichment, parent) {#csharp-updateenrichmentstrategy-updateowned-writer-enrichment-parent}
 
 Writes the owned `List` for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -25410,21 +25811,21 @@ public abstract Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, 
 
 `Task`
 
-###### UpdateLinked(entry, enrichment, parent) {#csharp-updateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+###### UpdateLinked(writer, enrichment, parent) {#csharp-updateenrichmentstrategy-updatelinked-writer-enrichment-parent}
 
 Writes the junction rows for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -25432,17 +25833,123 @@ public abstract Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment,
 
 `Task`
 
-##### StoredEnrichment {#csharp-storedenrichment}
+##### IChildPersist {#csharp-ichildpersist}
 
 ```csharp
-public sealed class StoredEnrichment
+public interface IChildPersist
 ```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create(item)](#csharp-ichildpersist-create-item) | Creates one child or link row. |
+| [Update(item, byWhere)](#csharp-ichildpersist-update-item-bywhere) | Updates one child or link row. |
+| [Delete(item, byWhere)](#csharp-ichildpersist-delete-item-bywhere) | Deletes one child or link row. |
+| [Read(where)](#csharp-ichildpersist-read-where) | Reads child or link rows. |
+| [New()](#csharp-ichildpersist-new) | Builds an empty child or link row. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| Enrichment | The registered [Enrichment](#enrichment). |
+| Ids | Id property names on the child or link type. |
+
+###### Create(item) {#csharp-ichildpersist-create-item}
+
+Creates one child or link row.
+
+**Definition**
+
+```csharp
+Task<object> Create(object item)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to create |
+
+**Returns**
+
+`Task<object>`
+
+###### Update(item, byWhere) {#csharp-ichildpersist-update-item-bywhere}
+
+Updates one child or link row.
+
+**Definition**
+
+```csharp
+Task<Response> Update(object item, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `byWhere` | optional predicate |
+
+**Returns**
+
+`Task` of `Response`
+
+###### Delete(item, byWhere) {#csharp-ichildpersist-delete-item-bywhere}
+
+Deletes one child or link row.
+
+**Definition**
+
+```csharp
+Task<Response> Delete(object item, IWhere? byWhere = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `byWhere` | optional predicate |
+
+**Returns**
+
+`Task` of `Response`
+
+###### Read(where) {#csharp-ichildpersist-read-where}
+
+Reads child or link rows.
+
+**Definition**
+
+```csharp
+IAsyncEnumerable<object> Read(IWhere where)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `where` | filter |
+
+**Returns**
+
+`IAsyncEnumerable<object>`
+
+###### New() {#csharp-ichildpersist-new}
+
+Builds an empty child or link row.
+
+**Definition**
+
+```csharp
+object New()
+```
+
+**Returns**
+
+`object`
 
 ##### Rust
 
@@ -25456,24 +25963,24 @@ pub trait UpdateEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [update_owned(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent) | Writes the owned `List` for one parent. |
-| [update_linked(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_linked-entry-enrichment-parent) | Writes the junction rows for one parent. |
+| [update_owned(writer, enrichment, parent)](#rust-updateenrichmentstrategy-update_owned-writer-enrichment-parent) | Writes the owned `List` for one parent. |
+| [update_linked(writer, enrichment, parent)](#rust-updateenrichmentstrategy-update_linked-writer-enrichment-parent) | Writes the junction rows for one parent. |
 
-###### update_owned(entry, enrichment, parent) {#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent}
+###### update_owned(writer, enrichment, parent) {#rust-updateenrichmentstrategy-update_owned-writer-enrichment-parent}
 
 Writes the owned `List` for one parent.
 
 **Definition**
 
 ```rust
-async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 
@@ -25481,21 +25988,21 @@ async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, 
 
 `Result<()>`
 
-###### update_linked(entry, enrichment, parent) {#rust-updateenrichmentstrategy-update_linked-entry-enrichment-parent}
+###### update_linked(writer, enrichment, parent) {#rust-updateenrichmentstrategy-update_linked-writer-enrichment-parent}
 
 Writes the junction rows for one parent.
 
 **Definition**
 
 ```rust
-async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 
@@ -25503,25 +26010,9 @@ async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment,
 
 `Result<()>`
 
-##### StoredEnrichment {#rust-storedenrichment}
-
-```rust
-pub struct StoredEnrichment
-```
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| enrichment | The registered [Enrichment](#enrichment). |
-| via | Related read repository. |
-| persist | Child repository for an owned list. |
-| link | Junction repository for an association. |
-| strategy | Read strategy for this edge. |
-
 ### Remarks
 
-Create uses the same child and link inserts as an update of a new parent. A subclass implements the two update methods. TypeScript also exposes `createChildren` and `createLinks`. Pass a subclass to [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy).
+A subclass implements the two update methods. Pass a subclass to [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy). Create uses [CreateEnrichmentStrategy](#createenrichmentstrategy).
 
 ### Examples
 
@@ -25645,8 +26136,8 @@ class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(entry, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
-| [updateLinked(entry, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Replaces the junction set for the parent key. |
+| [updateOwned(writer, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [updateLinked(writer, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Replaces the junction set for the parent key. |
 
 ###### new DefaultUpdateEnrichmentStrategy() {#typescript-defaultupdateenrichmentstrategy-new-defaultupdateenrichmentstrategy}
 
@@ -25662,21 +26153,21 @@ constructor()
 
 [DefaultUpdateEnrichmentStrategy](#typescript-defaultupdateenrichmentstrategy)
 
-###### updateOwned(entry, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+###### updateOwned(writer, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 **Definition**
 
 ```typescript
-updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -25684,21 +26175,21 @@ updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Pr
 
 `Promise<void>`
 
-###### updateLinked(entry, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+###### updateLinked(writer, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updatelinked-writer-enrichment-parent}
 
 Replaces the junction set for the parent key.
 
 **Definition**
 
 ```typescript
-updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
 | `parent` | parent object |
 
@@ -25724,8 +26215,8 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(entry, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
-| [UpdateLinked(entry, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Replaces the junction set for the parent key. |
+| [UpdateOwned(writer, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [UpdateLinked(writer, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Replaces the junction set for the parent key. |
 
 ###### DefaultUpdateEnrichmentStrategy() {#csharp-defaultupdateenrichmentstrategy-defaultupdateenrichmentstrategy}
 
@@ -25741,21 +26232,21 @@ public DefaultUpdateEnrichmentStrategy()
 
 [DefaultUpdateEnrichmentStrategy](#csharp-defaultupdateenrichmentstrategy)`<T>`
 
-###### UpdateOwned(entry, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+###### UpdateOwned(writer, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 **Definition**
 
 ```csharp
-public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -25763,21 +26254,21 @@ public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, 
 
 `Task`
 
-###### UpdateLinked(entry, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+###### UpdateLinked(writer, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updatelinked-writer-enrichment-parent}
 
 Replaces the junction set for the parent key.
 
 **Definition**
 
 ```csharp
-public override Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
 | `parent` | parent object |
 
@@ -25797,24 +26288,24 @@ pub struct DefaultUpdateEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [update_owned(entry, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_owned-entry-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
-| [update_linked(entry, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_linked-entry-enrichment-parent) | Replaces the junction set for the parent key. |
+| [update_owned(writer, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_owned-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [update_linked(writer, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_linked-writer-enrichment-parent) | Replaces the junction set for the parent key. |
 
-###### update_owned(entry, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_owned-entry-enrichment-parent}
+###### update_owned(writer, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_owned-writer-enrichment-parent}
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 **Definition**
 
 ```rust
-async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 
@@ -25822,21 +26313,21 @@ async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, 
 
 `Result<()>`
 
-###### update_linked(entry, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_linked-entry-enrichment-parent}
+###### update_linked(writer, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_linked-writer-enrichment-parent}
 
 Replaces the junction set for the parent key.
 
 **Definition**
 
 ```rust
-async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
 | `parent` | parent row |
 
@@ -25949,8 +26440,8 @@ class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(entry, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
-| [updateLinked(entry, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
+| [updateOwned(writer, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [updateLinked(writer, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
 
 ###### new CascadeDeleteUpdateEnrichmentStrategy() {#typescript-cascadedeleteupdateenrichmentstrategy-new-cascadedeleteupdateenrichmentstrategy}
 
@@ -25966,21 +26457,21 @@ constructor()
 
 [CascadeDeleteUpdateEnrichmentStrategy](#typescript-cascadedeleteupdateenrichmentstrategy)
 
-###### updateOwned(entry, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+###### updateOwned(writer, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 **Definition**
 
 ```typescript
-updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -25988,21 +26479,21 @@ updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Pr
 
 `Promise<void>`
 
-###### updateLinked(entry, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+###### updateLinked(writer, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-writer-enrichment-parent}
 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 **Definition**
 
 ```typescript
-updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
 | `parent` | parent object |
 
@@ -26028,8 +26519,8 @@ public sealed class CascadeDeleteUpdateEnrichmentStrategy<T> : UpdateEnrichmentS
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(entry, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
-| [UpdateLinked(entry, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
+| [UpdateOwned(writer, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [UpdateLinked(writer, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
 
 ###### CascadeDeleteUpdateEnrichmentStrategy() {#csharp-cascadedeleteupdateenrichmentstrategy-cascadedeleteupdateenrichmentstrategy}
 
@@ -26045,21 +26536,21 @@ public CascadeDeleteUpdateEnrichmentStrategy()
 
 [CascadeDeleteUpdateEnrichmentStrategy](#csharp-cascadedeleteupdateenrichmentstrategy)`<T>`
 
-###### UpdateOwned(entry, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-entry-enrichment-parent}
+###### UpdateOwned(writer, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 **Definition**
 
 ```csharp
-public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -26067,21 +26558,21 @@ public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, 
 
 `Task`
 
-###### UpdateLinked(entry, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-entry-enrichment-parent}
+###### UpdateLinked(writer, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-writer-enrichment-parent}
 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 **Definition**
 
 ```csharp
-public override Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
 | `parent` | parent object |
 
@@ -26101,24 +26592,24 @@ pub struct CascadeDeleteUpdateEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [update_owned(entry, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_owned-entry-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
-| [update_linked(entry, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_linked-entry-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
+| [update_owned(writer, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_owned-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [update_linked(writer, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_linked-writer-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
 
-###### update_owned(entry, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_owned-entry-enrichment-parent}
+###### update_owned(writer, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_owned-writer-enrichment-parent}
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 **Definition**
 
 ```rust
-async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 
@@ -26126,21 +26617,21 @@ async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, 
 
 `Result<()>`
 
-###### update_linked(entry, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_linked-entry-enrichment-parent}
+###### update_linked(writer, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_linked-writer-enrichment-parent}
 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 **Definition**
 
 ```rust
-async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
 | `parent` | parent row |
 
@@ -26268,26 +26759,26 @@ abstract class DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [deleteOwned(entry, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
-| [deleteLinked(entry, enrichment, parent)](#typescript-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Removes the junction rows for one parent. |
+| [deleteOwned(writer, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
+| [deleteLinked(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Removes the junction rows for one parent. |
 | [load(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent) | Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`. |
 | [loadLinks(writer, column, key)](#typescript-deleteenrichmentstrategy-loadlinks-writer-column-key) | Reads junction rows whose `column` equals `key`. |
 
-###### deleteOwned(entry, enrichment, parent, deleteNested) {#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+###### deleteOwned(writer, enrichment, parent, deleteNested) {#typescript-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
 
 Removes the owned `List` for one parent.
 
 **Definition**
 
 ```typescript
-abstract deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+abstract deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
@@ -26296,21 +26787,21 @@ abstract deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: ob
 
 `Promise<void>`
 
-###### deleteLinked(entry, enrichment, parent) {#typescript-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+###### deleteLinked(writer, enrichment, parent) {#typescript-deleteenrichmentstrategy-deletelinked-writer-enrichment-parent}
 
 Removes the junction rows for one parent.
 
 **Definition**
 
 ```typescript
-abstract deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -26374,24 +26865,24 @@ public abstract class DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [DeleteOwned(entry, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
-| [DeleteLinked(entry, enrichment, parent)](#csharp-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Removes the junction rows for one parent. |
+| [DeleteOwned(writer, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
+| [DeleteLinked(writer, enrichment, parent)](#csharp-deleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Removes the junction rows for one parent. |
 
-###### DeleteOwned(entry, enrichment, parent, deleteNested) {#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+###### DeleteOwned(writer, enrichment, parent, deleteNested) {#csharp-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
 
 Removes the owned `List` for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public abstract Task DeleteOwned(IChildPersist writer, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
@@ -26400,21 +26891,21 @@ public abstract Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, 
 
 `Task`
 
-###### DeleteLinked(entry, enrichment, parent) {#csharp-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+###### DeleteLinked(writer, enrichment, parent) {#csharp-deleteenrichmentstrategy-deletelinked-writer-enrichment-parent}
 
 Removes the junction rows for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task DeleteLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public abstract Task DeleteLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 
@@ -26434,24 +26925,24 @@ pub trait DeleteEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [delete_owned(entry, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested) | Removes the owned `List` for one parent. |
-| [delete_linked(entry, enrichment, parent)](#rust-deleteenrichmentstrategy-delete_linked-entry-enrichment-parent) | Removes the junction rows for one parent. |
+| [delete_owned(writer, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested) | Removes the owned `List` for one parent. |
+| [delete_linked(writer, enrichment, parent)](#rust-deleteenrichmentstrategy-delete_linked-writer-enrichment-parent) | Removes the junction rows for one parent. |
 
-###### delete_owned(entry, enrichment, parent, delete_nested) {#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested}
+###### delete_owned(writer, enrichment, parent, delete_nested) {#rust-deleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested}
 
 Removes the owned `List` for one parent.
 
 **Definition**
 
 ```rust
-async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 | `delete_nested` | deletes nested rows of the children before the children themselves |
@@ -26460,21 +26951,21 @@ async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, 
 
 `Result<()>`
 
-###### delete_linked(entry, enrichment, parent) {#rust-deleteenrichmentstrategy-delete_linked-entry-enrichment-parent}
+###### delete_linked(writer, enrichment, parent) {#rust-deleteenrichmentstrategy-delete_linked-writer-enrichment-parent}
 
 Removes the junction rows for one parent.
 
 **Definition**
 
 ```rust
-async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row) -> Result<()>
+async fn delete_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 
@@ -26556,8 +27047,8 @@ class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [deleteOwned(entry, enrichment, parent, deleteNested)](#typescript-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
-| [deleteLinked(entry, enrichment, parent)](#typescript-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
+| [deleteOwned(writer, enrichment, parent, deleteNested)](#typescript-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [deleteLinked(writer, enrichment, parent)](#typescript-cascadedeleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
 
 ###### new CascadeDeleteEnrichmentStrategy() {#typescript-cascadedeleteenrichmentstrategy-new-cascadedeleteenrichmentstrategy}
 
@@ -26573,21 +27064,21 @@ constructor()
 
 [CascadeDeleteEnrichmentStrategy](#typescript-cascadedeleteenrichmentstrategy)
 
-###### deleteOwned(entry, enrichment, parent, deleteNested) {#typescript-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+###### deleteOwned(writer, enrichment, parent, deleteNested) {#typescript-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 **Definition**
 
 ```typescript
-deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
@@ -26596,21 +27087,21 @@ deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, del
 
 `Promise<void>`
 
-###### deleteLinked(entry, enrichment, parent) {#typescript-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+###### deleteLinked(writer, enrichment, parent) {#typescript-cascadedeleteenrichmentstrategy-deletelinked-writer-enrichment-parent}
 
 Deletes junction rows for the parent key. Related rows stay.
 
 **Definition**
 
 ```typescript
-deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#typescript-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
 | `parent` | parent object |
 
@@ -26636,8 +27127,8 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
 
 | Name | Description |
 | --- | --- |
-| [DeleteOwned(entry, enrichment, parent, deleteNested)](#csharp-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
-| [DeleteLinked(entry, enrichment, parent)](#csharp-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
+| [DeleteOwned(writer, enrichment, parent, deleteNested)](#csharp-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [DeleteLinked(writer, enrichment, parent)](#csharp-cascadedeleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
 
 ###### CascadeDeleteEnrichmentStrategy() {#csharp-cascadedeleteenrichmentstrategy-cascadedeleteenrichmentstrategy}
 
@@ -26653,21 +27144,21 @@ public CascadeDeleteEnrichmentStrategy()
 
 [CascadeDeleteEnrichmentStrategy](#csharp-cascadedeleteenrichmentstrategy)`<T>`
 
-###### DeleteOwned(entry, enrichment, parent, deleteNested) {#csharp-cascadedeleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
+###### DeleteOwned(writer, enrichment, parent, deleteNested) {#csharp-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 **Definition**
 
 ```csharp
-public override Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | child [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent object |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
@@ -26676,21 +27167,21 @@ public override Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, 
 
 `Task`
 
-###### DeleteLinked(entry, enrichment, parent) {#csharp-cascadedeleteenrichmentstrategy-deletelinked-entry-enrichment-parent}
+###### DeleteLinked(writer, enrichment, parent) {#csharp-cascadedeleteenrichmentstrategy-deletelinked-writer-enrichment-parent}
 
 Deletes junction rows for the parent key. Related rows stay.
 
 **Definition**
 
 ```csharp
-public override Task DeleteLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task DeleteLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#csharp-storedenrichment) |
+| `writer` | link [IChildPersist](#csharp-ichildpersist) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
 | `parent` | parent object |
 
@@ -26710,24 +27201,24 @@ pub struct CascadeDeleteEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [delete_owned(entry, enrichment, parent, delete_nested)](#rust-cascadedeleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
-| [delete_linked(entry, enrichment, parent)](#rust-cascadedeleteenrichmentstrategy-delete_linked-entry-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
+| [delete_owned(writer, enrichment, parent, delete_nested)](#rust-cascadedeleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [delete_linked(writer, enrichment, parent)](#rust-cascadedeleteenrichmentstrategy-delete_linked-writer-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
 
-###### delete_owned(entry, enrichment, parent, delete_nested) {#rust-cascadedeleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested}
+###### delete_owned(writer, enrichment, parent, delete_nested) {#rust-cascadedeleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested}
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 **Definition**
 
 ```rust
-async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parent` | parent row |
 | `delete_nested` | deletes nested rows of the children before the children themselves |
@@ -26736,21 +27227,21 @@ async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, 
 
 `Result<()>`
 
-###### delete_linked(entry, enrichment, parent) {#rust-cascadedeleteenrichmentstrategy-delete_linked-entry-enrichment-parent}
+###### delete_linked(writer, enrichment, parent) {#rust-cascadedeleteenrichmentstrategy-delete_linked-writer-enrichment-parent}
 
 Deletes junction rows for the parent key. Related rows stay.
 
 **Definition**
 
 ```rust
-async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row) -> Result<()>
+async fn delete_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row) -> Result<()>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `entry` | [StoredEnrichment](#rust-storedenrichment) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
 | `parent` | parent row |
 

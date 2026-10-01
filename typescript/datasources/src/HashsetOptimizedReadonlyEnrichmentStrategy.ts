@@ -11,7 +11,7 @@ const hasKey = (value: Scalar | object | undefined): value is Scalar =>
 export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   extends DefaultReadonlyEnrichmentStrategy<T>
 {
-  protected override async applyLookup<TRelated extends object>(
+  protected override async applyObject<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
     parents: T[],
@@ -37,7 +37,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     }
   }
 
-  protected override async applyMany<TRelated extends object>(
+  protected override async applyList<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
     parents: T[],

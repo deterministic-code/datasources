@@ -441,6 +441,7 @@ async fn cascade_update_deletes_children_and_recreates() {
         DefaultWriteEnrichmentStrategy::new(
             None,
             Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+            None,
             false,
         ),
     ));
@@ -522,6 +523,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         DefaultWriteEnrichmentStrategy::new(
             None,
             Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+            None,
             false,
         ),
     ));
@@ -652,7 +654,7 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "Parent".into();
     options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
-        None, None, true,
+        None, None, None, true,
     )));
     let parents = BulkCRUDRepository::new(connection, options).unwrap();
     let created = parents

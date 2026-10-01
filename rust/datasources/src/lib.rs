@@ -17,6 +17,7 @@ mod console_command_middleware;
 pub mod converters;
 mod create;
 mod create_crud_repository_options;
+mod create_enrichment_strategy;
 mod create_readonly_repository_options;
 mod crud_repository;
 mod crud_repository_options;
@@ -24,6 +25,7 @@ mod datasource;
 mod datasource_error;
 mod datasource_url;
 mod datasource_url_parser;
+mod default_create_enrichment_strategy;
 mod default_readonly_enrichment_strategy;
 mod default_update_enrichment_strategy;
 mod default_write_enrichment_strategy;
@@ -105,6 +107,8 @@ pub use bulk_crud_repository::BulkCRUDRepository;
 pub use bulk_write_strategy::BulkWriteStrategy;
 pub use cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
 pub use cascade_delete_update_enrichment_strategy::CascadeDeleteUpdateEnrichmentStrategy;
+pub use create_enrichment_strategy::CreateEnrichmentStrategy;
+pub use default_create_enrichment_strategy::DefaultCreateEnrichmentStrategy;
 pub use command::Command;
 pub use command_middleware::CommandMiddleware;
 pub use command_middleware_host::CommandMiddlewareHost;
@@ -193,7 +197,6 @@ pub use statements::{
     StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint, UpdateStatement,
     Where,
 };
-pub use stored_enrichment::StoredEnrichment;
 pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;
 pub use stubs::{
     create_stub_datasource, StubCommand, StubConnection, StubDatasource, StubReader,

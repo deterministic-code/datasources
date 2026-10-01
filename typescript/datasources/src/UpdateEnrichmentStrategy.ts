@@ -1,6 +1,5 @@
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { defaultId } from "./createCRUDRepositoryOptions.ts";
 import { DatasourceError } from "./DatasourceError.ts";
@@ -11,28 +10,9 @@ type Props = Record<string, Scalar | object>;
 export abstract class UpdateEnrichmentStrategy<T> {
   declare private readonly subject: T;
 
-  abstract updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>;
+  abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>;
 
-  abstract updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>;
-
-  async createChildren(
-    writer: ICRUDRepository<object>,
-    enrichment: Enrichment,
-    parent: object,
-  ): Promise<void> {
-    for (const related of this.payloadOf(parent, enrichment.destinationProperty)) {
-      this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
-      await writer.create(related);
-    }
-  }
-
-  async createLinks(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
-    const association = enrichment.association;
-    if (!association) throw new DatasourceError("Missing association");
-    const parentKey = this.requiredKey(parent, enrichment);
-    for (const id of this.relatedIds(parent, enrichment))
-      await writer.create({ [association.parent]: parentKey, [association.related]: id });
-  }
+  abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>;
 
   protected getCell = (item: object, name: string): Scalar | object | undefined => (item as Props)[name];
 

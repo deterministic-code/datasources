@@ -26,29 +26,29 @@ constructor()
 
 **Methods**
 
-##### updateOwned(entry, enrichment, parent)
+##### updateOwned(writer, enrichment, parent)
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 ```typescript
-updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 
 **Returns** `Promise<void>`
 
-##### updateLinked(entry, enrichment, parent)
+##### updateLinked(writer, enrichment, parent)
 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 ```typescript
-updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
+updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
 - `parent` — parent object
 
@@ -75,29 +75,29 @@ public CascadeDeleteUpdateEnrichmentStrategy()
 
 **Methods**
 
-##### UpdateOwned(entry, enrichment, parent)
+##### UpdateOwned(writer, enrichment, parent)
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 ```csharp
-public override Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent object
 
 **Returns** `Task`
 
-##### UpdateLinked(entry, enrichment, parent)
+##### UpdateLinked(writer, enrichment, parent)
 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 ```csharp
-public override Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
 - `parent` — parent object
 
@@ -112,29 +112,29 @@ pub struct CascadeDeleteUpdateEnrichmentStrategy
 
 **Methods**
 
-##### update_owned(entry, enrichment, parent)
+##### update_owned(writer, enrichment, parent)
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 ```rust
-async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent row
 
 **Returns** `Result<()>`
 
-##### update_linked(entry, enrichment, parent)
+##### update_linked(writer, enrichment, parent)
 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 ```rust
-async fn update_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
-- `entry` — [StoredEnrichment](./update-enrichment-strategy.md#storedenrichment)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
 - `parent` — parent row
 

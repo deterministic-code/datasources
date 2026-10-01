@@ -301,13 +301,13 @@ public class CRUDRepositoryTests
     sealed class SkipDelete<T> : DeleteEnrichmentStrategy<T>
     {
         public override Task DeleteOwned(
-            StoredEnrichment _entry,
+            IChildPersist _writer,
             Enrichment _enrichment,
             object _parent,
             Func<IReadOnlyList<object>, Task> _deleteNested) =>
             Task.CompletedTask;
 
-        public override Task DeleteLinked(StoredEnrichment _entry, Enrichment _enrichment, object _parent) =>
+        public override Task DeleteLinked(IChildPersist _writer, Enrichment _enrichment, object _parent) =>
             Task.CompletedTask;
     }
 

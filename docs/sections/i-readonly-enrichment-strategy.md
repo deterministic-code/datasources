@@ -34,11 +34,11 @@ apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: E
 Fills each parent by reading the link table, then the related repository.
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
+- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`
@@ -74,11 +74,11 @@ Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichment enrichment, I
 Fills each parent by reading the link table, then the related repository.
 
 ```csharp
-Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, IReadonlyRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
+- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`
@@ -96,7 +96,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync
 
 ##### apply(via, enrichment, parents, sources)
 
-Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`.
+Fills each parent from the related repository. The default dispatches to `apply_object` or `apply_list`.
 
 ```rust
 async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
@@ -109,12 +109,12 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 
 **Returns** `Result<()>`
 
-##### apply_lookup(via, enrichment, parents, sources)
+##### apply_object(via, enrichment, parents, sources)
 
 Fills a scalar related value. The default reads one related row per distinct key.
 
 ```rust
-async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_object(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
@@ -124,12 +124,12 @@ async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enr
 
 **Returns** `Result<()>`
 
-##### apply_many(via, enrichment, parents, sources)
+##### apply_list(via, enrichment, parents, sources)
 
 Fills a list. The default reads the related rows for each parent key.
 
 ```rust
-async fn apply_many(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_list(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
@@ -144,11 +144,11 @@ async fn apply_many(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enric
 Fills each parent by reading the link table, then the related repository.
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
+- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`
@@ -158,7 +158,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 
 ## Remarks
 
-Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_lookup` and `apply_many` on this trait.
+Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the object and list fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_object` and `apply_list` on this trait.
 
 ## Examples
 
