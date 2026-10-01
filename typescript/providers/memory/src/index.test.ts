@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   collectAsync,
   CRUDRepository,
@@ -22,9 +22,18 @@ import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts"
 import { MemoryDriver } from "./MemoryDriver.ts";
 import { MemoryStore } from "./store.ts";
 
-afterEach(() => {
+const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] as const;
+
+beforeEach(() => {
+  for (const key of envKeys) delete process.env[key];
   DatasourceFactory.reset();
   DatasourceFactory.register("memory", new MemoryDriver());
+  process.env.PROVIDER = "memory";
+});
+
+afterEach(() => {
+  DatasourceFactory.reset();
+  for (const key of envKeys) delete process.env[key];
 });
 
 describe("DatasourceFactory", () => {
@@ -92,8 +101,9 @@ describe("Transaction", () => {
     expect(txn.isolation).toBe("readCommitted");
   });
 
-  it("two commands running together", async () => {
-    const connection = new MemoryConnection();
+  it("command running in one atomic transaction", async () => {
+    const ds = Datasource.default;
+    const connection = await ds.createConnection();
     await connection.open();
     const txn = await connection.startTransaction();
     const command = connection.createCommand();

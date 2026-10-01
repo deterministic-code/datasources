@@ -1,11 +1,17 @@
 mod command;
 mod connection;
-mod filter;
 mod driver;
+mod filter;
 mod store;
 mod transaction;
 
 pub use driver::MemoryDriver;
+
+#[cfg(test)]
+fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|error| error.into_inner())
+}
 
 #[cfg(test)]
 mod tests {
@@ -15,10 +21,10 @@ mod tests {
     use crate::filter::{json_to_value, matches, parse_filter};
     use crate::store::{MemoryData, MemoryStore};
     use datasources::{
-        converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
-        Connection, DatasourceError, ICRUDRepository, IReadonlyRepository, InsertStatement,
-        IsolationLevel, Parameter, Row, SelectInsertedIdStatement, SelectStatement, Value,
-        WhereText,
+        converters::Cells, create, default, register, reset, CRUDRepository, CRUDRepositoryOptions,
+        Command, Connection, DatasourceError, ICRUDRepository, IReadonlyRepository,
+        InsertStatement, IsolationLevel, Parameter, Row, SelectInsertedIdStatement,
+        SelectStatement, Value, WhereText,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -30,6 +36,15 @@ mod tests {
         CRUDRepository::new(conn, options).expect("repo")
     }
 
+    fn clear_env() {
+        reset();
+        for key in ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] {
+            std::env::remove_var(key);
+        }
+        register("memory", Arc::new(MemoryDriver));
+        std::env::set_var("PROVIDER", "memory");
+    }
+
     fn rec(id: i64, name: &str) -> Row {
         let mut r = Row::new();
         r.insert("id".into(), Value::Int(id));
@@ -39,6 +54,7 @@ mod tests {
 
     #[test]
     fn register_and_create() {
+        let _guard = super::env_lock();
         reset();
         register("memory", Arc::new(MemoryDriver));
         let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
@@ -99,8 +115,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn two_commands_running_together() {
-        let connection = MemoryConnection::from_options(None);
+    async fn command_running_in_one_atomic_transaction() {
+        let _guard = super::env_lock();
+        clear_env();
+        let ds = default().unwrap();
+        let connection = ds.create_connection().await.unwrap();
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
         let command = connection.create_command();
@@ -125,6 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn memory_crud_and_transactions() {
+        let _guard = super::env_lock();
         let store = Arc::new(MemoryStore::new());
         store.seed(&MemoryData::Rows(vec![rec(1, "a")]), "");
         store.seed(&MemoryData::Rows(vec![rec(2, "b")]), "");

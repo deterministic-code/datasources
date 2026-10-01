@@ -1,3 +1,0 @@
-var connection = new MemoryConnection();
-await connection.Open();
-await connection.Close();

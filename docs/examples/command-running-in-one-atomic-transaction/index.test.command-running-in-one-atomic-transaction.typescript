@@ -1,4 +1,5 @@
-const connection = new MemoryConnection();
+const ds = Datasource.default;
+const connection = await ds.createConnection();
 await connection.open();
 const txn = await connection.startTransaction();
 const command = connection.createCommand();

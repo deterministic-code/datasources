@@ -3,6 +3,7 @@ using Datasources.Memory;
 
 namespace Datasources.Memory.Tests;
 
+[Collection("DatasourceFactory")]
 public class MemoryTests
 {
     public MemoryTests()

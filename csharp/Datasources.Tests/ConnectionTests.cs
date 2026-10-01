@@ -26,6 +26,8 @@ public class ConnectionTests
     {
         var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
+        await connection.Open();
+        await connection.Close();
         Assert.False(connection.IsOpen);
     }
 }

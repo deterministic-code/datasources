@@ -291,7 +291,6 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ### Connection
 
 - [Create from Default](#create-from-default)
-- [Open and close](#open-and-close)
 - [Create and run a command](#create-and-run-a-command)
 - [Close with using](#close-with-using)
 - [Start a transaction](#start-a-transaction)
@@ -299,7 +298,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ### Transaction
 
 - [Commit or abort](#commit-or-abort)
-- [Two commands running together](#two-commands-running-together)
+- [Command running in one atomic transaction](#command-running-in-one-atomic-transaction)
 
 ### Command
 
@@ -1216,7 +1215,7 @@ std::env::set_var("PROVIDER", "sqlite");
 let ds = default().expect("default");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L43-L48)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L50-L55)
 
 ```typescript
 DatasourceFactory.register("sqlite", new MockDriver());
@@ -1578,14 +1577,16 @@ Working dialects (`json`, `memory`) open against injected ports (`IFileStore` / 
 
 #### Create from Default
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L24-L30)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ConnectionTests.cs#L24-L32)
 
 ```csharp
 var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
+await connection.Open();
+await connection.Close();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L16-L25)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/connection.rs#L16-L27)
 
 ```rust
 let ds = {
@@ -1594,37 +1595,15 @@ let ds = {
     default().expect("default")
 };
 let connection = ds.create_connection().await.expect("connection");
-```
-
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L27-L31)
-
-```typescript
-const ds = Datasource.default;
-const connection = await ds.createConnection();
-```
-
-#### Open and close
-
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#L8-L15)
-
-```csharp
-var connection = new MemoryConnection();
-await connection.Open();
-await connection.Close();
-```
-
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L48-L53)
-
-```rust
-let connection = MemoryConnection::from_options(None);
 connection.open().await.unwrap();
 connection.close().await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L40-L45)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Connection.test.ts#L27-L33)
 
 ```typescript
-const connection = new MemoryConnection();
+const ds = Datasource.default;
+const connection = await ds.createConnection();
 await connection.open();
 await connection.close();
 ```
@@ -1640,7 +1619,7 @@ var command = connection.CreateCommand();
 var response = await command.Execute("insert");
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L66-L73)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L83-L90)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1649,7 +1628,7 @@ let command = connection.create_command();
 let response = command.execute("insert", None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L60-L66)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L69-L75)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -1671,7 +1650,7 @@ await using var connection = new MemoryConnection();
 await connection.Open();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L48-L54)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L65-L71)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1679,7 +1658,7 @@ connection.open().await.unwrap();
 connection.close().await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L68-L75)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L77-L84)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -1699,7 +1678,7 @@ await connection.Open();
 var txn = await connection.StartTransaction();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L75-L80)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L92-L97)
 
 ```rust
 let connection = MemoryConnection::from_options(None);
@@ -1707,7 +1686,7 @@ connection.open().await.unwrap();
 let txn = connection.start_transaction(None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L53-L58)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L62-L67)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -1971,12 +1950,13 @@ if (saved) await txn.commit();
 else await txn.abort();
 ```
 
-#### Two commands running together
+#### Command running in one atomic transaction
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L28-L43)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#L45-L61)
 
 ```csharp
-var connection = new MemoryConnection();
+var ds = Datasource.Default;
+var connection = await ds.CreateConnection();
 await connection.Open();
 var txn = await connection.StartTransaction();
 var command = connection.CreateCommand();
@@ -1996,10 +1976,11 @@ await txn.Commit();
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L101-L124)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L118-L144)
 
 ```rust
-let connection = MemoryConnection::from_options(None);
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let txn = connection.start_transaction(None).await.unwrap();
 let command = connection.create_command();
@@ -2025,10 +2006,11 @@ txn.commit().await.unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L95-L108)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L104-L118)
 
 ```typescript
-const connection = new MemoryConnection();
+const ds = Datasource.default;
+const connection = await ds.createConnection();
 await connection.open();
 const txn = await connection.startTransaction();
 const command = connection.createCommand();
@@ -5115,7 +5097,7 @@ users_repo.add_enriched(
         "UserTypeId",
         "Id",
         Some("Name".into()),
-        false,
+        datasources::EnrichmentPropertyType::Object,
     ),
     user_types_repo.clone(),
     None,
@@ -6291,7 +6273,7 @@ users_repo.add_enriched(
         "UserTypeId",
         "Id",
         Some("Name".into()),
-        false,
+        datasources::EnrichmentPropertyType::Object,
     ),
     types,
     None,
@@ -9169,7 +9151,7 @@ users_repo.add_enriched(
         "UserTypeId",
         "Id",
         Some("Name".into()),
-        false,
+        datasources::EnrichmentPropertyType::Object,
     ),
     user_types_repo.clone(),
     None,
@@ -20960,21 +20942,21 @@ When `Create` / `create` / `create` is called with `null` / `undefined` / `None`
 
 #### Register and Create
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L11-L17)
 
 ```csharp
 DatasourceFactory.Register("memory", new MemoryDriver());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "memory" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L40-L45)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L56-L62)
 
 ```rust
 register("memory", Arc::new(MemoryDriver));
 let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L40-L45)
 
 ```typescript
 DatasourceFactory.register("memory", new MemoryDriver());
@@ -20995,7 +20977,7 @@ DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "missi
 create(Some(&HashMap::from([("PROVIDER".into(), "missing".into())])));
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L55-L59)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L62-L66)
 
 ```typescript
 DatasourceFactory.create({ PROVIDER: "missing" });
@@ -27245,21 +27227,21 @@ The package exports only the driver type.
 
 #### Register and Create
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L10-L16)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Memory.Tests/RegisterAndCreateTests.cs#L11-L17)
 
 ```csharp
 DatasourceFactory.Register("memory", new MemoryDriver());
 var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "memory" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L40-L45)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/memory/src/lib.rs#L56-L62)
 
 ```rust
 register("memory", Arc::new(MemoryDriver));
 let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L31-L36)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L40-L45)
 
 ```typescript
 DatasourceFactory.register("memory", new MemoryDriver());

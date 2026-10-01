@@ -1,3 +1,0 @@
-let connection = MemoryConnection::from_options(None);
-connection.open().await.unwrap();
-connection.close().await.unwrap();

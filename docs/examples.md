@@ -11,7 +11,6 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## Connection
 
 - [Create from Default](./sections/connection.md#create-from-default)
-- [Open and close](./sections/connection.md#open-and-close)
 - [Create and run a command](./sections/connection.md#create-and-run-a-command)
 - [Close with using](./sections/connection.md#close-with-using)
 - [Start a transaction](./sections/connection.md#start-a-transaction)
@@ -19,7 +18,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## Transaction
 
 - [Commit or abort](./sections/transaction.md#commit-or-abort)
-- [Two commands running together](./sections/transaction.md#two-commands-running-together)
+- [Command running in one atomic transaction](./sections/transaction.md#command-running-in-one-atomic-transaction)
 
 ## Command
 
