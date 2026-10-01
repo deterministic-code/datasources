@@ -656,9 +656,17 @@ CREATE TABLE users (id int, username string, email string, contact_name1 string,
 
 ## The Mapping and Converting Pipelines
 
-`Read` / `read` / `read` on a [readonly repository](#readonly-repository) calls `ExecuteReader` / `executeReader` / `execute_reader`. Each row then passes through three steps: rename datasource column names to property names, convert provider cell types, and assign the row onto the entity.
+We will describe the primary mapping and converting pipelines used in Datasource below. These include:
+
+- [The ReadonlyRepository read mapper and converting pipeline](#the-readonlyrepository-read-mapper-and-converting-pipeline)
+- The statement mapping and converting pipeline (TODO)
+- The SelectedIdMapping pipeline (TODO)
+
+Words are great to describe these steps, but showing an example is worth more than a thousand words.
 
 ### The ReadonlyRepository read mapper and converting pipeline
+
+This is the primary pipeline that maps and converts datasource rows to the entities used in the domain layer. We stop short of [object enrichment](#enrichment) and leave that for another discussion.
 
 ```mermaid
 flowchart LR
@@ -667,11 +675,13 @@ flowchart LR
 
 #### Map datasource column names to object property names
 
-The [reader](#reader) yields a row keyed by datasource column names. The repository renames each key with the property mapper's reverse map.
+The reader returns raw rows (key/value pairs) which are renamed to the object property names using the mapper.
 
 #### Convert row using provider
 
 `RowConverter` / `rowConverter` / `row_converter` converts the renamed row from provider cell types to object cell types. The keys stay the same. A SQLite bool stored as `1` or `0` becomes `true` or `false`. Uuid and datetime text become guid and datetime values where the dialect supports them.
+
+Since the datasource type often can be mapped to multiple object types (string for example) the column type from the entity object must also be passed in.
 
 #### Convert row to entity object
 
@@ -693,7 +703,7 @@ The [reader](#reader) yields a row keyed by datasource column names. The reposit
 
 One walkthrough: seed users, read the raw rows, rename columns, convert cell types, then build entities with `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` or a manual map.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L17-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L26-L102)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L17-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L26-L123)
 
 ```csharp
 public class User
@@ -711,11 +721,32 @@ var lin = Guid.Parse("33333333-3333-3333-3333-333333333333");
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
 await command.Execute(
-    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '{ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')");
+    "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+    [
+        new Parameter("id", 1),
+        new Parameter("uuid", ada.ToString()),
+        new Parameter("name", "ada"),
+        new Parameter("is_enabled", 1),
+        new Parameter("created", "2001-01-01T00:00:00.000Z"),
+    ]);
 await command.Execute(
-    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '{grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')");
+    "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+    [
+        new Parameter("id", 2),
+        new Parameter("uuid", grace.ToString()),
+        new Parameter("name", "grace"),
+        new Parameter("is_enabled", 1),
+        new Parameter("created", "2002-02-02T00:00:00.000Z"),
+    ]);
 await command.Execute(
-    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '{lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')");
+    "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+    [
+        new Parameter("id", 3),
+        new Parameter("uuid", lin.ToString()),
+        new Parameter("name", "lin"),
+        new Parameter("is_enabled", 0),
+        new Parameter("created", "2003-03-03T00:00:00.000Z"),
+    ]);
 
 var propertyToColumnMapper = new DictionaryMapper<string>(new()
 {
@@ -806,7 +837,7 @@ var finalManualEntities = convertedRows.Select(row => new User
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L12-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L24-L148)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L12-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L24-L160)
 
 ```rust
 impl ConvertSchema for User {
@@ -829,28 +860,40 @@ let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
     .execute(
-        &format!(
-            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '{ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')"
-        ),
-        None,
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+        Some(&[
+            Parameter::new("id", 1_i64),
+            Parameter::new("uuid", ada.to_string()),
+            Parameter::new("name", "ada"),
+            Parameter::new("is_enabled", 1_i64),
+            Parameter::new("created", "2001-01-01T00:00:00.000Z"),
+        ]),
     )
     .await
     .unwrap();
 command
     .execute(
-        &format!(
-            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '{grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')"
-        ),
-        None,
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+        Some(&[
+            Parameter::new("id", 2_i64),
+            Parameter::new("uuid", grace.to_string()),
+            Parameter::new("name", "grace"),
+            Parameter::new("is_enabled", 1_i64),
+            Parameter::new("created", "2002-02-02T00:00:00.000Z"),
+        ]),
     )
     .await
     .unwrap();
 command
     .execute(
-        &format!(
-            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '{lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')"
-        ),
-        None,
+        "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+        Some(&[
+            Parameter::new("id", 3_i64),
+            Parameter::new("uuid", lin.to_string()),
+            Parameter::new("name", "lin"),
+            Parameter::new("is_enabled", 0_i64),
+            Parameter::new("created", "2003-03-03T00:00:00.000Z"),
+        ]),
     )
     .await
     .unwrap();
@@ -941,7 +984,7 @@ let final_entities: Vec<Row> = converted_rows
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L12-L18) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L29-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L12-L18) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L29-L122)
 
 ```typescript
 class User {
@@ -958,13 +1001,34 @@ const lin = "33333333-3333-3333-3333-333333333333";
 const ds = Datasource.default;
 const command = await ds.createCommand();
 await command.execute(
-  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '${ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')`,
+  "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+  [
+    { name: "id", value: 1 },
+    { name: "uuid", value: ada },
+    { name: "name", value: "ada" },
+    { name: "is_enabled", value: 1 },
+    { name: "created", value: "2001-01-01T00:00:00.000Z" },
+  ],
 );
 await command.execute(
-  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '${grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')`,
+  "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+  [
+    { name: "id", value: 2 },
+    { name: "uuid", value: grace },
+    { name: "name", value: "grace" },
+    { name: "is_enabled", value: 1 },
+    { name: "created", value: "2002-02-02T00:00:00.000Z" },
+  ],
 );
 await command.execute(
-  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '${lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')`,
+  "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES ($id, $uuid, $name, $is_enabled, $created)",
+  [
+    { name: "id", value: 3 },
+    { name: "uuid", value: lin },
+    { name: "name", value: "lin" },
+    { name: "is_enabled", value: 0 },
+    { name: "created", value: "2003-03-03T00:00:00.000Z" },
+  ],
 );
 
 const propertyToColumnMapper = new DictionaryMapper([
@@ -23331,7 +23395,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -23339,7 +23403,7 @@ applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyReposit
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23393,7 +23457,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```csharp
-Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, IReadonlyRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
@@ -23401,7 +23465,7 @@ Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDReposi
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23422,14 +23486,14 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`. |
-| [apply_lookup(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_lookup-via-enrichment-parents-sources) | Fills a scalar related value. The default reads one related row per distinct key. |
-| [apply_many(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_many-via-enrichment-parents-sources) | Fills a list. The default reads the related rows for each parent key. |
+| [apply(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources) | Fills each parent from the related repository. The default dispatches to `apply_object` or `apply_list`. |
+| [apply_object(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_object-via-enrichment-parents-sources) | Fills a scalar related value. The default reads one related row per distinct key. |
+| [apply_list(via, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_list-via-enrichment-parents-sources) | Fills a list. The default reads the related rows for each parent key. |
 | [apply_linked(via, link, enrichment, parents, sources)](#rust-readonlyenrichmentstrategy-apply_linked-via-link-enrichment-parents-sources) | Fills each parent by reading the link table, then the related repository. |
 
 ###### apply(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply-via-enrichment-parents-sources}
 
-Fills each parent from the related repository. The default dispatches to `apply_lookup` or `apply_many`.
+Fills each parent from the related repository. The default dispatches to `apply_object` or `apply_list`.
 
 **Definition**
 
@@ -23450,14 +23514,14 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 
 `Result<()>`
 
-###### apply_lookup(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_lookup-via-enrichment-parents-sources}
+###### apply_object(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_object-via-enrichment-parents-sources}
 
 Fills a scalar related value. The default reads one related row per distinct key.
 
 **Definition**
 
 ```rust
-async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_object(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23473,14 +23537,14 @@ async fn apply_lookup(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enr
 
 `Result<()>`
 
-###### apply_many(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_many-via-enrichment-parents-sources}
+###### apply_list(via, enrichment, parents, sources) {#rust-readonlyenrichmentstrategy-apply_list-via-enrichment-parents-sources}
 
 Fills a list. The default reads the related rows for each parent key.
 
 **Definition**
 
 ```rust
-async fn apply_many(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_list(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23503,7 +23567,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23511,7 +23575,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23522,7 +23586,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 
 ### Remarks
 
-Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_lookup` and `apply_many` on this trait.
+Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the object and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_object` and `apply_list` on this trait.
 
 ### Examples
 
@@ -23641,7 +23705,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -23649,7 +23713,7 @@ applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyReposit
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23723,7 +23787,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```csharp
-public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, IReadonlyRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 **Parameters**
@@ -23731,7 +23795,7 @@ public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> v
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |
@@ -23785,7 +23849,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 **Parameters**
@@ -23793,7 +23857,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `link` | [ICRUDRepository](#crud-repository) |
+| `link` | junction [IReadonlyRepository](#readonly-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#rust-association) |
 | `parents` | parents to fill |
 | `sources` | optional source rows aligned with `parents` |

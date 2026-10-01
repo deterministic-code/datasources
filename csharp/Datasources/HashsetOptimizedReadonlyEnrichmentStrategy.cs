@@ -2,7 +2,7 @@ namespace Datasources;
 
 public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReadonlyEnrichmentStrategy<T> where T : new()
 {
-    protected override async Task ApplyLookup<TRelated>(
+    protected override async Task ApplyObject<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
         IList<T> parents,
@@ -30,7 +30,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         }
     }
 
-    protected override async Task ApplyMany<TRelated>(
+    protected override async Task ApplyList<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
         IList<T> parents,

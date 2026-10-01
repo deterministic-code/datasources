@@ -16,7 +16,7 @@ pub struct HashsetOptimizedReadonlyEnrichmentStrategy;
 
 #[async_trait]
 impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
-    async fn apply_lookup(
+    async fn apply_object(
         &self,
         via: Arc<dyn IReadonlyRepository>,
         enrichment: &Enrichment,
@@ -63,7 +63,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         Ok(())
     }
 
-    async fn apply_many(
+    async fn apply_list(
         &self,
         via: Arc<dyn IReadonlyRepository>,
         enrichment: &Enrichment,

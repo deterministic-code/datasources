@@ -46,11 +46,11 @@ apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: E
 Reads the junction for each parent key, then each related row.
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: ICRUDRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
+- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`
@@ -98,11 +98,11 @@ public virtual Task Apply<TRelated>(IReadonlyRepository<TRelated> via, Enrichmen
 Reads the junction for each parent key, then each related row.
 
 ```csharp
-public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
+public virtual Task ApplyLinked<TRelated, TLink>(IReadonlyRepository<TRelated> via, IReadonlyRepository<TLink> link, Enrichment enrichment, IList<object> parents, IReadOnlyList<Row?>? sources = null)
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
+- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`
@@ -140,11 +140,11 @@ async fn apply(&self, via: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment
 Reads the junction for each parent key, then each related row.
 
 ```rust
-async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
+async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IReadonlyRepository>, enrichment: &Enrichment, parents: &mut Vec<Row>, sources: Option<&[Option<Row>]>) -> Result<()>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `link` — [ICRUDRepository](./crud-repository.md)
+- `link` — junction [IReadonlyRepository](./readonly-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
 - `parents` — parents to fill
 - `sources` — optional source rows aligned with `parents`

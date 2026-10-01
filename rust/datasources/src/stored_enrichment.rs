@@ -1,6 +1,6 @@
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
-use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use std::sync::Arc;
@@ -57,7 +57,7 @@ impl StoredEnrichment {
                 self.strategy
                     .apply_linked(
                         self.via.clone(),
-                        self.link.clone().expect("linked enrichment"),
+                        as_readonly(self.link.clone().expect("linked enrichment")),
                         &self.enrichment,
                         parents,
                         sources,

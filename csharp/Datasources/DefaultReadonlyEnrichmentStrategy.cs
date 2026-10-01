@@ -11,14 +11,14 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         IReadOnlyList<Row?>? sources = null) =>
         enrichment.Type switch
         {
-            EnrichmentPropertyType.List => ApplyMany(via, enrichment, parents, sources),
-            EnrichmentPropertyType.Object => ApplyLookup(via, enrichment, parents, sources),
+            EnrichmentPropertyType.List => ApplyList(via, enrichment, parents, sources),
+            EnrichmentPropertyType.Object => ApplyObject(via, enrichment, parents, sources),
             _ => throw new DatasourceException($"Unsupported enrichment type \"{enrichment.Type}\"")
         };
 
     public virtual async Task ApplyLinked<TRelated, TLink>(
         IReadonlyRepository<TRelated> via,
-        ICRUDRepository<TLink> link,
+        IReadonlyRepository<TLink> link,
         Enrichment enrichment,
         IList<T> parents,
         IReadOnlyList<Row?>? sources = null)
@@ -40,7 +40,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         }
     }
 
-    protected virtual async Task ApplyLookup<TRelated>(
+    protected virtual async Task ApplyObject<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
         IList<T> parents,
@@ -63,7 +63,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         }
     }
 
-    protected virtual async Task ApplyMany<TRelated>(
+    protected virtual async Task ApplyList<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
         IList<T> parents,
