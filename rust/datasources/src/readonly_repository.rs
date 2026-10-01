@@ -14,8 +14,6 @@ use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::repository::IReadonlyRepository;
-use crate::repository_tree::RepositoryTree;
-use crate::repository_tree_node::RepositoryTreeNode;
 use crate::result::Result;
 use crate::row::Row;
 use crate::select_statement::SelectStatement;
@@ -25,7 +23,6 @@ use crate::statements::Where;
 use crate::statement_mappings::StatementMappings;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::stubs::StubConnection;
-use crate::stubs::StubRepository;
 use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::value::Value;
@@ -43,7 +40,6 @@ pub struct ReadonlyRepository {
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
-    pub(crate) tree: RepositoryTree,
 }
 
 impl ReadonlyRepository {
@@ -75,11 +71,6 @@ impl ReadonlyRepository {
             readonly_statements: built.statements,
             entity_type: TypeId::of::<Row>(),
             memory: None,
-            tree: RepositoryTree::new(RepositoryTreeNode::new(
-                Arc::new(StubRepository::new("readonly")),
-                "",
-                enrichments.clone(),
-            )),
             enrichments,
         }
     }
@@ -108,11 +99,6 @@ impl ReadonlyRepository {
             ),
             entity_type: TypeId::of::<Row>(),
             memory: Some(SharedItems::new(items)),
-            tree: RepositoryTree::new(RepositoryTreeNode::new(
-                Arc::new(StubRepository::new("memory")),
-                "",
-                enrichments.clone(),
-            )),
             enrichments,
         }
     }

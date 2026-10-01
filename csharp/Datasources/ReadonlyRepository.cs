@@ -11,7 +11,6 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly ReadonlyRepositoryStatements? readonlyStatements;
 
     public Type Type => typeof(T);
-    protected IRepositoryTree Tree { get; }
     IReadOnlyList<StoredEnrichment> IEnrichmentHost.Enrichments => enrichments;
     protected bool Enriched => enrichments.Count > 0;
 
@@ -24,8 +23,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     public ReadonlyRepository(BuiltRepository<T> built) :
         this(built.Connection, built.RowConverter, built.ObjectConverter, built.PropertyMappings, built.EntityMapper, built.Statements) { }
 
-    protected ReadonlyRepository() =>
-        Tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
+    protected ReadonlyRepository() { }
 
     protected ReadonlyRepository(
         IConnection connection,
@@ -40,7 +38,6 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         this.objectConverter = objectConverter;
         statementMappings = new StatementMappings(entityMappers, propertyMappers);
         readonlyStatements = statements;
-        Tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     }
 
     public ReadonlyRepository<T> AddMiddleware(ICommandMiddleware middleware)

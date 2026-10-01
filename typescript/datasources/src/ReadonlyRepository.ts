@@ -26,9 +26,6 @@ import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentSt
 import type { Enrichment } from "./Enrichment.ts";
 import type { IEnriched } from "./IEnriched.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
-import type { IRepositoryTree } from "./IRepositoryTree.ts";
-import { RepositoryTree } from "./RepositoryTree.ts";
-import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { StoredEnrichment } from "./StoredEnrichment.ts";
 
 export const untyped = <T>(): Constructable<T> => Object as never as Constructable<T>;
@@ -71,7 +68,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   private statementMappings = new StatementMappings(new IdentityMapper(), new IdentityMapper());
   private readonlyStatements?: ReadonlyRepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
-  protected readonly tree: IRepositoryTree;
 
   constructor(type: Constructable<T>);
   constructor(type: Constructable<T>, connection: IConnection);
@@ -83,7 +79,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T>,
   ) {
     storedEnrichments.set(this, []);
-    this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     if (typeOrConnectionOrBuilt === undefined) {
       this.type = untyped();
       return;
