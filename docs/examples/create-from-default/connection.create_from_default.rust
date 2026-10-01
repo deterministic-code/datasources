@@ -4,3 +4,5 @@ let ds = {
     default().expect("default")
 };
 let connection = ds.create_connection().await.expect("connection");
+connection.open().await.unwrap();
+connection.close().await.unwrap();

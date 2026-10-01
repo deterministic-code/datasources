@@ -279,14 +279,14 @@ Pass `None`.
 ```
 :::
 
-### Two commands running together
+### Command running in one atomic transaction
 
 ::: example
-```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#TwoCommandsRunningTogether
+```csharp csharp/Providers/Memory.Tests/TransactionLifecycleTests.cs#CommandRunningInOneAtomicTransaction
 ```
-```rust rust/providers/memory/src/lib.rs#two_commands_running_together
+```rust rust/providers/memory/src/lib.rs#command_running_in_one_atomic_transaction
 ```
-```typescript typescript/providers/memory/src/index.test.ts#two-commands-running-together
+```typescript typescript/providers/memory/src/index.test.ts#command-running-in-one-atomic-transaction
 ```
 
 ```output [Created id]

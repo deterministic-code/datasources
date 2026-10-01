@@ -27,6 +27,8 @@ describe("Connection", () => {
   it("create from default", async () => {
     const ds = Datasource.default;
     const connection = await ds.createConnection();
+    await connection.open();
+    await connection.close();
     expect(connection.isOpen).toBe(false);
   });
 });

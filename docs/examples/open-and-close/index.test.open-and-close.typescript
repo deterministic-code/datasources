@@ -1,3 +1,0 @@
-const connection = new MemoryConnection();
-await connection.open();
-await connection.close();

@@ -3,8 +3,25 @@ using Datasources.Memory;
 
 namespace Datasources.Memory.Tests;
 
+[Collection("DatasourceFactory")]
 public class TransactionLifecycleTests
 {
+    static readonly string[] EnvKeys =
+    [
+        "INSTALLED_PROVIDERS",
+        "DATASOURCE_URL",
+        "PROVIDER",
+    ];
+
+    public TransactionLifecycleTests()
+    {
+        DatasourceFactory.Reset();
+        foreach (var key in EnvKeys)
+            Environment.SetEnvironmentVariable(key, null);
+        DatasourceFactory.Register("memory", new MemoryDriver());
+        Environment.SetEnvironmentVariable("PROVIDER", "memory");
+    }
+
     [Fact]
     public async Task Commit()
     {
@@ -26,9 +43,10 @@ public class TransactionLifecycleTests
     }
 
     [Fact]
-    public async Task TwoCommandsRunningTogether()
+    public async Task CommandRunningInOneAtomicTransaction()
     {
-        var connection = new MemoryConnection();
+        var ds = Datasource.Default;
+        var connection = await ds.CreateConnection();
         await connection.Open();
         var txn = await connection.StartTransaction();
         var command = connection.CreateCommand();

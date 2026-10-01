@@ -255,17 +255,6 @@ Working dialects (`json`, `memory`) open against injected ports ({{IFileStore|IF
 ```
 :::
 
-### Open and close
-
-::: example
-```csharp csharp/Providers/Memory.Tests/ConnectionLifecycleTests.cs#OpenAndClose
-```
-```rust rust/providers/memory/src/lib.rs#open_and_close
-```
-```typescript typescript/providers/memory/src/index.test.ts#open-and-close
-```
-:::
-
 ### Create and run a command
 
 ::: example

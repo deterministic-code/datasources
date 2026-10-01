@@ -1,4 +1,5 @@
-var connection = new MemoryConnection();
+var ds = Datasource.Default;
+var connection = await ds.CreateConnection();
 await connection.Open();
 var txn = await connection.StartTransaction();
 var command = connection.CreateCommand();

@@ -21,5 +21,7 @@ async fn create_from_default() {
         default().expect("default")
     };
     let connection = ds.create_connection().await.expect("connection");
+    connection.open().await.unwrap();
+    connection.close().await.unwrap();
     assert_eq!(connection.is_open(), false);
 }

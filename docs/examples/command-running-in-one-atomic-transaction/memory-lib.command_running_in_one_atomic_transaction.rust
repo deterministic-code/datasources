@@ -1,4 +1,5 @@
-let connection = MemoryConnection::from_options(None);
+let ds = default().unwrap();
+let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let txn = connection.start_transaction(None).await.unwrap();
 let command = connection.create_command();
