@@ -3,7 +3,7 @@ use crate::mappers::IdentityMapper;
 use crate::parameter::Parameter;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::result::Result;
-use crate::statement_mappings::StatementMappings;
+use crate::statement_mappers::StatementMappers;
 use crate::statements::{
     DeleteStatement, InsertStatement, SelectInsertedIdStatement, UpdateStatement,
 };
@@ -20,7 +20,7 @@ impl CRUDRepositoryStatements {
         Self::new(
             "",
             Vec::new(),
-            StatementMappings::new(
+            StatementMappers::new(
                 Arc::new(IdentityMapper::<String>::new()),
                 Arc::new(IdentityMapper::<String>::new()),
             ),
@@ -30,7 +30,7 @@ impl CRUDRepositoryStatements {
     pub fn new(
         table: impl Into<String>,
         columns: Vec<String>,
-        mappings: StatementMappings,
+        mappings: StatementMappers,
     ) -> Self {
         Self {
             read: ReadonlyRepositoryStatements::new(table, columns, mappings),

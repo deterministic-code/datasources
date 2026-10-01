@@ -9,7 +9,7 @@ public sealed class NestedToObjectEnrichmentStrategy<T>(TypeMap typeMap) : Defau
     public override Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources = null)
     {
         parents.Clear();

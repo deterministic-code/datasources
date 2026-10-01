@@ -9,13 +9,13 @@ import { SelectStatement } from "./statements/SelectStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import { Where } from "./statements/Where.ts";
 
-export class StatementMappings {
+export class StatementMappers implements IMapper<string, string> {
   constructor(
     private readonly entityMappers: IMapper<string, string>,
     private readonly propertyMappers: IMapper<string, string>,
   ) {}
 
-  column = (property: string): string => {
+  map = (property: string): string => {
     const dot = lastDot(property);
     if (dot < 0) return this.propertyMappers.map(property);
     const qualifier = property.slice(0, dot);
@@ -26,7 +26,7 @@ export class StatementMappings {
     return table === qualifier && mapped === name ? property : `${table}.${mapped}`;
   };
 
-  property = (key: string): string => {
+  reverseMap = (key: string): string => {
     const reversed = this.propertyMappers.reverseMap(key);
     if (reversed !== key && this.propertyMappers.map(reversed) === key) return reversed;
     const dot = lastDot(key);
@@ -35,6 +35,10 @@ export class StatementMappings {
     const name = this.propertyMappers.reverseMap(column);
     return name !== column && this.propertyMappers.map(name) === column ? name : reversed;
   };
+
+  column = (property: string): string => this.map(property);
+
+  property = (key: string): string => this.reverseMap(key);
 
   apply = (
     query: IStatement | undefined,

@@ -14,7 +14,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   protected override async applyLookup<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     const keys = this.keysOf(parents, sources, enrichment.sourceProperty);
@@ -40,7 +40,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   protected override async applyMany<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     const keys = this.keysOf(parents, sources, enrichment.sourceProperty);
@@ -65,7 +65,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   }
 
   private keysOf(
-    parents: object[],
+    parents: T[],
     sources: (Row | undefined)[] | undefined,
     from: string,
   ): Map<string, Scalar> {

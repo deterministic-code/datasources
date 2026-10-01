@@ -2,7 +2,7 @@ namespace Datasources;
 
 public sealed class CRUDRepositoryStatements : ReadonlyRepositoryStatements
 {
-    readonly StatementMappings mappings;
+    readonly StatementMappers mappings;
 
     public CRUDRepositoryStatements(string table, IReadOnlyList<string> columns)
         : this(table, columns, new IdentityMapper<string>(), new IdentityMapper<string>()) { }

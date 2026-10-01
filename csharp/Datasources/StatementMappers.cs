@@ -1,14 +1,14 @@
 namespace Datasources;
 
-public sealed class StatementMappings
+public sealed class StatementMappers : IMapper<string, string>
 {
     readonly IMapper<string, string> entityMappers;
     readonly IMapper<string, string> propertyMappers;
 
-    public StatementMappings(IMapper<string, string> entityMappers, IMapper<string, string> propertyMappers) =>
+    public StatementMappers(IMapper<string, string> entityMappers, IMapper<string, string> propertyMappers) =>
         (this.entityMappers, this.propertyMappers) = (entityMappers, propertyMappers);
 
-    internal string Column(string property)
+    public string Map(string property)
     {
         var dot = LastDot(property);
         if (dot < 0) return propertyMappers.Map(property);
@@ -20,7 +20,7 @@ public sealed class StatementMappings
         return table == qualifier && mapped == name ? property : $"{table}.{mapped}";
     }
 
-    internal string Property(string key)
+    public string ReverseMap(string key)
     {
         var reversed = propertyMappers.ReverseMap(key);
         if (reversed != key && propertyMappers.Map(reversed) == key) return reversed;
@@ -30,6 +30,10 @@ public sealed class StatementMappings
         var name = propertyMappers.ReverseMap(column);
         return name != column && propertyMappers.Map(name) == column ? name : reversed;
     }
+
+    internal string Column(string property) => Map(property);
+
+    internal string Property(string key) => ReverseMap(key);
 
     public IStatement? Apply(IStatement? query, Func<string, Value, Value> cell) => query switch
     {

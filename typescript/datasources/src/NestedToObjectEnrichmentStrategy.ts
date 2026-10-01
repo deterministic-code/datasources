@@ -19,7 +19,7 @@ export class NestedToObjectEnrichmentStrategy<T extends object>
   override apply<TRelated extends object>(
     _via: IReadonlyRepository<TRelated>,
     _enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     parents.length = 0;

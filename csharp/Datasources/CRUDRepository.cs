@@ -65,7 +65,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
         base.AddEnriched(enrichment, via, strategy);
-        ((IEnrichmentHost)this).Enrichments[^1].AttachLink(
+        ((StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1]).AttachLink(
             (parents, sources) => chosen.ApplyLinked(via, link, enrichment, parents, sources),
             ChildPersist.For(link));
         return this;

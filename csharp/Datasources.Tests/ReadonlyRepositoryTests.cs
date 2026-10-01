@@ -193,14 +193,14 @@ public class ReadonlyRepositoryTests
         var connection = await Setup(person, org);
         person["Id"] = person["id"];
         org["Id"] = org["id"];
-        IList<object> parents = [];
+        IList<Parent> parents = [];
         var parentsRepo = Open<Parent>(connection);
         await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
         {
             Key = "Id",
             Fields = new Dictionary<string, TypeMapField> { ["Id"] = "Id", ["TypeName"] = "TypeName" }
         }).Apply(parentsRepo, new("TypeName", "Id", "Id"), parents, [person, org]);
-        var items = parents.Cast<Parent>();
+        var items = parents;
         Assert.Equal([Id(person), Id(org)], items.Select(item => item.Id));
         Assert.Equal(["person", "org"], items.Select(item => item.TypeName));
     }
