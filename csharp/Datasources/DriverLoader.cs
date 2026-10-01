@@ -2,9 +2,9 @@ using System.Reflection;
 
 namespace Datasources;
 
-public static class DriverLoader
+internal static class DriverLoader
 {
-    public static IDriver Load(ProviderCatalog catalog)
+    internal static IDriver Load(ProviderCatalog catalog)
     {
         try
         {

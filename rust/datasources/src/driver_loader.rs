@@ -8,10 +8,10 @@ use libloading::Library;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-pub struct DriverLoader;
+pub(crate) struct DriverLoader;
 
 impl DriverLoader {
-    pub fn load(catalog: &ProviderCatalog) -> Result<Arc<dyn Driver>> {
+    pub(crate) fn load(catalog: &ProviderCatalog) -> Result<Arc<dyn Driver>> {
         let path = find(&catalog.location).ok_or_else(|| DatasourceError::not_installed(&catalog.name))?;
         let lib = unsafe { Library::new(&path) }
             .map_err(|_| DatasourceError::not_installed(&catalog.name))?;
