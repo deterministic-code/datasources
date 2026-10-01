@@ -7,7 +7,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
     public virtual Task Apply<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources = null) =>
         enrichment.Type switch
         {
@@ -20,7 +20,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         IReadonlyRepository<TRelated> via,
         ICRUDRepository<TLink> link,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources = null)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
@@ -43,7 +43,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
     protected virtual async Task ApplyLookup<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
         var cache = new Dictionary<string, TRelated?>();
@@ -66,7 +66,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
     protected virtual async Task ApplyMany<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
         for (var i = 0; i < parents.Count; i++)
@@ -84,18 +84,18 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
     protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
         sources is not null && index < sources.Count ? sources[index] : null;
 
-    protected static object? SourceKey(object parent, string name, Row? source) =>
+    protected static object? SourceKey<TParent>(TParent parent, string name, Row? source) =>
         source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
             ? cell.ToObject()
-            : parent.GetType().GetProperty(name)?.GetValue(parent);
+            : parent!.GetType().GetProperty(name)?.GetValue(parent);
 
     protected static string KeyOf(object? key) => key?.ToString() ?? "";
 
-    protected static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
+    protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
 
-    protected static void Set(object obj, string name, object? value) => Prop(obj, name).SetValue(obj, value);
+    protected static void Set<TItem>(TItem obj, string name, object? value) => Prop(obj, name).SetValue(obj, value);
 
-    static PropertyInfo Prop(object obj, string name) =>
-        obj.GetType().GetProperty(name)
+    static PropertyInfo Prop<TItem>(TItem obj, string name) =>
+        obj!.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
 }

@@ -5,7 +5,7 @@ use crate::mappers::Mapper;
 use crate::readonly_repository_options::ReadonlyRepositoryOptions;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::result::Result;
-use crate::statement_mappings::StatementMappings;
+use crate::statement_mappers::StatementMappers;
 use std::sync::Arc;
 
 pub struct ReadonlyRepositoryBuilder;
@@ -50,7 +50,7 @@ pub(crate) fn assemble(
         })
         .unwrap_or_default();
     names.sort();
-    let mappings = StatementMappings::new(Arc::clone(&entity_mapper), Arc::clone(&property_mappings));
+    let mappings = StatementMappers::new(Arc::clone(&entity_mapper), Arc::clone(&property_mappings));
     Ok(BuiltRepository {
         connection,
         row_converter,

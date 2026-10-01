@@ -3,10 +3,10 @@ const org: Seed = { TypeName: "org" };
 const connection = await setup([person, org]);
 person.Id = person.id;
 org.Id = org.id;
-const parents: object[] = [];
+const parents: Parent[] = [];
 const parentsRepo = repo(Parent, connection);
 await new NestedToObjectEnrichmentStrategy<Parent>({
   key: "Id",
   fields: { Id: "Id", TypeName: "TypeName" },
 }).apply(parentsRepo, { destinationProperty: "TypeName", sourceProperty: "Id", relatedKey: "Id" }, parents, [person, org]);
-const items = parents as Parent[];
+const items = parents;

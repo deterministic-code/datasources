@@ -5,7 +5,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
     protected override async Task ApplyLookup<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
         var keys = Keys(parents, sources, enrichment.SourceProperty);
@@ -33,7 +33,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
     protected override async Task ApplyMany<TRelated>(
         IReadonlyRepository<TRelated> via,
         Enrichment enrichment,
-        IList<object> parents,
+        IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
         var keys = Keys(parents, sources, enrichment.SourceProperty);
@@ -60,7 +60,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         }
     }
 
-    static Dictionary<string, Value> Keys(IList<object> parents, IReadOnlyList<Row?>? sources, string from)
+    static Dictionary<string, Value> Keys(IList<T> parents, IReadOnlyList<Row?>? sources, string from)
     {
         var keys = new Dictionary<string, Value>();
         for (var i = 0; i < parents.Count; i++)

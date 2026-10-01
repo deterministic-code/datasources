@@ -2,7 +2,7 @@ import type { Cell } from "./converters/Cell.ts";
 import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
-import { StatementMappings } from "./StatementMappings.ts";
+import { StatementMappers } from "./StatementMappers.ts";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import { InsertStatement } from "./statements/InsertStatement.ts";
 import { SelectInsertedIdStatement } from "./statements/SelectInsertedIdStatement.ts";
@@ -13,7 +13,7 @@ import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts"
 const same = (_name: string, value: Cell): Cell => value;
 
 export class CRUDRepositoryStatements extends ReadonlyRepositoryStatements {
-  private readonly mappings: StatementMappings;
+  private readonly mappings: StatementMappers;
 
   constructor(
     table: string,
@@ -22,7 +22,7 @@ export class CRUDRepositoryStatements extends ReadonlyRepositoryStatements {
     propertyMappers: IMapper<string, string> = new IdentityMapper(),
   ) {
     super(table, columns);
-    this.mappings = new StatementMappings(entityMappers, propertyMappers);
+    this.mappings = new StatementMappers(entityMappers, propertyMappers);
   }
 
   insert = (fields: Field[]): InsertStatement =>

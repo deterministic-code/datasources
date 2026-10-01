@@ -16,7 +16,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   apply<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     const type = enrichment.type ?? EnrichmentPropertyType.Object;
@@ -31,7 +31,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     via: IReadonlyRepository<TRelated>,
     link: ICRUDRepository<TLink>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     const association = enrichment.association ?? (() => {
@@ -56,7 +56,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   protected async applyLookup<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     const cache = new Map<string, TRelated | undefined>();
@@ -80,7 +80,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   protected async applyMany<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
     for (const [index, parent] of parents.entries()) {

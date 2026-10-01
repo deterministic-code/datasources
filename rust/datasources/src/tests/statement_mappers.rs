@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::mappers::{DictionaryMapper, Mapper};
 use crate::*;
 
-fn mappings() -> StatementMappings {
+fn mappings() -> StatementMappers {
     let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
         ("User".to_string(), "people".to_string()),
         ("Role".to_string(), "roles".to_string()),
@@ -14,7 +14,7 @@ fn mappings() -> StatementMappings {
             ("title".to_string(), "book.title".to_string()),
             ("id".to_string(), "user_id".to_string()),
         ]));
-    StatementMappings::new(entities, properties)
+    StatementMappers::new(entities, properties)
 }
 
 fn mapper(name: &str, value: &Value) -> Result<Value> {
@@ -210,7 +210,7 @@ fn maps_contacts_select() {
             ("AddressTypeId".to_string(), "address_type_id".to_string()),
             ("PhoneTypeId".to_string(), "phone_type_id".to_string()),
         ]));
-    let mappings = StatementMappings::new(entities, properties);
+    let mappings = StatementMappers::new(entities, properties);
     let fields = [
         "Contact.FirstName",
         "Contact.LastName",

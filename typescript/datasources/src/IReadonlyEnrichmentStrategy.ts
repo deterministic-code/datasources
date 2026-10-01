@@ -7,14 +7,14 @@ export interface IReadonlyEnrichmentStrategy<T extends object> {
   apply<TRelated extends object>(
     via: IReadonlyRepository<TRelated>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void>;
   applyLinked<TRelated extends object, TLink extends object>(
     via: IReadonlyRepository<TRelated>,
     link: ICRUDRepository<TLink>,
     enrichment: Enrichment,
-    parents: object[],
+    parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void>;
 }

@@ -2,12 +2,12 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-public class StatementMappingsTests
+public class StatementMappersTests
 {
     [Fact]
     public void MapsSelect()
     {
-        var mappings = new StatementMappings(
+        var mappings = new StatementMappers(
             new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
             new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
         Value Mapper(string name, Value value) =>
@@ -49,7 +49,7 @@ public class StatementMappingsTests
     [Fact]
     public void MapsWrites()
     {
-        var mappings = new StatementMappings(
+        var mappings = new StatementMappers(
             new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
             new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
         Value Mapper(string name, Value value) =>
@@ -82,7 +82,7 @@ public class StatementMappingsTests
     [Fact]
     public void LeavesRawAndOtherStatements()
     {
-        var mappings = new StatementMappings(
+        var mappings = new StatementMappers(
             new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
             new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
         Value Mapper(string name, Value value) => value;
@@ -108,7 +108,7 @@ public class StatementMappingsTests
     [Fact]
     public void MapsContactsSelect()
     {
-        var mappings = new StatementMappings(
+        var mappings = new StatementMappers(
             new DictionaryMapper<string>(new Dictionary<string, string>
             {
                 ["Contact"] = "contacts_base",

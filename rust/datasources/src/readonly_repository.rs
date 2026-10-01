@@ -20,7 +20,7 @@ use crate::select_statement::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
-use crate::statement_mappings::StatementMappings;
+use crate::statement_mappers::StatementMappers;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::stubs::StubConnection;
 use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
@@ -35,7 +35,7 @@ pub struct ReadonlyRepository {
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     pub(crate) row_converter: Option<RowTypeConverter>,
     pub(crate) object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>,
-    statement_mappings: StatementMappings,
+    statement_mappers: StatementMappers,
     readonly_statements: ReadonlyRepositoryStatements,
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
@@ -67,7 +67,7 @@ impl ReadonlyRepository {
             middlewares: Vec::new(),
             row_converter: built.row_converter,
             object_converter: built.object_converter,
-            statement_mappings: StatementMappings::new(built.entity_mapper, built.property_mappings),
+            statement_mappers: StatementMappers::new(built.entity_mapper, built.property_mappings),
             readonly_statements: built.statements,
             entity_type: TypeId::of::<Row>(),
             memory: None,
@@ -82,17 +82,17 @@ impl ReadonlyRepository {
             middlewares: Vec::new(),
             row_converter: None,
             object_converter: Box::new(MetaDataRowTypeConverter::new(Vec::new())),
-            statement_mappings: {
+            statement_mappers: {
                 let entity: Arc<dyn Mapper<String, String> + Send + Sync> =
                     Arc::new(IdentityMapper::<String>::new());
                 let property: Arc<dyn Mapper<String, String> + Send + Sync> =
                     Arc::new(IdentityMapper::<String>::new());
-                StatementMappings::new(entity, property)
+                StatementMappers::new(entity, property)
             },
             readonly_statements: ReadonlyRepositoryStatements::new(
                 "",
                 Vec::new(),
-                StatementMappings::new(
+                StatementMappers::new(
                     Arc::new(IdentityMapper::<String>::new()),
                     Arc::new(IdentityMapper::<String>::new()),
                 ),
@@ -171,7 +171,7 @@ impl ReadonlyRepository {
         fields_applied: bool,
     ) -> Result<Option<Where>> {
         match where_clause.as_any().downcast_ref::<Where>() {
-            Some(clause) => Ok(Some(self.statement_mappings.apply_where(
+            Some(clause) => Ok(Some(self.statement_mappers.apply_where(
                 clause,
                 &|name, cell| self.cell(name, cell, fields_applied),
             )?)),
@@ -180,7 +180,7 @@ impl ReadonlyRepository {
     }
 
     pub(crate) fn column(&self, property: &str) -> String {
-        self.statement_mappings.column(property)
+        self.statement_mappers.column(property)
     }
 
     pub(crate) async fn fill(
@@ -215,7 +215,7 @@ impl ReadonlyRepository {
         query: Option<&dyn ReadInput>,
         parameters: Option<&[Parameter]>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
-        self.apply(self.read_items(query, parameters).await?).await
+        self.apply(self.read_rows(query, parameters).await?).await
     }
 
     async fn read_sources(
@@ -240,7 +240,7 @@ impl ReadonlyRepository {
             }
             Some(statement) => match statement.as_any().downcast_ref::<SelectStatement>() {
                 Some(select) if !select.table.is_empty() => {
-                    let mapped = self.statement_mappings.apply_select(select, &|name, cell| {
+                    let mapped = self.statement_mappers.apply_select(select, &|name, cell| {
                         self.cell(name, cell, false)
                     })?;
                     let params = parameters.map(|items| items.to_vec()).unwrap_or_else(|| {
@@ -277,13 +277,13 @@ impl ReadonlyRepository {
         let mut rows = Vec::new();
         while reader.next().await? {
             if let Some(row) = reader.current() {
-                rows.push(self.renamed(row));
+                rows.push(self.column_to_property_name(row));
             }
         }
         Ok(rows)
     }
 
-    async fn read_items(
+    async fn read_rows(
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[Parameter]>,
@@ -315,20 +315,17 @@ impl ReadonlyRepository {
         if !self.enriched() {
             return Ok(pairs);
         }
-        let mut items: Vec<Row> = pairs.iter().map(|(item, _)| item.clone()).collect();
-        let sources: Vec<Option<Row>> = pairs.iter().map(|(_, source)| source.clone()).collect();
+        let (mut items, sources): (Vec<Row>, Vec<Option<Row>>) = pairs.into_iter().unzip();
         self.fill(&mut items, Some(&sources)).await?;
-        let paired = items.len() == sources.len();
-        Ok(items
-            .into_iter()
-            .enumerate()
-            .map(|(index, item)| (item, if paired { sources[index].clone() } else { None }))
-            .collect())
+        Ok(match items.len() == sources.len() {
+            true => items.into_iter().zip(sources).collect(),
+            false => items.into_iter().map(|item| (item, None)).collect(),
+        })
     }
 
-    fn renamed(&self, row: Row) -> Row {
+    fn column_to_property_name(&self, row: Row) -> Row {
         row.into_iter()
-            .map(|(key, value)| (self.statement_mappings.property(&key), value))
+            .map(|(key, value)| (self.statement_mappers.property(&key), value))
             .collect()
     }
 
@@ -336,7 +333,7 @@ impl ReadonlyRepository {
         match select.table.is_empty() {
             true => Ok(select),
             false => self
-                .statement_mappings
+                .statement_mappers
                 .apply_select(&select, &|name, cell| self.cell(name, cell, false)),
         }
     }

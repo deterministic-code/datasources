@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
-import { StatementMappings } from "./StatementMappings.ts";
+import { StatementMappers } from "./StatementMappers.ts";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import { ExecuteStoredProcedureStatement } from "./statements/ExecuteStoredProcedureStatement.ts";
 import { Identifier } from "./statements/Identifier.ts";
@@ -18,9 +18,9 @@ import type { Cell } from "./converters/Cell.ts";
 const mapper = (name: string, value: Cell): Cell =>
   typeof value === "string" ? `${name}:${value.toUpperCase()}` : value;
 
-describe("StatementMappings", () => {
+describe("StatementMappers", () => {
   it("maps a select", () => {
-    const mappings = new StatementMappings(
+    const mappings = new StatementMappers(
       new DictionaryMapper([
         ["User", "people"],
         ["Role", "roles"],
@@ -69,7 +69,7 @@ describe("StatementMappings", () => {
   });
 
   it("maps writes", () => {
-    const mappings = new StatementMappings(
+    const mappings = new StatementMappers(
       new DictionaryMapper([
         ["User", "people"],
         ["Role", "roles"],
@@ -106,7 +106,7 @@ describe("StatementMappings", () => {
   });
 
   it("leaves raw and other statements", () => {
-    const mappings = new StatementMappings(
+    const mappings = new StatementMappers(
       new DictionaryMapper([
         ["User", "people"],
         ["Role", "roles"],
@@ -137,7 +137,7 @@ describe("StatementMappings", () => {
   });
 
   it("maps a contacts select", () => {
-    const mappings = new StatementMappings(
+    const mappings = new StatementMappers(
       new DictionaryMapper([
         ["Contact", "contacts_base"],
         ["ContactSource", "contact_source"],

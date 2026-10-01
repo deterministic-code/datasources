@@ -11,12 +11,12 @@ use crate::{DeleteStatement, InsertStatement, SelectInsertedIdStatement, SelectS
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct StatementMappings {
+pub struct StatementMappers {
     entity_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
     property_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
 }
 
-impl StatementMappings {
+impl StatementMappers {
     pub fn new(
         entity_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
         property_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
@@ -28,38 +28,11 @@ impl StatementMappings {
     }
 
     pub(crate) fn column(&self, property: &str) -> String {
-        let Some(dot) = last_dot(property) else {
-            return Mapper::map(&self.property_mappers, property.to_string());
-        };
-        let qualifier = &property[..dot];
-        let name = &property[dot + 1..];
-        let mapped = Mapper::map(&self.property_mappers, name.to_string());
-        if mapped != name && mapped.contains('.') {
-            return mapped;
-        }
-        let table = self.entity(qualifier);
-        if table == qualifier && mapped == name {
-            property.to_string()
-        } else {
-            format!("{table}.{mapped}")
-        }
+        Mapper::map(self, property.to_string())
     }
 
     pub(crate) fn property(&self, key: &str) -> String {
-        let reversed = Mapper::reverse_map(&self.property_mappers, key.to_string());
-        if reversed != key && Mapper::map(&self.property_mappers, reversed.clone()) == key {
-            return reversed;
-        }
-        let Some(dot) = last_dot(key) else {
-            return reversed;
-        };
-        let column = &key[dot + 1..];
-        let name = Mapper::reverse_map(&self.property_mappers, column.to_string());
-        if name != column && Mapper::map(&self.property_mappers, name.clone()) == column {
-            name
-        } else {
-            reversed
-        }
+        Mapper::reverse_map(self, key.to_string())
     }
 
     pub fn apply_select(
@@ -201,6 +174,43 @@ impl StatementMappings {
 
     fn entity(&self, name: &str) -> String {
         Mapper::map(&self.entity_mappers, name.to_string())
+    }
+}
+
+impl Mapper<String, String> for StatementMappers {
+    fn map(&self, property: String) -> String {
+        let Some(dot) = last_dot(&property) else {
+            return Mapper::map(&self.property_mappers, property);
+        };
+        let qualifier = &property[..dot];
+        let name = &property[dot + 1..];
+        let mapped = Mapper::map(&self.property_mappers, name.to_string());
+        if mapped != name && mapped.contains('.') {
+            return mapped;
+        }
+        let table = self.entity(qualifier);
+        if table == qualifier && mapped == name {
+            property
+        } else {
+            format!("{table}.{mapped}")
+        }
+    }
+
+    fn reverse_map(&self, key: String) -> String {
+        let reversed = Mapper::reverse_map(&self.property_mappers, key.clone());
+        if reversed != key && Mapper::map(&self.property_mappers, reversed.clone()) == key {
+            return reversed;
+        }
+        let Some(dot) = last_dot(&key) else {
+            return reversed;
+        };
+        let column = &key[dot + 1..];
+        let name = Mapper::reverse_map(&self.property_mappers, column.to_string());
+        if name != column && Mapper::map(&self.property_mappers, name.clone()) == column {
+            name
+        } else {
+            reversed
+        }
     }
 }
 

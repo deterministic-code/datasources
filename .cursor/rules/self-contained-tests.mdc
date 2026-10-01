@@ -9,7 +9,7 @@ Each test builds the objects it needs. Do not share a static field, fixture, map
 
 ```csharp
 // ❌ BAD
-static readonly StatementMappings Mappings = new(...);
+static readonly StatementMappers Mappings = new(...);
 
 [Fact]
 public void MapsSelect() => Mappings.Apply(select, Cell);
@@ -18,25 +18,25 @@ public void MapsSelect() => Mappings.Apply(select, Cell);
 [Fact]
 public void MapsSelect()
 {
-    var mappings = new StatementMappings(...);
+    var mappings = new StatementMappers(...);
     mappings.Apply(select, (name, value) => value);
 }
 ```
 
 ```typescript
 // ❌ BAD
-const mappings = new StatementMappings(...);
+const mappings = new StatementMappers(...);
 
 // ✅ GOOD
 it("maps a select", () => {
-  const mappings = new StatementMappings(...);
+  const mappings = new StatementMappers(...);
 });
 ```
 
 ```rust
 // ❌ BAD
-static MAPPINGS: LazyLock<StatementMappings> = ...;
+static MAPPINGS: LazyLock<StatementMappers> = ...;
 
 // ✅ GOOD
-let mappings = StatementMappings::new(entities, properties);
+let mappings = StatementMappers::new(entities, properties);
 ```

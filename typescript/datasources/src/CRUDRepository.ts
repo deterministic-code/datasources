@@ -104,7 +104,7 @@ export class CRUDRepository<T = Cells>
   ): this {
     const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
     super.addEnriched(enrichment, via, strategy);
-    const stored = lastEnrichment(this);
+    const stored = lastEnrichment(this) as StoredEnrichment<T & object>;
     stored.apply = (parents, sources) =>
       chosen.applyLinked(via, link, enrichment, parents, sources);
     stored.link = link as ICRUDRepository<object>;

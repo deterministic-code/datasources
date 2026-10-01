@@ -310,13 +310,13 @@ describe("ReadonlyRepository", () => {
     const connection = await setup([person, org]);
     person.Id = person.id;
     org.Id = org.id;
-    const parents: object[] = [];
+    const parents: Parent[] = [];
     const parentsRepo = repo(Parent, connection);
     await new NestedToObjectEnrichmentStrategy<Parent>({
       key: "Id",
       fields: { Id: "Id", TypeName: "TypeName" },
     }).apply(parentsRepo, { destinationProperty: "TypeName", sourceProperty: "Id", relatedKey: "Id" }, parents, [person, org]);
-    const items = parents as Parent[];
+    const items = parents;
     expect(items.map((item) => item.Id)).toEqual([person.id, org.id]);
     expect(items.map((item) => item.TypeName)).toEqual(["person", "org"]);
   });
