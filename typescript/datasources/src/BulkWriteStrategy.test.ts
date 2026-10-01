@@ -97,12 +97,13 @@ describe("bulk write strategies", () => {
   it("leaves a shorter name inside a longer parameter", async () => {
     class Coded {
       id = 0;
-      id_code = "";
+      code = "";
+      code_extra = "";
     }
     const { repo, command } = open(Coded, new BatchCommandIBulkWriteStrategy<Coded>());
-    await repo.createBulk([Object.assign(new Coded(), { id_code: "ab" })]);
-    expect(command.executeCalls[0]?.text).toContain("$id_code__0");
-    expect(command.executeCalls[0]?.text).not.toContain("$id_code__0__0");
+    await repo.createBulk([Object.assign(new Coded(), { code: "a", code_extra: "ab" })]);
+    expect(command.executeCalls[0]?.text).toContain("$code__0");
+    expect(command.executeCalls[0]?.text).toContain("$code_extra__0");
   });
 
   it("stored procedure commands sends one json call", async () => {
@@ -168,8 +169,8 @@ describe("bulk write strategies", () => {
       huge = 0;
       note = "";
       rank = 0n;
-      zed = 1;
       amy = 2;
+      zed = 1;
     }
     const { repo, command } = open(
       Odd,

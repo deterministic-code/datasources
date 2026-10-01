@@ -153,7 +153,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   private rowOf = (item: T): Cells => {
     const stored = this.reverse(item);
     const row: Cells = {};
-    for (const name of this.statements?.readColumns ?? []) {
+    for (const name of this.statements!.readColumns) {
       const match = Object.entries(stored).find(([key]) => this.column(key) === name && !this.enrichmentInto(key));
       row[name] = match?.[1] ?? null;
     }

@@ -48,9 +48,8 @@ describe("DatasourceFactory", () => {
   });
 
   it("skips a repeated installed provider", () => {
-    expect(() => DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "nope,nope" })).toThrow(
-      ProviderNotInstalledError,
-    );
+    DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "memory,memory" });
+    expect(DatasourceFactory.registered()).toEqual(["memory"]);
   });
 
   it("missing provider throws", () => {

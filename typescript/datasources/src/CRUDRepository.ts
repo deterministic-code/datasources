@@ -102,8 +102,7 @@ export class CRUDRepository<T = Cells>
     const built = crudBuilt(typeOrConnection, options);
     super(built);
     this.ids = built.ids;
-    const crud = typeof options === "object" && options !== null ? (options as CRUDRepositoryOptions<T>) : undefined;
-    this.write = crud?.write ?? new DefaultWriteEnrichmentStrategy<T>();
+    this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
   }
 
   override addEnriched<TRelated extends object>(
@@ -213,8 +212,7 @@ export class CRUDRepository<T = Cells>
     }
   };
 
-  private idValue = (item: T): Scalar | undefined =>
-    this.ids.length === 1 ? scalarOf((item as Props)[this.ids[0]!]) : undefined;
+  private idValue = (item: T): Scalar | undefined => scalarOf((item as Props)[this.ids[0]!]);
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
@@ -270,7 +268,7 @@ export class CRUDRepository<T = Cells>
   };
 
   protected enrichmentInto = (name: string): boolean =>
-    enrichmentsOf(this)?.some((entry) => entry.enrichment.into === name) ?? false;
+    enrichmentsOf(this)!.some((entry) => entry.enrichment.into === name);
 }
 
 const writerOf = <TRelated extends object>(
@@ -278,9 +276,4 @@ const writerOf = <TRelated extends object>(
 ): ICRUDRepository<object> | undefined =>
   "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<object>) : undefined;
 
-const lastEnrichment = (host: object): StoredEnrichment => {
-  const entries = enrichmentsOf(host);
-  const stored = entries?.[entries.length - 1];
-  if (!stored) throw new DatasourceError("Missing enrichment");
-  return stored;
-};
+const lastEnrichment = (host: object): StoredEnrichment => enrichmentsOf(host)!.at(-1)!;
