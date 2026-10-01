@@ -1,5 +1,5 @@
 let (mut users, seeded) = open(Some(Arc::new(LazyWriteEnrichmentStrategy::new(
-    None, None, false,
+    None, None, None, false,
 ))))
 .await;
 link(&mut users, &seeded);

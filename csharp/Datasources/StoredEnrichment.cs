@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class StoredEnrichment
+internal class StoredEnrichment
 {
     internal StoredEnrichment(Enrichment enrichment, IChildPersist? persist = null, IChildPersist? link = null)
     {
@@ -18,7 +18,7 @@ public class StoredEnrichment
     internal void AttachLink(IChildPersist link) => Link = link;
 }
 
-public sealed class StoredEnrichment<T> : StoredEnrichment
+internal sealed class StoredEnrichment<T> : StoredEnrichment
 {
     internal StoredEnrichment(
         Enrichment enrichment,

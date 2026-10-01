@@ -1,9 +1,10 @@
 use crate::cascade_delete_enrichment_strategy::CascadeDeleteEnrichmentStrategy;
+use crate::create_enrichment_strategy::CreateEnrichmentStrategy;
 use crate::datasource_error::DatasourceError;
+use crate::default_create_enrichment_strategy::DefaultCreateEnrichmentStrategy;
 use crate::default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
 use crate::delete_enrichment_strategy::DeleteEnrichmentStrategy;
 use crate::enrichment::Enrichment;
-use crate::repository::ICRUDRepository;
 use crate::repository_tree::RepositoryTree;
 use crate::result::Result;
 use crate::row::Row;
@@ -19,6 +20,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct DefaultWriteEnrichmentStrategy {
+    create: Arc<dyn CreateEnrichmentStrategy>,
     delete: Arc<dyn DeleteEnrichmentStrategy>,
     update: Arc<dyn UpdateEnrichmentStrategy>,
     skip_unloaded: bool,
@@ -29,9 +31,11 @@ impl DefaultWriteEnrichmentStrategy {
     pub fn new(
         delete: Option<Arc<dyn DeleteEnrichmentStrategy>>,
         update: Option<Arc<dyn UpdateEnrichmentStrategy>>,
+        create: Option<Arc<dyn CreateEnrichmentStrategy>>,
         use_transaction: bool,
     ) -> Self {
         Self {
+            create: create.unwrap_or_else(|| Arc::new(DefaultCreateEnrichmentStrategy)),
             delete: delete.unwrap_or_else(|| Arc::new(CascadeDeleteEnrichmentStrategy)),
             update: update.unwrap_or_else(|| Arc::new(DefaultUpdateEnrichmentStrategy)),
             skip_unloaded: false,
@@ -42,18 +46,19 @@ impl DefaultWriteEnrichmentStrategy {
     pub fn lazy(
         delete: Option<Arc<dyn DeleteEnrichmentStrategy>>,
         update: Option<Arc<dyn UpdateEnrichmentStrategy>>,
+        create: Option<Arc<dyn CreateEnrichmentStrategy>>,
         use_transaction: bool,
     ) -> Self {
         Self {
             skip_unloaded: true,
-            ..Self::new(delete, update, use_transaction)
+            ..Self::new(delete, update, create, use_transaction)
         }
     }
 }
 
 impl Default for DefaultWriteEnrichmentStrategy {
     fn default() -> Self {
-        Self::new(None, None, false)
+        Self::new(None, None, None, false)
     }
 }
 
@@ -119,13 +124,19 @@ impl DefaultWriteEnrichmentStrategy {
                     }
                     match mode {
                         WriteMode::Create => {
-                            create_links(writer.as_ref(), enrichment, parent).await?
+                            self.create
+                                .create_linked(writer.clone(), enrichment, parent)
+                                .await?
                         }
                         WriteMode::Update => {
-                            self.update.update_linked(entry, enrichment, parent).await?
+                            self.update
+                                .update_linked(writer.clone(), enrichment, parent)
+                                .await?
                         }
                         WriteMode::Delete => {
-                            self.delete.delete_linked(entry, enrichment, parent).await?
+                            self.delete
+                                .delete_linked(writer.clone(), enrichment, parent)
+                                .await?
                         }
                     }
                 }
@@ -148,14 +159,18 @@ impl DefaultWriteEnrichmentStrategy {
                 }
                 match mode {
                     WriteMode::Create => {
-                        create_children(writer.as_ref(), enrichment, parent).await?
+                        self.create
+                            .create_owned(writer.clone(), enrichment, parent)
+                            .await?
                     }
                     WriteMode::Update => {
-                        self.update.update_owned(entry, enrichment, parent).await?
+                        self.update
+                            .update_owned(writer.clone(), enrichment, parent)
+                            .await?
                     }
                     WriteMode::Delete => {
                         self.delete
-                            .delete_owned(entry, enrichment, parent, self)
+                            .delete_owned(writer.clone(), enrichment, parent, self)
                             .await?
                     }
                 }
@@ -174,49 +189,6 @@ impl crate::delete_nested::DeleteNested for DefaultWriteEnrichmentStrategy {
     async fn delete_nested(&self, _rows: &mut [Row]) -> Result<()> {
         Ok(())
     }
-}
-
-pub(crate) async fn create_children(
-    writer: &dyn ICRUDRepository,
-    enrichment: &Enrichment,
-    parent: &mut Row,
-) -> Result<()> {
-    let mut related = decode_rows(parent.get(&enrichment.destination_property));
-    let key = parent.get(&enrichment.source_property).cloned();
-    for row in &mut related {
-        if let Some(key) = &key {
-            row.insert(enrichment.related_key.clone(), key.clone());
-        }
-        writer.create(row).await?;
-    }
-    parent.insert(
-        enrichment.destination_property.clone(),
-        encode_rows(&related),
-    );
-    Ok(())
-}
-
-pub(crate) async fn create_links(
-    writer: &dyn ICRUDRepository,
-    enrichment: &Enrichment,
-    parent: &Row,
-) -> Result<()> {
-    let association = enrichment
-        .association
-        .as_ref()
-        .ok_or_else(|| DatasourceError::message("Missing association"))?;
-    let parent_key = required(
-        parent,
-        &enrichment.source_property,
-        &enrichment.destination_property,
-    )?;
-    for id in related_ids(parent, enrichment)? {
-        let mut row = Row::new();
-        row.insert(association.parent.clone(), parent_key.clone());
-        row.insert(association.related.clone(), id);
-        writer.create(&mut row).await?;
-    }
-    Ok(())
 }
 
 pub(crate) fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Value>> {

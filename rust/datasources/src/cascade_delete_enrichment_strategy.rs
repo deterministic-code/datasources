@@ -1,13 +1,13 @@
-use crate::datasource_error::DatasourceError;
 use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
+use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
+use std::sync::Arc;
 
 pub struct CascadeDeleteEnrichmentStrategy;
 
@@ -15,17 +15,11 @@ pub struct CascadeDeleteEnrichmentStrategy;
 impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
     async fn delete_owned(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &Row,
         delete_nested: &dyn DeleteNested,
     ) -> Result<()> {
-        let writer = entry.persist.as_ref().ok_or_else(|| {
-            DatasourceError::message(format!(
-                "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.destination_property
-            ))
-        })?;
         let mut existing = load(writer.as_ref(), enrichment, parent).await?;
         delete_nested.delete_nested(&mut existing).await?;
         for row in existing {
@@ -36,20 +30,14 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
 
     async fn delete_linked(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &Row,
     ) -> Result<()> {
         let association = enrichment
             .association
             .clone()
-            .ok_or_else(|| DatasourceError::message("Missing association"))?;
-        let writer = entry.link.as_ref().ok_or_else(|| {
-            DatasourceError::message(format!(
-                "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.destination_property
-            ))
-        })?;
+            .ok_or_else(|| crate::DatasourceError::message("Missing association"))?;
         let Some(parent_key) = parent.get(&enrichment.source_property).cloned() else {
             return Ok(());
         };

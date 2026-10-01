@@ -6,6 +6,7 @@ import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrate
 import { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
@@ -16,7 +17,6 @@ import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
-import { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
@@ -62,11 +62,8 @@ const mock = (rows: Cells[] = []) => {
   return { connection, command };
 };
 
-const entry = (into: string, extra: object = {}) =>
-  new StoredEnrichment(
-    { destinationProperty: into, sourceProperty: "id", relatedKey: "parent_id", type: "list", ...extra },
-    async () => {},
-  );
+const enrichment = (into: string, extra: object = {}) =>
+  ({ destinationProperty: into, sourceProperty: "id", relatedKey: "parent_id", type: "list", ...extra });
 
 describe("statement and repository edges", () => {
   it("names a native fragment", () => {
@@ -198,28 +195,31 @@ describe("statement and repository edges", () => {
 
 describe("enrichment edges", () => {
   it("requires a writer and an association", async () => {
-    const owned = entry("Children");
+    const owned = enrichment("Children");
     const cascade = new CascadeDeleteEnrichmentStrategy<Item>();
-    await expect(cascade.deleteOwned(owned, owned.enrichment, {}, async () => {})).rejects.toThrow(/Children/);
-    await expect(cascade.deleteLinked(owned, owned.enrichment, {})).rejects.toThrow("Missing association");
+    await expect(cascade.deleteLinked(new CRUDRepository<Item>(mock([]).connection, { entity: "items" }), owned, {})).rejects.toThrow(
+      "Missing association",
+    );
     const update = new CascadeDeleteUpdateEnrichmentStrategy<Item>();
-    await expect(update.updateOwned(owned, owned.enrichment, {})).rejects.toThrow(/Children/);
-    await expect(update.updateLinked(owned, owned.enrichment, {})).rejects.toThrow("Missing association");
+    await expect(update.updateLinked(new CRUDRepository<Item>(mock([]).connection, { entity: "items" }), owned, {})).rejects.toThrow(
+      "Missing association",
+    );
     const replacing = new DefaultUpdateEnrichmentStrategy<Item>();
-    await expect(replacing.updateOwned(owned, owned.enrichment, {})).rejects.toThrow(/Children/);
-    await expect(replacing.updateLinked(owned, owned.enrichment, {})).rejects.toThrow("Missing association");
+    await expect(replacing.updateLinked(new CRUDRepository<Item>(mock([]).connection, { entity: "items" }), owned, {})).rejects.toThrow(
+      "Missing association",
+    );
 
     const { connection } = mock([]);
     const writer = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
-    const linked = new StoredEnrichment(
-      { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id", association: { parent: "parent_id", related: "tag_id" } },
-      async () => {},
-      undefined,
-      writer,
-    );
-    await cascade.deleteLinked(linked, linked.enrichment, { id: 0 });
-    await cascade.deleteLinked(linked, linked.enrichment, { id: "" });
-    await expect(DeleteEnrichmentStrategy.load(writer, owned.enrichment, { id: { nested: true } })).resolves.toEqual([]);
+    const tags = {
+      destinationProperty: "Tags",
+      sourceProperty: "id",
+      relatedKey: "id",
+      association: { parent: "parent_id", related: "tag_id" },
+    };
+    await cascade.deleteLinked(writer, tags, { id: 0 });
+    await cascade.deleteLinked(writer, tags, { id: "" });
+    await expect(DeleteEnrichmentStrategy.load(writer, owned, { id: { nested: true } })).resolves.toEqual([]);
 
     const host = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
     host.addEnriched({ destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, writer);
@@ -272,35 +272,32 @@ describe("enrichment edges", () => {
     const children = { destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" };
     const quiet = mock([]);
     const writer = new CRUDRepository<Item>(quiet.connection, { type: Item, entity: "children", ids: ["id"] });
-    const owned = new StoredEnrichment(children, async () => {}, writer);
     const replacing = new DefaultUpdateEnrichmentStrategy<Item>();
-    await replacing.updateOwned(owned, children, { id: 1 });
+    await replacing.updateOwned(writer, children, { id: 1 });
     const existing = mock([
       { id: 1, parent_id: 1, name: "old" },
       { id: 9, parent_id: 1, name: "gone" },
     ]);
     const existingRepo = new CRUDRepository<Item>(existing.connection, { type: Item, entity: "children", ids: ["id"] });
-    await replacing.updateOwned(new StoredEnrichment(children, async () => {}, existingRepo), children, {
+    await replacing.updateOwned(existingRepo, children, {
       id: 1,
       Children: [{ id: 1, name: "kept" }, { name: "fresh" }, null, "skip"],
     });
 
-    const bare = new StoredEnrichment(tags, async () => {});
-    await expect(replacing.updateLinked(bare, tags, { id: 1, Tags: [{ id: 2 }] })).rejects.toThrow(/Tags/);
     const linkedRows = mock([{ tag_id: 0 }, { tag_id: 2 }, {}]);
     const linkWriter = new CRUDRepository<Item>(linkedRows.connection, { entity: "links", ids: ["id"] });
-    const linked = new StoredEnrichment(tags, async () => {}, undefined, linkWriter);
-    await replacing.updateLinked(linked, tags, { id: 1, Tags: [{ id: 2 }, { id: 2 }, { id: 3 }] });
-    await expect(replacing.createLinks(writer, { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id" }, { id: 1 })).rejects.toThrow(
+    await replacing.updateLinked(linkWriter, tags, { id: 1, Tags: [{ id: 2 }, { id: 2 }, { id: 3 }] });
+    await expect(new DefaultCreateEnrichmentStrategy<Item>().createLinked(writer, { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id" }, { id: 1 })).rejects.toThrow(
       "Missing association",
     );
     const noIds = new CRUDRepository<Item>(mock([]).connection, { entity: "children", ids: [] });
-    await replacing.updateOwned(new StoredEnrichment(children, async () => {}, noIds), children, {
+    await replacing.updateOwned(noIds, children, {
       id: 1,
       Children: [{ name: "a" }],
     });
-    await expect(replacing.createLinks(writer, tags, { id: 0, Tags: [{ id: 1 }] })).rejects.toThrow(/requires/);
-    await expect(replacing.createLinks(writer, tags, { id: 1, Tags: [{ id: 0 }] })).rejects.toThrow(/requires/);
+    const creating = new DefaultCreateEnrichmentStrategy<Item>();
+    await expect(creating.createLinked(writer, tags, { id: 0, Tags: [{ id: 1 }] })).rejects.toThrow(/requires/);
+    await expect(creating.createLinked(writer, tags, { id: 1, Tags: [{ id: 0 }] })).rejects.toThrow(/requires/);
 
     const open = new OpenUpdate();
     expect(open.key({ name: "a" }, ["missing"])).toBe("");
@@ -318,19 +315,13 @@ describe("enrichment edges", () => {
     open.stamp(flat, "parent_id", { nested: true });
 
     const cascade = new CascadeDeleteEnrichmentStrategy<Item>();
-    await expect(cascade.deleteLinked(bare, tags, { id: 1 })).rejects.toThrow(/Tags/);
     const cascadeRows = mock([{ tag_id: 0 }, { tag_id: 2 }]);
     const cascadeWriter = new CRUDRepository<Item>(cascadeRows.connection, { entity: "links", ids: ["id"] });
-    await cascade.deleteLinked(new StoredEnrichment(tags, async () => {}, undefined, cascadeWriter), tags, { id: 1 });
+    await cascade.deleteLinked(cascadeWriter, tags, { id: 1 });
     const cascadeUpdate = new CascadeDeleteUpdateEnrichmentStrategy<Item>();
-    await expect(cascadeUpdate.updateLinked(bare, tags, { id: 1, Tags: [{ id: 2 }] })).rejects.toThrow(/Tags/);
     const cascadeUpdateRows = mock([{ tag_id: 0 }, { tag_id: 3 }]);
     const cascadeUpdateWriter = new CRUDRepository<Item>(cascadeUpdateRows.connection, { entity: "links", ids: ["id"] });
-    await cascadeUpdate.updateLinked(
-      new StoredEnrichment(tags, async () => {}, undefined, cascadeUpdateWriter),
-      tags,
-      { id: 1, Tags: [{ id: 4 }] },
-    );
+    await cascadeUpdate.updateLinked(cascadeUpdateWriter, tags, { id: 1, Tags: [{ id: 4 }] });
 
     const parents = mock([]);
     const host = new CRUDRepository<Item>(parents.connection, { type: Item, entity: "parents" });

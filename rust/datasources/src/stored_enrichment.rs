@@ -5,7 +5,7 @@ use crate::result::Result;
 use crate::row::Row;
 use std::sync::Arc;
 
-pub struct StoredEnrichment {
+pub(crate) struct StoredEnrichment {
     pub enrichment: Enrichment,
     pub via: Arc<dyn IReadonlyRepository>,
     pub persist: Option<Arc<dyn ICRUDRepository>>,

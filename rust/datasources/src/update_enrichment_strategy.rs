@@ -1,21 +1,22 @@
 use crate::enrichment::Enrichment;
+use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
-use crate::stored_enrichment::StoredEnrichment;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 #[async_trait]
 pub trait UpdateEnrichmentStrategy: Send + Sync {
     async fn update_owned(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()>;
 
     async fn update_linked(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &mut Row,
     ) -> Result<()>;

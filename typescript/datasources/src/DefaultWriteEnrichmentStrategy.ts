@@ -1,5 +1,7 @@
 import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
+import type { CreateEnrichmentStrategy } from "./CreateEnrichmentStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
+import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
@@ -8,6 +10,7 @@ import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 import type { WriteMode } from "./WriteMode.ts";
 
@@ -35,12 +38,19 @@ const dispatch = (mode: string, runs: Record<WriteMode, () => Promise<void>>): P
 export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrategy<T> {
   protected skipUnloaded = false;
   readonly useTransaction: boolean;
+  private readonly createStrategy: CreateEnrichmentStrategy<T>;
+  private readonly deleteStrategy: DeleteEnrichmentStrategy<T>;
+  private readonly updateStrategy: UpdateEnrichmentStrategy<T>;
 
   constructor(
-    private readonly deleteStrategy = new CascadeDeleteEnrichmentStrategy<T>(),
-    private readonly updateStrategy: UpdateEnrichmentStrategy<T> = new DefaultUpdateEnrichmentStrategy<T>(),
+    deleteStrategy: DeleteEnrichmentStrategy<T> = new CascadeDeleteEnrichmentStrategy<T>(),
+    updateStrategy: UpdateEnrichmentStrategy<T> = new DefaultUpdateEnrichmentStrategy<T>(),
+    createStrategy: CreateEnrichmentStrategy<T> = new DefaultCreateEnrichmentStrategy<T>(),
     useTransaction = false,
   ) {
+    this.deleteStrategy = deleteStrategy;
+    this.updateStrategy = updateStrategy;
+    this.createStrategy = createStrategy;
     this.useTransaction = useTransaction;
   }
 
@@ -68,9 +78,9 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       for (const parent of parents) {
         if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
         await dispatch(mode, {
-          create: () => this.updateStrategy.createLinks(writer, enrichment, parent),
-          update: () => this.updateStrategy.updateLinked(entry, enrichment, parent),
-          delete: () => this.deleteStrategy.deleteLinked(entry, enrichment, parent),
+          create: () => this.createStrategy.createLinked(writer, enrichment, parent),
+          update: () => this.updateStrategy.updateLinked(writer, enrichment, parent),
+          delete: () => this.deleteStrategy.deleteLinked(writer, enrichment, parent),
         });
       }
       return;
@@ -80,9 +90,9 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     for (const parent of parents) {
       if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
       await dispatch(mode, {
-        create: () => this.updateStrategy.createChildren(writer, enrichment, parent),
-        update: () => this.updateStrategy.updateOwned(entry, enrichment, parent),
-        delete: () => this.deleteStrategy.deleteOwned(entry, enrichment, parent, async () => {}),
+        create: () => this.createStrategy.createOwned(writer, enrichment, parent),
+        update: () => this.updateStrategy.updateOwned(writer, enrichment, parent),
+        delete: () => this.deleteStrategy.deleteOwned(writer, enrichment, parent, async () => {}),
       });
     }
   };

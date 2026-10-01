@@ -183,6 +183,14 @@ pages:
     title: LazyWriteEnrichmentStrategy
     group: Code Reference
     parent: Enrichment
+  - path: sections/create-enrichment-strategy.md
+    title: CreateEnrichmentStrategy
+    group: Code Reference
+    parent: Enrichment
+  - path: sections/default-create-enrichment-strategy.md
+    title: DefaultCreateEnrichmentStrategy
+    group: Code Reference
+    parent: Enrichment
   - path: sections/update-enrichment-strategy.md
     title: UpdateEnrichmentStrategy
     group: Code Reference

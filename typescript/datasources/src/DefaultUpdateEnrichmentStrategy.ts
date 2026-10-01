@@ -2,22 +2,10 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 
-const writerOf = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
-  if (entry.persist) return entry.persist;
-  throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
-};
-
-const linkWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
-  if (entry.link) return entry.link;
-  throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
-};
-
 export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T> {
-  async updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
-    const writer = writerOf(entry, enrichment.destinationProperty);
+  async updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     const rows = this.payloadOf(parent, enrichment.destinationProperty);
     for (const related of rows) this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
@@ -30,10 +18,9 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
         : await writer.create(related);
   }
 
-  async updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
+  async updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
-    const writer = linkWriter(entry, enrichment.destinationProperty);
     const parentKey = this.requiredKey(parent, enrichment);
     const existing = await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey);
     const wanted = this.relatedIds(parent, enrichment);

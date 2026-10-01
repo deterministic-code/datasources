@@ -1,17 +1,18 @@
-using System.Collections;
-
 namespace Datasources;
 
 public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 {
+    readonly CreateEnrichmentStrategy<T> create;
     readonly DeleteEnrichmentStrategy<T> delete;
     readonly UpdateEnrichmentStrategy<T> update;
 
     public DefaultWriteEnrichmentStrategy(
         DeleteEnrichmentStrategy<T>? delete = null,
         UpdateEnrichmentStrategy<T>? update = null,
+        CreateEnrichmentStrategy<T>? create = null,
         bool useTransaction = false)
     {
+        this.create = create ?? new DefaultCreateEnrichmentStrategy<T>();
         this.delete = delete ?? new CascadeDeleteEnrichmentStrategy<T>();
         this.update = update ?? new DefaultUpdateEnrichmentStrategy<T>();
         UseTransaction = useTransaction;
@@ -35,7 +36,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     {
         if (entry.Enrichment.Type is EnrichmentPropertyType.Dictionary or EnrichmentPropertyType.Custom)
             throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
-        if (entry.Enrichment is { Association: { } association } enrichment)
+        if (entry.Enrichment is { Association: { } } enrichment)
         {
             var writer = entry.Link
                 ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
@@ -44,9 +45,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
                 if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
                 await (mode switch
                 {
-                    WriteMode.Create => update.CreateLinks(writer, enrichment, association, parent),
-                    WriteMode.Update => update.UpdateLinked(entry, enrichment, parent),
-                    WriteMode.Delete => delete.DeleteLinked(entry, enrichment, parent),
+                    WriteMode.Create => create.CreateLinked(writer, enrichment, parent),
+                    WriteMode.Update => update.UpdateLinked(writer, enrichment, parent),
+                    WriteMode.Delete => delete.DeleteLinked(writer, enrichment, parent),
                     _ => throw new DatasourceException("Unknown persist mode")
                 });
             }
@@ -61,9 +62,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             if (Skip(parent, owned.DestinationProperty, mode)) continue;
             await (mode switch
             {
-                WriteMode.Create => update.CreateChildren(childWriter, owned, parent),
-                WriteMode.Update => update.UpdateOwned(entry, owned, parent),
-                WriteMode.Delete => delete.DeleteOwned(entry, owned, parent, _ => Task.CompletedTask),
+                WriteMode.Create => create.CreateOwned(childWriter, owned, parent),
+                WriteMode.Update => update.UpdateOwned(childWriter, owned, parent),
+                WriteMode.Delete => delete.DeleteOwned(childWriter, owned, parent, _ => Task.CompletedTask),
                 _ => throw new DatasourceException("Unknown persist mode")
             });
         }

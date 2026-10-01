@@ -2,10 +2,8 @@ namespace Datasources;
 
 public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
 {
-    public override async Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
+    public override async Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
     {
-        var writer = entry.Persist
-            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
         var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
         var payload = Payload(parent, enrichment.DestinationProperty);
         foreach (var related in payload)
@@ -23,11 +21,9 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         }
     }
 
-    public override async Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent)
+    public override async Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
-        var writer = entry.Link
-            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
         var existing = await DeleteEnrichmentStrategy<T>.LoadLinks(writer, association.Parent, parentKey);
         var wanted = RelatedIds(parent, enrichment);

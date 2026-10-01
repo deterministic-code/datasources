@@ -5,7 +5,8 @@ public sealed class LazyWriteEnrichmentStrategy<T> : DefaultWriteEnrichmentStrat
     public LazyWriteEnrichmentStrategy(
         DeleteEnrichmentStrategy<T>? delete = null,
         UpdateEnrichmentStrategy<T>? update = null,
-        bool useTransaction = false) : base(delete, update, useTransaction) { }
+        CreateEnrichmentStrategy<T>? create = null,
+        bool useTransaction = false) : base(delete, update, create, useTransaction) { }
 
     protected override bool SkipUnloaded => true;
 }

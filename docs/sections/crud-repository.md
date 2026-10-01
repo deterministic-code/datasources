@@ -913,6 +913,7 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
 
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `RelatedKey` from the parent `SourceProperty`, then create children (and nested lists).
+- **Create** — [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md) is the default. Write the parent, stamp each child's related key, then create children and links.
 - **Update** — [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md) is the default. Write the parent, then replace-sync each list (delete missing, update matches by the configured id, create the rest). [CascadeDeleteUpdateEnrichmentStrategy](./cascade-delete-update-enrichment-strategy.md) deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
 - **Delete** — [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md) is the default. Delete nested list rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 

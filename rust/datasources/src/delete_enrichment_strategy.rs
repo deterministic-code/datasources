@@ -3,15 +3,15 @@ use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::{Operator, Where};
 use async_trait::async_trait;
+use std::sync::Arc;
 
 #[async_trait]
 pub trait DeleteEnrichmentStrategy: Send + Sync {
     async fn delete_owned(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &Row,
         delete_nested: &dyn DeleteNested,
@@ -19,7 +19,7 @@ pub trait DeleteEnrichmentStrategy: Send + Sync {
 
     async fn delete_linked(
         &self,
-        entry: &StoredEnrichment,
+        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
         parent: &Row,
     ) -> Result<()>;
@@ -56,7 +56,7 @@ mod tests {
     impl DeleteEnrichmentStrategy for SkipDelete {
         async fn delete_owned(
             &self,
-            _entry: &StoredEnrichment,
+            _writer: Arc<dyn ICRUDRepository>,
             _enrichment: &Enrichment,
             _parent: &Row,
             _delete_nested: &dyn DeleteNested,
@@ -66,7 +66,7 @@ mod tests {
 
         async fn delete_linked(
             &self,
-            _entry: &StoredEnrichment,
+            _writer: Arc<dyn ICRUDRepository>,
             _enrichment: &Enrichment,
             _parent: &Row,
         ) -> Result<()> {
@@ -78,6 +78,7 @@ mod tests {
     async fn delete_strategy_can_skip_children() {
         let write = Arc::new(DefaultWriteEnrichmentStrategy::new(
             Some(Arc::new(SkipDelete)),
+            None,
             None,
             false,
         ));

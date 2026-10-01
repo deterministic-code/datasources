@@ -37,7 +37,6 @@ export { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts"
 export type { IEnriched } from "./IEnriched.ts";
 export type { IRepositoryTree } from "./IRepositoryTree.ts";
 export type { IRepositoryTreeNode } from "./IRepositoryTreeNode.ts";
-export { StoredEnrichment } from "./StoredEnrichment.ts";
 export type { Association, Enrichment } from "./Enrichment.ts";
 export { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 export type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -49,6 +48,8 @@ export { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 export { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
 export { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 export { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
+export { CreateEnrichmentStrategy } from "./CreateEnrichmentStrategy.ts";
+export { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 export { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 export { LazyWriteEnrichmentStrategy } from "./LazyWriteEnrichmentStrategy.ts";
 export { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";

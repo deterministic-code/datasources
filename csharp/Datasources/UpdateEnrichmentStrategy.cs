@@ -5,34 +5,9 @@ namespace Datasources;
 
 public abstract class UpdateEnrichmentStrategy<T>
 {
-    public abstract Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent);
+    public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent);
 
-    public abstract Task UpdateLinked(StoredEnrichment entry, Enrichment enrichment, object parent);
-
-    internal async Task CreateChildren(IChildPersist writer, Enrichment enrichment, object parent)
-    {
-        foreach (var related in Payload(parent, enrichment.DestinationProperty))
-        {
-            Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
-            await writer.Create(related);
-        }
-    }
-
-    internal async Task CreateLinks(
-        IChildPersist writer,
-        Enrichment enrichment,
-        Association association,
-        object parent)
-    {
-        var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
-        foreach (var id in RelatedIds(parent, enrichment))
-        {
-            var row = writer.New();
-            Set(row, association.Parent, parentKey);
-            Set(row, association.Related, id);
-            await writer.Create(row);
-        }
-    }
+    public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent);
 
     protected static List<object> RelatedIds(object parent, Enrichment enrichment)
     {

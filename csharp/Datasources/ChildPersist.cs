@@ -1,6 +1,6 @@
 namespace Datasources;
 
-internal interface IChildPersist
+public interface IChildPersist
 {
     IReadOnlyList<string> Ids { get; }
     object New();
