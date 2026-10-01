@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   CRUDRepository,
   ChangeCasingMapper, Datasource,
+  DatasourceFactory,
   DictionaryMapper,
   PluralizerMapper,
   ReadonlyRepository,
@@ -29,28 +30,27 @@ class User {
   IsEnabled = false;
 }
 
-class MappedUser {
-  Id = 0;
-  Username = "";
-  IsEnabled = false;
+function snake() {
+  return new ChangeCasingMapper("pascalCase", "snakeCase");
 }
 
-const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
-const snakeThenPlural = new TransformMapper(
-  (name: string) => new PluralizerMapper().map(snake.map(name)),
-  (name: string) => snake.reverseMap(new PluralizerMapper().reverseMap(name)),
-);
+function snakeThenPlural() {
+  return new TransformMapper(
+    (name: string) => new PluralizerMapper().map(snake().map(name)),
+    (name: string) => snake().reverseMap(new PluralizerMapper().reverseMap(name)),
+  );
+}
 
-class UserConverter extends TypeConverter<MappedUser, Cells> {
-  convert = (from: Cells): MappedUser => {
-    const user = new MappedUser();
+class UserConverter extends TypeConverter<User, Cells> {
+  convert = (from: Cells): User => {
+    const user = new User();
     user.Id = from.Id as number;
     user.Username = from.Username as string;
     user.IsEnabled = from.IsEnabled === true;
     return user;
   };
 
-  reverseConvert = (to: MappedUser): Cells => ({
+  reverseConvert = (to: User): Cells => ({
     Id: to.Id,
     Username: to.Username,
     IsEnabled: to.IsEnabled ? 1 : 0,
@@ -65,28 +65,32 @@ class UserAccount {
 }
 
 describe("readonly repository", () => {
+  beforeEach(() => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("sqlite", new SqliteDriver());
+    delete process.env.INSTALLED_PROVIDERS;
+    delete process.env.DATASOURCE_URL;
+    process.env.PROVIDER = "sqlite";
+  });
+
   it("reads users by id and by username and enabled", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const ds = Datasource.default;
     const connection = await open(ds);
     await applySchema(connection, "minimal-users");
-    await executeSql(connection, `
-      INSERT INTO users (id, username, is_enabled) VALUES
-        (1, 'ada', 1),
-        (2, 'grace', 0);
-    `);
+    await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
+    await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
+    await executeSql(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
     const repo = ds.createReadonlyRepository(User, connection, {
-      entityMapper: snakeThenPlural,
-      propertyMappings: snake,
+      entityMapper: snakeThenPlural(),
+      propertyMappings: snake(),
     });
     const byId = await repo.readSingle(new Where("Id", eq, 1));
-    const disabled: User[] = [];
-    for await (const row of repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)))
-      disabled.push(row);
+    const [row] = await Array.fromAsync(repo.read(new Where("Username", eq, "grace").and("IsEnabled", eq, 0)));
     expect(byId?.Username).toBe("ada");
     expect(byId?.IsEnabled).toBe(true);
-    expect(disabled.length).toBe(1);
-    expect(disabled[0]?.Id).toBe(2);
-    expect(disabled[0]?.IsEnabled).toBe(false);
+    expect(row?.Id).toBe(2);
+    expect(row?.Username).toBe("grace");
+    expect(row?.IsEnabled).toBe(false);
   });
 
   it("maps an object explicitly", async () => {
@@ -98,9 +102,9 @@ describe("readonly repository", () => {
         (1, 'ada', 1),
         (2, 'grace', 0);
     `);
-    const usersRepo = ds.createReadonlyRepository(MappedUser, connection, {
-      entityMapper: snakeThenPlural,
-      propertyMappings: snake,
+    const usersRepo = ds.createReadonlyRepository(User, connection, {
+      entityMapper: snakeThenPlural(),
+      propertyMappings: snake(),
       objectConverter: new UserConverter(),
     });
     const user = await usersRepo.readSingle(new Where("Id", eq, 1));
@@ -214,12 +218,20 @@ const executeSql = async (connection: IConnection, sql: string): Promise<void> =
 };
 
 describe("user crud", () => {
+  beforeEach(() => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("sqlite", new SqliteDriver());
+    delete process.env.INSTALLED_PROVIDERS;
+    delete process.env.DATASOURCE_URL;
+    process.env.PROVIDER = "sqlite";
+  });
+
   it("writes a user from the type", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const ds = Datasource.default;
     const connection = await open(ds);
     await applySchema(connection, "user-pascal");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-    const usersRepo = new CRUDRepository(connection, {
+    const usersRepo = ds.createRepository(User, connection, {
       ...createCRUDRepositoryOptions(User),
       propertyMappings: casing,
       ids: ["Id"],
@@ -245,6 +257,14 @@ describe("user crud", () => {
 });
 
 describe("users view crud", () => {
+  beforeEach(() => {
+    DatasourceFactory.reset();
+    DatasourceFactory.register("sqlite", new SqliteDriver());
+    delete process.env.INSTALLED_PROVIDERS;
+    delete process.env.DATASOURCE_URL;
+    process.env.PROVIDER = "sqlite";
+  });
+
   class UserType {
     Id = 0;
     Name = "";
@@ -255,81 +275,95 @@ describe("users view crud", () => {
     Name = "";
   }
 
-  class UsersView {
+  class User {
     Key = 0;
     Login = "";
     Active = false;
     Opened = "";
-    UserTypeId = 0;
-    UserType = "";
+    UserType = new UserType();
     Version = 0;
     Roles: UserRole[] = [];
   }
 
   it("updates a user view when the version matches", async () => {
-    const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+    const ds = Datasource.default;
     const connection = await open(ds);
     await applySchema(connection, "user-view-version");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const usersRepo = new CRUDRepository(connection, {
-      ...createCRUDRepositoryOptions(UsersView),
+      ...createCRUDRepositoryOptions(User),
       ids: ["Key"],
-      readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
-      entityMapper: new DictionaryMapper([["UsersView", "user"]]),
+      entity: "User",
+      entityMapper: casing,
       propertyMappings: new DictionaryMapper([
         ["Key", "id"],
         ["Login", "username"],
         ["Active", "is_enabled"],
         ["Opened", "created"],
-        ["UserTypeId", "user_type_id"],
+        ["UserType", "user_type_id"],
         ["Version", "version"],
       ]),
     });
     const userTypesRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(UserType),
+      entity: "UserType",
       entityMapper: casing,
       propertyMappings: casing,
     });
     const userRolesRepo = new CRUDRepository(connection, {
       ...createCRUDRepositoryOptions(UserRole),
+      entity: "UserRole",
       entityMapper: casing,
       propertyMappings: casing,
     });
-    usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+    usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id" }, userTypesRepo);
     usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
     const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
-    expect(admin.Id).toBe(1);
-    const user = Object.assign(new UsersView(), {
+    const user = Object.assign(new User(), {
       Login: "ada",
       Active: true,
       Opened: "2020-01-01T00:00:00.000Z",
-      UserTypeId: admin.Id,
+      UserType: admin,
       Version: 1,
       Roles: [Object.assign(new UserRole(), { Name: "admin" }), Object.assign(new UserRole(), { Name: "editor" })],
     });
     const created = await usersRepo.create(user);
-    expect(created.Key).toBe(1);
+    const grace = await usersRepo.create(Object.assign(new User(), {
+      Login: "grace",
+      Active: true,
+      Opened: "2024-06-01T00:00:00.000Z",
+      UserType: admin,
+      Version: 1,
+      Roles: [Object.assign(new UserRole(), { Name: "viewer" })],
+    }));
     const loaded = await usersRepo.readSingle(new Where("Key", eq, user.Key));
     const version = loaded!.Version;
+    const member = await userTypesRepo.create(Object.assign(new UserType(), { Name: "member" }));
     loaded!.Login = "ada-v2";
+    loaded!.UserType = member;
+    loaded!.Roles.push(Object.assign(new UserRole(), { Name: "owner" }));
     loaded!.Version = version + 1;
     const updated = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
     const current = await usersRepo.readSingle(new Where("Key", eq, loaded!.Key));
     const stale = await usersRepo.update(loaded!, new Where("Key", eq, loaded!.Key).and("Version", eq, version));
     const removed = await usersRepo.delete(loaded!);
-    expect(removed.rowsAffected).toBe(1);
     const gone = await usersRepo.readSingleById(loaded!.Key);
+    expect(current?.Version).toBe(2);
+    expect(current?.Login).toBe("ada-v2");
+    expect(current?.Active).toBe(true);
+    expect(current?.UserType).toEqual({ Id: member.Id, Name: "member" });
+    expect(current?.Roles.map((role) => role.Name).sort()).toEqual(["admin", "editor", "owner"]);
     const roles: UserRole[] = [];
     for await (const role of userRolesRepo.read(new Where("UserId", eq, loaded!.Key)))
       roles.push(role);
     expect(admin.Id).toBe(1);
+    expect(created.Key).toBe(1);
     expect(user.Key).toBe(1);
-    expect(loaded?.UserType).toBe("admin");
-    expect(loaded?.Roles.map((role) => role.Name).sort()).toEqual(["admin", "editor"]);
+    expect(grace.Key).toBe(2);
+    expect(member.Id).toBe(2);
     expect(updated.rowsAffected).toBe(1);
-    expect(current?.Version).toBe(2);
-    expect(current?.Login).toBe("ada-v2");
     expect(stale.rowsAffected).toBe(0);
+    expect(removed.rowsAffected).toBe(1);
     expect(gone).toBeUndefined();
     expect(roles).toEqual([]);
   });

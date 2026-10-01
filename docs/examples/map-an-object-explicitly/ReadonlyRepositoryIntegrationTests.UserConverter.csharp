@@ -2,7 +2,7 @@ sealed class UserConverter : TypeConverter<User, Row>
 {
     public override User Convert(Row from) => new()
     {
-        Id = (int)(long)from["Id"].ToObject()!,
+        Id = (long)from["Id"].ToObject()!,
         Username = (string)from["Username"].ToObject()!,
         IsEnabled = (bool)from["IsEnabled"].ToObject()!
     };

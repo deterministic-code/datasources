@@ -1,19 +1,20 @@
-use datasources::{ExecuteStoredProcedureStatement, Parameter};
-command
-    .execute_native(
-        &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
-        None,
-    )
-    .await
-    .unwrap();
-let parameters = [
-    Parameter::new("start_n", 4_i64),
-    Parameter::output("result"),
-];
-let call = command
-    .execute_statement(
-        &ExecuteStoredProcedureStatement::new("bump", &parameters),
-        Some(&parameters),
-    )
-    .await
-    .unwrap();
+async fn fill_output_parameter(command: &dyn Command) {
+    use datasources::{ExecuteStoredProcedureStatement, Parameter};
+    command
+        .execute_native(
+            &Native::new("CREATE PROCEDURE bump(IN start_n INT, OUT result INT) BEGIN SET result = start_n + 1; END"),
+            None,
+        )
+        .await
+        .unwrap();
+    let parameters = [
+        Parameter::new("start_n", 4_i64),
+        Parameter::output("result"),
+    ];
+    let call = command
+        .execute_statement(
+            &ExecuteStoredProcedureStatement::new("bump", &parameters),
+            Some(&parameters),
+        )
+        .await
+        .unwrap();

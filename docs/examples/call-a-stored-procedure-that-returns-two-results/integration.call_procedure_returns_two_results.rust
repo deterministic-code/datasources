@@ -1,22 +1,23 @@
-use datasources::ExecuteStoredProcedureStatement;
-command
-    .execute_native(
-        &Native::new("CREATE PROCEDURE two_ids() BEGIN SELECT 1 AS id; SELECT 2 AS id; END"),
-        None,
-    )
-    .await
-    .unwrap();
-let reader = command
-    .execute_reader_statement(&ExecuteStoredProcedureStatement::new("two_ids", &[]), None)
-    .await
-    .unwrap();
-let mut first = Vec::new();
-while reader.next().await.unwrap() {
-    first.push(reader.current());
-}
-let moved = reader.next_result().await.unwrap();
-let mut second = Vec::new();
-while reader.next().await.unwrap() {
-    second.push(reader.current());
-}
-let again = reader.next_result().await.unwrap();
+async fn call_procedure_returns_two_results(command: &dyn Command) {
+    use datasources::ExecuteStoredProcedureStatement;
+    command
+        .execute_native(
+            &Native::new("CREATE PROCEDURE two_ids() BEGIN SELECT 1 AS id; SELECT 2 AS id; END"),
+            None,
+        )
+        .await
+        .unwrap();
+    let reader = command
+        .execute_reader_statement(&ExecuteStoredProcedureStatement::new("two_ids", &[]), None)
+        .await
+        .unwrap();
+    let mut first = Vec::new();
+    while reader.next().await.unwrap() {
+        first.push(reader.current());
+    }
+    let moved = reader.next_result().await.unwrap();
+    let mut second = Vec::new();
+    while reader.next().await.unwrap() {
+        second.push(reader.current());
+    }
+    let again = reader.next_result().await.unwrap();

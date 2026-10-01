@@ -1,0 +1,6 @@
+static IMapper<string, string> SnakeThenPlural()
+{
+    return new TransformMapper<string, string>(
+        name => new PluralizerMapper().Map(Snake().Map(name)),
+        name => Snake().ReverseMap(new PluralizerMapper().ReverseMap(name)));
+}

@@ -461,9 +461,20 @@ export const findRegions = (source, lang) => {
     typescript: collectTypescript,
   })[lang]?.(lines, events, starts, found, owners);
   const regions = uniquify(found, owners);
-  for (const owner of owners)
-    if (!regions.some((region) => region.kind === "type" && region.from === owner.from && region.to === owner.to))
-      if (lang === "csharp") regions.push(owner);
+  for (const owner of owners) {
+    if (regions.some((region) => region.kind === "type" && region.from === owner.from && region.to === owner.to))
+      continue;
+    if (lang !== "csharp") continue;
+    if (!regions.some((region) => region.name === owner.name)) {
+      regions.push(owner);
+      continue;
+    }
+    const enclosing = owners
+      .filter((item) => item.from < owner.from && item.to >= owner.to)
+      .sort((a, b) => a.to - a.from - (b.to - b.from))[0];
+    const name = enclosing ? `${slug(enclosing.name)}-${owner.name}` : `${owner.name}-2`;
+    regions.push({ ...owner, name });
+  }
   return regions;
 };
 
