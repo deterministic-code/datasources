@@ -69,7 +69,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   protected rowConverter?: TypeConverter<Cells, Cells>;
   protected objectConverter?: TypeConverter<T, Cells>;
   private statementMappings = new StatementMappings(new IdentityMapper(), new IdentityMapper());
-  protected statements?: ReadonlyRepositoryStatements;
+  private readonlyStatements?: ReadonlyRepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
   protected readonly tree: IRepositoryTree;
 
@@ -98,7 +98,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.rowConverter = built.rowConverter;
     this.objectConverter = built.objectConverter;
     this.statementMappings = new StatementMappings(built.entityMapper, built.propertyMappings);
-    this.statements = built.statements;
+    this.readonlyStatements = built.statements;
   }
 
   addMiddleware = (middleware: ICommandMiddleware): this => {
@@ -176,7 +176,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   }
 
   private async *readSources(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Cells> {
-    const statement = query ?? this.statements!.select();
+    const statement = query ?? this.readonlyStatements!.select();
     const reader = await executeReader(this.command(), statement, parameters);
     try {
       while (await reader.next()) {
@@ -226,11 +226,11 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
 
   private readQuery = (query?: ISelectStatement | IWhere): ISelectStatement | undefined =>
     !query
-      ? this.statements?.select()
+      ? this.readonlyStatements?.select()
       : "where" in query
         ? query
-        : this.statements
-          ? this.statements.select(
+        : this.readonlyStatements
+          ? this.readonlyStatements.select(
               this.statementMappings.applyWhere(query, (name, cell) => this.cell(name, cell, false))!,
             )
           : new SelectStatement(query.getText(), query);

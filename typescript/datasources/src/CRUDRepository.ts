@@ -10,11 +10,8 @@ import { Operator, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
-import type { BuiltRepository } from "./BuiltRepository.ts";
-import { createCRUDRepositoryOptions, defaultId, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
-import { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
+import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import type { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
-import type { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { enrichmentsOf, ReadonlyRepository } from "./ReadonlyRepository.ts";
 import type { Enrichment } from "./Enrichment.ts";
@@ -57,36 +54,13 @@ const identified = (row: Cells, column: string): Cells => {
 const scalarOf = (value: Scalar | object | undefined): Scalar | undefined =>
   value === undefined || value === null || typeof value === "object" ? undefined : value;
 
-const crudBuilt = <T>(
-  typeOrConnection: Constructable<T> | IConnection,
-  connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
-): BuiltRepository<T> =>
-  typeof typeOrConnection === "function"
-    ? new CRUDRepositoryBuilder<T>().parts(
-        connectionOrOptions as IConnection,
-        createCRUDRepositoryOptions(typeOrConnection),
-      )
-    : new CRUDRepositoryBuilder<T>().parts(
-        typeOrConnection,
-        withIds(connectionOrOptions as CRUDRepositoryOptions<T>),
-      );
-
-const writesOf = (statements: ReadonlyRepositoryStatements): CRUDRepositoryStatements =>
-  statements as CRUDRepositoryStatements;
-
-const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>
-  "ids" in options
-    ? options
-    : {
-        ...options,
-        ids: options.type ? defaultId(fieldNamesOf(options.type)) : ["id"],
-      };
 
 export class CRUDRepository<T = Cells>
   extends ReadonlyRepository<T>
   implements ICRUDRepository<T>
 {
   readonly ids: readonly string[];
+  private readonly crudStatements: CRUDRepositoryStatements;
   private readonly write: IWriteEnrichmentStrategy<T>;
   private get useTransaction(): boolean {
     return this.write.useTransaction;
@@ -99,9 +73,10 @@ export class CRUDRepository<T = Cells>
     connectionOrOptions?: IConnection | CRUDRepositoryOptions<T>,
   ) {
     const options = connectionOrOptions as IConnection | CRUDRepositoryOptions<T>;
-    const built = crudBuilt(typeOrConnection, options);
-    super(built);
-    this.ids = built.ids;
+    const opened = repositoryParts(typeOrConnection, options);
+    super(opened.built);
+    this.ids = opened.built.ids;
+    this.crudStatements = opened.statements;
     this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
   }
 
@@ -183,7 +158,7 @@ export class CRUDRepository<T = Cells>
       this.cell,
       this.enrichmentInto,
     );
-    const statement = writesOf(this.statements!).insert(fields);
+    const statement = this.crudStatements.insert(fields);
     const response = await execute(this.command(), statement, statement.fields);
     if (this.ids.length === 1) await this.copyInsertedId(item, fields);
     return response;
@@ -192,7 +167,7 @@ export class CRUDRepository<T = Cells>
   private copyInsertedId = async (target: T, fields: Field[]): Promise<void> => {
     void fields;
     const column = this.ids[0]!;
-    const statement = writesOf(this.statements!).selectInsertedId(column);
+    const statement = this.crudStatements.selectInsertedId(column);
     const sqlColumn = statement.column;
     const reader = await executeReader(this.command(), statement);
     try {
@@ -218,7 +193,7 @@ export class CRUDRepository<T = Cells>
     const record = this.reverseConvert(item);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    const statement = writesOf(this.statements!).update(
+    const statement = this.crudStatements.update(
       fields,
       byWhere ?? this.idWhere(record),
       (name, value) => this.cell(name, value, byWhere === undefined),
@@ -228,7 +203,7 @@ export class CRUDRepository<T = Cells>
 
   private remove = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
-    const statement = writesOf(this.statements!).delete(
+    const statement = this.crudStatements.delete(
       byWhere ?? this.idWhere(record),
       (name, value) => this.cell(name, value, byWhere === undefined),
     );

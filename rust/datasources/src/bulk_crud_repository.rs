@@ -2,8 +2,9 @@ use crate::bulk_command::BulkCommand;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::crud_repository::{writes, CRUDRepository};
+use crate::crud_repository::{open_for_bulk, CRUDRepository};
 use crate::crud_repository_options::CRUDRepositoryOptions;
+use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
@@ -30,6 +31,7 @@ use std::sync::Arc;
 
 pub struct BulkCRUDRepository {
     crud: CRUDRepository,
+    crud_statements: CRUDRepositoryStatements,
     strategy: Arc<dyn BulkWriteStrategy>,
     use_transaction: bool,
 }
@@ -52,8 +54,10 @@ impl BulkCRUDRepository {
             .write
             .as_ref()
             .is_some_and(|write| write.use_transaction());
+        let (crud, crud_statements) = open_for_bulk(connection, options)?;
         Ok(Self {
-            crud: CRUDRepository::new(connection, options)?,
+            crud,
+            crud_statements,
             strategy,
             use_transaction,
         })
@@ -67,6 +71,7 @@ impl BulkCRUDRepository {
         let use_transaction = write.as_ref().is_some_and(|write| write.use_transaction());
         Self {
             crud: CRUDRepository::memory_with(items, write),
+            crud_statements: CRUDRepositoryStatements::empty(),
             strategy: Arc::new(SingleCommandIBulkWriteStrategy),
             use_transaction,
         }
@@ -166,7 +171,13 @@ impl BulkCRUDRepository {
     pub fn inserts(&self, items: &[Row]) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| Ok(command(insert_command(&self.crud, item)?)))
+            .map(|item| {
+                Ok(command(insert_command(
+                    &self.crud,
+                    &self.crud_statements,
+                    item,
+                )?))
+            })
             .collect()
     }
 
@@ -177,7 +188,14 @@ impl BulkCRUDRepository {
     ) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| Ok(command(update_command(&self.crud, item, by_where)?)))
+            .map(|item| {
+                Ok(command(update_command(
+                    &self.crud,
+                    &self.crud_statements,
+                    item,
+                    by_where,
+                )?))
+            })
             .collect()
     }
 
@@ -188,14 +206,21 @@ impl BulkCRUDRepository {
     ) -> Result<Vec<BulkCommand>> {
         items
             .iter()
-            .map(|item| Ok(command(delete_command(&self.crud, item, by_where)?)))
+            .map(|item| {
+                Ok(command(delete_command(
+                    &self.crud,
+                    &self.crud_statements,
+                    item,
+                    by_where,
+                )?))
+            })
             .collect()
     }
 
     pub fn rows(&self, items: &[Row]) -> Result<Vec<Row>> {
         items
             .iter()
-            .map(|item| stored_row(&self.crud, item))
+            .map(|item| stored_row(&self.crud, &self.crud_statements, item))
             .collect()
     }
 }
@@ -216,16 +241,21 @@ fn id_of(repo: &CRUDRepository, item: &Row) -> Value {
     item.get(&ids[0]).cloned().unwrap_or(Value::Null)
 }
 
-fn insert_command(repo: &CRUDRepository, item: &Row) -> Result<(String, Vec<Parameter>)> {
+fn insert_command(
+    repo: &CRUDRepository,
+    statements: &CRUDRepositoryStatements,
+    item: &Row,
+) -> Result<(String, Vec<Parameter>)> {
     let readonly = stored_repo(repo);
     let record = readonly.reverse_convert(item)?;
     let fields = params(repo, &record, false)?;
-    let statement = writes(repo).insert(&fields);
+    let statement = statements.insert(&fields);
     Ok((statement.get_text(), statement.fields().to_vec()))
 }
 
 fn update_command(
     repo: &CRUDRepository,
+    statements: &CRUDRepositoryStatements,
     item: &Row,
     by_where: Option<&dyn IWhere>,
 ) -> Result<(String, Vec<Parameter>)> {
@@ -246,7 +276,6 @@ fn update_command(
         }
     };
     let applied = by_where.is_none();
-    let statements = writes(repo);
     let statement = statements.update(&fields, clause, &|name, value| {
         stored_repo(repo).cell(name, value, applied)
     })?;
@@ -255,6 +284,7 @@ fn update_command(
 
 fn delete_command(
     repo: &CRUDRepository,
+    statements: &CRUDRepositoryStatements,
     item: &Row,
     by_where: Option<&dyn IWhere>,
 ) -> Result<(String, Vec<Parameter>)> {
@@ -269,8 +299,9 @@ fn delete_command(
         }
     };
     let applied = by_where.is_none();
-    let statements = writes(repo);
-    let statement = statements.delete(clause, &|name, value| stored_repo(repo).cell(name, value, applied))?;
+    let statement = statements.delete(clause, &|name, value| {
+        stored_repo(repo).cell(name, value, applied)
+    })?;
     let parameters = statement
         .where_clause()
         .map(|clause| clause.parameters())
@@ -283,11 +314,15 @@ fn delete_command(
     Ok((statement.get_text(), parameters))
 }
 
-fn stored_row(repo: &CRUDRepository, item: &Row) -> Result<Row> {
+fn stored_row(
+    repo: &CRUDRepository,
+    statements: &CRUDRepositoryStatements,
+    item: &Row,
+) -> Result<Row> {
     let readonly = stored_repo(repo);
     let record = readonly.reverse_convert(item)?;
     let mut row = Row::new();
-    for name in readonly.statements.read_columns() {
+    for name in statements.read_columns() {
         let value = record
             .iter()
             .find(|(key, _)| readonly.column(key) == *name && !repo.enrichment_into(key))

@@ -1,20 +1,37 @@
 use crate::i_where::IWhere;
+use crate::mappers::IdentityMapper;
 use crate::parameter::Parameter;
+use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::result::Result;
 use crate::statement_mappings::StatementMappings;
 use crate::statements::{
     DeleteStatement, InsertStatement, SelectInsertedIdStatement, UpdateStatement,
 };
 use crate::value::Value;
-use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use std::ops::Deref;
+use std::sync::Arc;
 
 pub struct CRUDRepositoryStatements {
     read: ReadonlyRepositoryStatements,
 }
 
 impl CRUDRepositoryStatements {
-    pub fn new(table: impl Into<String>, columns: Vec<String>, mappings: StatementMappings) -> Self {
+    pub fn empty() -> Self {
+        Self::new(
+            "",
+            Vec::new(),
+            StatementMappings::new(
+                Arc::new(IdentityMapper::<String>::new()),
+                Arc::new(IdentityMapper::<String>::new()),
+            ),
+        )
+    }
+
+    pub fn new(
+        table: impl Into<String>,
+        columns: Vec<String>,
+        mappings: StatementMappings,
+    ) -> Self {
         Self {
             read: ReadonlyRepositoryStatements::new(table, columns, mappings),
         }
@@ -49,9 +66,10 @@ impl CRUDRepositoryStatements {
         where_clause: &dyn IWhere,
         cell: &dyn Fn(&str, &Value) -> Result<Value>,
     ) -> Result<DeleteStatement> {
-        self.read
-            .mappings()
-            .apply_delete(&DeleteStatement::new(self.table(), Some(where_clause)), cell)
+        self.read.mappings().apply_delete(
+            &DeleteStatement::new(self.table(), Some(where_clause)),
+            cell,
+        )
     }
 }
 

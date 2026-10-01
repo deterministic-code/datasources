@@ -8,7 +8,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly TypeConverter<Row, Row>? rowConverter;
     readonly TypeConverter<T, Row>? objectConverter;
     readonly StatementMappings statementMappings = new(new IdentityMapper<string>(), new IdentityMapper<string>());
-    readonly ReadonlyRepositoryStatements? statements;
+    readonly ReadonlyRepositoryStatements? readonlyStatements;
 
     public Type Type => typeof(T);
     protected IRepositoryTree Tree { get; }
@@ -39,7 +39,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         this.rowConverter = rowConverter;
         this.objectConverter = objectConverter;
         statementMappings = new StatementMappings(entityMappers, propertyMappers);
-        this.statements = statements;
+        readonlyStatements = statements;
         Tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     }
 
@@ -82,8 +82,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
             (command, middleware) => command.AddMiddleware(middleware));
 
-    protected ReadonlyRepositoryStatements Statements =>
-        statements ?? throw new DatasourceException("Statements required");
+    ReadonlyRepositoryStatements ReadonlyStatements =>
+        readonlyStatements ?? throw new DatasourceException("Statements required");
 
     protected TypeConverter<Row, Row>? RowConverter => rowConverter;
 
@@ -109,9 +109,9 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     private async IAsyncEnumerable<Row> ReadSources(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
     {
         var reader = await Command().ExecuteReader(
-            query ?? (Statements.Select() is SelectStatement typed
+            query ?? (ReadonlyStatements.Select() is SelectStatement typed
                 ? statementMappings.Apply(typed, (name, cell) => Cell(name, cell, false))!
-                : Statements.Select()),
+                : ReadonlyStatements.Select()),
             parameters);
         try
         {
@@ -163,7 +163,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     }
 
     private ISelectStatement Compiled(IWhere where) =>
-        statements is { } sql ? sql.Select(where) : new SelectStatement(where.GetText(), where);
+        readonlyStatements is { } sql ? sql.Select(where) : new SelectStatement(where.GetText(), where);
 
     private Row Renamed(Row row) =>
         new(row.Select(pair => KeyValuePair.Create(statementMappings.Property(pair.Key), pair.Value)));

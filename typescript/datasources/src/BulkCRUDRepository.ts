@@ -2,6 +2,7 @@ import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
+import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import type { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { Response } from "./Response.ts";
@@ -68,6 +69,7 @@ const inTransaction = async <TResult>(
 export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository<T> {
   private readonly strategy: IBulkWriteStrategy<T>;
   private readonly transactional: boolean;
+  private readonly crudStatements: CRUDRepositoryStatements;
   /** Widens the protected repository command so a bulk strategy can execute it. */
   declare command: () => ICommand;
 
@@ -80,12 +82,13 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   ) {
     const strategy = bulk ?? (isBulkStrategy<T>(connectionOrOptions) ? connectionOrOptions : undefined);
     const transactional = transactionOf(connectionOrOptions);
-    super(
-      typeOrConnection as Constructable<T> & IConnection,
-      (isBulkStrategy(connectionOrOptions) ? undefined : connectionOrOptions) as IConnection & CRUDRepositoryOptions<T>,
-    );
+    const parent = (
+      isBulkStrategy(connectionOrOptions) ? undefined : connectionOrOptions
+    ) as IConnection & CRUDRepositoryOptions<T>;
+    super(typeOrConnection as Constructable<T> & IConnection, parent);
     this.strategy = strategy ?? new SingleCommandIBulkWriteStrategy<T>();
     this.transactional = transactional;
+    this.crudStatements = repositoryParts(typeOrConnection, parent).statements;
   }
 
   createBulk = (items: T[]): Promise<Response> =>
@@ -117,7 +120,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;
 
   private insertCommand = (item: T): BulkCommand => {
-    const statement = (this.statements as CRUDRepositoryStatements).insert(
+    const statement = this.crudStatements.insert(
       fieldsOf(this.reverse(item), (col) => !this.ids.includes(col), this.cell, this.enrichmentInto),
     );
     return { text: statement.getText(), parameters: statement.fields };
@@ -127,7 +130,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     const record = this.reverse(item);
     const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.cell, this.enrichmentInto);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    const statement = (this.statements as CRUDRepositoryStatements).update(
+    const statement = this.crudStatements.update(
       fields,
       byWhere ?? this.idsWhere(record),
       (name, value) => this.cell(name, value, byWhere === undefined),
@@ -137,7 +140,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
 
   private deleteCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const statement = (this.statements as CRUDRepositoryStatements).delete(
+    const statement = this.crudStatements.delete(
       byWhere ?? this.idsWhere(record),
       (name, value) => this.cell(name, value, byWhere === undefined),
     );
@@ -153,7 +156,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   private rowOf = (item: T): Cells => {
     const stored = this.reverse(item);
     const row: Cells = {};
-    for (const name of this.statements!.readColumns) {
+    for (const name of this.crudStatements.readColumns) {
       const match = Object.entries(stored).find(([key]) => this.column(key) === name && !this.enrichmentInto(key));
       row[name] = match?.[1] ?? null;
     }
