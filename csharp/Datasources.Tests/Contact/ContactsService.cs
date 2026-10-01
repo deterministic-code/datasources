@@ -17,8 +17,8 @@ internal static class ContactsService
         phones.AddEnriched(new("PhoneType", "PhoneType", "Id"), phoneTypes);
         contacts.AddEnriched(new("ContactType", "ContactType", "Id"), types);
         contacts.AddEnriched(new("ContactSource", "ContactSource", "Id"), sources);
-        contacts.AddEnriched(new("Addresses", "Id", "Contact", Many: true), addresses);
-        contacts.AddEnriched(new("Phones", "Id", "Contact", Many: true), phones);
+        contacts.AddEnriched(new("Addresses", "Id", "Contact", Type: EnrichmentPropertyType.List), addresses);
+        contacts.AddEnriched(new("Phones", "Id", "Contact", Type: EnrichmentPropertyType.List), phones);
         return contacts;
     }
 }

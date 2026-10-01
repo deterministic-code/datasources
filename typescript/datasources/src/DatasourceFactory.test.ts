@@ -112,7 +112,7 @@ describe("Datasource registry", () => {
     );
     const enriched = ds.createReadonlyRepository(Item) as ReadonlyRepository<Item>;
     expect(enriched).toBeInstanceOf(ReadonlyRepository);
-    typed.addLinked({ into: "name", from: "id", by: "id", association: { parent: "id", related: "name" } }, typedRead, typed);
+    typed.addLinked({ destinationProperty: "name", sourceProperty: "id", relatedKey: "id", association: { parent: "id", related: "name" } }, typedRead, typed);
     const withWrite = ds.createRepository(Item, connection, {
       write: { useTransaction: false, persist: async () => {} },
       ids: ["id"],

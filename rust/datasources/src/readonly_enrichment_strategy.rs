@@ -18,10 +18,19 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        if enrichment.many {
-            self.apply_many(via, enrichment, parents, sources).await
-        } else {
-            self.apply_lookup(via, enrichment, parents, sources).await
+        match enrichment.r#type {
+            crate::EnrichmentPropertyType::List => {
+                self.apply_many(via, enrichment, parents, sources).await
+            }
+            crate::EnrichmentPropertyType::Object => {
+                self.apply_lookup(via, enrichment, parents, sources).await
+            }
+            crate::EnrichmentPropertyType::Dictionary | crate::EnrichmentPropertyType::Custom => {
+                Err(crate::DatasourceError::message(format!(
+                    "Unsupported enrichment type \"{:?}\"",
+                    enrichment.r#type
+                )))
+            }
         }
     }
 
@@ -34,7 +43,11 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
     ) -> Result<()> {
         let mut cache: HashMap<String, Option<Row>> = HashMap::new();
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index)) else {
+            let Some(key) = source_key(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index),
+            ) else {
                 continue;
             };
             let cache_key = key_of(&key);
@@ -42,7 +55,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                 let related = via
                     .read_single(
                         Some(&Where::new(Operator::equals(
-                            enrichment.by.clone(),
+                            enrichment.related_key.clone(),
                             key.clone(),
                         ))),
                         None,
@@ -53,7 +66,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
             let Some(related) = cache.get(&cache_key).cloned().flatten() else {
                 continue;
             };
-            parent.insert(enrichment.into.clone(), selected(enrichment, &related));
+            parent.insert(
+                enrichment.destination_property.clone(),
+                selected(enrichment, &related),
+            );
         }
         Ok(())
     }
@@ -66,16 +82,26 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index)) else {
+            let Some(key) = source_key(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index),
+            ) else {
                 continue;
             };
             let related = via
                 .read(
-                    Some(&Where::new(Operator::equals(enrichment.by.clone(), key))),
+                    Some(&Where::new(Operator::equals(
+                        enrichment.related_key.clone(),
+                        key,
+                    ))),
                     None,
                 )
                 .await?;
-            parent.insert(enrichment.into.clone(), encode_rows(&related));
+            parent.insert(
+                enrichment.destination_property.clone(),
+                encode_rows(&related),
+            );
         }
         Ok(())
     }
@@ -90,7 +116,11 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
     ) -> Result<()> {
         let association = enrichment.association.as_ref().expect("association");
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index)) else {
+            let Some(key) = source_key(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index),
+            ) else {
                 continue;
             };
             let links = link
@@ -109,7 +139,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                 };
                 if let Some(entity) = via
                     .read_single(
-                        Some(&Where::new(Operator::equals(enrichment.by.clone(), id))),
+                        Some(&Where::new(Operator::equals(
+                            enrichment.related_key.clone(),
+                            id,
+                        ))),
                         None,
                     )
                     .await?
@@ -117,7 +150,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                     related_rows.push(entity);
                 }
             }
-            parent.insert(enrichment.into.clone(), encode_rows(&related_rows));
+            parent.insert(
+                enrichment.destination_property.clone(),
+                encode_rows(&related_rows),
+            );
         }
         Ok(())
     }
@@ -125,7 +161,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
 
 fn selected(enrichment: &Enrichment, related: &Row) -> Value {
     enrichment
-        .select
+        .related_property
         .as_ref()
         .and_then(|select| related.get(select).cloned())
         .unwrap_or_else(|| encode_row(related))

@@ -8,7 +8,7 @@ await Execute(connection, $"""
 var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",

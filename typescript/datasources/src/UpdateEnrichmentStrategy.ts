@@ -20,8 +20,8 @@ export abstract class UpdateEnrichmentStrategy<T> {
     enrichment: Enrichment,
     parent: object,
   ): Promise<void> {
-    for (const related of this.payloadOf(parent, enrichment.into)) {
-      this.stampCell(related, enrichment.by, this.getCell(parent, enrichment.from));
+    for (const related of this.payloadOf(parent, enrichment.destinationProperty)) {
+      this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
       await writer.create(related);
     }
   }
@@ -84,9 +84,9 @@ export abstract class UpdateEnrichmentStrategy<T> {
   protected relatedIds = (parent: object, enrichment: Enrichment): Scalar[] => {
     const ids: Scalar[] = [];
     const seen = new Set<string>();
-    for (const related of this.payloadOf(parent, enrichment.into)) {
-      const id = this.getCell(related, enrichment.by);
-      if (!this.presentCell(id)) throw new DatasourceError(`${enrichment.into} requires "${enrichment.by}"`);
+    for (const related of this.payloadOf(parent, enrichment.destinationProperty)) {
+      const id = this.getCell(related, enrichment.relatedKey);
+      if (!this.presentCell(id)) throw new DatasourceError(`${enrichment.destinationProperty} requires "${enrichment.relatedKey}"`);
       const key = String(id);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -96,8 +96,8 @@ export abstract class UpdateEnrichmentStrategy<T> {
   };
 
   protected requiredKey = (parent: object, enrichment: Enrichment): Scalar => {
-    const key = this.getCell(parent, enrichment.from);
-    if (!this.presentCell(key)) throw new DatasourceError(`${enrichment.into} requires "${enrichment.from}"`);
+    const key = this.getCell(parent, enrichment.sourceProperty);
+    if (!this.presentCell(key)) throw new DatasourceError(`${enrichment.destinationProperty} requires "${enrichment.sourceProperty}"`);
     return key;
   };
 }

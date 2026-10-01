@@ -1,36 +1,37 @@
 use crate::association::Association;
+use crate::enrichment_property_type::EnrichmentPropertyType;
 
 #[derive(Clone)]
 pub struct Enrichment {
-    pub into: String,
-    pub from: String,
-    pub by: String,
-    pub select: Option<String>,
-    pub many: bool,
+    pub destination_property: String,
+    pub source_property: String,
+    pub related_key: String,
+    pub related_property: Option<String>,
+    pub r#type: EnrichmentPropertyType,
     pub association: Option<Association>,
 }
 
 impl Enrichment {
     pub fn new(
-        into: impl Into<String>,
-        from: impl Into<String>,
-        by: impl Into<String>,
-        select: Option<String>,
-        many: bool,
+        destination_property: impl Into<String>,
+        source_property: impl Into<String>,
+        related_key: impl Into<String>,
+        related_property: Option<String>,
+        r#type: EnrichmentPropertyType,
     ) -> Self {
         Self {
-            into: into.into(),
-            from: from.into(),
-            by: by.into(),
-            select,
-            many,
+            destination_property: destination_property.into(),
+            source_property: source_property.into(),
+            related_key: related_key.into(),
+            related_property,
+            r#type,
             association: None,
         }
     }
 
     pub fn linked(mut self, association: Association) -> Self {
-        self.many = true;
-        self.select = None;
+        self.r#type = EnrichmentPropertyType::List;
+        self.related_property = None;
         self.association = Some(association);
         self
     }

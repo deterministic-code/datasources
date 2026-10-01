@@ -17,7 +17,7 @@ const linkWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<obje
 
 export class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T> {
   async updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
-    const writer = writerOf(entry, enrichment.into);
+    const writer = writerOf(entry, enrichment.destinationProperty);
     for (const row of await DeleteEnrichmentStrategy.load(writer, enrichment, parent)) await writer.delete(row);
     await this.createChildren(writer, enrichment, parent);
   }
@@ -25,7 +25,7 @@ export class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentSt
   async updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
-    const writer = linkWriter(entry, enrichment.into);
+    const writer = linkWriter(entry, enrichment.destinationProperty);
     const parentKey = this.requiredKey(parent, enrichment);
     for (const row of await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey)) {
       const id = this.getCell(row, association.related);

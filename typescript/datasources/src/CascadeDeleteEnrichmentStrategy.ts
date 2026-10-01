@@ -44,7 +44,7 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
     parent: object,
     deleteNested: (rows: object[]) => Promise<void>,
   ): Promise<void> {
-    const writer = writerOf(entry, enrichment.into);
+    const writer = writerOf(entry, enrichment.destinationProperty);
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
     for (const row of existing) await writer.delete(row);
@@ -53,8 +53,8 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
   async deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
-    const writer = linkWriter(entry, enrichment.into);
-    const key = get(parent, enrichment.from);
+    const writer = linkWriter(entry, enrichment.destinationProperty);
+    const key = get(parent, enrichment.sourceProperty);
     if (!present(key)) return;
     for (const row of await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, key)) {
       const id = get(row, association.related);

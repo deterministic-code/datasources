@@ -91,8 +91,8 @@ describe("users view roles", () => {
         ["Name", "name"],
       ]),
     });
-    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo, strategy);
-    usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, rolesRepo, strategy);
+    usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id", relatedProperty: "Name" }, typesRepo, strategy);
+    usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, rolesRepo, strategy);
     const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(names(usersView?.Roles ?? [])).toEqual(["admin", "editor"]);
@@ -145,7 +145,7 @@ describe("users view roles", () => {
       ],
     });
     usersRepo.addEnriched(
-      { into: "Roles", from: "Key", by: "UserId", many: true },
+      { destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" },
       usersRepo,
       new NestedToObjectEnrichmentStrategy<UsersView>({
         key: "Key",

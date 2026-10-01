@@ -131,7 +131,7 @@ Each parent is created with its nested children. Responses sum `rowsAffected`.
 ::: example
 ```csharp csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#CreateWritesParentsAndChildren
 ```
-```rust rust/datasources/src/tests/mod.rs#table_repository_maps_flat_row_into_contacts
+```rust rust/datasources/tests/enriched.rs#bulk_create_writes_parents_and_children
 ```
 ```typescript typescript/datasources/src/BulkCRUDRepository.test.ts#creates-parents-and-children
 ```

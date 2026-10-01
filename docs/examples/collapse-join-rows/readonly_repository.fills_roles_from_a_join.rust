@@ -9,7 +9,7 @@ options.entity_mapper = Box::new(DictionaryMapper::new([
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
 ]));
-options.column_mappings = Box::new(DictionaryMapper::new([
+options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".into(), "id".into()),
     ("Login".into(), "username".into()),
     ("Active".into(), "is_enabled".into()),
@@ -21,10 +21,9 @@ options.column_mappings = Box::new(DictionaryMapper::new([
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
 ]));
-options.select = Some(Arc::new(TransformMapper::new(joined_users, |query| query)));
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     Arc::new(ReadonlyRepository::memory(vec![])),
     Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
         TypeMap::new(
@@ -50,7 +49,8 @@ users_repo.add_enriched(
         ),
     ))),
 );
-let items = users_repo.read(None, None).await.unwrap();
+let joined = joined_users();
+let items = users_repo.read(Some(&joined), None).await.unwrap();
 let view = |login: &str| {
     items
         .iter()

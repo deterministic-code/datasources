@@ -268,7 +268,7 @@ export class CRUDRepository<T = Cells>
   };
 
   protected enrichmentInto = (name: string): boolean =>
-    enrichmentsOf(this)!.some((entry) => entry.enrichment.into === name);
+    enrichmentsOf(this)!.some((entry) => entry.enrichment.destinationProperty === name);
 }
 
 const writerOf = <TRelated extends object>(

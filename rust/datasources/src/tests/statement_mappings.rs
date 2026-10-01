@@ -17,7 +17,7 @@ fn mappings() -> StatementMappings {
     StatementMappings::new(entities, properties)
 }
 
-fn cell(name: &str, value: &Value) -> Result<Value> {
+fn mapper(name: &str, value: &Value) -> Result<Value> {
     Ok(match value {
         Value::Text(text) => Value::Text(format!("{name}:{}", text.to_uppercase())),
         other => other.clone(),
@@ -52,7 +52,7 @@ fn maps_select() {
         offset: Some(1),
         ..SelectStatementOptions::new("User", &fields)
     });
-    let mapped = mappings().apply_select(&select, &cell).unwrap();
+    let mapped = mappings().apply_select(&select, &mapper).unwrap();
     assert_eq!(mapped.table, "people");
     assert_eq!(
         mapped.fields,
@@ -107,7 +107,7 @@ fn maps_writes() {
                 &[Parameter::new("Name", "Ada")],
                 Some(&where_clause),
             ),
-            &cell,
+            &mapper,
         )
         .unwrap();
     assert_eq!(
@@ -122,7 +122,7 @@ fn maps_writes() {
     let delete = names
         .apply_delete(
             &DeleteStatement::new("User", Some(&where_clause)),
-            &cell,
+            &mapper,
         )
         .unwrap();
     assert_eq!(
@@ -137,7 +137,7 @@ fn maps_writes() {
     let bare = names
         .apply_update(
             &UpdateStatement::new("User", &[Parameter::new("Name", "Ada")], None),
-            &cell,
+            &mapper,
         )
         .unwrap();
     assert_eq!(bare.get_text(), "UPDATE people SET full_name = $full_name");
@@ -152,16 +152,16 @@ fn leaves_raw_and_other_statements() {
         "INSERT INTO t VALUES (1)"
     );
     let raw_update = UpdateStatement::text("x", None);
-    assert_eq!(names.apply_update(&raw_update, &cell).unwrap().get_text(), "x");
+    assert_eq!(names.apply_update(&raw_update, &mapper).unwrap().get_text(), "x");
     let raw_where = UpdateStatement::text("x", Some(Box::new(WhereText::new("id = 1"))));
     assert_eq!(
-        names.apply_update(&raw_where, &cell).unwrap().get_text(),
+        names.apply_update(&raw_where, &mapper).unwrap().get_text(),
         "x"
     );
     let clause = Where::new(Operator::equals("id", 1));
     assert_eq!(
         names
-            .apply_update(&UpdateStatement::text("y", Some(Box::new(clause))), &cell)
+            .apply_update(&UpdateStatement::text("y", Some(Box::new(clause))), &mapper)
             .unwrap()
             .get_text(),
         "y"
@@ -169,16 +169,98 @@ fn leaves_raw_and_other_statements() {
     assert!(ReadInput::as_where(&WhereText::new("id = 1")).is_some());
     let raw_delete = DeleteStatement::raw("DELETE FROM t", None);
     assert_eq!(
-        names.apply_delete(&raw_delete, &cell).unwrap().get_text(),
+        names.apply_delete(&raw_delete, &mapper).unwrap().get_text(),
         "DELETE FROM t"
     );
     let text = WhereText::new("name = $name");
     let kept = names
-        .apply_delete(&DeleteStatement::new("User", Some(&text)), &cell)
+        .apply_delete(&DeleteStatement::new("User", Some(&text)), &mapper)
         .unwrap();
     assert_eq!(kept.get_text(), "DELETE FROM people WHERE name = $name");
     assert_eq!(
         ExecuteStoredProcedureStatement::text("CALL save_user()").get_text(),
         "CALL save_user()"
     );
+}
+
+#[test]
+fn maps_contacts_select() {
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
+        ("Contact".to_string(), "contacts_base".to_string()),
+        ("ContactSource".to_string(), "contact_source".to_string()),
+        ("ContactType".to_string(), "contact_type".to_string()),
+        ("Address".to_string(), "address".to_string()),
+        ("AddressType".to_string(), "address_type".to_string()),
+        ("Phone".to_string(), "phone".to_string()),
+        ("PhoneType".to_string(), "phone_type".to_string()),
+    ]));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("Id".to_string(), "id".to_string()),
+            ("FirstName".to_string(), "first_name".to_string()),
+            ("LastName".to_string(), "last_name".to_string()),
+            ("Email".to_string(), "email".to_string()),
+            ("Name".to_string(), "name".to_string()),
+            ("Line1".to_string(), "line1".to_string()),
+            ("City".to_string(), "city".to_string()),
+            ("Number".to_string(), "number".to_string()),
+            ("ContactId".to_string(), "contact_id".to_string()),
+            ("ContactSourceId".to_string(), "contact_source_id".to_string()),
+            ("ContactTypeId".to_string(), "contact_type_id".to_string()),
+            ("AddressTypeId".to_string(), "address_type_id".to_string()),
+            ("PhoneTypeId".to_string(), "phone_type_id".to_string()),
+        ]));
+    let mappings = StatementMappings::new(entities, properties);
+    let fields = [
+        "Contact.FirstName",
+        "Contact.LastName",
+        "Contact.Email",
+        "ContactSource.Name",
+        "Address.Line1",
+        "Address.City",
+        "Phone.Number",
+    ];
+    let joins = [
+        Join::inner(
+            "ContactSource",
+            "Contact.ContactSourceId",
+            "ContactSource.Id",
+        ),
+        Join::inner("ContactType", "Contact.ContactTypeId", "ContactType.Id"),
+        Join::left("Address", "Contact.Id", "Address.ContactId"),
+        Join::left("AddressType", "Address.AddressTypeId", "AddressType.Id"),
+        Join::left("Phone", "Contact.Id", "Phone.ContactId"),
+        Join::left("PhoneType", "Phone.PhoneTypeId", "PhoneType.Id"),
+    ];
+    let where_clause = Where::new(Operator::and(
+        Operator::equals("Contact.Email", "ada@ex.com"),
+        Operator::greater_than("Address.City", "A"),
+    ));
+    let having = Where::new(Operator::equals("ContactType.Name", "person"));
+    let order = [
+        OrderBy::asc("Contact.LastName"),
+        OrderBy::desc("Contact.FirstName"),
+    ];
+    let select = SelectStatement::new(SelectStatementOptions {
+        distinct: true,
+        where_clause: Some(&where_clause),
+        joins: &joins,
+        group_by: &["Contact.LastName"],
+        having: Some(&having),
+        order_by: &order,
+        limit: Some(20),
+        offset: Some(1),
+        ..SelectStatementOptions::new("Contact", &fields)
+    });
+    let mapped = mappings.apply_select(&select, &mapper).unwrap();
+    assert_eq!(
+        mapped.get_text(),
+        "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1"
+    );
+    let parameters = mapped.predicate().unwrap().parameters();
+    assert_eq!(
+        parameters[0].value,
+        Value::Text("Contact.Email:ADA@EX.COM".into())
+    );
+    assert_eq!(parameters[1].value, Value::Text("Address.City:A".into()));
 }

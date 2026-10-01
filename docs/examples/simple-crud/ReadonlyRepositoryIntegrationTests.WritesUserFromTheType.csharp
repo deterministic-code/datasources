@@ -2,7 +2,7 @@ var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, str
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
-    ColumnMappings = casing,
+    PropertyMappings = casing,
     Ids = ["Id"],
 });
 var created = await usersRepo.Create(new User { Username = "ada", IsEnabled = true });

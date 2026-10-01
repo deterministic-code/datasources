@@ -1,5 +1,6 @@
 import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrategy.ts";
 import { DatasourceError } from "./DatasourceError.ts";
+import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import { enrichmentsOf } from "./ReadonlyRepository.ts";
@@ -59,10 +60,13 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     mode: WriteMode,
   ): Promise<void> => {
     const enrichment = entry.enrichment;
+    const type = enrichment.type ?? EnrichmentPropertyType.Object;
+    if (type === EnrichmentPropertyType.Dictionary || type === EnrichmentPropertyType.Custom)
+      throw new DatasourceError(`Unsupported enrichment type "${type}"`);
     if (enrichment.association) {
-      const writer = linkWriter(entry, enrichment.into);
+      const writer = linkWriter(entry, enrichment.destinationProperty);
       for (const parent of parents) {
-        if (this.skip(parent, enrichment.into, mode)) continue;
+        if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
         await dispatch(mode, {
           create: () => this.updateStrategy.createLinks(writer, enrichment, parent),
           update: () => this.updateStrategy.updateLinked(entry, enrichment, parent),
@@ -71,10 +75,10 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       }
       return;
     }
-    if (!enrichment.many || enrichment.select) return;
-    const writer = childWriter(entry, enrichment.into);
+    if (type !== EnrichmentPropertyType.List || enrichment.relatedProperty) return;
+    const writer = childWriter(entry, enrichment.destinationProperty);
     for (const parent of parents) {
-      if (this.skip(parent, enrichment.into, mode)) continue;
+      if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
       await dispatch(mode, {
         create: () => this.updateStrategy.createChildren(writer, enrichment, parent),
         update: () => this.updateStrategy.updateOwned(entry, enrichment, parent),

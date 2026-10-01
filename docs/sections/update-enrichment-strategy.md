@@ -16,7 +16,7 @@ abstract class UpdateEnrichmentStrategy<T>
 
 ##### updateOwned(entry, enrichment, parent)
 
-Writes the owned `many` list for one parent.
+Writes the owned `List` for one parent.
 
 ```typescript
 abstract updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void>
@@ -44,7 +44,7 @@ abstract updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: o
 
 ##### createChildren(writer, enrichment, parent)
 
-Stamps each child's `by` from the parent `from`, then creates the payload.
+Stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates the payload.
 
 ```typescript
 createChildren(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
@@ -132,7 +132,7 @@ public abstract class UpdateEnrichmentStrategy<T>
 
 ##### UpdateOwned(entry, enrichment, parent)
 
-Writes the owned `many` list for one parent.
+Writes the owned `List` for one parent.
 
 ```csharp
 public abstract Task UpdateOwned(StoredEnrichment entry, Enrichment enrichment, object parent)
@@ -187,7 +187,7 @@ pub trait UpdateEnrichmentStrategy: Send + Sync
 
 ##### update_owned(entry, enrichment, parent)
 
-Writes the owned `many` list for one parent.
+Writes the owned `List` for one parent.
 
 ```rust
 async fn update_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &mut Row) -> Result<()>

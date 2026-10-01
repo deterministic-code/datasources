@@ -243,20 +243,20 @@ readonly enrichment?: Enrichment
 
 **Methods**
 
-##### include(via, into, from, by, select?, many?)
+##### include(via, destinationProperty, sourceProperty, relatedKey, relatedProperty?, type?)
 
 Adds a child node.
 
 ```typescript
-include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: string, from: string, by: string, select?: string, many?: boolean): IRepositoryTreeNode
+include<TRelated extends object>(via: IReadonlyRepository<TRelated>, destinationProperty: string, sourceProperty: string, relatedKey: string, relatedProperty?: string, type?: EnrichmentPropertyType): IRepositoryTreeNode
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
-- `into` — destination property
-- `from` — parent key
-- `by` — related key
-- `select` — optional related property to copy
-- `many` — collect a list
+- `destinationProperty` — parent property that gets filled
+- `sourceProperty` — parent key
+- `relatedKey` — key on the related row
+- `relatedProperty` — optional related property to copy
+- `type` — [EnrichmentPropertyType](./enrichment.md#enrichmentpropertytype)
 
 **Returns** [IRepositoryTreeNode](#irepositorytreenode)
 
@@ -662,20 +662,20 @@ pub enrichment: Option<Enrichment>
 
 **Methods**
 
-##### include(via, into, from, by, select, many)
+##### include(via, destination_property, source_property, related_key, related_property, type)
 
 Adds a child node.
 
 ```rust
-pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+pub fn include(&mut self, via: impl EnrichmentVia, destination_property: impl Into<String>, source_property: impl Into<String>, related_key: impl Into<String>, related_property: Option<String>, r#type: EnrichmentPropertyType) -> &mut Self
 ```
 
 - `via` — related [IReadonlyRepository](#ireadonlyrepository)
-- `into` — destination field
-- `from` — parent key
-- `by` — related key
-- `select` — optional related field to copy
-- `many` — collect a list
+- `destination_property` — parent field that gets filled
+- `source_property` — parent key
+- `related_key` — key on the related row
+- `related_property` — optional related field to copy
+- `type` — [EnrichmentPropertyType](./enrichment.md#enrichmentpropertytype)
 
 **Returns** `&mut Self`
 
@@ -684,13 +684,13 @@ pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from
 
 ## Remarks
 
-{{AddEnriched|addEnriched|add_enriched}} on [IEnriched](./i-enriched.md) registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
+{{AddEnriched|addEnriched|add_enriched}} on [IEnriched](./i-enriched.md) registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
 ```
 childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
-parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
 ```
 
 Repository read is convert, then map. See [Type Converters](./type-converters.md) and [Mappers](./mappers.md).

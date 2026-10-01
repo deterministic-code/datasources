@@ -26,33 +26,69 @@ impl ContactsService {
         mut phones: CRUDRepository,
     ) -> Self {
         addresses.add_enriched(
-            crate::enrichment::Enrichment::new("AddressType", "AddressType", "Id", None, false),
+            crate::enrichment::Enrichment::new(
+                "AddressType",
+                "AddressType",
+                "Id",
+                None,
+                crate::EnrichmentPropertyType::Object,
+            ),
             address_types,
             None,
         );
         phones.add_enriched(
-            crate::enrichment::Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
+            crate::enrichment::Enrichment::new(
+                "PhoneType",
+                "PhoneType",
+                "Id",
+                None,
+                crate::EnrichmentPropertyType::Object,
+            ),
             phone_types,
             None,
         );
         contacts
             .add_enriched(
-                crate::enrichment::Enrichment::new("ContactType", "ContactType", "Id", None, false),
+                crate::enrichment::Enrichment::new(
+                    "ContactType",
+                    "ContactType",
+                    "Id",
+                    None,
+                    crate::EnrichmentPropertyType::Object,
+                ),
                 types,
                 None,
             )
             .add_enriched(
-                crate::enrichment::Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
+                crate::enrichment::Enrichment::new(
+                    "ContactSource",
+                    "ContactSource",
+                    "Id",
+                    None,
+                    crate::EnrichmentPropertyType::Object,
+                ),
                 sources,
                 None,
             )
             .add_enriched(
-                crate::enrichment::Enrichment::new("Addresses", "Id", "Contact", None, true),
+                crate::enrichment::Enrichment::new(
+                    "Addresses",
+                    "Id",
+                    "Contact",
+                    None,
+                    crate::EnrichmentPropertyType::List,
+                ),
                 Arc::new(addresses),
                 None,
             )
             .add_enriched(
-                crate::enrichment::Enrichment::new("Phones", "Id", "Contact", None, true),
+                crate::enrichment::Enrichment::new(
+                    "Phones",
+                    "Id",
+                    "Contact",
+                    None,
+                    crate::EnrichmentPropertyType::List,
+                ),
                 Arc::new(phones),
                 None,
             );

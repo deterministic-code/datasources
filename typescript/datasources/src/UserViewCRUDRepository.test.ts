@@ -79,14 +79,14 @@ const graph = async (write?: LazyWriteEnrichmentStrategy<UserView>): Promise<Gra
 };
 
 const link = (usersRepo: CRUDRepository<UserView>, seeded: Graph): void => {
-  usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
+  usersRepo.addEnriched({ destinationProperty: "user_type", sourceProperty: "user_type_id", relatedKey: "id" }, seeded.userTypesRepo);
   usersRepo.addLinked(
-    { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+    { destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "role_id" } },
     seeded.rolesRepo,
     seeded.userRolesRepo,
   );
   usersRepo.addLinked(
-    { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
+    { destinationProperty: "groups", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "group_id" } },
     seeded.groupsRepo,
     seeded.userGroupsRepo,
   );
@@ -107,14 +107,14 @@ describe("CRUDRepository user view", () => {
   it("creates, updates, and deletes through link rows", async () => {
     const seeded = await graph();
     const usersRepo = seeded.usersRepo;
-    usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
+    usersRepo.addEnriched({ destinationProperty: "user_type", sourceProperty: "user_type_id", relatedKey: "id" }, seeded.userTypesRepo);
     usersRepo.addLinked(
-      { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+      { destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "role_id" } },
       seeded.rolesRepo,
       seeded.userRolesRepo,
     );
     usersRepo.addLinked(
-      { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
+      { destinationProperty: "groups", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "group_id" } },
       seeded.groupsRepo,
       seeded.userGroupsRepo,
     );
@@ -304,7 +304,7 @@ describe("CRUDRepository user view", () => {
   it("rejects a link without an id", async () => {
     const seeded = await graph();
     seeded.usersRepo.addLinked(
-      { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+      { destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "role_id" } },
       seeded.rolesRepo,
       seeded.userRolesRepo,
     );

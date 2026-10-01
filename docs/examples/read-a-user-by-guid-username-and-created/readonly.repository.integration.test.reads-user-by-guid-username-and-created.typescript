@@ -7,7 +7,7 @@ await executeSql(connection, `
 `);
 const repo = ds.createReadonlyRepository(UserAccount, connection, {
   entityMapper: new DictionaryMapper([["UserAccount", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],

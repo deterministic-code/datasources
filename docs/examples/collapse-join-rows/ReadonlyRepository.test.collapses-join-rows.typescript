@@ -8,5 +8,5 @@ const parentsRepo = repo(Parent, connection);
 await new NestedToObjectEnrichmentStrategy<Parent>({
   key: "Id",
   fields: { Id: "Id", TypeName: "TypeName" },
-}).apply(parentsRepo, { into: "TypeName", from: "Id", by: "Id" }, parents, [person, org]);
+}).apply(parentsRepo, { destinationProperty: "TypeName", sourceProperty: "Id", relatedKey: "Id" }, parents, [person, org]);
 const items = parents as Parent[];

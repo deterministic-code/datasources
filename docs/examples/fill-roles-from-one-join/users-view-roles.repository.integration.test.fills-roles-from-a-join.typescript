@@ -7,7 +7,7 @@ const usersRepo = new ReadonlyRepository(connection, {
     ["UserRole", "user_roles"],
     ["Role", "roles"],
   ]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -19,32 +19,27 @@ const usersRepo = new ReadonlyRepository(connection, {
     ["Name", "roles.name"],
     ["Id", "id"],
   ]),
-  select: new TransformMapper(
-    (query) =>
-      new SelectStatement({
-        table: "User",
-        fields: [
-          "User.Key",
-          "User.Login",
-          "User.Active",
-          "User.Opened",
-          "User.UserType",
-          "UserRole.UserId",
-          "UserRole.RoleId",
-          "Role.Name",
-        ],
-        where: query.where,
-        joins: [
-          Join.left("UserType", "UserType.Id", "User.UserTypeId"),
-          Join.left("UserRole", "UserRole.UserId", "User.Key"),
-          Join.left("Role", "Role.Id", "UserRole.RoleId"),
-        ],
-      }),
-    (query) => query,
-  ),
+});
+const joined = new SelectStatement({
+  table: "User",
+  fields: [
+    "User.Key",
+    "User.Login",
+    "User.Active",
+    "User.Opened",
+    "User.UserType",
+    "UserRole.UserId",
+    "UserRole.RoleId",
+    "Role.Name",
+  ],
+  joins: [
+    Join.left("UserType", "UserType.Id", "User.UserTypeId"),
+    Join.left("UserRole", "UserRole.UserId", "User.Key"),
+    Join.left("Role", "Role.Id", "UserRole.RoleId"),
+  ],
 });
 usersRepo.addEnriched(
-  { into: "Roles", from: "Key", by: "UserId", many: true },
+  { destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" },
   usersRepo,
   new NestedToObjectEnrichmentStrategy<UsersView>({
     key: "Key",
@@ -62,4 +57,3 @@ usersRepo.addEnriched(
   }),
 );
 const items: UsersView[] = [];
-for await (const item of usersRepo.read()) items.push(item);

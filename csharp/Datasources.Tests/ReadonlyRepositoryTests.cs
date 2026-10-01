@@ -100,7 +100,7 @@ public class ReadonlyRepositoryTests
             new Row { ["parent_id"] = other["id"], ["label"] = "x" });
         var childrenRepo = Open<Child>(childrenConnection);
         parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var item = await parentsRepo.ReadSingle();
         Assert.Equal("org", item!.TypeName);
         Assert.Equal(["a", "b"], item.Children.Select(child => child.Label));
@@ -124,7 +124,7 @@ public class ReadonlyRepositoryTests
         var childrenRepo = Open<Child>(childrenConnection);
         var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
         parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo, strategy);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo, strategy);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo, strategy);
         var item = await parentsRepo.ReadSingle();
         Assert.Equal("org", item!.TypeName);
         Assert.Equal(["a", "b"], item.Children.Select(child => child.Label));
@@ -150,7 +150,7 @@ public class ReadonlyRepositoryTests
         var childrenRepo = Open<Child>(childrenConnection);
         childrenRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), childTypesRepo);
         parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var item = await parentsRepo.ReadSingle();
         Assert.Equal("org", item!.TypeName);
         Assert.Equal("home", item.Children[0].TypeName);
@@ -178,7 +178,7 @@ public class ReadonlyRepositoryTests
         var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
         childrenRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), childTypesRepo);
         parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo, strategy);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo, strategy);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo, strategy);
         var item = await parentsRepo.ReadSingle();
         Assert.Equal("org", item!.TypeName);
         Assert.Equal("home", item.Children[0].TypeName);

@@ -18,7 +18,7 @@ execute_sql(
 .await;
 let mut users_options = create_crud_repository_options::<UserAccount>();
 users_options.entity = "user".into();
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -29,7 +29,7 @@ let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings =
+type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
@@ -41,7 +41,7 @@ users_repo.add_enriched(
         "UserTypeId",
         "Id",
         Some("Name".into()),
-        false,
+        datasources::EnrichmentPropertyType::Object,
     ),
     types,
     None,

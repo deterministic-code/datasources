@@ -27,8 +27,8 @@ public sealed class ContactsRepository : CRUDRepository<ContactsView>
         Phones.AddEnriched(new("phone_type", "phone_type_id", "id", "name"), PhoneTypes);
         AddEnriched(new("contact_source", "contact_source_id", "id", "name"), Sources);
         AddEnriched(new("contact_type", "contact_type_id", "id", "name"), Types);
-        AddEnriched(new("addresses", "id", "contact_id", Many: true), Addresses);
-        AddEnriched(new("phones", "id", "contact_id", Many: true), Phones);
+        AddEnriched(new("addresses", "id", "contact_id", Type: EnrichmentPropertyType.List), Addresses);
+        AddEnriched(new("phones", "id", "contact_id", Type: EnrichmentPropertyType.List), Phones);
         AddLinked(new("groups", "id", "id", Association: new("contact_id", "contact_group_id")), Groups, Members);
     }
 

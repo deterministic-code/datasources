@@ -179,7 +179,7 @@ Delete
 
 ## Remarks
 
-Set this as the repository `write` option. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) is the default. Lookups are filled on read and are not written. A `many` child list and a link are written. A bulk list uses one transaction for the whole list when {{UseTransaction|useTransaction|use_transaction}} is on.
+Set this as the repository `write` option. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) is the default. Lookups are filled on read and are not written. A `List` and a link are written. A bulk list uses one transaction for the whole list when {{UseTransaction|useTransaction|use_transaction}} is on.
 
 ## Examples
 

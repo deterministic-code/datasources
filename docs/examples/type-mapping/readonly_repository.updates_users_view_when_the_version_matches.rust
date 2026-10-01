@@ -6,7 +6,7 @@ users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
 )]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -19,12 +19,12 @@ let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings = Box::new(casing);
+type_options.property_mappings = Box::new(casing);
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-role_options.column_mappings =
+role_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
@@ -37,13 +37,13 @@ users_repo.add_enriched(
         "UserTypeId",
         "Id",
         Some("Name".into()),
-        false,
+        datasources::EnrichmentPropertyType::Object,
     ),
     user_types_repo.clone(),
     None,
 );
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     user_roles_repo.clone(),
     None,
 );

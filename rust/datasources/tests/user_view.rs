@@ -123,19 +123,19 @@ fn ada(seeded: &Seed, roles: Value, groups: Value) -> Row {
 fn link(users: &mut CRUDRepository, seeded: &Seed) {
     users
         .add_enriched(
-            Enrichment::new("user_type", "user_type_id", "id", None, false),
+            Enrichment::new("user_type", "user_type_id", "id", None, datasources::EnrichmentPropertyType::Object),
             seeded.user_types.clone(),
             None,
         )
         .add_linked(
-            Enrichment::new("roles", "id", "id", None, false)
+            Enrichment::new("roles", "id", "id", None, datasources::EnrichmentPropertyType::Object)
                 .linked(Association::new("user_id", "role_id")),
             seeded.roles.clone(),
             seeded.user_roles.clone(),
             None,
         )
         .add_linked(
-            Enrichment::new("groups", "id", "id", None, false)
+            Enrichment::new("groups", "id", "id", None, datasources::EnrichmentPropertyType::Object)
                 .linked(Association::new("user_id", "group_id")),
             seeded.groups.clone(),
             seeded.user_groups.clone(),
@@ -153,19 +153,19 @@ async fn create_update_and_delete_syncs_link_rows() {
     let (mut users, seeded) = open(None).await;
     users
         .add_enriched(
-            Enrichment::new("user_type", "user_type_id", "id", None, false),
+            Enrichment::new("user_type", "user_type_id", "id", None, datasources::EnrichmentPropertyType::Object),
             seeded.user_types.clone(),
             None,
         )
         .add_linked(
-            Enrichment::new("roles", "id", "id", None, false)
+            Enrichment::new("roles", "id", "id", None, datasources::EnrichmentPropertyType::Object)
                 .linked(Association::new("user_id", "role_id")),
             seeded.roles.clone(),
             seeded.user_roles.clone(),
             None,
         )
         .add_linked(
-            Enrichment::new("groups", "id", "id", None, false)
+            Enrichment::new("groups", "id", "id", None, datasources::EnrichmentPropertyType::Object)
                 .linked(Association::new("user_id", "group_id")),
             seeded.groups.clone(),
             seeded.user_groups.clone(),

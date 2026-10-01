@@ -25,7 +25,7 @@ const setup = async (): Promise<IConnection> => {
 };
 
 const relate = (parentsRepo: BulkCRUDRepository<Parent>, childrenRepo: BulkCRUDRepository<Child>) => {
-  parentsRepo.addEnriched({ into: "children", from: "id", by: "parent_id", many: true }, childrenRepo);
+  parentsRepo.addEnriched({ destinationProperty: "children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, childrenRepo);
   return parentsRepo;
 };
 

@@ -1,0 +1,42 @@
+---
+description: Each test builds its own objects and does not share static state
+alwaysApply: true
+---
+
+# Self-contained tests
+
+Each test builds the objects it needs. Do not share a static field, fixture, mapper, or connection across tests.
+
+```csharp
+// ❌ BAD
+static readonly StatementMappings Mappings = new(...);
+
+[Fact]
+public void MapsSelect() => Mappings.Apply(select, Cell);
+
+// ✅ GOOD
+[Fact]
+public void MapsSelect()
+{
+    var mappings = new StatementMappings(...);
+    mappings.Apply(select, (name, value) => value);
+}
+```
+
+```typescript
+// ❌ BAD
+const mappings = new StatementMappings(...);
+
+// ✅ GOOD
+it("maps a select", () => {
+  const mappings = new StatementMappings(...);
+});
+```
+
+```rust
+// ❌ BAD
+static MAPPINGS: LazyLock<StatementMappings> = ...;
+
+// ✅ GOOD
+let mappings = StatementMappings::new(entities, properties);
+```

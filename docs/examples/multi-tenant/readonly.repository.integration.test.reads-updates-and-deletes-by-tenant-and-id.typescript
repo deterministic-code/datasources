@@ -8,7 +8,7 @@ const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const accountsRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(Account),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
   ids: ["TenantId", "Id"],
 });
 const ada = await accountsRepo.readSingleById({ TenantId: 1, Id: 1 });

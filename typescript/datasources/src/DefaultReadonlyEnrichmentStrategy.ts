@@ -1,6 +1,7 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Enrichment } from "./Enrichment.ts";
+import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -18,9 +19,12 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: object[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    return enrichment.many
-      ? this.applyMany(via, enrichment, parents, sources)
-      : this.applyLookup(via, enrichment, parents, sources);
+    const type = enrichment.type ?? EnrichmentPropertyType.Object;
+    const run = {
+      [EnrichmentPropertyType.List]: () => this.applyMany(via, enrichment, parents, sources),
+      [EnrichmentPropertyType.Object]: () => this.applyLookup(via, enrichment, parents, sources),
+    }[type];
+    return run ? run() : Promise.reject(new DatasourceError(`Unsupported enrichment type "${type}"`));
   }
 
   async applyLinked<TRelated extends object, TLink extends object>(
@@ -34,7 +38,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
       throw new DatasourceError("Missing association");
     })();
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.from, sources, index);
+      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
       if (key === undefined || key === null) continue;
       const related: TRelated[] = [];
       for await (const row of link.read(
@@ -42,10 +46,10 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
       )) {
         const id = this.props(row)[association.related];
         if (id === undefined || id === null || typeof id === "object") continue;
-        const entity = await via.readSingle(new Where(new Operator.Equals(enrichment.by, id)));
+        const entity = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedKey, id)));
         if (entity) related.push(entity);
       }
-      Object.assign(parent, { [enrichment.into]: related });
+      Object.assign(parent, { [enrichment.destinationProperty]: related });
     }
   }
 
@@ -57,18 +61,18 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   ): Promise<void> {
     const cache = new Map<string, TRelated | undefined>();
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.from, sources, index);
+      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
       if (key === undefined || key === null) continue;
       const cacheKey = this.keyOf(key);
       if (!cache.has(cacheKey))
         cache.set(
           cacheKey,
-          await via.readSingle(new Where(new Operator.Equals(enrichment.by, this.scalar(key)))),
+          await via.readSingle(new Where(new Operator.Equals(enrichment.relatedKey, this.scalar(key)))),
         );
       const related = cache.get(cacheKey);
       if (!related) continue;
       Object.assign(parent, {
-        [enrichment.into]: enrichment.select ? this.props(related)[enrichment.select] : related,
+        [enrichment.destinationProperty]: enrichment.relatedProperty ? this.props(related)[enrichment.relatedProperty] : related,
       });
     }
   }
@@ -80,14 +84,14 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     sources?: (Row | undefined)[],
   ): Promise<void> {
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.from, sources, index);
+      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
       if (key === undefined || key === null) continue;
       const related: TRelated[] = [];
       for await (const item of via.read(
-        new Where(new Operator.Equals(enrichment.by, this.scalar(key))),
+        new Where(new Operator.Equals(enrichment.relatedKey, this.scalar(key))),
       ))
         related.push(item);
-      Object.assign(parent, { [enrichment.into]: related });
+      Object.assign(parent, { [enrichment.destinationProperty]: related });
     }
   }
 

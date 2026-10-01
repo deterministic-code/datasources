@@ -169,7 +169,7 @@ async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMod
 
 ## Remarks
 
-Set it on the repository `write` option. Create writes the parent, stamps each child's `by` from the parent `from`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips that null list. Nested writes join the transaction when they use the same connection.
+Set it on the repository `write` option. Create writes the parent, stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips that null list. Nested writes join the transaction when they use the same connection.
 
 ## Examples
 

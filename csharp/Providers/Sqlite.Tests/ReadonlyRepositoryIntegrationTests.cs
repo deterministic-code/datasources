@@ -306,7 +306,7 @@ public class UsersViewRoleTests
             }),
         });
         usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo, strategy);
-        usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), rolesRepo, strategy);
+        usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), rolesRepo, strategy);
         var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 
         Assert.Equal("admin", usersView!.UserType);
@@ -367,7 +367,7 @@ public class UsersViewRoleTests
             ],
         });
         usersRepo.AddEnriched(
-            new("Roles", "Key", "UserId", Many: true),
+            new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List),
             usersRepo,
             new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
             {
@@ -633,7 +633,7 @@ public class UsersViewCrudTests
             PropertyMappings = casing,
         });
         usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
-        usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
+        usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
         var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
         Assert.Equal(1, admin.Id);
         var user = new UsersView

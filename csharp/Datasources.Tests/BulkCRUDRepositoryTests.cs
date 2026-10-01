@@ -166,7 +166,7 @@ public class BulkCRUDRepositoryTests
         BulkCRUDRepository<Parent> parentsRepo,
         BulkCRUDRepository<Child> childrenRepo)
     {
-        parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
         return parentsRepo;
     }
 

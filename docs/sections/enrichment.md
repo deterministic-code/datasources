@@ -1,6 +1,6 @@
 # Enrichment
 
-One related fill. `into` is the destination property, `from` is the parent key, and `by` is the related key. `select` copies one related property. `many` collects a list. `association` names the junction columns for a link.
+One related fill. `destinationProperty` is the parent property that gets filled, `sourceProperty` is the parent key, and `relatedKey` is the key on the related row. `relatedProperty` copies one related property. `type` is [EnrichmentPropertyType](#enrichmentpropertytype). `association` names the junction columns for a link.
 
 ## Classes
 
@@ -16,44 +16,44 @@ One related fill.
 
 **Properties**
 
-##### into
+##### destinationProperty
 
-Destination property.
+Parent property that gets filled.
 
 ```typescript
-into: string
+destinationProperty: string
 ```
 
-##### from
+##### sourceProperty
 
 Parent key.
 
 ```typescript
-from: string
+sourceProperty: string
 ```
 
-##### by
+##### relatedKey
 
-Related key.
+Key on the related row.
 
 ```typescript
-by: string
+relatedKey: string
 ```
 
-##### select
+##### relatedProperty
 
-Optional related property to copy.
+Optional related property to copy. A string or int stays on `Object`.
 
 ```typescript
-select?: string
+relatedProperty?: string
 ```
 
-##### many
+##### type
 
-Collect a list.
+[EnrichmentPropertyType](#enrichmentpropertytype). Omitted means `Object`.
 
 ```typescript
-many?: boolean
+type?: EnrichmentPropertyType
 ```
 
 ##### association
@@ -62,6 +62,48 @@ Junction columns for a link. See [Association](#association).
 
 ```typescript
 association?: Association
+```
+
+#### EnrichmentPropertyType
+
+```typescript
+const EnrichmentPropertyType
+```
+
+Shape of the filled property.
+
+**Properties**
+
+##### Object
+
+One related row. `relatedProperty` copies one field.
+
+```typescript
+Object: "object"
+```
+
+##### List
+
+Related rows. Written with the parent when the repository can persist.
+
+```typescript
+List: "list"
+```
+
+##### Dictionary
+
+Rejected until its fill is defined.
+
+```typescript
+Dictionary: "dictionary"
+```
+
+##### Custom
+
+Rejected until its fill is defined.
+
+```typescript
+Custom: "custom"
 ```
 
 #### Association
@@ -101,63 +143,63 @@ One related fill.
 
 **Constructor**
 
-##### Enrichment(into, from, by, select, many, association)
+##### Enrichment(destinationProperty, sourceProperty, relatedKey, relatedProperty, type, association)
 
 Builds one related fill.
 
 ```csharp
-public Enrichment(string into, string from, string by, string? select = null, bool many = false, Association? association = null)
+public Enrichment(string destinationProperty, string sourceProperty, string relatedKey, string? relatedProperty = null, EnrichmentPropertyType type = EnrichmentPropertyType.Object, Association? association = null)
 ```
 
-- `into` — destination property
-- `from` — parent key
-- `by` — related key
-- `select` — optional related property to copy
-- `many` — collect a list
+- `destinationProperty` — parent property that gets filled
+- `sourceProperty` — parent key
+- `relatedKey` — key on the related row
+- `relatedProperty` — optional related property to copy
+- `type` — [EnrichmentPropertyType](#enrichmentpropertytype)
 - `association` — optional [Association](#association)
 
 **Returns** [Enrichment](#enrichment)
 
 **Properties**
 
-##### Into
+##### DestinationProperty
 
-Destination property.
+Parent property that gets filled.
 
 ```csharp
-string Into { get; }
+string DestinationProperty { get; }
 ```
 
-##### From
+##### SourceProperty
 
 Parent key.
 
 ```csharp
-string From { get; }
+string SourceProperty { get; }
 ```
 
-##### By
+##### RelatedKey
 
-Related key.
+Key on the related row.
 
 ```csharp
-string By { get; }
+string RelatedKey { get; }
 ```
 
-##### Select
+##### RelatedProperty
 
-Optional related property to copy.
+Optional related property to copy. A string or int stays on `Object`.
 
 ```csharp
-string? Select { get; }
+string? RelatedProperty { get; }
 ```
 
-##### Many
+##### Type
 
-Collect a list.
+[EnrichmentPropertyType](#enrichmentpropertytype).
 
 ```csharp
-bool Many { get; }
+EnrichmentPropertyType Type { get; }
 ```
 
 ##### Association
@@ -166,6 +208,48 @@ Junction columns for a link. See [Association](#association).
 
 ```csharp
 Association? Association { get; }
+```
+
+#### EnrichmentPropertyType
+
+```csharp
+public enum EnrichmentPropertyType
+```
+
+Shape of the filled property.
+
+**Properties**
+
+##### Object
+
+One related row. `RelatedProperty` copies one field.
+
+```csharp
+Object
+```
+
+##### List
+
+Related rows. Written with the parent when the repository can persist.
+
+```csharp
+List
+```
+
+##### Dictionary
+
+Rejected until its fill is defined.
+
+```csharp
+Dictionary
+```
+
+##### Custom
+
+Rejected until its fill is defined.
+
+```csharp
+Custom
 ```
 
 #### Association
@@ -220,25 +304,25 @@ One related fill.
 
 **Constructor**
 
-##### new(into, from, by, select, many)
+##### new(destination_property, source_property, related_key, related_property, type)
 
 Builds an enrichment. `association` starts unset.
 
 ```rust
-pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
+pub fn new(destination_property: impl Into<String>, source_property: impl Into<String>, related_key: impl Into<String>, related_property: Option<String>, r#type: EnrichmentPropertyType) -> Self
 ```
 
-- `into` — destination field
-- `from` — parent key
-- `by` — related key
-- `select` — optional related field to copy
-- `many` — collect a list
+- `destination_property` — parent field that gets filled
+- `source_property` — parent key
+- `related_key` — key on the related row
+- `related_property` — optional related field to copy
+- `type` — [EnrichmentPropertyType](#enrichmentpropertytype)
 
 **Returns** [Enrichment](#enrichment)
 
 ##### linked(association)
 
-Marks the fill as a many link and stores the junction columns.
+Marks the fill as a `List` link and stores the junction columns.
 
 ```rust
 pub fn linked(self, association: Association) -> Self
@@ -250,44 +334,44 @@ pub fn linked(self, association: Association) -> Self
 
 **Properties**
 
-##### into
+##### destination_property
 
-Destination field.
+Parent field that gets filled.
 
 ```rust
-pub into: String
+pub destination_property: String
 ```
 
-##### from
+##### source_property
 
 Parent key.
 
 ```rust
-pub from: String
+pub source_property: String
 ```
 
-##### by
+##### related_key
 
-Related key.
+Key on the related row.
 
 ```rust
-pub by: String
+pub related_key: String
 ```
 
-##### select
+##### related_property
 
-Optional related field to copy.
+Optional related field to copy. A string or int stays on `Object`.
 
 ```rust
-pub select: Option<String>
+pub related_property: Option<String>
 ```
 
-##### many
+##### type
 
-Collect a list.
+[EnrichmentPropertyType](#enrichmentpropertytype).
 
 ```rust
-pub many: bool
+pub r#type: EnrichmentPropertyType
 ```
 
 ##### association
@@ -296,6 +380,48 @@ Junction columns for a link. See [Association](#association).
 
 ```rust
 pub association: Option<Association>
+```
+
+#### EnrichmentPropertyType
+
+```rust
+pub enum EnrichmentPropertyType
+```
+
+Shape of the filled property.
+
+**Properties**
+
+##### Object
+
+One related row. `related_property` copies one field.
+
+```rust
+Object
+```
+
+##### List
+
+Related rows. Written with the parent when the repository can persist.
+
+```rust
+List
+```
+
+##### Dictionary
+
+Rejected until its fill is defined.
+
+```rust
+Dictionary
+```
+
+##### Custom
+
+Rejected until its fill is defined.
+
+```rust
+Custom
 ```
 
 #### Association
@@ -342,7 +468,7 @@ pub related: String
 
 ## Remarks
 
-A lookup copies `select`, or the related row when `select` is omitted. A `many` list is walked. A `select` scalar is not. [AddLinked](./crud-repository.md) sets `association` and writes the junction. Pass the value to [IEnriched](./i-enriched.md).
+`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` and `Custom` are rejected. [AddLinked](./crud-repository.md) sets `association` and writes the junction. Pass the value to [IEnriched](./i-enriched.md).
 
 ## Examples
 

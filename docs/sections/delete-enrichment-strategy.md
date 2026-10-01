@@ -16,7 +16,7 @@ abstract class DeleteEnrichmentStrategy<T>
 
 ##### deleteOwned(entry, enrichment, parent, deleteNested)
 
-Removes the owned `many` list for one parent.
+Removes the owned `List` for one parent.
 
 ```typescript
 abstract deleteOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
@@ -45,7 +45,7 @@ abstract deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: o
 
 ##### load(writer, enrichment, parent)
 
-Reads the owned rows whose `by` matches the parent `from`.
+Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`.
 
 ```typescript
 static load(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<object[]>
@@ -82,7 +82,7 @@ public abstract class DeleteEnrichmentStrategy<T>
 
 ##### DeleteOwned(entry, enrichment, parent, deleteNested)
 
-Removes the owned `many` list for one parent.
+Removes the owned `List` for one parent.
 
 ```csharp
 public abstract Task DeleteOwned(StoredEnrichment entry, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
@@ -120,7 +120,7 @@ pub trait DeleteEnrichmentStrategy: Send + Sync
 
 ##### delete_owned(entry, enrichment, parent, delete_nested)
 
-Removes the owned `many` list for one parent.
+Removes the owned `List` for one parent.
 
 ```rust
 async fn delete_owned(&self, entry: &StoredEnrichment, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>

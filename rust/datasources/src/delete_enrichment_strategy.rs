@@ -30,12 +30,12 @@ pub(crate) async fn load(
     enrichment: &Enrichment,
     parent: &Row,
 ) -> Result<Vec<Row>> {
-    let Some(key) = parent.get(&enrichment.from).cloned() else {
+    let Some(key) = parent.get(&enrichment.source_property).cloned() else {
         return Ok(Vec::new());
     };
     writer
         .read(
-            Some(&Where::new(Operator::equals(enrichment.by.clone(), key))),
+            Some(&Where::new(Operator::equals(enrichment.related_key.clone(), key))),
             None,
         )
         .await
@@ -46,7 +46,7 @@ mod tests {
     use super::*;
     use crate::crud_repository::CRUDRepository;
     use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
-        use crate::repository::IReadonlyRepository;
+    use crate::repository::IReadonlyRepository;
     use crate::value::Value;
     use std::sync::Arc;
 
@@ -90,7 +90,7 @@ mod tests {
         child.insert("label".into(), Value::from("a"));
         children.create(&mut child).await.unwrap();
         parents.add_enriched(
-            Enrichment::new("children", "id", "parent_id", None, true),
+            Enrichment::new("children", "id", "parent_id", None, crate::EnrichmentPropertyType::List),
             children.clone(),
             None,
         );

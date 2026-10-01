@@ -12,7 +12,7 @@ execute_sql(
 let mut options = create_crud_repository_options::<Account>();
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-options.column_mappings = Box::new(casing);
+options.property_mappings = Box::new(casing);
 options.ids = vec!["TenantId".into(), "Id".into()];
 options.row_converter = Some(RowTypeConverter::of::<Account>());
 let accounts_repo = CRUDRepository::new(connection, options).unwrap();

@@ -12,7 +12,7 @@ await executeSql(connection, `
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -22,7 +22,7 @@ const usersRepo = ds.createReadonlyRepository(UsersView, connection, {
 }) as ReadonlyRepository<UsersView>;
 const typesRepo = ds.createReadonlyRepository(UserType, connection, {
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
-usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
 const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));

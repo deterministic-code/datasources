@@ -24,7 +24,7 @@ let dropped = children
     .unwrap();
 assert!(num(&dropped, "Id") > 0);
 parents.add_enriched(
-    Enrichment::new("Children", "Id", "ParentId", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );

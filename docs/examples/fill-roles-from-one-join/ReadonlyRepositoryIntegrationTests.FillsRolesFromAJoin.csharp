@@ -10,7 +10,7 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
         ["UserRole"] = "user_roles",
         ["Role"] = "roles",
     }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -23,33 +23,30 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
         ["Name"] = "roles.name",
         ["Id"] = "id",
     }),
-    Select = new TransformMapper<ISelectStatement, ISelectStatement>(
-        query => new SelectStatement(new()
-        {
-            Table = "User",
-            Fields =
-            [
-                "User.Key",
-                "User.Login",
-                "User.Active",
-                "User.Opened",
-                "User.UserType",
-                "UserRole.UserId",
-                "UserRole.RoleId",
-                "Role.Name",
-            ],
-            Where = query.Where,
-            Joins =
-            [
-                new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
-                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
-                new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
-            ],
-        }),
-        query => query),
+});
+var joined = new SelectStatement(new()
+{
+    Table = "User",
+    Fields =
+    [
+        "User.Key",
+        "User.Login",
+        "User.Active",
+        "User.Opened",
+        "User.UserType",
+        "UserRole.UserId",
+        "UserRole.RoleId",
+        "Role.Name",
+    ],
+    Joins =
+    [
+        new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
+        new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
+        new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
+    ],
 });
 usersRepo.AddEnriched(
-    new("Roles", "Key", "UserId", Many: true),
+    new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List),
     usersRepo,
     new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
     {
@@ -74,7 +71,7 @@ usersRepo.AddEnriched(
         }
     }));
 var items = new List<UsersView>();
-await foreach (var item in usersRepo.Read())
+await foreach (var item in usersRepo.Read(joined))
     items.Add(item);
 var ada = Assert.Single(items, item => item.Login == "ada");
 var grace = Assert.Single(items, item => item.Login == "grace");

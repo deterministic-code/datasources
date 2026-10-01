@@ -8,25 +8,25 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         IList<object> parents,
         IReadOnlyList<Row?>? sources)
     {
-        var keys = Keys(parents, sources, enrichment.From);
+        var keys = Keys(parents, sources, enrichment.SourceProperty);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, TRelated>();
-        await foreach (var item in via.Read(new Where(new Operator.In(enrichment.By, keys.Values.ToList()))))
+        await foreach (var item in via.Read(new Where(new Operator.In(enrichment.RelatedKey, keys.Values.ToList()))))
         {
-            var by = Get(item!, enrichment.By);
+            var by = Get(item!, enrichment.RelatedKey);
             if (by is not null)
                 index[KeyOf(by)] = item;
         }
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
             if (key is null || !index.TryGetValue(KeyOf(key), out var related))
                 continue;
             Set(
                 parent,
-                enrichment.Into,
-                enrichment.Select is { } select ? Get(related!, select) : related);
+                enrichment.DestinationProperty,
+                enrichment.RelatedProperty is { } select ? Get(related!, select) : related);
         }
     }
 
@@ -36,12 +36,12 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         IList<object> parents,
         IReadOnlyList<Row?>? sources)
     {
-        var keys = Keys(parents, sources, enrichment.From);
+        var keys = Keys(parents, sources, enrichment.SourceProperty);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, List<TRelated>>();
-        await foreach (var item in via.Read(new Where(new Operator.In(enrichment.By, keys.Values.ToList()))))
+        await foreach (var item in via.Read(new Where(new Operator.In(enrichment.RelatedKey, keys.Values.ToList()))))
         {
-            var by = Get(item!, enrichment.By);
+            var by = Get(item!, enrichment.RelatedKey);
             if (by is null) continue;
             var cacheKey = KeyOf(by);
             if (!index.TryGetValue(cacheKey, out var list))
@@ -51,11 +51,11 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
             if (key is null) continue;
             Set(
                 parent,
-                enrichment.Into,
+                enrichment.DestinationProperty,
                 index.GetValueOrDefault(KeyOf(key)) ?? []);
         }
     }

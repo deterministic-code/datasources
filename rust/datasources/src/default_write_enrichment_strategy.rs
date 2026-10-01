@@ -97,15 +97,24 @@ impl DefaultWriteEnrichmentStrategy {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let enrichment = &entry.enrichment;
+            if matches!(
+                enrichment.r#type,
+                crate::EnrichmentPropertyType::Dictionary | crate::EnrichmentPropertyType::Custom
+            ) {
+                return Err(DatasourceError::message(format!(
+                    "Unsupported enrichment type \"{:?}\"",
+                    enrichment.r#type
+                )));
+            }
             if enrichment.association.is_some() {
                 let writer = entry.link.as_ref().ok_or_else(|| {
                     DatasourceError::message(format!(
                         "Deep write requires a CRUD repository for \"{}\"",
-                        enrichment.into
+                        enrichment.destination_property
                     ))
                 })?;
                 for parent in parents.iter_mut() {
-                    if self.skip(parent, &enrichment.into, mode) {
+                    if self.skip(parent, &enrichment.destination_property, mode) {
                         continue;
                     }
                     match mode {
@@ -122,17 +131,19 @@ impl DefaultWriteEnrichmentStrategy {
                 }
                 return Ok(());
             }
-            if !enrichment.many || enrichment.select.is_some() {
+            if enrichment.r#type != crate::EnrichmentPropertyType::List
+                || enrichment.related_property.is_some()
+            {
                 return Ok(());
             }
             let writer = entry.persist.as_ref().ok_or_else(|| {
                 DatasourceError::message(format!(
                     "Deep write requires a CRUD repository for \"{}\"",
-                    enrichment.into
+                    enrichment.destination_property
                 ))
             })?;
             for parent in parents.iter_mut() {
-                if self.skip(parent, &enrichment.into, mode) {
+                if self.skip(parent, &enrichment.destination_property, mode) {
                     continue;
                 }
                 match mode {
@@ -170,15 +181,18 @@ pub(crate) async fn create_children(
     enrichment: &Enrichment,
     parent: &mut Row,
 ) -> Result<()> {
-    let mut related = decode_rows(parent.get(&enrichment.into));
-    let key = parent.get(&enrichment.from).cloned();
+    let mut related = decode_rows(parent.get(&enrichment.destination_property));
+    let key = parent.get(&enrichment.source_property).cloned();
     for row in &mut related {
         if let Some(key) = &key {
-            row.insert(enrichment.by.clone(), key.clone());
+            row.insert(enrichment.related_key.clone(), key.clone());
         }
         writer.create(row).await?;
     }
-    parent.insert(enrichment.into.clone(), encode_rows(&related));
+    parent.insert(
+        enrichment.destination_property.clone(),
+        encode_rows(&related),
+    );
     Ok(())
 }
 
@@ -191,7 +205,11 @@ pub(crate) async fn create_links(
         .association
         .as_ref()
         .ok_or_else(|| DatasourceError::message("Missing association"))?;
-    let parent_key = required(parent, &enrichment.from, &enrichment.into)?;
+    let parent_key = required(
+        parent,
+        &enrichment.source_property,
+        &enrichment.destination_property,
+    )?;
     for id in related_ids(parent, enrichment)? {
         let mut row = Row::new();
         row.insert(association.parent.clone(), parent_key.clone());
@@ -204,17 +222,20 @@ pub(crate) async fn create_links(
 pub(crate) fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Value>> {
     let mut ids = Vec::new();
     let mut seen = HashSet::new();
-    for related in decode_rows(parent.get(&enrichment.into)) {
-        let id = related.get(&enrichment.by).cloned().ok_or_else(|| {
-            DatasourceError::message(format!(
-                "{} requires \"{}\"",
-                enrichment.into, enrichment.by
-            ))
-        })?;
+    for related in decode_rows(parent.get(&enrichment.destination_property)) {
+        let id = related
+            .get(&enrichment.related_key)
+            .cloned()
+            .ok_or_else(|| {
+                DatasourceError::message(format!(
+                    "{} requires \"{}\"",
+                    enrichment.destination_property, enrichment.related_key
+                ))
+            })?;
         if missing(&id) {
             return Err(DatasourceError::message(format!(
                 "{} requires \"{}\"",
-                enrichment.into, enrichment.by
+                enrichment.destination_property, enrichment.related_key
             )));
         }
         if seen.insert(id.wire_text()) {

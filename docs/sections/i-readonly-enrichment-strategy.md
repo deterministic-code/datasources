@@ -158,7 +158,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 
 ## Remarks
 
-Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `many` list is walked. A `select` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_lookup` and `apply_many` on this trait.
+Pass the strategy to [IEnriched](./i-enriched.md) for one edge. The repository calls {{Apply|apply|apply}} after it reads the parents. {{ApplyLinked|applyLinked|apply_linked}} runs for an enrichment that has an [association](./enrichment.md#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](./default-readonly-enrichment-strategy.md). Rust overrides `apply_lookup` and `apply_many` on this trait.
 
 ## Examples
 

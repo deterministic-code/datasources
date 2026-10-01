@@ -9,9 +9,12 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         Enrichment enrichment,
         IList<object> parents,
         IReadOnlyList<Row?>? sources = null) =>
-        enrichment.Many
-            ? ApplyMany(via, enrichment, parents, sources)
-            : ApplyLookup(via, enrichment, parents, sources);
+        enrichment.Type switch
+        {
+            EnrichmentPropertyType.List => ApplyMany(via, enrichment, parents, sources),
+            EnrichmentPropertyType.Object => ApplyLookup(via, enrichment, parents, sources),
+            _ => throw new DatasourceException($"Unsupported enrichment type \"{enrichment.Type}\"")
+        };
 
     public virtual async Task ApplyLinked<TRelated, TLink>(
         IReadonlyRepository<TRelated> via,
@@ -23,17 +26,17 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         for (var i = 0; i < parents.Count; i++)
         {
-            var key = SourceKey(parents[i], enrichment.From, At(sources, i));
+            var key = SourceKey(parents[i], enrichment.SourceProperty, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
             await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, Value.From(key)))))
             {
                 if (Get(row!, association.Related) is not { } id) continue;
-                var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, Value.From(id))));
+                var entity = await via.ReadSingle(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(id))));
                 if (entity is not null)
                     related.Add(entity);
             }
-            Set(parents[i], enrichment.Into, related);
+            Set(parents[i], enrichment.DestinationProperty, related);
         }
     }
 
@@ -47,16 +50,16 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
             if (key is null) continue;
             var cacheKey = KeyOf(key);
             if (!cache.TryGetValue(cacheKey, out var related))
             {
-                related = await via.ReadSingle(new Where(new Operator.Equals(enrichment.By, Value.From(key))));
+                related = await via.ReadSingle(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key))));
                 cache[cacheKey] = related;
             }
             if (related is null) continue;
-            Set(parent, enrichment.Into, enrichment.Select is { } select ? Get(related, select) : related);
+            Set(parent, enrichment.DestinationProperty, enrichment.RelatedProperty is { } select ? Get(related, select) : related);
         }
     }
 
@@ -69,12 +72,12 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.From, At(sources, i));
+            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
-            await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.By, Value.From(key)))))
+            await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
                 related.Add(item);
-            Set(parent, enrichment.Into, related);
+            Set(parent, enrichment.DestinationProperty, related);
         }
     }
 
