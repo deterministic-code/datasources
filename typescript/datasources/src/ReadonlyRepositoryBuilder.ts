@@ -1,7 +1,7 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
-import { fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
+import { fieldNamesOf } from "./createReadonlyRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";

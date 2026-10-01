@@ -39,7 +39,7 @@ where
 mod tests {
     use super::DictionaryMapper;
     use crate::converters::{ConvertSchema, RowTypeConverter};
-    use crate::create_crud_repository_options::create_crud_repository_options;
+    use crate::create_readonly_repository_options::create_readonly_repository_options;
     use crate::mappers::Mapper;
     use crate::mocks::{MockCommand, MockConnection};
     use crate::readonly_repository::ReadonlyRepository;
@@ -105,14 +105,14 @@ mod tests {
             row
         });
         let connection = MockConnection::with_command_provider(command.clone(), "memory");
-        let mut options = create_crud_repository_options::<Account>();
+        let mut options = create_readonly_repository_options::<Account>();
         options.entity = "user".into();
         options.row_converter = Some(RowTypeConverter::of::<Account>());
         options.property_mappings = Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
         ]));
-        let repo = ReadonlyRepository::new(connection, options.read).unwrap();
+        let repo = ReadonlyRepository::new(connection, options).unwrap();
         let row = repo.read_single(None, None).await.unwrap().unwrap();
         assert_eq!(row.get("Key"), Some(&Value::Int(7)));
         assert_eq!(row.get("Login"), Some(&Value::from("ada")));

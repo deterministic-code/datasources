@@ -1,7 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
-let mut users_options = create_crud_repository_options::<UsersView>();
+let mut users_options = create_readonly_repository_options::<UsersView>();
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
@@ -13,12 +13,12 @@ users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_crud_repository_options::<UserType>();
+let mut type_options = create_readonly_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-let mut role_options = create_crud_repository_options::<UserRole>();
+let mut role_options = create_readonly_repository_options::<UserRole>();
 role_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserRole".to_string(),
     "user_roles".to_string(),
@@ -28,13 +28,13 @@ role_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Name".to_string(), "name".to_string()),
 ]));
 let mut users_repo =
-    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+    ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
     Some(connection.clone()),
-    Some(type_options.read),
+    Some(type_options),
 );
 let roles =
-    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
+    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options));
 let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
 users_repo.add_enriched(
     datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),

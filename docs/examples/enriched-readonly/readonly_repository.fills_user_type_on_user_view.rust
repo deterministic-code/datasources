@@ -16,7 +16,7 @@ execute_sql(
     ),
 )
 .await;
-let mut users_options = create_crud_repository_options::<UserAccount>();
+let mut users_options = create_readonly_repository_options::<UserAccount>();
 users_options.entity = "user".into();
 users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
@@ -25,16 +25,16 @@ users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_crud_repository_options::<UserType>();
+let mut type_options = create_readonly_repository_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let mut users_repo =
-    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+    ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types =
-    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
+    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",

@@ -14,6 +14,7 @@ import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
+import { createReadonlyRepositoryOptions } from "./createReadonlyRepositoryOptions.ts";
 
 export class Datasource implements IDatasource {
   private connection?: IConnection;
@@ -39,16 +40,13 @@ export class Datasource implements IDatasource {
     return this.driver.command(connection);
   };
 
-  private apply = <T>(
+  private applyCrud = <T>(
     type: Constructable<T>,
-    options?: ReadonlyRepositoryOptions<T>,
+    options?: CRUDRepositoryOptions<T>,
   ): CRUDRepositoryOptions<T> => {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
-    const crud = options !== undefined && ("ids" in options || "write" in options)
-      ? (options as CRUDRepositoryOptions<T>)
-      : undefined;
     return options === undefined
       ? { ...built, rowTypeConverters: types, rowConverter: rows }
       : {
@@ -60,8 +58,29 @@ export class Datasource implements IDatasource {
           readProperties: options.readProperties,
           rowTypeConverters: types,
           type,
-          ids: crud?.ids ?? built.ids,
-          write: crud?.write,
+          ids: options.ids ?? built.ids,
+          write: options.write,
+        };
+  };
+
+  private applyReadonly = <T>(
+    type: Constructable<T>,
+    options?: ReadonlyRepositoryOptions<T>,
+  ): ReadonlyRepositoryOptions<T> => {
+    const built = createReadonlyRepositoryOptions(type, this.driver.rowTypeConverters);
+    const types = this.driver.rowTypeConverters;
+    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
+    return options === undefined
+      ? { ...built, rowTypeConverters: types, rowConverter: rows }
+      : {
+          entity: options.entity ?? built.entity,
+          entityMapper: options.entityMapper,
+          propertyMappings: options.propertyMappings,
+          rowConverter: rows,
+          objectConverter: options.objectConverter,
+          readProperties: options.readProperties,
+          rowTypeConverters: types,
+          type,
         };
   };
 
@@ -72,7 +91,7 @@ export class Datasource implements IDatasource {
   ): ICRUDRepository<T> =>
     new CRUDRepository(
       connection ?? this.defaultConnection(),
-      this.apply(type, options),
+      this.applyCrud(type, options),
     );
 
   createReadonlyRepository = <T>(
@@ -82,7 +101,7 @@ export class Datasource implements IDatasource {
   ): IReadonlyRepository<T> =>
     new ReadonlyRepository(
       connection ?? this.defaultConnection(),
-      this.apply(type, options),
+      this.applyReadonly(type, options),
     );
 
   static create: (options?: DatasourceOptions) => IDatasource;

@@ -34,44 +34,55 @@ public sealed class Datasource(
         ReadonlyRepositoryOptions<T>? options = null) where T : new() =>
         new ReadonlyRepository<T>(connection ?? DefaultConnection(), Apply(options));
 
-    CRUDRepositoryOptions<T> Apply<T>(ReadonlyRepositoryOptions<T>? options) where T : new()
+    CRUDRepositoryOptions<T> Apply<T>(CRUDRepositoryOptions<T>? options) where T : new()
     {
         var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         var rows = RowTypeConverter.From(types, Columns(typeof(T)));
-        return options switch
-        {
-            null => new()
+        return options is null
+            ? new()
             {
                 Ids = built.Ids,
                 Entity = built.Entity,
                 RowTypeConverters = types,
                 RowConverter = rows,
-            },
-            CRUDRepositoryOptions<T> crud => new()
-            {
-                Entity = crud.Entity ?? built.Entity,
-                EntityMapper = crud.EntityMapper,
-                PropertyMappings = crud.PropertyMappings,
-                RowConverter = crud.RowConverter ?? rows,
-                ObjectConverter = crud.ObjectConverter,
-                ReadProperties = crud.ReadProperties,
-                RowTypeConverters = types,
-                Ids = crud.Ids,
-                Write = crud.Write,
-            },
-            { } read => new()
-            {
-                Entity = read.Entity ?? built.Entity,
-                EntityMapper = read.EntityMapper,
-                PropertyMappings = read.PropertyMappings,
-                RowConverter = read.RowConverter ?? rows,
-                ObjectConverter = read.ObjectConverter,
-                ReadProperties = read.ReadProperties,
-                RowTypeConverters = types,
-                Ids = built.Ids,
             }
-        };
+            : new()
+            {
+                Entity = options.Entity ?? built.Entity,
+                EntityMapper = options.EntityMapper,
+                PropertyMappings = options.PropertyMappings,
+                RowConverter = options.RowConverter ?? rows,
+                ObjectConverter = options.ObjectConverter,
+                ReadProperties = options.ReadProperties,
+                RowTypeConverters = types,
+                Ids = options.Ids,
+                Write = options.Write,
+            };
+    }
+
+    ReadonlyRepositoryOptions<T> Apply<T>(ReadonlyRepositoryOptions<T>? options) where T : new()
+    {
+        var built = CreateReadonlyRepositoryOptions.FromType<T>(driver.RowTypeConverters);
+        var types = driver.RowTypeConverters;
+        var rows = RowTypeConverter.From(types, Columns(typeof(T)));
+        return options is null
+            ? new()
+            {
+                Entity = built.Entity,
+                RowTypeConverters = types,
+                RowConverter = rows,
+            }
+            : new()
+            {
+                Entity = options.Entity ?? built.Entity,
+                EntityMapper = options.EntityMapper,
+                PropertyMappings = options.PropertyMappings,
+                RowConverter = options.RowConverter ?? rows,
+                ObjectConverter = options.ObjectConverter,
+                ReadProperties = options.ReadProperties,
+                RowTypeConverters = types,
+            };
     }
 
     static IReadOnlyDictionary<string, string> Columns(Type type) =>
@@ -93,4 +104,3 @@ public sealed class Datasource(
         _ => null
     };
 }
-

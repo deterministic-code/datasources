@@ -14,7 +14,7 @@ import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
-import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
+import { createReadonlyRepositoryOptions } from "./createReadonlyRepositoryOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
@@ -51,7 +51,7 @@ export const builtOf = <T>(
       ? undefined
       : new ReadonlyRepositoryBuilder<T>().parts(
           connectionOrOptions as IConnection,
-          createCRUDRepositoryOptions(typeOrConnectionOrBuilt),
+          createReadonlyRepositoryOptions(typeOrConnectionOrBuilt),
         )
     : isBuilt(typeOrConnectionOrBuilt)
       ? typeOrConnectionOrBuilt

@@ -9,11 +9,11 @@ execute_sql(
     ",
 )
 .await;
-let mut options = create_crud_repository_options::<User>();
+let mut options = create_readonly_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
 options.object_converter = Some(Box::new(UserConverter));
-let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let user = users_repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
