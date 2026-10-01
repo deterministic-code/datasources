@@ -100,7 +100,7 @@ describe("Datasource registry", () => {
     expect(ds.provider).toBe("sqlite");
     const connection = await ds.createConnection();
     expect(connection.isOpen).toBe(false);
-    expect(ds.createCommand().connection).toBe(connection);
+    expect((await ds.createCommand()).connection).toBe(connection);
     expect(ds.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     expect(ds.createReadonlyRepository(untyped()).constructor).toBe(ReadonlyRepository);
     class Item {

@@ -127,13 +127,11 @@ public class MemoryTests
         Assert.Equal("memory", ds.Provider);
         var created = await ds.CreateConnection();
         await ((MemoryConnection)created).Open();
-        var bound = Assert.IsType<MemoryCommand>(ds.CreateCommand(created));
+        var bound = Assert.IsType<MemoryCommand>(await ds.CreateCommand(created));
         Assert.Same(created, bound.Connection);
         await bound.Execute("insert", [new Parameter("id", 99)]);
         await bound.ExecuteReader("");
-        var implicitCommand = Assert.IsType<MemoryCommand>(ds.CreateCommand());
-        await implicitCommand.Execute("insert", [new Parameter("id", 1)]);
-        await implicitCommand.ExecuteReader("");
+        await Assert.ThrowsAsync<DatasourceException>(() => ds.CreateCommand());
         ds.CreateRepository<Dictionary<string, Value>>(created);
         ds.CreateRepository<Dictionary<string, Value>>();
         Assert.Equal("memory", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "memory" }).Provider);

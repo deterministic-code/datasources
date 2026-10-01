@@ -49,7 +49,7 @@ public class SqliteTests
         var provided = Assert.IsType<SqliteConnection>(await ds.CreateConnection());
         Assert.Equal(":memory:", provided.Filename);
         await provided.Open();
-        var bound = Assert.IsType<SqliteCommand>(ds.CreateCommand(provided));
+        var bound = Assert.IsType<SqliteCommand>(await ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
         await bound.Execute("");
         await bound.ExecuteReader(Native.N("SELECT 1"));

@@ -9,7 +9,7 @@ import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
 export interface IDatasource {
   readonly provider: string;
   createConnection(): Promise<IConnection>;
-  createCommand(connection?: IConnection): ICommand;
+  createCommand(connection?: IConnection): Promise<ICommand>;
   createRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,

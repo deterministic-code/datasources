@@ -33,7 +33,8 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Read a row](./sections/reader.md#read-a-row)
 - [Read and apply case mappings](./sections/reader.md#read-and-apply-case-mappings)
-- [Type conversion and flat to nested](./sections/reader.md#type-conversion-and-flat-to-nested)
+- [ExecuteReader, then apply flat to nested mapper.](./sections/reader.md#executereader-then-apply-flat-to-nested-mapper)
+- [ExecuteReader maps flat contacts](./sections/reader.md#executereader-maps-flat-contacts)
 - [Read multiple results returned in a single command](./sections/reader.md#read-multiple-results-returned-in-a-single-command)
 - [Call a stored procedure that returns two results](./sections/reader.md#call-a-stored-procedure-that-returns-two-results)
 

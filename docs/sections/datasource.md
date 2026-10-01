@@ -85,12 +85,12 @@ createConnection(): Promise<IConnection>
 Creates a command.
 
 ```typescript
-createCommand(connection?: IConnection): ICommand
+createCommand(connection?: IConnection): Promise<ICommand>
 ```
 
-- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
+- `connection` — optional [IConnection](./connection.md). Omitted opens the datasource connection and throws when that connection is already open. A passed connection is not opened
 
-**Returns** [ICommand](./command.md)
+**Returns** `Promise<[ICommand](./command.md)>`
 
 ##### createRepository(type, connection?, options?)
 
@@ -212,12 +212,12 @@ Task<IConnection> CreateConnection()
 Creates a command.
 
 ```csharp
-ICommand CreateCommand(IConnection? connection = null)
+Task<ICommand> CreateCommand(IConnection? connection = null)
 ```
 
-- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
+- `connection` — optional [IConnection](./connection.md). Omitted opens the datasource connection and throws when that connection is already open. A passed connection is not opened
 
-**Returns** [ICommand](./command.md)
+**Returns** `Task<[ICommand](./command.md)>`
 
 ##### CreateRepository(connection, options)
 
@@ -343,12 +343,12 @@ async fn create_connection(&self) -> Result<Arc<dyn Connection>>
 Creates a command.
 
 ```rust
-fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>
+async fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn Command>>
 ```
 
-- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
+- `connection` — optional [Connection](./connection.md). Omitted opens the datasource connection and throws when that connection is already open. A passed connection is not opened
 
-**Returns** `Arc<dyn `[Command](./command.md)`>`
+**Returns** `Result<Arc<dyn `[Command](./command.md)`>>`
 
 ##### create_repository(connection, options)
 

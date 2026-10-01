@@ -22,10 +22,10 @@ public class DatasourceTests
     }
 
     [Fact]
-    public void CreateDefaultFromEnvSettings()
+    public async Task CreateDefaultFromEnvSettings()
     {
         var ds = Datasource.Default;
-        var command = ds.CreateCommand();
+        var command = await ds.CreateCommand();
         Assert.Equal("sqlite", ds.Provider);
         Assert.NotNull(command);
     }

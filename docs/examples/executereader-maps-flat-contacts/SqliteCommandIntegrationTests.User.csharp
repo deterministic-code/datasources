@@ -1,0 +1,14 @@
+record User
+{
+    public int id { get; set; }
+    public string username { get; set; } = "";
+    public string email { get; set; } = "";
+    public string contact_name1 { get; set; } = "";
+    public string contact_name2 { get; set; } = "";
+    public List<Contact> contacts { get; set; } = [];
+
+    public record Contact
+    {
+        public string name { get; set; } = "";
+    }
+}

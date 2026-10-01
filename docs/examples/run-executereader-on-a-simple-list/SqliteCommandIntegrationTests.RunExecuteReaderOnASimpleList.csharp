@@ -1,7 +1,5 @@
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
 await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");

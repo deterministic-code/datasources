@@ -4,6 +4,7 @@ import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
 import type { IReadonlyRepository } from "../IReadonlyRepository.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import { DatasourceError } from "../DatasourceError.ts";
 import { MockCommand } from "./mock-command.ts";
 import { MockConnection } from "./mock-connection.ts";
 import { MockRepository } from "./mock-repository.ts";
@@ -24,8 +25,12 @@ export class MockDatasource implements IDatasource {
     return Promise.resolve(this.connection);
   }
 
-  createCommand(connection?: IConnection): ICommand {
+  async createCommand(connection?: IConnection): Promise<ICommand> {
     this.createCommandCalls.push(connection);
+    if (connection === undefined) {
+      if (this.connection.isOpen) throw new DatasourceError("Connection is already open");
+      await this.connection.open();
+    }
     return this.command ?? new MockCommand(connection ?? this.connection);
   }
 

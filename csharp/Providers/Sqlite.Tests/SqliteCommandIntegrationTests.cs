@@ -26,7 +26,7 @@ public class SqliteCommandIntegrationTests
         public string name { get; set; } = "";
     }
 
-    sealed class User
+    record User
     {
         public int id { get; set; }
         public string username { get; set; } = "";
@@ -35,29 +35,11 @@ public class SqliteCommandIntegrationTests
         public string contact_name2 { get; set; } = "";
         public List<Contact> contacts { get; set; } = [];
 
-        public sealed class Contact
+        public record Contact
         {
             public string name { get; set; } = "";
         }
     }
-
-    static TransformMapper<User, User> UserContactsMapper() =>
-        new(
-            row =>
-            {
-                row.contacts =
-                [
-                    new User.Contact { name = row.contact_name1 },
-                    new User.Contact { name = row.contact_name2 }
-                ];
-                return row;
-            },
-            user =>
-            {
-                user.contact_name1 = user.contacts.ElementAtOrDefault(0)?.name ?? "";
-                user.contact_name2 = user.contacts.ElementAtOrDefault(1)?.name ?? "";
-                return user;
-            });
 
     [Fact]
     public async Task ReturnStatementSelectsScalar()
@@ -91,10 +73,8 @@ public class SqliteCommandIntegrationTests
     public async Task RunExecuteReaderOnASimpleList()
     {
         var ds = Datasource.Default;
-        await using var connection = await ds.CreateConnection();
-        await connection.Open();
-        var command = connection.CreateCommand();
-        await SchemaSpec.Apply(connection, "items");
+        var command = await ds.CreateCommand();
+        await SchemaSpec.Apply(command.Connection, "items");
         await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
         await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
         await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
@@ -113,10 +93,8 @@ public class SqliteCommandIntegrationTests
     public async Task ReadAndApplyCaseMappings()
     {
         var ds = Datasource.Default;
-        await using var connection = await ds.CreateConnection();
-        await connection.Open();
-        var command = connection.CreateCommand();
-        await SchemaSpec.Apply(connection, "case-contacts");
+        var command = await ds.CreateCommand();
+        await SchemaSpec.Apply(command.Connection, "case-contacts");
         await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
         await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
@@ -127,19 +105,15 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
-    public async Task ReadFlatRowsToNested()
+    public async Task ExecuteReaderThenApplyFlatToNestedMapper()
     {
         var ds = Datasource.Default;
-        await using var connection = await ds.CreateConnection();
-        await connection.Open();
-        var command = connection.CreateCommand();
-        await SchemaSpec.Apply(connection, "flat-users");
+        var command = await ds.CreateCommand();
+        await SchemaSpec.Apply(command.Connection, "flat-users");
         await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
         await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
         await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
-        var rows = new List<Row>();
-        while (await reader.Next())
-            rows.Add(reader.Current!);
+        var rows = await reader.Read().ToListAsync();
         var mapper = new FlatToNestedMapper(new TypeMap
         {
             Key = "id",
@@ -223,31 +197,42 @@ public class SqliteCommandIntegrationTests
     public async Task ExecuteReaderMapsFlatContacts()
     {
         var ds = Datasource.Default;
-        await using var connection = await ds.CreateConnection();
-        await connection.Open();
-        var command = connection.CreateCommand();
-        await SchemaSpec.Apply(connection, "flat-contact-users");
+        var command = await ds.CreateCommand();
+        await SchemaSpec.Apply(command.Connection, "flat-contact-users");
         await command.Execute(
             "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
         await using var reader = await command.ExecuteReader(
             "SELECT contact_name1, contact_name2, email, id, username FROM users");
         var converter = new MetaDataRowTypeConverter<User>();
+        TransformMapper<User, User> UserContactsMapper() =>
+            new(
+                row =>
+                {
+                    row.contacts =
+                    [
+                        new User.Contact { name = row.contact_name1 },
+                        new User.Contact { name = row.contact_name2 }
+                    ];
+                    return row;
+                },
+                user =>
+                {
+                    user.contact_name1 = user.contacts.ElementAtOrDefault(0)?.name ?? "";
+                    user.contact_name2 = user.contacts.ElementAtOrDefault(1)?.name ?? "";
+                    return user;
+                });
         var mapper = UserContactsMapper();
-        User? user = null;
-        while (await reader.Next())
-            user = mapper.Map(converter.Convert(reader.Current!));
-        Assert.Equal("bobby", user!.username);
-        Assert.Equal("bob@asdf.com", user.email);
-        Assert.Equal(["bob", "roberta"], user.contacts.Select(contact => contact.name));
+        var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))).ToListAsync();
+        Assert.Equal("bobby", users[0].username);
+        Assert.Equal("bob@asdf.com", users[0].email);
+        Assert.Equal(["bob", "roberta"], users[0].contacts.Select(contact => contact.name));
     }
 
     [Fact]
     public async Task ReadMultipleResults()
     {
         var ds = Datasource.Default;
-        await using var connection = await ds.CreateConnection();
-        await connection.Open();
-        var command = connection.CreateCommand();
+        var command = await ds.CreateCommand();
         await using var reader = await command.ExecuteReader(Native.N("SELECT 1 AS id; SELECT 2 AS id"));
         var first = new List<Row>();
         while (await reader.Next())

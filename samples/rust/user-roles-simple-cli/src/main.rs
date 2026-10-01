@@ -21,7 +21,7 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     let ds = datasources::default()?;
     let connection = ds.create_connection().await?;
     connection.open().await?;
-    let command = ds.create_command(Some(connection));
+    let command = ds.create_command(Some(connection)).await?;
     migrate::apply(command.as_ref(), ds.provider()).await?;
     let stamp = env("CLI_NOW");
     let clock = stamp.clone();

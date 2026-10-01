@@ -1,2 +1,2 @@
 let ds = default().expect("default");
-let command = ds.create_command(None);
+let command = ds.create_command(None).await.unwrap();

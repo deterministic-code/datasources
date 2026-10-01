@@ -109,9 +109,7 @@ mod tests {
         register("mysql", Arc::new(With(Some("mysql://db/app".into()))));
         let ds = create(Some(&HashMap::from([("PROVIDER".into(), "mysql".into())]))).unwrap();
         assert_eq!(ds.provider(), "mysql");
-        let command = ds.create_command(None);
-        assert!(command.execute("DELETE FROM items", None).await.is_err());
-        assert!(command.execute_reader_native(&datasources::Native::new("SELECT 1"), None).await.is_err());
+        assert!(ds.create_command(None).await.is_err());
         ds.create_repository::<Cells>(None, None);
         let factory = BuiltDatasource::new("mysql", Arc::new(With(None)), None);
         assert_eq!(factory.provider(), "mysql");

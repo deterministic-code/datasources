@@ -1,0 +1,26 @@
+const ds = Datasource.default;
+const command = await ds.createCommand();
+await command.execute(
+  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+);
+await using reader = await command.executeReader(
+  "SELECT contact_name1, contact_name2, email, id, username FROM users",
+);
+const converter = new MetaDataRowTypeConverter<User>();
+const userContactsMapper = () =>
+  new TransformMapper<User, User>(
+    (row) => {
+      row.contacts = [
+        Object.assign(new Contact(), { name: row.contact_name1 }),
+        Object.assign(new Contact(), { name: row.contact_name2 }),
+      ];
+      return row;
+    },
+    (user) => {
+      user.contact_name1 = user.contacts[0]?.name ?? "";
+      user.contact_name2 = user.contacts[1]?.name ?? "";
+      return user;
+    },
+  );
+const mapper = userContactsMapper();
+const users = await Array.fromAsync(reader.read(), (row) => mapper.map(converter.convert(row, User)));

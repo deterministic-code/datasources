@@ -1,2 +1,2 @@
 const ds = Datasource.default;
-const command = ds.createCommand();
+const command = await ds.createCommand();

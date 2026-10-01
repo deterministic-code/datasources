@@ -37,7 +37,7 @@ public class MysqlTests
         var ds = new Datasource("mysql", new MysqlDriver());
         Assert.Equal("mysql", ds.Provider);
         var provided = Assert.IsType<MysqlConnection>(await ds.CreateConnection());
-        var bound = Assert.IsType<MysqlCommand>(ds.CreateCommand(provided));
+        var bound = Assert.IsType<MysqlCommand>(await ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
         await bound.Execute("");
         await bound.ExecuteReader("");

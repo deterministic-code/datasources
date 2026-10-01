@@ -11,7 +11,7 @@ static async Task<int> Run(string[] args)
         var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();
-        var command = ds.CreateCommand(connection);
+        var command = await ds.CreateCommand(connection);
         await Migrate.Apply(command);
         var stamp = Env("CLI_NOW");
         command.AddMiddleware(new ConsoleCommandMiddleware(

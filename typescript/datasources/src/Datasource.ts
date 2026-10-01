@@ -9,6 +9,7 @@ import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+import { DatasourceError } from "./DatasourceError.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
@@ -29,8 +30,14 @@ export class Datasource implements IDatasource {
   createConnection = (): Promise<IConnection> =>
     Promise.resolve(this.defaultConnection());
 
-  createCommand = (connection?: IConnection): ICommand =>
-    this.driver.command(connection ?? this.defaultConnection());
+  createCommand = async (connection?: IConnection): Promise<ICommand> => {
+    if (!connection) {
+      connection = this.defaultConnection();
+      if (connection.isOpen) throw new DatasourceError("Connection is already open");
+      await connection.open();
+    }
+    return this.driver.command(connection);
+  };
 
   private apply = <T>(
     type: Constructable<T>,

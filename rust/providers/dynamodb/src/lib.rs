@@ -40,11 +40,9 @@ mod tests {
     async fn creates_command() {
         let ds = ds();
         let connection = ds.create_connection().await.unwrap();
-        let command = ds.create_command(Some(connection));
+        let command = ds.create_command(Some(connection)).await.unwrap();
         assert!(command.execute("", None).await.is_err());
         assert!(command.execute_reader("", None).await.is_err());
-        let implicit = ds.create_command(None);
-        assert!(implicit.execute("", None).await.is_err());
-        assert!(implicit.execute_reader("", None).await.is_err());
+        assert!(ds.create_command(None).await.is_err());
     }
 }

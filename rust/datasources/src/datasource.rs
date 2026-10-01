@@ -1,4 +1,5 @@
 use crate::command::Command;
+use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
 use crate::create_crud_repository_options::create_crud_repository_options;
@@ -18,7 +19,10 @@ use std::sync::{Arc, Mutex};
 pub trait Datasource: Send + Sync {
     fn provider(&self) -> &str;
     async fn create_connection(&self) -> Result<Arc<dyn Connection>>;
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>;
+    async fn create_command(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Result<Arc<dyn Command>>;
     fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection>;
     fn row_type_converters(
         &self,
@@ -131,9 +135,21 @@ impl Datasource for BuiltDatasource {
         Ok(self.default_connection())
     }
 
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        self.driver
-            .command(connection.unwrap_or_else(|| self.default_connection()))
+    async fn create_command(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Result<Arc<dyn Command>> {
+        match connection {
+            Some(connection) => Ok(self.driver.command(connection)),
+            None => {
+                let connection = self.default_connection();
+                if connection.is_open() {
+                    return Err(DatasourceError::message("Connection is already open"));
+                }
+                connection.open().await?;
+                Ok(self.driver.command(connection))
+            }
+        }
     }
 
     fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection> {

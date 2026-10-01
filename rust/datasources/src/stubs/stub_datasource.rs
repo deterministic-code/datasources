@@ -1,6 +1,7 @@
 use super::stub_connection::StubConnection;
 use super::stub_repository::StubRepository;
 use crate::command::Command;
+use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::TypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
@@ -39,10 +40,22 @@ impl Datasource for StubDatasource {
         Ok(self.new_connection())
     }
 
-    fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command> {
-        connection
-            .unwrap_or_else(|| self.new_connection())
-            .create_command()
+    async fn create_command(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Result<Arc<dyn Command>> {
+        let connection = match connection {
+            Some(connection) => connection,
+            None => {
+                let connection: Arc<dyn Connection> = self.new_connection();
+                if connection.is_open() {
+                    return Err(DatasourceError::message("Connection is already open"));
+                }
+                connection.open().await?;
+                connection
+            }
+        };
+        Ok(connection.create_command())
     }
 
     fn bind_connection(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Connection> {

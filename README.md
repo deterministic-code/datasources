@@ -58,7 +58,7 @@ var ds = Datasource.Default;
 var connection = await ds.CreateConnection();
 await connection.Open();
 
-var command = ds.CreateCommand(connection);
+var command = await ds.CreateCommand(connection);
 var reader = await command.ExecuteReader(
     "SELECT id, name FROM item WHERE id = $id",
     [new Parameter("id", 1)]);
@@ -75,7 +75,7 @@ let ds = default()?;
 let connection = ds.create_connection().await?;
 connection.open().await?;
 
-let command = ds.create_command(Some(connection));
+let command = ds.create_command(Some(connection)).await?;
 let reader = command
     .execute_reader("SELECT id, name FROM item WHERE id = $id", Some(&[Parameter::new("id", 1)]))
     .await?;
@@ -93,7 +93,7 @@ const ds = Datasource.default;
 const connection = await ds.createConnection();
 await connection.open();
 
-const command = ds.createCommand(connection);
+const command = await ds.createCommand(connection);
 const reader = await command.executeReader("SELECT id, name FROM item WHERE id = $id", [
   { name: "id", value: 1 },
 ]);
@@ -313,7 +313,8 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Read a row](#read-a-row)
 - [Read and apply case mappings](#read-and-apply-case-mappings)
-- [Type conversion and flat to nested](#type-conversion-and-flat-to-nested)
+- [ExecuteReader, then apply flat to nested mapper.](#executereader-then-apply-flat-to-nested-mapper)
+- [ExecuteReader maps flat contacts](#executereader-maps-flat-contacts)
 - [Read multiple results returned in a single command](#read-multiple-results-returned-in-a-single-command)
 - [Call a stored procedure that returns two results](#call-a-stored-procedure-that-returns-two-results)
 
@@ -755,18 +756,18 @@ Creates a command.
 **Definition**
 
 ```typescript
-createCommand(connection?: IConnection): ICommand
+createCommand(connection?: IConnection): Promise<ICommand>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
+| `connection` | optional [IConnection](#connection). Omitted opens the datasource connection and throws when that connection is already open. A passed connection is not opened |
 
 **Returns**
 
-[ICommand](#command)
+`Promise<[ICommand](#command)>`
 
 ###### createRepository(type, connection?, options?) {#typescript-idatasource-createrepository-type-connection-options}
 
@@ -905,18 +906,18 @@ Creates a command.
 **Definition**
 
 ```csharp
-ICommand CreateCommand(IConnection? connection = null)
+Task<ICommand> CreateCommand(IConnection? connection = null)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
+| `connection` | optional [IConnection](#connection). Omitted opens the datasource connection and throws when that connection is already open. A passed connection is not opened |
 
 **Returns**
 
-[ICommand](#command)
+`Task<[ICommand](#command)>`
 
 ###### CreateRepository(connection, options) {#csharp-idatasource-createrepository-connection-options}
 
@@ -1082,18 +1083,18 @@ Creates a command.
 **Definition**
 
 ```rust
-fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Arc<dyn Command>
+async fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn Command>>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `connection` | optional [Connection](#connection); omitted uses the datasource connection |
+| `connection` | optional [Connection](#connection). Omitted opens the datasource connection and throws when that connection is already open. A passed connection is not opened |
 
 **Returns**
 
-`Arc<dyn `[Command](#command)`>`
+`Result<Arc<dyn `[Command](#command)`>>`
 
 ###### create_repository(connection, options) {#rust-datasource-create_repository-connection-options}
 
@@ -1180,21 +1181,21 @@ See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI]
 
 ```csharp
 var ds = Datasource.Default;
-var command = ds.CreateCommand();
+var command = await ds.CreateCommand();
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L13-L21)
 
 ```rust
 let ds = default().expect("default");
-let command = ds.create_command(None);
+let command = ds.create_command(None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L41)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L42)
 
 ```typescript
 const ds = Datasource.default;
-const command = ds.createCommand();
+const command = await ds.createCommand();
 ```
 
 #### Default using environment variables
@@ -3197,13 +3198,11 @@ Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagno
 
 #### Run executeReader on a simple list
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L110)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L72-L90)
 
 ```csharp
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
 await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
@@ -3221,13 +3220,11 @@ var rows = await reader.Read().ToListAsync();
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L129-L161)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L77-L107)
 
 ```rust
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
     .await
@@ -3257,13 +3254,11 @@ let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L104-L120)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L86-L100)
 
 ```typescript
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
 await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
@@ -3289,7 +3284,7 @@ CREATE TABLE items (id int, name string, CONSTRAINT pk_items PRIMARY KEY (id))
 
 #### Run ExecuteReader and return NameValues
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L164-L184)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L138-L158)
 
 ```csharp
 sealed class NameValue
@@ -3320,7 +3315,7 @@ var items = await reader.Read().Select(row => converter.Convert(row)).ToListAsyn
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L12-L16) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L258-L304)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L12-L16) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L197-L243)
 
 ```rust
 impl ConvertSchema for NameValue {
@@ -3377,7 +3372,7 @@ let items: Vec<_> = reader
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L26-L29) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L166-L183)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L141-L158)
 
 ```typescript
 class NameValue {
@@ -3415,7 +3410,7 @@ CREATE TABLE settings (name string, value string)
 
 #### Execute, Insert, Read, Update, and Delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L186-L220)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L160-L194)
 
 ```csharp
 sealed class Item
@@ -3478,7 +3473,7 @@ var gone = await goneReader.Read().Select(row => converter.Convert(row)).ToListA
 []
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L20-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L306-L383)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L20-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L245-L322)
 
 ```rust
 impl ConvertSchema for Item {
@@ -3584,7 +3579,7 @@ let gone: Vec<_> = gone_reader
 []
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L31-L34) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L185-L217)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L160-L192)
 
 ```typescript
 class Item {
@@ -3656,10 +3651,10 @@ CREATE TABLE items (id int, name string, CONSTRAINT pk_items PRIMARY KEY (id))
 
 #### Map flat contacts
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L44-L54) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L222-L242)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L196-L229)
 
 ```csharp
-sealed class User
+record User
 {
     public int id { get; set; }
     public string username { get; set; } = "";
@@ -3668,13 +3663,20 @@ sealed class User
     public string contact_name2 { get; set; } = "";
     public List<Contact> contacts { get; set; } = [];
 
-    public sealed class Contact
+    public record Contact
     {
         public string name { get; set; } = "";
     }
 }
 
-static TransformMapper<User, User> UserContactsMapper() =>
+var ds = Datasource.Default;
+var command = await ds.CreateCommand();
+await command.Execute(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+await using var reader = await command.ExecuteReader(
+    "SELECT contact_name1, contact_name2, email, id, username FROM users");
+var converter = new MetaDataRowTypeConverter<User>();
+TransformMapper<User, User> UserContactsMapper() =>
     new(
         row =>
         {
@@ -3685,20 +3687,14 @@ static TransformMapper<User, User> UserContactsMapper() =>
             ];
             return row;
         },
-
-var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
-await command.Execute(
-    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
-await using var reader = await command.ExecuteReader(
-    "SELECT contact_name1, contact_name2, email, id, username FROM users");
-var converter = new MetaDataRowTypeConverter<User>();
+        user =>
+        {
+            user.contact_name1 = user.contacts.ElementAtOrDefault(0)?.name ?? "";
+            user.contact_name2 = user.contacts.ElementAtOrDefault(1)?.name ?? "";
+            return user;
+        });
 var mapper = UserContactsMapper();
-User? user = null;
-while (await reader.Next())
-    user = mapper.Map(converter.Convert(reader.Current!));
+var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))).ToListAsync();
 ```
 
 **User**
@@ -3715,63 +3711,24 @@ while (await reader.Next())
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L51-L101) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L385-L424)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L26-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L30-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L324-L419)
 
 ```rust
-fn text_of(row: &Row, key: &str) -> String {
-    match row.get(key) {
-        Some(Value::Text(text)) => text.clone(),
-        _ => String::new(),
-    }
+struct Contact {
+    name: String,
 }
-TransformMapper::new(
-    |row| {
-        let contact_name1 = text_of(&row, "contact_name1");
-        let contact_name2 = text_of(&row, "contact_name2");
-        User {
-            id: match row.get("id") {
-                Some(Value::Int(id)) => *id,
-                _ => 0,
-            },
-            username: text_of(&row, "username"),
-            email: text_of(&row, "email"),
-            contacts: vec![
-                Contact {
-                    name: contact_name1.clone(),
-                },
-                Contact {
-                    name: contact_name2.clone(),
-                },
-            ],
-            contact_name1,
-            contact_name2,
-        }
-    },
-    |mut user| {
-        user.contact_name1 = user
-            .contacts
-            .first()
-            .map(|contact| contact.name.clone())
-            .unwrap_or_default();
-        user.contact_name2 = user
-            .contacts
-            .get(1)
-            .map(|contact| contact.name.clone())
-            .unwrap_or_default();
-        let mut row = Row::new();
-        row.insert("id".into(), Value::Int(user.id));
-        row.insert("username".into(), Value::from(user.username));
-        row.insert("email".into(), Value::from(user.email));
-        row.insert("contact_name1".into(), Value::from(user.contact_name1));
-        row.insert("contact_name2".into(), Value::from(user.contact_name2));
-        row
-    },
-)
+
+struct User {
+    id: i64,
+    username: String,
+    email: String,
+    contact_name1: String,
+    contact_name2: String,
+    contacts: Vec<Contact>,
+}
 
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute(
         "INSERT INTO users (id, username, email, contact_name1, contact_name2)
@@ -3788,12 +3745,64 @@ let reader = command
     .await
     .unwrap();
 let converter = RowTypeConverter::of::<User>();
-let mapper = user_contacts_mapper();
-let mut user = None;
-while reader.next().await.unwrap() {
-    user = Some(mapper.map(converter.convert(&reader.current().unwrap()).unwrap()));
+fn user_contacts_mapper() -> TransformMapper<Row, User> {
+    fn text_of(row: &Row, key: &str) -> String {
+        match row.get(key) {
+            Some(Value::Text(text)) => text.clone(),
+            _ => String::new(),
+        }
+    }
+    TransformMapper::new(
+        |row| {
+            let contact_name1 = text_of(&row, "contact_name1");
+            let contact_name2 = text_of(&row, "contact_name2");
+            User {
+                id: match row.get("id") {
+                    Some(Value::Int(id)) => *id,
+                    _ => 0,
+                },
+                username: text_of(&row, "username"),
+                email: text_of(&row, "email"),
+                contacts: vec![
+                    Contact {
+                        name: contact_name1.clone(),
+                    },
+                    Contact {
+                        name: contact_name2.clone(),
+                    },
+                ],
+                contact_name1,
+                contact_name2,
+            }
+        },
+        |mut user| {
+            user.contact_name1 = user
+                .contacts
+                .first()
+                .map(|contact| contact.name.clone())
+                .unwrap_or_default();
+            user.contact_name2 = user
+                .contacts
+                .get(1)
+                .map(|contact| contact.name.clone())
+                .unwrap_or_default();
+            let mut row = Row::new();
+            row.insert("id".into(), Value::Int(user.id));
+            row.insert("username".into(), Value::from(user.username));
+            row.insert("email".into(), Value::from(user.email));
+            row.insert("contact_name1".into(), Value::from(user.contact_name1));
+            row.insert("contact_name2".into(), Value::from(user.contact_name2));
+            row
+        },
+    )
 }
-let user = user.unwrap();
+let mapper = user_contacts_mapper();
+let users: Vec<_> = reader
+    .read()
+    .map_ok(|row| mapper.map(converter.convert(&row).unwrap()))
+    .try_collect()
+    .await
+    .unwrap();
 ```
 
 **User**
@@ -3810,7 +3819,7 @@ let user = user.unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L36-L38) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L40-L47) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L49-L64) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L219-L238)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L194-L225)
 
 ```typescript
 class Contact {
@@ -3826,8 +3835,17 @@ class User {
   contacts: Contact[] = [];
 }
 
-function userContactsMapper() {
-  return new TransformMapper<User, User>(
+const ds = Datasource.default;
+const command = await ds.createCommand();
+await command.execute(
+  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+);
+await using reader = await command.executeReader(
+  "SELECT contact_name1, contact_name2, email, id, username FROM users",
+);
+const converter = new MetaDataRowTypeConverter<User>();
+const userContactsMapper = () =>
+  new TransformMapper<User, User>(
     (row) => {
       row.contacts = [
         Object.assign(new Contact(), { name: row.contact_name1 }),
@@ -3841,22 +3859,8 @@ function userContactsMapper() {
       return user;
     },
   );
-}
-
-const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
-await command.execute(
-  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
-);
-await using reader = await command.executeReader(
-  "SELECT contact_name1, contact_name2, email, id, username FROM users",
-);
-const converter = new MetaDataRowTypeConverter<User>();
 const mapper = userContactsMapper();
-let user: User | undefined;
-while (await reader.next()) user = mapper.map(converter.convert(reader.current!, User));
+const users = await Array.fromAsync(reader.read(), (row) => mapper.map(converter.convert(row, User)));
 ```
 
 **User**
@@ -4283,13 +4287,11 @@ Dispose the reader with `await using`. Rust drops it.
 
 #### Read a row
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L90-L110)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L72-L90)
 
 ```csharp
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
 await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
@@ -4307,13 +4309,11 @@ var rows = await reader.Read().ToListAsync();
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L129-L161)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L77-L107)
 
 ```rust
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
     .await
@@ -4343,13 +4343,11 @@ let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L104-L120)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L86-L100)
 
 ```typescript
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
 await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
 await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
@@ -4375,13 +4373,11 @@ CREATE TABLE items (id int, name string, CONSTRAINT pk_items PRIMARY KEY (id))
 
 #### Read and apply case mappings
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L112-L127)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L92-L105)
 
 ```csharp
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
 await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
@@ -4397,13 +4393,11 @@ var mapped = await reader.Read().Select(source =>
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L163-L196)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L109-L140)
 
 ```rust
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute(
         "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
@@ -4437,13 +4431,11 @@ let mapped: Vec<Row> = reader
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L122-L135)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L102-L113)
 
 ```typescript
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
 await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
@@ -4466,21 +4458,17 @@ Schema: [case-contacts](#case-contacts)
 CREATE TABLE contacts (user_id int, first_name string, CONSTRAINT pk_contacts PRIMARY KEY (user_id))
 ```
 
-#### Type conversion and flat to nested
+#### ExecuteReader, then apply flat to nested mapper.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L129-L162)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L107-L136)
 
 ```csharp
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
 await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
 await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
-var rows = new List<Row>();
-while (await reader.Next())
-    rows.Add(reader.Current!);
+var rows = await reader.Read().ToListAsync();
 var mapper = new FlatToNestedMapper(new TypeMap
 {
     Key = "id",
@@ -4498,7 +4486,7 @@ var mapper = new FlatToNestedMapper(new TypeMap
 var nested = mapper.Map(rows);
 ```
 
-**User**
+**Contact**
 
 ```
 {
@@ -4511,13 +4499,11 @@ var nested = mapper.Map(rows);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L198-L256)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L142-L195)
 
 ```rust
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute(
         "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
@@ -4536,10 +4522,7 @@ let reader = command
     .execute_reader("SELECT id, username, contact_name FROM users", None)
     .await
     .unwrap();
-let mut rows = Vec::new();
-while reader.next().await.unwrap() {
-    rows.push(reader.current().unwrap());
-}
+let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 let mapper = FlatToNestedMapper::new(TypeMap::new(
     "id",
     vec![
@@ -4557,7 +4540,7 @@ let mapper = FlatToNestedMapper::new(TypeMap::new(
 let nested = Mapper::map(&mapper, rows);
 ```
 
-**User**
+**Contact**
 
 ```
 {
@@ -4570,18 +4553,15 @@ let nested = Mapper::map(&mapper, rows);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L137-L164)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L115-L139)
 
 ```typescript
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
 await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
 await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
-const rows: Cells[] = [];
-while (await reader.next()) rows.push(reader.current!);
+const rows = await Array.fromAsync(reader.read());
 const mapper = new FlatToNestedMapper<{
   id: number;
   username: string;
@@ -4597,7 +4577,7 @@ const mapper = new FlatToNestedMapper<{
 const nested = mapper.map(rows);
 ```
 
-**User**
+**Contact**
 
 ```
 {
@@ -4616,15 +4596,247 @@ Schema: [flat-users](#flat-users)
 CREATE TABLE users (id int, username string, contact_name string)
 ```
 
+#### ExecuteReader maps flat contacts
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L196-L229)
+
+```csharp
+record User
+{
+    public int id { get; set; }
+    public string username { get; set; } = "";
+    public string email { get; set; } = "";
+    public string contact_name1 { get; set; } = "";
+    public string contact_name2 { get; set; } = "";
+    public List<Contact> contacts { get; set; } = [];
+
+    public record Contact
+    {
+        public string name { get; set; } = "";
+    }
+}
+
+var ds = Datasource.Default;
+var command = await ds.CreateCommand();
+await command.Execute(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+await using var reader = await command.ExecuteReader(
+    "SELECT contact_name1, contact_name2, email, id, username FROM users");
+var converter = new MetaDataRowTypeConverter<User>();
+TransformMapper<User, User> UserContactsMapper() =>
+    new(
+        row =>
+        {
+            row.contacts =
+            [
+                new User.Contact { name = row.contact_name1 },
+                new User.Contact { name = row.contact_name2 }
+            ];
+            return row;
+        },
+        user =>
+        {
+            user.contact_name1 = user.contacts.ElementAtOrDefault(0)?.name ?? "";
+            user.contact_name2 = user.contacts.ElementAtOrDefault(1)?.name ?? "";
+            return user;
+        });
+var mapper = UserContactsMapper();
+var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))).ToListAsync();
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L26-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L30-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L324-L419)
+
+```rust
+struct Contact {
+    name: String,
+}
+
+struct User {
+    id: i64,
+    username: String,
+    email: String,
+    contact_name1: String,
+    contact_name2: String,
+    contacts: Vec<Contact>,
+}
+
+let ds = default().unwrap();
+let command = ds.create_command(None).await.unwrap();
+command
+    .execute(
+        "INSERT INTO users (id, username, email, contact_name1, contact_name2)
+         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+        None,
+    )
+    .await
+    .unwrap();
+let reader = command
+    .execute_reader(
+        "SELECT contact_name1, contact_name2, email, id, username FROM users",
+        None,
+    )
+    .await
+    .unwrap();
+let converter = RowTypeConverter::of::<User>();
+fn user_contacts_mapper() -> TransformMapper<Row, User> {
+    fn text_of(row: &Row, key: &str) -> String {
+        match row.get(key) {
+            Some(Value::Text(text)) => text.clone(),
+            _ => String::new(),
+        }
+    }
+    TransformMapper::new(
+        |row| {
+            let contact_name1 = text_of(&row, "contact_name1");
+            let contact_name2 = text_of(&row, "contact_name2");
+            User {
+                id: match row.get("id") {
+                    Some(Value::Int(id)) => *id,
+                    _ => 0,
+                },
+                username: text_of(&row, "username"),
+                email: text_of(&row, "email"),
+                contacts: vec![
+                    Contact {
+                        name: contact_name1.clone(),
+                    },
+                    Contact {
+                        name: contact_name2.clone(),
+                    },
+                ],
+                contact_name1,
+                contact_name2,
+            }
+        },
+        |mut user| {
+            user.contact_name1 = user
+                .contacts
+                .first()
+                .map(|contact| contact.name.clone())
+                .unwrap_or_default();
+            user.contact_name2 = user
+                .contacts
+                .get(1)
+                .map(|contact| contact.name.clone())
+                .unwrap_or_default();
+            let mut row = Row::new();
+            row.insert("id".into(), Value::Int(user.id));
+            row.insert("username".into(), Value::from(user.username));
+            row.insert("email".into(), Value::from(user.email));
+            row.insert("contact_name1".into(), Value::from(user.contact_name1));
+            row.insert("contact_name2".into(), Value::from(user.contact_name2));
+            row
+        },
+    )
+}
+let mapper = user_contacts_mapper();
+let users: Vec<_> = reader
+    .read()
+    .map_ok(|row| mapper.map(converter.convert(&row).unwrap()))
+    .try_collect()
+    .await
+    .unwrap();
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L194-L225)
+
+```typescript
+class Contact {
+  name = "";
+}
+
+class User {
+  id = 0;
+  username = "";
+  email = "";
+  contact_name1 = "";
+  contact_name2 = "";
+  contacts: Contact[] = [];
+}
+
+const ds = Datasource.default;
+const command = await ds.createCommand();
+await command.execute(
+  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+);
+await using reader = await command.executeReader(
+  "SELECT contact_name1, contact_name2, email, id, username FROM users",
+);
+const converter = new MetaDataRowTypeConverter<User>();
+const userContactsMapper = () =>
+  new TransformMapper<User, User>(
+    (row) => {
+      row.contacts = [
+        Object.assign(new Contact(), { name: row.contact_name1 }),
+        Object.assign(new Contact(), { name: row.contact_name2 }),
+      ];
+      return row;
+    },
+    (user) => {
+      user.contact_name1 = user.contacts[0]?.name ?? "";
+      user.contact_name2 = user.contacts[1]?.name ?? "";
+      return user;
+    },
+  );
+const mapper = userContactsMapper();
+const users = await Array.fromAsync(reader.read(), (row) => mapper.map(converter.convert(row, User)));
+```
+
+**User**
+
+```
+{
+  id: 1,
+  username: 'bobby',
+  email: 'bob@asdf.com',
+  contacts: [
+    { name: 'bob' },
+    { name: 'roberta' }
+  ]
+}
+```
+
+Schema: [flat-contact-users](#flat-contact-users)
+
+```sql
+CREATE TABLE users (id int, username string, email string, contact_name1 string, contact_name2 string, CONSTRAINT pk_users PRIMARY KEY (id))
+```
+
 #### Read multiple results returned in a single command
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L244-L264)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L231-L249)
 
 ```csharp
 var ds = Datasource.Default;
-await using var connection = await ds.CreateConnection();
-await connection.Open();
-var command = connection.CreateCommand();
+var command = await ds.CreateCommand();
 await using var reader = await command.ExecuteReader(Native.N("SELECT 1 AS id; SELECT 2 AS id"));
 var first = new List<Row>();
 while (await reader.Next())
@@ -4652,13 +4864,11 @@ var again = await reader.NextResult();
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L426-L451)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L421-L444)
 
 ```rust
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 let reader = command
     .execute_reader_native(&Native::new("SELECT 1 AS id; SELECT 2 AS id"), None)
     .await
@@ -4693,13 +4903,11 @@ assert!(!again);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L240-L256)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L227-L241)
 
 ```typescript
 const ds = Datasource.default;
-await using connection = await ds.createConnection();
-await connection.open();
-const command = connection.createCommand();
+const command = await ds.createCommand();
 await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id; SELECT 2 AS id"));
 const first: { id: number }[] = [];
 while (await reader.next()) first.push(reader.current as { id: number });
@@ -6721,7 +6929,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1446-L1462)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1447-L1463)
 
 ```rust
         &row
@@ -6780,7 +6988,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1483-L1489)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1484-L1490)
 
 ```rust
 
@@ -16102,7 +16310,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1195-L1198)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1196-L1199)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -16133,7 +16341,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L934-L941)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L935-L942)
 
 ```rust
     Where::new(Operator::Equals {
@@ -16187,7 +16395,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L985-L999)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L986-L1000)
 
 ```rust
 .get_text()
@@ -16240,7 +16448,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1007)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1005-L1008)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -16281,7 +16489,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1012)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1010-L1013)
 
 ```rust
 
@@ -16319,7 +16527,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1017)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1015-L1018)
 
 ```rust
     .get_text(),
@@ -16360,7 +16568,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1022-L1025)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1023-L1026)
 
 ```rust
     .parameters()
@@ -16650,7 +16858,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L983-L987)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L984-L988)
 
 ```rust
     )))),
@@ -16978,7 +17186,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L988-L993)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -17313,7 +17521,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L997-L1002)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1003)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -18287,7 +18495,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1003-L1011)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1012)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -18336,7 +18544,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1016-L1039)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1017-L1040)
 
 ```rust
 );
@@ -18617,7 +18825,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1084-L1091)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1092)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -18662,7 +18870,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1093-L1095)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1094-L1096)
 
 ```rust
 })
@@ -18939,7 +19147,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1097-L1098)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1098-L1099)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -19215,7 +19423,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1103-L1104)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1104-L1105)
 
 ```rust
 "customers",
@@ -19826,7 +20034,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L658-L662)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L659-L663)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -19894,7 +20102,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1957-L1963)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1958-L1964)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -19951,7 +20159,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L937-L943)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L938-L944)
 
 ```rust
     })
@@ -20459,7 +20667,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L751-L766)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L752-L767)
 
 ```rust
 
@@ -20497,7 +20705,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1957-L1963)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1958-L1964)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -20664,7 +20872,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1174-L1178)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1175-L1179)
 
 ```rust
     &[],

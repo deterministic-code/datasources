@@ -1,7 +1,5 @@
 let ds = default().unwrap();
-let connection = ds.create_connection().await.unwrap();
-connection.open().await.unwrap();
-let command = connection.create_command();
+let command = ds.create_command(None).await.unwrap();
 command
     .execute(
         "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",

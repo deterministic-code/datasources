@@ -238,16 +238,12 @@ describe("Sqlite datasource", () => {
     const connection = await ds.createConnection();
     await (connection as SqliteConnection).open();
     expect(connection.createCommand()).toBeInstanceOf(SqliteCommand);
-    const command = ds.createCommand(connection);
+    const command = await ds.createCommand(connection);
     expect(command).toBeInstanceOf(SqliteCommand);
     expect(command.connection).toBe(connection);
     await command.execute("DELETE FROM items");
     await command.executeReaderNative(new Native("SELECT 1"));
-    const implicit = ds.createCommand();
-    expect(implicit).toBeInstanceOf(SqliteCommand);
-    expect(implicit.connection).toBeInstanceOf(SqliteConnection);
-    await implicit.execute("DELETE FROM items");
-    await implicit.executeReaderNative(new Native("SELECT 1"));
+    await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
     const repo = ds.createRepository(untyped(), connection);
     expect(ds.createReadonlyRepository(untyped(), connection).constructor).toBe(ReadonlyRepository);
     expect(repo).toBeInstanceOf(CRUDRepository);
