@@ -7,15 +7,15 @@ public class BulkCRUDRepositoryTests
 {
     sealed class Parent
     {
-        public int id { get; set; }
+        public long id { get; set; }
         public string label { get; set; } = "";
         public List<Child> children { get; set; } = [];
     }
 
     sealed class Child
     {
-        public int id { get; set; }
-        public int parent_id { get; set; }
+        public long id { get; set; }
+        public long parent_id { get; set; }
         public string label { get; set; } = "";
     }
 
