@@ -17,7 +17,7 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
             .Select(options.PropertyMappings.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
-        var converter = options.ObjectConverter ?? new MetaDataRowTypeConverter<T>();
+        var converter = options.ObjectConverter ?? new MetaDataRowTypeConverter<T> { ShouldCoerceId = true };
         if (converter is MetaDataRowTypeConverter<T> meta)
         {
             meta.References.Clear();

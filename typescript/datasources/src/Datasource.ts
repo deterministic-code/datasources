@@ -47,20 +47,13 @@ export class Datasource implements IDatasource {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
-    return options === undefined
-      ? { ...built, rowTypeConverters: types, rowConverter: rows }
-      : {
-          entity: options.entity ?? built.entity,
-          entityMapper: options.entityMapper,
-          propertyMappings: options.propertyMappings,
-          rowConverter: rows,
-          objectConverter: options.objectConverter,
-          readProperties: options.readProperties,
-          rowTypeConverters: types,
-          type,
-          ids: options.ids ?? built.ids,
-          write: options.write,
-        };
+    return {
+      ...(options ?? built),
+      entity: options?.entity ?? built.entity,
+      rowConverter: rows,
+      rowTypeConverters: types,
+      type,
+    };
   };
 
   private applyReadonly = <T>(
@@ -70,18 +63,13 @@ export class Datasource implements IDatasource {
     const built = createReadonlyRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
-    return options === undefined
-      ? { ...built, rowTypeConverters: types, rowConverter: rows }
-      : {
-          entity: options.entity ?? built.entity,
-          entityMapper: options.entityMapper,
-          propertyMappings: options.propertyMappings,
-          rowConverter: rows,
-          objectConverter: options.objectConverter,
-          readProperties: options.readProperties,
-          rowTypeConverters: types,
-          type,
-        };
+    return {
+      ...(options ?? built),
+      entity: options?.entity ?? built.entity,
+      rowConverter: rows,
+      rowTypeConverters: types,
+      type,
+    };
   };
 
   createRepository = <T>(

@@ -39,26 +39,12 @@ public sealed class Datasource(
         var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         var rows = RowTypeConverter.From(types, Columns(typeof(T)));
-        return options is null
-            ? new()
-            {
-                Ids = built.Ids,
-                Entity = built.Entity,
-                RowTypeConverters = types,
-                RowConverter = rows,
-            }
-            : new()
-            {
-                Entity = options.Entity ?? built.Entity,
-                EntityMapper = options.EntityMapper,
-                PropertyMappings = options.PropertyMappings,
-                RowConverter = options.RowConverter ?? rows,
-                ObjectConverter = options.ObjectConverter,
-                ReadProperties = options.ReadProperties,
-                RowTypeConverters = types,
-                Ids = options.Ids,
-                Write = options.Write,
-            };
+        return (options ?? built) with
+        {
+            Entity = options?.Entity ?? built.Entity,
+            RowConverter = options?.RowConverter ?? rows,
+            RowTypeConverters = types,
+        };
     }
 
     ReadonlyRepositoryOptions<T> Apply<T>(ReadonlyRepositoryOptions<T>? options) where T : new()
@@ -66,23 +52,12 @@ public sealed class Datasource(
         var built = CreateReadonlyRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         var rows = RowTypeConverter.From(types, Columns(typeof(T)));
-        return options is null
-            ? new()
-            {
-                Entity = built.Entity,
-                RowTypeConverters = types,
-                RowConverter = rows,
-            }
-            : new()
-            {
-                Entity = options.Entity ?? built.Entity,
-                EntityMapper = options.EntityMapper,
-                PropertyMappings = options.PropertyMappings,
-                RowConverter = options.RowConverter ?? rows,
-                ObjectConverter = options.ObjectConverter,
-                ReadProperties = options.ReadProperties,
-                RowTypeConverters = types,
-            };
+        return (options ?? built) with
+        {
+            Entity = options?.Entity ?? built.Entity,
+            RowConverter = options?.RowConverter ?? rows,
+            RowTypeConverters = types,
+        };
     }
 
     static IReadOnlyDictionary<string, string> Columns(Type type) =>
