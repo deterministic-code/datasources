@@ -6,7 +6,7 @@ users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
 )]));
-users_options.column_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
@@ -16,18 +16,17 @@ users_options.column_mappings = Box::new(DictionaryMapper::new([
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.column_mappings =
+type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserRole".to_string(),
     "user_roles".to_string(),
 )]));
-role_options.column_mappings = Box::new(DictionaryMapper::new([
+role_options.property_mappings = Box::new(DictionaryMapper::new([
     ("UserId".to_string(), "user_id".to_string()),
     ("Name".to_string(), "name".to_string()),
 ]));
-role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |statement| statement)));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
@@ -38,12 +37,12 @@ let roles =
     ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
 let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
 users_repo.add_enriched(
-    datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false),
+    datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types,
     Some(strategy.clone()),
 );
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     roles,
     Some(strategy),
 );

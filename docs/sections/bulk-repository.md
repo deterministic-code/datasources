@@ -28,7 +28,7 @@ constructor(inner: ICRUDRepository<T>)
 
 ##### createBulk(items)
 
-Creates each item, including nested `many` children.
+Creates each item, including nested `List` children.
 
 ```typescript
 createBulk(items: T[]): Promise<Response>
@@ -40,7 +40,7 @@ createBulk(items: T[]): Promise<Response>
 
 ##### updateBulk(items, byWhere?)
 
-Updates each item, then replace-syncs nested `many` lists.
+Updates each item, then replace-syncs nested `List` lists.
 
 ```typescript
 updateBulk(items: T[], byWhere?: IWhere): Promise<Response>
@@ -53,7 +53,7 @@ updateBulk(items: T[], byWhere?: IWhere): Promise<Response>
 
 ##### deleteBulk(items, byWhere?)
 
-Deletes nested `many` rows for each item, then the parents.
+Deletes nested `List` rows for each item, then the parents.
 
 ```typescript
 deleteBulk(items: T[], byWhere?: IWhere): Promise<Response>
@@ -87,7 +87,7 @@ public BulkCRUDRepository(ICRUDRepository<T> inner)
 
 ##### Create(items)
 
-Creates each item, including nested `many` children.
+Creates each item, including nested `List` children.
 
 ```csharp
 public Task<Response> Create(IReadOnlyList<T> items)
@@ -99,7 +99,7 @@ public Task<Response> Create(IReadOnlyList<T> items)
 
 ##### Update(items, byWhere)
 
-Updates each item, then replace-syncs nested `many` lists.
+Updates each item, then replace-syncs nested `List` lists.
 
 ```csharp
 public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null)
@@ -112,7 +112,7 @@ public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null)
 
 ##### Delete(items, byWhere)
 
-Deletes nested `many` rows for each item, then the parents.
+Deletes nested `List` rows for each item, then the parents.
 
 ```csharp
 public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null)
@@ -186,21 +186,21 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 ##### add_enriched(enrichment, via, strategy)
 
-Forwards to [CRUDRepository.add_enriched](./crud-repository.md#add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written.
+Forwards to [CRUDRepository.add_enriched](./crud-repository.md#add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `List` children can be written.
 
 ```rust
 pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>) -> &mut Self
 ```
 
 - `enrichment` — [Enrichment](./enrichment.md)
-- `via` — related repository. A CRUD repository is kept so `many` children can be written
+- `via` — related repository. A CRUD repository is kept so `List` children can be written
 - `strategy` — optional read strategy for this edge. Omitted uses the default strategy
 
 **Returns** `&mut Self`
 
 ##### create_bulk(items)
 
-Creates each item, including nested `many` children.
+Creates each item, including nested `List` children.
 
 ```rust
 pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
@@ -212,7 +212,7 @@ pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
 
 ##### update_bulk(items, by_where)
 
-Updates each item, then replace-syncs nested `many` lists.
+Updates each item, then replace-syncs nested `List` lists.
 
 ```rust
 pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
@@ -225,7 +225,7 @@ pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 
 ##### delete_bulk(items, by_where)
 
-Deletes nested `many` rows for each item, then the parents.
+Deletes nested `List` rows for each item, then the parents.
 
 ```rust
 pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
@@ -257,7 +257,7 @@ Each item still runs the same deep persist as [CRUDRepository](./crud-repository
 ::: example
 ```csharp csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#CreateWritesParentsAndChildren
 ```
-```rust rust/datasources/src/tests/mod.rs#table_repository_maps_flat_row_into_contacts
+```rust rust/datasources/tests/enriched.rs#bulk_create_writes_parents_and_children
 ```
 ```typescript typescript/datasources/src/BulkCRUDRepository.test.ts#creates-parents-and-children
 ```

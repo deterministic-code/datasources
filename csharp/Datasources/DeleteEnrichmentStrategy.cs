@@ -20,10 +20,10 @@ public abstract class DeleteEnrichmentStrategy<T>
         Enrichment enrichment,
         object parent)
     {
-        var key = Get(parent, enrichment.From);
+        var key = Get(parent, enrichment.SourceProperty);
         if (key is null) return [];
         var items = new List<object>();
-        await foreach (var item in writer.Read(new Where(new Operator.Equals(enrichment.By, Value.From(key)))))
+        await foreach (var item in writer.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
             items.Add(item);
         return items;
     }

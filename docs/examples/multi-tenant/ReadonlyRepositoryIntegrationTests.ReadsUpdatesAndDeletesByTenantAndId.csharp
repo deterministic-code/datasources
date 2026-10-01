@@ -8,7 +8,7 @@ var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
 {
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
     Ids = ["TenantId", "Id"],
 });
 var ada = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });

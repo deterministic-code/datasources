@@ -1,13 +1,15 @@
+import type { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
+
 export type Association = {
   parent: string;
   related: string;
 };
 
 export type Enrichment = {
-  into: string;
-  from: string;
-  by: string;
-  select?: string;
-  many?: boolean;
+  destinationProperty: string;
+  sourceProperty: string;
+  relatedKey: string;
+  relatedProperty?: string;
+  type?: EnrichmentPropertyType;
   association?: Association;
 };

@@ -17,10 +17,10 @@ const linkWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<obje
 
 export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T> {
   async updateOwned(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
-    const writer = writerOf(entry, enrichment.into);
+    const writer = writerOf(entry, enrichment.destinationProperty);
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
-    const rows = this.payloadOf(parent, enrichment.into);
-    for (const related of rows) this.stampCell(related, enrichment.by, this.getCell(parent, enrichment.from));
+    const rows = this.payloadOf(parent, enrichment.destinationProperty);
+    for (const related of rows) this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
     const keys = this.namesOf(writer, rows[0] ?? existing[0] ?? {});
     const keep = new Set(rows.filter((row) => this.hasKey(row, keys)).map((row) => this.keyOf(row, keys)));
     for (const row of existing.filter((row) => !keep.has(this.keyOf(row, keys)))) await writer.delete(row);
@@ -33,7 +33,7 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
   async updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: object): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
-    const writer = linkWriter(entry, enrichment.into);
+    const writer = linkWriter(entry, enrichment.destinationProperty);
     const parentKey = this.requiredKey(parent, enrichment);
     const existing = await DeleteEnrichmentStrategy.loadLinks(writer, association.parent, parentKey);
     const wanted = this.relatedIds(parent, enrichment);

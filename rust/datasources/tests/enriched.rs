@@ -100,33 +100,33 @@ fn open_contacts(
     mut phones: CRUDRepository,
 ) -> CRUDRepository {
     addresses.add_enriched(
-        Enrichment::new("AddressType", "AddressType", "Id", None, false),
+        Enrichment::new("AddressType", "AddressType", "Id", None, datasources::EnrichmentPropertyType::Object),
         address_types,
         None,
     );
     phones.add_enriched(
-        Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
+        Enrichment::new("PhoneType", "PhoneType", "Id", None, datasources::EnrichmentPropertyType::Object),
         phone_types,
         None,
     );
     contacts
         .add_enriched(
-            Enrichment::new("ContactType", "ContactType", "Id", None, false),
+            Enrichment::new("ContactType", "ContactType", "Id", None, datasources::EnrichmentPropertyType::Object),
             types,
             None,
         )
         .add_enriched(
-            Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
+            Enrichment::new("ContactSource", "ContactSource", "Id", None, datasources::EnrichmentPropertyType::Object),
             sources,
             None,
         )
         .add_enriched(
-            Enrichment::new("Addresses", "Id", "Contact", None, true),
+            Enrichment::new("Addresses", "Id", "Contact", None, datasources::EnrichmentPropertyType::List),
             Arc::new(addresses),
             None,
         )
         .add_enriched(
-            Enrichment::new("Phones", "Id", "Contact", None, true),
+            Enrichment::new("Phones", "Id", "Contact", None, datasources::EnrichmentPropertyType::List),
             Arc::new(phones),
             None,
         );
@@ -151,7 +151,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
     let mut parents_repo = mapped(connection, "Parent");
     let types_repo = Arc::new(mapped(types_connection, "UserType"));
     parents_repo.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), false),
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
         types_repo,
         None,
     );
@@ -173,12 +173,12 @@ async fn deep_create_writes_children_stamps_fk() {
     assert!(num(&kind, "Id") > 0);
     parents
         .add_enriched(
-            Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), false),
+            Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
             types.clone(),
             None,
         )
         .add_enriched(
-            Enrichment::new("Children", "Id", "ParentId", None, true),
+            Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
             children.clone(),
             None,
         );
@@ -388,7 +388,7 @@ async fn deep_update_replace_syncs_children() {
         .unwrap();
     assert!(num(&dropped, "Id") > 0);
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
         children.clone(),
         None,
     );
@@ -475,13 +475,13 @@ async fn cascade_update_deletes_children_and_recreates() {
         .unwrap();
     assert!(num(&note, "Id") > 0);
     children_repo.add_enriched(
-        Enrichment::new("Notes", "Id", "ChildId", None, true),
+        Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
         notes.clone(),
         None,
     );
     let children = Arc::new(children_repo);
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
         children.clone(),
         None,
     );
@@ -568,7 +568,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     assert!(num(&leftover, "Id") > 0);
     let old_link_id = old_link.get("Id").unwrap().clone();
     parents.add_linked(
-        Enrichment::new("Tags", "Id", "Id", None, true)
+        Enrichment::new("Tags", "Id", "Id", None, datasources::EnrichmentPropertyType::List)
             .linked(Association::new("ParentId", "TagId")),
         tags.clone(),
         links.clone(),
@@ -733,14 +733,14 @@ async fn deep_delete_cascades_children_then_parent() {
         .unwrap();
     assert!(num(&other, "Id") > 0);
     children_repo.add_enriched(
-        Enrichment::new("Notes", "Id", "ChildId", None, true),
+        Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
         notes.clone(),
         None,
     );
     let children = Arc::new(children_repo);
     let mut parents = parents;
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
         children.clone(),
         None,
     );
@@ -762,7 +762,7 @@ async fn deep_many_readonly_via_throws() {
     let connection = setup(&mut []).await;
     let mut parents = mapped_crud(connection.clone(), "Parent");
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, true),
+        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
         Arc::new(mapped(connection, "Child")),
         None,
     );
@@ -786,7 +786,7 @@ async fn bulk_create_writes_parents_and_children() {
     child_options.entity = "Child".into();
     let children = Arc::new(BulkCRUDRepository::new(connection, child_options).unwrap());
     parents.add_enriched(
-        Enrichment::new("children", "id", "parent_id", None, true),
+        Enrichment::new("children", "id", "parent_id", None, datasources::EnrichmentPropertyType::List),
         children.clone(),
         None,
     );

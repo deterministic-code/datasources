@@ -11,9 +11,9 @@ public abstract class UpdateEnrichmentStrategy<T>
 
     internal async Task CreateChildren(IChildPersist writer, Enrichment enrichment, object parent)
     {
-        foreach (var related in Payload(parent, enrichment.Into))
+        foreach (var related in Payload(parent, enrichment.DestinationProperty))
         {
-            Stamp(related, enrichment.By, Get(parent, enrichment.From));
+            Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
             await writer.Create(related);
         }
     }
@@ -24,7 +24,7 @@ public abstract class UpdateEnrichmentStrategy<T>
         Association association,
         object parent)
     {
-        var parentKey = Required(parent, enrichment.From, enrichment.Into);
+        var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
         foreach (var id in RelatedIds(parent, enrichment))
         {
             var row = writer.New();
@@ -38,10 +38,10 @@ public abstract class UpdateEnrichmentStrategy<T>
     {
         var ids = new List<object>();
         var seen = new HashSet<string>();
-        foreach (var related in Payload(parent, enrichment.Into))
+        foreach (var related in Payload(parent, enrichment.DestinationProperty))
         {
-            if (Get(related, enrichment.By) is not object id || Missing(id))
-                throw new DatasourceException($"{enrichment.Into} requires \"{enrichment.By}\"");
+            if (Get(related, enrichment.RelatedKey) is not object id || Missing(id))
+                throw new DatasourceException($"{enrichment.DestinationProperty} requires \"{enrichment.RelatedKey}\"");
             if (seen.Add(id.ToString() ?? ""))
                 ids.Add(id);
         }

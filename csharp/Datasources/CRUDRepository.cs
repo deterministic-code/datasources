@@ -207,7 +207,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
     protected bool EnrichmentInto(string name) =>
-        ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.Into == name);
+        ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.DestinationProperty == name);
 
     Row ReverseConvert(T item)
     {

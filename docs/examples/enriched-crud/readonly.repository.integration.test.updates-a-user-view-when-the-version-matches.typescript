@@ -5,7 +5,7 @@ const usersRepo = new CRUDRepository(connection, {
   ids: ["Key"],
   readProperties: ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
   entityMapper: new DictionaryMapper([["UsersView", "user"]]),
-  columnMappings: new DictionaryMapper([
+  propertyMappings: new DictionaryMapper([
     ["Key", "id"],
     ["Login", "username"],
     ["Active", "is_enabled"],
@@ -17,13 +17,13 @@ const usersRepo = new CRUDRepository(connection, {
 const userTypesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserType),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
 const userRolesRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(UserRole),
   entityMapper: casing,
-  columnMappings: casing,
+  propertyMappings: casing,
 });
-usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
-usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
 const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));

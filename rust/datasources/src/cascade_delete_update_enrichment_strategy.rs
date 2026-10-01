@@ -23,7 +23,7 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
         let writer = entry.persist.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.into
+                enrichment.destination_property
             ))
         })?;
         let existing = load(writer.as_ref(), enrichment, parent).await?;
@@ -46,10 +46,14 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
         let writer = entry.link.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.into
+                enrichment.destination_property
             ))
         })?;
-        let parent_key = required(parent, &enrichment.from, &enrichment.into)?;
+        let parent_key = required(
+            parent,
+            &enrichment.source_property,
+            &enrichment.destination_property,
+        )?;
         let existing = writer
             .read(
                 Some(&Where::new(Operator::equals(

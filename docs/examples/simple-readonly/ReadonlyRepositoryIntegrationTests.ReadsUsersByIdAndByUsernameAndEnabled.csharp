@@ -7,7 +7,7 @@ await Execute(connection, """
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    ColumnMappings = Snake,
+    PropertyMappings = Snake,
 });
 
 var byId = await repo.ReadSingle(new Where("Id", eq, 1));

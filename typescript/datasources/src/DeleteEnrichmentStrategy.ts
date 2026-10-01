@@ -27,10 +27,10 @@ export abstract class DeleteEnrichmentStrategy<T> {
     enrichment: Enrichment,
     parent: object,
   ): Promise<object[]> => {
-    const key = get(parent, enrichment.from);
+    const key = get(parent, enrichment.sourceProperty);
     if (key === undefined || key === null || typeof key === "object") return [];
     const items: object[] = [];
-    for await (const item of writer.read(new Where(new Operator.Equals(enrichment.by, key))))
+    for await (const item of writer.read(new Where(new Operator.Equals(enrichment.relatedKey, key))))
       items.push(item);
     return items;
   };

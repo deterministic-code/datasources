@@ -318,7 +318,7 @@ mod user_view {
                 "UserTypeId",
                 "Id",
                 Some("Name".into()),
-                false,
+                datasources::EnrichmentPropertyType::Object,
             ),
             types,
             None,
@@ -492,12 +492,12 @@ mod users_view_roles {
             ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
         let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
         users_repo.add_enriched(
-            datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false),
+            datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
             types,
             Some(strategy.clone()),
         );
         users_repo.add_enriched(
-            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
             roles,
             Some(strategy),
         );
@@ -548,7 +548,7 @@ mod users_view_roles {
         ]));
         let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
-            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
             Arc::new(ReadonlyRepository::memory(vec![])),
             Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
                 TypeMap::new(
@@ -779,13 +779,13 @@ mod user_crud {
                 "UserTypeId",
                 "Id",
                 Some("Name".into()),
-                false,
+                datasources::EnrichmentPropertyType::Object,
             ),
             user_types_repo.clone(),
             None,
         );
         users_repo.add_enriched(
-            datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+            datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
             user_roles_repo.clone(),
             None,
         );

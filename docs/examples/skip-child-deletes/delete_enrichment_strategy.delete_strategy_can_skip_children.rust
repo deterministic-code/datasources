@@ -12,7 +12,7 @@ child.insert("parent_id".into(), created.get("id").unwrap().clone());
 child.insert("label".into(), Value::from("a"));
 children.create(&mut child).await.unwrap();
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("children", "id", "parent_id", None, crate::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );

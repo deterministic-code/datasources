@@ -129,8 +129,8 @@ public class ContactsRepositoryTests
         phonesRepo.AddEnriched(new("PhoneType", "PhoneType", "Id"), phoneTypesRepo);
         contactsRepo.AddEnriched(new("ContactType", "ContactType", "Id"), typesRepo);
         contactsRepo.AddEnriched(new("ContactSource", "ContactSource", "Id"), sourcesRepo);
-        contactsRepo.AddEnriched(new("Addresses", "Id", "Contact", Many: true), addressesRepo);
-        contactsRepo.AddEnriched(new("Phones", "Id", "Contact", Many: true), phonesRepo);
+        contactsRepo.AddEnriched(new("Addresses", "Id", "Contact", Type: EnrichmentPropertyType.List), addressesRepo);
+        contactsRepo.AddEnriched(new("Phones", "Id", "Contact", Type: EnrichmentPropertyType.List), phonesRepo);
 
         var created = await contactsRepo.Create(ExtraContact.New(await ContactLookupIds.Resolve(conn)));
         var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));

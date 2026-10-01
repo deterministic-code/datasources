@@ -3,7 +3,9 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_crud_repository_options::create_crud_repository_options;
+use crate::crud_repository_builder::CRUDRepositoryBuilder;
 use crate::crud_repository_options::CRUDRepositoryOptions;
+use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
@@ -12,7 +14,6 @@ use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
-use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -22,7 +23,6 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::stored_enrichment::StoredEnrichment;
-use crate::crud_repository_builder::CRUDRepositoryBuilder;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
@@ -234,7 +234,9 @@ impl CRUDRepository {
             .iter()
             .filter(|(key, value)| {
                 (include_ids || !self.ids.contains(*key))
-                    && !entries.iter().any(|entry| entry.enrichment.into == **key)
+                    && !entries
+                        .iter()
+                        .any(|entry| entry.enrichment.destination_property == **key)
                     && !matches!(value, Value::Null)
             })
             .map(|(key, value)| (key.clone(), value.clone()))
@@ -331,7 +333,11 @@ impl CRUDRepository {
     fn without_enrichment(&self, item: &Row) -> Row {
         let entries = self.readonly.enrichments.lock().expect("enrichments");
         item.iter()
-            .filter(|(key, _)| !entries.iter().any(|entry| entry.enrichment.into == **key))
+            .filter(|(key, _)| {
+                !entries
+                    .iter()
+                    .any(|entry| entry.enrichment.destination_property == **key)
+            })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect()
     }
@@ -342,7 +348,7 @@ impl CRUDRepository {
             .lock()
             .expect("enrichments")
             .iter()
-            .any(|entry| entry.enrichment.into == name)
+            .any(|entry| entry.enrichment.destination_property == name)
     }
 
     async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {

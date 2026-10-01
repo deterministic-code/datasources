@@ -33,13 +33,15 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 
     async Task PersistEntry(StoredEnrichment entry, IReadOnlyList<object> parents, WriteMode mode)
     {
+        if (entry.Enrichment.Type is EnrichmentPropertyType.Dictionary or EnrichmentPropertyType.Custom)
+            throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
         if (entry.Enrichment is { Association: { } association } enrichment)
         {
             var writer = entry.Link
-                ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
+                ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
             foreach (var parent in parents)
             {
-                if (Skip(parent, enrichment.Into, mode)) continue;
+                if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
                 await (mode switch
                 {
                     WriteMode.Create => update.CreateLinks(writer, enrichment, association, parent),
@@ -50,13 +52,13 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             }
             return;
         }
-        if (entry.Enrichment is not { Many: true, Select: null } owned)
+        if (entry.Enrichment is not { Type: EnrichmentPropertyType.List, RelatedProperty: null } owned)
             return;
         var childWriter = entry.Persist
-            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{owned.Into}\"");
+            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{owned.DestinationProperty}\"");
         foreach (var parent in parents)
         {
-            if (Skip(parent, owned.Into, mode)) continue;
+            if (Skip(parent, owned.DestinationProperty, mode)) continue;
             await (mode switch
             {
                 WriteMode.Create => update.CreateChildren(childWriter, owned, parent),

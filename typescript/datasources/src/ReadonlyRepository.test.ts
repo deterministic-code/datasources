@@ -94,7 +94,7 @@ describe("ReadonlyRepository", () => {
     const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
     const parentsRepo = repo(Parent, connection);
     const typesRepo = repo(UserType, typesConnection);
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
     const items = await collectAsync(parentsRepo.read());
     expect(items[0]?.TypeName).toBe("person");
     expect(items[1]?.TypeName).toBe("");
@@ -109,7 +109,7 @@ describe("ReadonlyRepository", () => {
     const parentsRepo = repo(Parent, connection);
     const typesRepo = repo(UserType, typesConnection);
     parentsRepo.addEnriched(
-      { into: "TypeName", from: "Type", by: "Id", select: "Name" },
+      { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
       typesRepo,
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
@@ -133,8 +133,8 @@ describe("ReadonlyRepository", () => {
       { parent_id: other.id, label: "x" },
     ]);
     const childrenRepo = repo(Child, childrenConnection);
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const item = await parentsRepo.readSingle();
     expect(item?.TypeName).toBe("org");
     expect(item?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
@@ -156,8 +156,8 @@ describe("ReadonlyRepository", () => {
     ]);
     const childrenRepo = repo(Child, childrenConnection);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo, strategy);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo, strategy);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo, strategy);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo, strategy);
     const item = await parentsRepo.readSingle();
     expect(item?.TypeName).toBe("org");
     expect(item?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
@@ -180,9 +180,9 @@ describe("ReadonlyRepository", () => {
       { parent_id: parent.id, type_id: gone.id, label: "b" },
     ]);
     const childrenRepo = repo(Child, childrenConnection);
-    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    childrenRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const item = await parentsRepo.readSingle();
     expect(item?.TypeName).toBe("org");
     expect(item?.Children[0]?.TypeName).toBe("home");
@@ -207,9 +207,9 @@ describe("ReadonlyRepository", () => {
     ]);
     const childrenRepo = repo(Child, childrenConnection);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo, strategy);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo, strategy);
+    childrenRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo, strategy);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo, strategy);
     const item = await parentsRepo.readSingle();
     expect(item?.TypeName).toBe("org");
     expect(item?.Children[0]?.TypeName).toBe("home");
@@ -221,8 +221,8 @@ describe("ReadonlyRepository", () => {
     const parentsRepo = repo(Parent, connection);
     const typesRepo = repo(UserType, await setup([{ name: "person" }]));
     const childrenRepo = repo(Child, await setup([{ label: "a" }]));
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const items = await collectAsync(parentsRepo.read());
     expect(items[0]?.TypeName).toBe("");
     expect(items[1]?.TypeName).toBe("");
@@ -244,8 +244,8 @@ describe("ReadonlyRepository", () => {
     const childrenRepo = repo(Child, await setup([
       { parent_id: nested.id, type_id: home.id, label: "only" },
     ]));
-    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
-    parentsRepo.addEnriched({ into: "Child", from: "Id", by: "ParentId" }, childrenRepo);
+    childrenRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Child", sourceProperty: "Id", relatedKey: "ParentId" }, childrenRepo);
     const items = await collectAsync(parentsRepo.read());
     expect(items[0]?.Child).toBe("skip");
     expect(items[1]?.Child && typeof items[1].Child === "object" ? items[1].Child.TypeName : undefined).toBe("home");
@@ -256,7 +256,7 @@ describe("ReadonlyRepository", () => {
     await expect(
       new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
         typesRepo,
-        { into: "TypeName", from: "Type", by: "Id", select: "Name" },
+        { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
         [Object.assign(new Parent(), { Id: 1 })],
       ),
     ).rejects.toThrow(/scalar/);
@@ -269,7 +269,7 @@ describe("ReadonlyRepository", () => {
     const parentsRepo = repo(Parent, connection);
     const typesRepo = repo(UserType, typesConnection);
     parentsRepo.addEnriched(
-      { into: "Type", from: "Type", by: "Id" },
+      { destinationProperty: "Type", sourceProperty: "Type", relatedKey: "Id" },
       typesRepo,
       new HashsetOptimizedReadonlyEnrichmentStrategy(),
     );
@@ -293,8 +293,8 @@ describe("ReadonlyRepository", () => {
     ]);
     const childrenRepo = repo(Child, childrenConnection);
     const strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>();
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo, strategy);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo, strategy);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo, strategy);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo, strategy);
     const items = await collectAsync(parentsRepo.read());
     expect(items[0]?.TypeName).toBe("person");
     expect(items[0]?.Children.map((child) => child.Label)).toEqual(["a", "b"]);
@@ -315,7 +315,7 @@ describe("ReadonlyRepository", () => {
     await new NestedToObjectEnrichmentStrategy<Parent>({
       key: "Id",
       fields: { Id: "Id", TypeName: "TypeName" },
-    }).apply(parentsRepo, { into: "TypeName", from: "Id", by: "Id" }, parents, [person, org]);
+    }).apply(parentsRepo, { destinationProperty: "TypeName", sourceProperty: "Id", relatedKey: "Id" }, parents, [person, org]);
     const items = parents as Parent[];
     expect(items.map((item) => item.Id)).toEqual([person.id, org.id]);
     expect(items.map((item) => item.TypeName)).toEqual(["person", "org"]);
@@ -330,7 +330,7 @@ describe("ReadonlyRepository", () => {
       type: View,
       propertyMappings: new DictionaryMapper([["UserType", "user_type_id"]]),
     });
-    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
+    usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
     const item = await usersRepo.readSingle();
     expect(item?.UserType).toBe("admin");
   });
@@ -341,12 +341,12 @@ describe("ReadonlyRepository", () => {
     const connection = await setup([{ type_id: person.id }]);
     const parentsRepo = repo(Parent, connection);
     const typesRepo = repo(UserType, typesConnection);
-    parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
     const items = await collectAsync(parentsRepo.read());
     expect(items[0]?.TypeName).toBe("person");
     await new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
       typesRepo,
-      { into: "TypeName", from: "Type", by: "Id", select: "Name" },
+      { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
       items,
       [{ Type: person.id }],
     );

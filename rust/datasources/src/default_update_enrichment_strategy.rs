@@ -26,14 +26,14 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
         let writer = entry.persist.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.into
+                enrichment.destination_property
             ))
         })?;
         let existing = load(writer.as_ref(), enrichment, parent).await?;
-        let mut related = decode_rows(parent.get(&enrichment.into));
-        if let Some(key) = parent.get(&enrichment.from).cloned() {
+        let mut related = decode_rows(parent.get(&enrichment.destination_property));
+        if let Some(key) = parent.get(&enrichment.source_property).cloned() {
             for row in &mut related {
-                row.insert(enrichment.by.clone(), key.clone());
+                row.insert(enrichment.related_key.clone(), key.clone());
             }
         }
         let ids = writer.id_names();
@@ -62,7 +62,10 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                 }
             }
         }
-        parent.insert(enrichment.into.clone(), encode_rows(&related));
+        parent.insert(
+            enrichment.destination_property.clone(),
+            encode_rows(&related),
+        );
         Ok(())
     }
 
@@ -79,10 +82,14 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
         let writer = entry.link.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.into
+                enrichment.destination_property
             ))
         })?;
-        let parent_key = required(parent, &enrichment.from, &enrichment.into)?;
+        let parent_key = required(
+            parent,
+            &enrichment.source_property,
+            &enrichment.destination_property,
+        )?;
         let existing = writer
             .read(
                 Some(&Where::new(Operator::equals(

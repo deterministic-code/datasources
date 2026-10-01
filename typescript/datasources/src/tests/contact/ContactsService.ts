@@ -21,12 +21,12 @@ export const ContactsService = {
     addresses: EnrichedCRUD<Address>,
     phones: EnrichedCRUD<Phone>,
   ): EnrichedCRUD<Contact> {
-    addresses.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypes);
-    phones.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypes);
-    contacts.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, types);
-    contacts.addEnriched({ into: "ContactSource", from: "ContactSource", by: "Id" }, sources);
-    contacts.addEnriched({ into: "Addresses", from: "Id", by: "Contact", many: true }, addresses);
-    contacts.addEnriched({ into: "Phones", from: "Id", by: "Contact", many: true }, phones);
+    addresses.addEnriched({ destinationProperty: "AddressType", sourceProperty: "AddressType", relatedKey: "Id" }, addressTypes);
+    phones.addEnriched({ destinationProperty: "PhoneType", sourceProperty: "PhoneType", relatedKey: "Id" }, phoneTypes);
+    contacts.addEnriched({ destinationProperty: "ContactType", sourceProperty: "ContactType", relatedKey: "Id" }, types);
+    contacts.addEnriched({ destinationProperty: "ContactSource", sourceProperty: "ContactSource", relatedKey: "Id" }, sources);
+    contacts.addEnriched({ destinationProperty: "Addresses", sourceProperty: "Id", relatedKey: "Contact", type: "list" }, addresses);
+    contacts.addEnriched({ destinationProperty: "Phones", sourceProperty: "Id", relatedKey: "Contact", type: "list" }, phones);
     return contacts;
   },
 };

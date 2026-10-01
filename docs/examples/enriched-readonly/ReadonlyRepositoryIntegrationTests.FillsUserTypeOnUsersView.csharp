@@ -13,7 +13,7 @@ var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -25,7 +25,7 @@ var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<Users
 var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
 {
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo);
 var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));

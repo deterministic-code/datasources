@@ -4,25 +4,15 @@ namespace Datasources.Tests;
 
 public class StatementMappingsTests
 {
-    static readonly StatementMappings Mappings = new(
-        new DictionaryMapper<string>(new Dictionary<string, string>
-        {
-            ["User"] = "people",
-            ["Role"] = "roles",
-        }),
-        new DictionaryMapper<string>(new Dictionary<string, string>
-        {
-            ["Name"] = "full_name",
-            ["title"] = "book.title",
-            ["id"] = "user_id",
-        }));
-
-    static Value Cell(string name, Value value) =>
-        value is Value.Text text ? $"{name}:{text.Item.ToUpperInvariant()}" : value;
-
     [Fact]
     public void MapsSelect()
     {
+        var mappings = new StatementMappings(
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
+        Value Mapper(string name, Value value) =>
+            value is Value.Text text ? $"{name}:{text.Item.ToUpperInvariant()}" : value;
+
         var select = new SelectStatement(new SelectStatementOptions
         {
             Distinct = true,
@@ -36,7 +26,7 @@ public class StatementMappingsTests
             Limit = 5,
             Offset = 1,
         });
-        var mapped = Assert.IsType<SelectStatement>(Mappings.Apply(select, Cell));
+        var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
         Assert.Equal("people", mapped.Table);
         Assert.Equal(["full_name", "book.title", "book.title", "alias.other", "\"schema.name\".user_id"], mapped.Fields);
         Assert.True(mapped.Distinct);
@@ -50,23 +40,28 @@ public class StatementMappingsTests
         Assert.Null(mapped.Joins[1].On);
         Assert.Contains("full_name = $full_name", mapped.GetText());
         Assert.Equal(new Value.Text("Name:BEA"), Assert.Single(mapped.Where!.Parameters).Value);
-        Assert.Equal("Name", Mappings.Property("full_name"));
-        Assert.Equal("Name", Mappings.Property("people.full_name"));
-        Assert.Equal("other", Mappings.Property("other"));
-        Assert.Equal("people.missing", Mappings.Property("people.missing"));
+        Assert.Equal("Name", mappings.Property("full_name"));
+        Assert.Equal("Name", mappings.Property("people.full_name"));
+        Assert.Equal("other", mappings.Property("other"));
+        Assert.Equal("people.missing", mappings.Property("people.missing"));
     }
 
     [Fact]
     public void MapsWrites()
     {
-        var insert = Assert.IsType<InsertStatement>(Mappings.Apply(
-            new InsertStatement("User", [new Parameter("Name", "Ada")]), Cell));
+        var mappings = new StatementMappings(
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
+        Value Mapper(string name, Value value) =>
+            value is Value.Text text ? $"{name}:{text.Item.ToUpperInvariant()}" : value;
+        var insert = Assert.IsType<InsertStatement>(mappings.Apply(
+            new InsertStatement("User", [new Parameter("Name", "Ada")]), Mapper));
         Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name)", insert.GetText());
         Assert.Equal(new Value.Text("Ada"), Assert.Single(insert.Fields).Value);
 
-        var update = Assert.IsType<UpdateStatement>(Mappings.Apply(
+        var update = Assert.IsType<UpdateStatement>(mappings.Apply(
             new UpdateStatement("User", [new Parameter("Name", "Ada")], new Where(new Operator.Equals("Name", "Bea"))),
-            Cell));
+            Mapper));
         Assert.Equal(
             "UPDATE people SET full_name = $full_name WHERE full_name = $full_name__where",
             update.GetText());
@@ -74,12 +69,12 @@ public class StatementMappingsTests
         Assert.Equal("full_name__where", update.Parameters[1].Name);
         Assert.Equal(new Value.Text("Name:BEA"), update.Parameters[1].Value);
 
-        var delete = Assert.IsType<DeleteStatement>(Mappings.Apply(
-            new DeleteStatement("User", new Where(new Operator.Equals("Name", "Bea"))), Cell));
+        var delete = Assert.IsType<DeleteStatement>(mappings.Apply(
+            new DeleteStatement("User", new Where(new Operator.Equals("Name", "Bea"))), Mapper));
         Assert.Equal("DELETE FROM people WHERE full_name = $full_name", delete.GetText());
 
-        var inserted = Assert.IsType<SelectInsertedIdStatement>(Mappings.Apply(
-            new SelectInsertedIdStatement("User", "id"), Cell));
+        var inserted = Assert.IsType<SelectInsertedIdStatement>(mappings.Apply(
+            new SelectInsertedIdStatement("User", "id"), Mapper));
         Assert.Equal("people", inserted.Table);
         Assert.Equal("user_id", inserted.Column);
     }
@@ -87,22 +82,101 @@ public class StatementMappingsTests
     [Fact]
     public void LeavesRawAndOtherStatements()
     {
+        var mappings = new StatementMappings(
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
+        Value Mapper(string name, Value value) => value;
         var rawInsert = new InsertStatement("INSERT INTO t VALUES (1)");
-        Assert.Same(rawInsert, Mappings.Apply(rawInsert, Cell));
+        Assert.Same(rawInsert, mappings.Apply(rawInsert, Mapper));
         var rawUpdate = new UpdateStatement("x");
-        Assert.Same(rawUpdate, Mappings.Apply(rawUpdate, Cell));
+        Assert.Same(rawUpdate, mappings.Apply(rawUpdate, Mapper));
         var rawDelete = DeleteStatement.Raw("DELETE FROM t");
-        Assert.Same(rawDelete, Mappings.Apply(rawDelete, Cell));
+        Assert.Same(rawDelete, mappings.Apply(rawDelete, Mapper));
         var bare = new SelectStatement("SELECT 1");
-        Assert.Same(bare, Mappings.Apply(bare, Cell));
+        Assert.Same(bare, mappings.Apply(bare, Mapper));
         var call = new ExecuteStoredProcedureStatement("CALL save_user()");
-        Assert.Same(call, Mappings.Apply(call, Cell));
-        Assert.Null(Mappings.Apply((IStatement?)null, Cell));
-        Assert.Null(Mappings.Apply((IWhere?)null, Cell));
+        Assert.Same(call, mappings.Apply(call, Mapper));
+        Assert.Null(mappings.Apply((IStatement?)null, Mapper));
+        Assert.Null(mappings.Apply((IWhere?)null, Mapper));
         var text = new WhereText("name = $name");
-        Assert.Same(text, Mappings.Apply(text, Cell));
-        var kept = Assert.IsType<DeleteStatement>(Mappings.Apply(new DeleteStatement("User", text), Cell));
+        Assert.Same(text, mappings.Apply(text, Mapper));
+        var kept = Assert.IsType<DeleteStatement>(mappings.Apply(new DeleteStatement("User", text), Mapper));
         Assert.Same(text, kept.Where);
         Assert.Equal("DELETE FROM people WHERE name = $name", kept.GetText());
+    }
+
+    [Fact]
+    public void MapsContactsSelect()
+    {
+        var mappings = new StatementMappings(
+            new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Contact"] = "contacts_base",
+                ["ContactSource"] = "contact_source",
+                ["ContactType"] = "contact_type",
+                ["Address"] = "address",
+                ["AddressType"] = "address_type",
+                ["Phone"] = "phone",
+                ["PhoneType"] = "phone_type",
+            }),
+            new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Id"] = "id",
+                ["FirstName"] = "first_name",
+                ["LastName"] = "last_name",
+                ["Email"] = "email",
+                ["Name"] = "name",
+                ["Line1"] = "line1",
+                ["City"] = "city",
+                ["Number"] = "number",
+                ["ContactId"] = "contact_id",
+                ["ContactSourceId"] = "contact_source_id",
+                ["ContactTypeId"] = "contact_type_id",
+                ["AddressTypeId"] = "address_type_id",
+                ["PhoneTypeId"] = "phone_type_id",
+            }));
+        Value Mapper(string name, Value value) =>
+            value is Value.Text text ? $"{name}:{text.Item.ToUpperInvariant()}" : value;
+
+        var select = new SelectStatement(new SelectStatementOptions
+        {
+            Distinct = true,
+            Table = "Contact",
+            Fields =
+            [
+                "Contact.FirstName",
+                "Contact.LastName",
+                "Contact.Email",
+                "ContactSource.Name",
+                "Address.Line1",
+                "Address.City",
+                "Phone.Number",
+            ],
+            Where = new Where(new Operator.And(
+                new Operator.Equals("Contact.Email", "ada@ex.com"),
+                new Operator.GreaterThan("Address.City", "A"))),
+            Joins =
+            [
+                Join.Inner("ContactSource", "Contact.ContactSourceId", "ContactSource.Id"),
+                Join.Inner("ContactType", "Contact.ContactTypeId", "ContactType.Id"),
+                Join.Left("Address", "Contact.Id", "Address.ContactId"),
+                Join.Left("AddressType", "Address.AddressTypeId", "AddressType.Id"),
+                Join.Left("Phone", "Contact.Id", "Phone.ContactId"),
+                Join.Left("PhoneType", "Phone.PhoneTypeId", "PhoneType.Id"),
+            ],
+            GroupBy = ["Contact.LastName"],
+            Having = new Where(new Operator.Equals("ContactType.Name", "person")),
+            OrderBy = [OrderBy.Asc("Contact.LastName"), OrderBy.Desc("Contact.FirstName")],
+            Limit = 20,
+            Offset = 1,
+        });
+
+        var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
+        Assert.Equal(
+            "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1",
+            mapped.GetText());
+        Assert.Equal(new Value.Text("Contact.Email:ADA@EX.COM"), mapped.Where!.Parameters[0].Value);
+        Assert.Equal(new Value.Text("Address.City:A"), mapped.Where.Parameters[1].Value);
+        Assert.Equal(new Value.Text("ContactType.Name:PERSON"), Assert.Single(mapped.Having!.Parameters).Value);
     }
 }

@@ -9,7 +9,7 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
         Func<IReadOnlyList<object>, Task> deleteNested)
     {
         var writer = entry.Persist
-            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
+            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
         var existing = await Load(writer, enrichment, parent);
         await deleteNested(existing);
         foreach (var row in existing)
@@ -23,8 +23,8 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var writer = entry.Link
-            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.Into}\"");
-        var parentKey = Get(parent, enrichment.From);
+            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
+        var parentKey = Get(parent, enrichment.SourceProperty);
         if (parentKey is null) return;
         foreach (var row in await LoadLinks(writer, association.Parent, parentKey))
             await writer.Delete(row, LinkWhere(association, parentKey, Get(row, association.Related)));

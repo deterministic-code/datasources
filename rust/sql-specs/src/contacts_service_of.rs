@@ -45,7 +45,8 @@ fn open(
     options.row_converter =
         Some(RowTypeConverter::new(name_list(names)).with_fields(stamp_fields(field)));
     options.object_converter = Some(Box::new(
-        MetaDataRowTypeConverter::new(Vec::new()).with_references(references(), Box::new(columns())),
+        MetaDataRowTypeConverter::new(Vec::new())
+            .with_references(references(), Box::new(columns())),
     ));
     let mut repo = CRUDRepository::new(connection, options).expect("contacts repo");
     if let Some(middleware) = middleware {
@@ -70,50 +71,166 @@ pub fn contacts_service_of(
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> CRUDRepository {
     let base = [
-        "Id", "Uuid", "Created", "Updated", "Version", "ContactSource", "ContactType", "FirstName",
-        "LastName", "Email", "Notes",
+        "Id",
+        "Uuid",
+        "Created",
+        "Updated",
+        "Version",
+        "ContactSource",
+        "ContactType",
+        "FirstName",
+        "LastName",
+        "Email",
+        "Notes",
     ];
-    let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];
+    let named = [
+        "Id",
+        "Uuid",
+        "Created",
+        "Updated",
+        "Version",
+        "Name",
+        "Description",
+    ];
     let address = [
-        "Id", "Uuid", "Created", "Updated", "Version", "Contact", "AddressType", "Line1", "Line2",
-        "City", "Region", "PostalCode", "Country",
+        "Id",
+        "Uuid",
+        "Created",
+        "Updated",
+        "Version",
+        "Contact",
+        "AddressType",
+        "Line1",
+        "Line2",
+        "City",
+        "Region",
+        "PostalCode",
+        "Country",
     ];
     let phone = [
-        "Id", "Uuid", "Created", "Updated", "Version", "Contact", "PhoneType", "Number",
+        "Id",
+        "Uuid",
+        "Created",
+        "Updated",
+        "Version",
+        "Contact",
+        "PhoneType",
+        "Number",
     ];
-    let address_types = as_readonly(repo(connection.clone(), "AddressType", &named, middleware.clone(), field));
-    let phone_types = as_readonly(repo(connection.clone(), "PhoneType", &named, middleware.clone(), field));
-    let mut addresses_repo = open(connection.clone(), "Address", &address, false, middleware.clone(), field);
+    let address_types = as_readonly(repo(
+        connection.clone(),
+        "AddressType",
+        &named,
+        middleware.clone(),
+        field,
+    ));
+    let phone_types = as_readonly(repo(
+        connection.clone(),
+        "PhoneType",
+        &named,
+        middleware.clone(),
+        field,
+    ));
+    let mut addresses_repo = open(
+        connection.clone(),
+        "Address",
+        &address,
+        false,
+        middleware.clone(),
+        field,
+    );
     addresses_repo.add_enriched(
-        datasources::Enrichment::new("AddressType", "AddressType", "Id", None, false),
+        datasources::Enrichment::new(
+            "AddressType",
+            "AddressType",
+            "Id",
+            None,
+            datasources::EnrichmentPropertyType::Object,
+        ),
         address_types,
         None,
     );
-    let mut phones_repo = open(connection.clone(), "Phone", &phone, false, middleware.clone(), field);
+    let mut phones_repo = open(
+        connection.clone(),
+        "Phone",
+        &phone,
+        false,
+        middleware.clone(),
+        field,
+    );
     phones_repo.add_enriched(
-        datasources::Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
+        datasources::Enrichment::new(
+            "PhoneType",
+            "PhoneType",
+            "Id",
+            None,
+            datasources::EnrichmentPropertyType::Object,
+        ),
         phone_types,
         None,
     );
-    let mut contacts = open(connection.clone(), "Contact", &base, true, middleware.clone(), field);
+    let mut contacts = open(
+        connection.clone(),
+        "Contact",
+        &base,
+        true,
+        middleware.clone(),
+        field,
+    );
     contacts
         .add_enriched(
-            datasources::Enrichment::new("ContactType", "ContactType", "Id", None, false),
-            as_readonly(repo(connection.clone(), "ContactType", &named, middleware.clone(), field)),
+            datasources::Enrichment::new(
+                "ContactType",
+                "ContactType",
+                "Id",
+                None,
+                datasources::EnrichmentPropertyType::Object,
+            ),
+            as_readonly(repo(
+                connection.clone(),
+                "ContactType",
+                &named,
+                middleware.clone(),
+                field,
+            )),
             None,
         )
         .add_enriched(
-            datasources::Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
-            as_readonly(repo(connection.clone(), "ContactSource", &named, middleware.clone(), field)),
+            datasources::Enrichment::new(
+                "ContactSource",
+                "ContactSource",
+                "Id",
+                None,
+                datasources::EnrichmentPropertyType::Object,
+            ),
+            as_readonly(repo(
+                connection.clone(),
+                "ContactSource",
+                &named,
+                middleware.clone(),
+                field,
+            )),
             None,
         )
         .add_enriched(
-            datasources::Enrichment::new("Addresses", "Id", "Contact", None, true),
+            datasources::Enrichment::new(
+                "Addresses",
+                "Id",
+                "Contact",
+                None,
+                datasources::EnrichmentPropertyType::List,
+            ),
             Arc::new(addresses_repo),
             None,
         )
         .add_enriched(
-            datasources::Enrichment::new("Phones", "Id", "Contact", None, true),
+            datasources::Enrichment::new(
+                "Phones",
+                "Id",
+                "Contact",
+                None,
+                datasources::EnrichmentPropertyType::List,
+            ),
             Arc::new(phones_repo),
             None,
         );

@@ -14,7 +14,7 @@ let connection = setup(&mut parents).await;
 let mut parents_repo = mapped(connection, "Parent");
 let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types_repo,
     None,
 );

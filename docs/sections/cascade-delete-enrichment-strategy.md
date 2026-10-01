@@ -1,6 +1,6 @@
 # CascadeDeleteEnrichmentStrategy
 
-Default delete. Deletes nested `many` rows first, then children, then the parent delete continues. Loads existing children by foreign key. Does not trust payload lists. Junction rows for a link are deleted and the related rows stay.
+Default delete. Deletes nested `List` rows first, then children, then the parent delete continues. Loads existing children by foreign key. Does not trust payload lists. Junction rows for a link are deleted and the related rows stay.
 
 ## Classes
 

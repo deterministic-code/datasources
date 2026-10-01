@@ -23,14 +23,14 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        let keys = keys(parents, sources, &enrichment.from);
+        let keys = keys(parents, sources, &enrichment.source_property);
         if keys.is_empty() {
             return Ok(());
         }
         let loaded = via
             .read(
                 Some(&Where::new(Operator::in_list(
-                    enrichment.by.clone(),
+                    enrichment.related_key.clone(),
                     keys.values().cloned().collect(),
                 ))),
                 None,
@@ -38,24 +38,27 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
             .await?;
         let mut index = HashMap::new();
         for related in loaded {
-            if let Some(by) = related.get(&enrichment.by) {
+            if let Some(by) = related.get(&enrichment.related_key) {
                 index.insert(key_of(by), related);
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index_i))
-            else {
+            let Some(key) = source_key(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index_i),
+            ) else {
                 continue;
             };
             let Some(related) = index.get(&key_of(&key)) else {
                 continue;
             };
             let value = enrichment
-                .select
+                .related_property
                 .as_ref()
                 .and_then(|select| related.get(select).cloned())
                 .unwrap_or_else(|| encode_row(related));
-            parent.insert(enrichment.into.clone(), value);
+            parent.insert(enrichment.destination_property.clone(), value);
         }
         Ok(())
     }
@@ -67,14 +70,14 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        let keys = keys(parents, sources, &enrichment.from);
+        let keys = keys(parents, sources, &enrichment.source_property);
         if keys.is_empty() {
             return Ok(());
         }
         let loaded = via
             .read(
                 Some(&Where::new(Operator::in_list(
-                    enrichment.by.clone(),
+                    enrichment.related_key.clone(),
                     keys.values().cloned().collect(),
                 ))),
                 None,
@@ -82,17 +85,23 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
             .await?;
         let mut index: HashMap<String, Vec<Row>> = HashMap::new();
         for row in loaded {
-            if let Some(by) = row.get(&enrichment.by) {
+            if let Some(by) = row.get(&enrichment.related_key) {
                 index.entry(key_of(by)).or_default().push(row);
             }
         }
         for (index_i, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(parent, &enrichment.from, source_at(sources, index_i))
-            else {
+            let Some(key) = source_key(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index_i),
+            ) else {
                 continue;
             };
             let related = index.get(&key_of(&key)).cloned().unwrap_or_default();
-            parent.insert(enrichment.into.clone(), encode_rows(&related));
+            parent.insert(
+                enrichment.destination_property.clone(),
+                encode_rows(&related),
+            );
         }
         Ok(())
     }

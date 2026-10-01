@@ -34,14 +34,14 @@ let other = notes
     .unwrap();
 assert!(num(&other, "Id") > 0);
 children_repo.add_enriched(
-    Enrichment::new("Notes", "Id", "ChildId", None, true),
+    Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
     notes.clone(),
     None,
 );
 let children = Arc::new(children_repo);
 let mut parents = parents;
 parents.add_enriched(
-    Enrichment::new("Children", "Id", "ParentId", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );

@@ -104,14 +104,14 @@ See [Command](#command) for middleware and `execute`.
 
 ### Enriched CRUD repository
 
-A `CRUDRepository` fills related fields after `read` once enrichments are registered. When the related repository is also a CRUD repository, nested `many` children are written on create / update / delete. A readonly repository only fills.
+A `CRUDRepository` fills related fields after `read` once enrichments are registered. When the related repository is also a CRUD repository, nested `List` children are written on create / update / delete. A readonly repository only fills.
 
 ##### C#
 
 ```csharp
 var contacts = new CRUDRepository<Contact>(connection);
 contacts.AddEnriched(new("contact_type_name", "contact_type_id", "id", "name"), types);
-contacts.AddEnriched(new("addresses", "id", "contact_id", Many: true), addresses);
+contacts.AddEnriched(new("addresses", "id", "contact_id", Type: EnrichmentPropertyType.List), addresses);
 
 var loaded = await contacts.ReadSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address { line1 = "1 Main" }] });
@@ -122,8 +122,8 @@ await contacts.Create(new Contact { first_name = "Ada", addresses = [new Address
 ```rust
 let mut contacts = CRUDRepository::from_type::<Contact>(connection)?;
 contacts
-    .add_enriched(Enrichment::new("contact_type_name", "contact_type_id", "id", Some("name".into()), false), types, None)
-    .add_enriched(Enrichment::new("addresses", "id", "contact_id", None, true), addresses, None);
+    .add_enriched(Enrichment::new("contact_type_name", "contact_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), types, None)
+    .add_enriched(Enrichment::new("addresses", "id", "contact_id", None, EnrichmentPropertyType::List), addresses, None);
 
 let loaded = contacts.read_single(Some(&Where::new(Operator::equals("id", 10))), None).await?;
 contacts.create(contact).await?;
@@ -133,8 +133,8 @@ contacts.create(contact).await?;
 
 ```typescript
 const contacts = new CRUDRepository(Contact, connection);
-contacts.addEnriched({ into: "contact_type_name", from: "contact_type_id", by: "id", select: "name" }, types);
-contacts.addEnriched({ into: "addresses", from: "id", by: "contact_id", many: true }, addresses);
+contacts.addEnriched({ destinationProperty: "contact_type_name", sourceProperty: "contact_type_id", relatedKey: "id", relatedProperty: "name" }, types);
+contacts.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contact_id", type: "list" }, addresses);
 
 const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", 10)));
 await contacts.create({ first_name: "Ada", addresses: [{ line1: "1 Main" }] });
@@ -178,7 +178,7 @@ const flat = mapper.map(nested);
 const back = mapper.reverseMap(flat);
 ```
 
-See [Mappers](#mappers) for `TransformMapper`, `FlatToNestedMapper`, and [ReadonlyRepositoryOptions.RowsMapper](#rowsmapper).
+See [Mappers](#mappers) for `TransformMapper`, `FlatToNestedMapper`, and [DictionaryMapper](#dictionary-mapper).
 
 ### Type Converters
 
@@ -1191,7 +1191,7 @@ let ds = default().expect("default");
 let command = ds.create_command(None);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L32)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L41)
 
 ```typescript
 const ds = Datasource.default;
@@ -4868,7 +4868,7 @@ await Execute(connection, """
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    ColumnMappings = Snake,
+    PropertyMappings = Snake,
 });
 
 var byId = await repo.ReadSingle(new Where("Id", eq, 1));
@@ -4938,14 +4938,14 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 Create omits `id`, then writes the inserted id onto the user. Update and delete use that id.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L479-L511)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L467-L499)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
-    ColumnMappings = casing,
+    PropertyMappings = casing,
     Ids = ["Id"],
 });
 var created = await usersRepo.Create(new User { Username = "ada", IsEnabled = true });
@@ -4960,7 +4960,7 @@ var removed = await usersRepo.Delete(created);
 var gone = await usersRepo.ReadSingleById(created.Id);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L696-L748)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L685-L737)
 
 ```rust
 let built = datasource();
@@ -5036,7 +5036,7 @@ CREATE TABLE User (id int, is_enabled bool NOT NULL, username string NOT NULL, C
 
 `UsersView` maps onto `user`. Create writes the user and its roles. Read fills `UserType` and `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L613-L686)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L601-L674)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -5046,7 +5046,7 @@ var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOpti
     Ids = ["Key"],
     ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -5060,20 +5060,20 @@ var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryO
 {
     Ids = ["Id"],
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
 {
     Ids = [],
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
-usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
+usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L750-L867)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L856)
 
 ```rust
 let built = datasource();
@@ -5121,7 +5121,7 @@ users_repo.add_enriched(
     None,
 );
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     user_roles_repo.clone(),
     None,
 );
@@ -5159,8 +5159,8 @@ const userRolesRepo = new CRUDRepository(connection, {
   entityMapper: casing,
   propertyMappings: casing,
 });
-usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
-usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
 const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
 ```
 
@@ -5191,24 +5191,38 @@ var parents = await parentsRepo.Read().ToListAsync();
 var children = await childrenRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1897-L1939)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L779-L819)
 
 ```rust
-let command = Arc::new(MockCommand::new());
-command.reader_rows.lock().unwrap().push(record(&[
-    ("id", Value::Int(1)),
-    ("username", Value::from("bobby")),
-    ("email", Value::from("bob@asdf.com")),
-    ("contact_name1", Value::from("bob")),
-    ("contact_name2", Value::from("roberta")),
-]));
-let connection = MockConnection::with_command_provider(command.clone(), "memory");
+let connection = setup(&mut []).await;
 let mut options = CRUDRepositoryOptions::default();
-options.entity = "users".into();
-options.row_converter = Some(RowTypeConverter::of::<UserRow>());
-options.rows_mapper = Box::new(user_contacts_mapper());
-let repo = CRUDRepository::new(connection, options).unwrap();
-let mut user = repo.read_single(None, None).await.unwrap().unwrap();
+options.entity = "Parent".into();
+let mut parents = BulkCRUDRepository::new(connection.clone(), options).unwrap();
+let mut child_options = CRUDRepositoryOptions::default();
+child_options.entity = "Child".into();
+let children = Arc::new(BulkCRUDRepository::new(connection, child_options).unwrap());
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, datasources::EnrichmentPropertyType::List),
+    children.clone(),
+    None,
+);
+let response = parents
+    .create_bulk(&mut [
+        record(&[(
+            "children",
+            encode_rows(&[record(&[("label", Value::from("a"))])]),
+        )]),
+        record(&[(
+            "children",
+            encode_rows(&[
+                record(&[("label", Value::from("b"))]),
+                record(&[("label", Value::from("c"))]),
+            ]),
+        )]),
+    ])
+    .await
+    .unwrap();
+let stored_parents = parents.read(None, None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L50)
@@ -5408,8 +5422,6 @@ type ReadonlyRepositoryOptions<T = Cells>
 | entity | Table or entity name. |
 | entityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
 | propertyMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
-| select | Rewrites the finished select. Omitted leaves the statement unchanged. |
-| rowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
 | rowConverter | `Cells` to `Cells`. Omitted leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
 | objectConverter | `Cells` to `T`, after `rowConverter`. Omitted assigns the row onto `T`. |
 | type | Item constructor. Supplies the default entity name and column list. |
@@ -5448,17 +5460,17 @@ interface IRepositoryTreeNode
 
 | Name | Description |
 | --- | --- |
-| [include(via, into, from, by, select?, many?)](#typescript-irepositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
+| [include(via, destinationProperty, sourceProperty, relatedKey, relatedProperty?, type?)](#typescript-irepositorytreenode-include-via-destinationproperty-sourceproperty-relatedkey-relatedproperty-type) | Adds a child node. |
 | [enrichFrom(parents)](#typescript-irepositorytreenode-enrichfrom-parents) | Fills `parents` from this node. |
 
-###### include(via, into, from, by, select?, many?) {#typescript-irepositorytreenode-include-via-into-from-by-select-many}
+###### include(via, destinationProperty, sourceProperty, relatedKey, relatedProperty?, type?) {#typescript-irepositorytreenode-include-via-destinationproperty-sourceproperty-relatedkey-relatedproperty-type}
 
 Adds a child node.
 
 **Definition**
 
 ```typescript
-include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: string, from: string, by: string, select?: string, many?: boolean): IRepositoryTreeNode
+include<TRelated extends object>(via: IReadonlyRepository<TRelated>, destinationProperty: string, sourceProperty: string, relatedKey: string, relatedProperty?: string, type?: EnrichmentPropertyType): IRepositoryTreeNode
 ```
 
 **Parameters**
@@ -5466,11 +5478,11 @@ include<TRelated extends object>(via: IReadonlyRepository<TRelated>, into: strin
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#readonly-repository) |
-| `into` | destination property |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related property to copy |
-| `many` | collect a list |
+| `destinationProperty` | parent property that gets filled |
+| `sourceProperty` | parent key |
+| `relatedKey` | key on the related row |
+| `relatedProperty` | optional related property to copy |
+| `type` | [EnrichmentPropertyType](#typescript-enrichmentpropertytype) |
 
 **Returns**
 
@@ -5641,9 +5653,7 @@ public class ReadonlyRepositoryOptions<T> where T : new()
 | --- | --- |
 | Entity | Table or entity name. When omitted, `typeof(T).Name` is used. |
 | EntityMapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
-| ColumnMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
-| Select | Rewrites the finished select. Omitted leaves the statement unchanged. |
-| RowsMapper | Maps each converted item. Default is [IdentityMapper](#identity-mapper). |
+| PropertyMappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
 | RowConverter | `Row` to `Row`. Omitted leaves each cell unchanged. |
 | ObjectConverter | `Row` to `T`, after `RowConverter`. Omitted assigns public properties. A handwritten converter assigns each column and does not reflect. |
 | RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`. The driver applies its converters when it binds a parameter. A field converter on the object converter reverse-converts that property in the repository. |
@@ -5798,8 +5808,6 @@ pub struct ReadonlyRepositoryOptions
 | entity | Table or entity name. Default `"items"`. |
 | entity_mapper | Maps the table name when the repository is built. Default is [IdentityMapper](#identity-mapper). |
 | property_mappings | Maps property names to stored columns. Default is [IdentityMapper](#identity-mapper). The repository maps where identifiers and write parameters. Read reverse-maps each result key before the row converter. |
-| select | Rewrites finished select SQL. `None` leaves the statement unchanged. |
-| rows_mapper | Maps each converted row. Default is [IdentityMapper](#identity-mapper). |
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
 | object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. A handwritten converter assigns each column. |
 | row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
@@ -5835,16 +5843,16 @@ pub struct RepositoryTreeNode
 
 | Name | Description |
 | --- | --- |
-| [include(via, into, from, by, select, many)](#rust-repositorytreenode-include-via-into-from-by-select-many) | Adds a child node. |
+| [include(via, destination_property, source_property, related_key, related_property, type)](#rust-repositorytreenode-include-via-destination_property-source_property-related_key-related_property-type) | Adds a child node. |
 
-###### include(via, into, from, by, select, many) {#rust-repositorytreenode-include-via-into-from-by-select-many}
+###### include(via, destination_property, source_property, related_key, related_property, type) {#rust-repositorytreenode-include-via-destination_property-source_property-related_key-related_property-type}
 
 Adds a child node.
 
 **Definition**
 
 ```rust
-pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> &mut Self
+pub fn include(&mut self, via: impl EnrichmentVia, destination_property: impl Into<String>, source_property: impl Into<String>, related_key: impl Into<String>, related_property: Option<String>, r#type: EnrichmentPropertyType) -> &mut Self
 ```
 
 **Parameters**
@@ -5852,11 +5860,11 @@ pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from
 | Name | Description |
 | --- | --- |
 | `via` | related [IReadonlyRepository](#rust-ireadonlyrepository) |
-| `into` | destination field |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related field to copy |
-| `many` | collect a list |
+| `destination_property` | parent field that gets filled |
+| `source_property` | parent key |
+| `related_key` | key on the related row |
+| `related_property` | optional related field to copy |
+| `type` | [EnrichmentPropertyType](#rust-enrichmentpropertytype) |
 
 **Returns**
 
@@ -5864,13 +5872,13 @@ pub fn include(&mut self, via: impl EnrichmentVia, into: impl Into<String>, from
 
 ### Remarks
 
-`AddEnriched` / `addEnriched` / `add_enriched` on [IEnriched](#ienriched) registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `many` list is walked. A `select` scalar is not. Depth follows each related repository's own enrichments. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
+`AddEnriched` / `addEnriched` / `add_enriched` on [IEnriched](#ienriched) registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. Writes, including `List` children and associations, are [CRUDRepository](#crud-repository).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
 ```
 childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
-parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
 ```
 
 Repository read is convert, then map. See [Type Converters](#type-converters) and [Mappers](#mappers).
@@ -5893,7 +5901,7 @@ await Execute(connection, """
 var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    ColumnMappings = Snake,
+    PropertyMappings = Snake,
 });
 
 var byId = await repo.ReadSingle(new Where("Id", eq, 1));
@@ -6059,7 +6067,7 @@ await Execute(connection, """
 var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
-    ColumnMappings = Snake,
+    PropertyMappings = Snake,
     ObjectConverter = new UserConverter()
 });
 
@@ -6207,7 +6215,7 @@ var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -6219,7 +6227,7 @@ var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<Users
 var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
 {
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 usersRepo.AddEnriched(new("UserType", "UserType", "Id", "Name"), typesRepo);
 var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
@@ -6341,7 +6349,7 @@ const typesRepo = ds.createReadonlyRepository(UserType, connection, {
   entityMapper: casing,
   propertyMappings: casing,
 });
-usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
 const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
 ```
 
@@ -6379,7 +6387,7 @@ await Execute(connection, $"""
 var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -6618,7 +6626,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1438-L1454)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1439-L1455)
 
 ```rust
         &row
@@ -6635,7 +6643,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L102-L109)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L99-L106)
 
 ```typescript
 command.reader = new MockReader([{ id: 1, name: "a" }]);
@@ -6677,7 +6685,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1475-L1481)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1476-L1482)
 
 ```rust
 
@@ -6697,7 +6705,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L63-L73)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L60-L70)
 
 ```typescript
 const { repo, command } = create();
@@ -6725,39 +6733,53 @@ for await (const row of repo.read()) rows.push(row);
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
 
 ```csharp
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L123-L129)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L151-L157)
 
 ```rust
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+let mut parents_repo = mapped(connection, "Parent");
+let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types_repo,
     None,
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
 
 ```typescript
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+const items = await collectAsync(parentsRepo.read());
 ```
 
 #### Fill roles from one join
 
 The repository type is `UsersView`. The select reads `User`, joined to `UserType`, `UserRole`, and `Role`. Nested enrichment groups each user's `Roles`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L326-L411)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L317-L399)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -6772,7 +6794,7 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
         ["UserRole"] = "user_roles",
         ["Role"] = "roles",
     }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -6785,33 +6807,30 @@ var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyReposi
         ["Name"] = "roles.name",
         ["Id"] = "id",
     }),
-    Select = new TransformMapper<ISelectStatement, ISelectStatement>(
-        query => new SelectStatement(new()
-        {
-            Table = "User",
-            Fields =
-            [
-                "User.Key",
-                "User.Login",
-                "User.Active",
-                "User.Opened",
-                "User.UserType",
-                "UserRole.UserId",
-                "UserRole.RoleId",
-                "Role.Name",
-            ],
-            Where = query.Where,
-            Joins =
-            [
-                new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
-                new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
-                new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
-            ],
-        }),
-        query => query),
+});
+var joined = new SelectStatement(new()
+{
+    Table = "User",
+    Fields =
+    [
+        "User.Key",
+        "User.Login",
+        "User.Active",
+        "User.Opened",
+        "User.UserType",
+        "UserRole.UserId",
+        "UserRole.RoleId",
+        "Role.Name",
+    ],
+    Joins =
+    [
+        new Join(JoinKind.Left, "UserType", "UserType.Id", "User.UserTypeId"),
+        new Join(JoinKind.Left, "UserRole", "UserRole.UserId", "User.Key"),
+        new Join(JoinKind.Left, "Role", "Role.Id", "UserRole.RoleId"),
+    ],
 });
 usersRepo.AddEnriched(
-    new("Roles", "Key", "UserId", Many: true),
+    new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List),
     usersRepo,
     new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
     {
@@ -6836,7 +6855,7 @@ usersRepo.AddEnriched(
         }
     }));
 var items = new List<UsersView>();
-await foreach (var item in usersRepo.Read())
+await foreach (var item in usersRepo.Read(joined))
     items.Add(item);
 var ada = Assert.Single(items, item => item.Login == "ada");
 var grace = Assert.Single(items, item => item.Login == "grace");
@@ -6879,7 +6898,7 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L541-L599)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L530-L588)
 
 ```rust
 options.entity = "User".into();
@@ -6901,10 +6920,9 @@ options.property_mappings = Box::new(DictionaryMapper::new([
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
 ]));
-options.select = Some(Arc::new(TransformMapper::new(joined_users, |query| query)));
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     Arc::new(ReadonlyRepository::memory(vec![])),
     Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
         TypeMap::new(
@@ -6930,7 +6948,8 @@ users_repo.add_enriched(
         ),
     ))),
 );
-let items = users_repo.read(None, None).await.unwrap();
+let joined = joined_users();
+let items = users_repo.read(Some(&joined), None).await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -6974,7 +6993,7 @@ let lin = view("lin");
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L118-L182)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/users-view-roles.repository.integration.test.ts#L107-L165)
 
 ```typescript
 const usersRepo = new ReadonlyRepository(connection, {
@@ -6998,32 +7017,27 @@ const usersRepo = new ReadonlyRepository(connection, {
     ["Name", "roles.name"],
     ["Id", "id"],
   ]),
-  select: new TransformMapper(
-    (query) =>
-      new SelectStatement({
-        table: "User",
-        fields: [
-          "User.Key",
-          "User.Login",
-          "User.Active",
-          "User.Opened",
-          "User.UserType",
-          "UserRole.UserId",
-          "UserRole.RoleId",
-          "Role.Name",
-        ],
-        where: query.where,
-        joins: [
-          Join.left("UserType", "UserType.Id", "User.UserTypeId"),
-          Join.left("UserRole", "UserRole.UserId", "User.Key"),
-          Join.left("Role", "Role.Id", "UserRole.RoleId"),
-        ],
-      }),
-    (query) => query,
-  ),
+});
+const joined = new SelectStatement({
+  table: "User",
+  fields: [
+    "User.Key",
+    "User.Login",
+    "User.Active",
+    "User.Opened",
+    "User.UserType",
+    "UserRole.UserId",
+    "UserRole.RoleId",
+    "Role.Name",
+  ],
+  joins: [
+    Join.left("UserType", "UserType.Id", "User.UserTypeId"),
+    Join.left("UserRole", "UserRole.UserId", "User.Key"),
+    Join.left("Role", "Role.Id", "UserRole.RoleId"),
+  ],
 });
 usersRepo.addEnriched(
-  { into: "Roles", from: "Key", by: "UserId", many: true },
+  { destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" },
   usersRepo,
   new NestedToObjectEnrichmentStrategy<UsersView>({
     key: "Key",
@@ -7041,7 +7055,6 @@ usersRepo.addEnriched(
   }),
 );
 const items: UsersView[] = [];
-for await (const item of usersRepo.read()) items.push(item);
 ```
 
 **Users with roles**
@@ -7226,7 +7239,7 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
 | [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
 | [readSingleById(id)](#typescript-crudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. |
-| [addEnriched(enrichment, via, strategy?)](#typescript-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
+| [addEnriched(enrichment, via, strategy?)](#typescript-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent. |
 | [addLinked(enrichment, via, link, strategy?)](#typescript-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
 
 ###### CRUDRepository(type, connection) {#typescript-crudrepository-crudrepository-type-connection}
@@ -7404,7 +7417,7 @@ readSingleById(id: Scalar | Cells): Promise<T | undefined>
 
 ###### addEnriched(enrichment, via, strategy?) {#typescript-crudrepository-addenriched-enrichment-via-strategy}
 
-Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
+Registers the same read fill as [ReadonlyRepository](#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent.
 
 **Definition**
 
@@ -7417,7 +7430,7 @@ addEnriched<TRelated extends object>(enrichment: Enrichment, via: IReadonlyRepos
 | Name | Description |
 | --- | --- |
 | `enrichment` | [Enrichment](#enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `via` | related repository. A CRUD repository is kept so `List` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
 **Returns**
@@ -7458,10 +7471,7 @@ type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
 | Name | Description |
 | --- | --- |
 | ids | Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field and no `id`. |
-| insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
-| update | Rewrites the finished update. Omitted leaves the statement unchanged. |
-| delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
-| return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
+| write | Write enrichment strategy. Omitted uses the default strategy. |
 
 ##### BuiltRepository {#typescript-builtrepository}
 
@@ -7476,7 +7486,8 @@ type BuiltRepository<T = Cells>
 | connection | Open [IConnection](#connection). |
 | rowConverter | `Cells` to `Cells`. Omitted leaves each cell unchanged. |
 | objectConverter | `Cells` to `T`, after `rowConverter`. Default is [MetaDataRowTypeConverter](#metadata-row-type-converter). |
-| rowsMapper | Read-row [Mapper](#mappers). |
+| propertyMappings | Property name [Mapper](#mappers). |
+| entityMapper | Entity name [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 | type | Item constructor. |
@@ -7632,7 +7643,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 | [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
 | [ReadSingleById(id)](#csharp-crudrepository-readsinglebyid-id) | Returns the row for the single configured id column. |
 | [ReadSingleById(ids)](#csharp-crudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. |
-| [AddEnriched(enrichment, via, strategy)](#csharp-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
+| [AddEnriched(enrichment, via, strategy)](#csharp-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent. |
 | [AddLinked(enrichment, via, link, strategy)](#csharp-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
 
 ###### CRUDRepository(connection) {#csharp-crudrepository-crudrepository-connection}
@@ -7829,7 +7840,7 @@ public Task<T?> ReadSingleById(Row ids)
 
 ###### AddEnriched(enrichment, via, strategy) {#csharp-crudrepository-addenriched-enrichment-via-strategy}
 
-Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
+Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent.
 
 **Definition**
 
@@ -7842,7 +7853,7 @@ public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyReposi
 | Name | Description |
 | --- | --- |
 | `enrichment` | [Enrichment](#enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `via` | related repository. A CRUD repository is kept so `List` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
 **Returns**
@@ -7883,10 +7894,7 @@ public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> wher
 | Name | Description |
 | --- | --- |
 | Ids | Id column names. Default `["id"]`. |
-| Insert | Rewrites the finished insert. Omitted leaves the statement unchanged. |
-| Update | Rewrites the finished update. Omitted leaves the statement unchanged. |
-| Delete | Rewrites the finished delete. Omitted leaves the statement unchanged. |
-| Return | Rewrites a finished [ReturnStatement](#return-statement). Omitted leaves it unchanged. |
+| Write | Write enrichment strategy. Omitted uses the default strategy. |
 
 ##### BuiltRepository {#csharp-builtrepository}
 
@@ -7900,7 +7908,8 @@ public sealed record BuiltRepository<T> where T : new()
 | --- | --- |
 | Connection | Open [IConnection](#connection). |
 | RowConverter | Row [TypeConverter](#type-converters). |
-| RowsMapper | Read-row [Mapper](#mappers). |
+| PropertyMappings | Property name [Mapper](#mappers). |
+| EntityMapper | Entity name [Mapper](#mappers). |
 | Statements | SQL fragments. |
 | Ids | Id column names. |
 
@@ -8021,7 +8030,7 @@ pub struct CRUDRepository
 
 | Name | Description |
 | --- | --- |
-| [add_enriched(enrichment, via, strategy)](#rust-crudrepository-add_enriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent. |
+| [add_enriched(enrichment, via, strategy)](#rust-crudrepository-add_enriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent. |
 | [add_linked(enrichment, via, link, strategy)](#rust-crudrepository-add_linked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
 | [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
 | [read_single_by_id(id)](#rust-crudrepository-read_single_by_id-id) | Returns the row for one id column, or for a composite key. |
@@ -8089,7 +8098,7 @@ pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
 
 ###### add_enriched(enrichment, via, strategy) {#rust-crudrepository-add_enriched-enrichment-via-strategy}
 
-Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `many` children are written with the parent.
+Registers the same read fill as [ReadonlyRepository](#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent.
 
 **Definition**
 
@@ -8102,7 +8111,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 | Name | Description |
 | --- | --- |
 | `enrichment` | [Enrichment](#enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `via` | related repository. A CRUD repository is kept so `List` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
 **Returns**
@@ -8179,10 +8188,7 @@ pub struct CRUDRepositoryOptions
 | Name | Description |
 | --- | --- |
 | ids | Id column names. Default `["id"]`. |
-| insert | Rewrites finished insert SQL. `None` leaves the statement unchanged. |
-| update | Rewrites finished update SQL. `None` leaves the statement unchanged. |
-| delete | Rewrites finished delete SQL. `None` leaves the statement unchanged. |
-| return_ | Rewrites finished return SQL. `None` leaves it unchanged. |
+| write | Write enrichment strategy. `None` uses the default strategy. |
 | read | The embedded [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
 
 ##### BuiltRepository {#rust-builtrepository}
@@ -8198,23 +8204,24 @@ pub struct BuiltRepository
 | connection | [Connection](#connection). |
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. |
 | object_converter | `Row` to `Row`, after `row_converter`. Default is [MetaDataRowTypeConverter](#metadata-row-type-converter). A handwritten converter assigns each column. |
-| rows_mapper | Read-row [Mapper](#mappers). |
+| property_mappings | Property name [Mapper](#mappers). |
+| entity_mapper | Entity name [Mapper](#mappers). |
 | statements | SQL fragments. |
 | ids | Id column names. |
 
 ### Remarks
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, maps it, and copies the id onto the entity. The driver statement factory formats that statement. A stored-procedure create reads that id from the `Return` mapper instead. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
-[AddEnriched](#ienriched) registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `many` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
+[AddEnriched](#ienriched) registers the same read fill as [ReadonlyRepository](#readonly-repository). Lookups are filled on read and are not written. When `via` is a CRUD repository, `List` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
 [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
 
-- **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `by` from the parent `from`, then create children (and nested many).
-- **Update** — [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) is the default. Write the parent, then replace-sync each many list (delete missing, update matches by the configured id, create the rest). [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
-- **Delete** — [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default. Delete nested many rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
+- **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `RelatedKey` from the parent `SourceProperty`, then create children (and nested lists).
+- **Update** — [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) is the default. Write the parent, then replace-sync each list (delete missing, update matches by the configured id, create the rest). [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes every existing child, then inserts the payload as new rows. Recreated children get new ids. Links are replaced the same way. Related rows stay.
+- **Delete** — [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default. Delete nested list rows first, then children, then the parent. Loads existing children by FK; does not trust payload lists.
 
 See [Bulk repository](#bulk-repository) for list writes.
 
@@ -8224,14 +8231,14 @@ See [Bulk repository](#bulk-repository) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L479-L511)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L467-L499)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var usersRepo = new CRUDRepository<User>(connection, new CRUDRepositoryOptions<User>
 {
-    ColumnMappings = casing,
+    PropertyMappings = casing,
     Ids = ["Id"],
 });
 var created = await usersRepo.Create(new User { Username = "ada", IsEnabled = true });
@@ -8280,7 +8287,7 @@ ada-v2
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L696-L748)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L685-L737)
 
 ```rust
 let built = datasource();
@@ -8490,19 +8497,19 @@ roles and groups remain
 let (mut users, seeded) = open(None).await;
 users
     .add_enriched(
-        Enrichment::new("user_type", "user_type_id", "id", None, false),
+        Enrichment::new("user_type", "user_type_id", "id", None, datasources::EnrichmentPropertyType::Object),
         seeded.user_types.clone(),
         None,
     )
     .add_linked(
-        Enrichment::new("roles", "id", "id", None, false)
+        Enrichment::new("roles", "id", "id", None, datasources::EnrichmentPropertyType::Object)
             .linked(Association::new("user_id", "role_id")),
         seeded.roles.clone(),
         seeded.user_roles.clone(),
         None,
     )
     .add_linked(
-        Enrichment::new("groups", "id", "id", None, false)
+        Enrichment::new("groups", "id", "id", None, datasources::EnrichmentPropertyType::Object)
             .linked(Association::new("user_id", "group_id")),
         seeded.groups.clone(),
         seeded.user_groups.clone(),
@@ -8569,14 +8576,14 @@ roles and groups remain
 ```typescript
 const seeded = await graph();
 const usersRepo = seeded.usersRepo;
-usersRepo.addEnriched({ into: "user_type", from: "user_type_id", by: "id" }, seeded.userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "user_type", sourceProperty: "user_type_id", relatedKey: "id" }, seeded.userTypesRepo);
 usersRepo.addLinked(
-  { into: "roles", from: "id", by: "id", association: { parent: "user_id", related: "role_id" } },
+  { destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "role_id" } },
   seeded.rolesRepo,
   seeded.userRolesRepo,
 );
 usersRepo.addLinked(
-  { into: "groups", from: "id", by: "id", association: { parent: "user_id", related: "group_id" } },
+  { destinationProperty: "groups", sourceProperty: "id", relatedKey: "id", association: { parent: "user_id", related: "group_id" } },
   seeded.groupsRepo,
   seeded.userGroupsRepo,
 );
@@ -8644,7 +8651,7 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L537-L570)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L525-L558)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -8657,7 +8664,7 @@ var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var accountsRepo = new CRUDRepository<Account>(connection, new CRUDRepositoryOptions<Account>
 {
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
     Ids = ["TenantId", "Id"],
 });
 var ada = await accountsRepo.ReadSingleById(new Row { ["TenantId"] = 1, ["Id"] = 1 });
@@ -8681,7 +8688,7 @@ ada-v2
 grace
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L881-L927)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L870-L916)
 
 ```rust
 let built = datasource();
@@ -8795,51 +8802,51 @@ foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
 var contactsRepo = new CRUDRepository<Contact>(conn, new CRUDRepositoryOptions<Contact>
 {
     EntityMapper = ContactColumns.ContactEntity,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 var typesRepo = new CRUDRepository<ContactType>(conn, new CRUDRepositoryOptions<ContactType>
 {
     EntityMapper = ContactColumns.Snake,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 var sourcesRepo = new CRUDRepository<ContactSource>(conn, new CRUDRepositoryOptions<ContactSource>
 {
     EntityMapper = ContactColumns.Snake,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 var addressTypesRepo = new CRUDRepository<AddressType>(conn, new CRUDRepositoryOptions<AddressType>
 {
     EntityMapper = ContactColumns.Snake,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 var phoneTypesRepo = new CRUDRepository<PhoneType>(conn, new CRUDRepositoryOptions<PhoneType>
 {
     EntityMapper = ContactColumns.Snake,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 var addressesRepo = new CRUDRepository<Address>(conn, new CRUDRepositoryOptions<Address>
 {
     EntityMapper = ContactColumns.Snake,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 var phonesRepo = new CRUDRepository<Phone>(conn, new CRUDRepositoryOptions<Phone>
 {
     EntityMapper = ContactColumns.Snake,
-    ColumnMappings = ContactColumns.Columns,
+    PropertyMappings = ContactColumns.Columns,
     Ids = ["Id"],
 });
 addressesRepo.AddEnriched(new("AddressType", "AddressType", "Id"), addressTypesRepo);
 phonesRepo.AddEnriched(new("PhoneType", "PhoneType", "Id"), phoneTypesRepo);
 contactsRepo.AddEnriched(new("ContactType", "ContactType", "Id"), typesRepo);
 contactsRepo.AddEnriched(new("ContactSource", "ContactSource", "Id"), sourcesRepo);
-contactsRepo.AddEnriched(new("Addresses", "Id", "Contact", Many: true), addressesRepo);
-contactsRepo.AddEnriched(new("Phones", "Id", "Contact", Many: true), phonesRepo);
+contactsRepo.AddEnriched(new("Addresses", "Id", "Contact", Type: EnrichmentPropertyType.List), addressesRepo);
+contactsRepo.AddEnriched(new("Phones", "Id", "Contact", Type: EnrichmentPropertyType.List), phonesRepo);
 
 var created = await contactsRepo.Create(ExtraContact.New(await ContactLookupIds.Resolve(conn)));
 var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));
@@ -8880,35 +8887,35 @@ let base = [
 ];
 let mut addresses_repo = contact_repo(conn.clone(), "Address", &address, false, field);
 addresses_repo.add_enriched(
-    datasources::Enrichment::new("AddressType", "AddressType", "Id", None, false),
+    datasources::Enrichment::new("AddressType", "AddressType", "Id", None, datasources::EnrichmentPropertyType::Object),
     as_readonly(Arc::new(contact_repo(conn.clone(), "AddressType", &named, false, field))),
     None,
 );
 let mut phones_repo = contact_repo(conn.clone(), "Phone", &phone, false, field);
 phones_repo.add_enriched(
-    datasources::Enrichment::new("PhoneType", "PhoneType", "Id", None, false),
+    datasources::Enrichment::new("PhoneType", "PhoneType", "Id", None, datasources::EnrichmentPropertyType::Object),
     as_readonly(Arc::new(contact_repo(conn.clone(), "PhoneType", &named, false, field))),
     None,
 );
 let mut contacts_repo = contact_repo(conn.clone(), "Contact", &base, true, field);
 contacts_repo
     .add_enriched(
-        datasources::Enrichment::new("ContactType", "ContactType", "Id", None, false),
+        datasources::Enrichment::new("ContactType", "ContactType", "Id", None, datasources::EnrichmentPropertyType::Object),
         as_readonly(Arc::new(contact_repo(conn.clone(), "ContactType", &named, false, field))),
         None,
     )
     .add_enriched(
-        datasources::Enrichment::new("ContactSource", "ContactSource", "Id", None, false),
+        datasources::Enrichment::new("ContactSource", "ContactSource", "Id", None, datasources::EnrichmentPropertyType::Object),
         as_readonly(Arc::new(contact_repo(conn.clone(), "ContactSource", &named, false, field))),
         None,
     )
     .add_enriched(
-        datasources::Enrichment::new("Addresses", "Id", "Contact", None, true),
+        datasources::Enrichment::new("Addresses", "Id", "Contact", None, datasources::EnrichmentPropertyType::List),
         Arc::new(addresses_repo),
         None,
     )
     .add_enriched(
-        datasources::Enrichment::new("Phones", "Id", "Contact", None, true),
+        datasources::Enrichment::new("Phones", "Id", "Contact", None, datasources::EnrichmentPropertyType::List),
         Arc::new(phones_repo),
         None,
     );
@@ -8999,12 +9006,12 @@ const addressTypesRepo = new CRUDRepository(connection, { type: AddressType, ent
 const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
 const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
 const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
-addressesRepo.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypesRepo);
-phonesRepo.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypesRepo);
-contactsRepo.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, typesRepo);
-contactsRepo.addEnriched({ into: "ContactSource", from: "ContactSource", by: "Id" }, sourcesRepo);
-contactsRepo.addEnriched({ into: "Addresses", from: "Id", by: "Contact", many: true }, addressesRepo);
-contactsRepo.addEnriched({ into: "Phones", from: "Id", by: "Contact", many: true }, phonesRepo);
+addressesRepo.addEnriched({ destinationProperty: "AddressType", sourceProperty: "AddressType", relatedKey: "Id" }, addressTypesRepo);
+phonesRepo.addEnriched({ destinationProperty: "PhoneType", sourceProperty: "PhoneType", relatedKey: "Id" }, phoneTypesRepo);
+contactsRepo.addEnriched({ destinationProperty: "ContactType", sourceProperty: "ContactType", relatedKey: "Id" }, typesRepo);
+contactsRepo.addEnriched({ destinationProperty: "ContactSource", sourceProperty: "ContactSource", relatedKey: "Id" }, sourcesRepo);
+contactsRepo.addEnriched({ destinationProperty: "Addresses", sourceProperty: "Id", relatedKey: "Contact", type: "list" }, addressesRepo);
+contactsRepo.addEnriched({ destinationProperty: "Phones", sourceProperty: "Id", relatedKey: "Contact", type: "list" }, phonesRepo);
 
 const created = await contactsRepo.create(extraContact(await contactLookupIds(connection)));
 const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("Id", created.Id)));
@@ -9041,7 +9048,7 @@ CREATE TABLE contact_change_log (id int, uuid uuid NOT NULL, created datetime NO
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L613-L686)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L601-L674)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -9051,7 +9058,7 @@ var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOpti
     Ids = ["Key"],
     ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -9065,16 +9072,16 @@ var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryO
 {
     Ids = ["Id"],
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
 {
     Ids = [],
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
-usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
+usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 ```
 
@@ -9120,7 +9127,7 @@ var admin = await userTypesRepo.Create(new UserType { Name = "admin" });
 no row
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L750-L867)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L739-L856)
 
 ```rust
 let built = datasource();
@@ -9168,7 +9175,7 @@ users_repo.add_enriched(
     None,
 );
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     user_roles_repo.clone(),
     None,
 );
@@ -9248,8 +9255,8 @@ const userRolesRepo = new CRUDRepository(connection, {
   entityMapper: casing,
   propertyMappings: casing,
 });
-usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
-usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
 const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
 ```
 
@@ -9327,9 +9334,9 @@ class BulkCRUDRepository<T extends object> extends CRUDRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [createBulk(items)](#typescript-bulkcrudrepository-createbulk-items) | Creates each item, including nested `many` children. |
-| [updateBulk(items, byWhere?)](#typescript-bulkcrudrepository-updatebulk-items-bywhere) | Updates each item, then replace-syncs nested `many` lists. |
-| [deleteBulk(items, byWhere?)](#typescript-bulkcrudrepository-deletebulk-items-bywhere) | Deletes nested `many` rows for each item, then the parents. |
+| [createBulk(items)](#typescript-bulkcrudrepository-createbulk-items) | Creates each item, including nested `List` children. |
+| [updateBulk(items, byWhere?)](#typescript-bulkcrudrepository-updatebulk-items-bywhere) | Updates each item, then replace-syncs nested `List` lists. |
+| [deleteBulk(items, byWhere?)](#typescript-bulkcrudrepository-deletebulk-items-bywhere) | Deletes nested `List` rows for each item, then the parents. |
 
 ###### BulkCRUDRepository(inner) {#typescript-bulkcrudrepository-bulkcrudrepository-inner}
 
@@ -9349,7 +9356,7 @@ constructor(inner: ICRUDRepository<T>)
 
 ###### createBulk(items) {#typescript-bulkcrudrepository-createbulk-items}
 
-Creates each item, including nested `many` children.
+Creates each item, including nested `List` children.
 
 **Definition**
 
@@ -9369,7 +9376,7 @@ createBulk(items: T[]): Promise<Response>
 
 ###### updateBulk(items, byWhere?) {#typescript-bulkcrudrepository-updatebulk-items-bywhere}
 
-Updates each item, then replace-syncs nested `many` lists.
+Updates each item, then replace-syncs nested `List` lists.
 
 **Definition**
 
@@ -9390,7 +9397,7 @@ updateBulk(items: T[], byWhere?: IWhere): Promise<Response>
 
 ###### deleteBulk(items, byWhere?) {#typescript-bulkcrudrepository-deletebulk-items-bywhere}
 
-Deletes nested `many` rows for each item, then the parents.
+Deletes nested `List` rows for each item, then the parents.
 
 **Definition**
 
@@ -9427,9 +9434,9 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [Create(items)](#csharp-bulkcrudrepository-create-items) | Creates each item, including nested `many` children. |
-| [Update(items, byWhere)](#csharp-bulkcrudrepository-update-items-bywhere) | Updates each item, then replace-syncs nested `many` lists. |
-| [Delete(items, byWhere)](#csharp-bulkcrudrepository-delete-items-bywhere) | Deletes nested `many` rows for each item, then the parents. |
+| [Create(items)](#csharp-bulkcrudrepository-create-items) | Creates each item, including nested `List` children. |
+| [Update(items, byWhere)](#csharp-bulkcrudrepository-update-items-bywhere) | Updates each item, then replace-syncs nested `List` lists. |
+| [Delete(items, byWhere)](#csharp-bulkcrudrepository-delete-items-bywhere) | Deletes nested `List` rows for each item, then the parents. |
 | [BulkCreate(items)](#csharp-bulkcrudrepository-bulkcreate-items) | Alias of [Create](#csharp-bulkcrudrepository-create-items). |
 | [BulkUpdate(items, byWhere)](#csharp-bulkcrudrepository-bulkupdate-items-bywhere) | Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere). |
 | [BulkDelete(items, byWhere)](#csharp-bulkcrudrepository-bulkdelete-items-bywhere) | Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere). |
@@ -9452,7 +9459,7 @@ public BulkCRUDRepository(ICRUDRepository<T> inner)
 
 ###### Create(items) {#csharp-bulkcrudrepository-create-items}
 
-Creates each item, including nested `many` children.
+Creates each item, including nested `List` children.
 
 **Definition**
 
@@ -9472,7 +9479,7 @@ public Task<Response> Create(IReadOnlyList<T> items)
 
 ###### Update(items, byWhere) {#csharp-bulkcrudrepository-update-items-bywhere}
 
-Updates each item, then replace-syncs nested `many` lists.
+Updates each item, then replace-syncs nested `List` lists.
 
 **Definition**
 
@@ -9493,7 +9500,7 @@ public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere = null)
 
 ###### Delete(items, byWhere) {#csharp-bulkcrudrepository-delete-items-bywhere}
 
-Deletes nested `many` rows for each item, then the parents.
+Deletes nested `List` rows for each item, then the parents.
 
 **Definition**
 
@@ -9592,10 +9599,10 @@ pub struct BulkCRUDRepository
 
 | Name | Description |
 | --- | --- |
-| [add_enriched(enrichment, via, strategy)](#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy) | Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written. |
-| [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `many` children. |
-| [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `many` lists. |
-| [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `many` rows for each item, then the parents. |
+| [add_enriched(enrichment, via, strategy)](#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy) | Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `List` children can be written. |
+| [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `List` children. |
+| [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `List` lists. |
+| [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `List` rows for each item, then the parents. |
 
 ###### new(inner) {#rust-bulkcrudrepository-new-inner}
 
@@ -9619,7 +9626,7 @@ pub fn new(inner: Arc<dyn CRUDRepository>) -> Self
 
 ###### add_enriched(enrichment, via, strategy) {#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy}
 
-Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `many` children can be written.
+Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `List` children can be written.
 
 **Definition**
 
@@ -9632,7 +9639,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 | Name | Description |
 | --- | --- |
 | `enrichment` | [Enrichment](#enrichment) |
-| `via` | related repository. A CRUD repository is kept so `many` children can be written |
+| `via` | related repository. A CRUD repository is kept so `List` children can be written |
 | `strategy` | optional read strategy for this edge. Omitted uses the default strategy |
 
 **Returns**
@@ -9641,7 +9648,7 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 
 ###### create_bulk(items) {#rust-bulkcrudrepository-create_bulk-items}
 
-Creates each item, including nested `many` children.
+Creates each item, including nested `List` children.
 
 **Definition**
 
@@ -9661,7 +9668,7 @@ pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
 
 ###### update_bulk(items, by_where) {#rust-bulkcrudrepository-update_bulk-items-by_where}
 
-Updates each item, then replace-syncs nested `many` lists.
+Updates each item, then replace-syncs nested `List` lists.
 
 **Definition**
 
@@ -9682,7 +9689,7 @@ pub async fn update_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 
 ###### delete_bulk(items, by_where) {#rust-bulkcrudrepository-delete_bulk-items-by_where}
 
-Deletes nested `many` rows for each item, then the parents.
+Deletes nested `List` rows for each item, then the parents.
 
 **Definition**
 
@@ -9732,22 +9739,38 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1897-L1911)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L779-L819)
 
 ```rust
-let command = Arc::new(MockCommand::new());
-command.reader_rows.lock().unwrap().push(record(&[
-    ("id", Value::Int(1)),
-    ("username", Value::from("bobby")),
-    ("email", Value::from("bob@asdf.com")),
-    ("contact_name1", Value::from("bob")),
-    ("contact_name2", Value::from("roberta")),
-]));
-let connection = MockConnection::with_command_provider(command.clone(), "memory");
+let connection = setup(&mut []).await;
 let mut options = CRUDRepositoryOptions::default();
-options.entity = "users".into();
-options.row_converter = Some(RowTypeConverter::of::<UserRow>());
-options.rows_mapper = Box::new(user_contacts_mapper());
+options.entity = "Parent".into();
+let mut parents = BulkCRUDRepository::new(connection.clone(), options).unwrap();
+let mut child_options = CRUDRepositoryOptions::default();
+child_options.entity = "Child".into();
+let children = Arc::new(BulkCRUDRepository::new(connection, child_options).unwrap());
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, datasources::EnrichmentPropertyType::List),
+    children.clone(),
+    None,
+);
+let response = parents
+    .create_bulk(&mut [
+        record(&[(
+            "children",
+            encode_rows(&[record(&[("label", Value::from("a"))])]),
+        )]),
+        record(&[(
+            "children",
+            encode_rows(&[
+                record(&[("label", Value::from("b"))]),
+                record(&[("label", Value::from("c"))]),
+            ]),
+        )]),
+    ])
+    .await
+    .unwrap();
+let stored_parents = parents.read(None, None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L39)
@@ -10535,7 +10558,7 @@ var reversed = mapper.ReverseMap(mapped);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L136-L162)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L146-L172)
 
 ```rust
 let contact = Contact {
@@ -11656,7 +11679,7 @@ fn reverse_map(&self, value: T) -> T
 
 Unknown keys pass through. When two keys share a value, the first one wins on reverse.
 
-Use this for [ColumnMappings](#columnmappings) when property names and stored column names differ. `Map` rewrites the SELECT list, where identifiers, and write parameters. `ReverseMap` restores property names on each result key before the row converter.
+Use this for `[PropertyMappings](#propertymappings)` / `[propertyMappings](#propertymappings)` / `[property_mappings](#property_mappings)` when property names and stored column names differ. `Map` rewrites the SELECT list, where identifiers, and write parameters. `ReverseMap` restores property names on each result key before the row converter.
 
 ### Examples
 
@@ -12471,7 +12494,7 @@ fn reverse_map(&self, value: String) -> String
 
 ### Remarks
 
-Use this as [EntityMapper](#entitymapper) and [ColumnMappings](#columnmappings) when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
+Use this as [EntityMapper](#entitymapper) and `[PropertyMappings](#propertymappings)` / `[propertyMappings](#propertymappings)` / `[property_mappings](#property_mappings)` when application names are Pascal and stored names are snake case. `UserType` becomes `user_type`, and `Id` becomes `id`.
 
 ### Examples
 
@@ -12863,7 +12886,7 @@ var flat = mapper.Map(nested);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L86-L106)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L96-L116)
 
 ```rust
 let nested = Nested {
@@ -12973,7 +12996,7 @@ contact_email
 email
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L124-L134)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L134-L144)
 
 ```rust
 let mapper = TransformMapper::new(
@@ -13050,7 +13073,7 @@ var reversed = mapper.ReverseMap(mapped);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L136-L162)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L146-L172)
 
 ```rust
 let contact = Contact {
@@ -14270,7 +14293,7 @@ Repository read is convert, then map. See [TransformMapper](#transform-mapper) a
 
 ## Metadata Row Type Converter
 
-Default object converter. Read order is the renamed row, then `RowConverter` / `rowConverter` / `row_converter` when one is set, then this converter, then the rows mapper.
+Default object converter. Read order is the renamed row, then `RowConverter` / `rowConverter` / `row_converter` when one is set, then this converter.
 
 `RowConverter` / `rowConverter` / `row_converter` is the `Row` to `Row` cell step. Omitted, that step is skipped and the renamed row is passed through. This converter still runs. It assigns the row onto `T`. A handwritten object converter assigns each column and does not reflect.
 
@@ -14602,7 +14625,7 @@ let row = record(&[
 let converted = converter.convert(&row).unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L13-L18)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L14-L19)
 
 ```typescript
 const converter = new MetaDataRowTypeConverter();
@@ -14633,7 +14656,7 @@ let converter =
 let row = record(&[("is_enabled", Value::Int(2))]);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L21-L26)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L22-L27)
 
 ```typescript
 const converter = new MetaDataRowTypeConverter({ flag: new OnlyOne() });
@@ -15984,7 +16007,7 @@ var byId = new WhereText("id = 1");
 var withWhere = new SelectStatement("SELECT 1", byId);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1187-L1190)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1188-L1191)
 
 ```rust
     .not_null(NotNull::new(Some("nn_id"))),
@@ -16015,7 +16038,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L926-L933)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L927-L934)
 
 ```rust
     Where::new(Operator::Equals {
@@ -16069,7 +16092,7 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L977-L991)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L978-L992)
 
 ```rust
 .get_text()
@@ -16122,7 +16145,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L996-L999)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L997-L1000)
 
 ```rust
     left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -16163,7 +16186,7 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1001-L1004)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1002-L1005)
 
 ```rust
 
@@ -16201,7 +16224,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1006-L1009)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1007-L1010)
 
 ```rust
     .get_text(),
@@ -16242,7 +16265,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1014-L1017)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1015-L1018)
 
 ```rust
     .parameters()
@@ -16532,7 +16555,7 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L985-L989)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L986-L990)
 
 ```rust
     )))),
@@ -16860,7 +16883,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L980-L985)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L981-L986)
 
 ```rust
 left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
@@ -17195,7 +17218,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L990-L995)
 
 ```rust
 assert!(Where::new(Operator::Equals {
@@ -18169,7 +18192,7 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L995-L1003)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L996-L1004)
 
 ```rust
 assert!(Where::new(Operator::In {
@@ -18218,7 +18241,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1008-L1031)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1009-L1032)
 
 ```rust
 );
@@ -18499,7 +18522,7 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1076-L1083)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1077-L1084)
 
 ```rust
         ..SelectStatementOptions::new("users", &["users.id"])
@@ -18544,7 +18567,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1087)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1086-L1088)
 
 ```rust
 })
@@ -18821,7 +18844,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1089-L1090)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1090-L1091)
 
 ```rust
 let count = Aggregate::count("*", Some("n"));
@@ -19097,7 +19120,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1095-L1096)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1096-L1097)
 
 ```rust
 "customers",
@@ -19708,7 +19731,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L650-L654)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L651-L655)
 
 ```rust
 assert!(txn.commit().await.is_err());
@@ -19776,7 +19799,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2102-L2108)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1950-L1956)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -19833,7 +19856,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L929-L935)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L930-L936)
 
 ```rust
     })
@@ -20341,7 +20364,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L743-L758)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L744-L759)
 
 ```rust
 
@@ -20379,7 +20402,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2102-L2108)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1950-L1956)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -20546,7 +20569,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 var ret = new ReturnStatement("add", fields);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1166-L1170)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1167-L1171)
 
 ```rust
     &[],
@@ -20972,7 +20995,7 @@ DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "missi
 create(Some(&HashMap::from([("PROVIDER".into(), "missing".into())])));
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L50-L54)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/DatasourceFactory.test.ts#L55-L59)
 
 ```typescript
 DatasourceFactory.create({ PROVIDER: "missing" });
@@ -21394,16 +21417,16 @@ Register the child repository's own fills on that repository:
 
 ```
 childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
-parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
 ```
 
-Rust has no separate trait. `AddEnriched` / `addEnriched` / `add_enriched` is a method on [ReadonlyRepository](#readonly-repository) and [CRUDRepository](#crud-repository). With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `many` children and associations, are [CRUDRepository](#crud-repository).
+Rust has no separate trait. `AddEnriched` / `addEnriched` / `add_enriched` is a method on [ReadonlyRepository](#readonly-repository) and [CRUDRepository](#crud-repository). With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `List` children and associations, are [CRUDRepository](#crud-repository).
 
 ### Examples
 
 #### Register a fill
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L35-L51)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -21413,13 +21436,13 @@ await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gon
 var connection = await Setup(
     new Row { ["type_id"] = person["id"] },
     new Row { ["type_id"] = gone["id"] });
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L108-L133)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L136-L161)
 
 ```rust
 let mut seeds = [
@@ -21435,17 +21458,17 @@ let mut parents = [
     record(&[("type_id", gone.get("id").unwrap().clone())]),
 ];
 let connection = setup(&mut parents).await;
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+let mut parents_repo = mapped(connection, "Parent");
+let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types_repo,
     None,
 );
 let items = parents_repo.read(None, None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L84-L96)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -21453,15 +21476,15 @@ const gone: Seed = { name: "gone" };
 const typesConnection = await setup([person, gone]);
 await remove(typesConnection, gone);
 const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
 const items = await collectAsync(parentsRepo.read());
 ```
 
 ## Enrichment
 
-One related fill. `into` is the destination property, `from` is the parent key, and `by` is the related key. `select` copies one related property. `many` collects a list. `association` names the junction columns for a link.
+One related fill. `destinationProperty` is the parent property that gets filled, `sourceProperty` is the parent key, and `relatedKey` is the key on the related row. `relatedProperty` copies one related property. `type` is [EnrichmentPropertyType](#enrichmentpropertytype). `association` names the junction columns for a link.
 
 ### Classes
 
@@ -21477,12 +21500,27 @@ type Enrichment
 
 | Name | Description |
 | --- | --- |
-| into | Destination property. |
-| from | Parent key. |
-| by | Related key. |
-| select | Optional related property to copy. |
-| many | Collect a list. |
+| destinationProperty | Parent property that gets filled. |
+| sourceProperty | Parent key. |
+| relatedKey | Key on the related row. |
+| relatedProperty | Optional related property to copy. A string or int stays on `Object`. |
+| type | [EnrichmentPropertyType](#typescript-enrichmentpropertytype). Omitted means `Object`. |
 | association | Junction columns for a link. See [Association](#typescript-association). |
+
+##### EnrichmentPropertyType {#typescript-enrichmentpropertytype}
+
+```typescript
+const EnrichmentPropertyType
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Object | One related row. `relatedProperty` copies one field. |
+| List | Related rows. Written with the parent when the repository can persist. |
+| Dictionary | Rejected until its fill is defined. |
+| Custom | Rejected until its fill is defined. |
 
 ##### Association {#typescript-association}
 
@@ -21509,43 +21547,58 @@ public sealed record Enrichment
 
 | Name | Description |
 | --- | --- |
-| [Enrichment(into, from, by, select, many, association)](#csharp-enrichment-enrichment-into-from-by-select-many-association) | Builds one related fill. |
+| [Enrichment(destinationProperty, sourceProperty, relatedKey, relatedProperty, type, association)](#csharp-enrichment-enrichment-destinationproperty-sourceproperty-relatedkey-relatedproperty-type-association) | Builds one related fill. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| Into | Destination property. |
-| From | Parent key. |
-| By | Related key. |
-| Select | Optional related property to copy. |
-| Many | Collect a list. |
+| DestinationProperty | Parent property that gets filled. |
+| SourceProperty | Parent key. |
+| RelatedKey | Key on the related row. |
+| RelatedProperty | Optional related property to copy. A string or int stays on `Object`. |
+| Type | [EnrichmentPropertyType](#csharp-enrichmentpropertytype). |
 | Association | Junction columns for a link. See [Association](#csharp-association). |
 
-###### Enrichment(into, from, by, select, many, association) {#csharp-enrichment-enrichment-into-from-by-select-many-association}
+###### Enrichment(destinationProperty, sourceProperty, relatedKey, relatedProperty, type, association) {#csharp-enrichment-enrichment-destinationproperty-sourceproperty-relatedkey-relatedproperty-type-association}
 
 Builds one related fill.
 
 **Definition**
 
 ```csharp
-public Enrichment(string into, string from, string by, string? select = null, bool many = false, Association? association = null)
+public Enrichment(string destinationProperty, string sourceProperty, string relatedKey, string? relatedProperty = null, EnrichmentPropertyType type = EnrichmentPropertyType.Object, Association? association = null)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `into` | destination property |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related property to copy |
-| `many` | collect a list |
+| `destinationProperty` | parent property that gets filled |
+| `sourceProperty` | parent key |
+| `relatedKey` | key on the related row |
+| `relatedProperty` | optional related property to copy |
+| `type` | [EnrichmentPropertyType](#csharp-enrichmentpropertytype) |
 | `association` | optional [Association](#csharp-association) |
 
 **Returns**
 
 [Enrichment](#csharp-enrichment)
+
+##### EnrichmentPropertyType {#csharp-enrichmentpropertytype}
+
+```csharp
+public enum EnrichmentPropertyType
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Object | One related row. `RelatedProperty` copies one field. |
+| List | Related rows. Written with the parent when the repository can persist. |
+| Dictionary | Rejected until its fill is defined. |
+| Custom | Rejected until its fill is defined. |
 
 ##### Association {#csharp-association}
 
@@ -21599,39 +21652,39 @@ pub struct Enrichment
 
 | Name | Description |
 | --- | --- |
-| [new(into, from, by, select, many)](#rust-enrichment-new-into-from-by-select-many) | Builds an enrichment. `association` starts unset. |
-| [linked(association)](#rust-enrichment-linked-association) | Marks the fill as a many link and stores the junction columns. |
+| [new(destination_property, source_property, related_key, related_property, type)](#rust-enrichment-new-destination_property-source_property-related_key-related_property-type) | Builds an enrichment. `association` starts unset. |
+| [linked(association)](#rust-enrichment-linked-association) | Marks the fill as a `List` link and stores the junction columns. |
 
 **Properties**
 
 | Name | Description |
 | --- | --- |
-| into | Destination field. |
-| from | Parent key. |
-| by | Related key. |
-| select | Optional related field to copy. |
-| many | Collect a list. |
+| destination_property | Parent field that gets filled. |
+| source_property | Parent key. |
+| related_key | Key on the related row. |
+| related_property | Optional related field to copy. A string or int stays on `Object`. |
+| type | [EnrichmentPropertyType](#rust-enrichmentpropertytype). |
 | association | Junction columns for a link. See [Association](#rust-association). |
 
-###### new(into, from, by, select, many) {#rust-enrichment-new-into-from-by-select-many}
+###### new(destination_property, source_property, related_key, related_property, type) {#rust-enrichment-new-destination_property-source_property-related_key-related_property-type}
 
 Builds an enrichment. `association` starts unset.
 
 **Definition**
 
 ```rust
-pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<String>, select: Option<String>, many: bool) -> Self
+pub fn new(destination_property: impl Into<String>, source_property: impl Into<String>, related_key: impl Into<String>, related_property: Option<String>, r#type: EnrichmentPropertyType) -> Self
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `into` | destination field |
-| `from` | parent key |
-| `by` | related key |
-| `select` | optional related field to copy |
-| `many` | collect a list |
+| `destination_property` | parent field that gets filled |
+| `source_property` | parent key |
+| `related_key` | key on the related row |
+| `related_property` | optional related field to copy |
+| `type` | [EnrichmentPropertyType](#rust-enrichmentpropertytype) |
 
 **Returns**
 
@@ -21639,7 +21692,7 @@ pub fn new(into: impl Into<String>, from: impl Into<String>, by: impl Into<Strin
 
 ###### linked(association) {#rust-enrichment-linked-association}
 
-Marks the fill as a many link and stores the junction columns.
+Marks the fill as a `List` link and stores the junction columns.
 
 **Definition**
 
@@ -21656,6 +21709,21 @@ pub fn linked(self, association: Association) -> Self
 **Returns**
 
 [Enrichment](#rust-enrichment)
+
+##### EnrichmentPropertyType {#rust-enrichmentpropertytype}
+
+```rust
+pub enum EnrichmentPropertyType
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Object | One related row. `related_property` copies one field. |
+| List | Related rows. Written with the parent when the repository can persist. |
+| Dictionary | Rejected until its fill is defined. |
+| Custom | Rejected until its fill is defined. |
 
 ##### Association {#rust-association}
 
@@ -21699,38 +21767,52 @@ pub fn new(parent: impl Into<String>, related: impl Into<String>) -> Self
 
 ### Remarks
 
-A lookup copies `select`, or the related row when `select` is omitted. A `many` list is walked. A `select` scalar is not. [AddLinked](#crud-repository) sets `association` and writes the junction. Pass the value to [IEnriched](#ienriched).
+`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` and `Custom` are rejected. [AddLinked](#crud-repository) sets `association` and writes the junction. Pass the value to [IEnriched](#ienriched).
 
 ### Examples
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
 
 ```csharp
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L123-L129)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L151-L157)
 
 ```rust
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+let mut parents_repo = mapped(connection, "Parent");
+let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types_repo,
     None,
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
 
 ```typescript
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+const items = await collectAsync(parentsRepo.read());
 ```
 
 ## IReadonlyEnrichmentStrategy
@@ -21975,38 +22057,52 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 
 ### Remarks
 
-Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `many` list is walked. A `select` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_lookup` and `apply_many` on this trait.
+Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls `Apply` / `apply` / `apply` after it reads the parents. `ApplyLinked` / `applyLinked` / `apply_linked` runs for an enrichment that has an [association](#association). A `List` is walked. A `RelatedProperty` scalar is not. C# and TypeScript override the lookup and list fills on [DefaultReadonlyEnrichmentStrategy](#defaultreadonlyenrichmentstrategy). Rust overrides `apply_lookup` and `apply_many` on this trait.
 
 ### Examples
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
 
 ```csharp
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L123-L129)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L151-L157)
 
 ```rust
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+let mut parents_repo = mapped(connection, "Parent");
+let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types_repo,
     None,
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
 
 ```typescript
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+const items = await collectAsync(parentsRepo.read());
 ```
 
 ## DefaultReadonlyEnrichmentStrategy
@@ -22249,32 +22345,46 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IC
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L45-L47)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
 
 ```csharp
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);
+var person = new Row { ["name"] = "person" };
+var gone = new Row { ["name"] = "gone" };
+var typesConnection = await Setup(person, gone);
+await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gone["id"])]);
+var connection = await Setup(
+    new Row { ["type_id"] = person["id"] },
+    new Row { ["type_id"] = gone["id"] });
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L123-L129)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L151-L157)
 
 ```rust
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+let mut parents_repo = mapped(connection, "Parent");
+let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types_repo,
     None,
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L90-L92)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
 
 ```typescript
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);
+const person: Seed = { name: "person" };
+const gone: Seed = { name: "gone" };
+const typesConnection = await setup([person, gone]);
+await remove(typesConnection, gone);
+const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+const items = await collectAsync(parentsRepo.read());
 ```
 
 ## HashsetOptimizedReadonlyEnrichmentStrategy
@@ -22442,7 +22552,7 @@ Pass it as the strategy on [IEnriched](#ienriched). Linked fills stay on [Defaul
 
 #### Fill with one query
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L53-L72)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L65-L84)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -22452,16 +22562,16 @@ await typesConnection.CreateCommand().Execute("delete", [new Parameter("id", gon
 var connection = await Setup(
     new Row { ["type_id"] = person["id"] },
     new Row { ["type_id"] = gone["id"] });
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
+var parentsRepo = Open<Parent>(connection);
+var typesRepo = Open<UserType>(typesConnection);
 parentsRepo.AddEnriched(
-    new("type_name", "type_id", "id", "name"),
+    new("TypeName", "Type", "Id", "Name"),
     typesRepo,
     new HashsetOptimizedReadonlyEnrichmentStrategy<Parent>());
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L460-L529)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L450-L518)
 
 ```rust
 let built = datasource();
@@ -22493,7 +22603,6 @@ role_options.property_mappings = Box::new(DictionaryMapper::new([
     ("UserId".to_string(), "user_id".to_string()),
     ("Name".to_string(), "name".to_string()),
 ]));
-role_options.select = Some(Arc::new(TransformMapper::new(roles_sql, |statement| statement)));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
@@ -22504,12 +22613,12 @@ let roles =
     ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
 let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
 users_repo.add_enriched(
-    datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), false),
+    datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
     types,
     Some(strategy.clone()),
 );
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     roles,
     Some(strategy),
 );
@@ -22520,7 +22629,7 @@ let users_view = users_repo
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L98-L114)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L103-L119)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -22528,10 +22637,10 @@ const gone: Seed = { name: "gone" };
 const typesConnection = await setup([person, gone]);
 await remove(typesConnection, gone);
 const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
+const parentsRepo = repo(Parent, connection);
+const typesRepo = repo(UserType, typesConnection);
 parentsRepo.addEnriched(
-  { into: "type_name", from: "type_id", by: "id", select: "name" },
+  { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
   typesRepo,
   new HashsetOptimizedReadonlyEnrichmentStrategy(),
 );
@@ -22750,23 +22859,25 @@ This is the read-side collapse. [FlatToNestedMapper](#flat-to-nested-mapper) is 
 
 #### Collapse join rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#L176-L192)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L188-L206)
 
 ```csharp
-var person = new Row { ["type_name"] = "person" };
-var org = new Row { ["type_name"] = "org" };
+var person = new Row { ["TypeName"] = "person" };
+var org = new Row { ["TypeName"] = "org" };
 var connection = await Setup(person, org);
+person["Id"] = person["id"];
+org["Id"] = org["id"];
 IList<object> parents = [];
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
+var parentsRepo = Open<Parent>(connection);
 await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
 {
-    Key = "id",
-    Fields = new Dictionary<string, TypeMapField> { ["id"] = "id", ["type_name"] = "type_name" }
-}).Apply(parentsRepo, new("type_name", "id", "id"), parents, [person, org]);
+    Key = "Id",
+    Fields = new Dictionary<string, TypeMapField> { ["Id"] = "Id", ["TypeName"] = "TypeName" }
+}).Apply(parentsRepo, new("TypeName", "Id", "Id"), parents, [person, org]);
 var items = parents.Cast<Parent>();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L531-L640)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L520-L629)
 
 ```rust
 let built = datasource();
@@ -22792,10 +22903,9 @@ options.property_mappings = Box::new(DictionaryMapper::new([
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
 ]));
-options.select = Some(Arc::new(TransformMapper::new(joined_users, |query| query)));
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
-    datasources::Enrichment::new("Roles", "Key", "UserId", None, true),
+    datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
     Arc::new(ReadonlyRepository::memory(vec![])),
     Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
         TypeMap::new(
@@ -22821,7 +22931,8 @@ users_repo.add_enriched(
         ),
     ))),
 );
-let items = users_repo.read(None, None).await.unwrap();
+let joined = joined_users();
+let items = users_repo.read(Some(&joined), None).await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -22834,18 +22945,20 @@ let grace = view("grace");
 let lin = view("lin");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedReadonlyRepository.test.ts#L303-L316)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L307-L322)
 
 ```typescript
-const person: Seed = { type_name: "person" };
-const org: Seed = { type_name: "org" };
+const person: Seed = { TypeName: "person" };
+const org: Seed = { TypeName: "org" };
 const connection = await setup([person, org]);
+person.Id = person.id;
+org.Id = org.id;
 const parents: object[] = [];
-const parentsRepo = new ReadonlyRepository(Parent, connection);
+const parentsRepo = repo(Parent, connection);
 await new NestedToObjectEnrichmentStrategy<Parent>({
-  key: "id",
-  fields: { id: "id", type_name: "type_name" },
-}).apply(parentsRepo, { into: "type_name", from: "id", by: "id" }, parents, [person, org]);
+  key: "Id",
+  fields: { Id: "Id", TypeName: "TypeName" },
+}).apply(parentsRepo, { destinationProperty: "TypeName", sourceProperty: "Id", relatedKey: "Id" }, parents, [person, org]);
 const items = parents as Parent[];
 ```
 
@@ -23035,7 +23148,7 @@ pub enum WriteMode
 
 ### Remarks
 
-Set this as the repository `write` option. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) is the default. Lookups are filled on read and are not written. A `many` child list and a link are written. A bulk list uses one transaction for the whole list when `UseTransaction` / `useTransaction` / `use_transaction` is on.
+Set this as the repository `write` option. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) is the default. Lookups are filled on read and are not written. A `List` and a link are written. A bulk list uses one transaction for the whole list when `UseTransaction` / `useTransaction` / `use_transaction` is on.
 
 ### Examples
 
@@ -23052,7 +23165,7 @@ var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryO
 var first = await parentsRepo.Create(new Parent { label = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L618-L665)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L649-L696)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -23331,7 +23444,7 @@ async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMod
 
 ### Remarks
 
-Set it on the repository `write` option. Create writes the parent, stamps each child's `by` from the parent `from`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips that null list. Nested writes join the transaction when they use the same connection.
+Set it on the repository `write` option. Create writes the parent, stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates children and links. Update and delete delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](#lazywriteenrichmentstrategy) skips that null list. Nested writes join the transaction when they use the same connection.
 
 ### Examples
 
@@ -23348,7 +23461,7 @@ var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryO
 var first = await parentsRepo.Create(new Parent { label = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L618-L665)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L649-L696)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -23659,14 +23772,14 @@ abstract class UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `many` list for one parent. |
+| [updateOwned(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `List` for one parent. |
 | [updateLinked(entry, enrichment, parent)](#typescript-updateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Writes the junction rows for one parent. |
-| [createChildren(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent) | Stamps each child's `by` from the parent `from`, then creates the payload. |
+| [createChildren(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent) | Stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates the payload. |
 | [createLinks(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-createlinks-writer-enrichment-parent) | Inserts one junction row per related id. |
 
 ###### updateOwned(entry, enrichment, parent) {#typescript-updateenrichmentstrategy-updateowned-entry-enrichment-parent}
 
-Writes the owned `many` list for one parent.
+Writes the owned `List` for one parent.
 
 **Definition**
 
@@ -23710,7 +23823,7 @@ abstract updateLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: o
 
 ###### createChildren(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-createchildren-writer-enrichment-parent}
 
-Stamps each child's `by` from the parent `from`, then creates the payload.
+Stamps each child's `RelatedKey` from the parent `SourceProperty`, then creates the payload.
 
 **Definition**
 
@@ -23807,12 +23920,12 @@ public abstract class UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `many` list for one parent. |
+| [UpdateOwned(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent) | Writes the owned `List` for one parent. |
 | [UpdateLinked(entry, enrichment, parent)](#csharp-updateenrichmentstrategy-updatelinked-entry-enrichment-parent) | Writes the junction rows for one parent. |
 
 ###### UpdateOwned(entry, enrichment, parent) {#csharp-updateenrichmentstrategy-updateowned-entry-enrichment-parent}
 
-Writes the owned `many` list for one parent.
+Writes the owned `List` for one parent.
 
 **Definition**
 
@@ -23878,12 +23991,12 @@ pub trait UpdateEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [update_owned(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent) | Writes the owned `many` list for one parent. |
+| [update_owned(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent) | Writes the owned `List` for one parent. |
 | [update_linked(entry, enrichment, parent)](#rust-updateenrichmentstrategy-update_linked-entry-enrichment-parent) | Writes the junction rows for one parent. |
 
 ###### update_owned(entry, enrichment, parent) {#rust-updateenrichmentstrategy-update_owned-entry-enrichment-parent}
 
-Writes the owned `many` list for one parent.
+Writes the owned `List` for one parent.
 
 **Definition**
 
@@ -23949,81 +24062,77 @@ Create uses the same child and link inserts as an update of a new parent. A subc
 
 #### Replace children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L129-L160)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L140-L168)
 
 ```csharp
 var connection = await Setup();
-var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
-{
-    Write = new DefaultWriteEnrichmentStrategy<Parent>(update: new CascadeDeleteUpdateEnrichmentStrategy<Parent>()),
-});
-var childrenRepo = new CRUDRepository<Child>(connection);
-var notesRepo = new CRUDRepository<Note>(connection);
+var childrenRepo = Open<Child>(connection);
+var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L406-L485)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L437-L516)
 
 ```rust
 let connection = setup(&mut []).await;
-let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
         false,
     ),
 ));
-let mut children_repo = crud(connection.clone(), "Child");
-let notes = Arc::new(crud(connection, "Note"));
+let mut children_repo = mapped_crud(connection.clone(), "Child");
+let notes = Arc::new(mapped_crud(connection, "Note"));
 let parent = parents
-    .create(&mut record(&[("label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]))
     .await
     .unwrap();
-assert!(num(&parent, "id") > 0);
-let parent_id = parent.get("id").unwrap().clone();
+assert!(num(&parent, "Id") > 0);
+let parent_id = parent.get("Id").unwrap().clone();
 let child = children_repo
     .create(&mut record(&[
-        ("parent_id", parent_id.clone()),
-        ("label", Value::from("a")),
+        ("ParentId", parent_id.clone()),
+        ("Label", Value::from("a")),
     ]))
     .await
     .unwrap();
-assert!(num(&child, "id") > 0);
+assert!(num(&child, "Id") > 0);
 let other = children_repo
-    .create(&mut record(&[("label", Value::from("other"))]))
+    .create(&mut record(&[("Label", Value::from("other"))]))
     .await
     .unwrap();
-assert!(num(&other, "id") > 0);
-let child_id = child.get("id").unwrap().clone();
+assert!(num(&other, "Id") > 0);
+let child_id = child.get("Id").unwrap().clone();
 let note = notes
     .create(&mut record(&[
-        ("child_id", child_id.clone()),
-        ("text", Value::from("n")),
+        ("ChildId", child_id.clone()),
+        ("Text", Value::from("n")),
     ]))
     .await
     .unwrap();
-assert!(num(&note, "id") > 0);
+assert!(num(&note, "Id") > 0);
 children_repo.add_enriched(
-    Enrichment::new("notes", "id", "child_id", None, true),
+    Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
     notes.clone(),
     None,
 );
 let children = Arc::new(children_repo);
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );
 let updated = parents
     .update(
         &record(&[
-            ("id", parent_id.clone()),
-            ("label", Value::from("p")),
+            ("Id", parent_id.clone()),
+            ("Label", Value::from("p")),
             (
-                "children",
+                "Children",
                 encode_rows(&[record(&[
-                    ("id", child_id.clone()),
-                    ("label", Value::from("fresh")),
+                    ("Id", child_id.clone()),
+                    ("Label", Value::from("fresh")),
                 ])]),
             ),
         ]),
@@ -24033,16 +24142,17 @@ let updated = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L158-L186)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L185-L214)
 
 ```typescript
 const connection = await setup();
-const parentsRepo = new CRUDRepository<Parent>(connection, {
-  type: Parent,
-  write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
-});
-const childrenRepo = new CRUDRepository(Child, connection);
-const notesRepo = new CRUDRepository(Note, connection);
+const parentsRepo = repo(
+  Parent,
+  connection,
+  new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+);
+const childrenRepo = repo(Child, connection);
+const notesRepo = repo(Note, connection);
 const parent = await parentsRepo.create(new Parent());
 ```
 
@@ -24277,61 +24387,61 @@ This is the update strategy [DefaultWriteEnrichmentStrategy](#defaultwriteenrich
 
 #### Replace-sync children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L99-L127)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L110-L138)
 
 ```csharp
 var connection = await Setup();
-var parentsRepo = new CRUDRepository<Parent>(connection);
-var childrenRepo = new CRUDRepository<Child>(connection);
-var parent = await parentsRepo.Create(new Parent { type_id = 0 });
+var parentsRepo = Open<Parent>(connection);
+var childrenRepo = Open<Child>(connection);
+var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L335-L404)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L363-L435)
 
 ```rust
 let connection = setup(&mut []).await;
-let mut parents = crud(connection.clone(), "Parent");
-let children = Arc::new(crud(connection, "Child"));
+let mut parents = mapped_crud(connection.clone(), "Parent");
+let children = Arc::new(mapped_crud(connection, "Child"));
 let parent = parents
-    .create(&mut record(&[("label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]))
     .await
     .unwrap();
-assert!(num(&parent, "id") > 0);
-let parent_id = parent.get("id").unwrap().clone();
+assert!(num(&parent, "Id") > 0);
+let parent_id = parent.get("Id").unwrap().clone();
 let kept = children
     .create(&mut record(&[
-        ("parent_id", parent_id.clone()),
-        ("label", Value::from("a")),
+        ("ParentId", parent_id.clone()),
+        ("Label", Value::from("a")),
     ]))
     .await
     .unwrap();
-assert!(num(&kept, "id") > 0);
+assert!(num(&kept, "Id") > 0);
 let dropped = children
     .create(&mut record(&[
-        ("parent_id", parent_id.clone()),
-        ("label", Value::from("b")),
+        ("ParentId", parent_id.clone()),
+        ("Label", Value::from("b")),
     ]))
     .await
     .unwrap();
-assert!(num(&dropped, "id") > 0);
+assert!(num(&dropped, "Id") > 0);
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );
 let updated = parents
     .update(
         &record(&[
-            ("id", parent_id.clone()),
-            ("label", Value::from("p")),
+            ("Id", parent_id.clone()),
+            ("Label", Value::from("p")),
             (
-                "children",
+                "Children",
                 encode_rows(&[
                     record(&[
-                        ("id", kept.get("id").unwrap().clone()),
-                        ("label", Value::from("aa")),
+                        ("Id", kept.get("Id").unwrap().clone()),
+                        ("Label", Value::from("aa")),
                     ]),
-                    record(&[("label", Value::from("c"))]),
+                    record(&[("Label", Value::from("c"))]),
                 ]),
             ),
         ]),
@@ -24341,12 +24451,12 @@ let updated = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L132-L156)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L159-L183)
 
 ```typescript
 const connection = await setup();
-const parentsRepo = new CRUDRepository(Parent, connection);
-const childrenRepo = new CRUDRepository(Child, connection);
+const parentsRepo = repo(Parent, connection);
+const childrenRepo = repo(Child, connection);
 const parent = await parentsRepo.create(new Parent());
 ```
 
@@ -24581,81 +24691,77 @@ Pass it as the `update` argument of [DefaultWriteEnrichmentStrategy](#defaultwri
 
 #### Recreate children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L129-L160)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L140-L168)
 
 ```csharp
 var connection = await Setup();
-var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
-{
-    Write = new DefaultWriteEnrichmentStrategy<Parent>(update: new CascadeDeleteUpdateEnrichmentStrategy<Parent>()),
-});
-var childrenRepo = new CRUDRepository<Child>(connection);
-var notesRepo = new CRUDRepository<Note>(connection);
+var childrenRepo = Open<Child>(connection);
+var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L406-L485)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L437-L516)
 
 ```rust
 let connection = setup(&mut []).await;
-let mut parents = crud(connection.clone(), "Parent").with_write(Arc::new(
+let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
         false,
     ),
 ));
-let mut children_repo = crud(connection.clone(), "Child");
-let notes = Arc::new(crud(connection, "Note"));
+let mut children_repo = mapped_crud(connection.clone(), "Child");
+let notes = Arc::new(mapped_crud(connection, "Note"));
 let parent = parents
-    .create(&mut record(&[("label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]))
     .await
     .unwrap();
-assert!(num(&parent, "id") > 0);
-let parent_id = parent.get("id").unwrap().clone();
+assert!(num(&parent, "Id") > 0);
+let parent_id = parent.get("Id").unwrap().clone();
 let child = children_repo
     .create(&mut record(&[
-        ("parent_id", parent_id.clone()),
-        ("label", Value::from("a")),
+        ("ParentId", parent_id.clone()),
+        ("Label", Value::from("a")),
     ]))
     .await
     .unwrap();
-assert!(num(&child, "id") > 0);
+assert!(num(&child, "Id") > 0);
 let other = children_repo
-    .create(&mut record(&[("label", Value::from("other"))]))
+    .create(&mut record(&[("Label", Value::from("other"))]))
     .await
     .unwrap();
-assert!(num(&other, "id") > 0);
-let child_id = child.get("id").unwrap().clone();
+assert!(num(&other, "Id") > 0);
+let child_id = child.get("Id").unwrap().clone();
 let note = notes
     .create(&mut record(&[
-        ("child_id", child_id.clone()),
-        ("text", Value::from("n")),
+        ("ChildId", child_id.clone()),
+        ("Text", Value::from("n")),
     ]))
     .await
     .unwrap();
-assert!(num(&note, "id") > 0);
+assert!(num(&note, "Id") > 0);
 children_repo.add_enriched(
-    Enrichment::new("notes", "id", "child_id", None, true),
+    Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
     notes.clone(),
     None,
 );
 let children = Arc::new(children_repo);
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );
 let updated = parents
     .update(
         &record(&[
-            ("id", parent_id.clone()),
-            ("label", Value::from("p")),
+            ("Id", parent_id.clone()),
+            ("Label", Value::from("p")),
             (
-                "children",
+                "Children",
                 encode_rows(&[record(&[
-                    ("id", child_id.clone()),
-                    ("label", Value::from("fresh")),
+                    ("Id", child_id.clone()),
+                    ("Label", Value::from("fresh")),
                 ])]),
             ),
         ]),
@@ -24665,16 +24771,17 @@ let updated = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L158-L186)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L185-L214)
 
 ```typescript
 const connection = await setup();
-const parentsRepo = new CRUDRepository<Parent>(connection, {
-  type: Parent,
-  write: new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
-});
-const childrenRepo = new CRUDRepository(Child, connection);
-const notesRepo = new CRUDRepository(Note, connection);
+const parentsRepo = repo(
+  Parent,
+  connection,
+  new DefaultWriteEnrichmentStrategy(undefined, new CascadeDeleteUpdateEnrichmentStrategy()),
+);
+const childrenRepo = repo(Child, connection);
+const notesRepo = repo(Note, connection);
 const parent = await parentsRepo.create(new Parent());
 ```
 
@@ -24696,14 +24803,14 @@ abstract class DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [deleteOwned(entry, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `many` list for one parent. |
+| [deleteOwned(entry, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
 | [deleteLinked(entry, enrichment, parent)](#typescript-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Removes the junction rows for one parent. |
-| [load(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent) | Reads the owned rows whose `by` matches the parent `from`. |
+| [load(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent) | Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`. |
 | [loadLinks(writer, column, key)](#typescript-deleteenrichmentstrategy-loadlinks-writer-column-key) | Reads junction rows whose `column` equals `key`. |
 
 ###### deleteOwned(entry, enrichment, parent, deleteNested) {#typescript-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
 
-Removes the owned `many` list for one parent.
+Removes the owned `List` for one parent.
 
 **Definition**
 
@@ -24748,7 +24855,7 @@ abstract deleteLinked(entry: StoredEnrichment, enrichment: Enrichment, parent: o
 
 ###### load(writer, enrichment, parent) {#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent}
 
-Reads the owned rows whose `by` matches the parent `from`.
+Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`.
 
 **Definition**
 
@@ -24802,12 +24909,12 @@ public abstract class DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [DeleteOwned(entry, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `many` list for one parent. |
+| [DeleteOwned(entry, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
 | [DeleteLinked(entry, enrichment, parent)](#csharp-deleteenrichmentstrategy-deletelinked-entry-enrichment-parent) | Removes the junction rows for one parent. |
 
 ###### DeleteOwned(entry, enrichment, parent, deleteNested) {#csharp-deleteenrichmentstrategy-deleteowned-entry-enrichment-parent-deletenested}
 
-Removes the owned `many` list for one parent.
+Removes the owned `List` for one parent.
 
 **Definition**
 
@@ -24862,12 +24969,12 @@ pub trait DeleteEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [delete_owned(entry, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested) | Removes the owned `many` list for one parent. |
+| [delete_owned(entry, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested) | Removes the owned `List` for one parent. |
 | [delete_linked(entry, enrichment, parent)](#rust-deleteenrichmentstrategy-delete_linked-entry-enrichment-parent) | Removes the junction rows for one parent. |
 
 ###### delete_owned(entry, enrichment, parent, delete_nested) {#rust-deleteenrichmentstrategy-delete_owned-entry-enrichment-parent-delete_nested}
 
-Removes the owned `many` list for one parent.
+Removes the owned `List` for one parent.
 
 **Definition**
 
@@ -24918,15 +25025,11 @@ Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](#de
 
 #### Skip child deletes
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L218-L236)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L223-L238)
 
 ```csharp
 var connection = await Setup();
-var childrenRepo = new CRUDRepository<Child>(connection);
-var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
-{
-    Write = new DefaultWriteEnrichmentStrategy<Parent>(new SkipDelete<Parent>()),
-});
+var childrenRepo = Open<Child>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
@@ -24947,7 +25050,7 @@ child.insert("parent_id".into(), created.get("id").unwrap().clone());
 child.insert("label".into(), Value::from("a"));
 children.create(&mut child).await.unwrap();
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("children", "id", "parent_id", None, crate::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );
@@ -24955,21 +25058,18 @@ parents.delete(&created, None).await.unwrap();
 let left = children.read(None, None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L249-L265)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L278-L291)
 
 ```typescript
 const connection = await setup();
-const childrenRepo = new CRUDRepository(Child, connection);
-const parentsRepo = new CRUDRepository(connection, {
-  type: Parent,
-  write: new DefaultWriteEnrichmentStrategy(new SkipDelete()),
-});
+const childrenRepo = repo(Child, connection);
+const parentsRepo = repo(Parent, connection, new DefaultWriteEnrichmentStrategy(new SkipDelete()));
 const parent = await parentsRepo.create(new Parent());
 ```
 
 ## CascadeDeleteEnrichmentStrategy
 
-Default delete. Deletes nested `many` rows first, then children, then the parent delete continues. Loads existing children by foreign key. Does not trust payload lists. Junction rows for a link are deleted and the related rows stay.
+Default delete. Deletes nested `List` rows first, then children, then the parent delete continues. Loads existing children by foreign key. Does not trust payload lists. Junction rows for a link are deleted and the related rows stay.
 
 ### Classes
 
@@ -25201,79 +25301,79 @@ async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment,
 
 #### Cascade delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#L194-L216)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L199-L221)
 
 ```csharp
 var connection = await Setup();
-var parentsRepo = new CRUDRepository<Parent>(connection);
-var childrenRepo = new CRUDRepository<Child>(connection);
-var notesRepo = new CRUDRepository<Note>(connection);
+var parentsRepo = Open<Parent>(connection);
+var childrenRepo = Open<Child>(connection);
+var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L667-L727)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L698-L758)
 
 ```rust
 let connection = setup(&mut []).await;
-let parents = crud(connection.clone(), "Parent");
-let mut children_repo = crud(connection.clone(), "Child");
-let notes = Arc::new(crud(connection, "Note"));
+let parents = mapped_crud(connection.clone(), "Parent");
+let mut children_repo = mapped_crud(connection.clone(), "Child");
+let notes = Arc::new(mapped_crud(connection, "Note"));
 let parent = parents
-    .create(&mut record(&[("label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]))
     .await
     .unwrap();
-assert!(num(&parent, "id") > 0);
-let parent_id = parent.get("id").unwrap().clone();
+assert!(num(&parent, "Id") > 0);
+let parent_id = parent.get("Id").unwrap().clone();
 let child = children_repo
     .create(&mut record(&[
-        ("parent_id", parent_id.clone()),
-        ("label", Value::from("a")),
+        ("ParentId", parent_id.clone()),
+        ("Label", Value::from("a")),
     ]))
     .await
     .unwrap();
-assert!(num(&child, "id") > 0);
-let child_id = child.get("id").unwrap().clone();
+assert!(num(&child, "Id") > 0);
+let child_id = child.get("Id").unwrap().clone();
 let note = notes
     .create(&mut record(&[
-        ("child_id", child_id),
-        ("text", Value::from("n")),
+        ("ChildId", child_id),
+        ("Text", Value::from("n")),
     ]))
     .await
     .unwrap();
-assert!(num(&note, "id") > 0);
+assert!(num(&note, "Id") > 0);
 let other = notes
     .create(&mut record(&[
-        ("text", Value::from("other")),
-        ("label", Value::from("keep")),
+        ("Text", Value::from("other")),
+        ("Label", Value::from("keep")),
     ]))
     .await
     .unwrap();
-assert!(num(&other, "id") > 0);
+assert!(num(&other, "Id") > 0);
 children_repo.add_enriched(
-    Enrichment::new("notes", "id", "child_id", None, true),
+    Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
     notes.clone(),
     None,
 );
 let children = Arc::new(children_repo);
 let mut parents = parents;
 parents.add_enriched(
-    Enrichment::new("children", "id", "parent_id", None, true),
+    Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
     children.clone(),
     None,
 );
 let removed = parents
-    .delete(&record(&[("id", parent_id)]), None)
+    .delete(&record(&[("Id", parent_id)]), None)
     .await
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/EnrichedCRUDRepository.test.ts#L227-L247)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L256-L276)
 
 ```typescript
 const connection = await setup();
-const parentsRepo = new CRUDRepository(Parent, connection);
-const childrenRepo = new CRUDRepository(Child, connection);
-const notesRepo = new CRUDRepository(Note, connection);
+const parentsRepo = repo(Parent, connection);
+const childrenRepo = repo(Child, connection);
+const notesRepo = repo(Note, connection);
 const parent = await parentsRepo.create(new Parent());
 ```
 
@@ -25575,7 +25675,7 @@ repo.delete_bulk(
 let logs = command.execute_logs.lock().unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L35-L57)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L36-L58)
 
 ```typescript
 const { repo, command } = open(Parent, new SingleCommandIBulkWriteStrategy<Parent>());
@@ -25933,7 +26033,7 @@ repo.delete_bulk(
 let logs = command.execute_logs.lock().unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L35-L57)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L36-L58)
 
 ```typescript
 const { repo, command } = open(Parent, new SingleCommandIBulkWriteStrategy<Parent>());
@@ -26271,7 +26371,7 @@ repo.create_bulk(&mut created).await.unwrap();
     let logs = command.execute_logs.lock().unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L59-L94)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L60-L95)
 
 ```typescript
 const { repo, command } = open(Parent, new BatchCommandIBulkWriteStrategy<Parent>());
@@ -26666,7 +26766,7 @@ repo.delete_bulk(
 let logs = command.execute_logs.lock().unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L96-L129)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L109-L142)
 
 ```typescript
 const { repo, command } = open(

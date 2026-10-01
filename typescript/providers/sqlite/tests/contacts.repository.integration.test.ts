@@ -109,12 +109,12 @@ describe("contacts readonly repository", () => {
     const phoneTypesRepo = new CRUDRepository(connection, { type: PhoneType, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
     const addressesRepo = new CRUDRepository(connection, { type: Address, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
     const phonesRepo = new CRUDRepository(connection, { type: Phone, entityMapper: snake, propertyMappings: columns, ids: ["Id"] });
-    addressesRepo.addEnriched({ into: "AddressType", from: "AddressType", by: "Id" }, addressTypesRepo);
-    phonesRepo.addEnriched({ into: "PhoneType", from: "PhoneType", by: "Id" }, phoneTypesRepo);
-    contactsRepo.addEnriched({ into: "ContactType", from: "ContactType", by: "Id" }, typesRepo);
-    contactsRepo.addEnriched({ into: "ContactSource", from: "ContactSource", by: "Id" }, sourcesRepo);
-    contactsRepo.addEnriched({ into: "Addresses", from: "Id", by: "Contact", many: true }, addressesRepo);
-    contactsRepo.addEnriched({ into: "Phones", from: "Id", by: "Contact", many: true }, phonesRepo);
+    addressesRepo.addEnriched({ destinationProperty: "AddressType", sourceProperty: "AddressType", relatedKey: "Id" }, addressTypesRepo);
+    phonesRepo.addEnriched({ destinationProperty: "PhoneType", sourceProperty: "PhoneType", relatedKey: "Id" }, phoneTypesRepo);
+    contactsRepo.addEnriched({ destinationProperty: "ContactType", sourceProperty: "ContactType", relatedKey: "Id" }, typesRepo);
+    contactsRepo.addEnriched({ destinationProperty: "ContactSource", sourceProperty: "ContactSource", relatedKey: "Id" }, sourcesRepo);
+    contactsRepo.addEnriched({ destinationProperty: "Addresses", sourceProperty: "Id", relatedKey: "Contact", type: "list" }, addressesRepo);
+    contactsRepo.addEnriched({ destinationProperty: "Phones", sourceProperty: "Id", relatedKey: "Contact", type: "list" }, phonesRepo);
 
     const created = await contactsRepo.create(extraContact(await contactLookupIds(connection)));
     const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("Id", created.Id)));

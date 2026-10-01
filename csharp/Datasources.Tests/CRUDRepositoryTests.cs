@@ -98,7 +98,7 @@ public class CRUDRepositoryTests
         var connection = await Setup();
         var parentsRepo = Open<Parent>(connection);
         var childrenRepo = Open<Child>(connection);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var created = await parentsRepo.Create(new Parent { Children = [new Child { Label = "n" }] });
         Assert.True(created.Id > 0);
         var parent = Assert.Single(await parentsRepo.Read().ToListAsync());
@@ -119,7 +119,7 @@ public class CRUDRepositoryTests
         Assert.True(kept.Id > 0);
         var dropped = await childrenRepo.Create(new Child { ParentId = parent.Id, Label = "b" });
         Assert.True(dropped.Id > 0);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var updated = await parentsRepo.Update(new Parent
         {
             Id = parent.Id,
@@ -152,8 +152,8 @@ public class CRUDRepositoryTests
         Assert.True(other.Id > 0);
         var note = await notesRepo.Create(new Note { ChildId = child.Id, Text = "n" });
         Assert.True(note.Id > 0);
-        childrenRepo.AddEnriched(new("Notes", "Id", "ChildId", Many: true), notesRepo);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        childrenRepo.AddEnriched(new("Notes", "Id", "ChildId", Type: EnrichmentPropertyType.List), notesRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var updated = await parentsRepo.Update(new Parent
         {
             Id = parent.Id,
@@ -211,8 +211,8 @@ public class CRUDRepositoryTests
         Assert.True(note.Id > 0);
         var other = await notesRepo.Create(new Note { Text = "other" });
         Assert.True(other.Id > 0);
-        childrenRepo.AddEnriched(new("Notes", "Id", "ChildId", Many: true), notesRepo);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        childrenRepo.AddEnriched(new("Notes", "Id", "ChildId", Type: EnrichmentPropertyType.List), notesRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var removed = await parentsRepo.Delete(new Parent { Id = parent.Id });
         Assert.Equal(1, removed.RowsAffected);
         Assert.Empty(await parentsRepo.Read().ToListAsync());
@@ -230,7 +230,7 @@ public class CRUDRepositoryTests
         Assert.True(parent.Id > 0);
         var child = await childrenRepo.Create(new Child { ParentId = parent.Id, Label = "a" });
         Assert.True(child.Id > 0);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var removed = await parentsRepo.Delete(new Parent { Id = parent.Id });
         Assert.Equal(1, removed.RowsAffected);
         Assert.Empty(await parentsRepo.Read().ToListAsync());
@@ -248,8 +248,8 @@ public class CRUDRepositoryTests
         var home = await childTypesRepo.Create(new UserType { Name = "home" });
         Assert.True(home.Id > 0);
         childrenRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), childTypesRepo);
-        childrenRepo.AddEnriched(new("Notes", "Id", "ChildId", Many: true), notesRepo);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        childrenRepo.AddEnriched(new("Notes", "Id", "ChildId", Type: EnrichmentPropertyType.List), notesRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
         var created = await parentsRepo.Create(new Parent
         {
             Children =
@@ -275,7 +275,7 @@ public class CRUDRepositoryTests
     {
         var connection = await Setup();
         var parentsRepo = Open<Parent>(connection);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), Read<Child>(connection));
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), Read<Child>(connection));
         var error = await Assert.ThrowsAsync<DatasourceException>(() =>
             parentsRepo.Create(new Parent { Children = [new Child { Label = "a" }] }));
         Assert.Contains("Children", error.Message);
@@ -317,7 +317,7 @@ public class CRUDRepositoryTests
         IReadonlyRepository<Child> childrenRepo)
     {
         parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
-        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Many: true), childrenRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
     }
 
     static CRUDRepository<T> Open<T>(IConnection connection, IWriteEnrichmentStrategy<T>? write = null) where T : new() =>

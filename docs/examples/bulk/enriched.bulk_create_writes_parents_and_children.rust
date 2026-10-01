@@ -1,0 +1,29 @@
+let connection = setup(&mut []).await;
+let mut options = CRUDRepositoryOptions::default();
+options.entity = "Parent".into();
+let mut parents = BulkCRUDRepository::new(connection.clone(), options).unwrap();
+let mut child_options = CRUDRepositoryOptions::default();
+child_options.entity = "Child".into();
+let children = Arc::new(BulkCRUDRepository::new(connection, child_options).unwrap());
+parents.add_enriched(
+    Enrichment::new("children", "id", "parent_id", None, datasources::EnrichmentPropertyType::List),
+    children.clone(),
+    None,
+);
+let response = parents
+    .create_bulk(&mut [
+        record(&[(
+            "children",
+            encode_rows(&[record(&[("label", Value::from("a"))])]),
+        )]),
+        record(&[(
+            "children",
+            encode_rows(&[
+                record(&[("label", Value::from("b"))]),
+                record(&[("label", Value::from("c"))]),
+            ]),
+        )]),
+    ])
+    .await
+    .unwrap();
+let stored_parents = parents.read(None, None).await.unwrap();

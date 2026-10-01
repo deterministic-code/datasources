@@ -1,7 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 let mut options = create_crud_repository_options::<User>();
-options.column_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 options.ids = vec!["Id".into()];
 let users_repo = CRUDRepository::new(connection, options).unwrap();
 let mut created = datasources::Row::new();

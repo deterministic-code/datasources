@@ -17,22 +17,22 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     parents: object[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const keys = this.keysOf(parents, sources, enrichment.from);
+    const keys = this.keysOf(parents, sources, enrichment.sourceProperty);
     if (keys.size === 0) return;
     const index = new Map<string, TRelated>();
     for await (const item of via.read(
-      new Where(new Operator.In(enrichment.by, [...keys.values()])),
+      new Where(new Operator.In(enrichment.relatedKey, [...keys.values()])),
     )) {
-      const by = this.props(item)[enrichment.by];
+      const by = this.props(item)[enrichment.relatedKey];
       if (hasKey(by)) index.set(this.keyOf(by), item);
     }
     for (const [indexOfParent, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.from, sources, indexOfParent);
+      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, indexOfParent);
       if (key === undefined || key === null) continue;
       const related = index.get(this.keyOf(key));
       if (!related) continue;
       Object.assign(parent, {
-        [enrichment.into]: enrichment.select ? this.props(related)[enrichment.select] : related,
+        [enrichment.destinationProperty]: enrichment.relatedProperty ? this.props(related)[enrichment.relatedProperty] : related,
       });
     }
   }
@@ -43,13 +43,13 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     parents: object[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const keys = this.keysOf(parents, sources, enrichment.from);
+    const keys = this.keysOf(parents, sources, enrichment.sourceProperty);
     if (keys.size === 0) return;
     const index = new Map<string, TRelated[]>();
     for await (const item of via.read(
-      new Where(new Operator.In(enrichment.by, [...keys.values()])),
+      new Where(new Operator.In(enrichment.relatedKey, [...keys.values()])),
     )) {
-      const by = this.props(item)[enrichment.by];
+      const by = this.props(item)[enrichment.relatedKey];
       if (hasKey(by)) {
         const cacheKey = this.keyOf(by);
         const list = index.get(cacheKey) ?? [];
@@ -58,9 +58,9 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
       }
     }
     for (const [indexOfParent, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.from, sources, indexOfParent);
+      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, indexOfParent);
       if (key === undefined || key === null) continue;
-      Object.assign(parent, { [enrichment.into]: index.get(this.keyOf(key)) ?? [] });
+      Object.assign(parent, { [enrichment.destinationProperty]: index.get(this.keyOf(key)) ?? [] });
     }
   }
 

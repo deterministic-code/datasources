@@ -5,7 +5,7 @@ var usersRepo = new CRUDRepository<UsersView>(connection, new CRUDRepositoryOpti
     Ids = ["Key"],
     ReadProperties = ["Key", "Login", "Active", "Opened", "UserTypeId", "Version"],
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
-    ColumnMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+    PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
     {
         ["Key"] = "id",
         ["Login"] = "username",
@@ -19,14 +19,14 @@ var userTypesRepo = new CRUDRepository<UserType>(connection, new CRUDRepositoryO
 {
     Ids = ["Id"],
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 var userRolesRepo = new CRUDRepository<UserRole>(connection, new CRUDRepositoryOptions<UserRole>
 {
     Ids = [],
     EntityMapper = casing,
-    ColumnMappings = casing,
+    PropertyMappings = casing,
 });
 usersRepo.AddEnriched(new("UserType", "UserTypeId", "Id", "Name"), userTypesRepo);
-usersRepo.AddEnriched(new("Roles", "Key", "UserId", Many: true), userRolesRepo);
+usersRepo.AddEnriched(new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List), userRolesRepo);
 var admin = await userTypesRepo.Create(new UserType { Name = "admin" });

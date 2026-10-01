@@ -5,5 +5,5 @@ await remove(typesConnection, gone);
 const connection = await setup([{ type_id: person.id }, { type_id: gone.id }]);
 const parentsRepo = repo(Parent, connection);
 const typesRepo = repo(UserType, typesConnection);
-parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
 const items = await collectAsync(parentsRepo.read());

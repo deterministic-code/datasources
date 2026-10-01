@@ -64,7 +64,7 @@ const mock = (rows: Cells[] = []) => {
 
 const entry = (into: string, extra: object = {}) =>
   new StoredEnrichment(
-    { into, from: "id", by: "parent_id", many: true, ...extra },
+    { destinationProperty: into, sourceProperty: "id", relatedKey: "parent_id", type: "list", ...extra },
     async () => {},
   );
 
@@ -166,7 +166,7 @@ describe("statement and repository edges", () => {
     const { connection, command } = mock([]);
     const writer = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
     const host = new CRUDRepository<Item>(connection, { type: Item, entity: "parents" });
-    host.addEnriched({ into: "Children", from: "id", by: "parent_id", many: true }, writer);
+    host.addEnriched({ destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, writer);
     const objectId = Object.assign(new Item(), { id: { nested: true } as unknown as number, name: "a" });
     expect(await host.create(objectId)).toBe(objectId);
     const numeric = Object.assign(new Item(), { name: "b" });
@@ -176,7 +176,7 @@ describe("statement and repository edges", () => {
       entity: "parents",
       ids: ["id", "name"],
     });
-    wide.addEnriched({ into: "Children", from: "id", by: "parent_id", many: true }, writer);
+    wide.addEnriched({ destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, writer);
     expect(await wide.create(new Item())).toBeInstanceOf(Item);
 
     command.reader = new MockReader([undefined as unknown as Cells]);
@@ -212,7 +212,7 @@ describe("enrichment edges", () => {
     const { connection } = mock([]);
     const writer = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
     const linked = new StoredEnrichment(
-      { into: "Tags", from: "id", by: "id", association: { parent: "parent_id", related: "tag_id" } },
+      { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id", association: { parent: "parent_id", related: "tag_id" } },
       async () => {},
       undefined,
       writer,
@@ -222,7 +222,7 @@ describe("enrichment edges", () => {
     await expect(DeleteEnrichmentStrategy.load(writer, owned.enrichment, { id: { nested: true } })).resolves.toEqual([]);
 
     const host = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
-    host.addEnriched({ into: "Children", from: "id", by: "parent_id", many: true }, writer);
+    host.addEnriched({ destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, writer);
     const tree = new RepositoryTree(new RepositoryTreeNode(host, ""));
     await expect(
       new DefaultWriteEnrichmentStrategy<Item>().persist(tree, [new Item()], "nope" as WriteMode),
@@ -235,24 +235,24 @@ describe("enrichment edges", () => {
 
     await new HashsetOptimizedReadonlyEnrichmentStrategy<Item>().apply(
       writer,
-      { into: "name", from: "missing", by: "id", select: "name" },
+      { destinationProperty: "name", sourceProperty: "missing", relatedKey: "id", relatedProperty: "name" },
       [{}],
     );
     await new NestedToObjectEnrichmentStrategy<Item>({ key: "id", fields: { id: "id" } }).apply(
       writer,
-      { into: "name", from: "id", by: "id" },
+      { destinationProperty: "name", sourceProperty: "id", relatedKey: "id" },
       [],
     );
   });
 
   it("walks lookup, link, and replace edges", async () => {
-    const tags = { into: "Tags", from: "id", by: "id", association: { parent: "parent_id", related: "tag_id" } };
+    const tags = { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id", association: { parent: "parent_id", related: "tag_id" } };
     const empty = mock([]);
     const via = new CRUDRepository<Item>(empty.connection, { type: Item, entity: "tags" });
     const lookup = new DefaultReadonlyEnrichmentStrategy<Item>();
-    await lookup.apply(via, { into: "name", from: "id", by: "id" }, [{ id: null }, { id: 1 }]);
-    await lookup.apply(via, { into: "Children", from: "id", by: "parent_id", many: true }, [{ id: null }, {}]);
-    await expect(lookup.applyLinked(via, via, { into: "Tags", from: "id", by: "id" }, [{ id: 1 }])).rejects.toThrow(
+    await lookup.apply(via, { destinationProperty: "name", sourceProperty: "id", relatedKey: "id" }, [{ id: null }, { id: 1 }]);
+    await lookup.apply(via, { destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, [{ id: null }, {}]);
+    await expect(lookup.applyLinked(via, via, { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id" }, [{ id: 1 }])).rejects.toThrow(
       "Missing association",
     );
     await lookup.applyLinked(via, via, tags, [{ id: null }]);
@@ -261,15 +261,15 @@ describe("enrichment edges", () => {
     await lookup.applyLinked(via, linkRepo, tags, [{ id: 1 }]);
 
     const hash = new HashsetOptimizedReadonlyEnrichmentStrategy<Item>();
-    await hash.apply(via, { into: "name", from: "id", by: "id", select: "name", many: true }, [{}]);
+    await hash.apply(via, { destinationProperty: "name", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", type: "list" }, [{}]);
     const named = mock([{ id: 1, name: "a" }]);
     const namedRepo = new CRUDRepository<Item>(named.connection, { type: Item, entity: "tags" });
-    await hash.apply(namedRepo, { into: "name", from: "id", by: "id", select: "name" }, [{ id: 1 }, {}]);
+    await hash.apply(namedRepo, { destinationProperty: "name", sourceProperty: "id", relatedKey: "id", relatedProperty: "name" }, [{ id: 1 }, {}]);
     const many = mock([{ parent_id: 1, name: "a" }]);
     const manyRepo = new CRUDRepository<Item>(many.connection, { type: Item, entity: "children" });
-    await hash.apply(manyRepo, { into: "Children", from: "id", by: "parent_id", many: true }, [{ id: 1 }, { id: null }]);
+    await hash.apply(manyRepo, { destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" }, [{ id: 1 }, { id: null }]);
 
-    const children = { into: "Children", from: "id", by: "parent_id", many: true };
+    const children = { destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" };
     const quiet = mock([]);
     const writer = new CRUDRepository<Item>(quiet.connection, { type: Item, entity: "children", ids: ["id"] });
     const owned = new StoredEnrichment(children, async () => {}, writer);
@@ -291,7 +291,7 @@ describe("enrichment edges", () => {
     const linkWriter = new CRUDRepository<Item>(linkedRows.connection, { entity: "links", ids: ["id"] });
     const linked = new StoredEnrichment(tags, async () => {}, undefined, linkWriter);
     await replacing.updateLinked(linked, tags, { id: 1, Tags: [{ id: 2 }, { id: 2 }, { id: 3 }] });
-    await expect(replacing.createLinks(writer, { into: "Tags", from: "id", by: "id" }, { id: 1 })).rejects.toThrow(
+    await expect(replacing.createLinks(writer, { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id" }, { id: 1 })).rejects.toThrow(
       "Missing association",
     );
     const noIds = new CRUDRepository<Item>(mock([]).connection, { entity: "children", ids: [] });
@@ -346,5 +346,34 @@ describe("enrichment edges", () => {
         "create",
       ),
     ).rejects.toThrow(/Tags/);
+  });
+
+  it("rejects dictionary and custom fills", async () => {
+    const { connection } = mock([]);
+    const via = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
+    const read = new DefaultReadonlyEnrichmentStrategy<Item>();
+    const fill = (type: "dictionary" | "custom") => ({
+      destinationProperty: "name",
+      sourceProperty: "id",
+      relatedKey: "id",
+      type,
+    });
+    await expect(read.apply(via, fill("dictionary"), [])).rejects.toThrow(
+      'Unsupported enrichment type "dictionary"',
+    );
+    await expect(read.apply(via, fill("custom"), [])).rejects.toThrow(
+      'Unsupported enrichment type "custom"',
+    );
+    const host = new CRUDRepository<Item>(connection, { type: Item, entity: "parents" });
+    const write = new DefaultWriteEnrichmentStrategy<Item>();
+    host.addEnriched(fill("dictionary"), via);
+    await expect(
+      write.persist(new RepositoryTree(new RepositoryTreeNode(host, "")), [new Item()], "create"),
+    ).rejects.toThrow('Unsupported enrichment type "dictionary"');
+    const custom = new CRUDRepository<Item>(connection, { type: Item, entity: "parents" });
+    custom.addEnriched(fill("custom"), via);
+    await expect(
+      write.persist(new RepositoryTree(new RepositoryTreeNode(custom, "")), [new Item()], "create"),
+    ).rejects.toThrow('Unsupported enrichment type "custom"');
   });
 });

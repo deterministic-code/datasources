@@ -23,7 +23,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
         let writer = entry.persist.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.into
+                enrichment.destination_property
             ))
         })?;
         let mut existing = load(writer.as_ref(), enrichment, parent).await?;
@@ -47,10 +47,10 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
         let writer = entry.link.as_ref().ok_or_else(|| {
             DatasourceError::message(format!(
                 "Deep write requires a CRUD repository for \"{}\"",
-                enrichment.into
+                enrichment.destination_property
             ))
         })?;
-        let Some(parent_key) = parent.get(&enrichment.from).cloned() else {
+        let Some(parent_key) = parent.get(&enrichment.source_property).cloned() else {
             return Ok(());
         };
         if parent_key == Value::Null {

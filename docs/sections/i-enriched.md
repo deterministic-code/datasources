@@ -81,10 +81,10 @@ Register the child repository's own fills on that repository:
 
 ```
 childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRepo);
-parentsRepo.AddEnriched(new("children", "id", "parent_id", Many: true), childrenRepo);
+parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
 ```
 
-Rust has no separate trait. {{AddEnriched|addEnriched|add_enriched}} is a method on [ReadonlyRepository](./readonly-repository.md) and [CRUDRepository](./crud-repository.md). With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `many` children and associations, are [CRUDRepository](./crud-repository.md).
+Rust has no separate trait. {{AddEnriched|addEnriched|add_enriched}} is a method on [ReadonlyRepository](./readonly-repository.md) and [CRUDRepository](./crud-repository.md). With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md).
 
 ## Examples
 

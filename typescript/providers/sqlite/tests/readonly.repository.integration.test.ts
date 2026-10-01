@@ -190,7 +190,7 @@ describe("user view", () => {
       entityMapper: casing,
       propertyMappings: casing,
     });
-    usersRepo.addEnriched({ into: "UserType", from: "UserType", by: "Id", select: "Name" }, typesRepo);
+    usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
     const usersView = await usersRepo.readSingle(new Where("Key", eq, ada));
     expect(usersView?.UserType).toBe("admin");
     expect(usersView?.Login).toBe("ada");
@@ -295,8 +295,8 @@ describe("users view crud", () => {
       entityMapper: casing,
       propertyMappings: casing,
     });
-    usersRepo.addEnriched({ into: "UserType", from: "UserTypeId", by: "Id", select: "Name" }, userTypesRepo);
-    usersRepo.addEnriched({ into: "Roles", from: "Key", by: "UserId", many: true }, userRolesRepo);
+    usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserTypeId", relatedKey: "Id", relatedProperty: "Name" }, userTypesRepo);
+    usersRepo.addEnriched({ destinationProperty: "Roles", sourceProperty: "Key", relatedKey: "UserId", type: "list" }, userRolesRepo);
     const admin = await userTypesRepo.create(Object.assign(new UserType(), { Name: "admin" }));
     expect(admin.Id).toBe(1);
     const user = Object.assign(new UsersView(), {

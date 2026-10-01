@@ -111,8 +111,8 @@ const relate = (
   typesRepo: IReadonlyRepository<UserType>,
   childrenRepo: IReadonlyRepository<Child>,
 ) => {
-  parentsRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, typesRepo);
-  parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+  parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+  parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
 };
 
 describe("CRUDRepository", () => {
@@ -145,7 +145,7 @@ describe("CRUDRepository", () => {
     const connection = await setup();
     const parentsRepo = repo(Parent, connection);
     const childrenRepo = repo(Child, connection);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const created = await parentsRepo.create(Object.assign(new Parent(), {
       Children: [Object.assign(new Child(), { Label: "n" })],
     }));
@@ -166,7 +166,7 @@ describe("CRUDRepository", () => {
     expect(kept.Id).toBeGreaterThan(0);
     const dropped = await childrenRepo.create(Object.assign(new Child(), { ParentId: parent.Id, Label: "b" }));
     expect(dropped.Id).toBeGreaterThan(0);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const updated = await parentsRepo.update(Object.assign(new Parent(), {
       Id: parent.Id,
       Children: [
@@ -199,8 +199,8 @@ describe("CRUDRepository", () => {
     expect(other.Id).toBeGreaterThan(0);
     const note = await notesRepo.create(Object.assign(new Note(), { ChildId: child.Id, Text: "n" }));
     expect(note.Id).toBeGreaterThan(0);
-    childrenRepo.addEnriched({ into: "Notes", from: "Id", by: "ChildId", many: true }, notesRepo);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    childrenRepo.addEnriched({ destinationProperty: "Notes", sourceProperty: "Id", relatedKey: "ChildId", type: "list" }, notesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const updated = await parentsRepo.update(Object.assign(new Parent(), {
       Id: parent.Id,
       Children: [Object.assign(new Child(), { Id: child.Id, Label: "fresh" })],
@@ -235,7 +235,7 @@ describe("CRUDRepository", () => {
     const leftover = await linksRepo.create(Object.assign(new ParentTag(), { TagId: keep.Id }));
     expect(leftover.Id).toBeGreaterThan(0);
     parentsRepo.addLinked(
-      { into: "Tags", from: "Id", by: "Id", association: { parent: "ParentId", related: "TagId" } },
+      { destinationProperty: "Tags", sourceProperty: "Id", relatedKey: "Id", association: { parent: "ParentId", related: "TagId" } },
       tagsRepo,
       linksRepo,
     );
@@ -266,8 +266,8 @@ describe("CRUDRepository", () => {
     expect(note.Id).toBeGreaterThan(0);
     const other = await notesRepo.create(Object.assign(new Note(), { Text: "other" }));
     expect(other.Id).toBeGreaterThan(0);
-    childrenRepo.addEnriched({ into: "Notes", from: "Id", by: "ChildId", many: true }, notesRepo);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    childrenRepo.addEnriched({ destinationProperty: "Notes", sourceProperty: "Id", relatedKey: "ChildId", type: "list" }, notesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const removed = await parentsRepo.delete(Object.assign(new Parent(), { Id: parent.Id }));
     expect(removed.rowsAffected).toBe(1);
     expect(await collectAsync(parentsRepo.read())).toEqual([]);
@@ -283,7 +283,7 @@ describe("CRUDRepository", () => {
     expect(parent.Id).toBeGreaterThan(0);
     const child = await childrenRepo.create(Object.assign(new Child(), { ParentId: parent.Id, Label: "a" }));
     expect(child.Id).toBeGreaterThan(0);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const removed = await parentsRepo.delete(Object.assign(new Parent(), { Id: parent.Id }));
     expect(removed.rowsAffected).toBe(1);
     expect(await collectAsync(parentsRepo.read())).toEqual([]);
@@ -298,9 +298,9 @@ describe("CRUDRepository", () => {
     const childTypesRepo = repo(UserType, connection);
     const home = await childTypesRepo.create(Object.assign(new UserType(), { Name: "home" }));
     expect(home.Id).toBeGreaterThan(0);
-    childrenRepo.addEnriched({ into: "TypeName", from: "Type", by: "Id", select: "Name" }, childTypesRepo);
-    childrenRepo.addEnriched({ into: "Notes", from: "Id", by: "ChildId", many: true }, notesRepo);
-    parentsRepo.addEnriched({ into: "Children", from: "Id", by: "ParentId", many: true }, childrenRepo);
+    childrenRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, childTypesRepo);
+    childrenRepo.addEnriched({ destinationProperty: "Notes", sourceProperty: "Id", relatedKey: "ChildId", type: "list" }, notesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
     const created = await parentsRepo.create(Object.assign(new Parent(), {
       Children: [Object.assign(new Child(), {
         Type: Object.assign(new UserType(), { Id: home.Id }),
@@ -320,7 +320,7 @@ describe("CRUDRepository", () => {
     const connection = await setup();
     const parentsRepo = repo(Parent, connection);
     parentsRepo.addEnriched(
-      { into: "Children", from: "Id", by: "ParentId", many: true },
+      { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
       read(Child, connection),
     );
     await expect(parentsRepo.create(Object.assign(new Parent(), {

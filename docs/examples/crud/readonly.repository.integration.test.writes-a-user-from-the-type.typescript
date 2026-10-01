@@ -2,7 +2,7 @@ const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlit
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const usersRepo = new CRUDRepository(connection, {
   ...createCRUDRepositoryOptions(User),
-  columnMappings: casing,
+  propertyMappings: casing,
   ids: ["Id"],
 });
 const created = await usersRepo.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
