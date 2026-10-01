@@ -59,6 +59,13 @@ describe("MetaDataRowTypeConverter", () => {
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: { Id: 3 } })).Type).toBe(3);
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: { id: 5 } })).Type).toBe(5);
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: undefined as never })).Type).toBeUndefined();
+    class Flip extends TypeConverter<Cell, Cell> {
+      convert = (value: Cell): Cell => value;
+      reverseConvert = (): Cell => 7;
+    }
+    const flagged = new MetaDataRowTypeConverter<Item>({ Type: new Flip() });
+    flagged.references.add("Type");
+    expect(flagged.reverseConvert(Object.assign(new Item(), { Type: { Id: 1 } })).Type).toBe(7);
   });
 });
 

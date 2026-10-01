@@ -55,7 +55,7 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
       if (Array.isArray(value)) continue;
       if (this.references.has(key)) {
         const id = scalarId(value);
-        if (id !== undefined && id !== null) cells[this.referenceColumns.map(key)] = this.converted(key, id, true);
+        if (id !== undefined && id !== null) cells[this.referenceColumns.map(key)] = this.converted(key, id);
         continue;
       }
       const converter = this.fields[key];
@@ -64,8 +64,8 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
     return cells;
   };
 
-  private converted = (key: string, value: Cell, reverse: boolean): Cell => {
+  private converted = (key: string, value: Cell): Cell => {
     const converter = this.fields[key];
-    return converter ? (reverse ? converter.reverseConvert(value) : converter.convert(value)) : value;
+    return converter ? converter.reverseConvert(value) : value;
   };
 }

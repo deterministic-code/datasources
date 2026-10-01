@@ -158,6 +158,15 @@ fn leaves_raw_and_other_statements() {
         names.apply_update(&raw_where, &cell).unwrap().get_text(),
         "x"
     );
+    let clause = Where::new(Operator::equals("id", 1));
+    assert_eq!(
+        names
+            .apply_update(&UpdateStatement::text("y", Some(Box::new(clause))), &cell)
+            .unwrap()
+            .get_text(),
+        "y"
+    );
+    assert!(ReadInput::as_where(&WhereText::new("id = 1")).is_some());
     let raw_delete = DeleteStatement::raw("DELETE FROM t", None);
     assert_eq!(
         names.apply_delete(&raw_delete, &cell).unwrap().get_text(),

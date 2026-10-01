@@ -154,7 +154,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     return field && !fieldsApplied ? field.reverseConvert(value) : value;
   };
 
-  private entries = (): StoredEnrichment[] => storedEnrichments.get(this) ?? [];
+  private entries = (): StoredEnrichment[] => storedEnrichments.get(this)!;
 
   private async *readTracked(query?: ReadQuery, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
     const statement = this.statementMappings.apply(
@@ -176,7 +176,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   }
 
   private async *readSources(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Cells> {
-    const reader = await executeReader(this.command(), query ?? this.statements!.select(), parameters);
+    const statement = query ?? this.statements!.select();
+    const reader = await executeReader(this.command(), statement, parameters);
     try {
       while (await reader.next()) {
         yield this.renamed(
@@ -212,9 +213,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       sources.push(sourced.source);
     }
     await this.fill(items as object[], sources);
-    const paired = items.length === sources.length;
     for (let index = 0; index < items.length; index++)
-      yield { item: items[index]!, source: paired ? sources[index] : undefined };
+      yield { item: items[index]!, source: sources[index] };
   }
 
   private fill = async (parents: object[], sources?: (Row | undefined)[]): Promise<void> => {
@@ -231,7 +231,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
         ? query
         : this.statements
           ? this.statements.select(
-              this.statementMappings.applyWhere(query, (name, cell) => this.cell(name, cell, false)) ?? query,
+              this.statementMappings.applyWhere(query, (name, cell) => this.cell(name, cell, false))!,
             )
           : new SelectStatement(query.getText(), query);
 }
