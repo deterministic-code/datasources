@@ -4,18 +4,25 @@ import {
   Datasource,
   DatasourceError,
   DatasourceFactory,
-  MockCommand,
   MockDriver,
   ProviderNotInstalledError,
   ReadonlyRepository,
   untyped,
 } from "./index.ts";
+import type { IConnection } from "./IConnection.ts";
+import { MockCommand } from "./mocks/mock-command.ts";
+import { MockConnection } from "./mocks/mock-connection.ts";
 
-class SelectText extends ReadonlyRepository<object> {
-  static of(repo: object): string | undefined {
-    return (repo as SelectText).statements?.select().getText();
-  }
-}
+const selectText = async (
+  repo: { read(): AsyncIterable<unknown> },
+  connection: IConnection,
+): Promise<string | undefined> => {
+  if (!(connection instanceof MockConnection)) throw new Error("expected mock connection");
+  const command = new MockCommand(connection);
+  connection.command = command;
+  for await (const item of repo.read()) void item;
+  return command.executeReaderCalls[0]?.text;
+};
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -104,12 +111,10 @@ describe("Datasource registry", () => {
     const typedRead = ds.createReadonlyRepository(Item);
     expect(typed).toBeInstanceOf(CRUDRepository);
     expect(typed.type).toBe(Item);
-    expect(typed instanceof CRUDRepository && SelectText.of(typed)).toBe("SELECT id, name FROM Item");
+    expect(await selectText(typed, connection)).toBe("SELECT id, name FROM Item");
     expect(typedRead.constructor).toBe(ReadonlyRepository);
     expect(typedRead.type).toBe(Item);
-    expect(typedRead instanceof ReadonlyRepository && SelectText.of(typedRead)).toBe(
-      "SELECT id, name FROM Item",
-    );
+    expect(await selectText(typedRead, connection)).toBe("SELECT id, name FROM Item");
     const enriched = ds.createReadonlyRepository(Item) as ReadonlyRepository<Item>;
     expect(enriched).toBeInstanceOf(ReadonlyRepository);
     typed.addLinked({ destinationProperty: "name", sourceProperty: "id", relatedKey: "id", association: { parent: "id", related: "name" } }, typedRead, typed);

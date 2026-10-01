@@ -39,7 +39,7 @@ pub struct ReadonlyRepository {
     pub(crate) row_converter: Option<RowTypeConverter>,
     pub(crate) object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>,
     statement_mappings: StatementMappings,
-    pub(crate) statements: ReadonlyRepositoryStatements,
+    readonly_statements: ReadonlyRepositoryStatements,
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
@@ -72,7 +72,7 @@ impl ReadonlyRepository {
             row_converter: built.row_converter,
             object_converter: built.object_converter,
             statement_mappings: StatementMappings::new(built.entity_mapper, built.property_mappings),
-            statements: built.statements,
+            readonly_statements: built.statements,
             entity_type: TypeId::of::<Row>(),
             memory: None,
             tree: RepositoryTree::new(RepositoryTreeNode::new(
@@ -98,7 +98,7 @@ impl ReadonlyRepository {
                     Arc::new(IdentityMapper::<String>::new());
                 StatementMappings::new(entity, property)
             },
-            statements: ReadonlyRepositoryStatements::new(
+            readonly_statements: ReadonlyRepositoryStatements::new(
                 "",
                 Vec::new(),
                 StatementMappings::new(
@@ -167,7 +167,7 @@ impl ReadonlyRepository {
             };
             (statement, params)
         } else {
-            (self.statements.select(None), Vec::new())
+            (self.readonly_statements.select(None), Vec::new())
         }
     }
 
@@ -272,7 +272,7 @@ impl ReadonlyRepository {
                 }
             },
             None => {
-                let statement = self.own(self.statements.select(None))?;
+                let statement = self.own(self.readonly_statements.select(None))?;
                 self.fetch_sources(&statement, parameters.unwrap_or(&[]).to_vec())
                     .await
             }
@@ -358,11 +358,11 @@ impl ReadonlyRepository {
     fn stored_query(&self, where_clause: &dyn IWhere) -> Result<(SelectStatement, Vec<Parameter>)> {
         match self.store_where(where_clause, false)? {
             Some(stored) => Ok((
-                self.own(self.statements.select(Some(&stored)))?,
+                self.own(self.readonly_statements.select(Some(&stored)))?,
                 stored.parameters(),
             )),
             None => Ok((
-                self.own(self.statements.select(Some(where_clause)))?,
+                self.own(self.readonly_statements.select(Some(where_clause)))?,
                 where_clause.parameters(),
             )),
         }

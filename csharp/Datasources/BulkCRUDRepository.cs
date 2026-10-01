@@ -6,16 +6,23 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 {
     readonly IBulkWriteStrategy<T> bulk;
     readonly bool useTransaction;
+    readonly CRUDRepositoryStatements crudStatements;
 
     public BulkCRUDRepository(IConnection connection) : base(connection) =>
-        (bulk, useTransaction) = (new SingleCommandIBulkWriteStrategy<T>(), false);
+        (bulk, useTransaction, crudStatements) = (
+            new SingleCommandIBulkWriteStrategy<T>(),
+            false,
+            WriteStatements(connection, CreateCRUDRepositoryOptions.FromType<T>()));
 
     public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(connection, options, new SingleCommandIBulkWriteStrategy<T>()) { }
 
     public BulkCRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options, IBulkWriteStrategy<T> bulk)
         : base(connection, options) =>
-        (this.bulk, useTransaction) = (bulk, options.Write?.UseTransaction ?? false);
+        (this.bulk, useTransaction, crudStatements) = (
+            bulk,
+            options.Write?.UseTransaction ?? false,
+            WriteStatements(connection, options));
 
     public Task<Response> Create(IReadOnlyList<T> items) =>
         InTransaction(() => bulk.Create(items, this));
@@ -83,11 +90,16 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
             : Value.Null.Instance;
     }
 
-    CRUDRepositoryStatements Writes => (CRUDRepositoryStatements)Statements;
+    static CRUDRepositoryStatements WriteStatements(IConnection connection, CRUDRepositoryOptions<T> options)
+    {
+        var builder = new CRUDRepositoryBuilder<T>();
+        builder.Parts(connection, options);
+        return builder.CRUDStatements ?? throw new DatasourceException("Statements required");
+    }
 
     BulkCommand Insert(T item)
     {
-        var statement = Writes.Insert(Fields(Reverse(item), col => !Ids.Contains(col)));
+        var statement = crudStatements.Insert(Fields(Reverse(item), col => !Ids.Contains(col)));
         return new(statement.GetText(), statement.Fields);
     }
 
@@ -97,14 +109,14 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         var fields = Fields(record, col => !Ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        var statement = Writes.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        var statement = crudStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
         return new(statement.GetText(), statement.Parameters);
     }
 
     BulkCommand DeleteCommand(T item, IWhere? byWhere)
     {
         var record = Reverse(item);
-        var statement = Writes.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        var statement = crudStatements.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
         var parameters = statement.Where?.Parameters is { Count: > 0 } listed
             ? listed
             : statement.GetText().Contains('$') ? Fields(record, _ => true) : [];
@@ -115,7 +127,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     {
         var stored = Reverse(item);
         var row = new Row();
-        foreach (var name in Statements.ReadColumns)
+        foreach (var name in crudStatements.ReadColumns)
         {
             var match = stored.FirstOrDefault(pair => Column(pair.Key) == name && !EnrichmentInto(pair.Key));
             row[name] = match.Key is null ? Value.Null.Instance : match.Value;

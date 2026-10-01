@@ -3,7 +3,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter};
 use crate::create_crud_repository_options::create_crud_repository_options;
-use crate::crud_repository_builder::CRUDRepositoryBuilder;
+use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
@@ -36,15 +36,23 @@ use std::sync::Arc;
 pub struct CRUDRepository {
     readonly: ReadonlyRepository,
     ids: Vec<String>,
+    crud_statements: CRUDRepositoryStatements,
     write: Arc<dyn WriteEnrichmentStrategy>,
 }
 
-pub(crate) fn writes(repo: &CRUDRepository) -> CRUDRepositoryStatements {
-    CRUDRepositoryStatements::new(
-        repo.readonly.statements.table().to_string(),
-        repo.readonly.statements.read_columns().to_vec(),
-        repo.readonly.statements.mappings(),
-    )
+pub(crate) fn open_for_bulk(
+    connection: Arc<dyn Connection>,
+    options: CRUDRepositoryOptions,
+) -> Result<(CRUDRepository, CRUDRepositoryStatements)> {
+    let write = options.write.clone();
+    let built = CRUDRepositoryBuilder::parts(connection, options)?;
+    let crud_statements = write_statements(&built.statements);
+    let bulk_statements = write_statements(&built.statements);
+    let mut repo = CRUDRepository::from_built(built, crud_statements)?;
+    if let Some(write) = write {
+        repo.write = write;
+    }
+    Ok((repo, bulk_statements))
 }
 
 impl CRUDRepository {
@@ -58,17 +66,23 @@ impl CRUDRepository {
 
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
         let write = options.write.clone();
-        let mut repo = Self::from_built(CRUDRepositoryBuilder::parts(connection, options)?)?;
+        let built = CRUDRepositoryBuilder::parts(connection, options)?;
+        let crud_statements = write_statements(&built.statements);
+        let mut repo = Self::from_built(built, crud_statements)?;
         if let Some(write) = write {
             repo.write = write;
         }
         Ok(repo)
     }
 
-    fn from_built(built: BuiltRepository) -> Result<Self> {
+    fn from_built(
+        built: BuiltRepository,
+        crud_statements: CRUDRepositoryStatements,
+    ) -> Result<Self> {
         let id = built.ids.clone();
         Ok(Self {
             readonly: ReadonlyRepository::from_built(built),
+            crud_statements,
             ids: id,
             write: Arc::new(DefaultWriteEnrichmentStrategy::default()),
         })
@@ -82,6 +96,7 @@ impl CRUDRepository {
         let ids = vec!["id".into()];
         Self {
             readonly: ReadonlyRepository::memory(items),
+            crud_statements: CRUDRepositoryStatements::empty(),
             ids,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
         }
@@ -283,7 +298,7 @@ impl CRUDRepository {
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
         let record = self.readonly.reverse_convert(stored)?;
         let fields = self.params(&record, false)?;
-        let statement = writes(self).insert(&fields);
+        let statement = self.crud_statements.insert(&fields);
         let response = self
             .readonly
             .command()
@@ -298,7 +313,7 @@ impl CRUDRepository {
     async fn copy_inserted_id(&self, item: &mut Row, fields: &[Parameter]) -> Result<()> {
         let _ = fields;
         let column = self.ids[0].clone();
-        let inserted = writes(self).select_inserted_id(&column);
+        let inserted = self.crud_statements.select_inserted_id(&column);
         let sql_column = inserted.column.clone();
         let reader = self
             .readonly
@@ -372,7 +387,7 @@ impl CRUDRepository {
             }
         };
         let applied = by_where.is_none();
-        let statements = writes(self);
+        let statements = &self.crud_statements;
         let statement = statements.update(&fields, predicate, &|name, value| {
             self.readonly.cell(name, value, applied)
         })?;
@@ -397,7 +412,7 @@ impl CRUDRepository {
             }
         };
         let applied = by_where.is_none();
-        let statements = writes(self);
+        let statements = &self.crud_statements;
         let statement = statements.delete(predicate, &|name, value| {
             self.readonly.cell(name, value, applied)
         })?;

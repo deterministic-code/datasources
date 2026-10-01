@@ -7,17 +7,31 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 {
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
+    readonly CRUDRepositoryStatements crudStatements;
 
     public CRUDRepository(IConnection connection) :
         this(connection, CreateCRUDRepositoryOptions.FromType<T>()) { }
 
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
-        this(new CRUDRepositoryBuilder<T>().Parts(connection, options), options.Write) { }
+        this(Compose(connection, options)) { }
 
-    private CRUDRepository(BuiltRepository<T> built, IWriteEnrichmentStrategy<T>? write = null) : base(built)
+    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write) Compose(
+        IConnection connection,
+        CRUDRepositoryOptions<T> options)
     {
-        ids = built.Ids;
-        this.write = write ?? new DefaultWriteEnrichmentStrategy<T>();
+        var builder = new CRUDRepositoryBuilder<T>();
+        return (
+            builder.Parts(connection, options),
+            builder.CRUDStatements ?? throw new DatasourceException("Statements required"),
+            options.Write);
+    }
+
+    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write) composed) :
+        base(composed.Built)
+    {
+        ids = composed.Built.Ids;
+        crudStatements = composed.Statements;
+        write = composed.Write ?? new DefaultWriteEnrichmentStrategy<T>();
     }
 
     public IReadOnlyList<string> Ids => ids;
@@ -116,12 +130,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return await ReadSingle(IdWhere(key));
     }
 
-    CRUDRepositoryStatements Writes => (CRUDRepositoryStatements)Statements;
+    CRUDRepositoryStatements CRUDStatements => crudStatements;
 
     async Task<Response> Insert(T item)
     {
         var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
-        var statement = Writes.Insert(fields);
+        var statement = CRUDStatements.Insert(fields);
         var response = await Command().Execute(statement, statement.Fields);
         if (ids.Count == 1)
             await CopyInsertedId(item, statement.Fields);
@@ -131,7 +145,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task CopyInsertedId(T target, IReadOnlyList<Parameter> fields)
     {
         var column = ids[0];
-        var statement = Writes.SelectInsertedId(column);
+        var statement = CRUDStatements.SelectInsertedId(column);
         var sqlColumn = statement.Column;
         IStatement read = statement;
         var reader = await Command().ExecuteReader(read, read is IReturnStatement ? fields : null);
@@ -171,14 +185,14 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         var fields = Params(record, col => !ids.Contains(col));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
-        var statement = Writes.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        var statement = CRUDStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
         return await Command().Execute(statement, statement.Parameters);
     }
 
     async Task<Response> Remove(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var statement = Writes.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
+        var statement = CRUDStatements.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
         var parameters = statement.Where?.Parameters is { Count: > 0 } listed
             ? listed
             : statement.GetText().Contains('$') ? Params(record, _ => true) : [];
