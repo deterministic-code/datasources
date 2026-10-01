@@ -133,7 +133,6 @@ pub use default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
 pub use default_write_enrichment_strategy::encode_rows;
 pub use default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 pub use defaults::defaults;
-pub use driver_loader::DriverLoader;
 pub use erased_driver::erase_driver;
 pub use provider_catalog::ProviderCatalog;
 #[doc(hidden)]

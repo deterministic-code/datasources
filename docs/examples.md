@@ -220,10 +220,6 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Skip unloaded lists](./sections/lazy-write-enrichment-strategy.md#skip-unloaded-lists)
 
-## CreateEnrichmentStrategy
-
-## DefaultCreateEnrichmentStrategy
-
 ## UpdateEnrichmentStrategy
 
 - [Replace children](./sections/update-enrichment-strategy.md#replace-children)

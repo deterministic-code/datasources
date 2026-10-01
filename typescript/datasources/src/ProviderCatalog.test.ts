@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceError, DatasourceFactory, DriverLoader, ProviderCatalog, ProviderNotInstalledError } from "./index.ts";
+import { DriverLoader } from "./DriverLoader.ts";
+import { Datasource, DatasourceError, DatasourceFactory, ProviderCatalog, ProviderNotInstalledError } from "./index.ts";
 
 const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));

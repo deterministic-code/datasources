@@ -7,7 +7,6 @@ export type { IDriver } from "./IDriver.ts";
 export { columnType } from "./IDriver.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory } from "./DatasourceFactory.ts";
-export { DriverLoader } from "./DriverLoader.ts";
 export { ProviderCatalog } from "./ProviderCatalog.ts";
 export type {
   ICreateTableStatement,
