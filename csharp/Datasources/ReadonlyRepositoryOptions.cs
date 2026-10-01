@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public class ReadonlyRepositoryOptions<T> where T : new()
+public record ReadonlyRepositoryOptions<T> where T : new()
 {
     public string? Entity { get; init; }
     public IMapper<string, string> EntityMapper { get; init; } = new IdentityMapper<string>();

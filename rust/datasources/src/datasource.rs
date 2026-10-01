@@ -74,24 +74,16 @@ fn apply_crud<T: ConvertSchema + 'static>(
         .map(|(name, ty)| (name.to_string(), ty.to_string()))
         .collect();
     let rows = datasource.row_converter(&columns);
-    match custom {
-        None => {
-            let mut options = built;
-            options.row_converter = Some(rows);
-            options.row_type_converters = types;
-            options
-        }
-        Some(mut crud) => {
-            if crud.entity.is_empty() {
-                crud.entity = built.entity.clone();
-            }
-            if crud.row_converter.is_none() {
-                crud.row_converter = Some(rows);
-            }
-            crud.row_type_converters = types;
-            crud
-        }
+    let entity = built.entity.clone();
+    let mut options = custom.unwrap_or(built);
+    if options.entity.is_empty() {
+        options.entity = entity;
     }
+    if options.row_converter.is_none() {
+        options.row_converter = Some(rows);
+    }
+    options.row_type_converters = types;
+    options
 }
 
 fn apply_readonly<T: ConvertSchema + 'static>(
@@ -105,24 +97,16 @@ fn apply_readonly<T: ConvertSchema + 'static>(
         .map(|(name, ty)| (name.to_string(), ty.to_string()))
         .collect();
     let rows = datasource.row_converter(&columns);
-    match custom {
-        None => {
-            let mut options = built;
-            options.row_converter = Some(rows);
-            options.row_type_converters = types;
-            options
-        }
-        Some(mut read) => {
-            if read.entity.is_empty() {
-                read.entity = built.entity.clone();
-            }
-            if read.row_converter.is_none() {
-                read.row_converter = Some(rows);
-            }
-            read.row_type_converters = types;
-            read
-        }
+    let entity = built.entity.clone();
+    let mut options = custom.unwrap_or(built);
+    if options.entity.is_empty() {
+        options.entity = entity;
     }
+    if options.row_converter.is_none() {
+        options.row_converter = Some(rows);
+    }
+    options.row_type_converters = types;
+    options
 }
 
 pub struct BuiltDatasource {
