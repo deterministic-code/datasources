@@ -1,6 +1,6 @@
 # StatementEvaluator
 
-Interprets an [IExpression](./expressions.md) against a name→value map. [Where.GetText](./where-clause.md) materializes SQL; this type evaluates.
+Evaluates an [IStatement](./statements.md#istatement). Expression trees use [ExpressionEvaluator](./expression-evaluator.md).
 
 ## Classes
 
@@ -14,18 +14,15 @@ class StatementEvaluator
 
 **Methods**
 
-##### evaluate(expression, parameters?)
+##### evaluate(statement)
 
-Resolves identifiers from `parameters`. A where condition returns a boolean.
+Takes a statement. Body is empty until statement-level evaluation is defined.
 
 ```typescript
-evaluate(expression: IExpression, parameters?: Record<string, Scalar>): Scalar
+evaluate(statement: IStatement): void
 ```
 
-- `expression` — [IExpression](./expressions.md#iexpression)
-- `parameters` — row / name→value context
-
-**Returns** [Scalar](./where-clause.md#scalar)
+- `statement` — [IStatement](./statements.md#istatement)
 
 ### csharp
 #### StatementEvaluator
@@ -36,18 +33,15 @@ public sealed class StatementEvaluator
 
 **Methods**
 
-##### Evaluate(expression, parameters)
+##### Evaluate(statement)
 
-Resolves identifiers from `parameters`. A where condition returns a [Value](./command.md) bool.
+Takes a statement. Body is empty until statement-level evaluation is defined.
 
 ```csharp
-public Value Evaluate(IExpression expression, IReadOnlyDictionary<string, Value>? parameters)
+public void Evaluate(IStatement statement)
 ```
 
-- `expression` — [IExpression](./expressions.md#iexpression)
-- `parameters` — row / name→value context
-
-**Returns** `Value`
+- `statement` — [IStatement](./statements.md#istatement)
 
 ### rust
 #### StatementEvaluator
@@ -58,33 +52,17 @@ pub struct StatementEvaluator
 
 **Methods**
 
-##### evaluate(expression, parameters)
+##### evaluate(statement)
 
-Resolves identifiers from `parameters`. A where condition returns `Value::Bool`.
+Takes a statement. Body is empty until statement-level evaluation is defined.
 
 ```rust
-pub fn evaluate(&self, expression: &Expression, parameters: &Row) -> Value
+pub fn evaluate(&self, statement: &dyn Statement)
 ```
 
-- `expression` — [Expression](./expressions.md#expression)
-- `parameters` — row / name→value context
-
-**Returns** [Value](./command.md)
+- `statement` — [Statement](./statements.md#statement)
 :::
 
 ## Remarks
 
-Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A raw text [WhereText](./where-clause.md#wheretext) is not evaluable.
-
-## Examples
-
-### Match and miss
-
-::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
-```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
-```
-```typescript typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
-```
-:::
+For predicates and operators against a row map, use [ExpressionEvaluator](./expression-evaluator.md).

@@ -95,7 +95,7 @@ public sealed class StatementParserTests
     public void EvaluatesTheNewPredicates()
     {
         var row = new Row { ["name"] = "ada", ["age"] = 30, ["id"] = Value.Null.Instance };
-        var evaluator = new StatementEvaluator();
+        var evaluator = new ExpressionEvaluator();
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Operator.IsNull(new Identifier("id")), row));
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Operator.Like("name", "a%"), row));
         Assert.Equal(new Value.Bool(false), evaluator.Evaluate(new Operator.NotLike("name", "a%"), row));

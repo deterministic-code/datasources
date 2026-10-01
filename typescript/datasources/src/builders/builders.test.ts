@@ -19,7 +19,7 @@ import {
   PrimaryKey,
   SelectStatement,
   ReferentialAction,
-  StatementEvaluator,
+  ExpressionEvaluator,
   ParameterDirection,
   ReturnStatement,
   UniqueConstraint,
@@ -107,9 +107,9 @@ describe("Where", () => {
   });
 });
 
-describe("StatementEvaluator", () => {
+describe("ExpressionEvaluator", () => {
   it("evaluates compare, groups, not, and in", () => {
-    const evaluator = new StatementEvaluator();
+    const evaluator = new ExpressionEvaluator();
     const row = { id: 1, age: 21, name: "a" };
     expect(evaluator.evaluate(new Where(new Operator.Equals("id", 1)), row)).toBe(true);
     expect(evaluator.evaluate(new Where(new Operator.Equals("id", 2)), row)).toBe(false);

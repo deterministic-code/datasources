@@ -1,0 +1,8 @@
+let evaluator = ExpressionEvaluator;
+let row = record(&[
+    ("id", Value::Int(1)),
+    ("age", Value::Int(21)),
+    ("name", Value::Text("a".into())),
+]);
+let yes = Value::Bool(true);
+let no = Value::Bool(false);

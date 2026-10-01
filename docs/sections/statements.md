@@ -133,4 +133,5 @@ Bound values live on [Where](./where-clause.md). [IStatement](#istatement) is no
 - [ReturnStatement](./return-statement.md)
 - [Where](./where-clause.md)
 - [Expressions](./expressions.md)
+- [ExpressionEvaluator](./expression-evaluator.md)
 - [StatementEvaluator](./statement-evaluator.md)

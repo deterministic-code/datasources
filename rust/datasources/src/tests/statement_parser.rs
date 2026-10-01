@@ -153,7 +153,7 @@ fn evaluates_the_new_predicates() {
         ("age", Value::Int(30)),
         ("id", Value::Null),
     ]);
-    let evaluator = StatementEvaluator;
+    let evaluator = ExpressionEvaluator;
     assert_eq!(
         evaluator.evaluate(
             &Operator::is_null(Expression::Identifier(Identifier::new("id"))).into(),

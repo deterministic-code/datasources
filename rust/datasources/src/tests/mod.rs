@@ -1332,7 +1332,7 @@ fn rejects_a_negative_limit() {
 
 #[test]
 fn evaluates_where_statement() {
-    let evaluator = StatementEvaluator;
+    let evaluator = ExpressionEvaluator;
     let row = record(&[
         ("id", Value::Int(1)),
         ("age", Value::Int(21)),
@@ -1520,7 +1520,7 @@ fn evaluates_where_statement() {
 #[test]
 #[should_panic(expected = "array is not a scalar")]
 fn evaluate_array_panics() {
-    StatementEvaluator.evaluate(
+    ExpressionEvaluator.evaluate(
         &Expression::Array(ArrayExpression::new(vec![])),
         &Row::new(),
     );
@@ -1529,13 +1529,13 @@ fn evaluate_array_panics() {
 #[test]
 #[should_panic(expected = "text where is not evaluable")]
 fn evaluate_text_where_panics() {
-    StatementEvaluator.evaluate_where(&WhereText::new("id = 1"), &Row::new());
+    ExpressionEvaluator.evaluate_where(&WhereText::new("id = 1"), &Row::new());
 }
 
 #[test]
 #[should_panic(expected = "empty in")]
 fn evaluate_empty_in_panics() {
-    StatementEvaluator.evaluate(
+    ExpressionEvaluator.evaluate(
         &Expression::Operator(Operator::In {
             left: Box::new(Expression::Identifier(Identifier::new("id"))),
             right: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -1547,7 +1547,7 @@ fn evaluate_empty_in_panics() {
 #[test]
 #[should_panic(expected = "empty compare")]
 fn evaluate_empty_compare_panics() {
-    StatementEvaluator.evaluate(
+    ExpressionEvaluator.evaluate(
         &Expression::Operator(Operator::GreaterThan {
             left: Box::new(Expression::Literal(Literal::new(true))),
             right: Box::new(Expression::Literal(Literal::new(1_i64))),
