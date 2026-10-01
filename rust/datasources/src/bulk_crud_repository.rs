@@ -221,7 +221,7 @@ fn insert_command(repo: &CRUDRepository, item: &Row) -> Result<(String, Vec<Para
     let record = readonly.reverse_convert(item)?;
     let fields = params(repo, &record, false)?;
     let statement = writes(repo).insert(&fields);
-    Ok((statement.get_text(), fields))
+    Ok((statement.get_text(), statement.fields().to_vec()))
 }
 
 fn update_command(
@@ -237,15 +237,20 @@ fn update_command(
             "Update requires at least one non-Id field",
         ));
     }
-    let (owned, raw) = predicate(repo, &record, by_where)?;
-    let clause: &dyn IWhere = match (owned.as_ref(), raw) {
-        (Some(clause), _) => clause,
-        (None, Some(clause)) => clause,
-        _ => unreachable!(),
+    let owned;
+    let clause: &dyn IWhere = match by_where {
+        Some(clause) => clause,
+        None => {
+            owned = id_where(repo, &record)?;
+            &owned
+        }
     };
-    let statement = writes(repo).update(&fields, clause);
-    let parameters = crate::UpdateStatement::parameter_list(&fields, Some(clause));
-    Ok((statement.get_text(), parameters))
+    let applied = by_where.is_none();
+    let statements = writes(repo);
+    let statement = statements.update(&fields, clause, &|name, value| {
+        stored_repo(repo).cell(name, value, applied)
+    })?;
+    Ok((statement.get_text(), statement.parameters()))
 }
 
 fn delete_command(
@@ -255,14 +260,21 @@ fn delete_command(
 ) -> Result<(String, Vec<Parameter>)> {
     let readonly = stored_repo(repo);
     let record = readonly.reverse_convert(item)?;
-    let (owned, raw) = predicate(repo, &record, by_where)?;
-    let clause: &dyn IWhere = match (owned.as_ref(), raw) {
-        (Some(clause), _) => clause,
-        (None, Some(clause)) => clause,
-        _ => unreachable!(),
+    let owned;
+    let clause: &dyn IWhere = match by_where {
+        Some(clause) => clause,
+        None => {
+            owned = id_where(repo, &record)?;
+            &owned
+        }
     };
-    let statement = writes(repo).delete(clause);
-    let parameters = clause.parameters();
+    let applied = by_where.is_none();
+    let statements = writes(repo);
+    let statement = statements.delete(clause, &|name, value| stored_repo(repo).cell(name, value, applied))?;
+    let parameters = statement
+        .where_clause()
+        .map(|clause| clause.parameters())
+        .unwrap_or_default();
     let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
         params(repo, &record, true)?
     } else {
@@ -302,40 +314,11 @@ fn params(repo: &CRUDRepository, record: &Row, include_ids: bool) -> Result<Vec<
         .into_iter()
         .map(|(name, value)| {
             Ok(Parameter::new(
-                stored_repo(repo).column(&name),
+                name.clone(),
                 stored_repo(repo).cell(&name, &value, true)?,
             ))
         })
         .collect()
-}
-
-fn predicate<'a>(
-    repo: &CRUDRepository,
-    record: &Row,
-    by_where: Option<&'a dyn IWhere>,
-) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
-    match by_where {
-        Some(clause) => match clause.as_any().downcast_ref::<Where>() {
-            Some(typed) => Ok((
-                Some(typed.map(
-                    |name| stored_repo(repo).column(name),
-                    |name, cell| stored_repo(repo).cell(name, cell, false),
-                )?),
-                None,
-            )),
-            None => Ok((None, Some(clause))),
-        },
-        None => {
-            let clause = id_where(repo, record)?;
-            Ok((
-                Some(clause.map(
-                    |name| stored_repo(repo).column(name),
-                    |name, cell| stored_repo(repo).cell(name, cell, true),
-                )?),
-                None,
-            ))
-        }
-    }
 }
 
 fn id_where(repo: &CRUDRepository, record: &Row) -> Result<Where> {

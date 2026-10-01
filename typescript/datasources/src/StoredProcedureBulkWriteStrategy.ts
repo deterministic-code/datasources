@@ -19,7 +19,7 @@ const json = (rows: Cells[]): string => `[${rows.map(object).join(",")}]`;
 
 const object = (row: Cells): string =>
   `{${Object.entries(row)
-    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .sort(([left], [right]) => (left < right ? -1 : 1))
     .map(([key, value]) => `${quote(key)}:${scalar(value)}`)
     .join(",")}}`;
 

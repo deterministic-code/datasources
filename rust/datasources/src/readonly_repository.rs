@@ -8,7 +8,7 @@ use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrate
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
-use crate::mappers::IdentityMapper;
+use crate::mappers::{IdentityMapper, Mapper};
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
@@ -91,11 +91,21 @@ impl ReadonlyRepository {
             middlewares: Vec::new(),
             row_converter: None,
             object_converter: Box::new(MetaDataRowTypeConverter::new(Vec::new())),
-            statement_mappings: StatementMappings::new(
-                Box::new(IdentityMapper::<String>::new()),
-                Box::new(IdentityMapper::<String>::new()),
+            statement_mappings: {
+                let entity: Arc<dyn Mapper<String, String> + Send + Sync> =
+                    Arc::new(IdentityMapper::<String>::new());
+                let property: Arc<dyn Mapper<String, String> + Send + Sync> =
+                    Arc::new(IdentityMapper::<String>::new());
+                StatementMappings::new(entity, property)
+            },
+            statements: ReadonlyRepositoryStatements::new(
+                "",
+                Vec::new(),
+                StatementMappings::new(
+                    Arc::new(IdentityMapper::<String>::new()),
+                    Arc::new(IdentityMapper::<String>::new()),
+                ),
             ),
-            statements: ReadonlyRepositoryStatements::new("", Vec::new()),
             entity_type: TypeId::of::<Row>(),
             memory: Some(SharedItems::new(items)),
             tree: RepositoryTree::new(RepositoryTreeNode::new(
@@ -175,14 +185,12 @@ impl ReadonlyRepository {
         fields_applied: bool,
     ) -> Result<Option<Where>> {
         match where_clause.as_any().downcast_ref::<Where>() {
-            Some(clause) => Ok(Some(self.store_clause(clause, fields_applied)?)),
+            Some(clause) => Ok(Some(self.statement_mappings.apply_where(
+                clause,
+                &|name, cell| self.cell(name, cell, fields_applied),
+            )?)),
             None => Ok(None),
         }
-    }
-
-    fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
-        self.statement_mappings
-            .apply_where(clause, &|name, cell| self.cell(name, cell, fields_applied))
     }
 
     pub(crate) fn column(&self, property: &str) -> String {
@@ -246,7 +254,9 @@ impl ReadonlyRepository {
             }
             Some(statement) => match statement.as_any().downcast_ref::<SelectStatement>() {
                 Some(select) if !select.table.is_empty() => {
-                    let mapped = self.mapped_select(select)?;
+                    let mapped = self.statement_mappings.apply_select(select, &|name, cell| {
+                        self.cell(name, cell, false)
+                    })?;
                     let params = parameters.map(|items| items.to_vec()).unwrap_or_else(|| {
                         mapped
                             .predicate()
@@ -332,23 +342,16 @@ impl ReadonlyRepository {
 
     fn renamed(&self, row: Row) -> Row {
         row.into_iter()
-            .map(|(key, value)| (self.property(&key), value))
+            .map(|(key, value)| (self.statement_mappings.property(&key), value))
             .collect()
-    }
-
-    fn property(&self, key: &str) -> String {
-        self.statement_mappings.property(key)
-    }
-
-    fn mapped_select(&self, select: &SelectStatement) -> Result<SelectStatement> {
-        self.statement_mappings
-            .apply_select(select, &|name, cell| self.cell(name, cell, false))
     }
 
     fn own(&self, select: SelectStatement) -> Result<SelectStatement> {
         match select.table.is_empty() {
             true => Ok(select),
-            false => self.mapped_select(&select),
+            false => self
+                .statement_mappings
+                .apply_select(&select, &|name, cell| self.cell(name, cell, false)),
         }
     }
 

@@ -1,21 +1,25 @@
 use crate::builders::Join;
 use crate::i_where::IWhere;
 use crate::mappers::Mapper;
+use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::statements::statement::Statement;
+use crate::statements::text::Text;
 use crate::statements::{OrderBy, SelectStatementOptions, Where};
 use crate::value::Value;
-use crate::SelectStatement;
+use crate::{DeleteStatement, InsertStatement, SelectInsertedIdStatement, SelectStatement, UpdateStatement};
+use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct StatementMappings {
-    entity_mappers: Box<dyn Mapper<String, String> + Send + Sync>,
-    property_mappers: Box<dyn Mapper<String, String> + Send + Sync>,
+    entity_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
+    property_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
 }
 
 impl StatementMappings {
     pub fn new(
-        entity_mappers: Box<dyn Mapper<String, String> + Send + Sync>,
-        property_mappers: Box<dyn Mapper<String, String> + Send + Sync>,
+        entity_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
+        property_mappers: Arc<dyn Mapper<String, String> + Send + Sync>,
     ) -> Self {
         Self {
             entity_mappers,
@@ -23,7 +27,7 @@ impl StatementMappings {
         }
     }
 
-    pub fn column(&self, property: &str) -> String {
+    pub(crate) fn column(&self, property: &str) -> String {
         let Some(dot) = last_dot(property) else {
             return Mapper::map(&self.property_mappers, property.to_string());
         };
@@ -41,7 +45,7 @@ impl StatementMappings {
         }
     }
 
-    pub fn property(&self, key: &str) -> String {
+    pub(crate) fn property(&self, key: &str) -> String {
         let reversed = Mapper::reverse_map(&self.property_mappers, key.to_string());
         if reversed != key && Mapper::map(&self.property_mappers, reversed.clone()) == key {
             return reversed;
@@ -115,6 +119,73 @@ impl StatementMappings {
         cell: &dyn Fn(&str, &Value) -> Result<Value>,
     ) -> Result<Where> {
         clause.map(|name| self.column(name), cell)
+    }
+
+    pub fn apply_insert(&self, insert: &InsertStatement) -> InsertStatement {
+        let Some(table) = insert.table() else {
+            return InsertStatement::text(insert.get_text());
+        };
+        let fields: Vec<Parameter> = insert
+            .fields()
+            .iter()
+            .map(|field| Parameter {
+                name: self.column(&field.name),
+                value: field.value.clone(),
+                direction: field.direction,
+            })
+            .collect();
+        InsertStatement::new(self.entity(&table), &fields)
+    }
+
+    pub fn apply_update(
+        &self,
+        update: &UpdateStatement,
+        cell: &dyn Fn(&str, &Value) -> Result<Value>,
+    ) -> Result<UpdateStatement> {
+        let Some(table) = update.table() else {
+            return Ok(UpdateStatement::text(
+                update.get_text(),
+                crate::where_text::boxed(update.where_clause()),
+            ));
+        };
+        let fields: Vec<Parameter> = update
+            .fields()
+            .iter()
+            .map(|field| Parameter {
+                name: self.column(&field.name),
+                value: field.value.clone(),
+                direction: field.direction,
+            })
+            .collect();
+        let mapped = self.apply_predicate(update.where_clause(), cell)?;
+        let clause: Option<&dyn IWhere> = match mapped.as_ref() {
+            Some(where_clause) => Some(where_clause),
+            None => update.where_clause(),
+        };
+        Ok(UpdateStatement::new(self.entity(&table), &fields, clause))
+    }
+
+    pub fn apply_delete(
+        &self,
+        delete: &DeleteStatement,
+        cell: &dyn Fn(&str, &Value) -> Result<Value>,
+    ) -> Result<DeleteStatement> {
+        let Some(table) = delete.table() else {
+            return Ok(DeleteStatement::raw(
+                delete.get_text(),
+                crate::where_text::boxed(delete.where_clause()),
+            ));
+        };
+        let mapped = self.apply_predicate(delete.where_clause(), cell)?;
+        let clause: Option<&dyn IWhere> = match mapped.as_ref() {
+            Some(where_clause) => Some(where_clause),
+            None => delete.where_clause(),
+        };
+        Ok(DeleteStatement::new(self.entity(&table), clause))
+    }
+
+    pub fn apply_inserted(&self, inserted: &SelectInsertedIdStatement) -> SelectInsertedIdStatement {
+        SelectInsertedIdStatement::new(self.entity(&inserted.table), self.column(&inserted.column))
     }
 
     fn apply_predicate(

@@ -1,3 +1,0 @@
-var parentsRepo = new ReadonlyRepository<Parent>(connection);
-var typesRepo = new ReadonlyRepository<TypeRow>(typesConnection);
-parentsRepo.AddEnriched(new("type_name", "type_id", "id", "name"), typesRepo);

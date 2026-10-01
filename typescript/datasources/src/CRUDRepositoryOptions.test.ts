@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { UpdateStatement } from "./statements/UpdateStatement.ts";
+import { Operator, UpdateStatement, Where } from "./statements/index.ts";
 import { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
+import { CRUDRepository } from "./CRUDRepository.ts";
+import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
@@ -27,6 +29,24 @@ describe("CRUDRepositoryOptions", () => {
     };
     expect(new CRUDRepositoryBuilder<{ id: number }>().parts(new MockConnection(), fromType).ids).toEqual(["id"]);
     expect(new ReadonlyRepositoryBuilder().parts(new MockConnection(), {}).ids).toEqual([]);
+    expect(new CRUDRepositoryBuilder().parts(new MockConnection(), { entity: "users" }).ids).toEqual([]);
+    expect(
+      new CRUDRepositoryBuilder().parts(new MockConnection(), {
+        write: new DefaultWriteEnrichmentStrategy(),
+      }).ids,
+    ).toEqual(["id"]);
+    class Named {
+      id = 0;
+    }
+    expect(
+      new CRUDRepositoryBuilder<Named>().parts(new MockConnection(), {
+        type: Named,
+        write: new DefaultWriteEnrichmentStrategy<Named>(),
+      }).ids,
+    ).toEqual(["id"]);
+    expect(
+      new CRUDRepositoryBuilder().build(new MockConnection(), { ids: ["id"], entity: "users" }),
+    ).toBeInstanceOf(CRUDRepository);
   });
 
   it("uses the mapped table and columns", () => {
@@ -37,6 +57,12 @@ describe("CRUDRepositoryOptions", () => {
     );
     expect(statements.update([{ name: "name", value: "a" }]).getText()).toBe(
       "UPDATE users SET name = $name",
+    );
+    expect(
+      statements.update([{ name: "name", value: "a" }], new Where(new Operator.Equals("id", 1))).getText(),
+    ).toBe("UPDATE users SET name = $name WHERE id = $id");
+    expect(statements.delete(new Where(new Operator.Equals("id", 1))).getText()).toBe(
+      "DELETE FROM users WHERE id = $id",
     );
     expect(UpdateStatement.parameterList([{ name: "name", value: "a" }])).toEqual([
       { name: "name", value: "a" },

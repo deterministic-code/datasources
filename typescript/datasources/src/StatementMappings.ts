@@ -1,8 +1,12 @@
 import type { Cell } from "./converters/Cell.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
+import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import type { IStatement } from "./statements/IStatement.ts";
 import type { IWhere } from "./statements/IWhere.ts";
+import { InsertStatement } from "./statements/InsertStatement.ts";
+import { SelectInsertedIdStatement } from "./statements/SelectInsertedIdStatement.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
+import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import { Where } from "./statements/Where.ts";
 
 export class StatementMappings {
@@ -35,25 +39,44 @@ export class StatementMappings {
   apply = (
     query: IStatement | undefined,
     cell: (property: string, value: Cell) => Cell,
-  ): IStatement | undefined =>
-    query instanceof SelectStatement && query.table
-      ? new SelectStatement({
-          distinct: query.distinct,
-          table: this.entityMappers.map(query.table),
-          fields: query.fields.map(this.column),
-          where: query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
-          joins: query.joins.map((join) => ({
-            kind: join.kind,
-            table: this.entityMappers.map(join.table),
-            on: join.on ? new Where(join.on).map(this.column, cell).condition : undefined,
-          })),
-          groupBy: query.groupBy.map(this.column),
-          having: query.having instanceof Where ? this.applyWhere(query.having, cell) : query.having,
-          orderBy: query.orderBy.map((order) => ({ column: this.column(order.column), direction: order.direction })),
-          limit: query.limit,
-          offset: query.offset,
-        })
-      : query;
+  ): IStatement | undefined => {
+    if (query instanceof SelectStatement && query.table)
+      return new SelectStatement({
+        distinct: query.distinct,
+        table: this.entityMappers.map(query.table),
+        fields: query.fields.map(this.column),
+        where: query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
+        joins: query.joins.map((join) => ({
+          kind: join.kind,
+          table: this.entityMappers.map(join.table),
+          on: join.on ? new Where(join.on).map(this.column, cell).condition : undefined,
+        })),
+        groupBy: query.groupBy.map(this.column),
+        having: query.having instanceof Where ? this.applyWhere(query.having, cell) : query.having,
+        orderBy: query.orderBy.map((order) => ({ column: this.column(order.column), direction: order.direction })),
+        limit: query.limit,
+        offset: query.offset,
+      });
+    if (query instanceof InsertStatement && query.table !== undefined)
+      return new InsertStatement(
+        this.entityMappers.map(query.table),
+        query.fields.map((field) => ({ name: this.column(field.name), value: field.value })),
+      );
+    if (query instanceof UpdateStatement && query.table !== undefined)
+      return new UpdateStatement(
+        this.entityMappers.map(query.table),
+        query.fields.map((field) => ({ name: this.column(field.name), value: field.value })),
+        query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
+      );
+    if (query instanceof DeleteStatement && query.table !== undefined)
+      return new DeleteStatement(
+        this.entityMappers.map(query.table),
+        query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
+      );
+    if (query instanceof SelectInsertedIdStatement)
+      return new SelectInsertedIdStatement(this.entityMappers.map(query.table), this.column(query.column));
+    return query;
+  };
 
   applyWhere = (
     where: IWhere | undefined,

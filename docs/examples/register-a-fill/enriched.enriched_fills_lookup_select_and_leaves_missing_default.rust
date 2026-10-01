@@ -11,10 +11,10 @@ let mut parents = [
     record(&[("type_id", gone.get("id").unwrap().clone())]),
 ];
 let connection = setup(&mut parents).await;
-let mut parents_repo = readonly(connection, "Parent");
-let types_repo = Arc::new(readonly(types_connection, "TypeRow"));
+let mut parents_repo = mapped(connection, "Parent");
+let types_repo = Arc::new(mapped(types_connection, "UserType"));
 parents_repo.add_enriched(
-    Enrichment::new("type_name", "type_id", "id", Some("name".into()), false),
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), false),
     types_repo,
     None,
 );

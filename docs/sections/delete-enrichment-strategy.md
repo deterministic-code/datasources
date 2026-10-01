@@ -157,10 +157,10 @@ Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](./d
 ### Skip child deletes
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#DeleteStrategyCanSkipChildren
+```csharp csharp/Datasources.Tests/CRUDRepositoryTests.cs#DeleteStrategyCanSkipChildren
 ```
 ```rust rust/datasources/src/delete_enrichment_strategy.rs#delete_strategy_can_skip_children
 ```
-```typescript typescript/datasources/src/EnrichedCRUDRepository.test.ts#delete-strategy-can-skip-children
+```typescript typescript/datasources/src/CRUDRepository.test.ts#delete-strategy-can-skip-children
 ```
 :::

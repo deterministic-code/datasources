@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MockConnection, MockTransaction, UnitOfWorkTransaction } from "./index.ts";
+import { DatasourceError, MockConnection, MockTransaction, UnitOfWorkTransaction } from "./index.ts";
 
 describe("UnitOfWorkTransaction", () => {
   it("joins a transaction already open on the connection", async () => {
@@ -28,5 +28,16 @@ describe("UnitOfWorkTransaction", () => {
     expect(connection.startTransactionCalls).toBe(1);
     expect(txn.commitCalls).toBe(0);
     expect(txn.abortCalls).toBe(1);
+  });
+
+  it("rejects a second begin and a unit that never began", async () => {
+    const failed = new MockConnection();
+    failed.startTransactionError = new Error("nope");
+    const broken = new UnitOfWorkTransaction(failed);
+    await expect(broken.begin()).rejects.toThrow("nope");
+    await expect(broken.begin()).rejects.toThrow(DatasourceError);
+    const idle = new UnitOfWorkTransaction(new MockConnection());
+    await expect(idle.commit()).rejects.toThrow("has not begun");
+    await expect(idle.abort()).rejects.toThrow("has not begun");
   });
 });

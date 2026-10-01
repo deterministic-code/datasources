@@ -3,37 +3,56 @@ use super::text::Text;
 use crate::parameter::Parameter;
 
 pub struct InsertStatement {
-    text: String,
+    text: Option<String>,
+    table: Option<String>,
+    fields: Vec<Parameter>,
 }
 
 impl InsertStatement {
     pub fn text(text: impl Into<String>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: Some(text.into()),
+            table: None,
+            fields: Vec::new(),
+        }
     }
 
     pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self {
         Self {
-            text: format!(
+            text: None,
+            table: Some(table.as_ref().to_string()),
+            fields: fields.to_vec(),
+        }
+    }
+
+    pub fn table(&self) -> Option<&str> {
+        self.table.as_deref()
+    }
+
+    pub fn fields(&self) -> &[Parameter] {
+        &self.fields
+    }
+}
+
+impl Text for InsertStatement {
+    fn get_text(&self) -> String {
+        match &self.text {
+            Some(text) => text.clone(),
+            None => format!(
                 "INSERT INTO {} ({}) VALUES ({})",
-                table.as_ref(),
-                fields
+                self.table.as_deref().unwrap_or(""),
+                self.fields
                     .iter()
                     .map(|field| field.name.as_str())
                     .collect::<Vec<_>>()
                     .join(", "),
-                fields
+                self.fields
                     .iter()
                     .map(|field| format!("${}", field.name))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
         }
-    }
-}
-
-impl Text for InsertStatement {
-    fn get_text(&self) -> String {
-        self.text.clone()
     }
 }
 

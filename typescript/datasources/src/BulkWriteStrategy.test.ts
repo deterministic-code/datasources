@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DatasourceError } from "./DatasourceError.ts";
 import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
 import { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
@@ -93,6 +94,17 @@ describe("bulk write strategies", () => {
     expect(command.executeCalls[2]?.parameters?.map((parameter) => parameter.name)).toEqual(["id__0", "id__1"]);
   });
 
+  it("leaves a shorter name inside a longer parameter", async () => {
+    class Coded {
+      id = 0;
+      id_code = "";
+    }
+    const { repo, command } = open(Coded, new BatchCommandIBulkWriteStrategy<Coded>());
+    await repo.createBulk([Object.assign(new Coded(), { id_code: "ab" })]);
+    expect(command.executeCalls[0]?.text).toContain("$id_code__0");
+    expect(command.executeCalls[0]?.text).not.toContain("$id_code__0__0");
+  });
+
   it("stored procedure commands sends one json call", async () => {
     const { repo, command } = open(
       Parent,
@@ -148,6 +160,33 @@ describe("bulk write strategies", () => {
     expect(command.executeCalls[0]?.parameters?.[0]?.value).toBe(
       `[{"amount":1.25,"blob":"AQID","count":2,"created":"${created.toISOString().replace(/\.(\d{3})Z$/, ".$10000Z")}","flag":true,"label":null,"price":10.5,"token":"3f2504e0-4f89-11d3-9a0c-0305e82c3301"}]`,
     );
+  });
+
+  it("payload encodes the remaining scalars", async () => {
+    class Odd {
+      flag = false;
+      huge = 0;
+      note = "";
+      rank = 0n;
+      zed = 1;
+      amy = 2;
+    }
+    const { repo, command } = open(
+      Odd,
+      new StoredProcedureBulkWriteStrategy<Odd>("create_odd", "update_odd", "delete_odd"),
+    );
+    await repo.createBulk([
+      Object.assign(new Odd(), { flag: false, note: "a\u0001b", rank: 4n }),
+    ]);
+    expect(command.executeCalls[0]?.parameters?.[0]?.value).toContain('"flag":false');
+    expect(command.executeCalls[0]?.parameters?.[0]?.value).toContain('"rank":4');
+    expect(command.executeCalls[0]?.parameters?.[0]?.value).toContain("\\u0001");
+    await expect(
+      repo.createBulk([Object.assign(new Odd(), { huge: Number.POSITIVE_INFINITY })]),
+    ).rejects.toThrow(DatasourceError);
+    await expect(
+      repo.createBulk([Object.assign(new Odd(), { note: { bad: true } as never })]),
+    ).rejects.toThrow(DatasourceError);
   });
 
   it("empty list does not execute", async () => {

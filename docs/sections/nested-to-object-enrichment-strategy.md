@@ -129,10 +129,10 @@ This is the read-side collapse. [FlatToNestedMapper](./flat-to-nested-mapper.md)
 ### Collapse join rows
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedReadonlyRepositoryTests.cs#FlatToNestedCollapsesJoinRows
+```csharp csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#FlatToNestedCollapsesJoinRows
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#fills_roles_from_a_join
 ```
-```typescript typescript/datasources/src/EnrichedReadonlyRepository.test.ts#collapses-join-rows
+```typescript typescript/datasources/src/ReadonlyRepository.test.ts#collapses-join-rows
 ```
 :::

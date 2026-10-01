@@ -5,4 +5,7 @@
     <RootNamespace>Datasources</RootNamespace>
     <AssemblyName>Datasources</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Datasources.Tests" />
+  </ItemGroup>
 </Project>

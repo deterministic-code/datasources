@@ -29,5 +29,14 @@ describe("Datasource", () => {
     const command = ds.createCommand();
     expect(ds.provider).toBe("sqlite");
     expect(command.connection).toBe(ds.createCommand().connection);
+    class Wide {
+      id = 0;
+      on = false;
+      when = new Date(0);
+      blob = new Uint8Array();
+      tags: string[] = [];
+      name = "";
+    }
+    expect(ds.createRepository(Wide)).toBeTruthy();
   });
 });

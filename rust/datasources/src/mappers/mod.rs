@@ -41,6 +41,16 @@ impl<TFrom, TTo> Mapper<TFrom, TTo> for Box<dyn Mapper<TFrom, TTo> + Send + Sync
     }
 }
 
+impl<TFrom, TTo> Mapper<TFrom, TTo> for std::sync::Arc<dyn Mapper<TFrom, TTo> + Send + Sync> {
+    fn map(&self, value: TFrom) -> TTo {
+        (**self).map(value)
+    }
+
+    fn reverse_map(&self, value: TTo) -> TFrom {
+        (**self).reverse_map(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

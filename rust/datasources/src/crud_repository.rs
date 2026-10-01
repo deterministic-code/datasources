@@ -43,6 +43,7 @@ pub(crate) fn writes(repo: &CRUDRepository) -> CRUDRepositoryStatements {
     CRUDRepositoryStatements::new(
         repo.readonly.statements.table().to_string(),
         repo.readonly.statements.read_columns().to_vec(),
+        repo.readonly.statements.mappings(),
     )
 }
 
@@ -244,7 +245,7 @@ impl CRUDRepository {
             .into_iter()
             .map(|(name, value)| {
                 Ok(Parameter::new(
-                    self.readonly.column(&name),
+                    name.clone(),
                     self.readonly.cell(&name, &value, true)?,
                 ))
             })
@@ -284,10 +285,10 @@ impl CRUDRepository {
         let response = self
             .readonly
             .command()
-            .execute_statement(&statement, Some(&fields))
+            .execute_statement(&statement, Some(statement.fields()))
             .await?;
         if self.ids.len() == 1 {
-            self.copy_inserted_id(target, &fields).await?;
+            self.copy_inserted_id(target, statement.fields()).await?;
         }
         Ok(response)
     }
@@ -295,8 +296,8 @@ impl CRUDRepository {
     async fn copy_inserted_id(&self, item: &mut Row, fields: &[Parameter]) -> Result<()> {
         let _ = fields;
         let column = self.ids[0].clone();
-        let sql_column = self.readonly.column(&column);
-        let inserted = writes(self).select_inserted_id(&sql_column);
+        let inserted = writes(self).select_inserted_id(&column);
+        let sql_column = inserted.column.clone();
         let reader = self
             .readonly
             .command()
@@ -356,14 +357,20 @@ impl CRUDRepository {
                 "Update requires at least one non-Id field",
             ));
         }
-        let (owned, raw) = self.stored_predicate(&record, by_where)?;
-        let predicate: &dyn IWhere = match (owned.as_ref(), raw) {
-            (Some(clause), _) => clause,
-            (None, Some(clause)) => clause,
-            _ => unreachable!(),
+        let owned;
+        let predicate: &dyn IWhere = match by_where {
+            Some(clause) => clause,
+            None => {
+                owned = self.id_where(&record)?;
+                &owned
+            }
         };
-        let statement = writes(self).update(&fields, predicate);
-        let parameters = crate::UpdateStatement::parameter_list(&fields, Some(predicate));
+        let applied = by_where.is_none();
+        let statements = writes(self);
+        let statement = statements.update(&fields, predicate, &|name, value| {
+            self.readonly.cell(name, value, applied)
+        })?;
+        let parameters = statement.parameters();
         self.readonly
             .command()
             .execute_statement(&statement, Some(&parameters))
@@ -375,14 +382,23 @@ impl CRUDRepository {
             return Ok(memory.remove(item, by_where));
         }
         let record = self.readonly.reverse_convert(item)?;
-        let (owned, raw) = self.stored_predicate(&record, by_where)?;
-        let predicate: &dyn IWhere = match (owned.as_ref(), raw) {
-            (Some(clause), _) => clause,
-            (None, Some(clause)) => clause,
-            _ => unreachable!(),
+        let owned;
+        let predicate: &dyn IWhere = match by_where {
+            Some(clause) => clause,
+            None => {
+                owned = self.id_where(&record)?;
+                &owned
+            }
         };
-        let statement = writes(self).delete(predicate);
-        let parameters = predicate.parameters();
+        let applied = by_where.is_none();
+        let statements = writes(self);
+        let statement = statements.delete(predicate, &|name, value| {
+            self.readonly.cell(name, value, applied)
+        })?;
+        let parameters = statement
+            .where_clause()
+            .map(|clause| clause.parameters())
+            .unwrap_or_default();
         let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
             self.params(&record, true)?
         } else {
@@ -392,30 +408,6 @@ impl CRUDRepository {
             .command()
             .execute_statement(&statement, Some(&parameters))
             .await
-    }
-
-    fn stored_predicate<'a>(
-        &'a self,
-        record: &Row,
-        by_where: Option<&'a dyn IWhere>,
-    ) -> Result<(Option<Where>, Option<&'a dyn IWhere>)> {
-        match by_where {
-            Some(clause) => match clause.as_any().downcast_ref::<Where>() {
-                Some(typed) => Ok((Some(self.store_clause(typed, false)?), None)),
-                None => Ok((None, Some(clause))),
-            },
-            None => Ok((
-                Some(self.store_clause(&self.id_where(record)?, true)?),
-                None,
-            )),
-        }
-    }
-
-    fn store_clause(&self, clause: &Where, fields_applied: bool) -> Result<Where> {
-        clause.map(
-            |name| self.readonly.column(name),
-            |name, cell| self.readonly.cell(name, cell, fields_applied),
-        )
     }
 
     fn id_record(&self, id: &dyn IdKey) -> Result<Row> {

@@ -1,3 +1,0 @@
-const parentsRepo = new ReadonlyRepository(Parent, connection);
-const typesRepo = new ReadonlyRepository(TypeRow, typesConnection);
-parentsRepo.addEnriched({ into: "type_name", from: "type_id", by: "id", select: "name" }, typesRepo);

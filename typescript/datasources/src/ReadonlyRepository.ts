@@ -154,9 +154,6 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     return field && !fieldsApplied ? field.reverseConvert(value) : value;
   };
 
-  private stored = (where: IWhere, fieldsApplied = false): IWhere =>
-    this.statementMappings.applyWhere(where, (name, cell) => this.cell(name, cell, fieldsApplied)) ?? where;
-
   private entries = (): StoredEnrichment[] => storedEnrichments.get(this) ?? [];
 
   private async *readTracked(query?: ReadQuery, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
@@ -225,9 +222,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   };
 
   private renamed = (row: Cells): Cells =>
-    Object.fromEntries(Object.entries(row).map(([key, value]) => [this.property(key), value]));
-
-  private property = (key: string): string => this.statementMappings.property(key);
+    Object.fromEntries(Object.entries(row).map(([key, value]) => [this.statementMappings.property(key), value]));
 
   private readQuery = (query?: ISelectStatement | IWhere): ISelectStatement | undefined =>
     !query
@@ -235,6 +230,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       : "where" in query
         ? query
         : this.statements
-          ? this.statements.select(this.stored(query))
+          ? this.statements.select(
+              this.statementMappings.applyWhere(query, (name, cell) => this.cell(name, cell, false)) ?? query,
+            )
           : new SelectStatement(query.getText(), query);
 }

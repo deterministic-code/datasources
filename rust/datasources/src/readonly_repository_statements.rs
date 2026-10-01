@@ -1,4 +1,5 @@
 use crate::i_where::IWhere;
+use crate::statement_mappings::StatementMappings;
 use crate::statements::Text;
 use crate::where_text::WhereText;
 use crate::{SelectStatement, SelectStatementOptions, Where};
@@ -6,14 +7,20 @@ use crate::{SelectStatement, SelectStatementOptions, Where};
 pub struct ReadonlyRepositoryStatements {
     table: String,
     columns: Vec<String>,
+    mappings: StatementMappings,
 }
 
 impl ReadonlyRepositoryStatements {
-    pub fn new(table: impl Into<String>, columns: Vec<String>) -> Self {
+    pub fn new(table: impl Into<String>, columns: Vec<String>, mappings: StatementMappings) -> Self {
         Self {
             table: table.into(),
             columns,
+            mappings,
         }
+    }
+
+    pub fn mappings(&self) -> StatementMappings {
+        self.mappings.clone()
     }
 
     pub fn table(&self) -> &str {

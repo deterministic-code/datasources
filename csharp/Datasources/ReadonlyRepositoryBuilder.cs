@@ -5,8 +5,13 @@ namespace Datasources;
 
 public class ReadonlyRepositoryBuilder<T> where T : new()
 {
+    protected IMapper<string, string> EntityMappers { get; private set; } = new IdentityMapper<string>();
+    protected IMapper<string, string> PropertyMappers { get; private set; } = new IdentityMapper<string>();
+
     public BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryOptions<T> options)
     {
+        EntityMappers = options.EntityMapper;
+        PropertyMappers = options.PropertyMappings;
         var names = options.ReadProperties is { Count: > 0 } listed ? listed : Columns();
         var columns = names
             .Select(options.PropertyMappings.Map)

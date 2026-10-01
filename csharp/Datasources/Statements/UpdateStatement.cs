@@ -2,15 +2,20 @@ namespace Datasources;
 
 public sealed record UpdateStatement : IUpdateStatement
 {
-    readonly string text;
+    readonly string? text;
+    public string? Table { get; }
+    public IReadOnlyList<Parameter> Fields { get; } = [];
+    public IWhere? Where { get; }
 
     public UpdateStatement(string text, IWhere? where = null) => (this.text, Where) = (text, where);
 
-    public UpdateStatement(string table, IReadOnlyList<Parameter> fields, IWhere? where = null)
-        : this(Compose($"UPDATE {table} SET {Set(fields)}", where, fields).Text, where) { }
+    public UpdateStatement(string table, IReadOnlyList<Parameter> fields, IWhere? where = null) =>
+        (Table, Fields, Where) = (table, fields, where);
 
-    public IWhere? Where { get; }
-    public string GetText() => text;
+    public string GetText() => text ?? Compose(Sql(), Where, Fields).Text;
+
+    public IReadOnlyList<Parameter> Parameters =>
+        text is null ? Compose(Sql(), Where, Fields).Parameters : [];
 
     public static IReadOnlyList<Parameter> ParameterList(IReadOnlyList<Parameter> fields, IWhere? where = null) =>
         Compose("", where, fields).Parameters;
@@ -36,6 +41,8 @@ public sealed record UpdateStatement : IUpdateStatement
                 parameters.Add(parameter);
         return (head + tail, parameters);
     }
+
+    string Sql() => $"UPDATE {Table} SET {Set(Fields)}";
 
     static string Set(IReadOnlyList<Parameter> fields) =>
         string.Join(", ", fields.Select(field => $"{field.Name} = ${field.Name}"));

@@ -8,7 +8,7 @@ public sealed class StatementMappings
     public StatementMappings(IMapper<string, string> entityMappers, IMapper<string, string> propertyMappers) =>
         (this.entityMappers, this.propertyMappers) = (entityMappers, propertyMappers);
 
-    public string Column(string property)
+    internal string Column(string property)
     {
         var dot = LastDot(property);
         if (dot < 0) return propertyMappers.Map(property);
@@ -20,7 +20,7 @@ public sealed class StatementMappings
         return table == qualifier && mapped == name ? property : $"{table}.{mapped}";
     }
 
-    public string Property(string key)
+    internal string Property(string key)
     {
         var reversed = propertyMappers.ReverseMap(key);
         if (reversed != key && propertyMappers.Map(reversed) == key) return reversed;
@@ -46,6 +46,19 @@ public sealed class StatementMappings
             Limit = select.Limit,
             Offset = select.Offset,
         }),
+        InsertStatement { Table: { } table } insert => new InsertStatement(
+            entityMappers.Map(table),
+            [.. insert.Fields.Select(field => field with { Name = Column(field.Name) })]),
+        UpdateStatement { Table: { } table } update => new UpdateStatement(
+            entityMappers.Map(table),
+            [.. update.Fields.Select(field => field with { Name = Column(field.Name) })],
+            Apply(update.Where, cell)),
+        DeleteStatement { Table: { } table } delete => new DeleteStatement(
+            entityMappers.Map(table),
+            Apply(delete.Where, cell)),
+        SelectInsertedIdStatement inserted => new SelectInsertedIdStatement(
+            entityMappers.Map(inserted.Table),
+            Column(inserted.Column)),
         _ => query
     };
 

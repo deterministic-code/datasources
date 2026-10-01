@@ -153,10 +153,10 @@ async fn delete_linked(&self, entry: &StoredEnrichment, enrichment: &Enrichment,
 ### Cascade delete
 
 ::: example
-```csharp csharp/Datasources.Tests/EnrichedCRUDRepositoryTests.cs#DeleteCascadesChildrenThenParent
+```csharp csharp/Datasources.Tests/CRUDRepositoryTests.cs#DeleteCascadesChildrenThenParent
 ```
 ```rust rust/datasources/tests/enriched.rs#deep_delete_cascades_children_then_parent
 ```
-```typescript typescript/datasources/src/EnrichedCRUDRepository.test.ts#delete-cascades-children-then-parent
+```typescript typescript/datasources/src/CRUDRepository.test.ts#delete-cascades-children-then-parent
 ```
 :::

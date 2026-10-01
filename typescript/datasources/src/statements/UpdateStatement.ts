@@ -45,28 +45,35 @@ const compose = (
   return { text: head + tail, parameters };
 };
 
+const setClause = (fields: Field[]): string =>
+  fields.map((field) => `${field.name} = $${field.name}`).join(", ");
+
 export class UpdateStatement implements IUpdateStatement {
+  readonly table?: string;
+  readonly fields: Field[];
   readonly where?: IWhere;
-  private readonly text: string;
+  private readonly text?: string;
 
   constructor(text: string, where?: IWhere);
   constructor(table: string, fields: Field[], where?: IWhere);
   constructor(tableOrText: string, fieldsOrWhere?: Field[] | IWhere, where?: IWhere) {
     if (Array.isArray(fieldsOrWhere)) {
-      const bound = compose(
-        `UPDATE ${tableOrText} SET ${fieldsOrWhere.map((field) => `${field.name} = $${field.name}`).join(", ")}`,
-        fieldsOrWhere,
-        where,
-      );
-      this.text = bound.text;
+      this.table = tableOrText;
+      this.fields = fieldsOrWhere;
       this.where = where;
       return;
     }
     this.text = tableOrText;
+    this.fields = [];
     this.where = fieldsOrWhere;
   }
 
-  getText = (): string => this.text;
+  getText = (): string =>
+    this.text ?? compose(`UPDATE ${this.table} SET ${setClause(this.fields)}`, this.fields, this.where).text;
+
+  get parameters(): Parameter[] {
+    return this.text !== undefined ? [] : compose("", this.fields, this.where).parameters;
+  }
 
   static parameterList = (fields: Field[], where?: IWhere): Parameter[] =>
     compose("", fields, where).parameters;
