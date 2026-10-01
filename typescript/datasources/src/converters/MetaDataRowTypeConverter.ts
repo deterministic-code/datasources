@@ -15,6 +15,7 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
   fields: Record<string, TypeConverter<Cell, Cell>>;
   references = new Set<string>();
   referenceColumns: IMapper<string, string> = new IdentityMapper<string>();
+  shouldCoerceId = false;
 
   constructor(fields: Record<string, TypeConverter<Cell, Cell>> = {}) {
     super();

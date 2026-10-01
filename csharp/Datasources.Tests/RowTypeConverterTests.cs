@@ -68,6 +68,14 @@ public class RowTypeConverterTests
     }
 
     [Fact]
+    public void CoercesIntPropertyWhenShouldCoerceId()
+    {
+        var converter = new MetaDataRowTypeConverter<Counted> { ShouldCoerceId = true };
+        Assert.Equal(1, converter.Convert(new Row { ["id"] = 1L }).id);
+        Assert.Throws<OverflowException>(() => converter.Convert(new Row { ["id"] = (long)int.MaxValue + 1 }));
+    }
+
+    [Fact]
     public void SkipsIndexersAndWriteOnlyProperties()
     {
         var mixed = new MetaDataRowTypeConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });
