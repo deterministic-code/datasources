@@ -244,6 +244,11 @@ describe("CRUDRepository", () => {
       current: undefined,
       next: async () => true,
       nextResult: async () => false,
+      async *read() {
+        while (await this.next()) {
+          if (this.current !== undefined) yield this.current;
+        }
+      },
       dispose: async () => {},
     };
     await expect(async () => {
@@ -258,6 +263,11 @@ describe("CRUDRepository", () => {
       current: undefined,
       next: async () => true,
       nextResult: async () => false,
+      async *read() {
+        while (await this.next()) {
+          if (this.current !== undefined) yield this.current;
+        }
+      },
       dispose: async () => {},
     };
     await expect(async () => {

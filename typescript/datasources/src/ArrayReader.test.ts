@@ -16,6 +16,7 @@ describe("ArrayReader", () => {
     expect(await reader.next()).toBe(false);
     expect(reader.current).toBeUndefined();
     expect(await reader.nextResult()).toBe(false);
+    expect(await Array.fromAsync(new ArrayReader(["a", "b"]).read())).toEqual(["a", "b"]);
     await reader.dispose();
     await reader[Symbol.asyncDispose]();
   });

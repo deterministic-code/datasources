@@ -22,7 +22,7 @@ public class SqliteCommandIntegrationTests
 
     sealed class Item
     {
-        public int id { get; set; }
+        public long id { get; set; }
         public string name { get; set; } = "";
     }
 
@@ -88,7 +88,7 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
-    public async Task RunRawSql()
+    public async Task RunExecuteReaderOnASimpleList()
     {
         var ds = Datasource.Default;
         await using var connection = await ds.CreateConnection();
@@ -96,16 +96,21 @@ public class SqliteCommandIntegrationTests
         var command = connection.CreateCommand();
         await SchemaSpec.Apply(connection, "items");
         await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+        await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
+        await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
         await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
-        Row? row = null;
-        if (await reader.Next())
-            row = reader.Current;
-        Assert.Equal(new Value.Int(1), row!["id"]);
-        Assert.Equal(new Value.Text("ada"), row["name"]);
+        var rows = await reader.Read().ToListAsync();
+        Assert.Equal(3, rows.Count);
+        Assert.Equal(new Value.Int(1), rows[0]["id"]);
+        Assert.Equal(new Value.Text("ada"), rows[0]["name"]);
+        Assert.Equal(new Value.Int(2), rows[1]["id"]);
+        Assert.Equal(new Value.Text("grace"), rows[1]["name"]);
+        Assert.Equal(new Value.Int(3), rows[2]["id"]);
+        Assert.Equal(new Value.Text("bea"), rows[2]["name"]);
     }
 
     [Fact]
-    public async Task ReadWithCaseMapping()
+    public async Task ReadAndApplyCaseMappings()
     {
         var ds = Datasource.Default;
         await using var connection = await ds.CreateConnection();
@@ -115,16 +120,10 @@ public class SqliteCommandIntegrationTests
         await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
         await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-        Row? mapped = null;
-        while (await reader.Next())
-        {
-            var row = new Row();
-            foreach (var (key, value) in reader.Current!)
-                row[casing.ReverseMap(key)] = value;
-            mapped = row;
-        }
-        Assert.Equal(new Value.Int(1), mapped!["UserId"]);
-        Assert.Equal(new Value.Text("Ada"), mapped["FirstName"]);
+        var mapped = await reader.Read().Select(source =>
+            new Row(source.ToDictionary(cell => casing.ReverseMap(cell.Key), cell => cell.Value))).ToListAsync();
+        Assert.Equal(new Value.Int(1), mapped[0]["UserId"]);
+        Assert.Equal(new Value.Text("Ada"), mapped[0]["FirstName"]);
     }
 
     [Fact]
@@ -163,27 +162,29 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
-    public async Task RunExecuteReaderAndReturnNameValue()
+    public async Task RunExecuteReaderAndReturnNameValues()
     {
         var ds = Datasource.Default;
         await using var connection = await ds.CreateConnection();
         await connection.Open();
         var command = connection.CreateCommand();
         await SchemaSpec.Apply(connection, "settings");
-        await command.Execute(
-            "INSERT INTO settings (name, value) VALUES ($name, $value)",
-            [new Parameter("name", "theme"), new Parameter("value", "dark")]);
+        await command.Execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
+        await command.Execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
+        await command.Execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
         await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
         var converter = new MetaDataRowTypeConverter<NameValue>();
-        var items = new List<NameValue>();
-        while (await reader.Next())
-            items.Add(converter.Convert(reader.Current!));
+        var items = await reader.Read().Select(row => converter.Convert(row)).ToListAsync();
         Assert.Equal("theme", items[0].name);
         Assert.Equal("dark", items[0].value);
+        Assert.Equal("lang", items[1].name);
+        Assert.Equal("en", items[1].value);
+        Assert.Equal("size", items[2].name);
+        Assert.Equal("lg", items[2].value);
     }
 
     [Fact]
-    public async Task ExecuteInsertUpdateAndDelete()
+    public async Task ExecuteInsertReadUpdateAndDelete()
     {
         var ds = Datasource.Default;
         await using var connection = await ds.CreateConnection();
@@ -193,30 +194,29 @@ public class SqliteCommandIntegrationTests
         await command.Execute(
             "INSERT INTO items (id, name) VALUES ($id, $name)",
             [new Parameter("id", 1), new Parameter("name", "a")]);
-        await command.Execute(
+        var converter = new MetaDataRowTypeConverter<Item>();
+        await using var createdReader = await command.ExecuteReader(
+            "SELECT id, name FROM items WHERE id = $id",
+            [new Parameter("id", 1)]);
+        var created = await createdReader.Read().Select(row => converter.Convert(row)).ToListAsync();
+        var response = await command.Execute(
             "UPDATE items SET name = $name WHERE id = $id",
             [new Parameter("id", 1), new Parameter("name", "A")]);
-        var converter = new MetaDataRowTypeConverter<Item>();
-        Item? updated = null;
-        {
-            await using var reader = await command.ExecuteReader(
-                "SELECT id, name FROM items WHERE id = $id",
-                [new Parameter("id", 1)]);
-            if (await reader.Next())
-                updated = converter.Convert(reader.Current!);
-        }
+        await using var updatedReader = await command.ExecuteReader(
+            "SELECT id, name FROM items WHERE id = $id",
+            [new Parameter("id", 1)]);
+        var updated = await updatedReader.Read().Select(row => converter.Convert(row)).ToListAsync();
         await command.Execute("DELETE FROM items WHERE id = $id", [new Parameter("id", 1)]);
-        Item? gone = null;
-        {
-            await using var reader = await command.ExecuteReader(
-                "SELECT id, name FROM items WHERE id = $id",
-                [new Parameter("id", 1)]);
-            if (await reader.Next())
-                gone = converter.Convert(reader.Current!);
-        }
-        Assert.Equal(1, updated!.id);
-        Assert.Equal("A", updated.name);
-        Assert.Null(gone);
+        await using var goneReader = await command.ExecuteReader(
+            "SELECT id, name FROM items WHERE id = $id",
+            [new Parameter("id", 1)]);
+        var gone = await goneReader.Read().Select(row => converter.Convert(row)).ToListAsync();
+        Assert.Equal(1, created[0].id);
+        Assert.Equal("a", created[0].name);
+        Assert.Equal(1, response.RowsAffected);
+        Assert.Equal(1, updated[0].id);
+        Assert.Equal("A", updated[0].name);
+        Assert.Empty(gone);
     }
 
     [Fact]

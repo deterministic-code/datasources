@@ -5,9 +5,6 @@ const command = connection.createCommand();
 await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
 await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
-let mapped: Cells | undefined;
-while (await reader.next()) {
-  const row: Cells = {};
-  for (const [key, value] of Object.entries(reader.current!)) row[casing.reverseMap(key)] = value;
-  mapped = row;
-}
+const mapped = await Array.fromAsync(reader.read(), (source) =>
+  Object.fromEntries(Object.entries(source).map(([key, value]) => [casing.reverseMap(key), value])),
+);

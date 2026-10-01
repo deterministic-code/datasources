@@ -915,79 +915,84 @@ The `Command` trait has no connection getter. Stub `create_command` stores the o
 
 ## Examples
 
-### Run raw SQL
+### Run executeReader on a simple list
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunRawSql
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderOnASimpleList
 ```
-```rust rust/providers/sqlite/tests/command.rs#run_raw_sql
+```rust rust/providers/sqlite/tests/command.rs#run_execute_reader_on_a_simple_list
 ```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#runs-raw-sql
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#run-executereader-on-a-simple-list
 ```
 
-```output [Row]
-{
-  id: 1,
-  name: 'ada'
-}
+```output [Rows]
+[
+  { id: 1, name: 'ada' },
+  { id: 2, name: 'grace' },
+  { id: 3, name: 'bea' }
+]
 ```
 :::
 
-### Run ExecuteReader and return NameValue
+### Run ExecuteReader and return NameValues
 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NameValue
 ```
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValue
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValues
 ```
 ```rust rust/providers/sqlite/tests/command.rs#ConvertSchemaForNameValue
 ```
-```rust rust/providers/sqlite/tests/command.rs#run_execute_reader_and_return_name_value
+```rust rust/providers/sqlite/tests/command.rs#run_execute_reader_and_return_name_values
 ```
 ```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#NameValue
 ```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#runs-executereader-and-returns-namevalue
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#run-executereader-and-return-namevalues
 ```
 
-```output [NameValue]
-{
-  name: 'theme',
-  value: 'dark'
-}
+```output [NameValues]
+[
+  { name: 'theme', value: 'dark' },
+  { name: 'lang', value: 'en' },
+  { name: 'size', value: 'lg' }
+]
 ```
 :::
 
-### Execute insert, update, and delete
+### Execute, Insert, Read, Update, and Delete
 
 ::: example
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#Item
 ```
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteInsertUpdateAndDelete
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteInsertReadUpdateAndDelete
 ```
 ```rust rust/providers/sqlite/tests/command.rs#ConvertSchemaForItem
 ```
-```rust rust/providers/sqlite/tests/command.rs#execute_insert_update_and_delete
+```rust rust/providers/sqlite/tests/command.rs#execute_insert_read_update_and_delete
 ```
 ```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#Item
 ```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#executes-insert-update-and-delete
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#execute-insert-read-update-and-delete
+```
+
+```output [After: insert]
+[
+  { id: 1, name: 'a' }
+]
+```
+
+```output [Update]
+{ rowsAffected: 1 }
 ```
 
 ```output [After: update]
-{
-  id: 1,
-  name: 'A'
-}
+[
+  { id: 1, name: 'A' }
+]
 ```
 
 ```output [After: delete]
-null
-```
-```output:typescript [After: delete]
-undefined
-```
-```output:rust [After: delete]
-None
+[]
 ```
 :::
 

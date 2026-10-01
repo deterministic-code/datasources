@@ -15,6 +15,9 @@ describe("readerToAsyncIterable", () => {
   it("skips a defined-next row whose current is undefined", async () => {
     const reader: IReader<string> = {
       current: undefined,
+      read() {
+        return readerToAsyncIterable(this);
+      },
       async nextResult() {
         return false;
       },

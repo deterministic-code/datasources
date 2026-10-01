@@ -1,9 +1,11 @@
 use datasources::{
-    default, Casing, ChangeCasingMapper, ConvertSchema, FlatToNestedMapper, MappedRow, MappedValue,
+    default, Casing, ChangeCasingMapper, ConvertSchema, FlatToNestedMapper,
+    MappedRow, MappedValue,
     Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, TypeMap, TypeMapField,
     TypeMapGroup, Value,
 };
 use datasources_sql_specs::apply_schema;
+use futures_util::TryStreamExt;
 
 struct NameValue;
 
@@ -125,7 +127,7 @@ async fn reads_boolean_as_bool_and_leaves_integer() {
 }
 
 #[tokio::test]
-async fn run_raw_sql() {
+async fn run_execute_reader_on_a_simple_list() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
@@ -136,19 +138,30 @@ async fn run_raw_sql() {
         .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
         .await
         .unwrap();
+    command
+        .execute("INSERT INTO items (id, name) VALUES (2, 'grace')", None)
+        .await
+        .unwrap();
+    command
+        .execute("INSERT INTO items (id, name) VALUES (3, 'bea')", None)
+        .await
+        .unwrap();
     let reader = command
         .execute_reader("SELECT id, name FROM items", None)
         .await
         .unwrap();
-    assert!(reader.next().await.unwrap());
-    let row = reader.current().unwrap();
-    assert_eq!(row.get("id"), Some(&Value::Int(1)));
-    assert_eq!(row.get("name"), Some(&Value::from("ada")));
-    assert!(!reader.next().await.unwrap());
+    let rows: Vec<_> = reader.read().try_collect().await.unwrap();
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[0].get("id"), Some(&Value::Int(1)));
+    assert_eq!(rows[0].get("name"), Some(&Value::from("ada")));
+    assert_eq!(rows[1].get("id"), Some(&Value::Int(2)));
+    assert_eq!(rows[1].get("name"), Some(&Value::from("grace")));
+    assert_eq!(rows[2].get("id"), Some(&Value::Int(3)));
+    assert_eq!(rows[2].get("name"), Some(&Value::from("bea")));
 }
 
 #[tokio::test]
-async fn read_with_case_mapping() {
+async fn read_and_apply_case_mappings() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
@@ -167,15 +180,19 @@ async fn read_with_case_mapping() {
         .await
         .unwrap();
     let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-    let mut mapped = Row::new();
-    while reader.next().await.unwrap() {
-        mapped.clear();
-        for (key, value) in reader.current().unwrap() {
-            mapped.insert(Mapper::reverse_map(&casing, key), value);
-        }
-    }
-    assert_eq!(mapped.get("UserId"), Some(&Value::Int(1)));
-    assert_eq!(mapped.get("FirstName"), Some(&Value::from("Ada")));
+    let mapped: Vec<Row> = reader
+        .read()
+        .map_ok(|source| {
+            source
+                .into_iter()
+                .map(|(key, value)| (Mapper::reverse_map(&casing, key), value))
+                .collect()
+        })
+        .try_collect()
+        .await
+        .unwrap();
+    assert_eq!(mapped[0].get("UserId"), Some(&Value::Int(1)));
+    assert_eq!(mapped[0].get("FirstName"), Some(&Value::from("Ada")));
 }
 
 #[tokio::test]
@@ -239,21 +256,31 @@ async fn read_flat_rows_to_nested() {
 }
 
 #[tokio::test]
-async fn run_execute_reader_and_return_name_value() {
+async fn run_execute_reader_and_return_name_values() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
     let command = connection.create_command();
     apply_schema(connection.as_ref(), "settings").await.unwrap();
-    let parameters = [
-        Parameter::new("name", "theme"),
-        Parameter::new("value", "dark"),
-    ];
     command
         .execute(
-            "INSERT INTO settings (name, value) VALUES ($name, $value)",
-            Some(&parameters),
+            "INSERT INTO settings (name, value) VALUES ('theme', 'dark')",
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "INSERT INTO settings (name, value) VALUES ('lang', 'en')",
+            None,
+        )
+        .await
+        .unwrap();
+    command
+        .execute(
+            "INSERT INTO settings (name, value) VALUES ('size', 'lg')",
+            None,
         )
         .await
         .unwrap();
@@ -262,16 +289,22 @@ async fn run_execute_reader_and_return_name_value() {
         .await
         .unwrap();
     let converter = RowTypeConverter::of::<NameValue>();
-    let mut items = Vec::new();
-    while reader.next().await.unwrap() {
-        items.push(converter.convert(&reader.current().unwrap()).unwrap());
-    }
+    let items: Vec<_> = reader
+        .read()
+        .map_ok(|row| converter.convert(&row).unwrap())
+        .try_collect()
+        .await
+        .unwrap();
     assert_eq!(items[0].get("name"), Some(&Value::from("theme")));
     assert_eq!(items[0].get("value"), Some(&Value::from("dark")));
+    assert_eq!(items[1].get("name"), Some(&Value::from("lang")));
+    assert_eq!(items[1].get("value"), Some(&Value::from("en")));
+    assert_eq!(items[2].get("name"), Some(&Value::from("size")));
+    assert_eq!(items[2].get("value"), Some(&Value::from("lg")));
 }
 
 #[tokio::test]
-async fn execute_insert_update_and_delete() {
+async fn execute_insert_read_update_and_delete() {
     let _guard = super::env_lock();
     let ds = default().unwrap();
     let connection = ds.create_connection().await.unwrap();
@@ -285,29 +318,42 @@ async fn execute_insert_update_and_delete() {
         )
         .await
         .unwrap();
-    command
+    let converter = RowTypeConverter::of::<Item>();
+    let created_reader = command
+        .execute_reader(
+            "SELECT id, name FROM items WHERE id = $id",
+            Some(&[Parameter::new("id", 1_i64)]),
+        )
+        .await
+        .unwrap();
+    let created: Vec<_> = created_reader
+        .read()
+        .map_ok(|row| converter.convert(&row).unwrap())
+        .try_collect()
+        .await
+        .unwrap();
+    drop(created_reader);
+    let response = command
         .execute(
             "UPDATE items SET name = $name WHERE id = $id",
             Some(&[Parameter::new("id", 1_i64), Parameter::new("name", "A")]),
         )
         .await
         .unwrap();
-    let converter = RowTypeConverter::of::<Item>();
-    let updated = {
-        let reader = command
-            .execute_reader(
-                "SELECT id, name FROM items WHERE id = $id",
-                Some(&[Parameter::new("id", 1_i64)]),
-            )
-            .await
-            .unwrap();
-        let row = if reader.next().await.unwrap() {
-            Some(converter.convert(&reader.current().unwrap()).unwrap())
-        } else {
-            None
-        };
-        row
-    };
+    let updated_reader = command
+        .execute_reader(
+            "SELECT id, name FROM items WHERE id = $id",
+            Some(&[Parameter::new("id", 1_i64)]),
+        )
+        .await
+        .unwrap();
+    let updated: Vec<_> = updated_reader
+        .read()
+        .map_ok(|row| converter.convert(&row).unwrap())
+        .try_collect()
+        .await
+        .unwrap();
+    drop(updated_reader);
     command
         .execute(
             "DELETE FROM items WHERE id = $id",
@@ -315,25 +361,25 @@ async fn execute_insert_update_and_delete() {
         )
         .await
         .unwrap();
-    let gone = {
-        let reader = command
-            .execute_reader(
-                "SELECT id, name FROM items WHERE id = $id",
-                Some(&[Parameter::new("id", 1_i64)]),
-            )
-            .await
-            .unwrap();
-        let row = if reader.next().await.unwrap() {
-            Some(converter.convert(&reader.current().unwrap()).unwrap())
-        } else {
-            None
-        };
-        row
-    };
-    let updated = updated.unwrap();
-    assert_eq!(updated.get("id"), Some(&Value::Int(1)));
-    assert_eq!(updated.get("name"), Some(&Value::from("A")));
-    assert!(gone.is_none());
+    let gone_reader = command
+        .execute_reader(
+            "SELECT id, name FROM items WHERE id = $id",
+            Some(&[Parameter::new("id", 1_i64)]),
+        )
+        .await
+        .unwrap();
+    let gone: Vec<_> = gone_reader
+        .read()
+        .map_ok(|row| converter.convert(&row).unwrap())
+        .try_collect()
+        .await
+        .unwrap();
+    assert_eq!(created[0].get("id"), Some(&Value::Int(1)));
+    assert_eq!(created[0].get("name"), Some(&Value::from("a")));
+    assert_eq!(response.rows_affected, 1);
+    assert_eq!(updated[0].get("id"), Some(&Value::Int(1)));
+    assert_eq!(updated[0].get("name"), Some(&Value::from("A")));
+    assert!(gone.is_empty());
 }
 
 #[tokio::test]

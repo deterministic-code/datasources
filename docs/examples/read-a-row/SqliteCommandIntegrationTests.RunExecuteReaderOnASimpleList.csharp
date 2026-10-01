@@ -3,7 +3,7 @@ await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
 await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
+await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
+await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
 await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
-Row? row = null;
-if (await reader.Next())
-    row = reader.Current;
+var rows = await reader.Read().ToListAsync();

@@ -71,6 +71,7 @@ describe("StreamingReader", () => {
       async () => undefined,
       async () => false,
     );
+    expect(await Array.fromAsync(plain.read())).toEqual([]);
     await plain.dispose();
     await plain[Symbol.asyncDispose]();
     await plain.dispose();

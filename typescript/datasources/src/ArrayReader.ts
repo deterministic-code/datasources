@@ -1,4 +1,5 @@
 import type { IReader } from "./IReader.ts";
+import { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 
 export class ArrayReader<T = unknown> implements IReader<T> {
   private index = -1;
@@ -14,6 +15,10 @@ export class ArrayReader<T = unknown> implements IReader<T> {
     }
     this.current = undefined;
     return false;
+  }
+
+  read(): AsyncIterable<T> {
+    return readerToAsyncIterable(this);
   }
 
   async nextResult(): Promise<boolean> {

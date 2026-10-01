@@ -1,4 +1,5 @@
 import type { IReader } from "../IReader.ts";
+import { readerToAsyncIterable } from "../readerToAsyncIterable.ts";
 
 export class MockReader<T = unknown> implements IReader<T> {
   current: T | undefined = undefined;
@@ -20,6 +21,10 @@ export class MockReader<T = unknown> implements IReader<T> {
     }
     this.current = undefined;
     return false;
+  }
+
+  read(): AsyncIterable<T> {
+    return readerToAsyncIterable(this);
   }
 
   async nextResult(): Promise<boolean> {

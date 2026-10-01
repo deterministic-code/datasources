@@ -8,6 +8,7 @@ async-trait = "0.1"
 bcrypt = "0.16"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { path = "../../../rust/datasources" }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 datasources-mysql = { path = "../../../rust/providers/mysql" }
 datasources-postgres = { path = "../../../rust/providers/postgres" }
 datasources-sqlite = { path = "../../../rust/providers/sqlite" }

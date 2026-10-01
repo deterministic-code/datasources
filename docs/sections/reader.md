@@ -34,6 +34,16 @@ next(): Promise<boolean>
 
 **Returns** `Promise<boolean>`
 
+##### read()
+
+Reads the current result set. Skips a step whose [current](#ireader-current) is undefined.
+
+```typescript
+read(): AsyncIterable<T>
+```
+
+**Returns** `AsyncIterable<T>`
+
 ##### nextResult()
 
 Moves to the next result set and clears [current](#ireader-current). Returns false when there is no further set. [next](#ireader-next) then reads that set. Calling only [next](#ireader-next) leaves later sets unread.
@@ -93,6 +103,16 @@ Task<bool> Next()
 
 **Returns** `Task<bool>`
 
+##### Read()
+
+Reads the current result set. Skips a step whose [Current](#ireader-current) is null. `ToListAsync` materializes the sequence.
+
+```csharp
+IAsyncEnumerable<T> Read()
+```
+
+**Returns** `IAsyncEnumerable<T>`
+
 ##### NextResult()
 
 Moves to the next result set and clears [Current](#ireader-current). Returns false when there is no further set. [Next](#ireader-next) then reads that set. A reader with one set returns false. Calling only [Next](#ireader-next) leaves later sets unread.
@@ -117,7 +137,7 @@ ValueTask DisposeAsync()
 #### Reader
 
 ```rust
-pub trait Reader<T = Row>: Send + Sync
+pub trait Reader<T: Send = Row>: Send + Sync
 ```
 
 **Methods**
@@ -142,6 +162,16 @@ async fn next(&self) -> Result<bool>
 
 **Returns** `Result<bool>`
 
+##### read()
+
+Reads the current result set. Skips a step whose [current](#reader-current) is `None`. `try_collect` materializes the stream.
+
+```rust
+fn read(&self) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + '_>>
+```
+
+**Returns** `Pin<Box<dyn Stream<Item = Result<T>> + Send + '_>>`
+
 ##### next_result()
 
 Moves to the next result set and clears [current](#reader-current). Returns false when there is no further set. [next](#reader-next) then reads that set. The default returns false. Calling only [next](#reader-next) leaves later sets unread.
@@ -164,36 +194,36 @@ Dispose the reader with `await using`. Rust drops it.
 ### Read a row
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunRawSql
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderOnASimpleList
 ```
-```rust rust/providers/sqlite/tests/command.rs#run_raw_sql
+```rust rust/providers/sqlite/tests/command.rs#run_execute_reader_on_a_simple_list
 ```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#runs-raw-sql
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#run-executereader-on-a-simple-list
 ```
 
-```output [Row]
-{
-  id: 1,
-  name: 'ada'
-}
+```output [Rows]
+[
+  { id: 1, name: 'ada' },
+  { id: 2, name: 'grace' },
+  { id: 3, name: 'bea' }
+]
 ```
 :::
 
-### Read with case mapping
+### Read and apply case mappings
 
 ::: example
-```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ReadWithCaseMapping
+```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ReadAndApplyCaseMappings
 ```
-```rust rust/providers/sqlite/tests/command.rs#read_with_case_mapping
+```rust rust/providers/sqlite/tests/command.rs#read_and_apply_case_mappings
 ```
-```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#reads-with-case-mapping
+```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#read-and-apply-case-mappings
 ```
 
-```output [Row]
-{
-  UserId: 1,
-  FirstName: 'Ada'
-}
+```output [Rows]
+[
+  { UserId: 1, FirstName: 'Ada' }
+]
 ```
 :::
 

@@ -1,0 +1,10 @@
+var ds = Datasource.Default;
+await using var connection = await ds.CreateConnection();
+await connection.Open();
+var command = connection.CreateCommand();
+await command.Execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
+await command.Execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
+await command.Execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
+await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
+var converter = new MetaDataRowTypeConverter<NameValue>();
+var items = await reader.Read().Select(row => converter.Convert(row)).ToListAsync();

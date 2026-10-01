@@ -27,6 +27,11 @@ describe("MockCommand", () => {
       current: undefined,
       next: async () => false,
       nextResult: async () => false,
+      async *read() {
+        while (await this.next()) {
+          if (this.current !== undefined) yield this.current;
+        }
+      },
       dispose: async () => {},
     };
     expect(await command.executeReaderNative(new Native("plain"))).toBe(command.reader);

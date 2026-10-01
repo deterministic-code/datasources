@@ -1,4 +1,5 @@
 import type { IReader } from "../IReader.ts";
+import { readerToAsyncIterable } from "../readerToAsyncIterable.ts";
 import { notImplemented } from "./notImplemented.ts";
 
 export class StubReader<T = unknown> implements IReader<T> {
@@ -8,6 +9,10 @@ export class StubReader<T = unknown> implements IReader<T> {
 
   async next(): Promise<boolean> {
     notImplemented(this.provider);
+  }
+
+  read(): AsyncIterable<T> {
+    return readerToAsyncIterable(this);
   }
 
   async nextResult(): Promise<boolean> {

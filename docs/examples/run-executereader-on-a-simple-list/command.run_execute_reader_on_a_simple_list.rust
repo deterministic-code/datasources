@@ -6,9 +6,16 @@ command
     .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
     .await
     .unwrap();
+command
+    .execute("INSERT INTO items (id, name) VALUES (2, 'grace')", None)
+    .await
+    .unwrap();
+command
+    .execute("INSERT INTO items (id, name) VALUES (3, 'bea')", None)
+    .await
+    .unwrap();
 let reader = command
     .execute_reader("SELECT id, name FROM items", None)
     .await
     .unwrap();
-assert!(reader.next().await.unwrap());
-let row = reader.current().unwrap();
+let rows: Vec<_> = reader.read().try_collect().await.unwrap();
