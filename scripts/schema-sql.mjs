@@ -36,9 +36,7 @@ const tableSql = (table, fragments) => {
   return `CREATE TABLE ${table.name} (${parts.join(", ")})`;
 };
 
-let catalog;
-
-const file = () => (catalog ??= parse(readFileSync(join(root, "specs", "schemas.yaml"), "utf8")));
+const file = () => parse(readFileSync(join(root, "specs", "schemas.yaml"), "utf8"));
 
 export const schemaNames = () => Object.keys(file().schemas);
 

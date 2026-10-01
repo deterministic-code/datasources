@@ -1,6 +1,6 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_crud_repository_options, create_readonly_repository_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
+    create_readonly_repository_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
     Connection, ConvertSchema, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper,
     Result, Row, TransformMapper, TypeConverter, Value, Where,
 };
@@ -257,7 +257,7 @@ async fn execute_sql(connection: &Arc<dyn Connection>, sql: &str) {
 mod user_view {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
-        create_crud_repository_options, create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Value, Where,
     };
     use uuid::Uuid;
@@ -362,7 +362,7 @@ mod user_view {
 mod users_view_roles {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
-        create_crud_repository_options, create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
         SelectStatement, SelectStatementOptions, TypeMap,

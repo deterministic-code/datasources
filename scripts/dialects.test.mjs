@@ -55,6 +55,36 @@ test("a page with only names gets the selector after the title", () => {
   assert.match(page, /csharp="Default" typescript="default" rust="default\(\)"/);
 });
 
+test("a tutorial with names shows one dialect sample at a time", () => {
+  const source = `# The Mapping and Converting Pipelines
+
+{{Read|read|read}} calls {{ExecuteReader|executeReader|execute_reader}}.
+
+### Example
+
+::: example
+\`\`\`csharp csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#User
+\`\`\`
+\`\`\`csharp csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#MapsAndConvertsUsersThroughTheReadPipeline
+\`\`\`
+\`\`\`rust rust/providers/sqlite/tests/read_pipeline.rs#ConvertSchemaForUser
+\`\`\`
+\`\`\`rust rust/providers/sqlite/tests/read_pipeline.rs#maps_and_converts_users_through_the_read_pipeline
+\`\`\`
+\`\`\`typescript typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#User
+\`\`\`
+\`\`\`typescript typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#maps-and-converts-users-through-the-read-pipeline
+\`\`\`
+:::
+`;
+  const page = transformDialects(source, "vitepress");
+  assert.match(page, /<DialectSelector \/>/);
+  assert.match(page, /<DialectPanel name="csharp">/);
+  assert.match(page, /<DialectPanel name="rust">/);
+  assert.match(page, /<DialectPanel name="typescript">/);
+  assert.doesNotMatch(page, /::: code-group/);
+});
+
 test("a type and its usage render as one sample", () => {
   const source = `# Command
 
@@ -65,12 +95,12 @@ test("a type and its usage render as one sample", () => {
 #### ICommand
 :::
 
-### Run ExecuteReader and return NameValue
+### Run ExecuteReader and return NameValues
 
 ::: example
 \`\`\`csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#NameValue
 \`\`\`
-\`\`\`csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValue
+\`\`\`csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValues
 \`\`\`
 :::
 `;

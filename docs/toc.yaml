@@ -8,6 +8,9 @@ pages:
     title: Feature Matrix
   - path: examples.md
     title: Examples
+  - path: tutorials/mapping-converting-pipelines.md
+    title: The Mapping and Converting Pipelines
+    group: Articles
   - path: sections/datasource.md
     title: Datasource
     group: Code Reference

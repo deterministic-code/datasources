@@ -1,0 +1,11 @@
+impl ConvertSchema for User {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("Id", "INTEGER"),
+            ("Uuid", "TEXT"),
+            ("Username", "TEXT"),
+            ("IsEnabled", "INTEGER"),
+            ("Created", "TEXT"),
+        ]
+    }
+}

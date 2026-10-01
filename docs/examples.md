@@ -2,6 +2,10 @@
 
 Samples from the code reference. Open a link for the explanation and the C#, Rust, and TypeScript code.
 
+## The Mapping and Converting Pipelines
+
+- [Example](./tutorials/mapping-converting-pipelines.md#example)
+
 ## Datasource
 
 - [Create default from .env settings](./sections/datasource.md#create-default-from-env-settings)
@@ -263,6 +267,12 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 ```sql
 CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id))
+```
+
+### pipeline-users
+
+```sql
+CREATE TABLE users (id int, uuid uuid NOT NULL, name string NOT NULL, is_enabled bool NOT NULL, created datetime NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id))
 ```
 
 ### user-account

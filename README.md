@@ -282,6 +282,10 @@ Package names per language are on [Quick Start](#installation).
 
 Samples from the code reference. Open a link for the explanation and the C#, Rust, and TypeScript code.
 
+### The Mapping and Converting Pipelines
+
+- [Example](#example)
+
 ### Datasource
 
 - [Create default from .env settings](#create-default-from-env-settings)
@@ -545,6 +549,12 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id))
 ```
 
+#### pipeline-users
+
+```sql
+CREATE TABLE users (id int, uuid uuid NOT NULL, name string NOT NULL, is_enabled bool NOT NULL, created datetime NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id))
+```
+
 #### user-account
 
 ```sql
@@ -642,6 +652,420 @@ CREATE TABLE users (id int, username string, contact_name string)
 
 ```sql
 CREATE TABLE users (id int, username string, email string, contact_name1 string, contact_name2 string, CONSTRAINT pk_users PRIMARY KEY (id))
+```
+
+## The Mapping and Converting Pipelines
+
+`Read` / `read` / `read` on a [readonly repository](#readonly-repository) calls `ExecuteReader` / `executeReader` / `execute_reader`. Each row then passes through three steps: rename datasource column names to property names, convert provider cell types, and assign the row onto the entity.
+
+### The ReadonlyRepository read mapper and converting pipeline
+
+```mermaid
+flowchart LR
+  columnName["Map datasource column names to object property names"] --> provider["Convert row using provider"] --> entity["Convert row to entity object"]
+```
+
+#### Map datasource column names to object property names
+
+The [reader](#reader) yields a row keyed by datasource column names. The repository renames each key with the property mapper's reverse map.
+
+#### Convert row using provider
+
+`RowConverter` / `rowConverter` / `row_converter` converts the renamed row from provider cell types to object cell types. The keys stay the same. A SQLite bool stored as `1` or `0` becomes `true` or `false`. Uuid and datetime text become guid and datetime values where the dialect supports them.
+
+#### Convert row to entity object
+
+`ObjectConverter` / `objectConverter` / `object_converter` assigns that row onto the entity. See [Metadata Row Type Converter](#metadata-row-type-converter). You can also assign each property by hand.
+
+> **TypeScript**
+>
+> The result is a `User` instance.
+
+> **C#**
+>
+> The result is a `User`.
+
+> **Rust**
+>
+> The result stays a `Row` and keeps the schema columns.
+
+#### Example
+
+One walkthrough: seed users, read the raw rows, rename columns, convert cell types, then build entities with `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` or a manual map.
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L17-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L26-L102)
+
+```csharp
+public class User
+{
+    public long Id { get; set; }
+    public Guid Uuid { get; set; }
+    public string Username { get; set; } = "";
+    public bool IsEnabled { get; set; }
+    public DateTime Created { get; set; }
+}
+
+var ada = Guid.Parse("11111111-1111-1111-1111-111111111111");
+var grace = Guid.Parse("22222222-2222-2222-2222-222222222222");
+var lin = Guid.Parse("33333333-3333-3333-3333-333333333333");
+var ds = Datasource.Default;
+var command = await ds.CreateCommand();
+await command.Execute(
+    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '{ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')");
+await command.Execute(
+    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '{grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')");
+await command.Execute(
+    $"INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '{lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')");
+
+var propertyToColumnMapper = new DictionaryMapper<string>(new()
+{
+    ["Id"] = "id",
+    ["Uuid"] = "uuid",
+    ["Username"] = "name",
+    ["IsEnabled"] = "is_enabled",
+    ["Created"] = "created",
+});
+
+await using var reader = await command.ExecuteReader(
+    "SELECT id, uuid, name, is_enabled, created FROM users");
+var unmapped = await reader.Read().ToListAsync();
+
+var columnMappedRows = unmapped
+    .Select(row => new Row(row.Select(cell =>
+        KeyValuePair.Create(propertyToColumnMapper.ReverseMap(cell.Key), cell.Value))))
+    .ToList();
+
+var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new()
+{
+    ["Uuid"] = "uuid",
+    ["IsEnabled"] = "bool",
+    ["Created"] = "datetime",
+});
+var convertedRows = columnMappedRows.Select(rowConverter.Convert).ToList();
+
+var objectConverter = new MetaDataRowTypeConverter<User>();
+var finalEntities = convertedRows.Select(objectConverter.Convert).ToList();
+
+var finalManualEntities = convertedRows.Select(row => new User
+{
+    Id = (long)row["Id"].ToObject()!,
+    Uuid = (Guid)row["Uuid"].ToObject()!,
+    Username = (string)row["Username"].ToObject()!,
+    IsEnabled = (bool)row["IsEnabled"].ToObject()!,
+    Created = (DateTime)row["Created"].ToObject()!,
+}).ToList();
+```
+
+**Unmapped**
+
+```
+[
+  { id: 1, uuid: '11111111-1111-1111-1111-111111111111', name: 'ada', is_enabled: 1, created: '2001-01-01T00:00:00.000Z' },
+  { id: 2, uuid: '22222222-2222-2222-2222-222222222222', name: 'grace', is_enabled: 1, created: '2002-02-02T00:00:00.000Z' },
+  { id: 3, uuid: '33333333-3333-3333-3333-333333333333', name: 'lin', is_enabled: 0, created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Column mapped**
+
+```
+[
+  { Id: 1, Uuid: '11111111-1111-1111-1111-111111111111', Username: 'ada', IsEnabled: 1, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: '22222222-2222-2222-2222-222222222222', Username: 'grace', IsEnabled: 1, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: '33333333-3333-3333-3333-333333333333', Username: 'lin', IsEnabled: 0, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Type converted**
+
+```
+[
+  { Id: 1, Uuid: Guid('11111111-1111-1111-1111-111111111111'), Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: Guid('22222222-2222-2222-2222-222222222222'), Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: Guid('33333333-3333-3333-3333-333333333333'), Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Entities**
+
+```
+[
+  { Id: 1, Uuid: Guid('11111111-1111-1111-1111-111111111111'), Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: Guid('22222222-2222-2222-2222-222222222222'), Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: Guid('33333333-3333-3333-3333-333333333333'), Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Manual entities**
+
+```
+[
+  { Id: 1, Uuid: Guid('11111111-1111-1111-1111-111111111111'), Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: Guid('22222222-2222-2222-2222-222222222222'), Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: Guid('33333333-3333-3333-3333-333333333333'), Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L12-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L24-L148)
+
+```rust
+impl ConvertSchema for User {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("Id", "INTEGER"),
+            ("Uuid", "TEXT"),
+            ("Username", "TEXT"),
+            ("IsEnabled", "INTEGER"),
+            ("Created", "TEXT"),
+        ]
+    }
+}
+
+let ada = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+let grace = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
+let lin = Uuid::parse_str("33333333-3333-3333-3333-333333333333").unwrap();
+
+let ds = default().unwrap();
+let command = ds.create_command(None).await.unwrap();
+command
+    .execute(
+        &format!(
+            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '{ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')"
+        ),
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        &format!(
+            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '{grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')"
+        ),
+        None,
+    )
+    .await
+    .unwrap();
+command
+    .execute(
+        &format!(
+            "INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '{lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')"
+        ),
+        None,
+    )
+    .await
+    .unwrap();
+
+let property_to_column_mapper = DictionaryMapper::new([
+    ("Id".into(), "id".into()),
+    ("Uuid".into(), "uuid".into()),
+    ("Username".into(), "name".into()),
+    ("IsEnabled".into(), "is_enabled".into()),
+    ("Created".into(), "created".into()),
+]);
+
+let reader = command
+    .execute_reader("SELECT id, uuid, name, is_enabled, created FROM users", None)
+    .await
+    .unwrap();
+let unmapped: Vec<Row> = reader.read().try_collect().await.unwrap();
+
+let column_mapped_rows: Vec<Row> = unmapped
+    .iter()
+    .map(|row| {
+        row.iter()
+            .map(|(key, value)| {
+                (
+                    Mapper::reverse_map(&property_to_column_mapper, key.clone()),
+                    value.clone(),
+                )
+            })
+            .collect()
+    })
+    .collect();
+
+let columns = HashMap::from([
+    ("Uuid".into(), "uuid".into()),
+    ("IsEnabled".into(), "bool".into()),
+    ("Created".into(), "datetime".into()),
+]);
+let row_converter = RowTypeConverter::from(|| crate::SqliteDriver.row_type_converters(), &columns);
+let converted_rows: Vec<Row> = column_mapped_rows
+    .iter()
+    .map(|row| row_converter.convert(row).unwrap())
+    .collect();
+
+let object_converter = MetaDataRowTypeConverter::of::<User>();
+let final_entities: Vec<Row> = converted_rows
+    .iter()
+    .map(|row| object_converter.convert(row).unwrap())
+    .collect();
+```
+
+**Unmapped**
+
+```
+[
+  { id: 1, uuid: '11111111-1111-1111-1111-111111111111', name: 'ada', is_enabled: 1, created: '2001-01-01T00:00:00.000Z' },
+  { id: 2, uuid: '22222222-2222-2222-2222-222222222222', name: 'grace', is_enabled: 1, created: '2002-02-02T00:00:00.000Z' },
+  { id: 3, uuid: '33333333-3333-3333-3333-333333333333', name: 'lin', is_enabled: 0, created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Column mapped**
+
+```
+[
+  { Id: 1, Uuid: '11111111-1111-1111-1111-111111111111', Username: 'ada', IsEnabled: 1, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: '22222222-2222-2222-2222-222222222222', Username: 'grace', IsEnabled: 1, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: '33333333-3333-3333-3333-333333333333', Username: 'lin', IsEnabled: 0, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Type converted**
+
+```
+[
+  { Id: 1, Uuid: Uuid('11111111-1111-1111-1111-111111111111'), Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: Uuid('22222222-2222-2222-2222-222222222222'), Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: Uuid('33333333-3333-3333-3333-333333333333'), Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Entities**
+
+```
+[
+  { Id: 1, Uuid: Uuid('11111111-1111-1111-1111-111111111111'), Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: Uuid('22222222-2222-2222-2222-222222222222'), Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: Uuid('33333333-3333-3333-3333-333333333333'), Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L12-L18) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#L29-L101)
+
+```typescript
+class User {
+  Id = 0;
+  Uuid = "";
+  Username = "";
+  IsEnabled = false;
+  Created = new Date(0);
+}
+
+const ada = "11111111-1111-1111-1111-111111111111";
+const grace = "22222222-2222-2222-2222-222222222222";
+const lin = "33333333-3333-3333-3333-333333333333";
+const ds = Datasource.default;
+const command = await ds.createCommand();
+await command.execute(
+  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (1, '${ada}', 'ada', 1, '2001-01-01T00:00:00.000Z')`,
+);
+await command.execute(
+  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (2, '${grace}', 'grace', 1, '2002-02-02T00:00:00.000Z')`,
+);
+await command.execute(
+  `INSERT INTO users (id, uuid, name, is_enabled, created) VALUES (3, '${lin}', 'lin', 0, '2003-03-03T00:00:00.000Z')`,
+);
+
+const propertyToColumnMapper = new DictionaryMapper([
+  ["Id", "id"],
+  ["Uuid", "uuid"],
+  ["Username", "name"],
+  ["IsEnabled", "is_enabled"],
+  ["Created", "created"],
+]);
+
+await using reader = await command.executeReader(
+  "SELECT id, uuid, name, is_enabled, created FROM users",
+);
+const unmapped = await Array.fromAsync(reader.read());
+
+const columnMappedRows = unmapped.map((row) =>
+  Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [propertyToColumnMapper.reverseMap(key), value]),
+  ),
+);
+
+const rowConverter = RowTypeConverter.from(new SqliteDriver().rowTypeConverters, {
+  Uuid: "uuid",
+  IsEnabled: "bool",
+  Created: "datetime",
+});
+const convertedRows = columnMappedRows.map((row) => rowConverter.convert(row));
+
+const objectConverter = new MetaDataRowTypeConverter<User>();
+const finalEntities = convertedRows.map((row) => objectConverter.convert(row, User));
+
+const finalManualEntities = convertedRows.map(
+  (row) =>
+    Object.assign(new User(), {
+      Id: row.Id,
+      Uuid: row.Uuid,
+      Username: row.Username,
+      IsEnabled: row.IsEnabled,
+      Created: row.Created,
+    }),
+);
+
+expect(unmapped).toHaveLength(3);
+expect(unmapped[0]).toMatchObject({ id: 1, uuid: ada, name: "ada" });
+expect(columnMappedRows[0]).toMatchObject({ Id: 1, Uuid: ada, Username: "ada" });
+```
+
+**Unmapped**
+
+```
+[
+  { id: 1, uuid: '11111111-1111-1111-1111-111111111111', name: 'ada', is_enabled: 1, created: '2001-01-01T00:00:00.000Z' },
+  { id: 2, uuid: '22222222-2222-2222-2222-222222222222', name: 'grace', is_enabled: 1, created: '2002-02-02T00:00:00.000Z' },
+  { id: 3, uuid: '33333333-3333-3333-3333-333333333333', name: 'lin', is_enabled: 0, created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Column mapped**
+
+```
+[
+  { Id: 1, Uuid: '11111111-1111-1111-1111-111111111111', Username: 'ada', IsEnabled: 1, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: '22222222-2222-2222-2222-222222222222', Username: 'grace', IsEnabled: 1, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: '33333333-3333-3333-3333-333333333333', Username: 'lin', IsEnabled: 0, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Type converted**
+
+```
+[
+  { Id: 1, Uuid: '11111111-1111-1111-1111-111111111111', Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: '22222222-2222-2222-2222-222222222222', Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: '33333333-3333-3333-3333-333333333333', Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Entities**
+
+```
+[
+  { Id: 1, Uuid: '11111111-1111-1111-1111-111111111111', Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: '22222222-2222-2222-2222-222222222222', Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: '33333333-3333-3333-3333-333333333333', Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+**Manual entities**
+
+```
+[
+  { Id: 1, Uuid: '11111111-1111-1111-1111-111111111111', Username: 'ada', IsEnabled: true, Created: '2001-01-01T00:00:00.000Z' },
+  { Id: 2, Uuid: '22222222-2222-2222-2222-222222222222', Username: 'grace', IsEnabled: true, Created: '2002-02-02T00:00:00.000Z' },
+  { Id: 3, Uuid: '33333333-3333-3333-3333-333333333333', Username: 'lin', IsEnabled: false, Created: '2003-03-03T00:00:00.000Z' }
+]
+```
+
+Schema: [pipeline-users](#pipeline-users)
+
+```sql
+CREATE TABLE users (id int, uuid uuid NOT NULL, name string NOT NULL, is_enabled bool NOT NULL, created datetime NOT NULL, CONSTRAINT pk_users PRIMARY KEY (id))
 ```
 
 ## Datasource
@@ -5253,10 +5677,10 @@ execute_sql(
     "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
-let mut options = create_crud_repository_options::<User>();
+let mut options = create_readonly_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
-let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
@@ -6787,10 +7211,10 @@ execute_sql(
     "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
-let mut options = create_crud_repository_options::<User>();
+let mut options = create_readonly_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
-let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
@@ -6962,11 +7386,11 @@ execute_sql(
     ",
 )
 .await;
-let mut options = create_crud_repository_options::<User>();
+let mut options = create_readonly_repository_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
 options.object_converter = Some(Box::new(UserConverter));
-let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options.read));
+let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let user = users_repo
     .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
     .await
@@ -7106,7 +7530,7 @@ execute_sql(
     ),
 )
 .await;
-let mut users_options = create_crud_repository_options::<UserAccount>();
+let mut users_options = create_readonly_repository_options::<UserAccount>();
 users_options.entity = "user".into();
 users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
@@ -7115,16 +7539,16 @@ users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_crud_repository_options::<UserType>();
+let mut type_options = create_readonly_repository_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 let mut users_repo =
-    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+    ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types =
-    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options.read));
+    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
@@ -7300,7 +7724,7 @@ execute_sql(
     ),
 )
 .await;
-let mut options = create_crud_repository_options::<UserAccount>();
+let mut options = create_readonly_repository_options::<UserAccount>();
 options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserAccount".to_string(),
     "user".to_string(),
@@ -7311,7 +7735,7 @@ options.property_mappings = Box::new(DictionaryMapper::new([
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
 ]));
-let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options.read));
+let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
     .read_single(
@@ -15676,7 +16100,7 @@ const row = converter.reverseConvert(item);
 
 #### Field converter
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L103-L114)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L111-L122)
 
 ```csharp
 var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dictionary<string, TypeConverter<Value, Value>>
@@ -23618,7 +24042,7 @@ var items = await parentsRepo.Read().ToListAsync();
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
-let mut users_options = create_crud_repository_options::<UsersView>();
+let mut users_options = create_readonly_repository_options::<UsersView>();
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
@@ -23630,12 +24054,12 @@ users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_crud_repository_options::<UserType>();
+let mut type_options = create_readonly_repository_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-let mut role_options = create_crud_repository_options::<UserRole>();
+let mut role_options = create_readonly_repository_options::<UserRole>();
 role_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserRole".to_string(),
     "user_roles".to_string(),
@@ -23645,13 +24069,13 @@ role_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Name".to_string(), "name".to_string()),
 ]));
 let mut users_repo =
-    ReadonlyRepository::new(connection.clone(), users_options.read).unwrap();
+    ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
     Some(connection.clone()),
-    Some(type_options.read),
+    Some(type_options),
 );
 let roles =
-    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options.read));
+    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options));
 let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
 users_repo.add_enriched(
     datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
@@ -23908,14 +24332,14 @@ var org = new Row { ["TypeName"] = "org" };
 var connection = await Setup(person, org);
 person["Id"] = person["id"];
 org["Id"] = org["id"];
-IList<object> parents = [];
+IList<Parent> parents = [];
 var parentsRepo = Open<Parent>(connection);
 await new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
 {
     Key = "Id",
     Fields = new Dictionary<string, TypeMapField> { ["Id"] = "Id", ["TypeName"] = "TypeName" }
 }).Apply(parentsRepo, new("TypeName", "Id", "Id"), parents, [person, org]);
-var items = parents.Cast<Parent>();
+var items = parents;
 ```
 
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L533-L642)
@@ -23994,13 +24418,13 @@ const org: Seed = { TypeName: "org" };
 const connection = await setup([person, org]);
 person.Id = person.id;
 org.Id = org.id;
-const parents: object[] = [];
+const parents: Parent[] = [];
 const parentsRepo = repo(Parent, connection);
 await new NestedToObjectEnrichmentStrategy<Parent>({
   key: "Id",
   fields: { Id: "Id", TypeName: "TypeName" },
 }).apply(parentsRepo, { destinationProperty: "TypeName", sourceProperty: "Id", relatedKey: "Id" }, parents, [person, org]);
-const items = parents as Parent[];
+const items = parents;
 ```
 
 Schema: [user-roles-read](#user-roles-read)

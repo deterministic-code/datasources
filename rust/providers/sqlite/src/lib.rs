@@ -39,6 +39,9 @@ mod integration;
 #[path = "../tests/null_write.rs"]
 mod null_write;
 #[cfg(test)]
+#[path = "../tests/read_pipeline.rs"]
+mod read_pipeline;
+#[cfg(test)]
 #[path = "../tests/readonly_repository.rs"]
 mod readonly_repository;
 #[cfg(test)]
