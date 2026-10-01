@@ -8,6 +8,7 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
     public Dictionary<string, TypeConverter<Value, Value>> Fields { get; set; } = [];
     public HashSet<string> References { get; } = [];
     public IMapper<string, string> ReferenceColumns { get; set; } = new IdentityMapper<string>();
+    public bool ShouldCoerceId { get; set; }
 
     public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
     {
@@ -40,6 +41,8 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             var raw = cell.ToObject();
             if (raw is null ? underlying is not null || !type.IsValueType : type.IsInstanceOfType(raw))
                 prop.SetValue(target, raw);
+            else if (Coerced(raw, type) is { } coerced)
+                prop.SetValue(target, coerced);
         }
         return target;
     }
@@ -93,6 +96,15 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
 
     TypeConverter<Value, Value>? Converter(string key) =>
         Fields.TryGetValue(key, out var field) ? field : null;
+
+    object? Coerced(object? raw, Type type) =>
+        ShouldCoerceId && raw is not null && Integral(raw.GetType()) && Integral(type)
+            ? System.Convert.ChangeType(raw, type)
+            : null;
+
+    static bool Integral(Type type) => !type.IsEnum && Type.GetTypeCode(type) is
+        TypeCode.Byte or TypeCode.SByte or TypeCode.Int16 or TypeCode.UInt16
+        or TypeCode.Int32 or TypeCode.UInt32 or TypeCode.Int64 or TypeCode.UInt64;
 
     static bool IsColumn(Type type)
     {

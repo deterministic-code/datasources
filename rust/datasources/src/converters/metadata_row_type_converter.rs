@@ -11,6 +11,7 @@ pub struct MetaDataRowTypeConverter {
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     references: Vec<String>,
     reference_columns: Box<dyn Mapper<String, String> + Send + Sync>,
+    pub should_coerce_id: bool,
 }
 
 impl MetaDataRowTypeConverter {
@@ -29,6 +30,7 @@ impl MetaDataRowTypeConverter {
             fields: HashMap::new(),
             references: Vec::new(),
             reference_columns: Box::new(IdentityMapper::new()),
+            should_coerce_id: false,
         }
     }
 
