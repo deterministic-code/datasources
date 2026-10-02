@@ -102,10 +102,25 @@ def compare(name: str, path: Path, proposed: str) -> dict:
     after = public_surface(proposed, lang, name)
     if after is None:
         return deny(name)
-    added = [after[key] for key in after.keys() - (current or {}).keys()]
-    if not added:
+    before = current or {}
+    after = after or {}
+    if before == after:
         return allow()
-    return deny(name, "Rejected: " + "; ".join(added[:8]))
+    added = [after[key] for key in after.keys() - before.keys()]
+    removed = [before[key] for key in before.keys() - after.keys()]
+    changed = [
+        f"{before[key]} -> {after[key]}"
+        for key in before.keys() & after.keys()
+        if before[key] != after[key]
+    ]
+    parts = []
+    if added:
+        parts.append("added: " + "; ".join(added[:4]))
+    if removed:
+        parts.append("removed: " + "; ".join(removed[:4]))
+    if changed:
+        parts.append("changed: " + "; ".join(changed[:4]))
+    return deny(name, "Rejected: " + " | ".join(parts) if parts else "Rejected: surface changed")
 
 
 def proposed_text(tool: str, tool_input: dict, path: Path) -> str | None:
@@ -131,17 +146,37 @@ def check_shell(command: str) -> dict:
     if writes(command, [LOCK_FILE]):
         return deny_list()
     for name in locked_names():
-        if writes(command, files_for(name)):
-            return deny(name)
+        for path in files_for(name):
+            if not writes(command, [path]):
+                continue
+            proposed = shell_proposed_text(command, path)
+            if proposed is None:
+                return deny(
+                    name,
+                    "Shell cannot verify the public surface. "
+                    "Use Write or StrReplace; body and private edits are allowed; signatures are not.",
+                )
+            result = compare(name, path, proposed)
+            if result["permission"] != "allow":
+                return result
     return allow()
 
 
-def writes(command: str, paths: list[Path]) -> bool:
-    tokens = [token for path in paths for token in mention_tokens(path)]
-    if not tokens or not any(token in command for token in tokens):
-        return False
-    if redirect_targets(command, tokens):
-        return True
+def shell_proposed_text(command: str, path: Path) -> str | None:
+    if unverifiable_shell_write(command):
+        return None
+    tokens = mention_tokens(path)
+    recovered = redirect_content(command, tokens)
+    if recovered is None:
+        return None
+    op, content = recovered
+    if op == ">":
+        return content
+    current = path.read_text() if path.exists() else ""
+    return current + content
+
+
+def unverifiable_shell_write(command: str) -> bool:
     if re.search(r"\btee\b", command):
         return True
     if re.search(r"\bsed\b", command) and re.search(r"(^|\s)--in-place|(^|\s)-[A-Za-z]*i\b", command):
@@ -160,12 +195,48 @@ def writes(command: str, paths: list[Path]) -> bool:
     return False
 
 
+def writes(command: str, paths: list[Path]) -> bool:
+    tokens = [token for path in paths for token in mention_tokens(path)]
+    if not tokens or not any(token in command for token in tokens):
+        return False
+    if redirect_targets(command, tokens):
+        return True
+    return unverifiable_shell_write(command)
+
+
 def redirect_targets(command: str, tokens: list[str]) -> bool:
     for match in re.finditer(r"(?:^|[^>\d&])>{1,2}\s*([^\s;&|]+)", command):
         target = match.group(1).strip("'\"")
         if any(token in target for token in tokens):
             return True
     return False
+
+
+def redirect_content(command: str, tokens: list[str]) -> tuple[str, str] | None:
+    for match in re.finditer(r"(?:^|[^>\d&])(>{1,2})\s*([^\s;&|]+)", command):
+        target = match.group(2).strip("'\"")
+        if not any(token in target for token in tokens):
+            continue
+        op = match.group(1)
+        heredoc = re.search(r"<<\s*['\"]?(\w+)['\"]?", command)
+        if heredoc:
+            tag = heredoc.group(1)
+            after = command[heredoc.end() :]
+            if after.startswith("\n"):
+                after = after[1:]
+            end = re.search(rf"(?m)^{re.escape(tag)}\s*$", after)
+            if end is None:
+                return None
+            return op, after[: end.start()]
+        prefix = command[: match.start()].rstrip()
+        quoted = re.search(r"""(?:echo|printf)\s+(?:-e\s+)?(['"])(.*)(\1)\s*$""", prefix, re.DOTALL)
+        if quoted:
+            body = quoted.group(2)
+            if re.search(r"\becho\b", prefix) and not body.endswith("\n"):
+                body += "\n"
+            return op, body
+        return None
+    return None
 
 
 def mention_tokens(path: Path) -> list[str]:
@@ -205,8 +276,9 @@ def locked_names() -> list[str]:
     names = []
     for line in LOCK_FILE.read_text().splitlines():
         name = line.split("#", 1)[0].strip()
-        if name:
-            names.append(name)
+        if not name or name.startswith("--"):
+            continue
+        names.append(name)
     return names
 
 
@@ -783,10 +855,11 @@ def allow() -> dict:
 def deny(name: str, extra: str = "") -> dict:
     message = (
         f"{name} is listed in .cursor/hooks/locked-classes.txt. "
-        "Do not add a public, internal, or protected member, a pub(crate) or pub(super) member, or a parameter. "
+        "Do not add, remove, or change a public, internal, or protected member, "
+        "a pub(crate) or pub(super) member, or a parameter. "
         "Do not subclass this type to reach a new member. "
         "Stop and ask the user how to proceed. Dependency injection is one design they may want. "
-        "Body and private edits are allowed. "
+        "Body and private edits are allowed (prefer Write or StrReplace so the surface can be checked). "
         "The user removes the name from that file to change this API."
     )
     if extra:
