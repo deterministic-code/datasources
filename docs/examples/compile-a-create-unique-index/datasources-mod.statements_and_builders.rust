@@ -1,3 +1,2 @@
-})
-.get_text(),
+})),
 "SELECT id FROM users"

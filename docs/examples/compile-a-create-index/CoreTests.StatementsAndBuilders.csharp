@@ -1,2 +1,1 @@
-"CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
-new CreateTableStatement(
+var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);

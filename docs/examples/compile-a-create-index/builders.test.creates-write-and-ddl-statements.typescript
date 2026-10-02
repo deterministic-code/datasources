@@ -1,2 +1,1 @@
-new UniqueConstraint("uq_orders_user", ["user_id"]),
-new CheckConstraint("chk_orders_qty", "qty > 0"),
+const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);

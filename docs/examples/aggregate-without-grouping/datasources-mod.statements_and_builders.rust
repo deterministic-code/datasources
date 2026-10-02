@@ -1,1 +1,4 @@
-
+let min_n = Aggregate::min("n", None);
+let max_n = Aggregate::max("n", None);
+let bound_fields = [min_n.as_str(), max_n.as_str()];
+let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));

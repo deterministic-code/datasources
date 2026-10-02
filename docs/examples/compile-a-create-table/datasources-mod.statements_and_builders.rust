@@ -1,6 +1,5 @@
-assert!(Where::new(Operator::In {
-    left: Box::new(Expression::Literal(Literal::new(1_i64))),
-    right: Box::new(Expression::Literal(Literal::new(2_i64))),
-})
-.parameters()
-.is_empty());
+let create_table = CreateTableStatement::new(
+    "users",
+    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+    &[],
+);

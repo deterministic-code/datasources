@@ -90,7 +90,7 @@ executeNative(text: Native, parameters?: Parameter[]): Promise<Response>
 
 ##### execute(command, statement, parameters?)
 
-Runs [executeStatement](#icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#icommand-executenative-text-parameters) with `statement.getText()`.
+Runs [executeStatement](#icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#icommand-executenative-text-parameters) with `DefaultStatementTextRenderer.instance.render(statement)`.
 
 ```typescript
 function execute(command: ICommand, statement: IStatement, parameters?: Parameter[]): Promise<Response>
@@ -104,7 +104,7 @@ function execute(command: ICommand, statement: IStatement, parameters?: Paramete
 
 ##### executeReader(command, statement, parameters?)
 
-Runs [executeReaderStatement](#icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#icommand-executereadernative-text-parameters) with `statement.getText()`.
+Runs [executeReaderStatement](#icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#icommand-executereadernative-text-parameters) with `DefaultStatementTextRenderer.instance.render(statement)`.
 
 ```typescript
 function executeReader(command: ICommand, statement: IStatement, parameters?: Parameter[]): Promise<IReader<Cells>>
@@ -359,7 +359,7 @@ Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null)
 
 ##### ExecuteReader(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `statement.GetText()`.
+Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 ```csharp
 Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
@@ -372,7 +372,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 ##### Execute(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `statement.GetText()`.
+Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 ```csharp
 Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
@@ -643,7 +643,7 @@ async fn execute_native(&self, text: &Native, parameters: Option<&[Parameter]>) 
 
 ##### execute_reader_statement(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `statement.get_text()`.
+Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 ```rust
 async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
@@ -656,7 +656,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 ##### execute_statement(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `statement.get_text()`.
+Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 ```rust
 async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Response>

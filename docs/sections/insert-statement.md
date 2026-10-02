@@ -43,13 +43,15 @@ constructor(table: string, fields: Field[])
 
 **Methods**
 
-##### getText()
+##### accept(visitor)
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+- `visitor` — [IStatementVisitor](./statements.md#istatementvisitor)
 
 **Returns** `string`
 
@@ -115,13 +117,15 @@ public InsertStatement(string table, IReadOnlyList<Parameter> fields)
 
 **Methods**
 
-##### GetText()
+##### Accept(visitor)
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+- `visitor` — [IStatementVisitor](./statements.md#istatementvisitor)
 
 **Returns** `string`
 
@@ -161,20 +165,22 @@ pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self
 
 **Methods**
 
-##### get_text()
+##### accept()
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+- `text` — [StatementTextRenderer](./statements.md#statementtextrenderer)
 
 **Returns** `String`
 :::
 
 ## Remarks
 
-Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.md) uses {{GetText()|getText()|get_text()}} only.
+Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.md) uses {{StatementTextRenderer.Render|StatementTextRenderer.render|StatementTextRenderer::render}} only.
 
 ## Examples
 
