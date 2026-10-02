@@ -36,7 +36,7 @@ describe("StubDatasource", () => {
     await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
     const command = connection.createCommand();
     expect(command).toBeInstanceOf(StubCommand);
-    await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.executeNative(new Native("x"))).rejects.toThrow(ProviderNotImplementedError);
     await expect(command.executeReaderNative(new Native("select"), [])).rejects.toThrow(
       ProviderNotImplementedError,
     );

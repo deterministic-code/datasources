@@ -1,12 +1,13 @@
+import type { IConditionVisitor } from "../statements/IConditionVisitor.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
 export class MockWhere implements IWhere {
-  getTextCalls = 0;
+  acceptCalls = 0;
 
   constructor(public text: string) {}
 
-  getText(): string {
-    this.getTextCalls += 1;
+  accept(_visitor: IConditionVisitor): string {
+    this.acceptCalls += 1;
     return this.text;
   }
 }

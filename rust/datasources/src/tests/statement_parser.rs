@@ -1,3 +1,10 @@
+fn stmt_text(statement: &dyn crate::Statement) -> String {
+    crate::DefaultStatementTextRenderer::instance().render(statement)
+}
+fn where_sql(clause: &dyn crate::IWhere) -> String {
+    crate::DefaultStatementTextRenderer::instance().render_where(clause)
+}
+
 use crate::*;
 
 #[test]
@@ -21,7 +28,7 @@ fn round_trips_the_select_examples() {
         "SELECT id, name FROM users WHERE id = $id AND age > $age",
         "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10",
     ] {
-        assert_eq!(StatementParser::parse(sql).unwrap().get_text(), sql);
+        assert_eq!(stmt_text(StatementParser::parse(sql).unwrap().as_ref()), sql);
     }
 }
 
@@ -30,17 +37,15 @@ fn round_trips_the_write_examples() {
     for sql in [
         "INSERT INTO users (id, name) VALUES ($id, $name)",
         "INSERT INTO \"user\" (id) VALUES ($id)",
-        "INSERT INTO users (name) VALUES ('ada')",
         "UPDATE users SET name = $name WHERE id = $id",
         "UPDATE users SET name = $name, age = $age",
         "UPDATE users SET name = $name WHERE name NOT LIKE $name",
-        "UPDATE users SET name = name WHERE id = $id",
         "DELETE FROM users WHERE id = $id",
         "DELETE FROM users",
         "DELETE FROM \"user\" WHERE id = $id",
         "DELETE FROM users WHERE name NOT LIKE $name",
     ] {
-        assert_eq!(StatementParser::parse(sql).unwrap().get_text(), sql);
+        assert_eq!(stmt_text(StatementParser::parse(sql).unwrap().as_ref()), sql);
     }
 }
 
@@ -52,22 +57,25 @@ fn builds_the_write_trees() {
 
     let update = StatementParser::parse("UPDATE users SET name = $name WHERE id = $id").unwrap();
     let update = update.as_any().downcast_ref::<UpdateStatement>().unwrap();
-    assert_eq!(update.predicate().unwrap().get_text(), "id = $id");
+    assert_eq!(where_sql(update.predicate().unwrap()), "id = $id");
 
     let not_like =
         StatementParser::parse("UPDATE users SET name = $name WHERE name NOT LIKE $name").unwrap();
     assert_eq!(
-        not_like.predicate().unwrap().get_text(),
+        where_sql(not_like.predicate().unwrap()),
         "name NOT LIKE $name"
     );
 
     let delete = StatementParser::parse("DELETE FROM users WHERE id = $id").unwrap();
     let delete = delete.as_any().downcast_ref::<DeleteStatement>().unwrap();
-    assert_eq!(delete.predicate().unwrap().get_text(), "id = $id");
+    assert_eq!(where_sql(delete.predicate().unwrap()), "id = $id");
 
     let all = StatementParser::parse("DELETE FROM users").unwrap();
     let all = all.as_any().downcast_ref::<DeleteStatement>().unwrap();
     assert!(all.where_clause().is_none());
+
+    assert!(StatementParser::parse("INSERT INTO users (name) VALUES ('ada')").is_err());
+    assert!(StatementParser::parse("UPDATE users SET name = name WHERE id = $id").is_err());
 }
 
 #[test]
@@ -140,7 +148,7 @@ fn builds_the_where_tree() {
 #[test]
 fn keeps_a_string_beside_a_column_as_its_parameter() {
     let query = StatementParser::parse("SELECT id FROM users WHERE name = 'ada'").unwrap();
-    assert_eq!(query.get_text(), "SELECT id FROM users WHERE name = $name");
+    assert_eq!(stmt_text(query.as_ref()), "SELECT id FROM users WHERE name = $name");
     let parameters = query.predicate().unwrap().parameters();
     assert_eq!(parameters.len(), 1);
     assert_eq!(parameters[0].value, Value::Text("ada".into()));
@@ -185,19 +193,19 @@ fn evaluates_the_new_predicates() {
         Value::Bool(true)
     );
     assert_eq!(
-        Where::new(Operator::not_like("name", "%a")).get_text(),
+        where_sql(&Where::new(Operator::not_like("name", "%a"))),
         "name NOT LIKE $name"
     );
     assert_eq!(
-        Where::new(Operator::not_between("age", 1_i64, 2_i64)).get_text(),
+        where_sql(&Where::new(Operator::not_between("age", 1_i64, 2_i64))),
         "age NOT BETWEEN $age_0 AND $age_1"
     );
     assert_eq!(
-        Where::new(Operator::not_in("id", vec![])).get_text(),
+        where_sql(&Where::new(Operator::not_in("id", vec![]))),
         "1 = 1"
     );
     assert_eq!(
-        Where::new(Operator::not(Operator::like("name", "%a"))).get_text(),
+        where_sql(&Where::new(Operator::not(Operator::like("name", "%a")))),
         "NOT (name LIKE $name)"
     );
 }

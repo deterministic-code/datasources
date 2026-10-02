@@ -114,7 +114,8 @@ public class PostgresCommandIntegrationTests
     {
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL");
         if (string.IsNullOrEmpty(url)) return;
-        var dialect = SqlSpec.Dialect.Load("postgres", static statement => new PostgresStatementFactory().Transform(statement).GetText());
+        var dialect = SqlSpec.Dialect.Load("postgres", static statement =>
+            new StatementTextRenderer(t => new PostgresStatementRenderer(t)).Render(statement));
         foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml").Where(path => Path.GetFileName(path) != "schemas.yaml"))
         {
             var schema = $"ds_{Guid.NewGuid():N}"[..18];

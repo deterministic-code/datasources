@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
 import { StatementMappers } from "./StatementMappers.ts";
+import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import { ExecuteStoredProcedureStatement } from "./statements/ExecuteStoredProcedureStatement.ts";
 import { Identifier } from "./statements/Identifier.ts";
@@ -60,7 +61,7 @@ describe("StatementMappers", () => {
     expect((mapped.joins[0]?.on as Operator.Equals).left).toBeInstanceOf(Identifier);
     expect(((mapped.joins[0]?.on as Operator.Equals).left as Identifier).name).toBe("people.user_id");
     expect(mapped.joins[1]).toEqual({ kind: "cross", table: "logs" });
-    expect(mapped.getText()).toContain("full_name = $full_name");
+    expect(DefaultStatementTextRenderer.instance.render(mapped)).toContain("full_name = $full_name");
     expect(mapped.where?.parameters?.[0]?.value).toBe("Name:BEA");
     expect(mappings.property("full_name")).toBe("Name");
     expect(mappings.property("people.full_name")).toBe("Name");
@@ -81,14 +82,14 @@ describe("StatementMappers", () => {
       ]),
     );
     const insert = mappings.apply(new InsertStatement("User", [{ name: "Name", value: "Ada" }]), mapper) as InsertStatement;
-    expect(insert.getText()).toBe("INSERT INTO people (full_name) VALUES ($full_name)");
+    expect(DefaultStatementTextRenderer.instance.render(insert)).toBe("INSERT INTO people (full_name) VALUES ($full_name)");
     expect(insert.fields[0]?.value).toBe("Ada");
 
     const update = mappings.apply(
       new UpdateStatement("User", [{ name: "Name", value: "Ada" }], new Where(new Operator.Equals("Name", "Bea"))),
       mapper,
     ) as UpdateStatement;
-    expect(update.getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(update)).toBe(
       "UPDATE people SET full_name = $full_name WHERE full_name = $full_name__where",
     );
     expect(update.parameters[0]?.value).toBe("Ada");
@@ -98,7 +99,7 @@ describe("StatementMappers", () => {
       new DeleteStatement("User", new Where(new Operator.Equals("Name", "Bea"))),
       mapper,
     ) as DeleteStatement;
-    expect(deleted.getText()).toBe("DELETE FROM people WHERE full_name = $full_name");
+    expect(DefaultStatementTextRenderer.instance.render(deleted)).toBe("DELETE FROM people WHERE full_name = $full_name");
 
     const inserted = mappings.apply(new SelectInsertedIdStatement("User", "id"), mapper) as SelectInsertedIdStatement;
     expect(inserted.table).toBe("people");
@@ -117,23 +118,14 @@ describe("StatementMappers", () => {
         ["id", "user_id"],
       ]),
     );
-    const rawInsert = new InsertStatement("INSERT INTO t VALUES (1)");
-    expect(mappings.apply(rawInsert, mapper)).toBe(rawInsert);
-    const rawUpdate = new UpdateStatement("x");
-    expect(mappings.apply(rawUpdate, mapper)).toBe(rawUpdate);
-    expect(rawUpdate.parameters).toEqual([]);
-    const rawDelete = DeleteStatement.raw("DELETE FROM t");
-    expect(mappings.apply(rawDelete, mapper)).toBe(rawDelete);
-    const bare = new SelectStatement("SELECT 1");
-    expect(mappings.apply(bare, mapper)).toBe(bare);
-    const call = new ExecuteStoredProcedureStatement("CALL save_user()");
+    const call = new ExecuteStoredProcedureStatement("save_user", []);
     expect(mappings.apply(call, mapper)).toBe(call);
     expect(mappings.apply(undefined, mapper)).toBeUndefined();
     const text = new WhereText("name = $name");
     expect(mappings.applyWhere(text, mapper)).toBe(text);
     const kept = mappings.apply(new DeleteStatement("User", text), mapper) as DeleteStatement;
     expect(kept.where).toBe(text);
-    expect(kept.getText()).toBe("DELETE FROM people WHERE name = $name");
+    expect(DefaultStatementTextRenderer.instance.render(kept)).toBe("DELETE FROM people WHERE name = $name");
   });
 
   it("maps a contacts select", () => {
@@ -196,7 +188,7 @@ describe("StatementMappers", () => {
       offset: 1,
     });
     const mapped = mappings.apply(select, mapper) as SelectStatement;
-    expect(mapped.getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(mapped)).toBe(
       "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1",
     );
     expect(mapped.where?.parameters[0]?.value).toBe("Contact.Email:ADA@EX.COM");

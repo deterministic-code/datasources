@@ -8,7 +8,8 @@ internal sealed class MysqlConnection : IConnection
 
     public string Url { get; }
     public string Provider => "mysql";
-    public ICommand CreateCommand() => new MysqlCommand(this);
+    public ICommand CreateCommand() =>
+        new MysqlCommand(this, new StatementTextRenderer(t => new MysqlStatementRenderer(t)));
     public bool IsOpen { get; private set; }
 
     public MysqlConnection(IReadOnlyDictionary<string, string?>? options)

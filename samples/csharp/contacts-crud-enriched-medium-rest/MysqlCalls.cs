@@ -1,32 +1,31 @@
-using System.Text.RegularExpressions;
 using Datasources;
 
 namespace ContactsCrudEnrichedMediumRest;
 
 public static class MysqlCalls
 {
-    public static IMapper<IInsertStatement, IInsertStatement> Insert(string procedure) =>
-        new TransformMapper<IInsertStatement, IInsertStatement>(
-            statement => new InsertStatement(Call(procedure, Placeholders(statement.GetText()))),
-            static statement => statement);
+    public static IMapper<IInsertStatement, IStatement> Insert(string procedure) =>
+        new TransformMapper<IInsertStatement, IStatement>(
+            statement => new ExecuteStoredProcedureStatement(procedure, Fields(statement)),
+            static statement => (IInsertStatement)statement);
 
-    public static IMapper<IUpdateStatement, IUpdateStatement> Update(string procedure) =>
-        new TransformMapper<IUpdateStatement, IUpdateStatement>(
-            statement => new UpdateStatement(Call(procedure, Placeholders(statement.GetText())), statement.Where),
-            static statement => statement);
+    public static IMapper<IUpdateStatement, IStatement> Update(string procedure) =>
+        new TransformMapper<IUpdateStatement, IStatement>(
+            statement => new ExecuteStoredProcedureStatement(procedure, Fields(statement)),
+            static statement => (IUpdateStatement)statement);
 
-    public static IMapper<IDeleteStatement, IDeleteStatement> Delete(string procedure) =>
-        new TransformMapper<IDeleteStatement, IDeleteStatement>(
-            statement =>
-            {
-                var delete = (DeleteStatement)statement;
-                return DeleteStatement.Raw(Call(procedure, delete.Where?.Parameters.Select(parameter => parameter.Name) ?? []), delete.Where);
-            },
-            static statement => statement);
+    public static IMapper<IDeleteStatement, IStatement> Delete(string procedure) =>
+        new TransformMapper<IDeleteStatement, IStatement>(
+            statement => new ExecuteStoredProcedureStatement(
+                procedure,
+                statement.Where?.Parameters ?? []),
+            static statement => (IDeleteStatement)statement);
 
-    public static string Call(string procedure, IEnumerable<string> names) =>
-        $"CALL {procedure}({string.Join(", ", names.Select(name => $"${name}"))})";
+    static IReadOnlyList<Parameter> Fields(IInsertStatement statement) =>
+        statement is InsertStatement insert ? insert.Fields : [];
 
-    static IEnumerable<string> Placeholders(string sql) =>
-        Regex.Matches(sql, @"\$([A-Za-z_][A-Za-z0-9_]*)").Select(match => match.Groups[1].Value);
+    static IReadOnlyList<Parameter> Fields(IUpdateStatement statement) =>
+        statement is UpdateStatement update
+            ? UpdateStatement.ParameterList(update.Fields, update.Where)
+            : statement.Where?.Parameters ?? [];
 }

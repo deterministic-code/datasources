@@ -7,6 +7,7 @@ import {
   ParameterDirection,
   ReturnStatement,
   SelectStatement,
+  StatementTextRenderer,
   Response,
   splitStatements,
   statementReader,
@@ -17,11 +18,11 @@ import {
   type IStatement,
   type Parameter,
 } from "@datasources/core";
-import { MysqlStatementFactory } from "./MysqlStatementFactory.ts";
 import { bindParameters, toMysql } from "./bind.ts";
 import type { MysqlConnection } from "./connection.ts";
 import type { MysqlExecuteResult } from "./i-mysql-engine.ts";
 import type { Scalar } from "./scalar.ts";
+import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 
 const outputs = (parameters?: Parameter[]) =>
   parameters?.filter(
@@ -30,8 +31,11 @@ const outputs = (parameters?: Parameter[]) =>
   ) ?? [];
 
 export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
-  constructor(readonly connection: MysqlConnection) {
+  private readonly statements: StatementTextRenderer;
+
+  constructor(readonly connection: MysqlConnection, statements?: StatementTextRenderer) {
     super();
+    this.statements = statements ?? new StatementTextRenderer(t => new MysqlStatementRenderer(t));
   }
 
   async executeReaderNative(
@@ -60,21 +64,15 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReaderNative(
-      new Native(new MysqlStatementFactory().transform(statement).getText()),
-      parameters,
-    );
+    return this.executeReaderNative(new Native(this.statements.render(statement)), parameters);
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     if (statement instanceof SelectStatement || statement instanceof ReturnStatement)
       return this.firstCell(statement, parameters);
     if (statement instanceof ExecuteStoredProcedureStatement && statement.name && outputs(parameters).length)
-      return this.executeProcedure(statement.getText(), parameters);
-    return this.executeNative(
-      new Native(new MysqlStatementFactory().transform(statement).getText()),
-      parameters,
-    );
+      return this.executeProcedure(this.statements.render(statement), parameters);
+    return this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {

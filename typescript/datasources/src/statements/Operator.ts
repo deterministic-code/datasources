@@ -1,5 +1,6 @@
 import type { Cell } from "../converters/Cell.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
+import { Condition } from "./Condition.ts";
 import { Identifier } from "./Identifier.ts";
 import type { IExpression } from "./IExpression.ts";
 import { Literal } from "./Literal.ts";
@@ -12,7 +13,7 @@ const pair = (
     ? [new Identifier(left), new Literal(right as Cell)]
     : [left, right as IExpression];
 
-export abstract class Operator implements IExpression {}
+export abstract class Operator extends Condition {}
 
 export namespace Operator {
   export class Equals extends Operator {

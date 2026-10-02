@@ -5,6 +5,7 @@ import type { Response } from "./Response.ts";
 import type { Row } from "./Row.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { IStatement } from "./statements/IStatement.ts";
+import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
 import { Native } from "./statements/Native.ts";
 import { StatementParser } from "./statements/StatementParser.ts";
 
@@ -41,26 +42,30 @@ export class CommandMiddlewareHost {
   }
 
   execute(text: string, parameters?: Parameter[]): Promise<Response> {
-    return text.trim()
-      ? this.executeStatement(StatementParser.parse(text), parameters)
-      : this.executeNative(new Native(text), parameters);
+    if (!text.trim()) throw new Error("empty command");
+    return this.executeStatement(StatementParser.parse(text), parameters);
   }
 
   executeReader(text: string, parameters?: Parameter[]): Promise<IReader<Cells>> {
-    return text.trim()
-      ? this.executeReaderStatement(StatementParser.parse(text), parameters)
-      : this.executeReaderNative(new Native(text), parameters);
+    if (!text.trim()) throw new Error("empty command");
+    return this.executeReaderStatement(StatementParser.parse(text), parameters);
   }
 
   executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
-    return this.executeNative(new Native(statement.getText()), parameters);
+    return this.executeNative(
+      new Native(DefaultStatementTextRenderer.instance.render(statement)),
+      parameters,
+    );
   }
 
   executeReaderStatement(
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReaderNative(new Native(statement.getText()), parameters);
+    return this.executeReaderNative(
+      new Native(DefaultStatementTextRenderer.instance.render(statement)),
+      parameters,
+    );
   }
 
   executeNative(_text: Native, _parameters?: Parameter[]): Promise<Response> {

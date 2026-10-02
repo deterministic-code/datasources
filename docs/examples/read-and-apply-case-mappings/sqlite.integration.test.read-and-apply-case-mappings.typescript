@@ -1,6 +1,6 @@
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+await command.executeNative(new Native("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"));
 await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const mapped = await Array.fromAsync(reader.read(), (source) =>

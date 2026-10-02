@@ -1,4 +1,4 @@
-use super::text::Text;
+use super::statement_text_renderer::StatementTextRenderer;
 use crate::i_where::IWhere;
 use std::any::Any;
 
@@ -12,7 +12,8 @@ pub enum StatementKind {
     Other,
 }
 
-pub trait Statement: Text {
+pub trait Statement: Send + Sync {
+    fn accept(&self, text: &StatementTextRenderer) -> String;
     fn as_any(&self) -> &dyn Any;
     fn kind(&self) -> StatementKind {
         StatementKind::Other

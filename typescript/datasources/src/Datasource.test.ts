@@ -49,4 +49,15 @@ describe("Datasource", () => {
     await ds.createCommand();
     await expect(ds.createCommand()).rejects.toThrow("Connection is already open");
   });
+
+  it("applies repository options for crud and readonly", () => {
+    const ds = Datasource.default;
+    class Item {
+      id = 0;
+      name = "";
+    }
+    expect(ds.createRepository(Item, undefined, { entity: "items", ids: ["id"] })).toBeTruthy();
+    expect(ds.createReadonlyRepository(Item, undefined, { entity: "items" })).toBeTruthy();
+    expect(ds.createReadonlyRepository(Item)).toBeTruthy();
+  });
 });

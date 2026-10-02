@@ -11,7 +11,7 @@ public static class Migrate
             await command.Execute(Native.N("PRAGMA foreign_keys = ON"));
         foreach (var table in Schema.Tables(provider))
             await (provider == "sqlite"
-                ? command.Execute(Native.N(IfNotExists(table.GetText())))
+                ? command.Execute(Native.N(IfNotExists(DefaultStatementTextRenderer.Instance.Render(table))))
                 : command.Execute(table));
         await Seed(command, provider);
         if (provider == "mysql")

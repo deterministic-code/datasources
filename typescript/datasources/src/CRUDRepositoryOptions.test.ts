@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Operator, UpdateStatement, Where } from "./statements/index.ts";
+import { DefaultStatementTextRenderer, Operator, UpdateStatement, Where } from "./statements/index.ts";
 import { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
@@ -16,7 +16,7 @@ describe("CRUDRepositoryOptions", () => {
       readProperties: ["id"],
     };
     const built = new CRUDRepositoryBuilder().parts(new MockConnection(), read);
-    expect(built.statements.select().getText()).toBe("SELECT id FROM users");
+    expect(DefaultStatementTextRenderer.instance.render(built.statements.select())).toBe("SELECT id FROM users");
     expect(built.propertyMappings.map("x")).toBe("x");
     expect(built.propertyMappings.reverseMap("x")).toBe("x");
     const withId: CRUDRepositoryOptions = { ids: ["id"] };
@@ -51,26 +51,26 @@ describe("CRUDRepositoryOptions", () => {
 
   it("uses the mapped table and columns", () => {
     const statements = new CRUDRepositoryStatements("users", ["id", "name"]);
-    expect(statements.select().getText()).toBe("SELECT id, name FROM users");
-    expect(statements.insert([{ name: "id", value: 1 }]).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(statements.select())).toBe("SELECT id, name FROM users");
+    expect(DefaultStatementTextRenderer.instance.render(statements.insert([{ name: "id", value: 1 }]))).toBe(
       "INSERT INTO users (id) VALUES ($id)",
     );
-    expect(statements.update([{ name: "name", value: "a" }]).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(statements.update([{ name: "name", value: "a" }]))).toBe(
       "UPDATE users SET name = $name",
     );
     expect(
-      statements.update([{ name: "name", value: "a" }], new Where(new Operator.Equals("id", 1))).getText(),
+      DefaultStatementTextRenderer.instance.render(statements.update([{ name: "name", value: "a" }], new Where(new Operator.Equals("id", 1)))),
     ).toBe("UPDATE users SET name = $name WHERE id = $id");
-    expect(statements.delete(new Where(new Operator.Equals("id", 1))).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(statements.delete(new Where(new Operator.Equals("id", 1))))).toBe(
       "DELETE FROM users WHERE id = $id",
     );
     expect(UpdateStatement.parameterList([{ name: "name", value: "a" }])).toEqual([
       { name: "name", value: "a" },
     ]);
-    expect(statements.delete().getText()).toBe("DELETE FROM users");
+    expect(DefaultStatementTextRenderer.instance.render(statements.delete())).toBe("DELETE FROM users");
     const inserted = statements.selectInsertedId("id");
     expect(inserted.table).toBe("users");
     expect(inserted.column).toBe("id");
-    expect(() => inserted.getText()).toThrow("provider must implement SelectInsertIdStatement");
+    expect(() => DefaultStatementTextRenderer.instance.render(inserted)).toThrow("provider must implement SelectInsertIdStatement");
   });
 });

@@ -1,5 +1,5 @@
 use super::statement::Statement;
-use super::text::Text;
+use super::statement_text_renderer::StatementTextRenderer;
 
 pub struct SelectInsertedIdStatement {
     pub table: String,
@@ -15,13 +15,11 @@ impl SelectInsertedIdStatement {
     }
 }
 
-impl Text for SelectInsertedIdStatement {
-    fn get_text(&self) -> String {
-        panic!("provider must implement SelectInsertIdStatement");
-    }
-}
-
 impl Statement for SelectInsertedIdStatement {
+    fn accept(&self, text: &StatementTextRenderer) -> String {
+        text.statements().visit_select_inserted_id(self, text)
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

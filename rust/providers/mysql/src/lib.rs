@@ -5,7 +5,8 @@ mod create_table_statement_renderer;
 mod driver;
 mod engine;
 mod reader;
-mod statement_factory;
+mod select_inserted_id_statement_text_renderer;
+mod statement_renderer;
 mod transaction;
 
 pub use driver::MysqlDriver;
@@ -93,8 +94,14 @@ mod tests {
         );
         let conn = Arc::new(MysqlConnection::new(Some("mysql://db/app".into())));
         let command = MysqlCommand::new(conn.clone());
-        command.execute("", None).await.unwrap();
-        command.execute_reader("", None).await.unwrap();
+        command
+            .execute_native(&datasources::Native::new(""), None)
+            .await
+            .unwrap();
+        command
+            .execute_reader_native(&datasources::Native::new(""), None)
+            .await
+            .unwrap();
         assert!(conn.start_transaction(None).await.is_err());
         conn.close().await.unwrap();
         assert!(conn.ensure_open().is_err());

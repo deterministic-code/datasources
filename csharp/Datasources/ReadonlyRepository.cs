@@ -152,7 +152,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     }
 
     private ISelectStatement CompileStatement(IWhere where) =>
-        readonlyStatements is { } sql ? sql.Select(where) : new SelectStatement(where.GetText(), where);
+        readonlyStatements is { } sql ? sql.Select(where) : new SelectStatement(new() { Where = where });
 
     private Row ColumnToPropertyName(Row row) =>
         new(row.Select(pair => KeyValuePair.Create(statementMappers.Property(pair.Key), pair.Value)));

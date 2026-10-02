@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DeleteStatement,
+  DefaultStatementTextRenderer,
   Native,
   InsertStatement,
   SelectInsertedIdStatement,
@@ -74,12 +75,13 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
         ? this.execute("update", withWhere(parameters, statement.where))
         : statement instanceof DeleteStatement
           ? this.execute("delete", withWhere(parameters, statement.where))
-          : this.execute(statement.getText(), parameters);
+          : this.execute(DefaultStatementTextRenderer.instance.render(statement), parameters);
 
   async execute(
     text: string,
     parameters?: Parameter[],
   ): Promise<Response> {
+    if (!text.trim()) throw new Error("empty command");
     return this.run(text, parameters, async (query, params) => {
         this.connection.ensureOpen();
         const op = query.trim().toLowerCase();
@@ -140,10 +142,13 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
 
 const looksJson = (text?: string): boolean => !!text?.trimStart().startsWith("{");
 
+const renderWhere = (where?: IWhere): string | undefined =>
+  where ? DefaultStatementTextRenderer.instance.render(where) : undefined;
+
 const filterText = (statement: IStatement): string => {
-  const where = "where" in statement ? (statement as { where?: IWhere }).where?.getText() : undefined;
+  const where = "where" in statement ? renderWhere((statement as { where?: IWhere }).where) : undefined;
   if (looksJson(where)) return where!;
-  const text = statement.getText();
+  const text = DefaultStatementTextRenderer.instance.render(statement);
   return looksJson(text) || !text.trim() ? text : "";
 };
 
@@ -151,6 +156,6 @@ const withWhere = (
   parameters: Parameter[] | undefined,
   where?: IWhere,
 ): Parameter[] | undefined =>
-  looksJson(where?.getText())
-    ? [...(parameters ?? []), { name: "$where", value: where!.getText() }]
+  looksJson(renderWhere(where))
+    ? [...(parameters ?? []), { name: "$where", value: renderWhere(where)! }]
     : parameters;

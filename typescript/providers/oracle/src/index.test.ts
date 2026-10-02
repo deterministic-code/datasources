@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
+import { Datasource, DatasourceFactory, Native, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
 import { OracleConnection } from "./connection.ts";
 import { OracleDriver } from "./OracleDriver.ts";
 
@@ -20,8 +20,8 @@ describe("oracle", () => {
     const command = await ds.createCommand(connection);
     expect(command).toBeInstanceOf(StubCommand);
     expect(command.connection).toBe(connection);
-    await expect(command.execute("")).rejects.toThrow(ProviderNotImplementedError);
-    await expect(command.executeReader("")).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.executeNative(new Native("x"))).rejects.toThrow(ProviderNotImplementedError);
+    await expect(command.executeReaderNative(new Native("x"))).rejects.toThrow(ProviderNotImplementedError);
     await expect(ds.createCommand()).rejects.toThrow(ProviderNotImplementedError);
     ds.createRepository(untyped());
     ds.createRepository(untyped(), connection);

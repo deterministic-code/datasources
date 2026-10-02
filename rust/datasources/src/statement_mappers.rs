@@ -4,7 +4,6 @@ use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::statements::statement::Statement;
-use crate::statements::text::Text;
 use crate::statements::{OrderBy, SelectStatementOptions, Where};
 use crate::value::Value;
 use crate::{DeleteStatement, InsertStatement, SelectInsertedIdStatement, SelectStatement, UpdateStatement};
@@ -95,9 +94,6 @@ impl StatementMappers {
     }
 
     pub fn apply_insert(&self, insert: &InsertStatement) -> InsertStatement {
-        let Some(table) = insert.table() else {
-            return InsertStatement::text(insert.get_text());
-        };
         let fields: Vec<Parameter> = insert
             .fields()
             .iter()
@@ -107,7 +103,7 @@ impl StatementMappers {
                 direction: field.direction,
             })
             .collect();
-        InsertStatement::new(self.entity(&table), &fields)
+        InsertStatement::new(self.entity(insert.table()), &fields)
     }
 
     pub fn apply_update(
@@ -115,12 +111,6 @@ impl StatementMappers {
         update: &UpdateStatement,
         cell: &dyn Fn(&str, &Value) -> Result<Value>,
     ) -> Result<UpdateStatement> {
-        let Some(table) = update.table() else {
-            return Ok(UpdateStatement::text(
-                update.get_text(),
-                crate::where_text::boxed(update.where_clause()),
-            ));
-        };
         let fields: Vec<Parameter> = update
             .fields()
             .iter()
@@ -135,7 +125,7 @@ impl StatementMappers {
             Some(where_clause) => Some(where_clause),
             None => update.where_clause(),
         };
-        Ok(UpdateStatement::new(self.entity(&table), &fields, clause))
+        Ok(UpdateStatement::new(self.entity(update.table()), &fields, clause))
     }
 
     pub fn apply_delete(
@@ -143,18 +133,12 @@ impl StatementMappers {
         delete: &DeleteStatement,
         cell: &dyn Fn(&str, &Value) -> Result<Value>,
     ) -> Result<DeleteStatement> {
-        let Some(table) = delete.table() else {
-            return Ok(DeleteStatement::raw(
-                delete.get_text(),
-                crate::where_text::boxed(delete.where_clause()),
-            ));
-        };
         let mapped = self.apply_predicate(delete.where_clause(), cell)?;
         let clause: Option<&dyn IWhere> = match mapped.as_ref() {
             Some(where_clause) => Some(where_clause),
             None => delete.where_clause(),
         };
-        Ok(DeleteStatement::new(self.entity(&table), clause))
+        Ok(DeleteStatement::new(self.entity(delete.table()), clause))
     }
 
     pub fn apply_inserted(&self, inserted: &SelectInsertedIdStatement) -> SelectInsertedIdStatement {

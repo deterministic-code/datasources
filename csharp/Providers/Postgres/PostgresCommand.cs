@@ -7,7 +7,13 @@ namespace Datasources.Postgres;
 
 internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
 {
-    public PostgresCommand(PostgresConnection connection) => Connection = connection;
+    readonly StatementTextRenderer statements;
+
+    public PostgresCommand(PostgresConnection connection, StatementTextRenderer? statements = null)
+    {
+        Connection = connection;
+        this.statements = statements ?? new StatementTextRenderer(t => new PostgresStatementRenderer(t));
+    }
     public IConnection Connection { get; }
     PostgresConnection Typed => (PostgresConnection)Connection;
 
@@ -32,13 +38,13 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(new Native(new PostgresStatementFactory().Transform(statement).GetText()), parameters);
+        ExecuteReader(new Native(statements.Render(statement)), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
         {
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
-            _ => Execute(new Native(new PostgresStatementFactory().Transform(statement).GetText()), parameters)
+            _ => Execute(new Native(statements.Render(statement)), parameters)
         };
 
     async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)

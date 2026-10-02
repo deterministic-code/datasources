@@ -4,6 +4,7 @@ import {
   MockConnection,
   MockDatasource,
   MockRepository,
+  Native,
   untyped,
 } from "../index.ts";
 
@@ -14,8 +15,8 @@ describe("MockDatasource", () => {
     expect(await ds.createConnection()).toBe(ds.connection);
     const mockCommand = await ds.createCommand();
     expect(mockCommand).toBeInstanceOf(MockCommand);
-    await mockCommand.execute("");
-    await mockCommand.executeReader("");
+    await mockCommand.executeNative(new Native(""));
+    await mockCommand.executeReaderNative(new Native(""));
     const provided = new MockConnection();
     expect((await ds.createCommand(provided)).connection).toBe(provided);
     expect(ds.createRepository(untyped(), provided)).toBeInstanceOf(MockRepository);

@@ -2,9 +2,13 @@ namespace Datasources;
 
 public sealed record CreateIndexStatement : ICreateIndexStatement
 {
-    readonly string text;
-    public CreateIndexStatement(string text) => this.text = text;
+    public string Name { get; }
+    public string Table { get; }
+    public IReadOnlyList<string> Columns { get; }
+    public bool Unique { get; }
+
     public CreateIndexStatement(string name, string table, IReadOnlyList<string> columns, bool unique = false) =>
-        text = $"CREATE {(unique ? "UNIQUE " : "")}INDEX {name} ON {table} ({string.Join(", ", columns)})";
-    public string GetText() => text;
+        (Name, Table, Columns, Unique) = (name, table, columns, unique);
+
+    public string Accept(IStatementVisitor visitor) => visitor.Visit(this);
 }

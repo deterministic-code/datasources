@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  StatementTextRenderer,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -10,21 +11,18 @@ import {
   type TypeConverter,
 } from "@datasources/core";
 import { MysqlConnection } from "./connection.ts";
+import { MysqlCommand } from "./command.ts";
 import { MysqlTransaction } from "./transaction.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
+import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
+import { columnTypes } from "./columnTypes.ts";
 
-export const columnTypes: Record<string, string> = {
-  int: "INT",
-  uuid: "CHAR(36)",
-  string: "TEXT",
-  datetime: "TEXT",
-  bool: "TINYINT",
-  decimal: "DECIMAL(18,4)",
-  float: "DOUBLE",
-  binary: "BLOB",
-};
+export { columnTypes };
+
+const statements = new StatementTextRenderer(t => new MysqlStatementRenderer(t));
 
 export class MysqlDriver implements IDriver {
+  readonly statementRenderer = statements;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
   columnType = (name: string): string =>
     columnTypes[name] ??
@@ -33,7 +31,8 @@ export class MysqlDriver implements IDriver {
     })();
   connection = (options?: DatasourceOptions): IConnection =>
     MysqlConnection.from(options);
-  command = (connection: IConnection): ICommand => connection.createCommand();
+  command = (connection: IConnection): ICommand =>
+    new MysqlCommand(connection as MysqlConnection, statements);
   transaction = (
     connection: IConnection,
     isolation: IsolationLevel = "readCommitted",

@@ -60,7 +60,7 @@ public class ReadPipelineIntegrationTests
                 new Parameter("created", "2003-03-03T00:00:00.000Z"),
             ]);
 
-        var propertyToColumnMapper = new DictionaryMapper<string>(new()
+        var propertyToColumnMapper = new DictionaryMapper<string>(new Dictionary<string, string>
         {
             ["Id"] = "id",
             ["Uuid"] = "uuid",
@@ -78,7 +78,7 @@ public class ReadPipelineIntegrationTests
                 KeyValuePair.Create(propertyToColumnMapper.ReverseMap(cell.Key), cell.Value))))
             .ToList();
 
-        var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new()
+        var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new Dictionary<string, string>
         {
             ["Uuid"] = "uuid",
             ["IsEnabled"] = "bool",

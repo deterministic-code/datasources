@@ -2,6 +2,7 @@ use crate::command::Command;
 use crate::connection::Connection;
 use crate::converters::TypeConverter;
 use crate::isolation_level::IsolationLevel;
+use crate::statements::StatementTextRenderer;
 use crate::transaction::Transaction;
 use crate::value::Value;
 use std::collections::HashMap;
@@ -21,5 +22,9 @@ pub trait Driver: Send + Sync {
 
     fn column_type(&self, name: &str) -> crate::Result<String> {
         Ok(name.to_string())
+    }
+
+    fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
+        None
     }
 }

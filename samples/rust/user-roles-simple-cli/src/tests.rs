@@ -12,8 +12,8 @@ use crate::schema;
 use crate::users_roles_groups_query;
 use crate::users_view;
 use datasources::{
-    Column, CreateTableStatement, Driver, FlatToNestedMapper, MappedRow, MappedValue, Mapper,
-    MockCommand, Row, Text, Value,
+    Column, CreateTableStatement, DefaultStatementTextRenderer, Driver, FlatToNestedMapper,
+    MappedRow, MappedValue, Mapper, MockCommand, Row, Value,
 };
 
 fn driver(provider: &str) -> Box<dyn Driver> {
@@ -51,7 +51,11 @@ fn user_table(provider: &str) -> String {
             )
         })
         .collect();
-    CreateTableStatement::new(schema::ident(provider, "user"), &mapped, &[]).get_text()
+    DefaultStatementTextRenderer::instance().render(&CreateTableStatement::new(
+        schema::ident(provider, "user"),
+        &mapped,
+        &[],
+    ))
 }
 
 fn row(pairs: &[(&str, Value)]) -> Row {
@@ -143,7 +147,7 @@ fn builds_schema() {
         let sql = schema::tables(provider)
             .unwrap()
             .iter()
-            .map(Text::get_text)
+            .map(|table| DefaultStatementTextRenderer::instance().render(table))
             .collect::<Vec<_>>()
             .join("\n");
         assert!(sql.contains(&format!(
@@ -158,8 +162,8 @@ fn builds_schema() {
     }
     let sqlite = schema::tables("sqlite").unwrap();
     assert!(sqlite[0].columns[0].identity);
-    assert!(sqlite[0]
-        .get_text()
+    assert!(DefaultStatementTextRenderer::instance()
+        .render(&sqlite[0])
         .contains("CONSTRAINT pk_users PRIMARY KEY"));
     assert!(schema::tables("mysql").unwrap()[0].columns[0].identity);
     assert!(schema::tables("postgres").unwrap()[0].columns[0].identity);

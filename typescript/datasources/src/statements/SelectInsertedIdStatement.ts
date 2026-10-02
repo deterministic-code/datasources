@@ -1,4 +1,5 @@
 import type { IStatement } from "./IStatement.ts";
+import type { IStatementVisitor } from "./IStatementVisitor.ts";
 
 export class SelectInsertedIdStatement implements IStatement {
   constructor(
@@ -6,7 +7,5 @@ export class SelectInsertedIdStatement implements IStatement {
     readonly column: string,
   ) {}
 
-  getText = (): string => {
-    throw new Error("provider must implement SelectInsertIdStatement");
-  };
+  accept = (visitor: IStatementVisitor): string => visitor.visit(this);
 }

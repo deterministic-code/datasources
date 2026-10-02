@@ -1,6 +1,7 @@
 import {
   DatasourceError,
   IsolationLevel,
+  StatementTextRenderer,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -12,6 +13,7 @@ import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";
 import type { SqliteDatabase, SqliteDatabaseCtor } from "./i-sqlite-driver.ts";
 import { filenameOf } from "./sqlitePath.ts";
+import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 import { SqliteTransaction } from "./transaction.ts";
 
 const require = createRequire(import.meta.url);
@@ -39,7 +41,8 @@ export class SqliteConnection implements IConnection {
     this.Database = options.Database;
   }
 
-  createCommand = (): ICommand => new SqliteCommand(this);
+  createCommand = (): ICommand =>
+    new SqliteCommand(this, new StatementTextRenderer(t => new SqliteStatementRenderer(t)));
 
   async open(): Promise<void> {
     if (this.isOpen) throw new DatasourceError("Connection is already open");

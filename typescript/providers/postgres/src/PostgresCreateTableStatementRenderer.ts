@@ -1,12 +1,12 @@
 import {
   ColumnDefault,
-  CreateTableStatementRenderer,
+  CreateTableStatementTextRenderer,
   type Column,
 } from "@datasources/core";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
-import { columnTypes } from "./PostgresDriver.ts";
+import { columnTypes } from "./columnTypes.ts";
 
-export class PostgresCreateTableStatementRenderer extends CreateTableStatementRenderer {
+export class PostgresCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
   protected typeName(column: Column): string {
     return columnTypes[column.type] ?? column.type;
   }

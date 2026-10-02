@@ -16,13 +16,13 @@ public class ComparisonAliasTests
         var lessOrEqual = new Where("n", le, 0);
         var both = equals.And("is_enabled", eq, 0);
         var either = equals.Or("is_enabled", eq, 0);
-        Assert.Equal("username = $username", equals.GetText());
-        Assert.Equal("id <> $id", notEquals.GetText());
-        Assert.Equal("n > $n", greater.GetText());
-        Assert.Equal("n < $n", less.GetText());
-        Assert.Equal("n >= $n", greaterOrEqual.GetText());
-        Assert.Equal("n <= $n", lessOrEqual.GetText());
-        Assert.Equal("username = $username AND is_enabled = $is_enabled", both.GetText());
-        Assert.Equal("username = $username OR is_enabled = $is_enabled", either.GetText());
+        Assert.Equal("username = $username", DefaultStatementTextRenderer.Instance.Render(equals));
+        Assert.Equal("id <> $id", DefaultStatementTextRenderer.Instance.Render(notEquals));
+        Assert.Equal("n > $n", DefaultStatementTextRenderer.Instance.Render(greater));
+        Assert.Equal("n < $n", DefaultStatementTextRenderer.Instance.Render(less));
+        Assert.Equal("n >= $n", DefaultStatementTextRenderer.Instance.Render(greaterOrEqual));
+        Assert.Equal("n <= $n", DefaultStatementTextRenderer.Instance.Render(lessOrEqual));
+        Assert.Equal("username = $username AND is_enabled = $is_enabled", DefaultStatementTextRenderer.Instance.Render(both));
+        Assert.Equal("username = $username OR is_enabled = $is_enabled", DefaultStatementTextRenderer.Instance.Render(either));
     }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CRUDRepository,
+  DefaultStatementTextRenderer,
   ExecuteStoredProcedureStatement,
   SelectStatement,
   MetaDataRowTypeConverter,
@@ -167,7 +168,7 @@ describe("CRUDRepository", () => {
     expect(versioned.command.executeCalls[0]?.text).toContain("name = $name__where");
     expect(versioned.command.executeCalls[0]?.text).toContain("name_extra = $name_extra");
     const versionedWhere = await versioned.repo.update({ id: 1, name: "b" }, {
-      getText: () => "name = $name",
+      accept: () => "name = $name",
       parameters: [{ name: "skipped" }, { name: "name", value: "a" }],
     });
     expect(versionedWhere.rowsAffected).toBe(1);
@@ -303,8 +304,8 @@ describe("CRUDRepository", () => {
     expect(new CRUDRepository(asType(Item), connection)).toBeInstanceOf(CRUDRepository);
     expect(new CRUDRepositoryBuilder().parts(connection, fromId).connection).toBe(connection);
     expect(new CRUDRepositoryBuilder().parts(connection, createCRUDRepositoryOptions(asType(Item))).ids).toEqual(["id"]);
-    expect(new ReadonlyRepositoryBuilder().parts(connection, {}).statements.select().getText()).toBe("SELECT * FROM ");
-    expect(new ReadonlyRepositoryBuilder().parts(connection, { type: asType(Item) }).statements.select().getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new ReadonlyRepositoryBuilder().parts(connection, {}).statements.select())).toBe("SELECT * FROM ");
+    expect(DefaultStatementTextRenderer.instance.render(new ReadonlyRepositoryBuilder().parts(connection, { type: asType(Item) }).statements.select())).toBe(
       "SELECT id, name FROM Item",
     );
   });

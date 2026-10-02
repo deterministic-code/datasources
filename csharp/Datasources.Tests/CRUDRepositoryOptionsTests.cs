@@ -59,18 +59,19 @@ public class CRUDRepositoryOptionsTests
     public void StatementsUseTheMappedTableAndColumns()
     {
         var statements = new CRUDRepositoryStatements("users", ["id", "name"]);
-        Assert.Equal("SELECT id, name FROM users", statements.Select().GetText());
+        Assert.Equal("SELECT id, name FROM users", DefaultStatementTextRenderer.Instance.Render(statements.Select()));
         Assert.Equal(
             "INSERT INTO users (id) VALUES ($id)",
-            statements.Insert([new Parameter("id", 1)]).GetText());
+            DefaultStatementTextRenderer.Instance.Render(statements.Insert([new Parameter("id", 1)])));
         var updated = statements.Update([new Parameter("name", "a")]);
-        Assert.Equal("UPDATE users SET name = $name", updated.GetText());
+        Assert.Equal("UPDATE users SET name = $name", DefaultStatementTextRenderer.Instance.Render(updated));
         Assert.Equal("name", Assert.Single(UpdateStatement.ParameterList([new Parameter("name", "a")])).Name);
-        Assert.Equal("DELETE FROM users", statements.Delete().GetText());
+        Assert.Equal("DELETE FROM users", DefaultStatementTextRenderer.Instance.Render(statements.Delete()));
         var inserted = statements.SelectInsertedId("id");
         Assert.Equal("users", inserted.Table);
         Assert.Equal("id", inserted.Column);
-        var error = Assert.Throws<InvalidOperationException>(inserted.GetText);
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            DefaultStatementTextRenderer.Instance.Render(inserted));
         Assert.Equal("provider must implement SelectInsertIdStatement", error.Message);
     }
 }

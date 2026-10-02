@@ -1,15 +1,18 @@
 import type { ICreateIndexStatement } from "./ICreateIndexStatement.ts";
+import type { IStatementVisitor } from "./IStatementVisitor.ts";
 
 export class CreateIndexStatement implements ICreateIndexStatement {
-  private readonly text: string;
+  readonly name: string;
+  readonly table: string;
+  readonly columns: string[];
+  readonly unique: boolean;
 
-  constructor(text: string);
-  constructor(name: string, table: string, columns: string[], unique?: boolean);
-  constructor(nameOrText: string, table?: string, columns?: string[], unique = false) {
-    this.text = columns
-      ? `CREATE ${unique ? "UNIQUE " : ""}INDEX ${nameOrText} ON ${table} (${columns.join(", ")})`
-      : nameOrText;
+  constructor(name: string, table: string, columns: string[], unique = false) {
+    this.name = name;
+    this.table = table;
+    this.columns = columns;
+    this.unique = unique;
   }
 
-  getText = (): string => this.text;
+  accept = (visitor: IStatementVisitor): string => visitor.visit(this);
 }

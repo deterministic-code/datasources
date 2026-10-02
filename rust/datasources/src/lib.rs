@@ -49,6 +49,7 @@ mod hashset_optimized_readonly_enrichment_strategy;
 mod i_repository;
 mod i_select_statement;
 mod i_unit_of_work;
+mod i_condition;
 mod i_where;
 mod id_key;
 mod isolation_level;
@@ -149,6 +150,7 @@ pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonly
 pub use i_repository::IRepository;
 pub use i_select_statement::ISelectStatement;
 pub use i_unit_of_work::IUnitOfWork;
+pub use i_condition::ICondition;
 pub use i_where::IWhere;
 pub use id_key::IdKey;
 pub use isolation_level::IsolationLevel;
@@ -188,13 +190,18 @@ pub use split_statements::split_statements;
 pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
-    eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault,
-    CreateIndexStatement, CreateTableStatement, CreateTableStatementRenderer, DeleteStatement,
-    ExecuteStoredProcedureStatement, Expression, ExpressionEvaluator, ForeignKey, Identifier,
-    InsertStatement, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
-    ReturnStatement, SelectInsertedIdStatement, SelectStatementOptions, SortDirection, Statement,
-    StatementEvaluator, StatementKind, TableConstraint, Text, UniqueConstraint, UpdateStatement,
-    Where,
+    eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault, Condition,
+    ConditionRenderer, ConditionVisitor, CreateIndexStatement, CreateTableStatement,
+    CreateIndexStatementTextRenderer, CreateTableStatementTextRenderer,
+    DefaultStatementTextRenderer, DeleteStatement, DeleteStatementTextRenderer,
+    ExecuteStoredProcedureStatement, ExecuteStoredProcedureStatementTextRenderer, Expression,
+    ExpressionEvaluator, ExpressionRenderer, ForeignKey, Identifier, InsertStatement,
+    InsertStatementTextRenderer, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
+    ReturnStatement, ReturnStatementTextRenderer, SelectInsertedIdStatement,
+    SelectInsertedIdStatementTextRenderer, SelectStatementOptions, SelectStatementTextRenderer,
+    SortDirection, Statement, StatementEvaluator, StatementKind, StatementRenderer,
+    StatementTextRenderer, StatementVisitor, TableConstraint, UniqueConstraint, UpdateStatement,
+    UpdateStatementTextRenderer, Where,
 };
 pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;
 pub use stubs::{

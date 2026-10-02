@@ -5,6 +5,7 @@ import {
   Native,
   ReturnStatement,
   SelectStatement,
+  StatementTextRenderer,
   parametersToRecord,
   Response,
   splitStatements,
@@ -17,10 +18,10 @@ import {
   type IStatement,
   type Parameter,
 } from "@datasources/core";
-import { SqliteStatementFactory } from "./SqliteStatementFactory.ts";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
 import { reverse, SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
+import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 
 const bound = (parameters?: Parameter[]): Record<string, Scalar> => {
   const record = parametersToRecord(parameters);
@@ -30,8 +31,11 @@ const bound = (parameters?: Parameter[]): Record<string, Scalar> => {
 };
 
 export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
-  constructor(readonly connection: SqliteConnection) {
+  private readonly statements: StatementTextRenderer;
+
+  constructor(readonly connection: SqliteConnection, statements?: StatementTextRenderer) {
     super();
+    this.statements = statements ?? new StatementTextRenderer(t => new SqliteStatementRenderer(t));
   }
 
   async executeReaderNative(
@@ -73,19 +77,13 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReaderNative(
-      new Native(new SqliteStatementFactory().transform(statement).getText()),
-      parameters,
-    );
+    return this.executeReaderNative(new Native(this.statements.render(statement)), parameters);
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     return statement instanceof SelectStatement || statement instanceof ReturnStatement
       ? this.firstCell(statement, parameters)
-      : this.executeNative(
-          new Native(new SqliteStatementFactory().transform(statement).getText()),
-          parameters,
-        );
+      : this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {

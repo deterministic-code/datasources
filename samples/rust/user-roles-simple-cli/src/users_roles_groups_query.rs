@@ -1,5 +1,7 @@
 use crate::schema;
-use datasources::{Join, OrderBy, SelectStatement, SelectStatementOptions, Text};
+use datasources::{
+    DefaultStatementTextRenderer, Join, OrderBy, SelectStatement, SelectStatementOptions,
+};
 
 pub fn create(provider: &str) -> SelectStatement {
     let users = schema::ident(provider, "users");
@@ -46,5 +48,5 @@ pub fn create(provider: &str) -> SelectStatement {
 }
 
 pub fn text(provider: &str) -> String {
-    create(provider).get_text()
+    DefaultStatementTextRenderer::instance().render(&create(provider))
 }

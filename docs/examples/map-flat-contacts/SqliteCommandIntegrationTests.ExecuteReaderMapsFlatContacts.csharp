@@ -1,7 +1,7 @@
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute(
-    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+await command.Execute(Native.N(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"));
 await using var reader = await command.ExecuteReader(
     "SELECT contact_name1, contact_name2, email, id, username FROM users");
 var converter = new MetaDataRowTypeConverter<User>();

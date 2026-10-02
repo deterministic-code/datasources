@@ -5,6 +5,7 @@ import type { IsolationLevel } from "./IsolationLevel.ts";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
 import type { Cell } from "./converters/Cell.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
+import type { StatementTextRenderer } from "./statements/StatementTextRenderer.ts";
 
 export const columnType = (name: string): string => name;
 
@@ -17,4 +18,5 @@ export interface IDriver {
   ): ITransaction;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>;
   columnType(name: string): string;
+  statementRenderer?: StatementTextRenderer | null;
 }

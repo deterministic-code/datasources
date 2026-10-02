@@ -9,7 +9,7 @@ import type { Response } from "./Response.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
-import { Literal, Operator, Where } from "./statements/index.ts";
+import { DefaultStatementTextRenderer, Literal, Operator, Where } from "./statements/index.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { ICommand } from "./ICommand.ts";
 import type { Parameter } from "./Parameter.ts";
@@ -123,7 +123,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     const statement = this.crudStatements.insert(
       fieldsOf(this.reverse(item), (col) => !this.ids.includes(col), this.cell, this.enrichmentInto),
     );
-    return { text: statement.getText(), parameters: statement.fields };
+    return { text: DefaultStatementTextRenderer.instance.render(statement), parameters: statement.fields };
   };
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
@@ -135,7 +135,7 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
       byWhere ?? this.idsWhere(record),
       (name, value) => this.cell(name, value, byWhere === undefined),
     );
-    return { text: statement.getText(), parameters: statement.parameters };
+    return { text: DefaultStatementTextRenderer.instance.render(statement), parameters: statement.parameters };
   };
 
   private deleteCommand = (item: T, byWhere?: IWhere): BulkCommand => {
@@ -147,10 +147,10 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     const listed = statement.where?.parameters ?? [];
     const parameters: Parameter[] = listed.length
       ? listed
-      : statement.getText().includes("$")
+      : DefaultStatementTextRenderer.instance.render(statement).includes("$")
         ? fieldsOf(record, () => true, this.cell, this.enrichmentInto)
         : [];
-    return { text: statement.getText(), parameters };
+    return { text: DefaultStatementTextRenderer.instance.render(statement), parameters };
   };
 
   private rowOf = (item: T): Cells => {

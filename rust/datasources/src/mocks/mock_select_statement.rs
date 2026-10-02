@@ -1,13 +1,13 @@
 use crate::i_select_statement::ISelectStatement;
 use crate::i_where::IWhere;
 use crate::statement::Statement;
-use crate::statements::text::Text;
+use crate::StatementTextRenderer;
 use std::sync::Mutex;
 
 pub struct MockSelectStatement {
     text: String,
     where_clause: Option<Box<dyn IWhere>>,
-    calls: Mutex<usize>,
+    accept_calls: Mutex<usize>,
 }
 
 impl MockSelectStatement {
@@ -15,7 +15,7 @@ impl MockSelectStatement {
         Self {
             text: text.into(),
             where_clause: None,
-            calls: Mutex::new(0),
+            accept_calls: Mutex::new(0),
         }
     }
 
@@ -23,19 +23,12 @@ impl MockSelectStatement {
         Self {
             text: text.into(),
             where_clause: Some(Box::new(where_clause)),
-            calls: Mutex::new(0),
+            accept_calls: Mutex::new(0),
         }
     }
 
-    pub fn calls(&self) -> usize {
-        *self.calls.lock().expect("mock")
-    }
-}
-
-impl Text for MockSelectStatement {
-    fn get_text(&self) -> String {
-        *self.calls.lock().expect("mock") += 1;
-        self.text.clone()
+    pub fn accept_calls(&self) -> usize {
+        *self.accept_calls.lock().expect("mock")
     }
 }
 
@@ -46,6 +39,11 @@ impl crate::ReadInput for MockSelectStatement {
 }
 
 impl Statement for MockSelectStatement {
+    fn accept(&self, _text: &StatementTextRenderer) -> String {
+        *self.accept_calls.lock().expect("mock") += 1;
+        self.text.clone()
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

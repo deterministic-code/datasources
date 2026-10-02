@@ -24,8 +24,8 @@ public class MysqlTests
         var conn = new MysqlConnection(new MysqlConnectionOptions { Url = "mysql://db/app" });
         Assert.Equal("mysql://db/app", conn.Url);
         var command = new MysqlCommand(conn);
-        await command.Execute("");
-        await command.ExecuteReader("");
+        await command.Execute(new Native(""));
+        await command.ExecuteReader(new Native(""));
 
         Assert.False(conn.IsOpen);
         Assert.Throws<DatasourceException>(() => conn.EnsureOpen());
@@ -39,8 +39,8 @@ public class MysqlTests
         var provided = Assert.IsType<MysqlConnection>(await ds.CreateConnection());
         var bound = Assert.IsType<MysqlCommand>(await ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
-        await bound.Execute("");
-        await bound.ExecuteReader("");
+        await bound.Execute(new Native(""));
+        await bound.ExecuteReader(new Native(""));
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));
         Assert.Equal("mysql", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "mysql" }).Provider);

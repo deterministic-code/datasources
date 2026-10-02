@@ -29,9 +29,13 @@ class FakeClient implements IMysqlClient {
   header: MysqlQueryHeader = { affectedRows: 2, insertId: 5 };
   rows: Cells[] = [{ id: 1 }];
   arrayResult = false;
+  /** Multi-result-set payload for CALL (array of row arrays). */
+  callSets?: Cells[][];
 
   async query(sql: string, params?: Record<string, Scalar>) {
     this.queries.push({ sql, params });
+    if (this.callSets !== undefined)
+      return [this.callSets] as [MysqlQueryHeader | Cells[]];
     return [this.arrayResult ? this.rows : this.header] as [
       MysqlQueryHeader | Cells[],
     ];
@@ -89,13 +93,13 @@ describe("MysqlConnection", () => {
       .toMatchObject({ rowsAffected: 2 });
     expect(client.queries.at(-1)?.sql).toBe("CREATE TABLE users (id INTEGER)");
     client.arrayResult = true;
-    expect(await (await command.executeReaderStatement(new SelectStatement("SELECT 1"))).next()).toBe(true);
-    expect(await command.execute("   ")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
+    expect(await (await command.executeReaderNative(new Native("SELECT 1"))).next()).toBe(true);
+    expect(await command.executeNative(new Native("   "))).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     client.arrayResult = true;
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
-    expect(await (await command.executeReader("")).next()).toBe(false);
+    expect(await (await command.executeReaderNative(new Native(""))).next()).toBe(false);
     client.arrayResult = false;
     await connection.startTransaction();
     await connection.startTransaction(IsolationLevel.ReadUncommitted);
@@ -171,11 +175,11 @@ describe("MysqlCommand", () => {
     client.arrayResult = true;
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: undefined, rowsAffected: 1, parameters: [{ name: "id", value: 1 }] });
-    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
+    expect(await command.executeNative(new Native(""))).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
-    const empty = await command.executeReader("");
+    const empty = await command.executeReaderNative(new Native(""));
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
     client.rows = [{ add_one: 5 }];
@@ -212,12 +216,12 @@ describe("MysqlCommand", () => {
     ).toMatchObject({ rowsAffected: 0 });
     client.arrayResult = true;
     client.rows = [];
-    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({
+    expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({
       result: null,
       rowsAffected: 0,
     });
     client.rows = [{}];
-    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
+    expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({ result: null });
     expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", []))).toMatchObject({
       result: undefined,
     });
@@ -230,6 +234,28 @@ describe("MysqlCommand", () => {
         { name: "result", direction: ParameterDirection.Output },
       ]),
     ).toMatchObject({ rowsAffected: 0 });
+  });
+
+  it("reads CALL result sets through the reader", async () => {
+    const { command, client } = await opened();
+    client.callSets = [[{ id: 1 }, { id: 2 }], [{ id: 3 }]];
+    const reader = await command.executeReaderNative(new Native("CALL two_ids()"));
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 1 });
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 2 });
+    expect(await reader.next()).toBe(false);
+    expect(await reader.nextResult()).toBe(true);
+    expect(await reader.next()).toBe(true);
+    expect(reader.current).toEqual({ id: 3 });
+    expect(await reader.next()).toBe(false);
+    expect(await reader.nextResult()).toBe(false);
+
+    client.callSets = undefined;
+    client.arrayResult = false;
+    const empty = await command.executeReaderNative(new Native("CALL noop()"));
+    expect(await empty.next()).toBe(false);
+    expect(await empty.nextResult()).toBe(false);
   });
 });
 

@@ -1,31 +1,34 @@
 use super::statement::Statement;
-use super::text::Text;
+use super::statement_text_renderer::StatementTextRenderer;
 use crate::parameter::Parameter;
-use crate::parameter_direction::ParameterDirection;
 
 pub struct ReturnStatement {
-    text: String,
+    name: String,
+    parameters: Vec<Parameter>,
 }
 
 impl ReturnStatement {
-    pub fn text(text: impl Into<String>) -> Self {
-        Self { text: text.into() }
-    }
-
     pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self {
         Self {
-            text: format!("SELECT {}({})", name.as_ref(), args(parameters)),
+            name: name.as_ref().to_string(),
+            parameters: parameters.to_vec(),
         }
     }
-}
 
-impl Text for ReturnStatement {
-    fn get_text(&self) -> String {
-        self.text.clone()
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 }
 
 impl Statement for ReturnStatement {
+    fn accept(&self, text: &StatementTextRenderer) -> String {
+        text.statements().visit_return(self, text)
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
@@ -35,13 +38,4 @@ impl crate::ReadInput for ReturnStatement {
     fn as_statement(&self) -> Option<&dyn crate::Statement> {
         Some(self)
     }
-}
-
-fn args(parameters: &[Parameter]) -> String {
-    parameters
-        .iter()
-        .filter(|parameter| parameter.direction != ParameterDirection::ReturnValue)
-        .map(|parameter| format!("${}", parameter.name))
-        .collect::<Vec<_>>()
-        .join(", ")
 }

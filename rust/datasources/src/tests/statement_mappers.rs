@@ -1,3 +1,7 @@
+fn stmt_text(statement: &dyn crate::Statement) -> String {
+    crate::DefaultStatementTextRenderer::instance().render(statement)
+}
+
 use std::sync::Arc;
 
 use crate::mappers::{DictionaryMapper, Mapper};
@@ -76,7 +80,7 @@ fn maps_select() {
     assert_eq!(mapped.joins[1].table, "logs");
     assert!(mapped.joins[1].on.is_none());
     assert_eq!(mapped.joins[2].on.as_deref(), Some("a = b OR c"));
-    assert!(mapped.get_text().contains("full_name = $full_name"));
+    assert!(stmt_text(&mapped).contains("full_name = $full_name"));
     let parameters = mapped.predicate().unwrap().parameters();
     assert_eq!(parameters[0].value, Value::Text("Name:BEA".into()));
     let names = mappings();
@@ -94,7 +98,7 @@ fn maps_writes() {
         &[Parameter::new("Name", "Ada")],
     ));
     assert_eq!(
-        insert.get_text(),
+        stmt_text(&insert),
         "INSERT INTO people (full_name) VALUES ($full_name)"
     );
     assert_eq!(insert.fields()[0].value, Value::Text("Ada".into()));
@@ -111,7 +115,7 @@ fn maps_writes() {
         )
         .unwrap();
     assert_eq!(
-        update.get_text(),
+        stmt_text(&update),
         "UPDATE people SET full_name = $full_name WHERE full_name = $full_name__where"
     );
     let parameters = update.parameters();
@@ -126,7 +130,7 @@ fn maps_writes() {
         )
         .unwrap();
     assert_eq!(
-        delete.get_text(),
+        stmt_text(&delete),
         "DELETE FROM people WHERE full_name = $full_name"
     );
 
@@ -140,47 +144,20 @@ fn maps_writes() {
             &mapper,
         )
         .unwrap();
-    assert_eq!(bare.get_text(), "UPDATE people SET full_name = $full_name");
+    assert_eq!(stmt_text(&bare), "UPDATE people SET full_name = $full_name");
 }
 
 #[test]
 fn leaves_raw_and_other_statements() {
     let names = mappings();
-    let raw_insert = InsertStatement::text("INSERT INTO t VALUES (1)");
-    assert_eq!(
-        names.apply_insert(&raw_insert).get_text(),
-        "INSERT INTO t VALUES (1)"
-    );
-    let raw_update = UpdateStatement::text("x", None);
-    assert_eq!(names.apply_update(&raw_update, &mapper).unwrap().get_text(), "x");
-    let raw_where = UpdateStatement::text("x", Some(Box::new(WhereText::new("id = 1"))));
-    assert_eq!(
-        names.apply_update(&raw_where, &mapper).unwrap().get_text(),
-        "x"
-    );
-    let clause = Where::new(Operator::equals("id", 1));
-    assert_eq!(
-        names
-            .apply_update(&UpdateStatement::text("y", Some(Box::new(clause))), &mapper)
-            .unwrap()
-            .get_text(),
-        "y"
-    );
+    let call = ExecuteStoredProcedureStatement::new("save_user", &[]);
+    assert_eq!(stmt_text(&call), "CALL save_user()");
     assert!(ReadInput::as_where(&WhereText::new("id = 1")).is_some());
-    let raw_delete = DeleteStatement::raw("DELETE FROM t", None);
-    assert_eq!(
-        names.apply_delete(&raw_delete, &mapper).unwrap().get_text(),
-        "DELETE FROM t"
-    );
     let text = WhereText::new("name = $name");
     let kept = names
         .apply_delete(&DeleteStatement::new("User", Some(&text)), &mapper)
         .unwrap();
-    assert_eq!(kept.get_text(), "DELETE FROM people WHERE name = $name");
-    assert_eq!(
-        ExecuteStoredProcedureStatement::text("CALL save_user()").get_text(),
-        "CALL save_user()"
-    );
+    assert_eq!(stmt_text(&kept), "DELETE FROM people WHERE name = $name");
 }
 
 #[test]
@@ -254,7 +231,7 @@ fn maps_contacts_select() {
     });
     let mapped = mappings.apply_select(&select, &mapper).unwrap();
     assert_eq!(
-        mapped.get_text(),
+        stmt_text(&mapped),
         "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1"
     );
     let parameters = mapped.predicate().unwrap().parameters();

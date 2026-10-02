@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Datasources.Postgres;
 
-internal sealed class PostgresCreateTableStatementRenderer : CreateTableStatementRenderer
+internal sealed class PostgresCreateTableStatementRenderer : CreateTableStatementTextRenderer
 {
     protected override string Type(Column column) =>
         PostgresDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;

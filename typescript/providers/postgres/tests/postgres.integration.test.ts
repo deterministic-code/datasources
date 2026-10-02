@@ -4,6 +4,7 @@ import {
   ParameterDirection,
   ReturnStatement,
   ExecuteStoredProcedureStatement,
+  StatementTextRenderer,
 } from "@datasources/core";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
@@ -13,10 +14,13 @@ import {
 } from "../../sql-spec-runner.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
-import { PostgresStatementFactory } from "../src/PostgresStatementFactory.ts";
+import { PostgresStatementRenderer } from "../src/PostgresStatementRenderer.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
-const dialect = loadDialect("postgres", (statement) => new PostgresStatementFactory().transform(statement).getText());
+const dialect = loadDialect(
+  "postgres",
+  (statement) => new StatementTextRenderer(t => new PostgresStatementRenderer(t)).render(statement),
+);
 const url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 

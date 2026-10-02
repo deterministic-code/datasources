@@ -8,6 +8,8 @@ import {
   DatasourceFactory,
   DatasourceError,
   DeleteStatement,
+  CreateTableStatement,
+  Native,
   SelectInsertedIdStatement,
   InsertStatement,
   Operator,
@@ -286,18 +288,14 @@ describe("MemoryCommand and CRUDRepository", () => {
       rowsAffected: 1,
     });
     await expect(command.execute("nope")).rejects.toThrow("Unsupported Memory");
-    await expect(command.execute("")).rejects.toThrow("Unsupported Memory");
+    await expect(command.execute("")).rejects.toThrow("empty command");
     expect(await collectAsync(repo.read())).toEqual([]);
   });
 
   it("performs repository CRUD", async () => {
     const { repo } = await openRepo([{ id: 1, name: "a" }]);
     expect(await repo.readSingle()).toEqual({ id: 1, name: "a" });
-    expect(await repo.readSingle(new SelectStatement('{"id":9}'))).toBeUndefined();
-    expect(await collectAsync(repo.read(new SelectStatement('{"id":1}')))).toEqual([
-      { id: 1, name: "a" },
-    ]);
-    expect(await repo.readSingle(new WhereText('{"id":1}'))).toEqual({ id: 1, name: "a" });
+    expect(await repo.readSingle(new WhereText('{"id":9}'))).toBeUndefined();
     expect(await collectAsync(repo.read(new WhereText('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
@@ -353,15 +351,43 @@ describe("Memory datasource", () => {
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new MemoryDriver();
     expect(provider.transaction(connection).isolation).toBe("readCommitted");
-    await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
+    await expect(command.executeNative(new Native("nope"))).rejects.toThrow(
       "Unsupported Memory",
     );
-    await command.executeStatement(new InsertStatement("people", [{ name: "name", value: "ada" }]));
+    expect(await (await command.executeReaderNative(new Native("{}"))).next()).toBe(true);
+    await expect(
+      command.executeStatement(new CreateTableStatement("t", [{ name: "id", type: "INTEGER" }])),
+    ).rejects.toThrow("Unsupported Memory");
+    await command.executeStatement(new InsertStatement("people", [{ name: "name", value: "ada" }]), [
+      { name: "name", value: "ada" },
+    ]);
+    await command.executeStatement(
+      new InsertStatement("people", [{ name: "id", value: 5 }, { name: "name", value: "hi" }]),
+      [
+        { name: "id", value: 5 },
+        { name: "name", value: "hi" },
+      ],
+    );
+    await command.executeStatement(
+      new InsertStatement("people", [{ name: "id", value: 2 }, { name: "name", value: "lo" }]),
+      [
+        { name: "id", value: 2 },
+        { name: "name", value: "lo" },
+      ],
+    );
+    connection.rows("people", true).push({ id: "x", name: "str" });
+    await command.executeStatement(new InsertStatement("people", [{ name: "name", value: "bea" }]), [
+      { name: "name", value: "bea" },
+    ]);
     const inserted = await command.executeReaderStatement(new SelectInsertedIdStatement("people", "id"));
     expect(await inserted.next()).toBe(true);
-    expect(inserted.current).toEqual({ id: 1 });
+    expect(inserted.current).toEqual({ id: 6 });
     const matched = await command.executeReaderStatement(
-      new SelectStatement("SELECT id FROM people", new Where(new Operator.Equals("id", 1))),
+      new SelectStatement({
+        table: "people",
+        fields: ["id"],
+        where: new Where(new Operator.Equals("id", 1)),
+      }),
     );
     expect(await matched.next()).toBe(true);
     await command.executeStatement(new InsertStatement("people", [{ name: "id", value: 7 }, { name: "name", value: "bea" }]));
@@ -372,12 +398,12 @@ describe("Memory datasource", () => {
     await command.executeStatement(new DeleteStatement("people"));
     await command.executeStatement(new InsertStatement("", [{ name: "name", value: "x" }]));
     await command.executeReaderStatement({
-      getText: () => "SELECT id FROM people",
+      accept: () => "SELECT id FROM people",
       table: "people",
       where: new Where(new Operator.Equals("id", 1)),
     } as SelectStatement);
     await command.executeReaderStatement({
-      getText: () => "SELECT id FROM people",
+      accept: () => "SELECT id FROM people",
       table: "",
       where: new Where(new Operator.Equals("id", 1)),
     } as SelectStatement);
@@ -392,11 +418,18 @@ describe("Memory datasource", () => {
     const missingId = await command.executeReaderStatement(new SelectInsertedIdStatement("other", "id"));
     expect(await missingId.next()).toBe(false);
     await command.executeReaderStatement(
-      new SelectStatement("SELECT id FROM missing", new Where(new Operator.Equals("id", 1))),
+      new SelectStatement({
+        table: "missing",
+        fields: ["id"],
+        where: new Where(new Operator.Equals("id", 1)),
+      }),
     );
     await command.executeReaderStatement({
-      getText: () => "nope",
-      where: { getText: () => "id = 1" },
+      accept: () => "nope",
+      where: { accept: () => "id = 1" },
+    } as SelectStatement);
+    await command.executeReaderStatement({
+      accept: () => '{"id":1}',
     } as SelectStatement);
     await command.executeReaderStatement(new InsertStatement("t", []));
     await command.executeStatement(

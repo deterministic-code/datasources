@@ -5,8 +5,9 @@ mod converters;
 mod create_table_statement_renderer;
 mod driver;
 mod reader;
+mod select_inserted_id_statement_text_renderer;
 mod sqlite_path;
-mod statement_factory;
+mod statement_renderer;
 mod transaction;
 
 pub use driver::SqliteDriver;
@@ -99,7 +100,10 @@ mod tests {
         let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
         conn.open().await.unwrap();
         let command = SqliteCommand::new(conn.clone());
-        command.execute("", None).await.unwrap();
+        command
+            .execute_native(&datasources::Native::new(""), None)
+            .await
+            .unwrap();
         command
             .execute_native(
                 &datasources::Native::new("CREATE TABLE t (id INTEGER)"),
@@ -145,7 +149,10 @@ mod tests {
         );
         assert!(!sets.next_result().await.unwrap());
         drop(sets);
-        command.execute_reader("", None).await.unwrap();
+        command
+            .execute_reader_native(&datasources::Native::new(""), None)
+            .await
+            .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
         assert_eq!(
             datasources::Transaction::isolation(&*txn),
@@ -189,10 +196,10 @@ mod tests {
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None).await.unwrap();
         assert!(command.execute("DELETE FROM items", None).await.is_err());
-        assert!(command
+        command
             .execute_reader_native(&datasources::Native::new("SELECT 1"), None)
             .await
-            .is_err());
+            .unwrap();
         ds.create_repository::<Cells>(None, None);
         let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();

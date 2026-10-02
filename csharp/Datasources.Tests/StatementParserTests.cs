@@ -21,22 +21,20 @@ public sealed class StatementParserTests
     [InlineData("SELECT id, name FROM users WHERE id = $id AND age > $age")]
     [InlineData("SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10")]
     public void RoundTrips(string sql) =>
-        Assert.Equal(sql, StatementParser.Parse(sql).GetText());
+        Assert.Equal(sql, DefaultStatementTextRenderer.Instance.Render(StatementParser.Parse(sql)));
 
     [Theory]
     [InlineData("INSERT INTO users (id, name) VALUES ($id, $name)")]
     [InlineData("INSERT INTO \"user\" (id) VALUES ($id)")]
-    [InlineData("INSERT INTO users (name) VALUES ('ada')")]
     [InlineData("UPDATE users SET name = $name WHERE id = $id")]
     [InlineData("UPDATE users SET name = $name, age = $age")]
     [InlineData("UPDATE users SET name = $name WHERE name NOT LIKE $name")]
-    [InlineData("UPDATE users SET name = name WHERE id = $id")]
     [InlineData("DELETE FROM users WHERE id = $id")]
     [InlineData("DELETE FROM users")]
     [InlineData("DELETE FROM \"user\" WHERE id = $id")]
     [InlineData("DELETE FROM users WHERE name NOT LIKE $name")]
     public void RoundTripsWrites(string sql) =>
-        Assert.Equal(sql, StatementParser.Parse(sql).GetText());
+        Assert.Equal(sql, DefaultStatementTextRenderer.Instance.Render(StatementParser.Parse(sql)));
 
     [Fact]
     public void BuildsTheWriteTrees()
@@ -52,8 +50,8 @@ public sealed class StatementParserTests
         var delete = Assert.IsType<DeleteStatement>(StatementParser.Parse("DELETE FROM users WHERE id = $id"));
         Assert.IsType<Operator.Equals>(Assert.IsType<Where>(delete.Where).Condition);
 
-        var all = Assert.IsType<DeleteStatement>(StatementParser.Parse("DELETE FROM users"));
-        Assert.Null(all.Where);
+        Assert.Throws<InvalidOperationException>(() => StatementParser.Parse("INSERT INTO users (name) VALUES ('ada')"));
+        Assert.Throws<InvalidOperationException>(() => StatementParser.Parse("UPDATE users SET name = name WHERE id = $id"));
     }
 
     [Fact]
@@ -87,7 +85,7 @@ public sealed class StatementParserTests
     public void KeepsAStringBesideAColumnAsItsParameter()
     {
         var query = Assert.IsType<SelectStatement>(StatementParser.Parse("SELECT id FROM users WHERE name = 'ada'"));
-        Assert.Equal("SELECT id FROM users WHERE name = $name", query.GetText());
+        Assert.Equal("SELECT id FROM users WHERE name = $name", DefaultStatementTextRenderer.Instance.Render(query));
         Assert.Equal("ada", Assert.IsType<Value.Text>(Assert.Single(query.Where!.Parameters).Value).Item);
     }
 
@@ -102,9 +100,9 @@ public sealed class StatementParserTests
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Operator.Between("age", 18, 40), row));
         Assert.Equal(new Value.Bool(false), evaluator.Evaluate(new Operator.NotBetween("age", 18, 40), row));
         Assert.Equal(new Value.Bool(true), evaluator.Evaluate(new Operator.NotIn("age", [1, 2]), row));
-        Assert.Equal("name NOT LIKE $name", new Where(new Operator.NotLike("name", "%a")).GetText());
-        Assert.Equal("age NOT BETWEEN $age_0 AND $age_1", new Where(new Operator.NotBetween("age", 1, 2)).GetText());
-        Assert.Equal("1 = 1", new Where(new Operator.NotIn("id", [])).GetText());
-        Assert.Equal("NOT (name LIKE $name)", new Where(new Operator.Not(new Operator.Like("name", "%a"))).GetText());
+        Assert.Equal("name NOT LIKE $name", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.NotLike("name", "%a"))));
+        Assert.Equal("age NOT BETWEEN $age_0 AND $age_1", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.NotBetween("age", 1, 2))));
+        Assert.Equal("1 = 1", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.NotIn("id", []))));
+        Assert.Equal("NOT (name LIKE $name)", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Not(new Operator.Like("name", "%a")))));
     }
 }

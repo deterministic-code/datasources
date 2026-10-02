@@ -1,11 +1,11 @@
 use crate::connection::{map_err, SqliteConnection};
 use crate::converters;
-use crate::statement_factory::SqliteStatementFactory;
+use crate::statement_renderer::SqliteStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
     DatasourceError, Native, Parameter, Reader, Response, Result, ReturnStatement, Statement,
-    StatementKind, Value,
+    StatementKind, StatementTextRenderer, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
 use std::collections::HashMap;
@@ -19,13 +19,22 @@ struct SqliteExecuteResult {
 pub struct SqliteCommand {
     host: CommandMiddlewareHost,
     connection: Arc<SqliteConnection>,
+    statements: StatementTextRenderer,
 }
 
 impl SqliteCommand {
     pub fn new(connection: Arc<SqliteConnection>) -> Self {
+        Self::with_renderer(
+            connection,
+            StatementTextRenderer::new(Some(Box::new(SqliteStatementRenderer)), None),
+        )
+    }
+
+    pub fn with_renderer(connection: Arc<SqliteConnection>, statements: StatementTextRenderer) -> Self {
         Self {
             host: CommandMiddlewareHost::new(),
             connection,
+            statements,
         }
     }
 
@@ -129,7 +138,7 @@ impl Command for SqliteCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let text = SqliteStatementFactory.transform(statement).get_text();
+        let text = self.statements.render(statement);
         self.execute_reader_native(&Native::new(text), parameters)
             .await
     }
@@ -142,7 +151,7 @@ impl Command for SqliteCommand {
         if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
             return self.first_cell(statement, parameters).await;
         }
-        let text = SqliteStatementFactory.transform(statement).get_text();
+        let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await
     }
 }

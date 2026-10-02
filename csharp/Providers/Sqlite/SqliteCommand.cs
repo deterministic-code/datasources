@@ -2,7 +2,13 @@ namespace Datasources.Sqlite;
 
 internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
 {
-    public SqliteCommand(SqliteConnection connection) => Connection = connection;
+    readonly StatementTextRenderer statements;
+
+    public SqliteCommand(SqliteConnection connection, StatementTextRenderer? statements = null)
+    {
+        Connection = connection;
+        this.statements = statements ?? new StatementTextRenderer(t => new SqliteStatementRenderer(t));
+    }
     public IConnection Connection { get; }
     SqliteConnection Typed => (SqliteConnection)Connection;
 
@@ -17,13 +23,13 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(new Native(new SqliteStatementFactory().Transform(statement).GetText()), parameters);
+        ExecuteReader(new Native(statements.Render(statement)), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
         {
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
-            _ => Execute(new Native(new SqliteStatementFactory().Transform(statement).GetText()), parameters)
+            _ => Execute(new Native(statements.Render(statement)), parameters)
         };
 
     async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)

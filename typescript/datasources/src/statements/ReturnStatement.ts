@@ -1,23 +1,15 @@
-import { ParameterDirection } from "../ParameterDirection.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { IReturnStatement } from "./IReturnStatement.ts";
-
-const args = (parameters: Parameter[]): string =>
-  parameters
-    .filter((parameter) => parameter.direction !== ParameterDirection.ReturnValue)
-    .map((parameter) => `$${parameter.name}`)
-    .join(", ");
+import type { IStatementVisitor } from "./IStatementVisitor.ts";
 
 export class ReturnStatement implements IReturnStatement {
-  private readonly text: string;
+  readonly name: string;
+  readonly parameters: Parameter[];
 
-  constructor(text: string);
-  constructor(name: string, parameters: Parameter[]);
-  constructor(nameOrText: string, parameters?: Parameter[]) {
-    this.text = parameters
-      ? `SELECT ${nameOrText}(${args(parameters)})`
-      : nameOrText;
+  constructor(name: string, parameters: Parameter[]) {
+    this.name = name;
+    this.parameters = parameters;
   }
 
-  getText = (): string => this.text;
+  accept = (visitor: IStatementVisitor): string => visitor.visit(this);
 }

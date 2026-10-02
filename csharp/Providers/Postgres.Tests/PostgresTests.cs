@@ -32,8 +32,8 @@ public class PostgresTests
         Assert.Equal("s", conn.Schema);
         Assert.Equal("postgres://db/app", conn.Url);
         var command = new PostgresCommand(conn);
-        await command.Execute("");
-        await command.ExecuteReader("");
+        await command.Execute(new Native(""));
+        await command.ExecuteReader(new Native(""));
 
         Assert.False(conn.IsOpen);
         Assert.Throws<DatasourceException>(() => conn.EnsureOpen());
@@ -49,8 +49,8 @@ public class PostgresTests
         Assert.Equal("postgres", provided.Provider);
         var bound = Assert.IsType<PostgresCommand>(await ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
-        await bound.Execute("");
-        await bound.ExecuteReader("");
+        await bound.Execute(new Native(""));
+        await bound.ExecuteReader(new Native(""));
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));
         Assert.Equal("postgres", DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = "postgres" }).Provider);

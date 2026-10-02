@@ -1,3 +1,5 @@
-import type { IText } from "./IText.ts";
+import type { IStatementVisitor } from "./IStatementVisitor.ts";
 
-export interface IStatement extends IText {}
+export interface IStatement {
+  accept(visitor: IStatementVisitor): string;
+}

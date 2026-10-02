@@ -1,4 +1,5 @@
 import type { IStatement } from "./statements/IStatement.ts";
+import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
 import { Native } from "./statements/Native.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
@@ -27,7 +28,10 @@ export const execute = (
   parameters?: Parameter[],
 ): Promise<Response> =>
   command.executeStatement?.(statement, parameters) ??
-  command.executeNative(new Native(statement.getText()), parameters);
+  command.executeNative(
+    new Native(DefaultStatementTextRenderer.instance.render(statement)),
+    parameters,
+  );
 
 export const executeReader = (
   command: ICommand,
@@ -35,4 +39,7 @@ export const executeReader = (
   parameters?: Parameter[],
 ): Promise<IReader<Cells>> =>
   command.executeReaderStatement?.(statement, parameters) ??
-  command.executeReaderNative(new Native(statement.getText()), parameters);
+  command.executeReaderNative(
+    new Native(DefaultStatementTextRenderer.instance.render(statement)),
+    parameters,
+  );

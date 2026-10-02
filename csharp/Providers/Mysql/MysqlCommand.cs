@@ -6,7 +6,13 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
 {
-    public MysqlCommand(MysqlConnection connection) => Connection = connection;
+    readonly StatementTextRenderer statements;
+
+    public MysqlCommand(MysqlConnection connection, StatementTextRenderer? statements = null)
+    {
+        Connection = connection;
+        this.statements = statements ?? new StatementTextRenderer(t => new MysqlStatementRenderer(t));
+    }
     public IConnection Connection { get; }
     MysqlConnection Typed => (MysqlConnection)Connection;
 
@@ -31,7 +37,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(new Native(new MysqlStatementFactory().Transform(statement).GetText()), parameters);
+        ExecuteReader(new Native(statements.Render(statement)), parameters);
 
     public Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement switch
@@ -39,7 +45,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
             ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
                 ExecuteProcedure(name, parameters),
-            _ => Execute(new Native(new MysqlStatementFactory().Transform(statement).GetText()), parameters)
+            _ => Execute(new Native(statements.Render(statement)), parameters)
         };
 
     async Task<Response> FirstCell(IStatement statement, IReadOnlyList<Parameter>? parameters)
