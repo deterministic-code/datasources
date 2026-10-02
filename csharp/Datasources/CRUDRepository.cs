@@ -197,7 +197,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         var statement = CRUDStatements.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
         var parameters = statement.Where?.Parameters is { Count: > 0 } listed
             ? listed
-            : statement.GetText().Contains('$') ? Params(record, _ => true) : [];
+            : DefaultStatementTextRenderer.Instance.Render(statement).Contains('$') ? Params(record, _ => true) : [];
         return await Command().Execute(statement, parameters);
     }
 

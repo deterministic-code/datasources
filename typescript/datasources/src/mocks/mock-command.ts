@@ -7,6 +7,7 @@ import { CommandMiddlewareHost } from "../CommandMiddlewareHost.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { Row } from "../Row.ts";
 import type { IStatement } from "../statements/IStatement.ts";
+import { DefaultStatementTextRenderer } from "../statements/DefaultStatementTextRenderer.ts";
 import { Native } from "../statements/Native.ts";
 import { SelectInsertedIdStatement } from "../statements/SelectInsertedIdStatement.ts";
 import { MockReader } from "./mock-reader.ts";
@@ -31,7 +32,7 @@ export class MockCommand extends CommandMiddlewareHost implements ICommand {
       new Native(
         statement instanceof SelectInsertedIdStatement
           ? `${statement.table}.${statement.column}`
-          : statement.getText(),
+          : DefaultStatementTextRenderer.instance.render(statement),
       ),
       parameters,
     );

@@ -34,7 +34,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                 IReadOnlyList<Row> rows = id is Value.Null ? [] : [new Row { [inserted.Column] = id }];
                 return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
             }),
-            ISelectStatement { Where: Where clause } => Run(statement.GetText(), parameters, (_, _) =>
+            ISelectStatement { Where: Where clause } => Run(DefaultStatementTextRenderer.Instance.Render(statement), parameters, (_, _) =>
             {
                 Typed.EnsureOpen();
                 var evaluator = new ExpressionEvaluator();
@@ -42,8 +42,8 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
                     evaluator.Evaluate(clause, row) is Value.Bool(true))];
                 return Task.FromResult(((IReader<Row>)new ArrayReader<Row>(rows), rows));
             }),
-            ISelectStatement query when !LooksJson(query.Where?.GetText()) && !LooksJson(statement.GetText()) =>
-                Run(statement.GetText(), parameters, (_, _) =>
+            ISelectStatement query when !LooksJson(RenderWhere(query.Where)) && !LooksJson(DefaultStatementTextRenderer.Instance.Render(statement)) =>
+                Run(DefaultStatementTextRenderer.Instance.Render(statement), parameters, (_, _) =>
                 {
                     Typed.EnsureOpen();
                     IReadOnlyList<Row> rows = [.. Rows(TableOf(statement), create: false)];
@@ -58,11 +58,13 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             IInsertStatement => Write("insert", parameters, TableOf(statement), create: true),
             IUpdateStatement update => Write("update", parameters, TableOf(update), create: false, update.Where),
             IDeleteStatement delete => Write("delete", parameters, TableOf(delete), create: false, delete.Where),
-            _ => Execute(statement.GetText(), parameters)
+            _ => Execute(DefaultStatementTextRenderer.Instance.Render(statement), parameters)
         };
 
     public override Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, (query, paramsList) =>
+        string.IsNullOrWhiteSpace(text)
+            ? throw new InvalidOperationException("empty command")
+            : Run(text, parameters, (query, paramsList) =>
         {
             Typed.EnsureOpen();
             var op = query.Trim().ToLowerInvariant();
@@ -151,7 +153,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
         }
 
         obj.Remove("$where");
-        var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(obj);
+        var filter = LooksJson(RenderWhere(where)) ? ParseFilter(RenderWhere(where)) : new Row(obj);
         var updated = ApplyUpdate(rows, new Row(obj), filter);
         return new Response(updated.Result, updated.RowsAffected, parameters);
     }
@@ -165,7 +167,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             return new Response(Value.Null.Instance, affected, parameters);
         }
 
-        var filter = LooksJson(where?.GetText()) ? ParseFilter(where!.GetText()) : new Row(obj);
+        var filter = LooksJson(RenderWhere(where)) ? ParseFilter(RenderWhere(where)) : new Row(obj);
         var deleted = ApplyDelete(rows, filter);
         return new Response(deleted.Result, deleted.RowsAffected, parameters);
     }
@@ -176,7 +178,7 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
             : Typed.GetCollection();
 
     static string? TableOf(IStatement statement) =>
-        statement is SelectStatement { Table: { Length: > 0 } table } ? table : TableIn(statement.GetText());
+        statement is SelectStatement { Table: { Length: > 0 } table } ? table : TableIn(DefaultStatementTextRenderer.Instance.Render(statement));
 
     static string? TableIn(string text)
     {
@@ -228,11 +230,14 @@ internal sealed class MemoryCommand : CommandMiddlewareHost, ICommand
 
     static string FilterText(IStatement statement)
     {
-        var where = statement is ISelectStatement query ? query.Where?.GetText() : null;
+        var where = statement is ISelectStatement query ? RenderWhere(query.Where) : null;
         if (LooksJson(where)) return where!;
-        var text = statement.GetText();
+        var text = DefaultStatementTextRenderer.Instance.Render(statement);
         return LooksJson(text) || string.IsNullOrWhiteSpace(text) ? text : "";
     }
+
+    static string? RenderWhere(IWhere? where) =>
+        where is null ? null : DefaultStatementTextRenderer.Instance.Render(where);
 
     static bool LooksJson(string? text) => text?.TrimStart().StartsWith('{') == true;
 

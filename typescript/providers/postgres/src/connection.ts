@@ -2,6 +2,7 @@ import {
   DatasourceError,
   DatasourceUrlParser,
   IsolationLevel,
+  StatementTextRenderer,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -12,6 +13,7 @@ import { createRequire } from "node:module";
 import { PostgresCommand } from "./command.ts";
 import type { PostgresConnectionOptions } from "./connection-options.ts";
 import { pgClient, type IPgClient, type PgClientCtor, type PgModule } from "./i-postgres-driver.ts";
+import { PostgresStatementRenderer } from "./PostgresStatementRenderer.ts";
 import { PostgresTransaction } from "./transaction.ts";
 
 const require = createRequire(import.meta.url);
@@ -48,7 +50,8 @@ export class PostgresConnection implements IConnection {
     this.Client = options.Client;
   }
 
-  createCommand = (): ICommand => new PostgresCommand(this);
+  createCommand = (): ICommand =>
+    new PostgresCommand(this, new StatementTextRenderer(t => new PostgresStatementRenderer(t)));
 
   async open(): Promise<void> {
     if (this.isOpen) throw new DatasourceError("Connection is already open");

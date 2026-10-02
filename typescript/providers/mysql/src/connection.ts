@@ -1,6 +1,7 @@
 import {
   DatasourceError,
   IsolationLevel,
+  StatementTextRenderer,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -16,6 +17,7 @@ import {
   type Mysql2Module,
   type MysqlCreateConnection,
 } from "./i-mysql-engine.ts";
+import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 import { MysqlTransaction } from "./transaction.ts";
 
 const require = createRequire(import.meta.url);
@@ -47,7 +49,8 @@ export class MysqlConnection implements IConnection {
     this.connect = options.connect;
   }
 
-  createCommand = (): ICommand => new MysqlCommand(this);
+  createCommand = (): ICommand =>
+    new MysqlCommand(this, new StatementTextRenderer(t => new MysqlStatementRenderer(t)));
 
   async open(): Promise<void> {
     if (this.isOpen) throw new DatasourceError("Connection is already open");

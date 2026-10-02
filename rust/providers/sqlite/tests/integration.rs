@@ -117,13 +117,13 @@ fn quote_ident(id: &str) -> String {
 }
 
 fn render_schema(name: &str) -> String {
+    let renderer = datasources::StatementTextRenderer::new(
+        Some(Box::new(crate::statement_renderer::SqliteStatementRenderer)),
+        None,
+    );
     datasources_sql_specs::schema_tables(name, quote_ident, None)
         .iter()
-        .map(|statement| {
-            crate::statement_factory::SqliteStatementFactory
-                .transform(statement)
-                .get_text()
-        })
+        .map(|statement| renderer.render(statement))
         .collect::<Vec<_>>()
         .join(";\n")
 }

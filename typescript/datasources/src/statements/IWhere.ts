@@ -1,7 +1,7 @@
 import type { Parameter } from "../Parameter.ts";
+import type { ICondition } from "./ICondition.ts";
 import type { IExpression } from "./IExpression.ts";
-import type { IText } from "./IText.ts";
 
-export interface IWhere extends IExpression, IText {
+export interface IWhere extends IExpression, ICondition {
   readonly parameters?: Parameter[];
 }

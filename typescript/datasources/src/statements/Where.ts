@@ -2,6 +2,7 @@ import type { Parameter } from "../Parameter.ts";
 import type { Cell } from "../converters/Cell.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
 import { Identifier } from "./Identifier.ts";
+import type { IConditionVisitor } from "./IConditionVisitor.ts";
 import type { IExpression } from "./IExpression.ts";
 import type { IWhere } from "./IWhere.ts";
 import { Literal } from "./Literal.ts";
@@ -10,46 +11,6 @@ import type { Comparison } from "./Cmp.ts";
 import { eq } from "./Cmp.ts";
 import { SelectStatement } from "./SelectStatement.ts";
 import { Subquery } from "./Subquery.ts";
-
-const symbol = (op: Operator): string =>
-  op instanceof Operator.Equals
-    ? "="
-    : op instanceof Operator.NotEquals
-      ? "<>"
-      : op instanceof Operator.GreaterThan
-        ? ">"
-        : op instanceof Operator.LessThan
-          ? "<"
-          : op instanceof Operator.GreaterThanOrEqual
-            ? ">="
-            : op instanceof Operator.LessThanOrEqual
-              ? "<="
-              : op instanceof Operator.Like
-                ? "LIKE"
-                : op instanceof Operator.NotLike
-                  ? "NOT LIKE"
-                  : "IN";
-
-const inline = (value: Cell): string =>
-  value === null
-    ? "null"
-    : typeof value === "boolean"
-      ? String(value)
-      : typeof value === "string"
-        ? `'${value.replace(/'/g, "''")}'`
-        : String(value);
-
-const needsParens = (child: IExpression, and: boolean): boolean =>
-  child instanceof Where
-    ? needsParens(child.condition, and)
-    : child instanceof Operator.Not ||
-      child instanceof Operator.In ||
-      child instanceof Operator.NotIn ||
-      (child instanceof Operator.And && !and) ||
-      (child instanceof Operator.Or && and);
-
-const wrap = (child: IExpression, and: boolean): string =>
-  needsParens(child, and) ? `(${render(child)})` : render(child);
 
 const pair = (
   expression: Operator,
@@ -89,55 +50,6 @@ const parts = (name: string): string[] => {
   }
   found.push(name.slice(start));
   return found;
-};
-
-const slots = (name: string, count: number): string =>
-  Array.from({ length: count }, (_, i) => `$${parameterName(name)}_${i}`).join(", ");
-
-const render = (expression: IExpression): string => {
-  if (expression instanceof Where) return render(expression.condition);
-  if (expression instanceof Identifier) return expression.name;
-  if (expression instanceof Literal) return inline(expression.value);
-  if (expression instanceof ArrayExpression) return expression.elements.map(render).join(", ");
-  if (expression instanceof Subquery) return `(${expression.query.getText()})`;
-  if (expression instanceof Operator.Not) return `NOT (${render(expression.argument)})`;
-  if (expression instanceof Operator.IsNull) return `${render(expression.argument)} IS NULL`;
-  if (expression instanceof Operator.IsNotNull) return `${render(expression.argument)} IS NOT NULL`;
-  if (expression instanceof Operator.Exists) return `EXISTS ${render(expression.argument)}`;
-  if (expression instanceof Operator.In && expression.left instanceof Identifier && expression.right instanceof ArrayExpression)
-    return expression.right.elements.length === 0
-      ? "1 = 0"
-      : `${expression.left.name} IN (${slots(expression.left.name, expression.right.elements.length)})`;
-  if (expression instanceof Operator.In && expression.left instanceof Identifier && expression.right instanceof Subquery)
-    return `${expression.left.name} IN ${render(expression.right)}`;
-  if (expression instanceof Operator.NotIn && expression.left instanceof Identifier && expression.right instanceof ArrayExpression)
-    return expression.right.elements.length === 0
-      ? "1 = 1"
-      : `${expression.left.name} NOT IN (${slots(expression.left.name, expression.right.elements.length)})`;
-  if (expression instanceof Operator.NotIn && expression.left instanceof Identifier && expression.right instanceof Subquery)
-    return `${expression.left.name} NOT IN ${render(expression.right)}`;
-  if (
-    (expression instanceof Operator.Between || expression instanceof Operator.NotBetween) &&
-    expression.value instanceof Identifier &&
-    expression.low instanceof Literal &&
-    expression.high instanceof Literal
-  ) {
-    const word = expression instanceof Operator.NotBetween ? "NOT BETWEEN" : "BETWEEN";
-    return `${expression.value.name} ${word} $${parameterName(expression.value.name)}_0 AND $${parameterName(expression.value.name)}_1`;
-  }
-  if (expression instanceof Operator.Between)
-    return `${render(expression.value)} BETWEEN ${render(expression.low)} AND ${render(expression.high)}`;
-  if (expression instanceof Operator.NotBetween)
-    return `${render(expression.value)} NOT BETWEEN ${render(expression.low)} AND ${render(expression.high)}`;
-  if (expression instanceof Operator.And) return `${wrap(expression.left, true)} AND ${wrap(expression.right, true)}`;
-  if (expression instanceof Operator.Or) return `${wrap(expression.left, false)} OR ${wrap(expression.right, false)}`;
-  const operands = expression instanceof Operator ? pair(expression) : undefined;
-  if (operands && operands.left instanceof Identifier && operands.right instanceof Literal)
-    return `${operands.left.name} ${symbol(expression as Operator)} $${parameterName(operands.left.name)}`;
-  if (operands && operands.left instanceof Literal && operands.right instanceof Literal)
-    return `${inline(operands.left.value)} ${symbol(expression as Operator)} ${inline(operands.right.value)}`;
-  if (operands) return `${render(operands.left)} ${symbol(expression as Operator)} ${render(operands.right)}`;
-  throw new Error("empty expression");
 };
 
 const side = (
@@ -330,7 +242,8 @@ export class Where implements IWhere {
     return new Where(rewrite(this.condition, column, value));
   }
 
-  getText = (): string => render(this.condition);
+  accept = (visitor: IConditionVisitor): string => visitor.visit(this);
+
   get parameters(): Parameter[] {
     return collect(this.condition) as Parameter[];
   }

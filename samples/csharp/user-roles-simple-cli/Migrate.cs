@@ -9,7 +9,7 @@ public static class Migrate
         var provider = command.Connection.Provider;
         foreach (var table in Schema.Tables(provider))
             await (provider == "sqlite"
-                ? command.Execute(Native.N(IfNotExists(table.GetText())))
+                ? command.Execute(Native.N(IfNotExists(DefaultStatementTextRenderer.Instance.Render(table))))
                 : command.Execute(table));
         if (command.Connection.Provider == "mysql")
             foreach (var sql in Schema.MysqlProcedures())

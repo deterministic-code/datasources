@@ -74,6 +74,9 @@ impl Command for MemoryCommand {
     }
 
     async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
+        if text.trim().is_empty() {
+            return Err(DatasourceError::message("empty command"));
+        }
         let connection = self.connection.clone();
         self.host
             .run(text, parameters, move |query, params| {
@@ -167,7 +170,7 @@ impl Command for MemoryCommand {
                 })
                 .await;
         }
-        let text = statement.get_text();
+        let text = datasources::DefaultStatementTextRenderer::instance().render(statement);
         let connection = self.connection.clone();
         let table = table_of(statement);
         if let Some(condition) = statement
@@ -203,7 +206,9 @@ impl Command for MemoryCommand {
         }
         let where_text = statement
             .predicate()
-            .map(|predicate| predicate.get_text())
+            .map(|predicate| {
+                datasources::DefaultStatementTextRenderer::instance().render_where(predicate)
+            })
             .unwrap_or_default();
         if !where_text.trim_start().starts_with('{')
             && !text.trim_start().starts_with('{')
@@ -261,7 +266,13 @@ impl Command for MemoryCommand {
                 )
                 .await
             }
-            _ => self.execute(&statement.get_text(), parameters).await,
+            _ => {
+                self.execute(
+                    &datasources::DefaultStatementTextRenderer::instance().render(statement),
+                    parameters,
+                )
+                .await
+            }
         }
     }
 }
@@ -294,7 +305,9 @@ impl MemoryCommand {
         let connection = self.connection.clone();
         let table = table.map(str::to_string);
         let op_text = op.to_string();
-        let predicate_text = predicate.map(|item| item.get_text());
+        let predicate_text = predicate.map(|item| {
+            datasources::DefaultStatementTextRenderer::instance().render_where(item)
+        });
         let condition = predicate
             .and_then(|item| item.as_any().downcast_ref::<Where>())
             .map(|clause| clause.condition.clone());
@@ -425,7 +438,7 @@ fn table_of(statement: &dyn Statement) -> Option<String> {
             return Some(select.table.clone());
         }
     }
-    table_in(&statement.get_text())
+    table_in(&datasources::DefaultStatementTextRenderer::instance().render(statement))
 }
 
 fn table_in(text: &str) -> Option<String> {
@@ -471,12 +484,12 @@ fn inserted_id(row: &Row, connection: &MemoryConnection) -> Value {
 
 fn filter_text(statement: &dyn Statement) -> String {
     if let Some(where_clause) = statement.predicate() {
-        let text = where_clause.get_text();
+        let text = datasources::DefaultStatementTextRenderer::instance().render_where(where_clause);
         if text.trim_start().starts_with('{') {
             return text;
         }
     }
-    let text = statement.get_text();
+    let text = datasources::DefaultStatementTextRenderer::instance().render(statement);
     if text.trim_start().starts_with('{') || text.trim().is_empty() {
         text
     } else {

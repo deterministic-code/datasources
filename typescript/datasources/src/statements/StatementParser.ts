@@ -9,6 +9,7 @@ import { Join, type JoinKind } from "./Join.ts";
 import { Literal } from "./Literal.ts";
 import { Operator } from "./Operator.ts";
 import { OrderBy } from "./OrderBy.ts";
+import { DefaultStatementTextRenderer } from "./DefaultStatementTextRenderer.ts";
 import { SelectStatement } from "./SelectStatement.ts";
 import { Subquery } from "./Subquery.ts";
 import { UpdateStatement } from "./UpdateStatement.ts";
@@ -34,7 +35,6 @@ class Cursor {
   }
 
   private parseInsert(): InsertStatement {
-    const start = this.i;
     this.expectWord("INSERT");
     this.expectWord("INTO");
     const table = this.ident();
@@ -48,13 +48,13 @@ class Cursor {
     while (this.tryChar(",")) values.push(this.rawExpr());
     this.expectChar(")");
     const fields: Field[] = columns.map((name) => ({ name, value: null }));
-    return values.length === columns.length && values.every((value, index) => value === `$${columns[index]}`)
+    return values.length === columns.length &&
+      values.every((value, index) => value.trim() === `$${columns[index]}`)
       ? new InsertStatement(table, fields)
-      : new InsertStatement(this.text.slice(start, this.i));
+      : empty();
   }
 
   private parseUpdate(): UpdateStatement {
-    const start = this.i;
     this.expectWord("UPDATE");
     const table = this.ident();
     this.expectWord("SET");
@@ -63,9 +63,7 @@ class Cursor {
     while (this.tryChar(",")) canonical = this.assignment(columns) && canonical;
     const where = this.tryWord("WHERE") ? new Where(this.expr()) : undefined;
     const fields: Field[] = columns.map((name) => ({ name, value: null }));
-    return canonical
-      ? new UpdateStatement(table, fields, where)
-      : new UpdateStatement(this.text.slice(start, this.i), where);
+    return canonical ? new UpdateStatement(table, fields, where) : empty();
   }
 
   private assignment(columns: string[]): boolean {
@@ -73,7 +71,7 @@ class Cursor {
     this.expectChar("=");
     const raw = this.rawExpr();
     columns.push(column);
-    return raw === `$${column}`;
+    return raw.trim() === `$${column}`;
   }
 
   private parseDelete(): DeleteStatement {
@@ -149,7 +147,7 @@ class Cursor {
     if (!this.peek("(")) return this.ident();
     const nested = this.nested();
     this.expectWord("AS");
-    return `(${nested.getText()}) AS ${this.ident()}`;
+    return `(${DefaultStatementTextRenderer.instance.render(nested)}) AS ${this.ident()}`;
   }
 
   private nested(): SelectStatement {

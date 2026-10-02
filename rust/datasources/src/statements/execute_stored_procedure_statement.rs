@@ -1,33 +1,26 @@
 use super::statement::{Statement, StatementKind};
-use super::text::Text;
+use super::statement_text_renderer::StatementTextRenderer;
 use crate::parameter::Parameter;
-use crate::parameter_direction::ParameterDirection;
 
 pub struct ExecuteStoredProcedureStatement {
-    text: String,
-    pub name: Option<String>,
+    name: String,
+    parameters: Vec<Parameter>,
 }
 
 impl ExecuteStoredProcedureStatement {
-    pub fn text(text: impl Into<String>) -> Self {
-        Self {
-            text: text.into(),
-            name: None,
-        }
-    }
-
     pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self {
-        let name = name.as_ref().to_string();
         Self {
-            text: format!("CALL {name}({})", args(parameters)),
-            name: Some(name),
+            name: name.as_ref().to_string(),
+            parameters: parameters.to_vec(),
         }
     }
-}
 
-impl Text for ExecuteStoredProcedureStatement {
-    fn get_text(&self) -> String {
-        self.text.clone()
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn parameters(&self) -> &[Parameter] {
+        &self.parameters
     }
 }
 
@@ -38,19 +31,14 @@ impl crate::ReadInput for ExecuteStoredProcedureStatement {
 }
 
 impl Statement for ExecuteStoredProcedureStatement {
+    fn accept(&self, text: &StatementTextRenderer) -> String {
+        text.statements().visit_execute_stored_procedure(self, text)
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
     fn kind(&self) -> StatementKind {
         StatementKind::Procedure
     }
-}
-
-fn args(parameters: &[Parameter]) -> String {
-    parameters
-        .iter()
-        .filter(|parameter| parameter.direction != ParameterDirection::ReturnValue)
-        .map(|parameter| format!("${}", parameter.name))
-        .collect::<Vec<_>>()
-        .join(", ")
 }

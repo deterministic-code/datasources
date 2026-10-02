@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Tests;
 
-sealed class ReplacedRenderer : CreateTableStatementRenderer
+sealed class ReplacedRenderer : CreateTableStatementTextRenderer
 {
     public override string Render(CreateTableStatement statement) => "CREATE TABLE replaced";
 }
@@ -36,13 +36,13 @@ public class CoreTests
     {
         Assert.Empty(Helpers.ParametersToRecord(null));
         Assert.Equal(new Value.Int(1), Helpers.ParametersToRecord(new[] { new Parameter("id", 1) })["id"]);
-        var select = new SelectStatement("SELECT 1");
+        var select = new SelectStatement(new() { Table = "dual", Fields = ["1"] });
         var byId = new WhereText("id = 1");
-        var withWhere = new SelectStatement("SELECT 1", byId);
-        Assert.Equal("SELECT 1", select.GetText());
+        var withWhere = new SelectStatement(new() { Table = "dual", Fields = ["1"], Where = byId });
+        Assert.Equal("SELECT 1 FROM dual", DefaultStatementTextRenderer.Instance.Render(select));
         Assert.Null(select.Where);
         Assert.Same(byId, withWhere.Where);
-        Assert.Equal("id = 1", byId.GetText());
+        Assert.Equal("id = 1", DefaultStatementTextRenderer.Instance.Render(byId));
     }
 
     [Fact]
@@ -51,70 +51,70 @@ public class CoreTests
         var where = new Where(new Operator.And(
             new Operator.Equals("id", 1),
             new Operator.GreaterThan("age", 18)));
-        Assert.Equal("id = $id AND age > $age", where.GetText());
+        Assert.Equal("id = $id AND age > $age", DefaultStatementTextRenderer.Instance.Render(where));
         Assert.Equal(2, where.Parameters.Count);
         Assert.Equal(new Value.Int(1), where.Parameters[0].Value);
         Assert.Equal(new Value.Int(18), where.Parameters[1].Value);
-        Assert.Equal("id <> $id", new Where(new Operator.NotEquals("id", 2)).GetText());
-        Assert.Equal("n < $n", new Where(new Operator.LessThan("n", 0)).GetText());
-        Assert.Equal("n >= $n", new Where(new Operator.GreaterThanOrEqual("n", 0)).GetText());
-        Assert.Equal("n <= $n", new Where(new Operator.LessThanOrEqual("n", 0)).GetText());
-        Assert.Equal("1 = 1", new Where(new Operator.Equals(new Literal(1), new Literal(1))).GetText());
-        Assert.Equal("1 = 0", new Where(new Operator.Equals(new Literal(1), new Literal(0))).GetText());
-        Assert.Equal("id = $id", new Where(new Operator.Equals("id", 1)).GetText());
+        Assert.Equal("id <> $id", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.NotEquals("id", 2))));
+        Assert.Equal("n < $n", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.LessThan("n", 0))));
+        Assert.Equal("n >= $n", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.GreaterThanOrEqual("n", 0))));
+        Assert.Equal("n <= $n", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.LessThanOrEqual("n", 0))));
+        Assert.Equal("1 = 1", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(1), new Literal(1)))));
+        Assert.Equal("1 = 0", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(1), new Literal(0)))));
+        Assert.Equal("id = $id", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals("id", 1))));
         Assert.Equal(
             "(id = $id AND age > $age) OR name = $name",
-            new Where(new Operator.Or(where, new Operator.Equals("name", "a"))).GetText());
+            DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Or(where, new Operator.Equals("name", "a")))));
         Assert.Equal(3, new Where(new Operator.Or(where, new Operator.Equals("name", "a"))).Parameters.Count);
         var notWhere = new Where(new Operator.Not(new Where(new Operator.Equals("id", 1))));
-        Assert.Equal("NOT (id = $id)", notWhere.GetText());
+        Assert.Equal("NOT (id = $id)", DefaultStatementTextRenderer.Instance.Render(notWhere));
         Assert.Equal(["id"], notWhere.Parameters.Select(parameter => parameter.Name));
         Assert.Equal(
             "(id = $id OR id = $id) AND age = $age",
-            new Where(new Operator.And(
+            DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.And(
                 new Operator.Or(new Operator.Equals("id", 1), new Operator.Equals("id", 2)),
-                new Operator.Equals("age", 18))).GetText());
+                new Operator.Equals("age", 18)))));
         Assert.Equal(
             "(id IN ($id_0)) OR name = $name",
-            new Where(new Operator.Or(
+            DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Or(
                 new Operator.In("id", [1]),
-                new Operator.Equals("name", "a"))).GetText());
-        Assert.Equal("id", new Where(new Identifier("id")).GetText());
+                new Operator.Equals("name", "a")))));
+        Assert.Equal("id", DefaultStatementTextRenderer.Instance.Render(new Where(new Identifier("id"))));
         Assert.Empty(new Where(new Identifier("id")).Parameters);
-        Assert.Equal("1", new Where(new ArrayExpression([new Literal(1)])).GetText());
+        Assert.Equal("1", DefaultStatementTextRenderer.Instance.Render(new Where(new ArrayExpression([new Literal(1)]))));
         Assert.Empty(new Where(new ArrayExpression([new Literal(1)])).Parameters);
-        Assert.Equal("a = b", new Where(new Operator.Equals(new Identifier("a"), new Identifier("b"))).GetText());
+        Assert.Equal("a = b", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Identifier("a"), new Identifier("b")))));
         Assert.Empty(new Where(new Operator.Equals(new Identifier("a"), new Identifier("b"))).Parameters);
-        Assert.Equal("1 IN 2", new Where(new Operator.In(new Literal(1), new Literal(2))).GetText());
-        Assert.Equal("true = false", new Where(new Operator.Equals(new Literal(true), new Literal(false))).GetText());
+        Assert.Equal("1 IN 2", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.In(new Literal(1), new Literal(2)))));
+        Assert.Equal("true = false", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(true), new Literal(false)))));
         Assert.Empty(new Where(new Operator.Equals(new Literal(true), new Literal(false))).Parameters);
-        Assert.Equal("null = null", new Where(new Operator.Equals(new Literal(Value.Null.Instance), new Literal(Value.Null.Instance))).GetText());
-        Assert.Equal("1.5 = 2.5", new Where(new Operator.Equals(new Literal(1.5), new Literal(2.5))).GetText());
-        Assert.Equal("1.5 = 2.5", new Where(new Operator.Equals(new Literal(1.5m), new Literal(2.5m))).GetText());
-        Assert.Equal("'a' = 'b'", new Where(new Operator.Equals(new Literal("a"), new Literal("b"))).GetText());
-        Assert.Contains("=", new Where(new Operator.Equals(new Literal(Guid.Empty), new Literal(Guid.Empty))).GetText());
-        Assert.Contains("=", new Where(new Operator.Equals(new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)), new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)))).GetText());
-        Assert.Contains("=", new Where(new Operator.Equals(new Literal(new Value.Binary([1])), new Literal(new Value.Binary([1])))).GetText());
+        Assert.Equal("null = null", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(Value.Null.Instance), new Literal(Value.Null.Instance)))));
+        Assert.Equal("1.5 = 2.5", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(1.5), new Literal(2.5)))));
+        Assert.Equal("1.5 = 2.5", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(1.5m), new Literal(2.5m)))));
+        Assert.Equal("'a' = 'b'", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal("a"), new Literal("b")))));
+        Assert.Contains("=", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(Guid.Empty), new Literal(Guid.Empty)))));
+        Assert.Contains("=", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc)), new Literal(new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc))))));
+        Assert.Contains("=", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals(new Literal(new Value.Binary([1])), new Literal(new Value.Binary([1]))))));
         Assert.Equal(
             "(NOT (id = $id)) AND age = $age",
-            new Where(new Operator.And(
+            DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.And(
                 new Operator.Not(new Operator.Equals("id", 1)),
-                new Operator.Equals("age", 18))).GetText());
-        Assert.Equal("id = $id", new Where(new Operator.Equals("id", null)).GetText());
+                new Operator.Equals("age", 18)))));
+        Assert.Equal("id = $id", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.Equals("id", null))));
         Assert.Equal(Value.Null.Instance, new Where(new Operator.Equals("id", null)).Parameters[0].Value);
         Assert.Equal(Value.Null.Instance, new Where(new Operator.NotEquals("id", null)).Parameters[0].Value);
         Assert.Equal(Value.Null.Instance, new Where(new Operator.GreaterThan("id", null)).Parameters[0].Value);
         Assert.Equal(Value.Null.Instance, new Where(new Operator.LessThan("id", null)).Parameters[0].Value);
         Assert.Equal(Value.Null.Instance, new Where(new Operator.GreaterThanOrEqual("id", null)).Parameters[0].Value);
         Assert.Equal(Value.Null.Instance, new Where(new Operator.LessThanOrEqual("id", null)).Parameters[0].Value);
-        Assert.Throws<InvalidOperationException>(() => new Where(new WhereText("x")).GetText());
+        Assert.Throws<InvalidOperationException>(() => DefaultStatementTextRenderer.Instance.Render(new Where(new WhereText("x"))));
         Assert.Throws<InvalidOperationException>(() => new Where(new WhereText("x")).Parameters);
         Assert.Throws<InvalidOperationException>(() =>
             new Where(new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")]))).Parameters);
-        Assert.Equal("1 = 0", new Where(new Operator.In("id", [])).GetText());
+        Assert.Equal("1 = 0", DefaultStatementTextRenderer.Instance.Render(new Where(new Operator.In("id", []))));
         Assert.Empty(new Where(new Operator.In("id", [])).Parameters);
         var inIds = new Where(new Operator.In("id", [1, 2]));
-        Assert.Equal("id IN ($id_0, $id_1)", inIds.GetText());
+        Assert.Equal("id IN ($id_0, $id_1)", DefaultStatementTextRenderer.Instance.Render(inIds));
         Assert.Equal(["id_0", "id_1"], inIds.Parameters.Select(parameter => parameter.Name));
         Assert.Equal(new Value.Int(1), inIds.Parameters[0].Value);
         Assert.Equal(new Value.Int(2), inIds.Parameters[1].Value);
@@ -125,22 +125,22 @@ public class CoreTests
 
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
         var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
-        Assert.Equal("SELECT id, name FROM users WHERE id = $id AND age > $age", query.GetText());
+        Assert.Equal("SELECT id, name FROM users WHERE id = $id AND age > $age", DefaultStatementTextRenderer.Instance.Render(query));
         Assert.Same(where, query.Where);
-        Assert.Equal("SELECT * FROM users", new SelectStatement(new() { Table = "users", Fields = [] }).GetText());
+        Assert.Equal("SELECT * FROM users", DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = "users", Fields = [] })));
         Assert.Null(new SelectStatement(new() { Table = "users", Fields = [] }).Where);
-        Assert.Equal("SELECT id, name FROM users", new SelectStatement(new() { Table = "users", Fields = ["id", "name"] }).GetText());
+        Assert.Equal("SELECT id, name FROM users", DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = "users", Fields = ["id", "name"] })));
         Assert.Equal(
             "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id",
-            new SelectStatement(new()
+            DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new()
             {
                 Table = "users",
                 Fields = ["users.id", "orders.total"],
                 Joins = [Join.Inner("orders", "users.id", "orders.user_id")],
-            }).GetText());
+            })));
         Assert.Equal(
             "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
-            new SelectStatement(new()
+            DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new()
             {
                 Table = "users",
                 Fields = ["users.id"],
@@ -151,8 +151,8 @@ public class CoreTests
                     Join.Left("payments", "orders.id", "payments.order_id"),
                     Join.Right("profiles", "users.id", "profiles.user_id"),
                 ],
-            }).GetText());
-        Assert.Equal("SELECT id FROM users", new SelectStatement(new() { Table = "users", Fields = ["id"], Joins = [] }).GetText());
+            })));
+        Assert.Equal("SELECT id FROM users", DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = "users", Fields = ["id"], Joins = [] })));
         var grouped = new SelectStatement(new()
         {
             Table = "orders",
@@ -163,30 +163,31 @@ public class CoreTests
             OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
             Limit = 10,
         });
-        Assert.Equal("SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10", grouped.GetText());
+        Assert.Equal("SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10", DefaultStatementTextRenderer.Instance.Render(grouped));
         var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
-        Assert.Equal("SELECT id FROM users GROUP BY id", byStatus.GetText());
+        Assert.Equal("SELECT id FROM users GROUP BY id", DefaultStatementTextRenderer.Instance.Render(byStatus));
         var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
-        Assert.Equal("SELECT MIN(n), MAX(n) FROM users", bounds.GetText());
+        Assert.Equal("SELECT MIN(n), MAX(n) FROM users", DefaultStatementTextRenderer.Instance.Render(bounds));
         var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
-        Assert.Equal("SELECT id FROM users ORDER BY id ASC, name DESC", ordered.GetText());
+        Assert.Equal("SELECT id FROM users ORDER BY id ASC, name DESC", DefaultStatementTextRenderer.Instance.Render(ordered));
         var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
-        Assert.Equal("SELECT id FROM users LIMIT 10", limited.GetText());
-        Assert.Equal("SELECT id FROM users LIMIT 0", new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 0 }).GetText());
-        Assert.Throws<InvalidOperationException>(() => new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = -1 }));
+        Assert.Equal("SELECT id FROM users LIMIT 10", DefaultStatementTextRenderer.Instance.Render(limited));
+        Assert.Equal("SELECT id FROM users LIMIT 0", DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 0 })));
+        Assert.Throws<InvalidOperationException>(() =>
+            DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = -1 })));
         var insert = new InsertStatement("users", fields);
-        Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", insert.GetText());
+        Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", DefaultStatementTextRenderer.Instance.Render(insert));
         var update = new UpdateStatement("users", fields, where);
-        Assert.Equal("UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age", update.GetText());
+        Assert.Equal("UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age", DefaultStatementTextRenderer.Instance.Render(update));
         Assert.Same(where, update.Where);
         Assert.Null(new UpdateStatement("users", fields).Where);
-        Assert.Equal("UPDATE users SET id = $id, name = $name", new UpdateStatement("users", fields).GetText());
+        Assert.Equal("UPDATE users SET id = $id, name = $name", DefaultStatementTextRenderer.Instance.Render(new UpdateStatement("users", fields)));
         var delete = new DeleteStatement("users", where);
-        Assert.Equal("DELETE FROM users WHERE id = $id AND age > $age", delete.GetText());
+        Assert.Equal("DELETE FROM users WHERE id = $id AND age > $age", DefaultStatementTextRenderer.Instance.Render(delete));
         Assert.Same(where, delete.Where);
-        Assert.Equal("DELETE FROM users", new DeleteStatement("users").GetText());
+        Assert.Equal("DELETE FROM users", DefaultStatementTextRenderer.Instance.Render(new DeleteStatement("users")));
         var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
-        Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", createTable.GetText());
+        Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", DefaultStatementTextRenderer.Instance.Render(createTable));
         Assert.Equal("CREATE TABLE replaced", new ReplacedRenderer().Render(createTable));
         var namedTable = new CreateTableStatement(
             "orders",
@@ -204,63 +205,65 @@ public class CoreTests
             ]);
         Assert.Equal(
             "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
-            namedTable.GetText());
+            DefaultStatementTextRenderer.Instance.Render(namedTable));
         Assert.Equal(
             "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
-            new CreateTableStatement(
+            DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "items",
                 [new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
-                [new ForeignKey("fk_items_user", ["id"], "users", ["id"])]).GetText());
+                [new ForeignKey("fk_items_user", ["id"], "users", ["id"])])));
         Assert.Equal(
             "CREATE TABLE users (id INTEGER)",
-            new CreateTableStatement("users", [new Column("id", "INTEGER")], []).GetText());
+            DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement("users", [new Column("id", "INTEGER")], [])));
         Assert.Equal(
             "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)",
-            new CreateTableStatement(
+            DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "t",
                 [new Column("id", "INTEGER")],
-                [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)]).GetText());
+                [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)])));
         Assert.Equal(
             "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)",
-            new CreateTableStatement(
+            DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "t",
                 [new Column("id", "INTEGER")],
-                [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)]).GetText());
+                [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)])));
         Assert.Throws<InvalidOperationException>(() =>
-            new CreateTableStatement("t", [new Column("id", "INTEGER")], [new EmptyTableConstraint()]).GetText());
+            DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement("t", [new Column("id", "INTEGER")], [new EmptyTableConstraint()])));
         Assert.Throws<InvalidOperationException>(() =>
-            new CreateTableStatement(
+            DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "t",
                 [new Column("id", "INTEGER")],
-                [new ForeignKey("fk", ["id"], "u", ["id"], (ReferentialAction)99)]).GetText());
+                [new ForeignKey("fk", ["id"], "u", ["id"], (ReferentialAction)99)])));
         var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
-        Assert.Equal("CREATE INDEX idx_orders_user ON orders (user_id)", createIndex.GetText());
+        Assert.Equal("CREATE INDEX idx_orders_user ON orders (user_id)", DefaultStatementTextRenderer.Instance.Render(createIndex));
         Assert.Equal(
             "CREATE UNIQUE INDEX uq_orders_code ON orders (code)",
-            new CreateIndexStatement("uq_orders_code", "orders", ["code"], true).GetText());
+            DefaultStatementTextRenderer.Instance.Render(new CreateIndexStatement("uq_orders_code", "orders", ["code"], true)));
         var call = new ExecuteStoredProcedureStatement("save", fields);
-        Assert.Equal("CALL save($id, $name)", call.GetText());
-        Assert.Equal("CALL save()", new ExecuteStoredProcedureStatement("save", []).GetText());
+        Assert.Equal("CALL save($id, $name)", DefaultStatementTextRenderer.Instance.Render(call));
+        Assert.Equal("CALL save()", DefaultStatementTextRenderer.Instance.Render(new ExecuteStoredProcedureStatement("save", [])));
         var ret = new ReturnStatement("add", fields);
-        Assert.Equal("SELECT add($id, $name)", ret.GetText());
-        Assert.Equal("SELECT add()", new ReturnStatement("add", []).GetText());
+        Assert.Equal("SELECT add($id, $name)", DefaultStatementTextRenderer.Instance.Render(ret));
+        Assert.Equal("SELECT add()", DefaultStatementTextRenderer.Instance.Render(new ReturnStatement("add", [])));
         Assert.Equal(
             "CALL save($id)",
-            new ExecuteStoredProcedureStatement("save", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
+            DefaultStatementTextRenderer.Instance.Render(new ExecuteStoredProcedureStatement("save", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)])));
         Assert.Equal(
             "SELECT add($id)",
-            new ReturnStatement("add", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)]).GetText());
+            DefaultStatementTextRenderer.Instance.Render(new ReturnStatement("add", [new Parameter("id", 1), new Parameter("ret", ParameterDirection.ReturnValue)])));
         Assert.Equal(ParameterDirection.Input, new Parameter("id", 1).Direction);
         Assert.Equal(ParameterDirection.Output, new Parameter("count", ParameterDirection.Output).Direction);
         Assert.Equal(Value.Null.Instance, new Parameter("count", ParameterDirection.Output).Value);
         Assert.Null(new Response(1, 2).Parameters);
-        Assert.Equal("INSERT INTO t () VALUES ()", new InsertStatement("INSERT INTO t () VALUES ()").GetText());
-        Assert.Equal("x", new UpdateStatement("x").GetText());
-        Assert.Equal("x", DeleteStatement.Raw("x").GetText());
-        Assert.Equal("x", new CreateTableStatement("x").GetText());
-        Assert.Equal("x", new CreateIndexStatement("x").GetText());
-        Assert.Equal("x", new ExecuteStoredProcedureStatement("x").GetText());
-        Assert.Equal("x", new ReturnStatement("x").GetText());
+        Assert.Equal("INSERT INTO t () VALUES ()", DefaultStatementTextRenderer.Instance.Render(new InsertStatement("t", [])));
+        Assert.Equal("UPDATE users SET name = $name", DefaultStatementTextRenderer.Instance.Render(new UpdateStatement("users", [new Parameter("name", "a")])));
+        Assert.Equal("DELETE FROM users", DefaultStatementTextRenderer.Instance.Render(new DeleteStatement("users")));
+        Assert.Equal("CREATE TABLE t ()", DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement("t", [])));
+        Assert.Equal(
+            "CREATE INDEX idx ON t (id)",
+            DefaultStatementTextRenderer.Instance.Render(new CreateIndexStatement("idx", "t", ["id"])));
+        Assert.Equal("CALL save()", DefaultStatementTextRenderer.Instance.Render(new ExecuteStoredProcedureStatement("save", [])));
+        Assert.Equal("SELECT add()", DefaultStatementTextRenderer.Instance.Render(new ReturnStatement("add", [])));
     }
 
     [Fact]
@@ -579,7 +582,7 @@ public class CoreTests
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => connection.StartTransaction());
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => ds.CreateCommand());
         var command = connection.CreateCommand();
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(""));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(Native.N("x")));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader(Native.N("select"), Array.Empty<Parameter>()));
         var provided = new StubConnection("text");
         Assert.Same(provided, (await ds.CreateCommand(provided)).Connection);
@@ -633,9 +636,9 @@ public class CoreTests
 
         var command = new MockCommand(connection) { Response = new Response(1, 2), Reader = new MockReader<Row>([new Row { ["id"] = 1 }]) };
         Assert.Equal(2, (await command.Execute(Native.N("insert"), new[] { new Parameter("id", 1) })).RowsAffected);
-        await command.ExecuteReader("");
+        await command.ExecuteReader(Native.N(""));
         command.ExecuteError = new InvalidOperationException("exec");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute(""));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute(Native.N("")));
         command.ExecuteReaderError = new InvalidOperationException("read");
         await Assert.ThrowsAsync<InvalidOperationException>(() => command.ExecuteReader(Native.N("x")));
 
@@ -683,8 +686,8 @@ public class CoreTests
         Assert.Equal("mock", ds.Provider);
         await ds.CreateConnection();
         var mockCommand = Assert.IsType<MockCommand>(await ds.CreateCommand());
-        await mockCommand.Execute("");
-        await mockCommand.ExecuteReader("");
+        await mockCommand.Execute(Native.N(""));
+        await mockCommand.ExecuteReader(Native.N(""));
         var provided = new MockConnection();
         Assert.Same(provided, (await ds.CreateCommand(provided)).Connection);
         Assert.IsType<MockRepository<object>>(ds.CreateRepository<object>());
@@ -700,10 +703,10 @@ public class CoreTests
 
         var q = new MockSelectStatement("q");
         var w = new MockWhere("w");
-        Assert.Equal("q", q.GetText());
-        Assert.Equal("w", w.GetText());
-        Assert.Equal(1, q.GetTextCalls);
-        Assert.Equal(1, w.GetTextCalls);
+        Assert.Equal("q", DefaultStatementTextRenderer.Instance.Render(q));
+        Assert.Equal("w", DefaultStatementTextRenderer.Instance.Render(w));
+        Assert.Equal(1, q.AcceptCalls);
+        Assert.Equal(1, w.AcceptCalls);
 
         var seen = new List<string>();
         command.AddMiddleware(new DelegateMiddleware(

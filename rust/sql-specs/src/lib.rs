@@ -5,7 +5,7 @@ use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
-    SelectStatementOptions, Text, TransformMapper, TypeConverter, UpdateStatement, Value, Where,
+    SelectStatementOptions, DefaultStatementTextRenderer, TransformMapper, TypeConverter, UpdateStatement, Value, Where,
 };
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -436,47 +436,49 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
         .flat_map(|step| {
             let sql = if let Some(create) = &step.create {
                 with_statement_sql(
-                    InsertStatement::new(
+                    DefaultStatementTextRenderer::instance().render(&InsertStatement::new(
                         &table,
                         &fields_of(
                             &flatten_yaml(&create.row, &spec.type_spec.mappings),
                             |col| !ids.contains(col),
                         ),
-                    )
-                    .get_text(),
+                    )),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(read) = &step.read {
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
                 with_statement_sql(
-                    SelectStatement::new(SelectStatementOptions {
-                        where_clause: Some(&where_clause),
-                        ..SelectStatementOptions::new(&table, &refs)
-                    })
-                    .get_text(),
+                    DefaultStatementTextRenderer::instance().render(&SelectStatement::new(
+                        SelectStatementOptions {
+                            where_clause: Some(&where_clause),
+                            ..SelectStatementOptions::new(&table, &refs)
+                        },
+                    )),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(query) = &step.query {
                 let where_clause = query.where_clause.as_ref().map(where_sql);
                 with_statement_sql(
-                    SelectStatement::new(SelectStatementOptions {
-                        where_clause: where_clause.as_ref().map(|w| w as &dyn datasources::IWhere),
-                        ..SelectStatementOptions::new(&table, &refs)
-                    })
-                    .get_text(),
+                    DefaultStatementTextRenderer::instance().render(&SelectStatement::new(
+                        SelectStatementOptions {
+                            where_clause: where_clause.as_ref().map(|w| w as &dyn datasources::IWhere),
+                            ..SelectStatementOptions::new(&table, &refs)
+                        },
+                    )),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(read_by) = &step.read_by {
                 let where_clause = where_sql(&read_by.where_clause);
                 with_statement_sql(
-                    SelectStatement::new(SelectStatementOptions {
-                        where_clause: Some(&where_clause),
-                        ..SelectStatementOptions::new(&table, &refs)
-                    })
-                    .get_text(),
+                    DefaultStatementTextRenderer::instance().render(&SelectStatement::new(
+                        SelectStatementOptions {
+                            where_clause: Some(&where_clause),
+                            ..SelectStatementOptions::new(&table, &refs)
+                        },
+                    )),
                     false,
                     &spec.type_spec,
                 )
@@ -485,7 +487,11 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
                 let fields = fields_of(&flat, |col| !ids.contains(col));
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&flat["id"])));
                 with_statement_sql(
-                    UpdateStatement::new(&table, &fields, Some(&where_clause)).get_text(),
+                    DefaultStatementTextRenderer::instance().render(&UpdateStatement::new(
+                        &table,
+                        &fields,
+                        Some(&where_clause),
+                    )),
                     true,
                     &spec.type_spec,
                 )
@@ -496,21 +502,31 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
                 );
                 let where_clause = where_sql(&update_by.where_clause);
                 with_statement_sql(
-                    UpdateStatement::new(&table, &fields, Some(&where_clause)).get_text(),
+                    DefaultStatementTextRenderer::instance().render(&UpdateStatement::new(
+                        &table,
+                        &fields,
+                        Some(&where_clause),
+                    )),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(delete) = &step.delete {
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&delete.id)));
                 with_statement_sql(
-                    DeleteStatement::new(&table, Some(&where_clause)).get_text(),
+                    DefaultStatementTextRenderer::instance().render(&DeleteStatement::new(
+                        &table,
+                        Some(&where_clause),
+                    )),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(delete_by) = &step.delete_by {
                 let where_clause = where_sql(&delete_by.where_clause);
                 with_statement_sql(
-                    DeleteStatement::new(&table, Some(&where_clause)).get_text(),
+                    DefaultStatementTextRenderer::instance().render(&DeleteStatement::new(
+                        &table,
+                        Some(&where_clause),
+                    )),
                     true,
                     &spec.type_spec,
                 )

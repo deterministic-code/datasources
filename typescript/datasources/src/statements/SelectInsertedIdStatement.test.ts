@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { SelectInsertedIdStatement } from "./SelectInsertedIdStatement.ts";
+import { DefaultStatementTextRenderer, SelectInsertedIdStatement } from "../index.ts";
 
 describe("SelectInsertedIdStatement", () => {
-  it("throws until a provider formats the select", () => {
+  it("requires a provider implementation", () => {
     const statement = new SelectInsertedIdStatement("users", "id");
-    expect(statement.table).toBe("users");
-    expect(statement.column).toBe("id");
-    expect(() => statement.getText()).toThrow("provider must implement SelectInsertIdStatement");
+    expect(() => DefaultStatementTextRenderer.instance.render(statement)).toThrow(
+      "provider must implement SelectInsertIdStatement",
+    );
   });
 });

@@ -91,9 +91,7 @@ public class JsonTests
         var repo = new CRUDRepository<Dictionary<string, Value>>(conn);
         var command = new JsonCommand(conn);
         Assert.NotNull(await repo.ReadSingle());
-        Assert.Null(await repo.ReadSingle(new SelectStatement("{\"id\":9}")));
-        Assert.NotEmpty(await repo.Read(new SelectStatement("{\"id\":1}")).ToListAsync());
-        Assert.NotNull(await repo.ReadSingle(new WhereText("{\"id\":1}")));
+        Assert.Null(await repo.ReadSingle(new WhereText("{\"id\":9}")));
         Assert.NotEmpty(await repo.Read(new WhereText("{\"id\":1}")).ToListAsync());
         var inserted = await repo.Create(new Row { ["id"] = 4, ["name"] = "d" });
         Assert.Equal(new Value.Int(4), inserted["id"]);
@@ -108,7 +106,8 @@ public class JsonTests
         await command.Execute("delete", new[] { new Parameter("id", 5) });
         await command.Execute("delete");
         await Assert.ThrowsAsync<DatasourceException>(() => command.Execute("nope"));
-        await Assert.ThrowsAsync<DatasourceException>(() => command.Execute(""));
+        var empty = await Assert.ThrowsAsync<InvalidOperationException>(() => command.Execute(""));
+        Assert.Equal("empty command", empty.Message);
         await command.ExecuteReader("", new[] { new Parameter("name", "a") });
 
         var closed = new JsonConnection();

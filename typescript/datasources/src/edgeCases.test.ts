@@ -48,6 +48,10 @@ class OpenUpdate extends DefaultUpdateEnrichmentStrategy<Item> {
   key = (item: object, keys: readonly string[]): string => this.keyOf(item, keys);
 }
 
+class OpenCreate extends DefaultCreateEnrichmentStrategy<Item> {
+  payload = (parent: object, into: string): object[] => this.payloadOf(parent, into);
+}
+
 class DropId extends TypeConverter<Item, Cells> {
   convert = (row: Cells): Item => Object.assign(new Item(), row);
   reverseConvert = (): Cells => ({ name: "a" });
@@ -94,7 +98,7 @@ describe("statement and repository edges", () => {
     expect(await collectAsync(converted.read())).toHaveLength(1);
     command.reader = new MockReader([]);
     await expect(
-      collectAsync(converted.read(new ExecuteStoredProcedureStatement("save_item"))),
+      collectAsync(converted.read(new ExecuteStoredProcedureStatement("save_item", []))),
     ).resolves.toEqual([]);
     command.reader = new MockReader([{ generated: 9 }]);
     const created = await repo.create(Object.assign(new Item(), { name: "a" }));
@@ -301,8 +305,109 @@ describe("enrichment edges", () => {
 
     const open = new OpenUpdate();
     expect(open.key({ name: "a" }, ["missing"])).toBe("");
+    expect(open.key({ id: 5 }, ["id"])).toBe("5");
+    expect(open.key({ id: null as unknown as number }, ["id"])).toBe("");
+    expect(open["requiredKey"]({ id: 1 }, {
+      destinationProperty: "Tags",
+      sourceProperty: "id",
+      relatedKey: "id",
+    })).toBe(1);
+    expect(() =>
+      open["requiredKey"]({ id: 0 }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    open.stamp({ parent: null as unknown as object }, "parent", 8);
     expect(open.payload({ Children: { not: "array" } }, "Children")).toEqual([]);
     expect(open.payload({ Children: "text" }, "Children")).toEqual([]);
+    const creatingOpen = new OpenCreate();
+    expect(creatingOpen.payload({ Children: { not: "array" } }, "Children")).toEqual([]);
+    expect(creatingOpen.payload({ Children: [null, "skip", { id: 1n }] }, "Children")).toEqual([{ id: 1n }]);
+    const stamped = { parent: { Id: 0 } };
+    creatingOpen["stampCell"](stamped, "parent", 9);
+    expect(stamped.parent.Id).toBe(9);
+    const createSnake = { parent: { name: "a" } };
+    creatingOpen["stampCell"](createSnake, "parent", 5);
+    expect((createSnake.parent as { id?: number }).id).toBe(5);
+    const createFlat = { parent_id: 0 };
+    creatingOpen["stampCell"](createFlat, "parent_id", 6);
+    expect(createFlat.parent_id).toBe(6);
+    creatingOpen["stampCell"](createFlat, "parent_id", undefined);
+    creatingOpen["stampCell"](createFlat, "parent_id", null);
+    creatingOpen["stampCell"](createFlat, "parent_id", { nested: true });
+    creatingOpen["stampCell"](createFlat, "parent_id", []);
+    expect(open["namesOf"]({ ids: [] } as never, { id: 1, name: "a" })).toEqual(["id"]);
+    expect(open["namesOf"]({ ids: ["id"] } as never, { id: 1 })).toEqual(["id"]);
+    expect(() =>
+      creatingOpen["relatedIds"]({ Tags: [{ id: 0 }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(() =>
+      creatingOpen["relatedIds"]({ Tags: [{ id: 0n }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(() =>
+      creatingOpen["relatedIds"]({ Tags: [{ id: "" }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(() =>
+      creatingOpen["relatedIds"]({ Tags: [{ id: { nested: true } }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(
+      creatingOpen["relatedIds"]({ Tags: [{ id: 2 }, { id: 2 }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toEqual([2]);
+    expect(open.payload({ Children: [null, "skip", { id: 1 }] }, "Children")).toEqual([{ id: 1 }]);
+    expect(() =>
+      open["relatedIds"]({ Tags: [{ id: 0 }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(() =>
+      open["relatedIds"]({ Tags: [{ id: 0n }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(() =>
+      open["relatedIds"]({ Tags: [{ id: "" }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toThrow(/requires/);
+    expect(
+      open["relatedIds"]({ Tags: [{ id: 2 }, { id: 2 }] }, {
+        destinationProperty: "Tags",
+        sourceProperty: "id",
+        relatedKey: "id",
+      }),
+    ).toEqual([2]);
+    expect(open["hasKey"]({}, [])).toBe(false);
+    expect(open["hasKey"]({ id: 1 }, ["id"])).toBe(true);
+    expect(open["hasKey"]({ id: 0 }, ["id"])).toBe(false);
+    expect(open["hasKey"]({ id: 1 }, ["id", "missing"])).toBe(false);
     const nested = { parent: { Id: 0 } };
     open.stamp(nested, "parent", 4);
     expect(nested.parent.Id).toBe(4);
@@ -313,6 +418,9 @@ describe("enrichment edges", () => {
     open.stamp(flat, "parent_id", 6);
     expect(flat.parent_id).toBe(6);
     open.stamp(flat, "parent_id", { nested: true });
+    const withArray = { parent_id: [1, 2] as unknown as number };
+    open.stamp(withArray, "parent_id", 7);
+    expect(withArray.parent_id).toBe(7);
 
     const cascade = new CascadeDeleteEnrichmentStrategy<Item>();
     const cascadeRows = mock([{ tag_id: 0 }, { tag_id: 2 }]);

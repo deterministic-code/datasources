@@ -4,6 +4,7 @@ import {
   ParameterDirection,
   ReturnStatement,
   ExecuteStoredProcedureStatement,
+  StatementTextRenderer,
 } from "@datasources/core";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
@@ -13,10 +14,13 @@ import {
 } from "../../sql-spec-runner.ts";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
-import { MysqlStatementFactory } from "../src/MysqlStatementFactory.ts";
+import { MysqlStatementRenderer } from "../src/MysqlStatementRenderer.ts";
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
-const dialect = loadDialect("mysql", (statement) => new MysqlStatementFactory().transform(statement).getText());
+const dialect = loadDialect(
+  "mysql",
+  (statement) => new StatementTextRenderer(t => new MysqlStatementRenderer(t)).render(statement),
+);
 const url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 

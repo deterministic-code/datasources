@@ -32,7 +32,6 @@ public static class StatementParser
 
         InsertStatement ParseInsert()
         {
-            var start = i;
             ExpectWord("INSERT");
             ExpectWord("INTO");
             var table = Ident();
@@ -44,14 +43,13 @@ public static class StatementParser
             var values = new List<string> { RawExpr() };
             while (Try(',')) values.Add(RawExpr());
             Expect(')');
-            return values.Count == columns.Count && values.Zip(columns).All(pair => pair.First == "$" + pair.Second)
+            return values.Count == columns.Count && values.Zip(columns).All(pair => pair.First.Trim() == "$" + pair.Second)
                 ? new InsertStatement(table, columns.Select(name => new Parameter(name, Value.Null.Instance)).ToList())
-                : new InsertStatement(text[start..i]);
+                : throw new InvalidOperationException("empty statement");
         }
 
         UpdateStatement ParseUpdate()
         {
-            var start = i;
             ExpectWord("UPDATE");
             var table = Ident();
             ExpectWord("SET");
@@ -61,7 +59,7 @@ public static class StatementParser
             IWhere? where = TryWord("WHERE") ? new Where(Expr()) : null;
             return canonical
                 ? new UpdateStatement(table, columns.Select(name => new Parameter(name, Value.Null.Instance)).ToList(), where)
-                : new UpdateStatement(text[start..i], where);
+                : throw new InvalidOperationException("empty statement");
         }
 
         bool Assignment(List<string> columns)
@@ -70,7 +68,7 @@ public static class StatementParser
             Expect('=');
             var raw = RawExpr();
             columns.Add(column);
-            return raw == "$" + column;
+            return raw.Trim() == "$" + column;
         }
 
         DeleteStatement ParseDelete()
@@ -156,7 +154,7 @@ public static class StatementParser
             if (!Peek('(')) return Ident();
             var nested = Nested();
             ExpectWord("AS");
-            return $"({nested.GetText()}) AS {Ident()}";
+            return $"({DefaultStatementTextRenderer.Instance.Render(nested)}) AS {Ident()}";
         }
 
         SelectStatement Nested()

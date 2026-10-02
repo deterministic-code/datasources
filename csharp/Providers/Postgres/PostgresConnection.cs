@@ -9,7 +9,8 @@ internal sealed class PostgresConnection : IConnection
     public string Url { get; }
     public string? Schema { get; }
     public string Provider => "postgres";
-    public ICommand CreateCommand() => new PostgresCommand(this);
+    public ICommand CreateCommand() =>
+        new PostgresCommand(this, new StatementTextRenderer(t => new PostgresStatementRenderer(t)));
     public bool IsOpen { get; private set; }
 
     public PostgresConnection(IReadOnlyDictionary<string, string?>? options)

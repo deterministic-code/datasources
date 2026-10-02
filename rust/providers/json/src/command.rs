@@ -76,6 +76,9 @@ impl Command for JsonCommand {
     }
 
     async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
+        if text.trim().is_empty() {
+            return Err(DatasourceError::message("empty command"));
+        }
         let connection = self.connection.clone();
         self.host
             .run(text, parameters, move |query, params| {
@@ -184,19 +187,25 @@ impl Command for JsonCommand {
                 let params = with_where(parameters, statement.predicate());
                 self.execute("delete", Some(&params)).await
             }
-            _ => self.execute(&statement.get_text(), parameters).await,
+            _ => {
+                self.execute(
+                    &datasources::DefaultStatementTextRenderer::instance().render(statement),
+                    parameters,
+                )
+                .await
+            }
         }
     }
 }
 
 fn filter_text(statement: &dyn Statement) -> String {
     if let Some(where_clause) = statement.predicate() {
-        let text = where_clause.get_text();
+        let text = datasources::DefaultStatementTextRenderer::instance().render_where(where_clause);
         if text.trim_start().starts_with('{') {
             return text;
         }
     }
-    let text = statement.get_text();
+    let text = datasources::DefaultStatementTextRenderer::instance().render(statement);
     if text.trim_start().starts_with('{') || text.trim().is_empty() {
         text
     } else {
@@ -209,7 +218,9 @@ fn with_where(
     where_clause: Option<&dyn IWhere>,
 ) -> Vec<Parameter> {
     let mut params = parameters.unwrap_or(&[]).to_vec();
-    if let Some(text) = where_clause.map(|predicate| predicate.get_text()) {
+    if let Some(text) = where_clause.map(|predicate| {
+        datasources::DefaultStatementTextRenderer::instance().render_where(predicate)
+    }) {
         if text.trim_start().starts_with('{') {
             params.push(Parameter::new("$where", Value::Text(text)));
         }

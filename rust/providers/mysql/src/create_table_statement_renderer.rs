@@ -1,9 +1,9 @@
 use crate::driver::column_sql;
-use datasources::{Column, CreateTableStatementRenderer};
+use datasources::{Column, CreateTableStatementTextRenderer};
 
 pub struct MysqlCreateTableStatementRenderer;
 
-impl CreateTableStatementRenderer for MysqlCreateTableStatementRenderer {
+impl CreateTableStatementTextRenderer for MysqlCreateTableStatementRenderer {
     fn type_name(&self, column: &Column) -> String {
         column_sql(&column.type_name)
             .map(str::to_string)

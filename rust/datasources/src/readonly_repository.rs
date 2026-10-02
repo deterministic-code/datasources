@@ -138,25 +138,6 @@ impl ReadonlyRepository {
         command
     }
 
-    fn query_of(&self, query: Option<&dyn Statement>) -> (SelectStatement, Vec<Parameter>) {
-        if let Some(query) = query {
-            let params = query
-                .predicate()
-                .map(|predicate| predicate.parameters())
-                .unwrap_or_default();
-            let statement = match query.predicate() {
-                Some(predicate) => SelectStatement::with_where(
-                    query.get_text(),
-                    crate::where_text::WhereText::new(predicate.get_text()),
-                ),
-                None => SelectStatement::text(query.get_text()),
-            };
-            (statement, params)
-        } else {
-            (self.readonly_statements.select(None), Vec::new())
-        }
-    }
-
     pub(crate) fn reverse_convert(&self, item: &Row) -> Result<Row> {
         let row = self.object_converter.reverse_convert(item)?;
         match &self.row_converter {
@@ -252,9 +233,13 @@ impl ReadonlyRepository {
                     self.fetch_sources(&mapped, params).await
                 }
                 _ => {
-                    let (statement, params) = self.query_of(Some(statement));
-                    self.fetch_sources(&statement, parameters.unwrap_or(&params).to_vec())
-                        .await
+                    let params = parameters.map(|items| items.to_vec()).unwrap_or_else(|| {
+                        statement
+                            .predicate()
+                            .map(|predicate| predicate.parameters())
+                            .unwrap_or_default()
+                    });
+                    self.fetch_sources(statement, params).await
                 }
             },
             None => {

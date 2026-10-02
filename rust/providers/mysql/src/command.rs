@@ -2,12 +2,12 @@ use crate::connection::{map_err, MysqlConnection};
 use crate::converters;
 use crate::engine::to_mysql;
 use crate::reader::MysqlReader;
-use crate::statement_factory::MysqlStatementFactory;
+use crate::statement_renderer::MysqlStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, Native, Parameter, Reader, Response, Result, ReturnStatement,
-    Statement, StatementKind, Value,
+    Statement, StatementKind, StatementTextRenderer, Value,
 };
 use mysql_async::prelude::Queryable;
 use mysql_async::{Params, Row, Value as MysqlValue};
@@ -22,6 +22,7 @@ struct MysqlExecuteResult {
 pub struct MysqlCommand {
     host: CommandMiddlewareHost,
     connection: Arc<MysqlConnection>,
+    statements: StatementTextRenderer,
 }
 
 impl MysqlCommand {
@@ -29,6 +30,7 @@ impl MysqlCommand {
         Self {
             host: CommandMiddlewareHost::new(),
             connection,
+            statements: StatementTextRenderer::new(Some(Box::new(MysqlStatementRenderer)), None),
         }
     }
 
@@ -139,7 +141,7 @@ impl Command for MysqlCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let text = MysqlStatementFactory.transform(statement).get_text();
+        let text = self.statements.render(statement);
         self.execute_reader_native(&Native::new(text), parameters).await
     }
 
@@ -151,7 +153,7 @@ impl Command for MysqlCommand {
         if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
             return self.first_cell(statement, parameters).await;
         }
-        let text = MysqlStatementFactory.transform(statement).get_text();
+        let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await
     }
 }

@@ -6,7 +6,7 @@ import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal } from "./statements/Literal.ts";
-import { Operator, Where } from "./statements/index.ts";
+import { DefaultStatementTextRenderer, Operator, Where } from "./statements/index.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -215,7 +215,7 @@ export class CRUDRepository<T = Cells>
     const listed = statement.where?.parameters ?? [];
     const parameters = listed.length
       ? listed
-      : statement.getText().includes("$")
+      : DefaultStatementTextRenderer.instance.render(statement).includes("$")
         ? fieldsOf(record, () => true, this.cell, this.enrichmentInto)
         : [];
     return execute(this.command(), statement, parameters);

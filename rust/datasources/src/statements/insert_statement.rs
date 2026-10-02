@@ -1,58 +1,26 @@
 use super::statement::Statement;
-use super::text::Text;
+use super::statement_text_renderer::StatementTextRenderer;
 use crate::parameter::Parameter;
 
 pub struct InsertStatement {
-    text: Option<String>,
-    table: Option<String>,
+    table: String,
     fields: Vec<Parameter>,
 }
 
 impl InsertStatement {
-    pub fn text(text: impl Into<String>) -> Self {
-        Self {
-            text: Some(text.into()),
-            table: None,
-            fields: Vec::new(),
-        }
-    }
-
     pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self {
         Self {
-            text: None,
-            table: Some(table.as_ref().to_string()),
+            table: table.as_ref().to_string(),
             fields: fields.to_vec(),
         }
     }
 
-    pub fn table(&self) -> Option<&str> {
-        self.table.as_deref()
+    pub fn table(&self) -> &str {
+        &self.table
     }
 
     pub fn fields(&self) -> &[Parameter] {
         &self.fields
-    }
-}
-
-impl Text for InsertStatement {
-    fn get_text(&self) -> String {
-        match &self.text {
-            Some(text) => text.clone(),
-            None => format!(
-                "INSERT INTO {} ({}) VALUES ({})",
-                self.table.as_deref().unwrap_or(""),
-                self.fields
-                    .iter()
-                    .map(|field| field.name.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                self.fields
-                    .iter()
-                    .map(|field| format!("${}", field.name))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-        }
     }
 }
 
@@ -63,6 +31,10 @@ impl crate::ReadInput for InsertStatement {
 }
 
 impl Statement for InsertStatement {
+    fn accept(&self, text: &StatementTextRenderer) -> String {
+        text.statements().visit_insert(self, text)
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

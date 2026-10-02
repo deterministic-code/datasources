@@ -28,9 +28,7 @@ pub trait Command: Send + Sync {
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
         if text.trim().is_empty() {
-            return self
-                .execute_reader_native(&Native::new(text), parameters)
-                .await;
+            return Err(crate::DatasourceError::message("empty command"));
         }
         let statement = StatementParser::parse(text)?;
         self.execute_reader_statement(statement.as_ref(), parameters)
@@ -38,7 +36,7 @@ pub trait Command: Send + Sync {
     }
     async fn execute(&self, text: &str, parameters: Option<&[Parameter]>) -> Result<Response> {
         if text.trim().is_empty() {
-            return self.execute_native(&Native::new(text), parameters).await;
+            return Err(crate::DatasourceError::message("empty command"));
         }
         let statement = StatementParser::parse(text)?;
         self.execute_statement(statement.as_ref(), parameters).await
@@ -48,15 +46,21 @@ pub trait Command: Send + Sync {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Response> {
-        self.execute_native(&Native::new(statement.get_text()), parameters)
-            .await
+        self.execute_native(
+            &Native::new(crate::DefaultStatementTextRenderer::instance().render(statement)),
+            parameters,
+        )
+        .await
     }
     async fn execute_reader_statement(
         &self,
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        self.execute_reader_native(&Native::new(statement.get_text()), parameters)
-            .await
+        self.execute_reader_native(
+            &Native::new(crate::DefaultStatementTextRenderer::instance().render(statement)),
+            parameters,
+        )
+        .await
     }
 }

@@ -1,5 +1,6 @@
 import {
   DatasourceError,
+  StatementTextRenderer,
   type Cell,
   type DatasourceOptions,
   type ICommand,
@@ -10,21 +11,18 @@ import {
   type TypeConverter,
 } from "@datasources/core";
 import { SqliteConnection } from "./connection.ts";
+import { SqliteCommand } from "./command.ts";
 import { SqliteTransaction } from "./transaction.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
+import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
+import { columnTypes } from "./columnTypes.ts";
 
-export const columnTypes: Record<string, string> = {
-  int: "INTEGER",
-  uuid: "TEXT",
-  string: "TEXT",
-  bool: "BOOLEAN",
-  decimal: "NUMERIC",
-  float: "REAL",
-  datetime: "TEXT",
-  binary: "BLOB",
-};
+export { columnTypes };
+
+const statements = new StatementTextRenderer(t => new SqliteStatementRenderer(t));
 
 export class SqliteDriver implements IDriver {
+  readonly statementRenderer = statements;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   columnType = (name: string): string =>
     columnTypes[name] ??
@@ -33,7 +31,8 @@ export class SqliteDriver implements IDriver {
     })();
   connection = (options?: DatasourceOptions): IConnection =>
     SqliteConnection.from(options);
-  command = (connection: IConnection): ICommand => connection.createCommand();
+  command = (connection: IConnection): ICommand =>
+    new SqliteCommand(connection as SqliteConnection, statements);
   transaction = (
     connection: IConnection,
     isolation: IsolationLevel = "readCommitted",

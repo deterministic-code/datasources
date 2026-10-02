@@ -60,7 +60,7 @@ public class SqliteCommandIntegrationTests
         await connection.Open();
         var command = connection.CreateCommand();
         await SchemaSpec.Apply(connection, "flags");
-        await command.Execute("INSERT INTO flags (enabled, count) VALUES (1, 1)");
+        await command.Execute(Native.N("INSERT INTO flags (enabled, count) VALUES (1, 1)"));
         await using var reader = await command.ExecuteReader(Native.N("SELECT enabled, count, 1 AS one FROM flags"));
         Assert.True(await reader.Next());
         var row = reader.Current!;
@@ -75,9 +75,9 @@ public class SqliteCommandIntegrationTests
         var ds = Datasource.Default;
         var command = await ds.CreateCommand();
         await SchemaSpec.Apply(command.Connection, "items");
-        await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-        await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-        await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+        await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+        await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+        await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (3, 'bea')"));
         await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
         var rows = await reader.Read().ToListAsync();
         Assert.Equal(3, rows.Count);
@@ -95,7 +95,7 @@ public class SqliteCommandIntegrationTests
         var ds = Datasource.Default;
         var command = await ds.CreateCommand();
         await SchemaSpec.Apply(command.Connection, "case-contacts");
-        await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+        await command.Execute(Native.N("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"));
         await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
         var mapped = await reader.Read().Select(source =>
@@ -110,8 +110,8 @@ public class SqliteCommandIntegrationTests
         var ds = Datasource.Default;
         var command = await ds.CreateCommand();
         await SchemaSpec.Apply(command.Connection, "flat-users");
-        await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
-        await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+        await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"));
+        await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
         await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
         var rows = await reader.Read().ToListAsync();
         var mapper = new FlatToNestedMapper(new TypeMap
@@ -143,9 +143,9 @@ public class SqliteCommandIntegrationTests
         await connection.Open();
         var command = connection.CreateCommand();
         await SchemaSpec.Apply(connection, "settings");
-        await command.Execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
-        await command.Execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
-        await command.Execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
+        await command.Execute(Native.N("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"));
+        await command.Execute(Native.N("INSERT INTO settings (name, value) VALUES ('lang', 'en')"));
+        await command.Execute(Native.N("INSERT INTO settings (name, value) VALUES ('size', 'lg')"));
         await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
         var converter = new MetaDataRowTypeConverter<NameValue>();
         var items = await reader.Read().Select(row => converter.Convert(row)).ToListAsync();
@@ -199,8 +199,8 @@ public class SqliteCommandIntegrationTests
         var ds = Datasource.Default;
         var command = await ds.CreateCommand();
         await SchemaSpec.Apply(command.Connection, "flat-contact-users");
-        await command.Execute(
-            "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+        await command.Execute(Native.N(
+            "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"));
         await using var reader = await command.ExecuteReader(
             "SELECT contact_name1, contact_name2, email, id, username FROM users");
         var converter = new MetaDataRowTypeConverter<User>();
@@ -251,7 +251,8 @@ public class SqliteCommandIntegrationTests
     [Fact]
     public async Task SharedSpecs()
     {
-        var dialect = SqlSpec.Dialect.Load("sqlite", static statement => new SqliteStatementFactory().Transform(statement).GetText());
+        var dialect = SqlSpec.Dialect.Load("sqlite", static statement =>
+            new StatementTextRenderer(t => new SqliteStatementRenderer(t)).Render(statement));
         foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml").Where(path => Path.GetFileName(path) != "schemas.yaml"))
             await SqlSpec.Run(path, dialect, target =>
             {

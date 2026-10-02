@@ -13,11 +13,12 @@ import {
   Subquery,
   UpdateStatement,
   Where,
+  DefaultStatementTextRenderer,
 } from "../index.ts";
 import type { IExpression } from "./IExpression.ts";
 
 const roundTrip = (sql: string): void => {
-  expect(StatementParser.parse(sql).getText()).toBe(sql);
+  expect(DefaultStatementTextRenderer.instance.render(StatementParser.parse(sql))).toBe(sql);
 };
 
 describe("StatementParser", () => {
@@ -48,11 +49,9 @@ describe("StatementParser", () => {
     for (const sql of [
       "INSERT INTO users (id, name) VALUES ($id, $name)",
       'INSERT INTO "user" (id) VALUES ($id)',
-      "INSERT INTO users (name) VALUES ('ada')",
       "UPDATE users SET name = $name WHERE id = $id",
       "UPDATE users SET name = $name, age = $age",
       "UPDATE users SET name = $name WHERE name NOT LIKE $name",
-      "UPDATE users SET name = name WHERE id = $id",
       "DELETE FROM users WHERE id = $id",
       "DELETE FROM users",
       'DELETE FROM "user" WHERE id = $id',
@@ -74,6 +73,8 @@ describe("StatementParser", () => {
     const deleted = StatementParser.parse("DELETE FROM users WHERE id = $id") as DeleteStatement;
     expect((deleted.where as Where).condition).toBeInstanceOf(Operator.Equals);
     expect((StatementParser.parse("DELETE FROM users") as DeleteStatement).where).toBeUndefined();
+    expect(() => StatementParser.parse("INSERT INTO users (name) VALUES ('ada')")).toThrow("empty statement");
+    expect(() => StatementParser.parse("UPDATE users SET name = name WHERE id = $id")).toThrow("empty statement");
   });
 
   it("builds the where tree", () => {
@@ -105,7 +106,7 @@ describe("StatementParser", () => {
 
   it("keeps a string beside a column as its parameter", () => {
     const query = StatementParser.parse("SELECT id FROM users WHERE name = 'ada'") as SelectStatement;
-    expect(query.getText()).toBe("SELECT id FROM users WHERE name = $name");
+    expect(DefaultStatementTextRenderer.instance.render(query)).toBe("SELECT id FROM users WHERE name = $name");
     expect(query.where?.parameters).toEqual([{ name: "name", value: "ada" }]);
   });
 
@@ -118,12 +119,12 @@ describe("StatementParser", () => {
     expect(evaluator.evaluate(new Operator.Between("age", 18, 40), row)).toBe(true);
     expect(evaluator.evaluate(new Operator.NotBetween("age", 18, 40), row)).toBe(false);
     expect(evaluator.evaluate(new Operator.NotIn("age", [1, 2]), row)).toBe(true);
-    expect(new Where(new Operator.NotLike("name", "%a")).getText()).toBe("name NOT LIKE $name");
-    expect(new Where(new Operator.NotBetween("age", 1, 2)).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.NotLike("name", "%a")))).toBe("name NOT LIKE $name");
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.NotBetween("age", 1, 2)))).toBe(
       "age NOT BETWEEN $age_0 AND $age_1",
     );
-    expect(new Where(new Operator.NotIn("id", [])).getText()).toBe("1 = 1");
-    expect(new Where(new Operator.Not(new Operator.Like("name", "%a"))).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.NotIn("id", [])))).toBe("1 = 1");
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.Not(new Operator.Like("name", "%a"))))).toBe(
       "NOT (name LIKE $name)",
     );
   });
@@ -155,7 +156,7 @@ describe("StatementParser", () => {
       "SELECT * FROM users",
     ])
       roundTrip(sql);
-    expect(StatementParser.parse("SELECT id FROM users WHERE (id = $id)").getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(StatementParser.parse("SELECT id FROM users WHERE (id = $id)"))).toBe(
       "SELECT id FROM users WHERE id = $id",
     );
     expect(() => StatementParser.parse("INSERT INTO users")).toThrow("empty statement");
@@ -180,14 +181,14 @@ describe("StatementParser", () => {
       having: new Where(new Operator.Equals("n", 2)),
       joins: [Join.inner("tags", "posts.id", "tags.post_id")],
     });
-    const plain = new SelectStatement("SELECT 1");
+    const plain = new SelectStatement({ table: "dual", fields: ["1"] });
     const mapped = new Where(
       new Operator.And(
         new Operator.Or(new Operator.IsNull(new Identifier("id")), new Operator.IsNotNull(new Identifier("id"))),
         new Operator.Not(new Operator.Like(new Literal("a"), new Identifier("name"))),
       ),
     ).map(same, keep);
-    expect(mapped.getText()).toBe("(id IS NULL OR id IS NOT NULL) AND (NOT ('a' LIKE name))");
+    expect(DefaultStatementTextRenderer.instance.render(mapped)).toBe("(id IS NULL OR id IS NOT NULL) AND (NOT ('a' LIKE name))");
     for (const op of [
       new Operator.NotEquals("id", 1),
       new Operator.GreaterThan("id", 1),
@@ -203,12 +204,12 @@ describe("StatementParser", () => {
       new Operator.Exists(new Subquery(nested)),
       new Operator.Exists(new Subquery(plain)),
     ])
-      expect(new Where(op).map(same, keep).getText().length).toBeGreaterThan(0);
-    expect(new Where(new Operator.Equals('"user"', 1)).getText()).toBe('"user" = $user');
+      expect(DefaultStatementTextRenderer.instance.render(new Where(op).map(same, keep)).length).toBeGreaterThan(0);
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.Equals('"user"', 1)))).toBe('"user" = $user');
     expect(new Where(new Operator.Equals('"a.b"', 1)).parameters).toEqual([
       { name: "a.b", value: 1 },
     ]);
-    expect(new Where(new Operator.In(new Identifier("id"), new Subquery(nested))).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.In(new Identifier("id"), new Subquery(nested))))).toBe(
       "id IN (SELECT id FROM posts INNER JOIN tags ON posts.id = tags.post_id WHERE id = $id HAVING n = $n)",
     );
     expect(
@@ -218,24 +219,26 @@ describe("StatementParser", () => {
       { name: "n", value: 2 },
     ]);
     expect(
-      new Where(new Operator.Between(new Literal(1), new Literal(0), new Literal(2))).getText(),
+      DefaultStatementTextRenderer.instance.render(new Where(new Operator.Between(new Literal(1), new Literal(0), new Literal(2)))),
     ).toBe("1 BETWEEN 0 AND 2");
-    expect(new Where(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))))).toBe(
       "1 NOT BETWEEN 0 AND 2",
     );
     expect(new Where(new Operator.NotBetween(new Literal(1), new Literal(0), new Literal(2))).parameters).toEqual(
       [],
     );
     expect(
-      new Where(
+      DefaultStatementTextRenderer.instance.render(new Where(
         new Operator.Between(new Identifier("age"), new Identifier("low"), new Identifier("high")),
-      ).map(same, keep).getText(),
+      ).map(same, keep)),
     ).toBe("age BETWEEN low AND high");
     expect(
-      new Where(new Operator.In(new Identifier("id"), new Subquery(plain))).map(same, keep).getText(),
-    ).toBe("id IN (SELECT 1)");
+      DefaultStatementTextRenderer.instance.render(new Where(new Operator.In(new Identifier("id"), new Subquery(plain))).map(same, keep)),
+    ).toBe("id IN (SELECT 1 FROM dual)");
+    const whereOnly = new SelectStatement({ where: new Where(new Operator.Equals("id", 1)) });
+    expect(new Where(new Operator.Exists(new Subquery(whereOnly))).map(same, keep)).toBeInstanceOf(Where);
     const bare = new SelectStatement({ table: "posts", fields: ["id"], joins: [Join.cross("tags")] });
-    expect(new Where(new Operator.Exists(new Subquery(bare))).map(same, keep).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Operator.Exists(new Subquery(bare))).map(same, keep))).toBe(
       "EXISTS (SELECT id FROM posts CROSS JOIN tags)",
     );
     expect(new Where(new Operator.Exists(new Subquery(bare))).parameters).toEqual([]);
@@ -256,21 +259,23 @@ describe("StatementParser", () => {
       { name: "age_1", value: 2 },
     ]);
     expect(
-      new Where(
+      DefaultStatementTextRenderer.instance.render(new Where(
         new Operator.In(new Identifier("id"), new ArrayExpression([new Identifier("x")])),
-      ).map(same, keep).getText(),
+      ).map(same, keep)),
     ).toBe("id IN ($id_0)");
-    expect(new Where(new Where(new Operator.Equals("id", 1))).map(same, keep).getText()).toBe(
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new Where(new Operator.Equals("id", 1))).map(same, keep))).toBe(
       "id = $id",
     );
-    expect(new Where(new ArrayExpression([new Literal(1)])).map(same, keep).getText()).toBe("1");
+    expect(DefaultStatementTextRenderer.instance.render(new Where(new ArrayExpression([new Literal(1)])).map(same, keep))).toBe("1");
     expect(Join.full("profiles", "users.id", "profiles.user_id").kind).toBe("full");
     expect(() =>
-      new SelectStatement({ table: "users", fields: ["id"], joins: [{ kind: "inner", table: "t" }] }).getText(),
+      DefaultStatementTextRenderer.instance.render(new SelectStatement({ table: "users", fields: ["id"], joins: [{ kind: "inner", table: "t" }] })),
     ).toThrow("empty join");
-    expect(() => new SelectStatement({ table: "users", fields: ["id"], offset: -1 })).toThrow(
-      "negative offset",
-    );
+    expect(() =>
+      DefaultStatementTextRenderer.instance.render(
+        new SelectStatement({ table: "users", fields: ["id"], offset: -1 }),
+      ),
+    ).toThrow("negative offset");
     expect(() => new Where(new Ghost() as IExpression).map(same, keep)).toThrow("empty expression");
   });
 
@@ -290,7 +295,7 @@ describe("StatementParser", () => {
     expect(() => evaluator.evaluate(new Operator.NotIn(new Identifier("id"), new Literal(1)), row)).toThrow(
       "empty in",
     );
-    const query = new Subquery(new SelectStatement("SELECT 1"));
+    const query = new Subquery(new SelectStatement({ table: "dual", fields: ["1"] }));
     expect(() => evaluator.evaluate(new Operator.Exists(query), row)).toThrow("subquery is not evaluable");
     expect(() => evaluator.evaluate(query, row)).toThrow("subquery is not evaluable");
   });

@@ -10,7 +10,8 @@ internal sealed class SqliteConnection : IConnection
 
     public string Filename { get; }
     public string Provider => "sqlite";
-    public ICommand CreateCommand() => new SqliteCommand(this);
+    public ICommand CreateCommand() =>
+        new SqliteCommand(this, new StatementTextRenderer(t => new SqliteStatementRenderer(t)));
     public bool IsOpen { get; private set; }
 
     public SqliteConnection(IReadOnlyDictionary<string, string?>? options)

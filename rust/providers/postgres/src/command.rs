@@ -2,13 +2,13 @@ use crate::bind::to_postgres;
 use crate::connection::{map_err, PostgresConnection};
 use crate::pg_value::PgValue;
 use crate::reader::PostgresReader;
-use crate::statement_factory::PostgresStatementFactory;
+use crate::statement_renderer::PostgresStatementRenderer;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, Native, Parameter, ParameterDirection, Reader, Response,
-    Result, ReturnStatement, Statement, StatementKind, Value,
+    Result, ReturnStatement, Statement, StatementKind, StatementTextRenderer, Value,
 };
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -25,6 +25,7 @@ struct PostgresExecuteResult {
 pub struct PostgresCommand {
     host: CommandMiddlewareHost,
     connection: Arc<PostgresConnection>,
+    statements: StatementTextRenderer,
 }
 
 impl PostgresCommand {
@@ -32,6 +33,7 @@ impl PostgresCommand {
         Self {
             host: CommandMiddlewareHost::new(),
             connection,
+            statements: StatementTextRenderer::new(Some(Box::new(PostgresStatementRenderer)), None),
         }
     }
 
@@ -196,7 +198,7 @@ impl Command for PostgresCommand {
         statement: &dyn Statement,
         parameters: Option<&[Parameter]>,
     ) -> Result<Box<dyn Reader>> {
-        let text = PostgresStatementFactory.transform(statement).get_text();
+        let text = self.statements.render(statement);
         self.execute_reader_native(&Native::new(text), parameters).await
     }
 
@@ -208,7 +210,7 @@ impl Command for PostgresCommand {
         if statement.kind() == StatementKind::Select || statement.as_any().is::<ReturnStatement>() {
             return self.first_cell(statement, parameters).await;
         }
-        let text = PostgresStatementFactory.transform(statement).get_text();
+        let text = self.statements.render(statement);
         self.execute_native(&Native::new(text), parameters).await
     }
 }

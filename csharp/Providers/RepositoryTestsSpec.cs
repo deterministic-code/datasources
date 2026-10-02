@@ -201,14 +201,14 @@ public static class RepositoryTestsSpec
         {
             var sql = step switch
             {
-                { Create: { } create } => new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col))).GetText(),
-                { Read: { } read } => new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) }).GetText(),
-                { Query: { } query } => new SelectStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null }).GetText(),
-                { ReadBy: { } readBy } => new SelectStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) }).GetText(),
-                { Update: { } update } => new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new Where(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"])))).GetText(),
-                { UpdateBy: { } updateBy } => new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where)).GetText(),
-                { Delete: { } delete } => new DeleteStatement(table, new Where(new Operator.Equals("id", Value.From(delete.Id)))).GetText(),
-                { DeleteBy: { } deleteBy } => new DeleteStatement(table, SqlWhere(deleteBy.Where)).GetText(),
+                { Create: { } create } => DefaultStatementTextRenderer.Instance.Render(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col)))),
+                { Read: { } read } => DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) })),
+                { Query: { } query } => DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null })),
+                { ReadBy: { } readBy } => DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) })),
+                { Update: { } update } => DefaultStatementTextRenderer.Instance.Render(new UpdateStatement(table, Fields(Flatten(update.Row, spec.Type), col => !ids.Contains(col)), new Where(new Operator.Equals("id", Value.From(Flatten(update.Row, spec.Type)["id"]))))),
+                { UpdateBy: { } updateBy } => DefaultStatementTextRenderer.Instance.Render(new UpdateStatement(table, Fields(Flatten(updateBy.Row, spec.Type), col => !ids.Contains(col)), SqlWhere(updateBy.Where))),
+                { Delete: { } delete } => DefaultStatementTextRenderer.Instance.Render(new DeleteStatement(table, new Where(new Operator.Equals("id", Value.From(delete.Id))))),
+                { DeleteBy: { } deleteBy } => DefaultStatementTextRenderer.Instance.Render(new DeleteStatement(table, SqlWhere(deleteBy.Where))),
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
             yield return sql;

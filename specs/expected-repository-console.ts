@@ -1,4 +1,5 @@
 import {
+  DefaultStatementTextRenderer,
   Literal,
   Operator,
   SelectStatement,
@@ -11,6 +12,9 @@ import {
   type Scalar,
 } from "@datasources/core";
 import { expectedConsoleSignatures } from "./expected-console-output.ts";
+
+const render = (statement: InsertStatement | SelectStatement | UpdateStatement | DeleteStatement): string =>
+  DefaultStatementTextRenderer.instance.render(statement);
 
 export type CanonicalType =
   | "int"
@@ -129,27 +133,29 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
         flattenRepositoryRow(step.CREATE.row, type.mappings),
         (col) => !ids.has(col),
       );
-      return withStatementSql(new InsertStatement(table, fields).getText(), true, type);
+      return withStatementSql(render(new InsertStatement(table, fields)), true, type);
     }
     if (step.READ)
       return withStatementSql(
-        new SelectStatement({ table, fields: columns, where: idWhere(type, step.READ.id) }).getText(),
+        render(new SelectStatement({ table, fields: columns, where: idWhere(type, step.READ.id) })),
         false,
         type,
       );
     if (step.QUERY)
       return withStatementSql(
-        new SelectStatement({
-          table,
-          fields: columns,
-          where: step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
-        }).getText(),
+        render(
+          new SelectStatement({
+            table,
+            fields: columns,
+            where: step.QUERY.where ? whereOf(step.QUERY.where) : undefined,
+          }),
+        ),
         false,
         type,
       );
     if (step.READBY)
       return withStatementSql(
-        new SelectStatement({ table, fields: columns, where: whereOf(step.READBY.where) }).getText(),
+        render(new SelectStatement({ table, fields: columns, where: whereOf(step.READBY.where) })),
         false,
         type,
       );
@@ -157,7 +163,7 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
       const flat = flattenRepositoryRow(step.UPDATE.row, type.mappings);
       const fields = fieldsOf(flat, (col) => !ids.has(col));
       return withStatementSql(
-        new UpdateStatement(table, fields, idWhere(type, flat.id as Scalar)).getText(),
+        render(new UpdateStatement(table, fields, idWhere(type, flat.id as Scalar))),
         true,
         type,
       );
@@ -168,20 +174,20 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
         (col) => !ids.has(col),
       );
       return withStatementSql(
-        new UpdateStatement(table, fields, whereOf(step.UPDATEBY.where)).getText(),
+        render(new UpdateStatement(table, fields, whereOf(step.UPDATEBY.where))),
         true,
         type,
       );
     }
     if (step.DELETE)
       return withStatementSql(
-        new DeleteStatement(table, idWhere(type, step.DELETE.id)).getText(),
+        render(new DeleteStatement(table, idWhere(type, step.DELETE.id))),
         true,
         type,
       );
     if (step.DELETEBY)
       return withStatementSql(
-        new DeleteStatement(table, whereOf(step.DELETEBY.where)).getText(),
+        render(new DeleteStatement(table, whereOf(step.DELETEBY.where))),
         true,
         type,
       );

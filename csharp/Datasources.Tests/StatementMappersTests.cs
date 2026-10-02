@@ -38,7 +38,7 @@ public class StatementMappersTests
         Assert.Equal("people.user_id", ((Operator.Equals)((Join)mapped.Joins[0]).On!).Left is Identifier left ? left.Name : "");
         Assert.Equal("logs", mapped.Joins[1].Table);
         Assert.Null(mapped.Joins[1].On);
-        Assert.Contains("full_name = $full_name", mapped.GetText());
+        Assert.Contains("full_name = $full_name", DefaultStatementTextRenderer.Instance.Render(mapped));
         Assert.Equal(new Value.Text("Name:BEA"), Assert.Single(mapped.Where!.Parameters).Value);
         Assert.Equal("Name", mappings.Property("full_name"));
         Assert.Equal("Name", mappings.Property("people.full_name"));
@@ -56,7 +56,7 @@ public class StatementMappersTests
             value is Value.Text text ? $"{name}:{text.Item.ToUpperInvariant()}" : value;
         var insert = Assert.IsType<InsertStatement>(mappings.Apply(
             new InsertStatement("User", [new Parameter("Name", "Ada")]), Mapper));
-        Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name)", insert.GetText());
+        Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name)", DefaultStatementTextRenderer.Instance.Render(insert));
         Assert.Equal(new Value.Text("Ada"), Assert.Single(insert.Fields).Value);
 
         var update = Assert.IsType<UpdateStatement>(mappings.Apply(
@@ -64,14 +64,14 @@ public class StatementMappersTests
             Mapper));
         Assert.Equal(
             "UPDATE people SET full_name = $full_name WHERE full_name = $full_name__where",
-            update.GetText());
+            DefaultStatementTextRenderer.Instance.Render(update));
         Assert.Equal(new Value.Text("Ada"), update.Parameters[0].Value);
         Assert.Equal("full_name__where", update.Parameters[1].Name);
         Assert.Equal(new Value.Text("Name:BEA"), update.Parameters[1].Value);
 
         var delete = Assert.IsType<DeleteStatement>(mappings.Apply(
             new DeleteStatement("User", new Where(new Operator.Equals("Name", "Bea"))), Mapper));
-        Assert.Equal("DELETE FROM people WHERE full_name = $full_name", delete.GetText());
+        Assert.Equal("DELETE FROM people WHERE full_name = $full_name", DefaultStatementTextRenderer.Instance.Render(delete));
 
         var inserted = Assert.IsType<SelectInsertedIdStatement>(mappings.Apply(
             new SelectInsertedIdStatement("User", "id"), Mapper));
@@ -86,15 +86,7 @@ public class StatementMappersTests
             new DictionaryMapper<string>(new Dictionary<string, string> { ["User"] = "people", ["Role"] = "roles" }),
             new DictionaryMapper<string>(new Dictionary<string, string> { ["Name"] = "full_name", ["title"] = "book.title", ["id"] = "user_id" }));
         Value Mapper(string name, Value value) => value;
-        var rawInsert = new InsertStatement("INSERT INTO t VALUES (1)");
-        Assert.Same(rawInsert, mappings.Apply(rawInsert, Mapper));
-        var rawUpdate = new UpdateStatement("x");
-        Assert.Same(rawUpdate, mappings.Apply(rawUpdate, Mapper));
-        var rawDelete = DeleteStatement.Raw("DELETE FROM t");
-        Assert.Same(rawDelete, mappings.Apply(rawDelete, Mapper));
-        var bare = new SelectStatement("SELECT 1");
-        Assert.Same(bare, mappings.Apply(bare, Mapper));
-        var call = new ExecuteStoredProcedureStatement("CALL save_user()");
+        var call = new ExecuteStoredProcedureStatement("save_user", []);
         Assert.Same(call, mappings.Apply(call, Mapper));
         Assert.Null(mappings.Apply((IStatement?)null, Mapper));
         Assert.Null(mappings.Apply((IWhere?)null, Mapper));
@@ -102,7 +94,7 @@ public class StatementMappersTests
         Assert.Same(text, mappings.Apply(text, Mapper));
         var kept = Assert.IsType<DeleteStatement>(mappings.Apply(new DeleteStatement("User", text), Mapper));
         Assert.Same(text, kept.Where);
-        Assert.Equal("DELETE FROM people WHERE name = $name", kept.GetText());
+        Assert.Equal("DELETE FROM people WHERE name = $name", DefaultStatementTextRenderer.Instance.Render(kept));
     }
 
     [Fact]
@@ -174,7 +166,7 @@ public class StatementMappersTests
         var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
         Assert.Equal(
             "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1",
-            mapped.GetText());
+            DefaultStatementTextRenderer.Instance.Render(mapped));
         Assert.Equal(new Value.Text("Contact.Email:ADA@EX.COM"), mapped.Where!.Parameters[0].Value);
         Assert.Equal(new Value.Text("Address.City:A"), mapped.Where.Parameters[1].Value);
         Assert.Equal(new Value.Text("ContactType.Name:PERSON"), Assert.Single(mapped.Having!.Parameters).Value);

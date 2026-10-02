@@ -4,7 +4,7 @@ use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::select_statement::SelectStatement;
 use crate::statements::statement::Statement;
-use crate::statements::text::Text;
+use crate::statements::DefaultStatementTextRenderer;
 use crate::statements::{
     ArrayExpression, DeleteStatement, Expression, Identifier, InsertStatement, Literal, Operator,
     OrderBy, SelectStatementOptions, UpdateStatement, Where,
@@ -50,7 +50,6 @@ impl<'a> Cursor<'a> {
     }
 
     fn parse_insert(&mut self) -> Result<InsertStatement> {
-        let start = self.i;
         self.expect_word("INSERT")?;
         self.expect_word("INTO")?;
         let table = self.ident()?;
@@ -71,7 +70,7 @@ impl<'a> Cursor<'a> {
             && values
                 .iter()
                 .zip(&columns)
-                .all(|(value, column)| value == &format!("${column}"))
+                .all(|(value, column)| value.trim() == format!("${column}"))
         {
             let fields: Vec<Parameter> = columns
                 .into_iter()
@@ -79,11 +78,10 @@ impl<'a> Cursor<'a> {
                 .collect();
             return Ok(InsertStatement::new(&table, &fields));
         }
-        Ok(InsertStatement::text(&self.text[start..self.i]))
+        empty()
     }
 
     fn parse_update(&mut self) -> Result<UpdateStatement> {
-        let start = self.i;
         self.expect_word("UPDATE")?;
         let table = self.ident()?;
         self.expect_word("SET")?;
@@ -108,17 +106,14 @@ impl<'a> Cursor<'a> {
                 clause.as_ref().map(|predicate| predicate as &dyn IWhere),
             ));
         }
-        Ok(UpdateStatement::text(
-            &self.text[start..self.i],
-            clause.map(|predicate| Box::new(predicate) as Box<dyn IWhere>),
-        ))
+        empty()
     }
 
     fn assignment(&mut self, columns: &mut Vec<String>) -> Result<bool> {
         let column = self.ident()?;
         self.expect_char('=')?;
         let raw = self.raw_expr()?;
-        let canonical = raw == format!("${column}");
+        let canonical = raw.trim() == format!("${column}");
         columns.push(column);
         Ok(canonical)
     }
@@ -260,7 +255,11 @@ impl<'a> Cursor<'a> {
         }
         let nested = self.nested()?;
         self.expect_word("AS")?;
-        Ok(format!("({}) AS {}", nested.get_text(), self.ident()?))
+        Ok(format!(
+            "({}) AS {}",
+            DefaultStatementTextRenderer::instance().render(&nested),
+            self.ident()?
+        ))
     }
 
     fn nested(&mut self) -> Result<SelectStatement> {
@@ -285,7 +284,12 @@ impl<'a> Cursor<'a> {
             joins.push(if kind == JoinKind::Cross {
                 Join::cross(table)
             } else {
-                Join::condition(kind, table, Where::new(self.on()?).get_text())
+                Join::condition(
+                    kind,
+                    table,
+                    DefaultStatementTextRenderer::instance()
+                        .render_where(&Where::new(self.on()?)),
+                )
             });
         }
         Ok(joins)
@@ -370,7 +374,9 @@ impl<'a> Cursor<'a> {
     fn predicate(&mut self) -> Result<Expression> {
         if self.try_word("EXISTS") {
             return Ok(Expression::Operator(Operator::exists(
-                Expression::Subquery(self.nested()?.get_text()),
+                Expression::Subquery(
+                    DefaultStatementTextRenderer::instance().render(&self.nested()?),
+                ),
             )));
         }
         let left = self.primary()?;
@@ -479,7 +485,9 @@ impl<'a> Cursor<'a> {
         if self.peek_word("SELECT") {
             let query = self.select_statement()?;
             self.expect_char(')')?;
-            return Ok(Expression::Subquery(query.get_text()));
+            return Ok(Expression::Subquery(
+                DefaultStatementTextRenderer::instance().render(&query),
+            ));
         }
         let mut items = vec![self.param()?];
         while self.try_char(',') {
@@ -494,7 +502,9 @@ impl<'a> Cursor<'a> {
             if self.peek_word("SELECT") {
                 let query = self.select_statement()?;
                 self.expect_char(')')?;
-                return Ok(Expression::Subquery(query.get_text()));
+                return Ok(Expression::Subquery(
+                    DefaultStatementTextRenderer::instance().render(&query),
+                ));
             }
             let inner = self.expr()?;
             self.expect_char(')')?;

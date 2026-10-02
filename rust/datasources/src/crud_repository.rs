@@ -30,7 +30,7 @@ use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
-use crate::{Expression, Literal, Operator, Text, Where};
+use crate::{Expression, Literal, Operator, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
@@ -434,7 +434,11 @@ impl CRUDRepository {
             .where_clause()
             .map(|clause| clause.parameters())
             .unwrap_or_default();
-        let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
+        let parameters = if parameters.is_empty()
+            && crate::DefaultStatementTextRenderer::instance()
+                .render(&statement)
+                .contains('$')
+        {
             self.params(&record, true)?
         } else {
             parameters

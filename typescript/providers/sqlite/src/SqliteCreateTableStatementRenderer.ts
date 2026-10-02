@@ -1,7 +1,7 @@
-import { CreateTableStatementRenderer, type Column } from "@datasources/core";
-import { columnTypes } from "./SqliteDriver.ts";
+import { CreateTableStatementTextRenderer, type Column } from "@datasources/core";
+import { columnTypes } from "./columnTypes.ts";
 
-export class SqliteCreateTableStatementRenderer extends CreateTableStatementRenderer {
+export class SqliteCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
   protected typeName(column: Column): string {
     return columnTypes[column.type] ?? column.type;
   }

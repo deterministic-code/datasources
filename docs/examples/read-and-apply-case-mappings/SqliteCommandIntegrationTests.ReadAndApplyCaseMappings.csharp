@@ -1,6 +1,6 @@
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+await command.Execute(Native.N("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"));
 await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var mapped = await reader.Read().Select(source =>

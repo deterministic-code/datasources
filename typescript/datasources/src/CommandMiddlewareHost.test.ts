@@ -5,9 +5,9 @@ describe("CommandMiddlewareHost", () => {
   it("base execute methods require a driver", () => {
     const host = new CommandMiddlewareHost();
     expect(() => host.execute("SELECT id FROM users")).toThrow("executeNative");
-    expect(() => host.execute("  ")).toThrow("executeNative");
+    expect(() => host.execute("  ")).toThrow("empty command");
     expect(() => host.executeReader("SELECT id FROM users")).toThrow("executeReaderNative");
-    expect(() => host.executeReader("")).toThrow("executeReaderNative");
+    expect(() => host.executeReader("")).toThrow("empty command");
   });
 
   it("rewrites the text and runs afterCommand", async () => {

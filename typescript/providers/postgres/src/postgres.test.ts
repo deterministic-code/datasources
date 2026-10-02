@@ -82,24 +82,24 @@ describe("PostgresConnection", () => {
     expect(await command.execute("INSERT INTO items (id) VALUES ($id)", [{ name: "id", value: 1 }]))
       .toMatchObject({ rowsAffected: 2, result: null });
     client.result = { rowCount: 0, rows: [] };
-    expect(await command.execute("INSERT INTO items (id) VALUES (1)")).toEqual({
+    expect(await command.executeNative(new Native("INSERT INTO items (id) VALUES (1)"))).toEqual({
       rowsAffected: 0,
       result: null,
       parameters: undefined,
     });
     client.result = { rowCount: null, rows: [{ id: 9 }] };
-    expect(await command.execute("UPDATE items SET n = 1")).toMatchObject({
+    expect(await command.executeNative(new Native("UPDATE items SET n = 1"))).toMatchObject({
       rowsAffected: 1,
       result: null,
     });
-    expect(await command.execute("   ")).toEqual({ rowsAffected: 0, parameters: undefined });
+    expect(await command.executeNative(new Native("   "))).toEqual({ rowsAffected: 0, parameters: undefined });
     client.result = { rowCount: null, rows: [{ id: 1 }] };
     expect(await command.executeReader("SELECT * FROM items")).toBeInstanceOf(Object);
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
       .toMatchObject({ rowsAffected: 1 });
-    expect(await (await command.executeReaderStatement(new SelectStatement("SELECT 1"))).next()).toBe(true);
+    expect(await (await command.executeReaderNative(new Native("SELECT 1"))).next()).toBe(true);
     await connection.startTransaction();
     await connection.startTransaction(IsolationLevel.ReadUncommitted);
     await connection.startTransaction(IsolationLevel.ReadCommitted);
@@ -193,11 +193,11 @@ describe("PostgresCommand", () => {
     const { command, client } = await setup();
     expect(await command.execute("DELETE FROM items", [{ name: "id", value: 1 }]))
       .toEqual({ result: null, rowsAffected: 2, parameters: [{ name: "id", value: 1 }] });
-    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
+    expect(await command.executeNative(new Native(""))).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
     const reader = await command.executeReader("SELECT * FROM items");
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 5 });
-    const empty = await command.executeReader("");
+    const empty = await command.executeReaderNative(new Native(""));
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
     client.result = { rowCount: 1, rows: [{ add_one: 5 }] };
@@ -205,12 +205,12 @@ describe("PostgresCommand", () => {
     expect(await command.executeStatement(new ReturnStatement("add_one", [n]), [n]))
       .toEqual({ result: 5, rowsAffected: 1, parameters: [n] });
     client.result = { rowCount: 0, rows: [] };
-    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({
+    expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({
       result: null,
       rowsAffected: 0,
     });
     client.result = { rowCount: 1, rows: [{}] };
-    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
+    expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({ result: null });
     client.result = { rowCount: 0, rows: [] };
     expect(await command.executeNative(new Native("SELECT 1"))).toEqual({
       result: null,

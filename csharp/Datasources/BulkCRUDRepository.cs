@@ -100,7 +100,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     BulkCommand Insert(T item)
     {
         var statement = crudStatements.Insert(Fields(Reverse(item), col => !Ids.Contains(col)));
-        return new(statement.GetText(), statement.Fields);
+        return new(DefaultStatementTextRenderer.Instance.Render(statement), statement.Fields);
     }
 
     BulkCommand UpdateCommand(T item, IWhere? byWhere)
@@ -110,7 +110,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = crudStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
-        return new(statement.GetText(), statement.Parameters);
+        return new(DefaultStatementTextRenderer.Instance.Render(statement), statement.Parameters);
     }
 
     BulkCommand DeleteCommand(T item, IWhere? byWhere)
@@ -119,8 +119,8 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         var statement = crudStatements.Delete(byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
         var parameters = statement.Where?.Parameters is { Count: > 0 } listed
             ? listed
-            : statement.GetText().Contains('$') ? Fields(record, _ => true) : [];
-        return new(statement.GetText(), parameters);
+            : DefaultStatementTextRenderer.Instance.Render(statement).Contains('$') ? Fields(record, _ => true) : [];
+        return new(DefaultStatementTextRenderer.Instance.Render(statement), parameters);
     }
 
     Row RowOf(T item)

@@ -8,14 +8,14 @@ public interface ICommand
     Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null);
     Task<IReader<Row>> ExecuteReader(string text, IReadOnlyList<Parameter>? parameters = null) =>
         string.IsNullOrWhiteSpace(text)
-            ? ExecuteReader(new Native(text), parameters)
+            ? throw new InvalidOperationException("empty command")
             : ExecuteReader(StatementParser.Parse(text), parameters);
     Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
         string.IsNullOrWhiteSpace(text)
-            ? Execute(new Native(text), parameters)
+            ? throw new InvalidOperationException("empty command")
             : Execute(StatementParser.Parse(text), parameters);
     Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        ExecuteReader(new Native(statement.GetText()), parameters);
+        ExecuteReader(new Native(DefaultStatementTextRenderer.Instance.Render(statement)), parameters);
     Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
-        Execute(new Native(statement.GetText()), parameters);
+        Execute(new Native(DefaultStatementTextRenderer.Instance.Render(statement)), parameters);
 }

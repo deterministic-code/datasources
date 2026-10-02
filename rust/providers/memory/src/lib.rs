@@ -23,8 +23,8 @@ mod tests {
     use datasources::{
         converters::Cells, create, default, register, reset, CRUDRepository, CRUDRepositoryOptions,
         Command, Connection, DatasourceError, ICRUDRepository, IReadonlyRepository,
-        InsertStatement, IsolationLevel, Parameter, Row, SelectInsertedIdStatement,
-        SelectStatement, Value, WhereText,
+        InsertStatement, IsolationLevel, Parameter, Row, SelectInsertedIdStatement, Value,
+        WhereText,
     };
     use serde_json::Value as JsonValue;
     use std::collections::HashMap;
@@ -169,12 +169,12 @@ mod tests {
         let repo = crud(conn.clone());
         assert!(repo.read_single(None, None).await.unwrap().is_some());
         assert!(repo
-            .read_single(Some(&SelectStatement::text("{\"id\":9}")), None)
+            .read_single(Some(&WhereText::new("{\"id\":9}")), None)
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(Some(&SelectStatement::text("{\"id\":1}")), None)
+            .read(Some(&WhereText::new("{\"id\":1}")), None)
             .await
             .unwrap()
             .is_empty());
@@ -191,7 +191,7 @@ mod tests {
         let created = repo.create(&mut rec(2, "b")).await.unwrap();
         assert_eq!(created.get("id"), Some(&Value::Int(2)));
         let updated = repo.update(&rec(2, "B"), None).await.unwrap();
-        assert_eq!(updated.rows_affected, 0);
+        assert_eq!(updated.rows_affected, 1);
         let updated_by_where = repo
             .update(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await
@@ -276,13 +276,13 @@ mod tests {
         ds.create_connection().await.unwrap();
         let command = ds.create_command(None).await.unwrap();
         command.execute("insert", None).await.unwrap();
-        assert!(command.execute_reader("", None).await.is_err());
+        command.execute_reader("", None).await.unwrap();
         let bound = ds
             .create_command(Some(ds.create_connection().await.unwrap()))
             .await
             .unwrap();
         bound.execute("insert", None).await.unwrap();
-        assert!(bound.execute_reader("", None).await.is_err());
+        bound.execute_reader("", None).await.unwrap();
         ds.create_repository::<Cells>(None, None);
         ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);
         assert_eq!(

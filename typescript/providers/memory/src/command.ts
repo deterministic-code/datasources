@@ -2,6 +2,7 @@ import {
   ArrayReader,
   CommandMiddlewareHost,
   DeleteStatement,
+  DefaultStatementTextRenderer,
   Native,
   InsertStatement,
   SelectInsertedIdStatement,
@@ -65,7 +66,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     }
     const clause = "where" in statement && statement.where instanceof Where ? statement.where : undefined;
     if (clause) {
-      return this.run(statement.getText(), parameters, async () => {
+      return this.run(DefaultStatementTextRenderer.instance.render(statement), parameters, async () => {
         this.connection.ensureOpen();
         const evaluator = new ExpressionEvaluator();
         const rows = this.connection
@@ -74,8 +75,12 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
       });
     }
-    if ("where" in statement && !looksJson(statement.where?.getText()) && !looksJson(statement.getText())) {
-      return this.run(statement.getText(), parameters, async () => {
+    if (
+      "where" in statement &&
+      !looksJson(renderWhere(statement.where)) &&
+      !looksJson(DefaultStatementTextRenderer.instance.render(statement))
+    ) {
+      return this.run(DefaultStatementTextRenderer.instance.render(statement), parameters, async () => {
         this.connection.ensureOpen();
         const rows = this.connection.rows(tableOf(statement), false);
         return { value: new ArrayReader(rows as Cells[]), rows: rows as Cells[] };
@@ -94,12 +99,13 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         ? this.write("update", parameters, tableOf(statement), false, statement.where)
         : statement instanceof DeleteStatement
           ? this.write("delete", parameters, tableOf(statement), false, statement.where)
-          : this.execute(statement.getText(), parameters);
+          : this.execute(DefaultStatementTextRenderer.instance.render(statement), parameters);
 
   async execute(
     text: string,
     parameters?: Parameter[],
   ): Promise<Response> {
+    if (!text.trim()) throw new Error("empty command");
     return this.run(text, parameters, async (query, params) => {
         this.connection.ensureOpen();
         const op = query.trim().toLowerCase();
@@ -176,7 +182,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     }
     const next = { ...obj };
     delete next.$where;
-    const filter = looksJson(where?.getText()) ? parseFilter(where!.getText()) : next;
+    const filter = looksJson(renderWhere(where)) ? parseFilter(renderWhere(where)!) : next;
     return this.applyUpdate(rows, next, filter);
   };
 
@@ -195,7 +201,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       rows.push(...remaining);
       return { result: undefined, rowsAffected };
     }
-    const filter = looksJson(where?.getText()) ? parseFilter(where!.getText()) : obj;
+    const filter = looksJson(renderWhere(where)) ? parseFilter(renderWhere(where)!) : obj;
     return this.applyDelete(rows, filter);
   };
 
@@ -230,17 +236,20 @@ const insertedId = (row: MemoryRecord, rows: MemoryRecord[]): number =>
 
 const looksJson = (text?: string): boolean => !!text?.trimStart().startsWith("{");
 
+const renderWhere = (where?: IWhere): string | undefined =>
+  where ? DefaultStatementTextRenderer.instance.render(where) : undefined;
+
 const filterText = (statement: IStatement): string => {
-  const where = "where" in statement ? (statement as { where?: IWhere }).where?.getText() : undefined;
+  const where = "where" in statement ? renderWhere((statement as { where?: IWhere }).where) : undefined;
   if (looksJson(where)) return where!;
-  const text = statement.getText();
+  const text = DefaultStatementTextRenderer.instance.render(statement);
   return looksJson(text) || !text.trim() ? text : "";
 };
 
 const tableOf = (statement: IStatement): string | undefined => {
   if ("table" in statement && typeof statement.table === "string" && statement.table.length > 0)
     return statement.table;
-  return tableIn(statement.getText());
+  return tableIn(DefaultStatementTextRenderer.instance.render(statement));
 };
 
 const tableIn = (text: string): string | undefined => {

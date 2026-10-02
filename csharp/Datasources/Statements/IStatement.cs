@@ -1,3 +1,6 @@
 namespace Datasources;
 
-public interface IStatement : IText;
+public interface IStatement
+{
+    string Accept(IStatementVisitor visitor);
+}

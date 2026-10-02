@@ -1,3 +1,11 @@
+
+fn stmt_text(statement: &dyn crate::Statement) -> String {
+    crate::DefaultStatementTextRenderer::instance().render(statement)
+}
+fn where_sql(clause: &dyn crate::IWhere) -> String {
+    crate::DefaultStatementTextRenderer::instance().render_where(clause)
+}
+
 #[allow(dead_code)]
 mod bulk_write_strategy;
 mod command;
@@ -581,7 +589,10 @@ async fn stubs_throw() {
         .is_err());
     assert!(ds.create_command(None).await.is_err());
     let command = closed.create_command();
-    assert!(command.execute("", None).await.is_err());
+    assert!(command
+        .execute_native(&Native::new("x"), None)
+        .await
+        .is_err());
     assert!(command
         .execute_reader_native(&Native::new("select"), Some(&[Parameter::new("id", 1_i64)]))
         .await
@@ -663,13 +674,22 @@ async fn published_mocks() {
     let command = MockCommand::new();
     command.execute_native(&crate::Native::new("insert"), None).await.unwrap();
     command
-        .execute_reader("", Some(&[Parameter::new("id", 1_i64)]))
+        .execute_reader_native(
+            &crate::Native::new(""),
+            Some(&[Parameter::new("id", 1_i64)]),
+        )
         .await
         .unwrap();
     command.set_execute_error("exec");
-    assert!(command.execute("", None).await.is_err());
+    assert!(command
+        .execute_native(&crate::Native::new("x"), None)
+        .await
+        .is_err());
     command.set_reader_error("read");
-    assert!(command.execute_reader("", None).await.is_err());
+    assert!(command
+        .execute_reader_native(&crate::Native::new("x"), None)
+        .await
+        .is_err());
 
     let reader = MockReader::new(vec![record(&[("id", Value::Int(1))])]);
     assert!(reader.next().await.unwrap());
@@ -683,7 +703,7 @@ async fn published_mocks() {
         .unwrap()
         .push(record(&[("id", Value::Int(1))]));
     assert!(repo
-        .read_single(Some(&SelectStatement::text("id=1")), None)
+        .read_single(Some(&WhereText::new("id=1")), None)
         .await
         .unwrap()
         .is_some());
@@ -740,18 +760,24 @@ async fn published_mocks() {
     assert_eq!(Datasource::provider(ds), "mock");
     ds.create_connection().await.unwrap();
     let command = ds.create_command(None).await.unwrap();
-    command.execute("", None).await.unwrap();
-    command.execute_reader("", None).await.unwrap();
+    command
+        .execute_native(&crate::Native::new(""), None)
+        .await
+        .unwrap();
+    command
+        .execute_reader_native(&crate::Native::new(""), None)
+        .await
+        .unwrap();
     ds.create_repository::<Cells>(None, None);
     ds.create_readonly_repository::<Cells>(None, None);
 
     let q = MockSelectStatement::new("q");
     let w = MockWhere::new("w");
-    assert_eq!(q.get_text(), "q");
-    assert_eq!(w.get_text(), "w");
-    assert_eq!(q.calls(), 1);
-    assert_eq!(w.calls(), 1);
-    assert_eq!(WhereText::new("x").get_text(), "x");
+    assert_eq!(stmt_text(&q), "q");
+    assert_eq!(where_sql(&w), "w");
+    assert_eq!(q.accept_calls(), 1);
+    assert_eq!(w.accept_calls(), 1);
+    assert_eq!(where_sql(&WhereText::new("x")), "x");
 
     let command = MockCommand::new();
     let seen = Arc::new(Mutex::new(Vec::new()));
@@ -784,7 +810,7 @@ fn statements_and_builders() {
         Operator::equals("id", 1_i64),
         Operator::greater_than("age", 18_i64),
     ));
-    assert_eq!(where_clause.get_text(), "id = $id AND age > $age");
+    assert_eq!(where_sql(&where_clause), "id = $id AND age > $age");
     assert_eq!(where_clause.parameters().len(), 2);
     assert_eq!(
         Where::new(Operator::not_equals("id", 2_i64))
@@ -819,47 +845,44 @@ fn statements_and_builders() {
     assert_eq!(where_clause.parameters()[0].value, Value::Int(1));
     assert_eq!(where_clause.parameters()[1].value, Value::Int(18));
     assert_eq!(
-        Where::new(Operator::not_equals("id", 2_i64)).get_text(),
+        where_sql(&Where::new(Operator::not_equals("id", 2_i64))),
         "id <> $id"
     );
     assert_eq!(
-        Where::new(Operator::less_than("n", 0_i64)).get_text(),
+        where_sql(&Where::new(Operator::less_than("n", 0_i64))),
         "n < $n"
     );
     assert_eq!(
-        Where::new(Operator::greater_than_or_equal("n", 0_i64)).get_text(),
+        where_sql(&Where::new(Operator::greater_than_or_equal("n", 0_i64))),
         "n >= $n"
     );
     assert_eq!(
-        Where::new(Operator::less_than_or_equal("n", 0_i64)).get_text(),
+        where_sql(&Where::new(Operator::less_than_or_equal("n", 0_i64))),
         "n <= $n"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(1_i64))),
             right: Box::new(Expression::Literal(Literal::new(1_i64))),
-        })
-        .get_text(),
+        })),
         "1 = 1"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(1_i64))),
             right: Box::new(Expression::Literal(Literal::new(0_i64))),
-        })
-        .get_text(),
+        })),
         "1 = 0"
     );
     assert_eq!(
-        Where::new(Operator::equals("id", 1_i64)).get_text(),
+        where_sql(&Where::new(Operator::equals("id", 1_i64))),
         "id = $id"
     );
     assert_eq!(
-        Where::new(Operator::or(
+        where_sql(&Where::new(Operator::or(
             where_clause.clone(),
             Operator::equals("name", "a")
-        ))
-        .get_text(),
+        ))),
         "(id = $id AND age > $age) OR name = $name"
     );
     assert_eq!(
@@ -872,36 +895,33 @@ fn statements_and_builders() {
         3
     );
     let not_where = Where::new(Operator::not(Where::new(Operator::equals("id", 1_i64))));
-    assert_eq!(not_where.get_text(), "NOT (id = $id)");
+    assert_eq!(where_sql(&not_where), "NOT (id = $id)");
     assert_eq!(not_where.parameters()[0].name, "id");
     assert_eq!(
-        Where::new(Operator::and(
+        where_sql(&Where::new(Operator::and(
             Operator::or(Operator::equals("id", 1_i64), Operator::equals("id", 2_i64)),
             Operator::equals("age", 18_i64)
-        ))
-        .get_text(),
+        ))),
         "(id = $id OR id = $id) AND age = $age"
     );
     assert_eq!(
-        Where::new(Operator::or(
+        where_sql(&Where::new(Operator::or(
             Operator::in_list("id", vec![Value::Int(1)]),
             Operator::equals("name", "a")
-        ))
-        .get_text(),
+        ))),
         "(id IN ($id_0)) OR name = $name"
     );
     assert_eq!(
-        Where::new(Expression::Identifier(Identifier::new("id"))).get_text(),
+        where_sql(&Where::new(Expression::Identifier(Identifier::new("id")))),
         "id"
     );
     assert!(Where::new(Expression::Identifier(Identifier::new("id")))
         .parameters()
         .is_empty());
     assert_eq!(
-        Where::new(Expression::Array(ArrayExpression::new(vec![
+        where_sql(&Where::new(Expression::Array(ArrayExpression::new(vec![
             Expression::Literal(Literal::new(1_i64))
-        ])))
-        .get_text(),
+        ])))),
         "1"
     );
     assert!(Where::new(Expression::Array(ArrayExpression::new(vec![
@@ -910,11 +930,10 @@ fn statements_and_builders() {
     .parameters()
     .is_empty());
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Identifier(Identifier::new("a"))),
             right: Box::new(Expression::Identifier(Identifier::new("b"))),
-        })
-        .get_text(),
+        })),
         "a = b"
     );
     assert!(Where::new(Operator::Equals {
@@ -924,82 +943,73 @@ fn statements_and_builders() {
     .parameters()
     .is_empty());
     assert_eq!(
-        Where::new(Operator::In {
+        where_sql(&Where::new(Operator::In {
             left: Box::new(Expression::Literal(Literal::new(1_i64))),
             right: Box::new(Expression::Literal(Literal::new(2_i64))),
-        })
-        .get_text(),
+        })),
         "1 IN 2"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(true))),
             right: Box::new(Expression::Literal(Literal::new(false))),
-        })
-        .get_text(),
+        })),
         "true = false"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(Value::Null))),
             right: Box::new(Expression::Literal(Literal::new(Value::Null))),
-        })
-        .get_text(),
+        })),
         "null = null"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(1.5_f64))),
             right: Box::new(Expression::Literal(Literal::new(2.5_f64))),
-        })
-        .get_text(),
+        })),
         "1.5 = 2.5"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new(Value::Decimal(
                 rust_decimal::Decimal::new(15, 1)
             )))),
             right: Box::new(Expression::Literal(Literal::new(Value::Decimal(
                 rust_decimal::Decimal::new(25, 1)
             )))),
-        })
-        .get_text(),
+        })),
         "1.5 = 2.5"
     );
     assert_eq!(
-        Where::new(Operator::Equals {
+        where_sql(&Where::new(Operator::Equals {
             left: Box::new(Expression::Literal(Literal::new("a"))),
             right: Box::new(Expression::Literal(Literal::new("b"))),
-        })
-        .get_text(),
+        })),
         "'a' = 'b'"
     );
-    assert!(Where::new(Operator::Equals {
+    assert!(where_sql(&Where::new(Operator::Equals {
         left: Box::new(Expression::Literal(Literal::new(Value::Uuid(
             uuid::Uuid::nil()
         )))),
         right: Box::new(Expression::Literal(Literal::new(Value::Uuid(
             uuid::Uuid::nil()
         )))),
-    })
-    .get_text()
+    }))
     .contains('='));
-    assert!(Where::new(Operator::Equals {
+    assert!(where_sql(&Where::new(Operator::Equals {
         left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
             chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
         )))),
         right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
             chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
         )))),
-    })
-    .get_text()
+    }))
     .contains('='));
-    assert!(Where::new(Operator::Equals {
+    assert!(where_sql(&Where::new(Operator::Equals {
         left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
         right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    })
-    .get_text()
+    }))
     .contains('='));
     assert!(Where::new(Operator::In {
         left: Box::new(Expression::Literal(Literal::new(1_i64))),
@@ -1008,22 +1018,21 @@ fn statements_and_builders() {
     .parameters()
     .is_empty());
     assert_eq!(
-        Where::new(Operator::and(
+        where_sql(&Where::new(Operator::and(
             Operator::not(Operator::equals("id", 1_i64)),
             Operator::equals("age", 18_i64)
-        ))
-        .get_text(),
+        ))),
         "(NOT (id = $id)) AND age = $age"
     );
     assert_eq!(
-        Where::new(Operator::in_list("id", vec![])).get_text(),
+        where_sql(&Where::new(Operator::in_list("id", vec![]))),
         "1 = 0"
     );
     assert!(Where::new(Operator::in_list("id", vec![]))
         .parameters()
         .is_empty());
     let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
-    assert_eq!(in_ids.get_text(), "id IN ($id_0, $id_1)");
+    assert_eq!(where_sql(&in_ids), "id IN ($id_0, $id_1)");
     assert_eq!(in_ids.parameters()[0].name, "id_0");
     assert_eq!(in_ids.parameters()[1].name, "id_1");
     match &where_clause.condition {
@@ -1049,12 +1058,12 @@ fn statements_and_builders() {
         ..SelectStatementOptions::new("users", &["id", "name"])
     });
     assert_eq!(
-        query.get_text(),
+        stmt_text(&query),
         "SELECT id, name FROM users WHERE id = $id AND age > $age"
     );
     assert!(query.where_clause().is_some());
     assert_eq!(
-        SelectStatement::new(SelectStatementOptions::new("users", &[])).get_text(),
+        stmt_text(&SelectStatement::new(SelectStatementOptions::new("users", &[]))),
         "SELECT * FROM users"
     );
     assert!(
@@ -1063,19 +1072,18 @@ fn statements_and_builders() {
             .is_none()
     );
     assert_eq!(
-        SelectStatement::new(SelectStatementOptions::new("users", &["id", "name"])).get_text(),
+        stmt_text(&SelectStatement::new(SelectStatementOptions::new("users", &["id", "name"]))),
         "SELECT id, name FROM users"
     );
     assert_eq!(
-        SelectStatement::new(SelectStatementOptions {
+        stmt_text(&SelectStatement::new(SelectStatementOptions {
             joins: &[Join::inner("orders", "users.id", "orders.user_id")],
             ..SelectStatementOptions::new("users", &["users.id", "orders.total"])
-        })
-        .get_text(),
+        })),
         "SELECT users.id, orders.total FROM users INNER JOIN orders ON users.id = orders.user_id"
     );
     assert_eq!(
-        SelectStatement::new(SelectStatementOptions {
+        stmt_text(&SelectStatement::new(SelectStatementOptions {
             where_clause: Some(&Where::new(Operator::equals("users.id", 1_i64))),
             joins: &[
                 Join::inner("orders", "users.id", "orders.user_id"),
@@ -1083,16 +1091,14 @@ fn statements_and_builders() {
                 Join::right("profiles", "users.id", "profiles.user_id"),
             ],
             ..SelectStatementOptions::new("users", &["users.id"])
-        })
-        .get_text(),
+        })),
         "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
     );
     assert_eq!(
-        SelectStatement::new(SelectStatementOptions {
+        stmt_text(&SelectStatement::new(SelectStatementOptions {
             joins: &[],
             ..SelectStatementOptions::new("users", &["id"])
-        })
-        .get_text(),
+        })),
         "SELECT id FROM users"
     );
     let count = Aggregate::count("*", Some("n"));
@@ -1111,48 +1117,47 @@ fn statements_and_builders() {
         ..SelectStatementOptions::new("orders", &grouped_fields)
     });
     assert_eq!(
-        grouped.get_text(),
+        stmt_text(&grouped),
         "SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10"
     );
     let by_status = SelectStatement::new(SelectStatementOptions {
         group_by: &["id"],
         ..SelectStatementOptions::new("users", &["id"])
     });
-    assert_eq!(by_status.get_text(), "SELECT id FROM users GROUP BY id");
+    assert_eq!(stmt_text(&by_status), "SELECT id FROM users GROUP BY id");
     let min_n = Aggregate::min("n", None);
     let max_n = Aggregate::max("n", None);
     let bound_fields = [min_n.as_str(), max_n.as_str()];
     let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
-    assert_eq!(bounds.get_text(), "SELECT MIN(n), MAX(n) FROM users");
+    assert_eq!(stmt_text(&bounds), "SELECT MIN(n), MAX(n) FROM users");
     let ordered = SelectStatement::new(SelectStatementOptions {
         order_by: &[OrderBy::asc("id"), OrderBy::desc("name")],
         ..SelectStatementOptions::new("users", &["id"])
     });
     assert_eq!(
-        ordered.get_text(),
+        stmt_text(&ordered),
         "SELECT id FROM users ORDER BY id ASC, name DESC"
     );
     let limited = SelectStatement::new(SelectStatementOptions {
         limit: Some(10),
         ..SelectStatementOptions::new("users", &["id"])
     });
-    assert_eq!(limited.get_text(), "SELECT id FROM users LIMIT 10");
+    assert_eq!(stmt_text(&limited), "SELECT id FROM users LIMIT 10");
     assert_eq!(
-        SelectStatement::new(SelectStatementOptions {
+        stmt_text(&SelectStatement::new(SelectStatementOptions {
             limit: Some(0),
             ..SelectStatementOptions::new("users", &["id"])
-        })
-        .get_text(),
+        })),
         "SELECT id FROM users LIMIT 0"
     );
     let insert = InsertStatement::new("users", &fields);
     assert_eq!(
-        insert.get_text(),
+        stmt_text(&insert),
         "INSERT INTO users (id, name) VALUES ($id, $name)"
     );
     let update = UpdateStatement::new("users", &fields, Some(&where_clause));
     assert_eq!(
-        update.get_text(),
+        stmt_text(&update),
         "UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age"
     );
     assert!(update.where_clause().is_some());
@@ -1161,12 +1166,12 @@ fn statements_and_builders() {
         .is_none());
     let delete = DeleteStatement::new("users", Some(&where_clause));
     assert_eq!(
-        delete.get_text(),
+        stmt_text(&delete),
         "DELETE FROM users WHERE id = $id AND age > $age"
     );
     assert!(delete.where_clause().is_some());
     assert_eq!(
-        DeleteStatement::new("users", None).get_text(),
+        stmt_text(&DeleteStatement::new("users", None)),
         "DELETE FROM users"
     );
     let create_table = CreateTableStatement::new(
@@ -1175,11 +1180,11 @@ fn statements_and_builders() {
         &[],
     );
     assert_eq!(
-        create_table.get_text(),
+        stmt_text(&create_table),
         "CREATE TABLE users (id INTEGER, name TEXT)"
     );
     struct ReplacedRenderer;
-    impl CreateTableStatementRenderer for ReplacedRenderer {
+    impl CreateTableStatementTextRenderer for ReplacedRenderer {
         fn render(&self, _statement: &CreateTableStatement) -> String {
             "CREATE TABLE replaced".into()
         }
@@ -1213,23 +1218,22 @@ fn statements_and_builders() {
         ],
     );
     assert_eq!(
-        named_table.get_text(),
+        stmt_text(&named_table),
         "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))"
     );
     assert_eq!(
-        CreateTableStatement::new(
+        stmt_text(&CreateTableStatement::new(
             "items",
             &[
                 Column::new("id", "INTEGER").default(ColumnDefault::new("0", None)),
                 Column::new("name", "TEXT").not_null(NotNull::new(None)),
             ],
             &[ForeignKey::new("fk_items_user", &["id"], "users", &["id"], None, None)],
-        )
-        .get_text(),
+        )),
         "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))"
     );
     assert_eq!(
-        CreateTableStatement::new(
+        stmt_text(&CreateTableStatement::new(
             "t",
             &[Column::new("id", "INTEGER")],
             &[ForeignKey::new(
@@ -1240,12 +1244,11 @@ fn statements_and_builders() {
                 Some(ReferentialAction::SetNull),
                 Some(ReferentialAction::SetDefault),
             )],
-        )
-        .get_text(),
+        )),
         "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)"
     );
     assert_eq!(
-        CreateTableStatement::new(
+        stmt_text(&CreateTableStatement::new(
             "t",
             &[Column::new("id", "INTEGER")],
             &[ForeignKey::new(
@@ -1256,42 +1259,39 @@ fn statements_and_builders() {
                 Some(ReferentialAction::Restrict),
                 Some(ReferentialAction::NoAction),
             )],
-        )
-        .get_text(),
+        )),
         "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)"
     );
     let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
     assert_eq!(
-        create_index.get_text(),
+        stmt_text(&create_index),
         "CREATE INDEX idx_orders_user ON orders (user_id)"
     );
     assert_eq!(
-        CreateIndexStatement::new("uq_orders_code", "orders", &["code"], true).get_text(),
+        stmt_text(&CreateIndexStatement::new("uq_orders_code", "orders", &["code"], true)),
         "CREATE UNIQUE INDEX uq_orders_code ON orders (code)"
     );
     let call = ExecuteStoredProcedureStatement::new("save", &fields);
-    assert_eq!(call.get_text(), "CALL save($id, $name)");
+    assert_eq!(stmt_text(&call), "CALL save($id, $name)");
     assert_eq!(
-        ExecuteStoredProcedureStatement::new("save", &[]).get_text(),
+        stmt_text(&ExecuteStoredProcedureStatement::new("save", &[])),
         "CALL save()"
     );
     let ret = ReturnStatement::new("add", &fields);
-    assert_eq!(ret.get_text(), "SELECT add($id, $name)");
-    assert_eq!(ReturnStatement::new("add", &[]).get_text(), "SELECT add()");
+    assert_eq!(stmt_text(&ret), "SELECT add($id, $name)");
+    assert_eq!(stmt_text(&ReturnStatement::new("add", &[])), "SELECT add()");
     assert_eq!(
-        ExecuteStoredProcedureStatement::new(
+        stmt_text(&ExecuteStoredProcedureStatement::new(
             "save",
             &[Parameter::new("id", 1_i64), Parameter::return_value("ret")]
-        )
-        .get_text(),
+        )),
         "CALL save($id)"
     );
     assert_eq!(
-        ReturnStatement::new(
+        stmt_text(&ReturnStatement::new(
             "add",
             &[Parameter::new("id", 1_i64), Parameter::return_value("ret")]
-        )
-        .get_text(),
+        )),
         "SELECT add($id)"
     );
     assert_eq!(
@@ -1304,30 +1304,50 @@ fn statements_and_builders() {
     );
     assert_eq!(Parameter::output("count").value, Value::Null);
     assert!(Response::new(1_i64, 2, None).parameters.is_none());
-    assert_eq!(ReturnStatement::text("x").get_text(), "x");
-
-    let query = SelectStatement::with_where("SELECT 1", WhereText::new("id = 1"));
-    assert_eq!(query.get_text(), "SELECT 1");
-    assert!(query.where_clause().is_some());
-    assert!(SelectStatement::text("SELECT 1").where_clause().is_none());
+    assert_eq!(
+        stmt_text(&InsertStatement::new("t", &[])),
+        "INSERT INTO t () VALUES ()"
+    );
+    assert_eq!(
+        stmt_text(&UpdateStatement::new(
+            "users",
+            &[Parameter::new("name", "a")],
+            None
+        )),
+        "UPDATE users SET name = $name"
+    );
+    assert_eq!(
+        stmt_text(&DeleteStatement::new("users", None)),
+        "DELETE FROM users"
+    );
+    assert_eq!(
+        stmt_text(&CreateTableStatement::new("t", &[], &[])),
+        "CREATE TABLE t ()"
+    );
+    assert_eq!(
+        stmt_text(&CreateIndexStatement::new("idx", "t", &["id"], false)),
+        "CREATE INDEX idx ON t (id)"
+    );
+    assert_eq!(
+        stmt_text(&ExecuteStoredProcedureStatement::new("save", &[])),
+        "CALL save()"
+    );
+    assert_eq!(
+        stmt_text(&ReturnStatement::new("add", &[])),
+        "SELECT add()"
+    );
     let mock = MockSelectStatement::with_where("q", MockWhere::new("w"));
     assert!(mock.where_clause().is_some());
-    assert_eq!(InsertStatement::text("x").get_text(), "x");
-    assert_eq!(UpdateStatement::text("x", None).get_text(), "x");
-    assert_eq!(DeleteStatement::raw("x", None).get_text(), "x");
-    assert_eq!(CreateTableStatement::text("x").get_text(), "x");
-    assert_eq!(CreateIndexStatement::text("x").get_text(), "x");
-    assert_eq!(ExecuteStoredProcedureStatement::text("x").get_text(), "x");
-    assert_eq!(ReturnStatement::text("x").get_text(), "x");
+
 }
 
 #[test]
 #[should_panic(expected = "negative limit")]
 fn rejects_a_negative_limit() {
-    SelectStatement::new(SelectStatementOptions {
+    let _ = stmt_text(&SelectStatement::new(SelectStatementOptions {
         limit: Some(-1),
         ..SelectStatementOptions::new("users", &["id"])
-    });
+    }));
 }
 
 #[test]
@@ -1963,18 +1983,18 @@ fn comparison_aliases() {
     let less_or_equal = Where::binary("n", le, 0);
     let both = equals.clone().and("is_enabled", eq, 0);
     let either = equals.clone().or("is_enabled", eq, 0);
-    assert_eq!(equals.get_text(), "username = $username");
-    assert_eq!(not_equals.get_text(), "id <> $id");
-    assert_eq!(greater.get_text(), "n > $n");
-    assert_eq!(less.get_text(), "n < $n");
-    assert_eq!(greater_or_equal.get_text(), "n >= $n");
-    assert_eq!(less_or_equal.get_text(), "n <= $n");
+    assert_eq!(where_sql(&equals), "username = $username");
+    assert_eq!(where_sql(&not_equals), "id <> $id");
+    assert_eq!(where_sql(&greater), "n > $n");
+    assert_eq!(where_sql(&less), "n < $n");
+    assert_eq!(where_sql(&greater_or_equal), "n >= $n");
+    assert_eq!(where_sql(&less_or_equal), "n <= $n");
     assert_eq!(
-        both.get_text(),
+        where_sql(&both),
         "username = $username AND is_enabled = $is_enabled"
     );
     assert_eq!(
-        either.get_text(),
+        where_sql(&either),
         "username = $username OR is_enabled = $is_enabled"
     );
 }

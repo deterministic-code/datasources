@@ -23,8 +23,8 @@ public partial class RegisterCreateTests
         var command = await ds.CreateCommand(connection);
         Assert.IsType<StubCommand>(command);
         Assert.Same(connection, command.Connection);
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(""));
-        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader(""));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.Execute(Native.N("x")));
+        await Assert.ThrowsAsync<ProviderNotImplementedException>(() => command.ExecuteReader(Native.N("x")));
         await Assert.ThrowsAsync<ProviderNotImplementedException>(() => ds.CreateCommand());
     }
 }

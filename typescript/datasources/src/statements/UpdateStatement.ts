@@ -1,80 +1,34 @@
 import type { Field } from "../builders/Field.ts";
-import type { Scalar } from "../builders/Scalar.ts";
 import type { Parameter } from "../Parameter.ts";
+import { DefaultStatementTextRenderer } from "./DefaultStatementTextRenderer.ts";
+import type { IStatementVisitor } from "./IStatementVisitor.ts";
 import type { IUpdateStatement } from "./IUpdateStatement.ts";
 import type { IWhere } from "./IWhere.ts";
-
-const rename = (text: string, name: string, alias: string): string => {
-  const token = `$${name}`;
-  const next = `$${alias}`;
-  let index = 0;
-  let result = "";
-  while (text.indexOf(token, index) >= 0) {
-    const at = text.indexOf(token, index);
-    const end = at + token.length;
-    const nextChar = text.charAt(end);
-    const boundary = nextChar === "" || !/[A-Za-z0-9_]/.test(nextChar);
-    result += text.slice(index, at) + (boundary ? next : token);
-    index = end;
-  }
-  return result + text.slice(index);
-};
-
-const compose = (
-  sql: string,
-  fields: Field[],
-  where?: IWhere,
-): { text: string; parameters: Parameter[] } => {
-  if (!where) return { text: sql, parameters: fields };
-  const text = `${sql} WHERE ${where.getText()}`;
-  const split = text.lastIndexOf(" WHERE ");
-  const head = text.slice(0, split);
-  let tail = text.slice(split);
-  const parameters: Parameter[] = [...fields];
-  const values = new Map<string, Scalar>();
-  for (const field of fields) values.set(field.name, field.value);
-  for (const parameter of where.parameters ?? []) {
-    if (parameter.value === undefined) continue;
-    const current = values.get(parameter.name);
-    if (values.has(parameter.name) && current !== parameter.value) {
-      const alias = `${parameter.name}__where`;
-      tail = rename(tail, parameter.name, alias);
-      parameters.push({ name: alias, value: parameter.value });
-    } else parameters.push({ name: parameter.name, value: parameter.value });
-  }
-  return { text: head + tail, parameters };
-};
-
-const setClause = (fields: Field[]): string =>
-  fields.map((field) => `${field.name} = $${field.name}`).join(", ");
+import { UpdateStatementTextRenderer } from "./UpdateStatementTextRenderer.ts";
 
 export class UpdateStatement implements IUpdateStatement {
-  readonly table?: string;
+  readonly table: string;
   readonly fields: Field[];
   readonly where?: IWhere;
-  private readonly text?: string;
 
-  constructor(text: string, where?: IWhere);
-  constructor(table: string, fields: Field[], where?: IWhere);
-  constructor(tableOrText: string, fieldsOrWhere?: Field[] | IWhere, where?: IWhere) {
-    if (Array.isArray(fieldsOrWhere)) {
-      this.table = tableOrText;
-      this.fields = fieldsOrWhere;
-      this.where = where;
-      return;
-    }
-    this.text = tableOrText;
-    this.fields = [];
-    this.where = fieldsOrWhere;
+  constructor(table: string, fields: Field[], where?: IWhere) {
+    this.table = table;
+    this.fields = fields;
+    this.where = where;
   }
 
-  getText = (): string =>
-    this.text ?? compose(`UPDATE ${this.table} SET ${setClause(this.fields)}`, this.fields, this.where).text;
+  accept = (visitor: IStatementVisitor): string => visitor.visit(this);
 
   get parameters(): Parameter[] {
-    return this.text !== undefined ? [] : compose("", this.fields, this.where).parameters;
+    return new UpdateStatementTextRenderer(DefaultStatementTextRenderer.instance)
+      .compose(
+        `UPDATE ${this.table} SET ${this.fields.map((item) => `${item.name} = $${item.name}`).join(", ")}`,
+        this.where,
+        this.fields,
+      ).parameters;
   }
 
   static parameterList = (fields: Field[], where?: IWhere): Parameter[] =>
-    compose("", fields, where).parameters;
+    new UpdateStatementTextRenderer(DefaultStatementTextRenderer.instance).compose("", where, fields)
+      .parameters;
 }

@@ -6,6 +6,7 @@ import {
   ParameterDirection,
   ReturnStatement,
   SelectStatement,
+  StatementTextRenderer,
   Response,
   splitStatements,
   statementReader,
@@ -15,15 +16,18 @@ import {
   type IStatement,
   type Parameter,
 } from "@datasources/core";
-import { PostgresStatementFactory } from "./PostgresStatementFactory.ts";
 import { bindParameters, toPostgres } from "./bind.ts";
 import type { PostgresConnection } from "./connection.ts";
 import type { PostgresExecuteResult } from "./i-postgres-driver.ts";
 import type { Scalar } from "./scalar.ts";
+import { PostgresStatementRenderer } from "./PostgresStatementRenderer.ts";
 
 export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
-  constructor(readonly connection: PostgresConnection) {
+  private readonly statements: StatementTextRenderer;
+
+  constructor(readonly connection: PostgresConnection, statements?: StatementTextRenderer) {
     super();
+    this.statements = statements ?? new StatementTextRenderer(t => new PostgresStatementRenderer(t));
   }
 
   async executeReaderNative(
@@ -47,19 +51,13 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     statement: IStatement,
     parameters?: Parameter[],
   ): Promise<IReader<Cells>> {
-    return this.executeReaderNative(
-      new Native(new PostgresStatementFactory().transform(statement).getText()),
-      parameters,
-    );
+    return this.executeReaderNative(new Native(this.statements.render(statement)), parameters);
   }
 
   async executeStatement(statement: IStatement, parameters?: Parameter[]): Promise<Response> {
     return statement instanceof SelectStatement || statement instanceof ReturnStatement
       ? this.firstCell(statement, parameters)
-      : this.executeNative(
-          new Native(new PostgresStatementFactory().transform(statement).getText()),
-          parameters,
-        );
+      : this.executeNative(new Native(this.statements.render(statement)), parameters);
   }
 
   private async firstCell(statement: IStatement, parameters?: Parameter[]): Promise<Response> {

@@ -41,11 +41,13 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
             IInsertStatement => Execute("insert", parameters),
             IUpdateStatement update => Execute("update", WithWhere(parameters, update.Where)),
             IDeleteStatement delete => Execute("delete", WithWhere(parameters, delete.Where)),
-            _ => Execute(statement.GetText(), parameters)
+            _ => Execute(DefaultStatementTextRenderer.Instance.Render(statement), parameters)
         };
 
     public override Task<Response> Execute(string text, IReadOnlyList<Parameter>? parameters = null) =>
-        Run(text, parameters, async (query, paramsList) =>
+        string.IsNullOrWhiteSpace(text)
+            ? throw new InvalidOperationException("empty command")
+            : Run(text, parameters, async (query, paramsList) =>
         {
             Typed.EnsureOpen();
             var op = query.Trim().ToLowerInvariant();
@@ -146,16 +148,19 @@ internal sealed class JsonCommand : CommandMiddlewareHost, ICommand
 
     static string FilterText(IStatement statement)
     {
-        var where = statement is ISelectStatement query ? query.Where?.GetText() : null;
+        var where = statement is ISelectStatement query ? RenderWhere(query.Where) : null;
         if (LooksJson(where)) return where!;
-        var text = statement.GetText();
+        var text = DefaultStatementTextRenderer.Instance.Render(statement);
         return LooksJson(text) || string.IsNullOrWhiteSpace(text) ? text : "";
     }
 
     static IReadOnlyList<Parameter>? WithWhere(IReadOnlyList<Parameter>? parameters, IWhere? where) =>
-        LooksJson(where?.GetText())
-            ? [.. parameters ?? [], new Parameter("$where", where!.GetText())]
+        LooksJson(RenderWhere(where))
+            ? [.. parameters ?? [], new Parameter("$where", RenderWhere(where)!)]
             : parameters;
+
+    static string? RenderWhere(IWhere? where) =>
+        where is null ? null : DefaultStatementTextRenderer.Instance.Render(where);
 
     static bool LooksJson(string? text) => text?.TrimStart().StartsWith('{') == true;
 

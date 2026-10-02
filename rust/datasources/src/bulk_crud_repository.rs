@@ -23,7 +23,7 @@ use crate::single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
-use crate::{Expression, Literal, Operator, Text, Where};
+use crate::{DefaultStatementTextRenderer, Expression, Literal, Operator, Where};
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
@@ -250,7 +250,7 @@ fn insert_command(
     let record = readonly.reverse_convert(item)?;
     let fields = params(repo, &record, false)?;
     let statement = statements.insert(&fields);
-    Ok((statement.get_text(), statement.fields().to_vec()))
+    Ok((DefaultStatementTextRenderer::instance().render(&statement), statement.fields().to_vec()))
 }
 
 fn update_command(
@@ -279,7 +279,7 @@ fn update_command(
     let statement = statements.update(&fields, clause, &|name, value| {
         stored_repo(repo).cell(name, value, applied)
     })?;
-    Ok((statement.get_text(), statement.parameters()))
+    Ok((DefaultStatementTextRenderer::instance().render(&statement), statement.parameters()))
 }
 
 fn delete_command(
@@ -306,12 +306,13 @@ fn delete_command(
         .where_clause()
         .map(|clause| clause.parameters())
         .unwrap_or_default();
-    let parameters = if parameters.is_empty() && statement.get_text().contains('$') {
+    let rendered = DefaultStatementTextRenderer::instance().render(&statement);
+    let parameters = if parameters.is_empty() && rendered.contains('$') {
         params(repo, &record, true)?
     } else {
         parameters
     };
-    Ok((statement.get_text(), parameters))
+    Ok((rendered, parameters))
 }
 
 fn stored_row(

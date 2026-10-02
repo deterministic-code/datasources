@@ -10,7 +10,7 @@ public sealed class SchemaTests
     [InlineData("postgres")]
     public void CreatesPhysicalTablesWithForeignKeys(string provider)
     {
-        var sql = string.Join("\n", Schema.Tables(provider).Select(table => table.GetText()));
+        var sql = string.Join("\n", Schema.Tables(provider).Select(table => DefaultStatementTextRenderer.Instance.Render(table)));
         Assert.Contains("tbl_Contacts", sql);
         Assert.Contains("m_FirstName", sql);
         Assert.Contains($"FOREIGN KEY ({Schema.Ident(provider, "ContactSourceId")}) REFERENCES", sql);
@@ -26,7 +26,7 @@ public sealed class SchemaTests
     {
         var source = Schema.Tables("sqlite")[0];
         Assert.True(source.Columns[0].Identity);
-        Assert.Contains("CONSTRAINT pk_ContactSource PRIMARY KEY", source.GetText());
+        Assert.Contains("CONSTRAINT pk_ContactSource PRIMARY KEY", DefaultStatementTextRenderer.Instance.Render(source));
     }
 
     [Fact]
@@ -40,10 +40,10 @@ public sealed class SchemaTests
     [Fact]
     public void LegacyKeyIsThePrimaryKey()
     {
-        var sqlite = Schema.Tables("sqlite").Single(table => table.GetText().Contains("legacy_contact")).GetText();
-        var mysql = Schema.Tables("mysql").Single(table => table.GetText().Contains("legacy_contact")).GetText();
-        Assert.Contains("PRIMARY KEY (\"m_Key\")", sqlite);
-        Assert.Contains("PRIMARY KEY (`m_Key`)", mysql);
+        var sqlite = Schema.Tables("sqlite").Single(table => DefaultStatementTextRenderer.Instance.Render(table).Contains("legacy_contact"));
+        var mysql = Schema.Tables("mysql").Single(table => DefaultStatementTextRenderer.Instance.Render(table).Contains("legacy_contact"));
+        Assert.Contains("PRIMARY KEY (\"m_Key\")", DefaultStatementTextRenderer.Instance.Render(sqlite));
+        Assert.Contains("PRIMARY KEY (`m_Key`)", DefaultStatementTextRenderer.Instance.Render(mysql));
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (3, 'bea')"));
 await using reader = await command.executeReader("SELECT id, name FROM items");
 const rows = await Array.fromAsync(reader.read());

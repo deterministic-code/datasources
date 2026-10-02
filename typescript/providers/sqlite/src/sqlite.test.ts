@@ -147,7 +147,7 @@ describe("SqliteCommand", () => {
       rowsAffected: 2,
       parameters: [{ name: "id", value: 1 }],
     });
-    expect(await command.execute("")).toEqual({ result: undefined, rowsAffected: 0 });
+    expect(await command.executeNative(new Native(""))).toEqual({ result: undefined, rowsAffected: 0 });
     db.rows = [{ abs: 3 }];
     const x = { name: "x", value: -3 };
     expect(await command.executeStatement(new ReturnStatement("abs", [x]), [x])).toEqual({
@@ -169,7 +169,7 @@ describe("SqliteCommand", () => {
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 2, name: "b" });
     await reader.dispose();
-    const empty = await command.executeReader("");
+    const empty = await command.executeReaderNative(new Native(""));
     expect(await empty.next()).toBe(false);
     expect(await (await command.executeReaderNative(new Native(";"))).next()).toBe(false);
     db.bySql = { "SELECT 1 AS id": [{ id: 1 }], "SELECT 2 AS id": [{ id: 2 }] };
@@ -186,15 +186,15 @@ describe("SqliteCommand", () => {
     await sets.dispose();
     db.bySql = undefined;
     db.rows = [];
-    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toEqual({
+    expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toEqual({
       result: null,
       rowsAffected: 0,
       parameters: undefined,
     });
     db.rows = [{}];
-    expect(await command.executeStatement(new SelectStatement("SELECT 1"))).toMatchObject({ result: null });
+    expect(await command.executeStatement(new SelectStatement({ table: "dual", fields: ["1"] }))).toMatchObject({ result: null });
     db.omitRowid = false;
-    expect(await command.executeStatement(new CreateTableStatement("items"))).toMatchObject({
+    expect(await command.executeStatement(new CreateTableStatement("items", [{ name: "id", type: "INTEGER" }]))).toMatchObject({
       result: null,
       rowsAffected: 2,
     });

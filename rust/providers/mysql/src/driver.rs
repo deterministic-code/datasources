@@ -1,14 +1,18 @@
 use crate::connection::MysqlConnection;
 use crate::converters;
+use crate::statement_renderer::MysqlStatementRenderer;
 use crate::transaction::MysqlTransaction;
 use datasources::{
     downcast_connection, Command, Connection, DatasourceError, Driver, IsolationLevel, Result,
-    Transaction, TypeConverter, Value,
+    StatementTextRenderer, Transaction, TypeConverter, Value,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 pub struct MysqlDriver;
+
+static STATEMENTS: LazyLock<StatementTextRenderer> =
+    LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(MysqlStatementRenderer)), None));
 
 pub(crate) fn column_sql(name: &str) -> Option<&'static str> {
     Some(match name {
@@ -51,6 +55,10 @@ impl Driver for MysqlDriver {
         column_sql(name)
             .map(str::to_string)
             .ok_or_else(|| DatasourceError::message(format!("Unknown mysql type \"{name}\"")))
+    }
+
+    fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
+        Some(&STATEMENTS)
     }
 }
 

@@ -1,7 +1,7 @@
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (3, 'bea')"));
 await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
 var rows = await reader.Read().ToListAsync();

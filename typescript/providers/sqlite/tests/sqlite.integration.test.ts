@@ -7,6 +7,7 @@ import {
   Native,
   ReturnStatement,
   MetaDataRowTypeConverter,
+  StatementTextRenderer,
   TransformMapper,
 } from "@datasources/core";
 import {
@@ -17,10 +18,13 @@ import {
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
-import { SqliteStatementFactory } from "../src/SqliteStatementFactory.ts";
+import { SqliteStatementRenderer } from "../src/SqliteStatementRenderer.ts";
 import { applySchema } from "../../../schema-spec.ts";
 
-const dialect = loadDialect("sqlite", (statement) => new SqliteStatementFactory().transform(statement).getText());
+const dialect = loadDialect(
+  "sqlite",
+  (statement) => new StatementTextRenderer(t => new SqliteStatementRenderer(t)).render(statement),
+);
 
 class NameValue {
   name = "";
@@ -77,7 +81,7 @@ describe("command", () => {
     await connection.open();
     const command = connection.createCommand();
     await applySchema(connection, "flags");
-    await command.execute("INSERT INTO flags (enabled, count) VALUES (1, 1)");
+    await command.executeNative(new Native("INSERT INTO flags (enabled, count) VALUES (1, 1)"));
     await using reader = await command.executeReaderNative(new Native("SELECT enabled, count, 1 AS one FROM flags"));
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ enabled: true, count: 1, one: 1 });
@@ -87,9 +91,9 @@ describe("command", () => {
     const ds = Datasource.default;
     const command = await ds.createCommand();
     await applySchema(command.connection, "items");
-    await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-    await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-    await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+    await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+    await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+    await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (3, 'bea')"));
     await using reader = await command.executeReader("SELECT id, name FROM items");
     const rows = await Array.fromAsync(reader.read());
     expect(rows).toEqual([
@@ -103,7 +107,7 @@ describe("command", () => {
     const ds = Datasource.default;
     const command = await ds.createCommand();
     await applySchema(command.connection, "case-contacts");
-    await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+    await command.executeNative(new Native("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"));
     await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
     const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
     const mapped = await Array.fromAsync(reader.read(), (source) =>
@@ -116,8 +120,8 @@ describe("command", () => {
     const ds = Datasource.default;
     const command = await ds.createCommand();
     await applySchema(command.connection, "flat-users");
-    await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
-    await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+    await command.executeNative(new Native("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"));
+    await command.executeNative(new Native("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
     await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
     const rows = await Array.fromAsync(reader.read());
     const mapper = new FlatToNestedMapper<{
@@ -144,9 +148,9 @@ describe("command", () => {
     await connection.open();
     const command = connection.createCommand();
     await applySchema(connection, "settings");
-    await command.execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
-    await command.execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
-    await command.execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
+    await command.executeNative(new Native("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"));
+    await command.executeNative(new Native("INSERT INTO settings (name, value) VALUES ('lang', 'en')"));
+    await command.executeNative(new Native("INSERT INTO settings (name, value) VALUES ('size', 'lg')"));
     await using reader = await command.executeReader("SELECT name, value FROM settings");
     const converter = new MetaDataRowTypeConverter<NameValue>();
     const items = await Array.fromAsync(reader.read(), (row) => converter.convert(row, NameValue));
@@ -195,8 +199,10 @@ describe("command", () => {
     const ds = Datasource.default;
     const command = await ds.createCommand();
     await applySchema(command.connection, "flat-contact-users");
-    await command.execute(
-      "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+    await command.executeNative(
+      new Native(
+        "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+      ),
     );
     await using reader = await command.executeReader(
       "SELECT contact_name1, contact_name2, email, id, username FROM users",

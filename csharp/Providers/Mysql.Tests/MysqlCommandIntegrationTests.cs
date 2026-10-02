@@ -42,7 +42,8 @@ public class MysqlCommandIntegrationTests
     {
         var url = Environment.GetEnvironmentVariable("MYSQL_URL");
         if (string.IsNullOrEmpty(url)) return;
-        var dialect = SqlSpec.Dialect.Load("mysql", static statement => new MysqlStatementFactory().Transform(statement).GetText());
+        var dialect = SqlSpec.Dialect.Load("mysql", static statement =>
+            new StatementTextRenderer(t => new MysqlStatementRenderer(t)).Render(statement));
         foreach (var path in Directory.GetFiles(SqlSpec.SpecsDir(), "*.yaml").Where(path => Path.GetFileName(path) != "schemas.yaml"))
         {
             var isolated = await Isolate(url);

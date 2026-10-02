@@ -15,7 +15,7 @@ public sealed class MockCommand : CommandMiddlewareHost, ICommand
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>
         statement is SelectInsertedIdStatement inserted
             ? ExecuteReader(new Native($"{inserted.Table}.{inserted.Column}"), parameters)
-            : ExecuteReader(new Native(statement.GetText()), parameters);
+            : ExecuteReader(new Native(DefaultStatementTextRenderer.Instance.Render(statement)), parameters);
 
     public Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null) =>
         Run(text.Text, parameters, (query, paramsList) =>

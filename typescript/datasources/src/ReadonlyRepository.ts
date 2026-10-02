@@ -225,5 +225,5 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
           ? this.readonlyStatements.select(
               this.statementMappers.applyWhere(query, (name, cell) => this.cell(name, cell, false))!,
             )
-          : new SelectStatement(query.getText(), query);
+          : new SelectStatement({ where: query });
 }

@@ -2,8 +2,8 @@ namespace Datasources;
 
 public sealed class SelectStatementOptions
 {
-    public required string Table { get; init; }
-    public required IReadOnlyList<string> Fields { get; init; }
+    public string Table { get; init; } = "";
+    public IReadOnlyList<string> Fields { get; init; } = [];
     public bool Distinct { get; init; }
     public IWhere? Where { get; init; }
     public IReadOnlyList<Join>? Joins { get; init; }

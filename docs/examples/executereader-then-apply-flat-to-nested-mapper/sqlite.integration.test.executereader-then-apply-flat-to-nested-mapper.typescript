@@ -1,7 +1,7 @@
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
-await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+await command.executeNative(new Native("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"));
+await command.executeNative(new Native("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
 await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
 const rows = await Array.fromAsync(reader.read());
 const mapper = new FlatToNestedMapper<{

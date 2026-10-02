@@ -20,7 +20,7 @@ describe("MockCommand", () => {
       rowsAffected: 2,
     });
     expect(command.executeCalls).toHaveLength(1);
-    const reader = await command.executeReader("");
+    const reader = await command.executeReaderNative(new Native(""));
     expect(reader).toBe(command.reader);
 
     command.reader = {
@@ -37,7 +37,7 @@ describe("MockCommand", () => {
     expect(await command.executeReaderNative(new Native("plain"))).toBe(command.reader);
 
     command.executeError = new Error("exec");
-    await expect(command.execute("")).rejects.toThrow("exec");
+    await expect(command.executeNative(new Native(""))).rejects.toThrow("exec");
     command.executeReaderError = new Error("read");
     await expect(command.executeReaderNative(new Native("x"))).rejects.toThrow("read");
 

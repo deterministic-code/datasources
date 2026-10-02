@@ -1,10 +1,10 @@
 use crate::converters::field;
 use crate::driver::column_sql;
-use datasources::{Column, ColumnDefault, CreateTableStatementRenderer, Value};
+use datasources::{Column, ColumnDefault, CreateTableStatementTextRenderer, Value};
 
 pub struct PostgresCreateTableStatementRenderer;
 
-impl CreateTableStatementRenderer for PostgresCreateTableStatementRenderer {
+impl CreateTableStatementTextRenderer for PostgresCreateTableStatementRenderer {
     fn type_name(&self, column: &Column) -> String {
         column_sql(&column.type_name)
             .map(str::to_string)

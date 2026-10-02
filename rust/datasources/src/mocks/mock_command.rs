@@ -88,7 +88,7 @@ impl Command for MockCommand {
             .downcast_ref::<SelectInsertedIdStatement>()
         {
             Some(inserted) => format!("{}.{}", inserted.table, inserted.column),
-            _ => statement.get_text(),
+            _ => crate::DefaultStatementTextRenderer::instance().render(statement),
         };
         self.execute_reader_native(&Native::new(text), parameters).await
     }

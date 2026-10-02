@@ -4,8 +4,13 @@ namespace Datasources.Postgres;
 
 public sealed class PostgresDriver : IDriver
 {
+    static readonly StatementTextRenderer Statements =
+        new(t => new PostgresStatementRenderer(t));
+
+    public StatementTextRenderer? StatementRenderer => Statements;
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new PostgresConnection(options);
-    public ICommand Command(IConnection connection) => connection.CreateCommand();
+    public ICommand Command(IConnection connection) =>
+        new PostgresCommand((PostgresConnection)connection, Statements);
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted) =>
         new PostgresTransaction((PostgresConnection)connection, isolation);
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters => PostgresRowTypeConverters.All;

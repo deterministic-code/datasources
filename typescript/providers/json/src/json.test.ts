@@ -17,7 +17,9 @@ import {
   Datasource,
   DatasourceFactory,
   DatasourceError,
+  CreateTableStatement,
   InsertStatement,
+  Native,
   SelectStatement,
   UpdateStatement,
   WhereText,
@@ -281,18 +283,14 @@ describe("JsonCommand and CRUDRepository", () => {
       rowsAffected: 1,
     });
     await expect(command.execute("nope")).rejects.toThrow("Unsupported JSON");
-    await expect(command.execute("")).rejects.toThrow("Unsupported JSON");
+    await expect(command.execute("")).rejects.toThrow("empty command");
     expect(await collectAsync(repo.read())).toEqual([]);
   });
 
   it("performs repository CRUD", async () => {
     const { repo } = await openRepo([{ id: 1, name: "a" }]);
     expect(await repo.readSingle()).toEqual({ id: 1, name: "a" });
-    expect(await repo.readSingle(new SelectStatement('{"id":9}'))).toBeUndefined();
-    expect(await collectAsync(repo.read(new SelectStatement('{"id":1}')))).toEqual([
-      { id: 1, name: "a" },
-    ]);
-    expect(await repo.readSingle(new WhereText('{"id":1}'))).toEqual({ id: 1, name: "a" });
+    expect(await repo.readSingle(new WhereText('{"id":9}'))).toBeUndefined();
     expect(await collectAsync(repo.read(new WhereText('{"id":1}')))).toEqual([
       { id: 1, name: "a" },
     ]);
@@ -351,10 +349,17 @@ describe("Json datasource", () => {
     expect(registered.createRepository(untyped())).toBeInstanceOf(CRUDRepository);
     const provider = new JsonDriver();
     expect(provider.transaction(connection).isolation).toBe("readCommitted");
-    await expect(command.executeStatement(new SelectStatement("nope"))).rejects.toThrow(
+    await expect(command.executeNative(new Native("nope"))).rejects.toThrow(
       "Unsupported JSON",
     );
+    expect(await (await command.executeReaderNative(new Native("{}"))).next()).toBe(true);
+    await expect(
+      command.executeStatement(new CreateTableStatement("t", [{ name: "id", type: "INTEGER" }])),
+    ).rejects.toThrow("Unsupported JSON");
     await command.executeReaderStatement(new InsertStatement("t", []));
+    await command.executeReaderStatement({
+      accept: () => '{"id":1}',
+    } as SelectStatement);
     await command.executeStatement(
       new UpdateStatement("t", [{ name: "name", value: "Z" }], new WhereText('{"id":99}')),
     );

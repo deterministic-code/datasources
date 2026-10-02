@@ -18,9 +18,9 @@ public class SqliteTests
         Assert.Equal(":memory:", conn.Filename);
         await conn.Open();
         var command = new SqliteCommand(conn);
-        await command.Execute("");
+        await command.Execute(new Native(""));
         await command.ExecuteReader(Native.N("SELECT 1"));
-        await command.ExecuteReader("");
+        await command.ExecuteReader(new Native(""));
 
         var txn = await conn.StartTransaction();
         Assert.Equal(IsolationLevel.ReadCommitted, txn.Isolation);
@@ -51,7 +51,7 @@ public class SqliteTests
         await provided.Open();
         var bound = Assert.IsType<SqliteCommand>(await ds.CreateCommand(provided));
         Assert.Same(provided, bound.Connection);
-        await bound.Execute("");
+        await bound.Execute(new Native(""));
         await bound.ExecuteReader(Native.N("SELECT 1"));
         Assert.IsType<CRUDRepository<Dictionary<string, Value>>>(
             ds.CreateRepository<Dictionary<string, Value>>(provided));

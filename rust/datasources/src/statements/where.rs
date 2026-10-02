@@ -1,9 +1,10 @@
 use super::array_expression::ArrayExpression;
+use super::expression_renderer::parameter_name;
 use super::expression::Expression;
 use super::identifier::Identifier;
 use super::literal::Literal;
 use super::operator::Operator;
-use super::text::Text;
+use super::statement_text_renderer::StatementTextRenderer;
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
@@ -52,15 +53,19 @@ impl Where {
     }
 }
 
-impl Text for Where {
-    fn get_text(&self) -> String {
-        render(&self.condition)
-    }
-}
-
 impl crate::ReadInput for Where {
     fn as_where(&self) -> Option<&dyn IWhere> {
         Some(self)
+    }
+}
+
+impl crate::ICondition for Where {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn accept(&self, text: &StatementTextRenderer) -> String {
+        text.conditions().visit_where(self, text)
     }
 }
 
@@ -68,77 +73,11 @@ impl IWhere for Where {
     fn parameters(&self) -> Vec<Parameter> {
         collect(&self.condition)
     }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 impl From<Where> for Expression {
     fn from(where_clause: Where) -> Self {
         where_clause.condition
-    }
-}
-
-fn symbol(op: &Operator) -> &'static str {
-    match op {
-        Operator::Equals { .. } => "=",
-        Operator::NotEquals { .. } => "<>",
-        Operator::GreaterThan { .. } => ">",
-        Operator::LessThan { .. } => "<",
-        Operator::GreaterThanOrEqual { .. } => ">=",
-        Operator::LessThanOrEqual { .. } => "<=",
-        Operator::Like { .. } => "LIKE",
-        Operator::NotLike { .. } => "NOT LIKE",
-        _ => "IN",
-    }
-}
-
-fn inline(value: &Value) -> String {
-    match value {
-        Value::Int(number) => number.to_string(),
-        Value::Float(number) => number.to_string(),
-        Value::Decimal(number) => number.to_string(),
-        Value::Bool(flag) => flag.to_string(),
-        Value::Text(text) => format!("'{}'", text.replace('\'', "''")),
-        Value::Null => "null".into(),
-        other => other.wire_text(),
-    }
-}
-
-fn needs_parens(child: &Expression, and: bool) -> bool {
-    match child {
-        Expression::Operator(
-            Operator::Not { .. } | Operator::In { .. } | Operator::NotIn { .. },
-        ) => true,
-        Expression::Operator(Operator::And { .. }) if !and => true,
-        Expression::Operator(Operator::Or { .. }) if and => true,
-        _ => false,
-    }
-}
-
-fn wrap(child: &Expression, and: bool) -> String {
-    if needs_parens(child, and) {
-        format!("({})", render(child))
-    } else {
-        render(child)
-    }
-}
-
-fn compare_text(op: &Operator, left: &Expression, right: &Expression) -> String {
-    match (left, right) {
-        (Expression::Identifier(id), Expression::Literal(_)) => {
-            format!("{} {} ${}", id.name, symbol(op), parameter_name(&id.name))
-        }
-        (Expression::Literal(left), Expression::Literal(right)) => {
-            format!(
-                "{} {} {}",
-                inline(&left.value),
-                symbol(op),
-                inline(&right.value)
-            )
-        }
-        (left, right) => format!("{} {} {}", render(left), symbol(op), render(right)),
     }
 }
 
@@ -154,133 +93,6 @@ fn compare_parameters(left: &Expression, right: &Expression) -> Vec<Parameter> {
             parameters
         }
     }
-}
-
-fn render(expression: &Expression) -> String {
-    match expression {
-        Expression::Identifier(id) => id.name.clone(),
-        Expression::Literal(lit) => inline(&lit.value),
-        Expression::Subquery(query) => format!("({query})"),
-        Expression::Array(arr) => arr
-            .elements
-            .iter()
-            .map(render)
-            .collect::<Vec<_>>()
-            .join(", "),
-        Expression::Operator(Operator::Not { argument }) => {
-            format!("NOT ({})", render(argument))
-        }
-        Expression::Operator(Operator::IsNull { argument }) => {
-            format!("{} IS NULL", render(argument))
-        }
-        Expression::Operator(Operator::IsNotNull { argument }) => {
-            format!("{} IS NOT NULL", render(argument))
-        }
-        Expression::Operator(Operator::Exists { argument }) => {
-            format!("EXISTS {}", render(argument))
-        }
-        Expression::Operator(op @ Operator::In { left, right }) => match (&**left, &**right) {
-            (Expression::Identifier(_), Expression::Array(arr)) if arr.elements.is_empty() => {
-                "1 = 0".into()
-            }
-            (Expression::Identifier(id), Expression::Array(arr)) => {
-                let list = (0..arr.elements.len())
-                    .map(|i| format!("${}_{i}", parameter_name(&id.name)))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("{} IN ({list})", id.name)
-            }
-            (Expression::Identifier(id), Expression::Subquery(_)) => {
-                format!("{} IN {}", id.name, render(right))
-            }
-            _ => compare_text(op, left, right),
-        },
-        Expression::Operator(Operator::NotIn { left, right }) => match (&**left, &**right) {
-            (Expression::Identifier(_), Expression::Array(arr)) if arr.elements.is_empty() => {
-                "1 = 1".into()
-            }
-            (Expression::Identifier(id), Expression::Array(arr)) => {
-                let list = (0..arr.elements.len())
-                    .map(|i| format!("${}_{i}", parameter_name(&id.name)))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!("{} NOT IN ({list})", id.name)
-            }
-            (Expression::Identifier(id), Expression::Subquery(_)) => {
-                format!("{} NOT IN {}", id.name, render(right))
-            }
-            _ => format!("{} NOT IN {}", render(left), render(right)),
-        },
-        Expression::Operator(Operator::Between { value, low, high }) => {
-            bounds("BETWEEN", value, low, high)
-        }
-        Expression::Operator(Operator::NotBetween { value, low, high }) => {
-            bounds("NOT BETWEEN", value, low, high)
-        }
-        Expression::Operator(Operator::And { left, right }) => {
-            format!("{} AND {}", wrap(left, true), wrap(right, true))
-        }
-        Expression::Operator(Operator::Or { left, right }) => {
-            format!("{} OR {}", wrap(left, false), wrap(right, false))
-        }
-        Expression::Operator(
-            op @ (Operator::Equals { left, right }
-            | Operator::NotEquals { left, right }
-            | Operator::GreaterThan { left, right }
-            | Operator::LessThan { left, right }
-            | Operator::GreaterThanOrEqual { left, right }
-            | Operator::LessThanOrEqual { left, right }
-            | Operator::Like { left, right }
-            | Operator::NotLike { left, right }),
-        ) => compare_text(op, left, right),
-    }
-}
-
-fn bounds(word: &str, value: &Expression, low: &Expression, high: &Expression) -> String {
-    match (value, low, high) {
-        (Expression::Identifier(id), Expression::Literal(_), Expression::Literal(_)) => {
-            let name = parameter_name(&id.name);
-            format!("{} {word} ${name}_0 AND ${name}_1", id.name)
-        }
-        _ => format!(
-            "{} {word} {} AND {}",
-            render(value),
-            render(low),
-            render(high)
-        ),
-    }
-}
-
-fn parameter_name(name: &str) -> String {
-    parts(name)
-        .into_iter()
-        .map(|part| {
-            if part.len() >= 2 && part.starts_with('"') && part.ends_with('"') {
-                part[1..part.len() - 1].replace("\"\"", "\"")
-            } else {
-                part
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(".")
-}
-
-fn parts(name: &str) -> Vec<String> {
-    let mut found = Vec::new();
-    let mut start = 0;
-    let mut quoted = false;
-    let chars: Vec<char> = name.chars().collect();
-    for (i, ch) in chars.iter().enumerate() {
-        if *ch == '"' {
-            quoted = !quoted;
-        }
-        if *ch == '.' && !quoted {
-            found.push(chars[start..i].iter().collect());
-            start = i + 1;
-        }
-    }
-    found.push(chars[start..].iter().collect());
-    found
 }
 
 fn collect(expression: &Expression) -> Vec<Parameter> {

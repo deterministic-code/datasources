@@ -1,6 +1,6 @@
 namespace Datasources.Mysql;
 
-internal sealed class MysqlCreateTableStatementRenderer : CreateTableStatementRenderer
+internal sealed class MysqlCreateTableStatementRenderer : CreateTableStatementTextRenderer
 {
     protected override string Type(Column column) =>
         MysqlDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;

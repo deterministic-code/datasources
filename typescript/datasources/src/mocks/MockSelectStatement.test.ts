@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MockSelectStatement } from "../index.ts";
+import { DefaultStatementTextRenderer, MockSelectStatement } from "../index.ts";
 
 describe("MockSelectStatement", () => {
-  it("counts text access", () => {
+  it("tracks accept calls", () => {
     const query = new MockSelectStatement("q");
-    expect(query.getText()).toBe("q");
-    expect(query.getTextCalls).toBe(1);
+    expect(query.accept({ visit: () => "" })).toBe("q");
+    expect(query.acceptCalls).toBe(1);
+    expect(DefaultStatementTextRenderer.instance.render(query)).toBe("q");
   });
 });

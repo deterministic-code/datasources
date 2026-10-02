@@ -164,7 +164,7 @@ public static class SqlSpec
     {
         public ConnectionMeta Connection { get; init; } = new();
         public string Engine { get; init; } = "";
-        public Func<CreateTableStatement, string> Render { get; init; } = static statement => statement.GetText();
+        public Func<CreateTableStatement, string> Render { get; init; } = static statement => DefaultStatementTextRenderer.Instance.Render(statement);
         public string CreateUserTable { get; init; } = "";
         public string CreateUserTableVersioned { get; init; } = "";
         public List<Dictionary<string, Value>> DirtyReadRows { get; init; } = [];
