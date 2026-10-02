@@ -3,8 +3,8 @@ use crate::converters;
 use crate::statement_renderer::MysqlStatementRenderer;
 use crate::transaction::MysqlTransaction;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, Driver, IsolationLevel, Result,
-    StatementTextRenderer, Transaction, TypeConverter, Value,
+    downcast_connection, Command, Connection, DatasourceError, Driver, Information, IsolationLevel,
+    Result, StatementTextRenderer, Transaction, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -13,6 +13,21 @@ pub struct MysqlDriver;
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
     LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(MysqlStatementRenderer)), None));
+
+static INFORMATION: LazyLock<Information> = LazyLock::new(|| {
+    Information::new(
+        [
+            "MySQL / MariaDB server driver.",
+            "Full connection, command, transaction, and repository support.",
+        ],
+        [
+            "Overrides SelectInsertedIdStatement to SELECT LAST_INSERT_ID() AS {column}",
+            "Overrides CreateTableStatement identity to AUTO_INCREMENT",
+            "Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)",
+        ],
+        [] as [&str; 0],
+    )
+});
 
 pub(crate) fn column_sql(name: &str) -> Option<&'static str> {
     Some(match name {
@@ -59,6 +74,10 @@ impl Driver for MysqlDriver {
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
         Some(&STATEMENTS)
+    }
+
+    fn information(&self) -> Option<&Information> {
+        Some(&INFORMATION)
     }
 }
 

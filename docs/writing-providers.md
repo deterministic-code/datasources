@@ -273,6 +273,8 @@ pub struct Information {
 
 {{Information|information|information}} is optional metadata a driver may publish. Each list is free-form text: {{Descriptions|descriptions|descriptions}} for capability notes, {{Overrides|overrides|overrides}} for dialect-specific behavior, and {{ChangeLogs|changeLogs|change_logs}} for provider history. The default is unset.
 
+Published drivers list that metadata (and {{RowTypeConverters|rowTypeConverters|row_type_converters}} keys) per language on [Languages](./drivers.md). Edit `docs/DriverSummary.yaml`, keep each driver's {{Information|information|information}} in sync, then run `npm run docs:drivers`.
+
 The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. {{SelectInsertedIdStatementTextRenderer.Render|SelectInsertedIdStatementTextRenderer.render|SelectInsertedIdStatementTextRenderer::render}} throws until a provider overrides it.
 
 {{ColumnType|columnType|column_type}} maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.

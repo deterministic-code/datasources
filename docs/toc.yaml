@@ -4,8 +4,10 @@ pages:
     title: Introduction
   - path: quickstart.md
     title: Quick Start
-  - path: feature-matrix.md
-    title: Feature Matrix
+  - path: features.md
+    title: Features
+  - path: drivers.md
+    title: Languages
   - path: examples.md
     title: Examples
   - path: tutorials/mapping-converting-pipelines.md

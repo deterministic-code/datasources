@@ -9,7 +9,8 @@ It is designed for AI agents. The motivation is that current AI-generated data-a
 The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched repositories, and bulk repositories.
 
 - [Quick Start](#quick-start)
-- [Feature Matrix](#feature-matrix)
+- [Features](#features)
+- [Languages](#languages)
 
 ## Quick Start
 
@@ -237,7 +238,7 @@ const item = rows.convert(row);
 
 See [Type Converters](#type-converters).
 
-## Feature Matrix
+## Features
 
 Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repositories above them.
 
@@ -262,21 +263,350 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 ### Providers
 
+Implemented drivers (SQLite, MySQL, PostgreSQL) are listed per language on [Languages](#languages).
+
 | Provider | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
 | json | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | memory | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| sqlite | ✅ | ✅ | ✅ |
+| [sqlite](#csharp-sqlite) | ✅ | ✅ | ✅ |
 | xml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | yaml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| mysql | ✅ | ✅ | ✅ |
+| [mysql](#csharp-mysql) | ✅ | ✅ | ✅ |
 | sqlserver | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| postgres | ✅ | ✅ | ✅ |
+| [postgres](#csharp-postgres) | ✅ | ✅ | ✅ |
 | oracle | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 
 Package names per language are on [Quick Start](#installation).
+
+<!-- Generated from docs/DriverSummary.yaml. Edit that file and run npm run docs:drivers. -->
+
+## Languages {#languages}
+
+Pick a language, then a driver. Each driver section lists `Information` / `information` / `information`, Overrides, and `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` from that language's `IDriver` / `IDriver` / `Driver`.
+
+<div class="driver-header">
+  <a class="driver-tile" href="#csharp">
+    <img src="/languages/csharp.svg" alt="" width="48" height="48" />
+    <span>C#</span>
+  </a>
+  <a class="driver-tile" href="#rust">
+    <img src="/languages/rust.svg" alt="" width="48" height="48" />
+    <span>Rust</span>
+  </a>
+  <a class="driver-tile" href="#typescript">
+    <img src="/languages/typescript.svg" alt="" width="48" height="48" />
+    <span>TypeScript</span>
+  </a>
+</div>
+
+### C# {#csharp}
+
+<a href="#languages" class="driver-back">← Languages</a>
+
+Drivers for C#. Click a tile for Information, Overrides, and RowTypeConverters from that `IDriver`.
+
+<div class="driver-header">
+  <a class="driver-tile" href="#csharp-sqlite">
+    <img src="/drivers/sqlite.svg" alt="" width="48" height="48" />
+    <span>SQLite</span>
+  </a>
+  <a class="driver-tile" href="#csharp-mysql">
+    <img src="/drivers/mysql.svg" alt="" width="48" height="48" />
+    <span>MySQL</span>
+  </a>
+  <a class="driver-tile" href="#csharp-postgres">
+    <img src="/drivers/postgres.svg" alt="" width="48" height="48" />
+    <span>PostgreSQL</span>
+  </a>
+</div>
+
+#### SQLite {#csharp-sqlite}
+
+<a href="#csharp" class="driver-back">← C# drivers</a>
+
+##### Information
+
+- Embedded SQL database for local development and tests.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT last_insert_rowid() AS {column}
+- Overrides CreateTableStatement type mapping (int→INTEGER, bool→BOOLEAN, uuid/string/datetime→TEXT, decimal→NUMERIC, float→REAL, binary→BLOB)
+
+##### RowTypeConverters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### ChangeLogs
+
+_None._
+
+#### MySQL {#csharp-mysql}
+
+<a href="#csharp" class="driver-back">← C# drivers</a>
+
+##### Information
+
+- MySQL / MariaDB server driver.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT LAST_INSERT_ID() AS {column}
+- Overrides CreateTableStatement identity to AUTO_INCREMENT
+- Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)
+
+##### RowTypeConverters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### ChangeLogs
+
+_None._
+
+#### PostgreSQL {#csharp-postgres}
+
+<a href="#csharp" class="driver-back">← C# drivers</a>
+
+##### Information
+
+- PostgreSQL server driver.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT lastval() AS {column}
+- Overrides CreateTableStatement identity to GENERATED BY DEFAULT AS IDENTITY
+- Overrides CreateTableStatement boolean defaults (0/1 → TRUE/FALSE)
+- Overrides CreateTableStatement type mapping (int→INTEGER, uuid→UUID, string→TEXT, bool→BOOLEAN, decimal→NUMERIC, float→DOUBLE PRECISION, datetime→TIMESTAMPTZ, binary→BYTEA)
+
+##### RowTypeConverters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### ChangeLogs
+
+_None._
+
+### Rust {#rust}
+
+<a href="#languages" class="driver-back">← Languages</a>
+
+Drivers for Rust. Click a tile for information, Overrides, and row_type_converters from that `Driver`.
+
+<div class="driver-header">
+  <a class="driver-tile" href="#rust-sqlite">
+    <img src="/drivers/sqlite.svg" alt="" width="48" height="48" />
+    <span>SQLite</span>
+  </a>
+  <a class="driver-tile" href="#rust-mysql">
+    <img src="/drivers/mysql.svg" alt="" width="48" height="48" />
+    <span>MySQL</span>
+  </a>
+  <a class="driver-tile" href="#rust-postgres">
+    <img src="/drivers/postgres.svg" alt="" width="48" height="48" />
+    <span>PostgreSQL</span>
+  </a>
+</div>
+
+#### SQLite {#rust-sqlite}
+
+<a href="#rust" class="driver-back">← Rust drivers</a>
+
+##### information
+
+- Embedded SQL database for local development and tests.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT last_insert_rowid() AS {column}
+- Overrides CreateTableStatement type mapping (int→INTEGER, bool→BOOLEAN, uuid/string/datetime→TEXT, decimal→NUMERIC, float→REAL, binary→BLOB)
+
+##### row_type_converters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### change_logs
+
+_None._
+
+#### MySQL {#rust-mysql}
+
+<a href="#rust" class="driver-back">← Rust drivers</a>
+
+##### information
+
+- MySQL / MariaDB server driver.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT LAST_INSERT_ID() AS {column}
+- Overrides CreateTableStatement identity to AUTO_INCREMENT
+- Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)
+
+##### row_type_converters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### change_logs
+
+_None._
+
+#### PostgreSQL {#rust-postgres}
+
+<a href="#rust" class="driver-back">← Rust drivers</a>
+
+##### information
+
+- PostgreSQL server driver.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT lastval() AS {column}
+- Overrides CreateTableStatement identity to GENERATED BY DEFAULT AS IDENTITY
+- Overrides CreateTableStatement boolean defaults (0/1 → TRUE/FALSE)
+- Overrides CreateTableStatement type mapping (int→INTEGER, uuid→UUID, string→TEXT, bool→BOOLEAN, decimal→NUMERIC, float→DOUBLE PRECISION, datetime→TIMESTAMPTZ, binary→BYTEA)
+
+##### row_type_converters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### change_logs
+
+_None._
+
+### TypeScript {#typescript}
+
+<a href="#languages" class="driver-back">← Languages</a>
+
+Drivers for TypeScript. Click a tile for information, Overrides, and rowTypeConverters from that `IDriver`.
+
+<div class="driver-header">
+  <a class="driver-tile" href="#typescript-sqlite">
+    <img src="/drivers/sqlite.svg" alt="" width="48" height="48" />
+    <span>SQLite</span>
+  </a>
+  <a class="driver-tile" href="#typescript-mysql">
+    <img src="/drivers/mysql.svg" alt="" width="48" height="48" />
+    <span>MySQL</span>
+  </a>
+  <a class="driver-tile" href="#typescript-postgres">
+    <img src="/drivers/postgres.svg" alt="" width="48" height="48" />
+    <span>PostgreSQL</span>
+  </a>
+</div>
+
+#### SQLite {#typescript-sqlite}
+
+<a href="#typescript" class="driver-back">← TypeScript drivers</a>
+
+##### information
+
+- Embedded SQL database for local development and tests.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT last_insert_rowid() AS {column}
+- Overrides CreateTableStatement type mapping (int→INTEGER, bool→BOOLEAN, uuid/string/datetime→TEXT, decimal→NUMERIC, float→REAL, binary→BLOB)
+
+##### rowTypeConverters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### changeLogs
+
+_None._
+
+#### MySQL {#typescript-mysql}
+
+<a href="#typescript" class="driver-back">← TypeScript drivers</a>
+
+##### information
+
+- MySQL / MariaDB server driver.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT LAST_INSERT_ID() AS {column}
+- Overrides CreateTableStatement identity to AUTO_INCREMENT
+- Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)
+
+##### rowTypeConverters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### changeLogs
+
+_None._
+
+#### PostgreSQL {#typescript-postgres}
+
+<a href="#typescript" class="driver-back">← TypeScript drivers</a>
+
+##### information
+
+- PostgreSQL server driver.
+- Full connection, command, transaction, and repository support.
+
+##### Overrides
+
+- Overrides SelectInsertedIdStatement to SELECT lastval() AS {column}
+- Overrides CreateTableStatement identity to GENERATED BY DEFAULT AS IDENTITY
+- Overrides CreateTableStatement boolean defaults (0/1 → TRUE/FALSE)
+- Overrides CreateTableStatement type mapping (int→INTEGER, uuid→UUID, string→TEXT, bool→BOOLEAN, decimal→NUMERIC, float→DOUBLE PRECISION, datetime→TIMESTAMPTZ, binary→BYTEA)
+
+##### rowTypeConverters
+
+- `bool`
+- `datetime`
+- `uuid`
+- `decimal`
+- `binary`
+
+##### changeLogs
+
+_None._
 
 ## Examples
 
@@ -402,6 +732,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Wrap query text and an optional where](#wrap-query-text-and-an-optional-where)
 - [Compile a SELECT](#compile-a-select)
+- [Join tables](#join-tables)
 - [Group, aggregate, order, and limit](#group-aggregate-order-and-limit)
 - [Group rows](#group-rows)
 - [Aggregate without grouping](#aggregate-without-grouping)
@@ -748,7 +1079,7 @@ await command.Execute(
         new Parameter("created", "2003-03-03T00:00:00.000Z"),
     ]);
 
-var propertyToColumnMapper = new DictionaryMapper<string>(new()
+var propertyToColumnMapper = new DictionaryMapper<string>(new Dictionary<string, string>
 {
     ["Id"] = "id",
     ["Uuid"] = "uuid",
@@ -766,7 +1097,7 @@ var columnMappedRows = unmapped
         KeyValuePair.Create(propertyToColumnMapper.ReverseMap(cell.Key), cell.Value))))
     .ToList();
 
-var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new()
+var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new Dictionary<string, string>
 {
     ["Uuid"] = "uuid",
     ["IsEnabled"] = "bool",
@@ -2117,7 +2448,7 @@ let command = connection.create_command();
 let response = command.execute("insert", None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L69-L75)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L71-L77)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -2147,7 +2478,7 @@ connection.open().await.unwrap();
 connection.close().await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L77-L84)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L79-L86)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -2175,7 +2506,7 @@ connection.open().await.unwrap();
 let txn = connection.start_transaction(None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L62-L67)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L64-L69)
 
 ```typescript
 const connection = new MemoryConnection();
@@ -2495,7 +2826,7 @@ txn.commit().await.unwrap();
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L104-L118)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L106-L120)
 
 ```typescript
 const ds = Datasource.default;
@@ -2548,8 +2879,8 @@ interface ICommand
 | [execute(text, parameters?)](#typescript-icommand-execute-text-parameters) | Parses `text` with [StatementParser.parse](#statements) and runs [executeStatement](#typescript-icommand-executestatement-statement-parameters). Blank text runs [executeNative](#typescript-icommand-executenative-text-parameters). |
 | [executeReaderNative(text, parameters?)](#typescript-icommand-executereadernative-text-parameters) | Runs provider text without parsing it. |
 | [executeNative(text, parameters?)](#typescript-icommand-executenative-text-parameters) | Runs provider text without parsing it. |
-| [execute(command, statement, parameters?)](#typescript-icommand-execute-command-statement-parameters) | Runs [executeStatement](#typescript-icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#typescript-icommand-executenative-text-parameters) with `statement.getText()`. |
-| [executeReader(command, statement, parameters?)](#typescript-icommand-executereader-command-statement-parameters) | Runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#typescript-icommand-executereadernative-text-parameters) with `statement.getText()`. |
+| [execute(command, statement, parameters?)](#typescript-icommand-execute-command-statement-parameters) | Runs [executeStatement](#typescript-icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#typescript-icommand-executenative-text-parameters) with `DefaultStatementTextRenderer.instance.render(statement)`. |
+| [executeReader(command, statement, parameters?)](#typescript-icommand-executereader-command-statement-parameters) | Runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#typescript-icommand-executereadernative-text-parameters) with `DefaultStatementTextRenderer.instance.render(statement)`. |
 
 ###### addMiddleware(middleware) {#typescript-icommand-addmiddleware-middleware}
 
@@ -2657,7 +2988,7 @@ executeNative(text: Native, parameters?: Parameter[]): Promise<Response>
 
 ###### execute(command, statement, parameters?) {#typescript-icommand-execute-command-statement-parameters}
 
-Runs [executeStatement](#typescript-icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#typescript-icommand-executenative-text-parameters) with `statement.getText()`.
+Runs [executeStatement](#typescript-icommand-executestatement-statement-parameters) when the command implements it, otherwise [executeNative](#typescript-icommand-executenative-text-parameters) with `DefaultStatementTextRenderer.instance.render(statement)`.
 
 **Definition**
 
@@ -2679,7 +3010,7 @@ function execute(command: ICommand, statement: IStatement, parameters?: Paramete
 
 ###### executeReader(command, statement, parameters?) {#typescript-icommand-executereader-command-statement-parameters}
 
-Runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#typescript-icommand-executereadernative-text-parameters) with `statement.getText()`.
+Runs [executeReaderStatement](#typescript-icommand-executereaderstatement-statement-parameters) when the command implements it, otherwise [executeReaderNative](#typescript-icommand-executereadernative-text-parameters) with `DefaultStatementTextRenderer.instance.render(statement)`.
 
 **Definition**
 
@@ -2872,8 +3203,8 @@ public interface ICommand
 | [Execute(text, parameters)](#csharp-icommand-execute-text-parameters) | Parses `text` with [StatementParser.Parse](#statements) and runs [Execute(statement)](#csharp-icommand-execute-statement-parameters). Blank text runs [Execute(Native)](#csharp-icommand-execute-native-parameters). |
 | [ExecuteReader(native, parameters)](#csharp-icommand-executereader-native-parameters) | Runs provider text without parsing it. |
 | [Execute(native, parameters)](#csharp-icommand-execute-native-parameters) | Runs provider text without parsing it. |
-| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`. |
-| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`. |
+| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`. |
+| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`. |
 
 ###### AddMiddleware(middleware) {#csharp-icommand-addmiddleware-middleware}
 
@@ -2981,7 +3312,7 @@ Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null)
 
 ###### ExecuteReader(statement, parameters) {#csharp-icommand-executereader-statement-parameters}
 
-Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`.
+Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 **Definition**
 
@@ -3002,7 +3333,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 ###### Execute(statement, parameters) {#csharp-icommand-execute-statement-parameters}
 
-Runs the statement. The default renders [Native](#csharp-native) from `statement.GetText()`.
+Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 **Definition**
 
@@ -3241,8 +3572,8 @@ pub trait Command: Send + Sync
 | [execute(text, parameters)](#rust-command-execute-text-parameters) | Parses `text` with [StatementParser::parse](#statements) and runs [execute_statement](#rust-command-execute_statement-statement-parameters). Blank text runs [execute_native](#rust-command-execute_native-text-parameters). |
 | [execute_reader_native(text, parameters)](#rust-command-execute_reader_native-text-parameters) | Runs provider text without parsing it. |
 | [execute_native(text, parameters)](#rust-command-execute_native-text-parameters) | Runs provider text without parsing it. |
-| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`. |
-| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`. |
+| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`. |
+| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`. |
 
 ###### add_middleware(middleware) {#rust-command-add_middleware-middleware}
 
@@ -3346,7 +3677,7 @@ async fn execute_native(&self, text: &Native, parameters: Option<&[Parameter]>) 
 
 ###### execute_reader_statement(statement, parameters) {#rust-command-execute_reader_statement-statement-parameters}
 
-Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`.
+Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 **Definition**
 
@@ -3367,7 +3698,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 ###### execute_statement(statement, parameters) {#rust-command-execute_statement-statement-parameters}
 
-Runs the statement. The default renders [Native](#rust-native) from `statement.get_text()`.
+Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 **Definition**
 
@@ -3691,9 +4022,9 @@ Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagno
 ```csharp
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (3, 'bea')"));
 await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
 var rows = await reader.Read().ToListAsync();
 ```
@@ -3742,14 +4073,14 @@ let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L86-L100)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L90-L104)
 
 ```typescript
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (3, 'bea')"));
 await using reader = await command.executeReader("SELECT id, name FROM items");
 const rows = await Array.fromAsync(reader.read());
 ```
@@ -3785,9 +4116,9 @@ var ds = Datasource.Default;
 await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
-await command.Execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
-await command.Execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
-await command.Execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
+await command.Execute(Native.N("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"));
+await command.Execute(Native.N("INSERT INTO settings (name, value) VALUES ('lang', 'en')"));
+await command.Execute(Native.N("INSERT INTO settings (name, value) VALUES ('size', 'lg')"));
 await using var reader = await command.ExecuteReader("SELECT name, value FROM settings");
 var converter = new MetaDataRowTypeConverter<NameValue>();
 var items = await reader.Read().Select(row => converter.Convert(row)).ToListAsync();
@@ -3860,7 +4191,7 @@ let items: Vec<_> = reader
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L25-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L141-L158)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L29-L32) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L145-L162)
 
 ```typescript
 class NameValue {
@@ -3872,9 +4203,9 @@ const ds = Datasource.default;
 await using connection = await ds.createConnection();
 await connection.open();
 const command = connection.createCommand();
-await command.execute("INSERT INTO settings (name, value) VALUES ('theme', 'dark')");
-await command.execute("INSERT INTO settings (name, value) VALUES ('lang', 'en')");
-await command.execute("INSERT INTO settings (name, value) VALUES ('size', 'lg')");
+await command.executeNative(new Native("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"));
+await command.executeNative(new Native("INSERT INTO settings (name, value) VALUES ('lang', 'en')"));
+await command.executeNative(new Native("INSERT INTO settings (name, value) VALUES ('size', 'lg')"));
 await using reader = await command.executeReader("SELECT name, value FROM settings");
 const converter = new MetaDataRowTypeConverter<NameValue>();
 const items = await Array.fromAsync(reader.read(), (row) => converter.convert(row, NameValue));
@@ -4067,7 +4398,7 @@ let gone: Vec<_> = gone_reader
 []
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L160-L192)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L34-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L164-L196)
 
 ```typescript
 class Item {
@@ -4159,8 +4490,8 @@ record User
 
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute(
-    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+await command.Execute(Native.N(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"));
 await using var reader = await command.ExecuteReader(
     "SELECT contact_name1, contact_name2, email, id, username FROM users");
 var converter = new MetaDataRowTypeConverter<User>();
@@ -4307,7 +4638,7 @@ let users: Vec<_> = reader
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L194-L225)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L41) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L43-L50) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L198-L231)
 
 ```typescript
 class Contact {
@@ -4325,8 +4656,10 @@ class User {
 
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute(
-  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+await command.executeNative(
+  new Native(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+  ),
 );
 await using reader = await command.executeReader(
   "SELECT contact_name1, contact_name2, email, id, username FROM users",
@@ -4373,7 +4706,7 @@ CREATE TABLE users (id int, username string, email string, contact_name1 string,
 
 #### Fill an output parameter
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L67-L79)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L68-L80)
 
 ```csharp
 await command.Execute(Native.N("""
@@ -4424,7 +4757,7 @@ async fn fill_output_parameter(command: &dyn Command) {
 result: 5
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L25-L39)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L29-L43)
 
 ```typescript
 async function fillOutputParameter(command: MysqlCommand) {
@@ -4496,7 +4829,7 @@ async fn read_return_value(command: &dyn Command) {
 5
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L25-L34)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L29-L38)
 
 ```typescript
 async function readReturnValue(command: PostgresCommand) {
@@ -4782,9 +5115,9 @@ Dispose the reader with `await using`. Rust drops it.
 ```csharp
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-await command.Execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-await command.Execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+await command.Execute(Native.N("INSERT INTO items (id, name) VALUES (3, 'bea')"));
 await using var reader = await command.ExecuteReader("SELECT id, name FROM items");
 var rows = await reader.Read().ToListAsync();
 ```
@@ -4833,14 +5166,14 @@ let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L86-L100)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L90-L104)
 
 ```typescript
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO items (id, name) VALUES (1, 'ada')");
-await command.execute("INSERT INTO items (id, name) VALUES (2, 'grace')");
-await command.execute("INSERT INTO items (id, name) VALUES (3, 'bea')");
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (1, 'ada')"));
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (2, 'grace')"));
+await command.executeNative(new Native("INSERT INTO items (id, name) VALUES (3, 'bea')"));
 await using reader = await command.executeReader("SELECT id, name FROM items");
 const rows = await Array.fromAsync(reader.read());
 ```
@@ -4868,7 +5201,7 @@ CREATE TABLE items (id int, name string, CONSTRAINT pk_items PRIMARY KEY (id))
 ```csharp
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+await command.Execute(Native.N("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"));
 await using var reader = await command.ExecuteReader("SELECT user_id, first_name FROM contacts");
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
 var mapped = await reader.Read().Select(source =>
@@ -4921,12 +5254,12 @@ let mapped: Vec<Row> = reader
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L102-L113)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L106-L117)
 
 ```typescript
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')");
+await command.executeNative(new Native("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"));
 await using reader = await command.executeReader("SELECT user_id, first_name FROM contacts");
 const casing = new ChangeCasingMapper("pascalCase", "snakeCase");
 const mapped = await Array.fromAsync(reader.read(), (source) =>
@@ -4955,8 +5288,8 @@ CREATE TABLE contacts (user_id int, first_name string, CONSTRAINT pk_contacts PR
 ```csharp
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
-await command.Execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"));
+await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
 await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
 var rows = await reader.Read().ToListAsync();
 var mapper = new FlatToNestedMapper(new TypeMap
@@ -5043,13 +5376,13 @@ let nested = Mapper::map(&mapper, rows);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L115-L139)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L119-L143)
 
 ```typescript
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')");
-await command.execute("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')");
+await command.executeNative(new Native("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"));
+await command.executeNative(new Native("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
 await using reader = await command.executeReader("SELECT id, username, contact_name FROM users");
 const rows = await Array.fromAsync(reader.read());
 const mapper = new FlatToNestedMapper<{
@@ -5108,8 +5441,8 @@ record User
 
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
-await command.Execute(
-    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')");
+await command.Execute(Native.N(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"));
 await using var reader = await command.ExecuteReader(
     "SELECT contact_name1, contact_name2, email, id, username FROM users");
 var converter = new MetaDataRowTypeConverter<User>();
@@ -5256,7 +5589,7 @@ let users: Vec<_> = reader
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L46) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L194-L225)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L41) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L43-L50) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L198-L231)
 
 ```typescript
 class Contact {
@@ -5274,8 +5607,10 @@ class User {
 
 const ds = Datasource.default;
 const command = await ds.createCommand();
-await command.execute(
-  "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+await command.executeNative(
+  new Native(
+    "INSERT INTO users (id, username, email, contact_name1, contact_name2) VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+  ),
 );
 await using reader = await command.executeReader(
   "SELECT contact_name1, contact_name2, email, id, username FROM users",
@@ -5393,7 +5728,7 @@ assert!(!again);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L227-L241)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L233-L247)
 
 ```typescript
 const ds = Datasource.default;
@@ -5429,7 +5764,7 @@ const again = await reader.nextResult();
 
 #### Call a stored procedure that returns two results
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L81-L103)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Mysql.Tests/MysqlCommandIntegrationTests.cs#L82-L104)
 
 ```csharp
 await command.Execute(Native.N("""
@@ -5510,7 +5845,7 @@ async fn call_procedure_returns_two_results(command: &dyn Command) {
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L41-L60)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L45-L64)
 
 ```typescript
 async function callProcedureReturnsTwoResults(command: MysqlCommand) {
@@ -7954,7 +8289,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1447-L1463)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1468-L1484)
 
 ```rust
         &row
@@ -7971,7 +8306,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L99-L106)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L107)
 
 ```typescript
 command.reader = new MockReader([{ id: 1, name: "a" }]);
@@ -8013,7 +8348,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1484-L1490)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1505-L1511)
 
 ```rust
 
@@ -8033,7 +8368,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L60-L70)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L61-L71)
 
 ```typescript
 const { repo, command } = create();
@@ -16195,175 +16530,575 @@ const dest = converter.convert({ flag: 1, name: "a" });
 
 ## Statements
 
-Command text. A string passed to [Command](#command) `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader` is parsed with `StatementParser.Parse` / `StatementParser.parse` / `StatementParser::parse`. `Native` / `Native` / `Native` and `N` / `n` / `n` send that text to the provider engine. A statement overload renders with `GetText()` / `getText()` / `get_text()` after the provider transforms it, then runs `Native` / `Native` / `Native`.
+Command text. A string passed to [Command](#command) `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader` is parsed with `StatementParser.Parse` / `StatementParser.parse` / `StatementParser::parse`. `Native` / `Native` / `Native` and `N` / `n` / `n` send that text to the provider engine. A statement overload renders with `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` — by default `DefaultStatementTextRenderer.Instance` / `DefaultStatementTextRenderer.instance` / `DefaultStatementTextRenderer::instance()` — after the provider transforms it, then runs `Native` / `Native` / `Native`.
 
 ### Classes
 
 ##### TypeScript
 
-##### IText {#typescript-itext}
-
-```typescript
-interface IText
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [getText()](#typescript-itext-gettext) | Rendered text. |
-
-###### getText() {#typescript-itext-gettext}
-
-Rendered text.
-
-**Definition**
-
-```typescript
-getText(): string
-```
-
-**Returns**
-
-`string`
-
 ##### IStatement {#typescript-istatement}
 
 ```typescript
-interface IStatement extends IText
+interface IStatement
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-istatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-istatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
-###### getText() {#typescript-istatement-gettext}
+###### accept(visitor) {#typescript-istatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
 `string`
 
-##### C#
+##### StatementTextRenderer {#typescript-statementtextrenderer}
 
-##### IText {#csharp-itext}
+```typescript
+class StatementTextRenderer
+```
 
-```csharp
-public interface IText
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StatementTextRenderer(statements?, conditions?, expressions?)](#typescript-statementtextrenderer-statementtextrenderer-statements-conditions-expressions) | Builds a renderer. Omitting factories uses [StatementRenderer](#typescript-statementrenderer) and [ConditionRenderer](#typescript-conditionrenderer). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [render(statement)](#typescript-statementtextrenderer-render-statement) | Renders a statement to command text. |
+| [render(condition)](#typescript-statementtextrenderer-render-condition) | Renders a condition to predicate text. |
+
+###### StatementTextRenderer(statements?, conditions?, expressions?) {#typescript-statementtextrenderer-statementtextrenderer-statements-conditions-expressions}
+
+Builds a renderer. Omitting factories uses [StatementRenderer](#typescript-statementrenderer) and [ConditionRenderer](#typescript-conditionrenderer).
+
+**Definition**
+
+```typescript
+constructor(
+  statements?: (text: StatementTextRenderer) => StatementRenderer,
+  conditions?: (expressions: ExpressionRenderer) => ConditionRenderer,
+  expressions?: (text: StatementTextRenderer) => ExpressionRenderer,
+)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statements` | optional factory for the statement visitor |
+| `conditions` | optional factory for the condition visitor |
+| `expressions` | optional factory for the expression renderer |
+
+###### render(statement) {#typescript-statementtextrenderer-render-statement}
+
+Renders a statement to command text.
+
+**Definition**
+
+```typescript
+render(statement: IStatement): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [IStatement](#typescript-istatement) |
+
+**Returns**
+
+`string`
+
+###### render(condition) {#typescript-statementtextrenderer-render-condition}
+
+Renders a condition to predicate text.
+
+**Definition**
+
+```typescript
+render(condition: ICondition): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `condition` | [ICondition](#typescript-icondition) |
+
+**Returns**
+
+`string`
+
+##### DefaultStatementTextRenderer {#typescript-defaultstatementtextrenderer}
+
+```typescript
+class DefaultStatementTextRenderer extends StatementTextRenderer
+```
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| instance |  |
+
+##### IStatementVisitor {#typescript-istatementvisitor}
+
+```typescript
+interface IStatementVisitor
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-itext-gettext) | Rendered text. |
+| [visit(statement)](#typescript-istatementvisitor-visit-statement) |  |
 
-###### GetText() {#csharp-itext-gettext}
+###### visit(statement) {#typescript-istatementvisitor-visit-statement}
 
-Rendered text.
+
 
 **Definition**
 
-```csharp
-string GetText()
+```typescript
+visit(statement: SelectStatement): string
+visit(statement: InsertStatement): string
+visit(statement: UpdateStatement): string
+visit(statement: DeleteStatement): string
+visit(statement: CreateTableStatement): string
+visit(statement: CreateIndexStatement): string
+visit(statement: ExecuteStoredProcedureStatement): string
+visit(statement: ReturnStatement): string
+visit(statement: SelectInsertedIdStatement): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | concrete [IStatement](#typescript-istatement) |
 
 **Returns**
 
 `string`
+
+##### StatementRenderer {#typescript-statementrenderer}
+
+```typescript
+class StatementRenderer implements IStatementVisitor
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StatementRenderer(text)](#typescript-statementrenderer-statementrenderer-text) |  |
+
+###### StatementRenderer(text) {#typescript-statementrenderer-statementrenderer-text}
+
+
+
+**Definition**
+
+```typescript
+constructor(text: StatementTextRenderer)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#typescript-statementtextrenderer) |
+
+##### C#
 
 ##### IStatement {#csharp-istatement}
 
 ```csharp
-public interface IStatement : IText
+public interface IStatement
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-istatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-istatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
-###### GetText() {#csharp-istatement-gettext}
+###### Accept(visitor) {#csharp-istatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-string GetText()
+string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
 `string`
 
-##### Rust
+##### StatementTextRenderer {#csharp-statementtextrenderer}
 
-##### Text {#rust-text}
+```csharp
+public class StatementTextRenderer
+```
 
-```rust
-pub trait Text: Send + Sync
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StatementTextRenderer(statements, conditions, expressions)](#csharp-statementtextrenderer-statementtextrenderer-statements-conditions-expressions) | Builds a renderer. Omitting factories uses [StatementRenderer](#csharp-statementrenderer) and [ConditionRenderer](#csharp-conditionrenderer). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Render(statement)](#csharp-statementtextrenderer-render-statement) | Renders a statement to command text. |
+| [Render(condition)](#csharp-statementtextrenderer-render-condition) | Renders a condition to predicate text. |
+
+###### StatementTextRenderer(statements, conditions, expressions) {#csharp-statementtextrenderer-statementtextrenderer-statements-conditions-expressions}
+
+Builds a renderer. Omitting factories uses [StatementRenderer](#csharp-statementrenderer) and [ConditionRenderer](#csharp-conditionrenderer).
+
+**Definition**
+
+```csharp
+public StatementTextRenderer(
+    Func<StatementTextRenderer, StatementRenderer>? statements = null,
+    Func<ExpressionRenderer, ConditionRenderer>? conditions = null,
+    Func<StatementTextRenderer, ExpressionRenderer>? expressions = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statements` | optional factory for the statement visitor |
+| `conditions` | optional factory for the condition visitor |
+| `expressions` | optional factory for the expression renderer |
+
+###### Render(statement) {#csharp-statementtextrenderer-render-statement}
+
+Renders a statement to command text.
+
+**Definition**
+
+```csharp
+public string Render(IStatement statement)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [IStatement](#csharp-istatement) |
+
+**Returns**
+
+`string`
+
+###### Render(condition) {#csharp-statementtextrenderer-render-condition}
+
+Renders a condition to predicate text.
+
+**Definition**
+
+```csharp
+public string Render(ICondition condition)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `condition` | [ICondition](#csharp-icondition) |
+
+**Returns**
+
+`string`
+
+##### DefaultStatementTextRenderer {#csharp-defaultstatementtextrenderer}
+
+```csharp
+public sealed class DefaultStatementTextRenderer : StatementTextRenderer
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [DefaultStatementTextRenderer()](#csharp-defaultstatementtextrenderer-defaultstatementtextrenderer) |  |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Instance |  |
+
+###### DefaultStatementTextRenderer() {#csharp-defaultstatementtextrenderer-defaultstatementtextrenderer}
+
+
+
+**Definition**
+
+```csharp
+public DefaultStatementTextRenderer()
+```
+
+##### IStatementVisitor {#csharp-istatementvisitor}
+
+```csharp
+public interface IStatementVisitor
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-text-get_text) | Rendered text. |
+| [Visit(statement)](#csharp-istatementvisitor-visit-statement) |  |
 
-###### get_text() {#rust-text-get_text}
+###### Visit(statement) {#csharp-istatementvisitor-visit-statement}
 
-Rendered text.
+
 
 **Definition**
 
-```rust
-fn get_text(&self) -> String
+```csharp
+string Visit(SelectStatement statement)
+string Visit(InsertStatement statement)
+string Visit(UpdateStatement statement)
+string Visit(DeleteStatement statement)
+string Visit(CreateTableStatement statement)
+string Visit(CreateIndexStatement statement)
+string Visit(ExecuteStoredProcedureStatement statement)
+string Visit(ReturnStatement statement)
+string Visit(SelectInsertedIdStatement statement)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | concrete [IStatement](#csharp-istatement) |
 
 **Returns**
 
-`String`
+`string`
+
+##### StatementRenderer {#csharp-statementrenderer}
+
+```csharp
+public class StatementRenderer : IStatementVisitor
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [StatementRenderer(text)](#csharp-statementrenderer-statementrenderer-text) |  |
+
+###### StatementRenderer(text) {#csharp-statementrenderer-statementrenderer-text}
+
+
+
+**Definition**
+
+```csharp
+public StatementRenderer(StatementTextRenderer text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#csharp-statementtextrenderer) |
+
+##### Rust
 
 ##### Statement {#rust-statement}
 
 ```rust
-pub trait Statement: Text
+pub trait Statement: Send + Sync
 ```
 
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-statement-get_text) | Command text. |
+| [accept()](#rust-statement-accept) | Dispatches through the renderer's statement visitor. |
 
-###### get_text() {#rust-statement-get_text}
+###### accept() {#rust-statement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
 `String`
 
+##### StatementTextRenderer {#rust-statementtextrenderer}
+
+```rust
+pub struct StatementTextRenderer
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [new(statements, conditions)](#rust-statementtextrenderer-new-statements-conditions) | Builds a renderer. `None` uses [StatementRenderer](#rust-statementrenderer) and [ConditionRenderer](#rust-conditionrenderer). |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [render()](#rust-statementtextrenderer-render) | Renders a statement to command text. |
+| [render_condition() / render_where()](#rust-statementtextrenderer-render_condition-render_where) | Renders a condition or where clause to predicate text. |
+
+###### new(statements, conditions) {#rust-statementtextrenderer-new-statements-conditions}
+
+Builds a renderer. `None` uses [StatementRenderer](#rust-statementrenderer) and [ConditionRenderer](#rust-conditionrenderer).
+
+**Definition**
+
+```rust
+pub fn new(
+    statements: Option<Box<dyn StatementVisitor>>,
+    conditions: Option<Box<dyn ConditionVisitor>>,
+) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statements` | optional statement visitor |
+| `conditions` | optional condition visitor |
+
+**Returns**
+
+[StatementTextRenderer](#rust-statementtextrenderer)
+
+###### render() {#rust-statementtextrenderer-render}
+
+Renders a statement to command text.
+
+**Definition**
+
+```rust
+pub fn render(&self, statement: &dyn Statement) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `statement` | [Statement](#rust-statement) |
+
+**Returns**
+
+`String`
+
+###### render_condition() / render_where() {#rust-statementtextrenderer-render_condition-render_where}
+
+Renders a condition or where clause to predicate text.
+
+**Definition**
+
+```rust
+pub fn render_condition(&self, condition: &dyn ICondition) -> String
+pub fn render_where(&self, where_clause: &dyn IWhere) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `condition` | [ICondition](#rust-icondition) |
+| `where_clause` | [IWhere](#rust-iwhere) |
+
+**Returns**
+
+`String`
+
+##### DefaultStatementTextRenderer {#rust-defaultstatementtextrenderer}
+
+```rust
+pub struct DefaultStatementTextRenderer
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [instance()](#rust-defaultstatementtextrenderer-instance) |  |
+
+###### instance() {#rust-defaultstatementtextrenderer-instance}
+
+
+
+**Definition**
+
+```rust
+pub fn instance() -> &'static StatementTextRenderer
+```
+
+**Returns**
+
+[StatementTextRenderer](#rust-statementtextrenderer)
+
+##### StatementVisitor {#rust-statementvisitor}
+
+```rust
+pub trait StatementVisitor: Send + Sync
+```
+
+##### StatementRenderer {#rust-statementrenderer}
+
+```rust
+pub struct StatementRenderer
+```
+
 ### Remarks
 
-Bound values live on [Where](#where). [IStatement](#istatement) is not an [IExpression](#iexpression); [IText](#itext) is the shared `GetText()` / `getText()` / `get_text()` surface. [IWhere](#iwhere) is a clause ([IExpression](#iexpression) + [IText](#itext)), not an [IStatement](#istatement).
+Bound values live on [Where](#where). [IStatement](#istatement) is not an [IExpression](#iexpression). Call `Accept` / `accept` / `accept` to dispatch; `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` is the usual entry point for SQL text. [IWhere](#iwhere) is a clause ([IExpression](#iexpression) + [ICondition](#icondition)), not an [IStatement](#istatement).
 
 ### See also
 
@@ -16423,7 +17158,7 @@ class SelectStatement implements ISelectStatement
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-selectstatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-selectstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### SelectStatement(text, where?) {#typescript-selectstatement-selectstatement-text-where}
 
@@ -16458,15 +17193,21 @@ constructor(options: SelectStatementOptions)
 | --- | --- |
 | `options` | table, fields, and optional where, joins, group, order, and limit |
 
-###### getText() {#typescript-selectstatement-gettext}
+###### accept(visitor) {#typescript-selectstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -16784,7 +17525,7 @@ public sealed record SelectStatement : ISelectStatement
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-selectstatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-selectstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### SelectStatement(text, where) {#csharp-selectstatement-selectstatement-text-where}
 
@@ -16819,15 +17560,21 @@ public SelectStatement(SelectStatementOptions options)
 | --- | --- |
 | `options` | table, fields, and optional where, joins, group, order, and limit |
 
-###### GetText() {#csharp-selectstatement-gettext}
+###### Accept(visitor) {#csharp-selectstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -17141,7 +17888,7 @@ pub struct SelectStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-selectstatement-get_text) | Command text. |
+| [accept()](#rust-selectstatement-accept) | Dispatches through the renderer's statement visitor. |
 | [where_clause()](#rust-selectstatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this query. |
 
 ###### text(text) {#rust-selectstatement-text-text}
@@ -17205,15 +17952,21 @@ pub fn new(options: SelectStatementOptions<'_>) -> Self
 
 [SelectStatement](#rust-selectstatement)
 
-###### get_text() {#rust-selectstatement-get_text}
+###### accept() {#rust-selectstatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -17524,42 +18277,47 @@ pub enum JoinKind
 
 ### Remarks
 
-[Command](#command) uses `GetText()` / `getText()` / `get_text()` only. Keep the [Where](#where) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
+[Command](#command) uses `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` only. Keep the [Where](#where) when the caller needs bound parameters. Empty `fields` compiles `SELECT *`. Clauses append as `GROUP BY`, `ORDER BY`, then `LIMIT`. An empty group or order list is omitted. `Aggregate` returns a select-list fragment such as `COUNT(*) AS n`.
 
 ### Examples
 
 #### Wrap query text and an optional where
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L39-L44)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L7-L17)
 
 ```csharp
-var select = new SelectStatement("SELECT 1");
+var select = new SelectStatement(new() { Table = "dual", Fields = ["1"] });
 var byId = new WhereText("id = 1");
-var withWhere = new SelectStatement("SELECT 1", byId);
+var withWhere = new SelectStatement(new() { Table = "dual", Fields = ["1"], Where = byId });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1196-L1199)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L10-L22)
 
 ```rust
-    .not_null(NotNull::new(Some("nn_id"))),
-Column::new("tenant_id", "INTEGER"),
-Column::new("user_id", "INTEGER"),
-Column::new("qty", "INTEGER"),
+let select = SelectStatement::new(SelectStatementOptions::new("dual", &["1"]));
+let by_id = WhereText::new("id = 1");
+let with_where = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&by_id),
+    ..SelectStatementOptions::new("dual", &["1"])
+});
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L42-L44)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L28-L36)
 
 ```typescript
-const select = new SelectStatement("SELECT 1");
-const where = new WhereText("id = 1");
-const withWhere = new SelectStatement("SELECT 1", where);
+const select = new SelectStatement({ table: "dual", fields: ["1"] });
+const byId = new WhereText("id = 1");
+const withWhere = new SelectStatement({ table: "dual", fields: ["1"], where: byId });
 ```
 
 #### Compile a SELECT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L127-L129)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L19-L28)
 
 ```csharp
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
 var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
 ```
 
@@ -17569,16 +18327,17 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L935-L942)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L24-L39)
 
 ```rust
-    Where::new(Operator::Equals {
-        left: Box::new(Expression::Literal(Literal::new(true))),
-        right: Box::new(Expression::Literal(Literal::new(false))),
-    })
-    .get_text(),
-    "true = false"
-);
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let query = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&where_clause),
+    ..SelectStatementOptions::new("users", &["id", "name"])
+});
 ```
 
 **After: select**
@@ -17587,22 +18346,91 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L198-L199)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L38-L47)
 
 ```typescript
-const where = new Where(new Operator.Equals("id", 1));
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
 const query = new SelectStatement({ table: "users", fields: ["id", "name"], where });
 ```
 
 **After: select**
 
 ```
-SELECT id, name FROM users WHERE id = $id
+SELECT id, name FROM users WHERE id = $id AND age > $age
+```
+
+#### Join tables
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L30-L48)
+
+```csharp
+var query = new SelectStatement(new()
+{
+    Table = "users",
+    Fields = ["users.id"],
+    Where = new Where(new Operator.Equals("users.id", 1)),
+    Joins =
+    [
+        Join.Inner("orders", "users.id", "orders.user_id"),
+        Join.Left("payments", "orders.id", "payments.order_id"),
+        Join.Right("profiles", "users.id", "profiles.user_id"),
+    ],
+});
+```
+
+**After: joins**
+
+```
+SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L41-L57)
+
+```rust
+let where_clause = Where::new(Operator::equals("users.id", 1_i64));
+let query = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&where_clause),
+    joins: &[
+        Join::inner("orders", "users.id", "orders.user_id"),
+        Join::left("payments", "orders.id", "payments.order_id"),
+        Join::right("profiles", "users.id", "profiles.user_id"),
+    ],
+    ..SelectStatementOptions::new("users", &["users.id"])
+});
+```
+
+**After: joins**
+
+```
+SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L49-L63)
+
+```typescript
+const query = new SelectStatement({
+  table: "users",
+  fields: ["users.id"],
+  where: new Where(new Operator.Equals("users.id", 1)),
+  joins: [
+    Join.inner("orders", "users.id", "orders.user_id"),
+    Join.left("payments", "orders.id", "payments.order_id"),
+    Join.right("profiles", "users.id", "profiles.user_id"),
+  ],
+});
+```
+
+**After: joins**
+
+```
+SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id
 ```
 
 #### Group, aggregate, order, and limit
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L156-L165)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L50-L66)
 
 ```csharp
 var grouped = new SelectStatement(new()
@@ -17623,24 +18451,25 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L986-L1000)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L59-L81)
 
 ```rust
-.get_text()
-.contains('='));
-assert!(Where::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
-        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
-    )))),
-    right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
-        chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
-    )))),
-})
-.get_text()
-.contains('='));
-assert!(Where::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
+let count = Aggregate::count("*", Some("n"));
+let total = Aggregate::sum("amount", Some("total"));
+let grouped_fields = ["status", count.as_str(), total.as_str()];
+let where_clause = Where::new(Operator::equals("status", "open"));
+let grouped = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&where_clause),
+    joins: &[Join::inner(
+        "customers",
+        "orders.customer_id",
+        "customers.id",
+    )],
+    group_by: &["status"],
+    order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
+    limit: Some(10),
+    ..SelectStatementOptions::new("orders", &grouped_fields)
+});
 ```
 
 **After: grouped select**
@@ -17649,11 +18478,18 @@ assert!(Where::new(Operator::Equals {
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L232-L240)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L65-L78)
 
 ```typescript
-  "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id",
-);
+const grouped = new SelectStatement({
+  table: "orders",
+  fields: ["status", Aggregate.count("*", "n"), Aggregate.sum("amount", "total")],
+  where: new Where(new Operator.Equals("status", "open")),
+  joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
+  groupBy: ["status"],
+  orderBy: [OrderBy.desc("total"), OrderBy.asc("status")],
+  limit: 10,
+});
 ```
 
 **After: grouped select**
@@ -17664,7 +18500,7 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 
 #### Group rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L167-L167)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L68-L73)
 
 ```csharp
 var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
@@ -17676,13 +18512,13 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1005-L1008)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L83-L90)
 
 ```rust
-    left: Box::new(Expression::Literal(Literal::new(1_i64))),
-    right: Box::new(Expression::Literal(Literal::new(2_i64))),
-})
-.parameters()
+let by_status = SelectStatement::new(SelectStatementOptions {
+    group_by: &["id"],
+    ..SelectStatementOptions::new("users", &["id"])
+});
 ```
 
 **After: group by**
@@ -17691,10 +18527,10 @@ SELECT id FROM users GROUP BY id
 SELECT id FROM users GROUP BY id
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L244-L244)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L80-L83)
 
 ```typescript
-limit: 10,
+const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
 ```
 
 **After: group by**
@@ -17705,7 +18541,7 @@ SELECT id FROM users GROUP BY id
 
 #### Aggregate without grouping
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L169-L169)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L75-L80)
 
 ```csharp
 var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
@@ -17717,10 +18553,13 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1010-L1013)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L92-L99)
 
 ```rust
-
+let min_n = Aggregate::min("n", None);
+let max_n = Aggregate::max("n", None);
+let bound_fields = [min_n.as_str(), max_n.as_str()];
+let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
 ```
 
 **After: min and max**
@@ -17729,10 +18568,10 @@ SELECT MIN(n), MAX(n) FROM users
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L246-L246)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L85-L88)
 
 ```typescript
-
+const bounds = new SelectStatement({ table: "users", fields: [Aggregate.min("n"), Aggregate.max("n")] });
 ```
 
 **After: min and max**
@@ -17743,7 +18582,7 @@ SELECT MIN(n), MAX(n) FROM users
 
 #### Order rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L171-L171)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L82-L87)
 
 ```csharp
 var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
@@ -17755,12 +18594,13 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1015-L1018)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L101-L111)
 
 ```rust
-    .get_text(),
-    "(NOT (id = $id)) AND age = $age"
-);
+let ordered = SelectStatement::new(SelectStatementOptions {
+    order_by: &[OrderBy::asc("id"), OrderBy::desc("name")],
+    ..SelectStatementOptions::new("users", &["id"])
+});
 ```
 
 **After: order by**
@@ -17769,11 +18609,14 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L248-L252)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L90-L99)
 
 ```typescript
-);
-const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
+const ordered = new SelectStatement({
+  table: "users",
+  fields: ["id"],
+  orderBy: [OrderBy.asc("id"), OrderBy.desc("name")],
+});
 ```
 
 **After: order by**
@@ -17784,7 +18627,7 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 
 #### Limit rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L173-L173)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L89-L94)
 
 ```csharp
 var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
@@ -17796,12 +18639,13 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1023-L1026)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L113-L120)
 
 ```rust
-    .parameters()
-    .is_empty());
-let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
+let limited = SelectStatement::new(SelectStatementOptions {
+    limit: Some(10),
+    ..SelectStatementOptions::new("users", &["id"])
+});
 ```
 
 **After: limit**
@@ -17810,10 +18654,10 @@ let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2
 SELECT id FROM users LIMIT 10
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L254-L254)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L101-L104)
 
 ```typescript
-table: "users",
+const limited = new SelectStatement({ table: "users", fields: ["id"], limit: 10 });
 ```
 
 **After: limit**
@@ -17853,7 +18697,7 @@ class InsertStatement implements IInsertStatement
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-insertstatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-insertstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### InsertStatement(text) {#typescript-insertstatement-insertstatement-text}
 
@@ -17888,15 +18732,21 @@ constructor(table: string, fields: Field[])
 | `table` | table name |
 | `fields` | [Field](#typescript-field) columns and bound values |
 
-###### getText() {#typescript-insertstatement-gettext}
+###### accept(visitor) {#typescript-insertstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -17940,7 +18790,7 @@ public sealed record InsertStatement : IInsertStatement
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-insertstatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-insertstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### InsertStatement(text) {#csharp-insertstatement-insertstatement-text}
 
@@ -17975,15 +18825,21 @@ public InsertStatement(string table, IReadOnlyList<Parameter> fields)
 | `table` | table name |
 | `fields` | [Parameter](#csharp-parameter) columns and bound values |
 
-###### GetText() {#csharp-insertstatement-gettext}
+###### Accept(visitor) {#csharp-insertstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -18008,7 +18864,7 @@ pub struct InsertStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-insertstatement-get_text) | Command text. |
+| [accept()](#rust-insertstatement-accept) | Dispatches through the renderer's statement visitor. |
 
 ###### text(text) {#rust-insertstatement-text-text}
 
@@ -18051,15 +18907,21 @@ pub fn new(table: impl AsRef<str>, fields: &[Parameter]) -> Self
 
 [InsertStatement](#rust-insertstatement)
 
-###### get_text() {#rust-insertstatement-get_text}
+###### accept() {#rust-insertstatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -18067,17 +18929,17 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](#command) uses `GetText()` / `getText()` / `get_text()` only.
+Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](#command) uses `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` only.
 
 ### Examples
 
 #### Compile an INSERT
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L150-L151)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L96-L102)
 
 ```csharp
-Join.Inner("orders", "users.id", "orders.user_id"),
-Join.Left("payments", "orders.id", "payments.order_id"),
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var insert = new InsertStatement("users", fields);
 ```
 
 **After: insert**
@@ -18086,14 +18948,11 @@ Join.Left("payments", "orders.id", "payments.order_id"),
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L984-L988)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L122-L130)
 
 ```rust
-    )))),
-})
-.get_text()
-.contains('='));
-assert!(Where::new(Operator::Equals {
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let insert = InsertStatement::new("users", &fields);
 ```
 
 **After: insert**
@@ -18102,13 +18961,14 @@ assert!(Where::new(Operator::Equals {
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L222-L225)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L106-L115)
 
 ```typescript
-table: "users",
-fields: ["users.id"],
-where: new Where(new Operator.Equals("users.id", 1)),
-joins: [
+const fields = [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+];
+const insert = new InsertStatement("users", fields);
 ```
 
 **After: insert**
@@ -18160,7 +19020,7 @@ class UpdateStatement implements IUpdateStatement
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-updatestatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-updatestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### UpdateStatement(text, where?) {#typescript-updatestatement-updatestatement-text-where}
 
@@ -18197,15 +19057,21 @@ constructor(table: string, fields: Field[], where?: IWhere)
 | `fields` | [Field](#typescript-field) columns and bound values |
 | `where` | optional [IWhere](#typescript-iwhere) |
 
-###### getText() {#typescript-updatestatement-gettext}
+###### accept(visitor) {#typescript-updatestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -18248,7 +19114,7 @@ public sealed record UpdateStatement : IUpdateStatement
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-updatestatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-updatestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### UpdateStatement(text, where) {#csharp-updatestatement-updatestatement-text-where}
 
@@ -18285,15 +19151,21 @@ public UpdateStatement(string table, IReadOnlyList<Parameter> fields, IWhere? wh
 | `fields` | [Parameter](#csharp-parameter) columns and bound values |
 | `where` | optional [IWhere](#csharp-iwhere) |
 
-###### GetText() {#csharp-updatestatement-gettext}
+###### Accept(visitor) {#csharp-updatestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -18318,7 +19190,7 @@ pub struct UpdateStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-updatestatement-get_text) | Command text. |
+| [accept()](#rust-updatestatement-accept) | Dispatches through the renderer's statement visitor. |
 | [where_clause()](#rust-updatestatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this update. |
 
 ###### text(text, where_clause) {#rust-updatestatement-text-text-where_clause}
@@ -18364,15 +19236,21 @@ pub fn new(table: impl AsRef<str>, fields: &[Parameter], where_clause: Option<&d
 
 [UpdateStatement](#rust-updatestatement)
 
-###### get_text() {#rust-updatestatement-get_text}
+###### accept() {#rust-updatestatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -18400,12 +19278,14 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 
 #### Compile an UPDATE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L152-L154)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L104-L114)
 
 ```csharp
-        Join.Right("profiles", "users.id", "profiles.user_id"),
-    ],
-}).GetText());
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
+var update = new UpdateStatement("users", fields, where);
 ```
 
 **After: update**
@@ -18414,15 +19294,15 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](#iw
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L989-L994)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L132-L145)
 
 ```rust
-left: Box::new(Expression::Literal(Literal::new(Value::DateTime(
-    chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
-)))),
-right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
-    chrono::Utc.with_ymd_and_hms(2024, 1, 2, 0, 0, 0).unwrap()
-)))),
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let update = UpdateStatement::new("users", &fields, Some(&where_clause));
 ```
 
 **After: update**
@@ -18431,20 +19311,23 @@ right: Box::new(Expression::Literal(Literal::new(Value::DateTime(
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L226-L230)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L117-L130)
 
 ```typescript
-    Join.inner("orders", "users.id", "orders.user_id"),
-    Join.left("payments", "orders.id", "payments.order_id"),
-    Join.right("profiles", "users.id", "profiles.user_id"),
-  ],
-}).getText(),
+const fields = [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+];
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
+const update = new UpdateStatement("users", fields, where);
 ```
 
 **After: update**
 
 ```
-UPDATE users SET id = $id, name = $name WHERE id = $id
+UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
 ## Delete Statement
@@ -18490,7 +19373,7 @@ class DeleteStatement implements IDeleteStatement
 | Name | Description |
 | --- | --- |
 | [raw(text, where?)](#typescript-deletestatement-raw-text-where) | Wraps delete text and an optional [IWhere](#typescript-iwhere). |
-| [getText()](#typescript-deletestatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-deletestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### DeleteStatement(table, where?) {#typescript-deletestatement-deletestatement-table-where}
 
@@ -18530,15 +19413,21 @@ static raw(text: string, where?: IWhere): DeleteStatement
 
 [DeleteStatement](#typescript-deletestatement)
 
-###### getText() {#typescript-deletestatement-gettext}
+###### accept(visitor) {#typescript-deletestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -18581,7 +19470,7 @@ public sealed record DeleteStatement : IDeleteStatement
 | Name | Description |
 | --- | --- |
 | [Raw(text, where)](#csharp-deletestatement-raw-text-where) | Wraps delete text and an optional [IWhere](#csharp-iwhere). |
-| [GetText()](#csharp-deletestatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-deletestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### DeleteStatement(table, where) {#csharp-deletestatement-deletestatement-table-where}
 
@@ -18621,15 +19510,21 @@ public static DeleteStatement Raw(string text, IWhere? where = null)
 
 [DeleteStatement](#csharp-deletestatement)
 
-###### GetText() {#csharp-deletestatement-gettext}
+###### Accept(visitor) {#csharp-deletestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -18654,7 +19549,7 @@ pub struct DeleteStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-deletestatement-get_text) | Command text. |
+| [accept()](#rust-deletestatement-accept) | Dispatches through the renderer's statement visitor. |
 | [where_clause()](#rust-deletestatement-where_clause) | Optional [IWhere](#rust-iwhere) used to build this delete. |
 
 ###### new(table, where_clause) {#rust-deletestatement-new-table-where_clause}
@@ -18699,15 +19594,21 @@ pub fn raw(text: impl Into<String>, where_clause: Option<Box<dyn IWhere>>) -> Se
 
 [DeleteStatement](#rust-deletestatement)
 
-###### get_text() {#rust-deletestatement-get_text}
+###### accept() {#rust-deletestatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -18735,12 +19636,13 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 
 #### Compile a DELETE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L157-L159)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L116-L125)
 
 ```csharp
-{
-    Table = "orders",
-    Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
+var delete = new DeleteStatement("users", where);
 ```
 
 **After: delete**
@@ -18749,15 +19651,14 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](#iwhere) is p
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L998-L1003)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L147-L159)
 
 ```rust
-assert!(Where::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-})
-.get_text()
-.contains('='));
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let delete = DeleteStatement::new("users", Some(&where_clause));
 ```
 
 **After: delete**
@@ -18766,16 +19667,19 @@ assert!(Where::new(Operator::Equals {
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L234-L236)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L132-L141)
 
 ```typescript
-
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
+const del = new DeleteStatement("users", where);
 ```
 
 **After: delete**
 
 ```
-DELETE FROM users WHERE id = $id
+DELETE FROM users WHERE id = $id AND age > $age
 ```
 
 ## Create Table Statement
@@ -18817,7 +19721,7 @@ class CreateTableStatement implements ICreateTableStatement
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-createtablestatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-createtablestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### CreateTableStatement(text) {#typescript-createtablestatement-createtablestatement-text}
 
@@ -18853,15 +19757,21 @@ constructor(table: string, columns: Column[], constraints?: ITableConstraint[])
 | `columns` | [Column](#typescript-column) names, types, optional [ColumnDefault](#typescript-columndefault) and [NotNull](#typescript-notnull) |
 | `constraints` | optional named [ITableConstraint](#typescript-itableconstraint) list |
 
-###### getText() {#typescript-createtablestatement-gettext}
+###### accept(visitor) {#typescript-createtablestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -18881,7 +19791,7 @@ interface Column
 | type | SQL type name. |
 | default | Optional [ColumnDefault](#typescript-columndefault). |
 | notNull | Optional [NotNull](#typescript-notnull). |
-| identity | When true, MySQL and Postgres commands render an identity clause. `getText()` leaves it off. |
+| identity | When true, MySQL and Postgres commands render an identity clause. `DefaultStatementTextRenderer` leaves it off. |
 
 ##### ColumnDefault {#typescript-columndefault}
 
@@ -19135,7 +20045,7 @@ public sealed record CreateTableStatement : ICreateTableStatement
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-createtablestatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-createtablestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### CreateTableStatement(text) {#csharp-createtablestatement-createtablestatement-text}
 
@@ -19171,15 +20081,21 @@ public CreateTableStatement(string table, IReadOnlyList<Column> columns, IReadOn
 | `columns` | [Column](#csharp-column) names, types, optional [ColumnDefault](#csharp-columndefault) and [NotNull](#csharp-notnull) |
 | `constraints` | optional named [ITableConstraint](#csharp-itableconstraint) list |
 
-###### GetText() {#csharp-createtablestatement-gettext}
+###### Accept(visitor) {#csharp-createtablestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -19199,7 +20115,7 @@ public sealed record Column(string Name, string Type, ColumnDefault? Default = n
 | Type | SQL type name. |
 | Default | Optional [ColumnDefault](#csharp-columndefault). |
 | NotNull | Optional [NotNull](#csharp-notnull). |
-| Identity | When true, MySQL and Postgres commands render an identity clause. `GetText()` leaves it off. |
+| Identity | When true, MySQL and Postgres commands render an identity clause. `DefaultStatementTextRenderer` leaves it off. |
 
 ##### ColumnDefault {#csharp-columndefault}
 
@@ -19331,7 +20247,7 @@ pub struct CreateTableStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-createtablestatement-get_text) | Command text. |
+| [accept()](#rust-createtablestatement-accept) | Dispatches through the renderer's statement visitor. |
 
 ###### text(text) {#rust-createtablestatement-text-text}
 
@@ -19375,15 +20291,21 @@ pub fn new(table: impl AsRef<str>, columns: &[Column], constraints: &[TableConst
 
 [CreateTableStatement](#rust-createtablestatement)
 
-###### get_text() {#rust-createtablestatement-get_text}
+###### accept() {#rust-createtablestatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -19402,7 +20324,7 @@ pub struct Column
 | [new(name, type_name)](#rust-column-new-name-type_name) | Column name and SQL type. |
 | [default(self, default)](#rust-column-default-self-default) | Sets an optional [ColumnDefault](#rust-columndefault). |
 | [not_null(self, not_null)](#rust-column-not_null-self-not_null) | Sets an optional [NotNull](#rust-notnull). |
-| [identity(self)](#rust-column-identity-self) | Marks the column as an identity. `get_text()` leaves the clause off. MySQL and Postgres commands render it. |
+| [identity(self)](#rust-column-identity-self) | Marks the column as an identity. `DefaultStatementTextRenderer` leaves the clause off. MySQL and Postgres commands render it. |
 
 ###### new(name, type_name) {#rust-column-new-name-type_name}
 
@@ -19467,7 +20389,7 @@ pub fn not_null(self, not_null: NotNull) -> Self
 
 ###### identity(self) {#rust-column-identity-self}
 
-Marks the column as an identity. `get_text()` leaves the clause off. MySQL and Postgres commands render it.
+Marks the column as an identity. `DefaultStatementTextRenderer` leaves the clause off. MySQL and Postgres commands render it.
 
 **Definition**
 
@@ -19704,17 +20626,16 @@ pub enum ReferentialAction
 
 ### Remarks
 
-A compiled statement stores the table, columns, and constraints. `GetText()` / `getText()` / `get_text()` renders `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTRAINT n NOT NULL], …, CONSTRAINT name …)`. Table and column names are interpolated as given. Default and check values are raw SQL fragments. Wrapped text has no table. Indexes use [CreateIndexStatement](#create-index-statement). `GetText()` / `getText()` / `get_text()` uses `CreateTableStatementRenderer`. A provider subclasses that renderer and can replace `Render` / `render` / `render` or override type, default, and identity. SQLite, MySQL, and Postgres override type so canonical names become engine types. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. Identity renders `AUTO_INCREMENT` or `GENERATED BY DEFAULT AS IDENTITY`. SQLite leaves identity empty. `GetText()` / `getText()` / `get_text()` leaves those changes off. Other commands use the rendered text.
+A compiled statement stores the table, columns, and constraints. `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` renders `CREATE TABLE table (name TYPE [CONSTRAINT n DEFAULT v] [CONSTRAINT n NOT NULL], …, CONSTRAINT name …)`. Table and column names are interpolated as given. Default and check values are raw SQL fragments. Wrapped text has no table. Indexes use [CreateIndexStatement](#create-index-statement). `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` uses `CreateTableStatementTextRenderer`. A provider subclasses that renderer and can replace `Render` / `render` / `render` or override type, default, and identity. SQLite, MySQL, and Postgres override type so canonical names become engine types. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. Identity renders `AUTO_INCREMENT` or `GENERATED BY DEFAULT AS IDENTITY`. SQLite leaves identity empty. `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` leaves those changes off. Other commands use the rendered text.
 
 ### Examples
 
 #### Compile a CREATE TABLE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L161-L162)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L127-L132)
 
 ```csharp
-Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
-GroupBy = ["status"],
+var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
 ```
 
 **After: create table**
@@ -19723,15 +20644,14 @@ GroupBy = ["status"],
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1004-L1012)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L161-L172)
 
 ```rust
-assert!(Where::new(Operator::In {
-    left: Box::new(Expression::Literal(Literal::new(1_i64))),
-    right: Box::new(Expression::Literal(Literal::new(2_i64))),
-})
-.parameters()
-.is_empty());
+let create_table = CreateTableStatement::new(
+    "users",
+    &[Column::new("id", "INTEGER"), Column::new("name", "TEXT")],
+    &[],
+);
 ```
 
 **After: create table**
@@ -19740,14 +20660,13 @@ assert!(Where::new(Operator::In {
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L240-L244)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L143-L151)
 
 ```typescript
-where: new Where(new Operator.Equals("status", "open")),
-joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
-groupBy: ["status"],
-orderBy: [OrderBy.desc("total"), OrderBy.asc("status")],
-limit: 10,
+const createTable = new CreateTableStatement("users", [
+  { name: "id", type: "INTEGER" },
+  { name: "name", type: "TEXT" },
+]);
 ```
 
 **After: create table**
@@ -19758,12 +20677,23 @@ CREATE TABLE users (id INTEGER, name TEXT)
 
 #### Compile named constraints
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L163-L176)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L134-L154)
 
 ```csharp
-    OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
-    Limit = 10,
-});
+var namedTable = new CreateTableStatement(
+    "orders",
+    [
+        new Column("id", "INTEGER", new ColumnDefault("0", "df_id"), new NotNull("nn_id")),
+        new Column("tenant_id", "INTEGER"),
+        new Column("user_id", "INTEGER"),
+        new Column("qty", "INTEGER")
+    ],
+    [
+        new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+        new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+        new UniqueConstraint("uq_orders_user", ["user_id"]),
+        new CheckConstraint("chk_orders_qty", "qty > 0")
+    ]);
 ```
 
 **After: named constraints**
@@ -19772,9 +20702,32 @@ CREATE TABLE users (id INTEGER, name TEXT)
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1017-L1040)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L174-L204)
 
 ```rust
+let named_table = CreateTableStatement::new(
+    "orders",
+    &[
+        Column::new("id", "INTEGER")
+            .default(ColumnDefault::new("0", Some("df_id")))
+            .not_null(NotNull::new(Some("nn_id"))),
+        Column::new("tenant_id", "INTEGER"),
+        Column::new("user_id", "INTEGER"),
+        Column::new("qty", "INTEGER"),
+    ],
+    &[
+        PrimaryKey::new("pk_orders", &["id", "tenant_id"]),
+        ForeignKey::new(
+            "fk_orders_user",
+            &["user_id"],
+            "users",
+            &["id"],
+            Some(ReferentialAction::Cascade),
+            None,
+        ),
+        UniqueConstraint::new("uq_orders_user", &["user_id"]),
+        CheckConstraint::new("chk_orders_qty", "qty > 0"),
+    ],
 );
 ```
 
@@ -19784,10 +20737,24 @@ CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT 
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L245-L259)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L153-L172)
 
 ```typescript
-});
+const namedTable = new CreateTableStatement(
+  "orders",
+  [
+    { name: "id", type: "INTEGER", default: new ColumnDefault("0", "df_id"), notNull: new NotNull("nn_id") },
+    { name: "tenant_id", type: "INTEGER" },
+    { name: "user_id", type: "INTEGER" },
+    { name: "qty", type: "INTEGER" },
+  ],
+  [
+    new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+    new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+    new UniqueConstraint("uq_orders_user", ["user_id"]),
+    new CheckConstraint("chk_orders_qty", "qty > 0"),
+  ],
+);
 ```
 
 **After: named constraints**
@@ -19827,7 +20794,7 @@ class CreateIndexStatement implements ICreateIndexStatement
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-createindexstatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-createindexstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### CreateIndexStatement(text) {#typescript-createindexstatement-createindexstatement-text}
 
@@ -19864,15 +20831,21 @@ constructor(name: string, table: string, columns: string[], unique?: boolean)
 | `columns` | indexed columns |
 | `unique` | `CREATE UNIQUE INDEX` when true |
 
-###### getText() {#typescript-createindexstatement-gettext}
+###### accept(visitor) {#typescript-createindexstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -19903,7 +20876,7 @@ public sealed record CreateIndexStatement : ICreateIndexStatement
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-createindexstatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-createindexstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### CreateIndexStatement(text) {#csharp-createindexstatement-createindexstatement-text}
 
@@ -19940,15 +20913,21 @@ public CreateIndexStatement(string name, string table, IReadOnlyList<string> col
 | `columns` | indexed columns |
 | `unique` | `CREATE UNIQUE INDEX` when true |
 
-###### GetText() {#csharp-createindexstatement-gettext}
+###### Accept(visitor) {#csharp-createindexstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -19973,7 +20952,7 @@ pub struct CreateIndexStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-createindexstatement-get_text) | Command text. |
+| [accept()](#rust-createindexstatement-accept) | Dispatches through the renderer's statement visitor. |
 
 ###### text(text) {#rust-createindexstatement-text-text}
 
@@ -20018,15 +20997,21 @@ pub fn new(name: impl AsRef<str>, table: impl AsRef<str>, columns: &[&str], uniq
 
 [CreateIndexStatement](#rust-createindexstatement)
 
-###### get_text() {#rust-createindexstatement-get_text}
+###### accept() {#rust-createindexstatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -20034,17 +21019,16 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX name ON table (cols)`. Table and column names are interpolated as given. [Command](#command) uses `GetText()` / `getText()` / `get_text()` only.
+Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX name ON table (cols)`. Table and column names are interpolated as given. [Command](#command) uses `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` only.
 
 ### Examples
 
 #### Compile a CREATE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L209-L210)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L156-L161)
 
 ```csharp
-"CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
-new CreateTableStatement(
+var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
 ```
 
 **After: create index**
@@ -20053,14 +21037,10 @@ new CreateTableStatement(
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1085-L1092)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L206-L213)
 
 ```rust
-        ..SelectStatementOptions::new("users", &["users.id"])
-    })
-    .get_text(),
-    "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
-);
+let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
 ```
 
 **After: create index**
@@ -20069,11 +21049,10 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L306-L307)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L174-L179)
 
 ```typescript
-new UniqueConstraint("uq_orders_user", ["user_id"]),
-new CheckConstraint("chk_orders_qty", "qty > 0"),
+const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
 ```
 
 **After: create index**
@@ -20084,12 +21063,10 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 
 #### Compile a CREATE UNIQUE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L211-L213)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L163-L168)
 
 ```csharp
-"items",
-[new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
-[new ForeignKey("fk_items_user", ["id"], "users", ["id"])]).GetText());
+var createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
 ```
 
 **After: create unique index**
@@ -20098,12 +21075,10 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1094-L1096)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L215-L222)
 
 ```rust
-})
-.get_text(),
-"SELECT id FROM users"
+let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code"], true);
 ```
 
 **After: create unique index**
@@ -20112,11 +21087,10 @@ CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L308-L310)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L181-L186)
 
 ```typescript
-  ],
-);
+const createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
 ```
 
 **After: create unique index**
@@ -20156,7 +21130,7 @@ class ExecuteStoredProcedureStatement implements IExecuteStoredProcedureStatemen
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-executestoredprocedurestatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-executestoredprocedurestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### ExecuteStoredProcedureStatement(text) {#typescript-executestoredprocedurestatement-executestoredprocedurestatement-text}
 
@@ -20191,15 +21165,21 @@ constructor(name: string, parameters: Parameter[])
 | `name` | procedure name |
 | `parameters` | bound values (empty for `CALL name()`) |
 
-###### getText() {#typescript-executestoredprocedurestatement-gettext}
+###### accept(visitor) {#typescript-executestoredprocedurestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -20230,7 +21210,7 @@ public sealed record ExecuteStoredProcedureStatement : IExecuteStoredProcedureSt
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-executestoredprocedurestatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-executestoredprocedurestatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### ExecuteStoredProcedureStatement(text) {#csharp-executestoredprocedurestatement-executestoredprocedurestatement-text}
 
@@ -20265,15 +21245,21 @@ public ExecuteStoredProcedureStatement(string name, IReadOnlyList<Parameter> par
 | `name` | procedure name |
 | `parameters` | bound values (empty for `CALL name()`) |
 
-###### GetText() {#csharp-executestoredprocedurestatement-gettext}
+###### Accept(visitor) {#csharp-executestoredprocedurestatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -20298,7 +21284,7 @@ pub struct ExecuteStoredProcedureStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-executestoredprocedurestatement-get_text) | Command text. |
+| [accept()](#rust-executestoredprocedurestatement-accept) | Dispatches through the renderer's statement visitor. |
 
 ###### text(text) {#rust-executestoredprocedurestatement-text-text}
 
@@ -20341,15 +21327,21 @@ pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self
 
 [ExecuteStoredProcedureStatement](#rust-executestoredprocedurestatement)
 
-###### get_text() {#rust-executestoredprocedurestatement-get_text}
+###### accept() {#rust-executestoredprocedurestatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -20363,10 +21355,11 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 
 #### Compile a CALL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L214-L215)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L170-L176)
 
 ```csharp
-
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var call = new ExecuteStoredProcedureStatement("save", fields);
 ```
 
 **After: call**
@@ -20375,11 +21368,11 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](#parameterdirec
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1098-L1099)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L224-L229)
 
 ```rust
-let count = Aggregate::count("*", Some("n"));
-let total = Aggregate::sum("amount", Some("total"));
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let call = ExecuteStoredProcedureStatement::new("save", &fields);
 ```
 
 **After: call**
@@ -20388,11 +21381,14 @@ let total = Aggregate::sum("amount", Some("total"));
 CALL save($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L311-L312)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L188-L195)
 
 ```typescript
-  "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
-);
+const fields = [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+];
+const call = new ExecuteStoredProcedureStatement("save", fields);
 ```
 
 **After: call**
@@ -20432,7 +21428,7 @@ class ReturnStatement implements IReturnStatement
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-returnstatement-gettext) | Command text. |
+| [accept(visitor)](#typescript-returnstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### ReturnStatement(text) {#typescript-returnstatement-returnstatement-text}
 
@@ -20467,15 +21463,21 @@ constructor(name: string, parameters: Parameter[])
 | `name` | function name |
 | `parameters` | bound values (empty for `SELECT name()`) |
 
-###### getText() {#typescript-returnstatement-gettext}
+###### accept(visitor) {#typescript-returnstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#typescript-istatementvisitor) |
 
 **Returns**
 
@@ -20506,7 +21508,7 @@ public sealed record ReturnStatement : IReturnStatement
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-returnstatement-gettext) | Command text. |
+| [Accept(visitor)](#csharp-returnstatement-accept-visitor) | Dispatches to a statement visitor that renders command text. |
 
 ###### ReturnStatement(text) {#csharp-returnstatement-returnstatement-text}
 
@@ -20541,15 +21543,21 @@ public ReturnStatement(string name, IReadOnlyList<Parameter> parameters)
 | `name` | function name |
 | `parameters` | bound values (empty for `SELECT name()`) |
 
-###### GetText() {#csharp-returnstatement-gettext}
+###### Accept(visitor) {#csharp-returnstatement-accept-visitor}
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IStatementVisitor](#csharp-istatementvisitor) |
 
 **Returns**
 
@@ -20574,7 +21582,7 @@ pub struct ReturnStatement
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-returnstatement-get_text) | Command text. |
+| [accept()](#rust-returnstatement-accept) | Dispatches through the renderer's statement visitor. |
 
 ###### text(text) {#rust-returnstatement-text-text}
 
@@ -20617,15 +21625,21 @@ pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self
 
 [ReturnStatement](#rust-returnstatement)
 
-###### get_text() {#rust-returnstatement-get_text}
+###### accept() {#rust-returnstatement-accept}
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -20639,10 +21653,11 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 
 #### Compile a SELECT function call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L217-L218)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L178-L184)
 
 ```csharp
-
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var ret = new ReturnStatement("add", fields);
 ```
 
 **After: return**
@@ -20651,11 +21666,11 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](#parameterd
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1104-L1105)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L231-L236)
 
 ```rust
-"customers",
-"orders.customer_id",
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let ret = ReturnStatement::new("add", &fields);
 ```
 
 **After: return**
@@ -20664,11 +21679,14 @@ SELECT add($id, $name)
 SELECT add($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L316-L317)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L197-L204)
 
 ```typescript
-[
-  { name: "id", type: "INTEGER", default: new ColumnDefault("0") },
+const fields = [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+];
+const ret = new ReturnStatement("add", fields);
 ```
 
 **After: return**
@@ -20709,7 +21727,7 @@ class Where implements IWhere
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-where-gettext) | Predicate text. |
+| [accept(visitor)](#typescript-where-accept-visitor) | Dispatches to a condition visitor that renders predicate text. |
 | [and(column, op, value) / or(column, op, value)](#typescript-where-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under [Operator.And](#typescript-operator) or `Operator.Or`. |
 | [map(column, value)](#typescript-where-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
 
@@ -20747,15 +21765,21 @@ constructor(column: string, op: Comparison, value: Cell)
 | `op` | [Cmp](#typescript-cmp) alias such as `eq` or `gt` |
 | `value` | [Cell](#typescript-cell) |
 
-###### getText() {#typescript-where-gettext}
+###### accept(visitor) {#typescript-where-accept-visitor}
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IConditionVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IConditionVisitor](#typescript-iconditionvisitor) |
 
 **Returns**
 
@@ -20805,10 +21829,81 @@ map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell)
 
 [Where](#typescript-where)
 
+##### ICondition {#typescript-icondition}
+
+```typescript
+interface ICondition
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [accept(visitor)](#typescript-icondition-accept-visitor) | Dispatches to a condition visitor that renders predicate text. |
+
+###### accept(visitor) {#typescript-icondition-accept-visitor}
+
+Dispatches to a condition visitor that renders predicate text.
+
+**Definition**
+
+```typescript
+accept(visitor: IConditionVisitor): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IConditionVisitor](#typescript-iconditionvisitor) |
+
+**Returns**
+
+`string`
+
+##### IConditionVisitor {#typescript-iconditionvisitor}
+
+```typescript
+interface IConditionVisitor
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [visit(where)](#typescript-iconditionvisitor-visit-where) |  |
+
+###### visit(where) {#typescript-iconditionvisitor-visit-where}
+
+
+
+**Definition**
+
+```typescript
+visit(where: Where): string
+visit(where: WhereText): string
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `where` | [Where](#typescript-where) or [WhereText](#typescript-wheretext) |
+
+**Returns**
+
+`string`
+
+##### ConditionRenderer {#typescript-conditionrenderer}
+
+```typescript
+class ConditionRenderer implements IConditionVisitor
+```
+
 ##### IWhere {#typescript-iwhere}
 
 ```typescript
-interface IWhere extends IExpression, IText {}
+interface IWhere extends IExpression, ICondition {}
 ```
 
 ##### WhereText {#typescript-wheretext}
@@ -20827,7 +21922,7 @@ class WhereText implements IWhere
 
 | Name | Description |
 | --- | --- |
-| [getText()](#typescript-wheretext-gettext) | Predicate text. |
+| [accept(visitor)](#typescript-wheretext-accept-visitor) | Dispatches to a condition visitor that renders predicate text. |
 
 ###### WhereText(text) {#typescript-wheretext-wheretext-text}
 
@@ -20845,15 +21940,21 @@ constructor(text: string)
 | --- | --- |
 | `text` | predicate text |
 
-###### getText() {#typescript-wheretext-gettext}
+###### accept(visitor) {#typescript-wheretext-accept-visitor}
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 **Definition**
 
 ```typescript
-getText(): string
+accept(visitor: IConditionVisitor): string
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IConditionVisitor](#typescript-iconditionvisitor) |
 
 **Returns**
 
@@ -20891,7 +21992,7 @@ public sealed record Where(IExpression Condition) : IWhere
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-where-gettext) | Predicate text. |
+| [Accept(visitor)](#csharp-where-accept-visitor) | Dispatches to a condition visitor that renders predicate text. |
 | [And(column, op, value) / Or(column, op, value)](#csharp-where-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under `Operator.And` or `Operator.Or`. |
 | [Map(column, value)](#csharp-where-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
 
@@ -20929,15 +22030,21 @@ public Where(string column, Comparison op, Value? value)
 | `op` | [Cmp](#csharp-cmp) alias such as `eq` or `gt` |
 | `value` | cell value |
 
-###### GetText() {#csharp-where-gettext}
+###### Accept(visitor) {#csharp-where-accept-visitor}
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 **Definition**
 
 ```csharp
-public string GetText()
+public string Accept(IConditionVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IConditionVisitor](#csharp-iconditionvisitor) |
 
 **Returns**
 
@@ -20987,10 +22094,81 @@ public Where Map(Func<string, string> column, Func<string, Value, Value> value)
 
 [Where](#csharp-where)
 
+##### ICondition {#csharp-icondition}
+
+```csharp
+public interface ICondition
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Accept(visitor)](#csharp-icondition-accept-visitor) | Dispatches to a condition visitor that renders predicate text. |
+
+###### Accept(visitor) {#csharp-icondition-accept-visitor}
+
+Dispatches to a condition visitor that renders predicate text.
+
+**Definition**
+
+```csharp
+string Accept(IConditionVisitor visitor)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IConditionVisitor](#csharp-iconditionvisitor) |
+
+**Returns**
+
+`string`
+
+##### IConditionVisitor {#csharp-iconditionvisitor}
+
+```csharp
+public interface IConditionVisitor
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Visit(where)](#csharp-iconditionvisitor-visit-where) |  |
+
+###### Visit(where) {#csharp-iconditionvisitor-visit-where}
+
+
+
+**Definition**
+
+```csharp
+string Visit(Where where)
+string Visit(WhereText where)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `where` | [Where](#csharp-where) or [WhereText](#csharp-wheretext) |
+
+**Returns**
+
+`string`
+
+##### ConditionRenderer {#csharp-conditionrenderer}
+
+```csharp
+public class ConditionRenderer : IConditionVisitor
+```
+
 ##### IWhere {#csharp-iwhere}
 
 ```csharp
-public interface IWhere : IExpression, IText
+public interface IWhere : IExpression, ICondition
 ```
 
 ##### WhereText {#csharp-wheretext}
@@ -21009,7 +22187,7 @@ public sealed record WhereText : IWhere
 
 | Name | Description |
 | --- | --- |
-| [GetText()](#csharp-wheretext-gettext) | Predicate text. |
+| [Accept(visitor)](#csharp-wheretext-accept-visitor) | Dispatches to a condition visitor that renders predicate text. |
 
 ###### WhereText(text) {#csharp-wheretext-wheretext-text}
 
@@ -21027,15 +22205,21 @@ public WhereText(string text)
 | --- | --- |
 | `text` | predicate text |
 
-###### GetText() {#csharp-wheretext-gettext}
+###### Accept(visitor) {#csharp-wheretext-accept-visitor}
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 **Definition**
 
 ```csharp
-string GetText()
+string Accept(IConditionVisitor visitor)
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `visitor` | [IConditionVisitor](#csharp-iconditionvisitor) |
 
 **Returns**
 
@@ -21057,7 +22241,7 @@ pub struct Where
 | [binary(column, op, value)](#rust-where-binary-column-op-value) | Builds a comparison from a column, a [Cmp](#rust-cmp) alias, and a literal. |
 | [and(column, op, value) / or(column, op, value)](#rust-where-and-column-op-value-or-column-op-value) | Nests this clause with another comparison under `Operator::and` or `Operator::or`. |
 | [map(column, value)](#rust-where-map-column-value) | Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals. |
-| [get_text()](#rust-where-get_text) | Predicate text. |
+| [accept()](#rust-where-accept) | Dispatches through the renderer's condition visitor. |
 | [parameters()](#rust-where-parameters) | Bound [Parameter](#rust-parameter) list. |
 
 ###### new(condition) {#rust-where-new-condition}
@@ -21149,15 +22333,21 @@ where
 
 `Result<`[Where](#rust-where)`>`
 
-###### get_text() {#rust-where-get_text}
+###### accept() {#rust-where-accept}
 
-Predicate text.
+Dispatches through the renderer's condition visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -21177,10 +22367,54 @@ fn parameters(&self) -> Vec<Parameter>
 
 `Vec<`[Parameter](#rust-parameter)`>`
 
+##### ICondition {#rust-icondition}
+
+```rust
+pub trait ICondition: Send + Sync
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [accept()](#rust-icondition-accept) | Dispatches through the renderer's condition visitor. |
+
+###### accept() {#rust-icondition-accept}
+
+Dispatches through the renderer's condition visitor.
+
+**Definition**
+
+```rust
+fn accept(&self, text: &StatementTextRenderer) -> String
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
+
+**Returns**
+
+`String`
+
+##### ConditionVisitor {#rust-conditionvisitor}
+
+```rust
+pub trait ConditionVisitor: Send + Sync
+```
+
+##### ConditionRenderer {#rust-conditionrenderer}
+
+```rust
+pub struct ConditionRenderer
+```
+
 ##### IWhere {#rust-iwhere}
 
 ```rust
-pub trait IWhere: Text {}
+pub trait IWhere: ICondition
 ```
 
 ##### WhereText {#rust-wheretext}
@@ -21199,7 +22433,7 @@ pub struct WhereText
 
 | Name | Description |
 | --- | --- |
-| [get_text()](#rust-wheretext-get_text) | Predicate text. |
+| [accept()](#rust-wheretext-accept) | Dispatches through the renderer's condition visitor. |
 
 ###### new(text) {#rust-wheretext-new-text}
 
@@ -21221,15 +22455,21 @@ pub fn new(text: impl Into<String>) -> Self
 
 [WhereText](#rust-wheretext)
 
-###### get_text() {#rust-wheretext-get_text}
+###### accept() {#rust-wheretext-accept}
 
-Predicate text.
+Dispatches through the renderer's condition visitor.
 
 **Definition**
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | [StatementTextRenderer](#rust-statementtextrenderer) |
 
 **Returns**
 
@@ -21237,17 +22477,19 @@ fn get_text(&self) -> String
 
 ### Remarks
 
-Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](#select-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [ExpressionEvaluator](#expression-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
+Construct the predicate with [Operator](#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](#select-statement) / [UpdateStatement](#update-statement) / [DeleteStatement](#delete-statement) embed `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` of the where in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [ExpressionEvaluator](#expression-evaluator) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ### Examples
 
 #### Compare, groups, not, and in
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L52-L54)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L186-L195)
 
 ```csharp
-new Operator.Equals("id", 1),
-new Operator.GreaterThan("age", 18)));
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
+var inIds = new Where(new Operator.In("id", [1, 2]));
 ```
 
 **After: and**
@@ -21262,14 +22504,14 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L659-L663)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L238-L247)
 
 ```rust
-assert!(txn.commit().await.is_err());
-txn.set_abort_error("a");
-assert!(txn.abort().await.is_err());
-
-let command = MockCommand::new();
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));
 ```
 
 **After: and**
@@ -21284,12 +22526,13 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L57-L59)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L206-L213)
 
 ```typescript
 const where = new Where(
   new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
 );
+const inIds = new Where(new Operator.In("id", [1, 2]));
 ```
 
 **After: and**
@@ -21330,7 +22573,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1958-L1964)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1979-L1985)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -21354,10 +22597,17 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L356-L362)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L386-L403)
 
 ```typescript
-const call = new ExecuteStoredProcedureStatement("save", [...fields]);
+const equals = new Where("username", eq, "grace");
+const notEquals = new Where("id", ne, 2);
+const greater = new Where("n", gt, 0);
+const less = new Where("n", lt, 0);
+const greaterOrEqual = new Where("n", ge, 0);
+const lessOrEqual = new Where("n", le, 0);
+const both = equals.and("is_enabled", eq, 0);
+const either = equals.or("is_enabled", eq, 0);
 ```
 
 **After: equals**
@@ -21374,10 +22624,12 @@ username = $username AND is_enabled = $is_enabled
 
 #### Attach to a query
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L126-L129)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L206-L214)
 
 ```csharp
-var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
 var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });
 ```
 
@@ -21387,13 +22639,17 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L938-L944)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L258-L272)
 
 ```rust
-    })
-    .get_text(),
-    "true = false"
-);
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let query = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&where_clause),
+    ..SelectStatementOptions::new("users", &["id", "name"])
+});
 ```
 
 **After: select**
@@ -21402,25 +22658,24 @@ SELECT id, name FROM users WHERE id = $id AND age > $age
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L176-L181)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L222-L230)
 
 ```typescript
-).toEqual([]);
-class Ghost extends Operator {}
-expect(() => evaluator.evaluate(new Ghost(), row)).toThrow("empty expression");
-expect(() => new Where(new Ghost()).getText()).toThrow("empty expression");
-expect(() => new Where(new Ghost()).parameters).toThrow("empty expression");
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
+const query = new SelectStatement({ table: "users", fields: ["id", "name"], where });
 ```
 
 **After: select**
 
 ```
-SELECT id, name FROM users WHERE id = $id
+SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
 ## Expressions
 
-AST nodes for [Where](#where). `Operator` records hold operands; `GetText()` maps them to SQL.
+AST nodes for [Where](#where). `Operator` records hold operands; [StatementTextRenderer](#statementtextrenderer) maps them to SQL.
 
 ### Classes
 
@@ -21889,22 +23144,29 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 #### Compare tree
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L77-L80)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L197-L204)
 
 ```csharp
-
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L752-L767)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L249-L256)
 
 ```rust
-
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L64-L74)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L215-L220)
 
 ```typescript
-]);
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
 ```
 
 #### Column, alias, literal
@@ -21933,7 +23195,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1958-L1964)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1979-L1985)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -21957,10 +23219,17 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L356-L362)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L386-L403)
 
 ```typescript
-const call = new ExecuteStoredProcedureStatement("save", [...fields]);
+const equals = new Where("username", eq, "grace");
+const notEquals = new Where("id", ne, 2);
+const greater = new Where("n", gt, 0);
+const less = new Where("n", lt, 0);
+const greaterOrEqual = new Where("n", ge, 0);
+const lessOrEqual = new Where("n", le, 0);
+const both = equals.and("is_enabled", eq, 0);
+const either = equals.or("is_enabled", eq, 0);
 ```
 
 **After: equals**
@@ -21977,7 +23246,7 @@ username = $username AND is_enabled = $is_enabled
 
 ## ExpressionEvaluator
 
-Interprets an [IExpression](#expressions) against a name→value map. [Where.GetText](#where) materializes SQL; this type evaluates.
+Interprets an [IExpression](#expressions) against a name→value map. [StatementTextRenderer](#statementtextrenderer) materializes SQL; this type evaluates.
 
 ### Classes
 
@@ -22101,7 +23370,7 @@ var evaluator = new ExpressionEvaluator();
 IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1333-L1518)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1354-L1539)
 
 ```rust
 let evaluator = ExpressionEvaluator;
@@ -22114,11 +23383,10 @@ let yes = Value::Bool(true);
 let no = Value::Bool(false);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L111-L188)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L110-L188)
 
 ```typescript
-const evaluator = new ExpressionEvaluator();
-const row = { id: 1, age: 21, name: "a" };
+
 ```
 
 ## StatementEvaluator
@@ -22613,7 +23881,7 @@ register("memory", Arc::new(MemoryDriver));
 let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L40-L45)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L42-L47)
 
 ```typescript
 DatasourceFactory.register("memory", new MemoryDriver());
@@ -28940,6 +30208,7 @@ interface IDriver
 | [transaction(connection, isolation?)](#typescript-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
 | [rowTypeConverters](#typescript-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
 | [columnType(name)](#typescript-idriver-columntype-name) | SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default, exported as `columnType`, returns `name`. MySQL, Postgres, and SQLite override it. An unknown name throws. |
+| [information](#typescript-idriver-information) | Optional provider notes: descriptions, overrides, and change logs. Omitted or `null` when the driver has none. |
 
 ###### connection(options?) {#typescript-idriver-connection-options}
 
@@ -29036,6 +30305,28 @@ columnType(name: string): string
 
 `string`
 
+###### information {#typescript-idriver-information}
+
+Optional provider notes: descriptions, overrides, and change logs. Omitted or `null` when the driver has none.
+
+```typescript
+type Information = {
+  descriptions: readonly string[];
+  overrides: readonly string[];
+  changeLogs: readonly string[];
+}
+```
+
+**Definition**
+
+```typescript
+information?: Information | null
+```
+
+**Returns**
+
+`Information | null | undefined`
+
 ##### C#
 
 ##### IDriver {#csharp-idriver}
@@ -29053,6 +30344,7 @@ public interface IDriver
 | [Transaction(connection, isolation)](#csharp-idriver-transaction-connection-isolation) | Builds an [ITransaction](#transaction) for the connection. |
 | [RowTypeConverters](#csharp-idriver-rowtypeconverters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
 | [ColumnType(name)](#csharp-idriver-columntype-name) | SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name throws. |
+| [Information](#csharp-idriver-information) | Optional provider notes: descriptions, overrides, and change logs. The default returns `null`. |
 
 ###### Connection(options) {#csharp-idriver-connection-options}
 
@@ -29149,6 +30441,27 @@ string ColumnType(string name)
 
 `string`
 
+###### Information {#csharp-idriver-information}
+
+Optional provider notes: descriptions, overrides, and change logs. The default returns `null`.
+
+```csharp
+public sealed record Information(
+    IReadOnlyList<string> Descriptions,
+    IReadOnlyList<string> Overrides,
+    IReadOnlyList<string> ChangeLogs);
+```
+
+**Definition**
+
+```csharp
+Information? Information
+```
+
+**Returns**
+
+`Information?`
+
 ##### Rust
 
 ##### Driver {#rust-driver}
@@ -29166,6 +30479,7 @@ pub trait Driver
 | [transaction(connection, isolation)](#rust-driver-transaction-connection-isolation) | Builds a [Transaction](#transaction) for the connection. |
 | [row_type_converters()](#rust-driver-row_type_converters) | Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects. |
 | [column_type(name)](#rust-driver-column_type-name) | SQL type name for a canonical column type (`int`, `string`, `bool`, …). The default returns `name`. MySQL, Postgres, and SQLite override it. An unknown name returns an error. |
+| [information()](#rust-driver-information) | Optional provider notes: descriptions, overrides, and change logs. The default returns `None`. |
 
 ###### connection(options) {#rust-driver-connection-options}
 
@@ -29262,13 +30576,39 @@ fn column_type(&self, name: &str) -> Result<String>
 
 `Result<String>`
 
+###### information() {#rust-driver-information}
+
+Optional provider notes: descriptions, overrides, and change logs. The default returns `None`.
+
+```rust
+pub struct Information {
+    pub descriptions: Vec<String>,
+    pub overrides: Vec<String>,
+    pub change_logs: Vec<String>,
+}
+```
+
+**Definition**
+
+```rust
+fn information(&self) -> Option<&Information>
+```
+
+**Returns**
+
+`Option<&Information>`
+
 ### Remarks
 
 `Connection` / `connection` / `connection` receives the options bag. A provider parses `DATASOURCE_URL` with [DatasourceUrlParser](#datasource-url). `Command` / `command` / `command` delegates to the connection's `CreateCommand` / `createCommand` / `create_command`. `Transaction` / `transaction` / `transaction` builds the dialect transaction. Isolation defaults to read committed.
 
 `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` maps a canonical type name to a [TypeConverter](#type-converters). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
-The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own `GetText` / `getText` / `get_text` throws until a provider formats it.
+`Information` / `information` / `information` is optional metadata a driver may publish. Each list is free-form text: `Descriptions` / `descriptions` / `descriptions` for capability notes, `Overrides` / `overrides` / `overrides` for dialect-specific behavior, and `ChangeLogs` / `changeLogs` / `change_logs` for provider history. The default is unset.
+
+Published drivers list that metadata (and `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` keys) per language on [Languages](#languages). Edit `docs/DriverSummary.yaml`, keep each driver's `Information` / `information` / `information` in sync, then run `npm run docs:drivers`.
+
+The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. `SelectInsertedIdStatementTextRenderer.Render` / `SelectInsertedIdStatementTextRenderer.render` / `SelectInsertedIdStatementTextRenderer::render` throws until a provider overrides it.
 
 `ColumnType` / `columnType` / `column_type` maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
@@ -29284,7 +30624,7 @@ The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`
 >
 > Inherit the default method.
 
-SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
+SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementTextRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement `Execute` / `executeStatement` / `execute_statement` and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
 
 The package exports only the driver type.
 
@@ -29320,7 +30660,7 @@ register("memory", Arc::new(MemoryDriver));
 let ds = create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())]))).unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L40-L45)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/memory/src/index.test.ts#L42-L47)
 
 ```typescript
 DatasourceFactory.register("memory", new MemoryDriver());
