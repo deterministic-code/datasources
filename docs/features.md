@@ -1,4 +1,4 @@
-# Feature Matrix
+# Features
 
 Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repositories above them.
 

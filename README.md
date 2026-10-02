@@ -9,7 +9,7 @@ It is designed for AI agents. The motivation is that current AI-generated data-a
 The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched repositories, and bulk repositories.
 
 - [Quick Start](#quick-start)
-- [Feature Matrix](#feature-matrix)
+- [Features](#features)
 
 ## Quick Start
 
@@ -237,7 +237,7 @@ const item = rows.convert(row);
 
 See [Type Converters](#type-converters).
 
-## Feature Matrix
+## Features
 
 Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repositories above them.
 
