@@ -5,6 +5,7 @@ export type { IConnection } from "./IConnection.ts";
 export type { IDatasource } from "./IDatasource.ts";
 export type { IDriver } from "./IDriver.ts";
 export { columnType } from "./IDriver.ts";
+export type { Information } from "./Information.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory } from "./DatasourceFactory.ts";
 export { ProviderCatalog } from "./ProviderCatalog.ts";

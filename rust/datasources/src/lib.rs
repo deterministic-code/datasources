@@ -52,6 +52,7 @@ mod i_unit_of_work;
 mod i_condition;
 mod i_where;
 mod id_key;
+mod information;
 mod isolation_level;
 mod lazy_write_enrichment_strategy;
 pub mod mappers;
@@ -153,6 +154,7 @@ pub use i_unit_of_work::IUnitOfWork;
 pub use i_condition::ICondition;
 pub use i_where::IWhere;
 pub use id_key::IdKey;
+pub use information::Information;
 pub use isolation_level::IsolationLevel;
 pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
 pub use mappers::{

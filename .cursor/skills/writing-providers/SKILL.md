@@ -17,6 +17,7 @@ Read `docs/writing-providers.md` for the interface. Implement these members:
 - `transaction` — build a transaction; isolation defaults to read committed
 - `rowTypeConverters` — canonical cell converters (`bool`, `datetime`, `uuid`, `decimal`, `binary`). Empty when cells are already canonical
 - `columnType` — SQL type name for a canonical column type. Default returns the name. C# and Rust inherit that default. TypeScript assigns the exported `columnType`. MySQL, Postgres, and SQLite override it and throw on an unknown name. The statement factory maps statements to general ones, including `SelectInsertedIdStatement` to a `SelectStatement`, and the repository reads that row. SQLite, MySQL, and Postgres keep create-table rendering on their own `CreateTableStatementRenderer`. The factory does not subclass that renderer.
+- `information` — optional `Information` with `descriptions`, `overrides`, and `changeLogs` string lists. Default is unset (`null` / omitted / `None`).
 
 ## Public surface
 

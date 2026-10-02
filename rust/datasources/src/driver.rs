@@ -1,6 +1,7 @@
 use crate::command::Command;
 use crate::connection::Connection;
 use crate::converters::TypeConverter;
+use crate::information::Information;
 use crate::isolation_level::IsolationLevel;
 use crate::statements::StatementTextRenderer;
 use crate::transaction::Transaction;
@@ -25,6 +26,10 @@ pub trait Driver: Send + Sync {
     }
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
+        None
+    }
+
+    fn information(&self) -> Option<&Information> {
         None
     }
 }

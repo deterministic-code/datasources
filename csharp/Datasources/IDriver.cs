@@ -8,4 +8,5 @@ public interface IDriver
     IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
     string ColumnType(string name) => name;
     StatementTextRenderer? StatementRenderer => null;
+    Information? Information => null;
 }
