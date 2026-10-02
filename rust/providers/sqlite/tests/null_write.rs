@@ -25,8 +25,8 @@ async fn omits_null_datetime_and_version() {
         .unwrap();
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "Item".into();
-    options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-    options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
     options.ids = vec!["Id".into()];
     options.row_converter = Some(item_converter());
     let repo = CRUDRepository::new(conn, options).unwrap();

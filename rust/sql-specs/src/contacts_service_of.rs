@@ -36,12 +36,12 @@ fn open(
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
-    options.entity_mapper = if contact {
-        Box::new(contact_entity())
+    options.entity_mapper = Some(std::sync::Arc::new(if contact {
+        contact_entity()
     } else {
-        Box::new(snake())
-    };
-    options.property_mappings = Box::new(columns());
+        snake()
+    }));
+    options.property_mappings = Some(std::sync::Arc::new(columns()));
     options.row_converter =
         Some(RowTypeConverter::new(name_list(names)).with_fields(stamp_fields(field)));
     options.object_converter = Some(Box::new(

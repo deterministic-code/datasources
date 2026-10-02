@@ -14,11 +14,12 @@ import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
-import { createReadonlyRepositoryOptions } from "./createReadonlyRepositoryOptions.ts";
-import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+import { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
+import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
+import type { IMapper } from "./mappers/IMapper.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 import type { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { StatementMappers } from "./StatementMappers.ts";
@@ -44,20 +45,20 @@ export const isBuilt = <T>(
 
 export const builtOf = <T>(
   typeOrConnectionOrBuilt: Constructable<T> | IConnection | BuiltRepository<T>,
-  connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T>,
+  connectionOrOptions?: IConnection | ReadonlyRepositoryMappingOptions<T>,
 ): BuiltRepository<T> | undefined =>
   typeof typeOrConnectionOrBuilt === "function"
     ? connectionOrOptions === undefined
       ? undefined
       : new ReadonlyRepositoryBuilder<T>().parts(
           connectionOrOptions as IConnection,
-          createReadonlyRepositoryOptions(typeOrConnectionOrBuilt),
+          createReadonlyRepositoryMappingOptions(typeOrConnectionOrBuilt),
         )
     : isBuilt(typeOrConnectionOrBuilt)
       ? typeOrConnectionOrBuilt
       : new ReadonlyRepositoryBuilder<T>().parts(
           typeOrConnectionOrBuilt,
-          connectionOrOptions as ReadonlyRepositoryOptions<T>,
+          connectionOrOptions as ReadonlyRepositoryMappingOptions<T>,
         );
 
 export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<T> {
@@ -65,18 +66,20 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   private connection?: IConnection;
   protected rowConverter?: TypeConverter<Cells, Cells>;
   protected objectConverter?: TypeConverter<T, Cells>;
+  private entityMappers: IMapper<string, string> = new IdentityMapper();
+  private propertyMappers: IMapper<string, string> = new IdentityMapper();
   private statementMappers = new StatementMappers(new IdentityMapper(), new IdentityMapper());
   private readonlyStatements?: ReadonlyRepositoryStatements;
   private readonly middlewares: ICommandMiddleware[] = [];
 
   constructor(type: Constructable<T>);
   constructor(type: Constructable<T>, connection: IConnection);
-  constructor(connection: IConnection, options: ReadonlyRepositoryOptions<T>);
+  constructor(connection: IConnection, options: ReadonlyRepositoryMappingOptions<T>);
   constructor(built: BuiltRepository<T>);
   constructor();
   constructor(
     typeOrConnectionOrBuilt?: Constructable<T> | IConnection | BuiltRepository<T>,
-    connectionOrOptions?: IConnection | ReadonlyRepositoryOptions<T>,
+    connectionOrOptions?: IConnection | ReadonlyRepositoryMappingOptions<T>,
   ) {
     storedEnrichments.set(this, []);
     if (typeOrConnectionOrBuilt === undefined) {
@@ -92,6 +95,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.connection = built.connection;
     this.rowConverter = built.rowConverter;
     this.objectConverter = built.objectConverter;
+    this.entityMappers = built.entityMapper;
+    this.propertyMappers = built.propertyMappings;
     this.statementMappers = new StatementMappers(built.entityMapper, built.propertyMappings);
     this.readonlyStatements = built.statements;
   }
@@ -116,12 +121,20 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     return this;
   }
 
-  async *read(query?: ReadQuery, parameters?: Parameter[]): AsyncIterable<T> {
-    for await (const sourced of this.readTracked(query, parameters)) yield sourced.item;
+  async *read(
+    query?: ReadQuery,
+    parameters?: Parameter[],
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): AsyncIterable<T> {
+    for await (const sourced of this.readTracked(query, parameters, options)) yield sourced.item;
   }
 
-  async readSingle(query?: ReadQuery, parameters?: Parameter[]): Promise<T | undefined> {
-    for await (const item of this.read(query, parameters)) return item;
+  async readSingle(
+    query?: ReadQuery,
+    parameters?: Parameter[],
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): Promise<T | undefined> {
+    for await (const item of this.read(query, parameters, options)) return item;
     return undefined;
   }
 
@@ -137,26 +150,53 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
 
   protected column = (property: string): string => this.statementMappers.column(property);
 
-  protected cell = (property: string, value: Cell, fieldsApplied: boolean): Cell => {
+  protected cell = (
+    property: string,
+    value: Cell,
+    fieldsApplied: boolean,
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): Cell => {
+    const objects = options?.objectConverter ?? this.objectConverter;
     const field =
-      this.objectConverter instanceof MetaDataRowTypeConverter
-        ? this.objectConverter.fields[property]
-        : undefined;
+      objects instanceof MetaDataRowTypeConverter ? objects.fields[property] : undefined;
     return field && !fieldsApplied ? field.reverseConvert(value) : value;
   };
 
   private entries = (): StoredEnrichment<T & object>[] =>
     storedEnrichments.get(this) as StoredEnrichment<T & object>[];
 
-  private async *readTracked(query?: ReadQuery, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
-    const statement = this.statementMappers.apply(
-      query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query),
-      (name, value) => this.cell(name, value, false),
+  private mappers = (options?: ReadonlyRepositoryMappingOptions<T>): StatementMappers =>
+    options?.entityMapper === undefined && options?.propertyMappings === undefined
+      ? this.statementMappers
+      : new StatementMappers(
+          options?.entityMapper ?? this.entityMappers,
+          options?.propertyMappings ?? this.propertyMappers,
+        );
+
+  private rows = (options?: ReadonlyRepositoryMappingOptions<T>): TypeConverter<Cells, Cells> | undefined =>
+    options?.rowConverter ?? this.rowConverter;
+
+  private objects = (options?: ReadonlyRepositoryMappingOptions<T>): TypeConverter<T, Cells> =>
+    options?.objectConverter ??
+    this.objectConverter ??
+    (() => {
+      throw new DatasourceError("Object converter required");
+    })();
+
+  private async *readTracked(
+    query?: ReadQuery,
+    parameters?: Parameter[],
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): AsyncIterable<Sourced<T>> {
+    const mappers = this.mappers(options);
+    const statement = mappers.apply(
+      query instanceof ExecuteStoredProcedureStatement ? query : this.readQuery(query, mappers, options),
+      (name, value) => this.cell(name, value, false, options),
     );
     const listed =
       parameters ??
       (statement instanceof SelectStatement ? statement.where?.parameters : undefined);
-    yield* this.apply(this.readRows(statement, listed));
+    yield* this.apply(this.readItems(statement, listed, mappers, this.rows(options), this.objects(options)));
   }
 
   private async *apply(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
@@ -167,34 +207,37 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     yield* this.sourced(pairs);
   }
 
-  private async *readSources(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Cells> {
+  private convertObject = (row: Cells, objects: TypeConverter<T, Cells>): T =>
+    objects instanceof MetaDataRowTypeConverter
+      ? objects.convert(row, this.type)
+      : objects.convert(row);
+
+  private async *readItems(
+    query: IStatement | undefined,
+    parameters: Parameter[] | undefined,
+    mappers: StatementMappers,
+    rows: TypeConverter<Cells, Cells> | undefined,
+    objects: TypeConverter<T, Cells>,
+  ): AsyncIterable<Sourced<T>> {
     const statement = query ?? this.readonlyStatements!.select();
     const reader = await executeReader(this.command(), statement, parameters);
     try {
       while (await reader.next()) {
-        yield this.columnToPropertyName(
+        const renamed = this.columnToPropertyName(
           reader.current ??
             (() => {
               throw new DatasourceError("Reader current must be a row");
             })(),
+          mappers,
         );
+        yield {
+          item: this.convertObject(rows ? rows.convert(renamed) : renamed, objects),
+          source: renamed,
+        };
       }
     } finally {
       await reader.dispose();
     }
-  }
-
-  private convertObject = (row: Cells): T =>
-    this.objectConverter instanceof MetaDataRowTypeConverter
-      ? this.objectConverter.convert(row, this.type)
-      : this.objectConverter!.convert(row);
-
-  private async *readRows(query?: IStatement, parameters?: Parameter[]): AsyncIterable<Sourced<T>> {
-    for await (const renamed of this.readSources(query, parameters))
-      yield {
-        item: this.convertObject(this.rowConverter ? this.rowConverter.convert(renamed) : renamed),
-        source: renamed,
-      };
   }
 
   private async *sourced(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
@@ -213,17 +256,21 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     for (const entry of this.entries()) await entry.apply(parents, sources);
   };
 
-  private columnToPropertyName = (row: Cells): Cells =>
-    Object.fromEntries(Object.entries(row).map(([key, value]) => [this.statementMappers.property(key), value]));
+  private columnToPropertyName = (row: Cells, mappers: StatementMappers): Cells =>
+    Object.fromEntries(Object.entries(row).map(([key, value]) => [mappers.property(key), value]));
 
-  private readQuery = (query?: ISelectStatement | IWhere): ISelectStatement | undefined =>
+  private readQuery = (
+    query: ISelectStatement | IWhere | undefined,
+    mappers: StatementMappers,
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): ISelectStatement | undefined =>
     !query
       ? this.readonlyStatements?.select()
       : "where" in query
         ? query
         : this.readonlyStatements
           ? this.readonlyStatements.select(
-              this.statementMappers.applyWhere(query, (name, cell) => this.cell(name, cell, false))!,
+              mappers.applyWhere(query, (name, cell) => this.cell(name, cell, false, options))!,
             )
           : new SelectStatement({ where: query });
 }

@@ -45,6 +45,7 @@ impl IReadonlyRepository for StubRepository {
         &self,
         _query: Option<&dyn ReadInput>,
         _parameters: Option<&[crate::Parameter]>,
+        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
@@ -53,6 +54,7 @@ impl IReadonlyRepository for StubRepository {
         &self,
         _query: Option<&dyn ReadInput>,
         _parameters: Option<&[crate::Parameter]>,
+        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
         Err(fail(&self.provider))
     }

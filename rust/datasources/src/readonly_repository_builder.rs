@@ -1,8 +1,8 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
 use crate::converters::MetaDataRowTypeConverter;
-use crate::mappers::Mapper;
-use crate::readonly_repository_options::ReadonlyRepositoryOptions;
+use crate::mappers::{IdentityMapper, Mapper};
+use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::result::Result;
 use crate::statement_mappers::StatementMappers;
@@ -13,7 +13,7 @@ pub struct ReadonlyRepositoryBuilder;
 impl ReadonlyRepositoryBuilder {
     pub fn parts(
         connection: Arc<dyn Connection>,
-        options: ReadonlyRepositoryOptions,
+        options: ReadonlyRepositoryMappingOptions,
     ) -> Result<BuiltRepository> {
         assemble(connection, options, Vec::new())
     }
@@ -21,10 +21,10 @@ impl ReadonlyRepositoryBuilder {
 
 pub(crate) fn assemble(
     connection: Arc<dyn Connection>,
-    options: ReadonlyRepositoryOptions,
+    options: ReadonlyRepositoryMappingOptions,
     ids: Vec<String>,
 ) -> Result<BuiltRepository> {
-    let ReadonlyRepositoryOptions {
+    let ReadonlyRepositoryMappingOptions {
         entity,
         entity_mapper,
         property_mappings,
@@ -35,9 +35,10 @@ pub(crate) fn assemble(
     let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
     let object_converter =
         object_converter.unwrap_or_else(|| Box::new(MetaDataRowTypeConverter::new(Vec::new())));
-    let entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::from(entity_mapper);
+    let entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync> =
+        entity_mapper.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
     let property_mappings: Arc<dyn Mapper<String, String> + Send + Sync> =
-        Arc::from(property_mappings);
+        property_mappings.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
     let table = Mapper::map(&entity_mapper, entity);
     let mut names: Vec<String> = row_converter
         .as_ref()

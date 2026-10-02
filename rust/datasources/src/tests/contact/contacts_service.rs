@@ -112,16 +112,18 @@ impl IReadonlyRepository for ContactsService {
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
-        self.contacts.read_single(query, parameters).await
+        self.contacts.read_single(query, parameters, options).await
     }
 
     async fn read(
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
-        self.contacts.read(query, parameters).await
+        self.contacts.read(query, parameters, options).await
     }
 }
 

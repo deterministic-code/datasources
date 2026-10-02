@@ -329,7 +329,7 @@ public class CRUDRepositoryTests
         });
 
     static ReadonlyRepository<T> Read<T>(IConnection connection) where T : new() =>
-        new(connection, new ReadonlyRepositoryOptions<T> { PropertyMappings = Columns });
+        new(connection, new ReadonlyRepositoryMappingOptions<T> { PropertyMappings = Columns });
 
     static async Task<IConnection> Setup(params Row[] rows)
     {

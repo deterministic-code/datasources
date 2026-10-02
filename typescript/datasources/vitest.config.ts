@@ -51,7 +51,7 @@ export default defineConfig({
         "src/Response.ts",
         "src/ITransaction.ts",
         "src/BuiltRepository.ts",
-        "src/ReadonlyRepositoryOptions.ts",
+        "src/ReadonlyRepositoryMappingOptions.ts",
         "src/CRUDRepositoryOptions.ts",
         "src/builders/index.ts",
         "src/builders/Field.ts",

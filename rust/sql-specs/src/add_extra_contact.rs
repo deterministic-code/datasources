@@ -62,7 +62,7 @@ pub async fn add_extra_contact(service: &CRUDRepository, ids: &ContactLookups) -
     service
         .read_single(
             Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
-            None,
+            None, None
         )
         .await?
         .ok_or_else(|| DatasourceError::message(format!("extra contact {id} missing")))

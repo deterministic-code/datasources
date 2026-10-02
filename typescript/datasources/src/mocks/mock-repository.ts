@@ -7,6 +7,7 @@ import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteSto
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
+import type { ReadonlyRepositoryMappingOptions } from "../ReadonlyRepositoryMappingOptions.ts";
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
@@ -37,6 +38,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
   async readSingle(
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
     _parameters?: Parameter[],
+    _options?: ReadonlyRepositoryMappingOptions<T>,
   ): Promise<T | undefined> {
     this.readSingleCalls.push(query);
     if (this.readSingleError) {
@@ -48,6 +50,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
   async *read(
     query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement,
     _parameters?: Parameter[],
+    _options?: ReadonlyRepositoryMappingOptions<T>,
   ): AsyncIterable<T> {
     this.readCalls.push(query);
     if (this.readError) {

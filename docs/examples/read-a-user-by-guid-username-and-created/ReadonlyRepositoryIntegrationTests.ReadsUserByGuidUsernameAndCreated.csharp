@@ -5,7 +5,7 @@ await Execute(connection, $"""
         ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
         ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
     """);
-var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryMappingOptions<UserAccount>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>

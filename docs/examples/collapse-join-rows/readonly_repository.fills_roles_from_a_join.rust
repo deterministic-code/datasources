@@ -1,7 +1,7 @@
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
-let mut options = ReadonlyRepositoryOptions::default();
+let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity = "User".into();
 options.entity_mapper = Box::new(DictionaryMapper::new([
     ("User".into(), "user".into()),

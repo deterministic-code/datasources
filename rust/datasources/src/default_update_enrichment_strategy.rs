@@ -84,8 +84,8 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                     association.parent.clone(),
                     parent_key.clone(),
                 ))),
-                None,
-            )
+                None, None
+        )
             .await?;
         let wanted = related_ids(parent, enrichment)?;
         let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();

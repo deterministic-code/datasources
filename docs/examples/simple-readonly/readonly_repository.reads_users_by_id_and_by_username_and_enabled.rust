@@ -14,7 +14,7 @@ execute_sql(
     "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
-let mut options = create_readonly_repository_options::<User>();
+let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));

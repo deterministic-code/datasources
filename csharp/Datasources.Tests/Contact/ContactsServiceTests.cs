@@ -66,7 +66,7 @@ public class ContactsServiceTests
     }
 
     static ReadonlyRepository<T> CreateLookupRepo<T>(IConnection connection) where T : new() =>
-        new(connection, new ReadonlyRepositoryOptions<T>
+        new(connection, new ReadonlyRepositoryMappingOptions<T>
         {
             EntityMapper = ContactColumns.Snake,
             PropertyMappings = ContactColumns.Columns,

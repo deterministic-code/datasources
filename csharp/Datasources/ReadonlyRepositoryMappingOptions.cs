@@ -1,10 +1,10 @@
 namespace Datasources;
 
-public record ReadonlyRepositoryOptions<T> where T : new()
+public record ReadonlyRepositoryMappingOptions<T>
 {
     public string? Entity { get; init; }
-    public IMapper<string, string> EntityMapper { get; init; } = new IdentityMapper<string>();
-    public IMapper<string, string> PropertyMappings { get; init; } = new IdentityMapper<string>();
+    public IMapper<string, string>? EntityMapper { get; init; }
+    public IMapper<string, string>? PropertyMappings { get; init; }
     public TypeConverter<Row, Row>? RowConverter { get; init; }
     public TypeConverter<T, Row>? ObjectConverter { get; init; }
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }

@@ -4,7 +4,7 @@ public sealed class CRUDRepositoryBuilder<T> : ReadonlyRepositoryBuilder<T> wher
 {
     public CRUDRepositoryStatements? CRUDStatements { get; private set; }
 
-    protected override IReadOnlyList<string> Ids(ReadonlyRepositoryOptions<T> options) =>
+    protected override IReadOnlyList<string> Ids(ReadonlyRepositoryMappingOptions<T> options) =>
         options is CRUDRepositoryOptions<T> crud ? crud.Ids : [];
 
     protected override ReadonlyRepositoryStatements Statements(string table, IReadOnlyList<string> columns)

@@ -2,7 +2,7 @@ var ds = Datasource.Default;
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
-var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
     PropertyMappings = Snake(),

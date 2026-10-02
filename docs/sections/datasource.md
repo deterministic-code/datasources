@@ -111,12 +111,12 @@ createRepository<T>(type: Constructable<T>, connection?: IConnection, options?: 
 Creates a read-only repository.
 
 ```typescript
-createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryOptions<T>): IReadonlyRepository<T>
+createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryMappingOptions<T>): IReadonlyRepository<T>
 ```
 
 - `type` — class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity
 - `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
-- `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
+- `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
@@ -237,11 +237,11 @@ ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null, CRUDRepos
 Creates a read-only repository.
 
 ```csharp
-IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryOptions<T>? options = null)
+IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryMappingOptions<T>? options = null)
 ```
 
 - `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
-- `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
+- `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
@@ -368,11 +368,11 @@ fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<d
 Creates a read-only repository.
 
 ```rust
-fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryOptions>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryMappingOptions>) -> Arc<dyn IReadonlyRepository>
 ```
 
 - `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
-- `options` — optional [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
+- `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
 
 **Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
 

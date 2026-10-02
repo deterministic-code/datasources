@@ -58,8 +58,8 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                             enrichment.related_key.clone(),
                             key.clone(),
                         ))),
-                        None,
-                    )
+                        None, None
+        )
                     .await?;
                 cache.insert(cache_key.clone(), related);
             }
@@ -95,8 +95,8 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                         enrichment.related_key.clone(),
                         key,
                     ))),
-                    None,
-                )
+                    None, None
+        )
                 .await?;
             parent.insert(
                 enrichment.destination_property.clone(),
@@ -129,8 +129,8 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                         association.parent.clone(),
                         key,
                     ))),
-                    None,
-                )
+                    None, None
+        )
                 .await?;
             let mut related_rows = Vec::new();
             for row in links {
@@ -143,8 +143,8 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                             enrichment.related_key.clone(),
                             id,
                         ))),
-                        None,
-                    )
+                        None, None
+        )
                     .await?
                 {
                     related_rows.push(entity);

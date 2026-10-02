@@ -55,7 +55,7 @@ public class ReadonlyRepositoryIntegrationTests
         await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
         await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
         await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
-        var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+        var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
         {
             EntityMapper = SnakeThenPlural(),
             PropertyMappings = Snake(),
@@ -100,7 +100,7 @@ public class ReadonlyRepositoryIntegrationTests
                 (1, 'ada', 1),
                 (2, 'grace', 0);
             """);
-        var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+        var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
         {
             EntityMapper = SnakeThenPlural(),
             PropertyMappings = Snake(),
@@ -126,7 +126,7 @@ public class ReadonlyRepositoryIntegrationTests
                 ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
                 ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
             """);
-        var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+        var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryMappingOptions<UserAccount>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
             PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -345,7 +345,7 @@ public class UserViewEnrichmentTests
                 ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
             """);
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-        var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
             PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -357,7 +357,7 @@ public class UserViewEnrichmentTests
                 ["UserType"] = "user_type_id",
             }),
         });
-        var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+        var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryMappingOptions<UserType>
         {
             EntityMapper = casing,
             PropertyMappings = casing,
@@ -424,7 +424,7 @@ public class UsersViewRoleTests
         await SchemaSpec.Apply(connection, "user-roles-read");
         await Execute(connection, Seed());
         var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
             PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -437,12 +437,12 @@ public class UsersViewRoleTests
             }),
         });
         var strategy = new HashsetOptimizedReadonlyEnrichmentStrategy<UsersView>();
-        var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+        var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryMappingOptions<UserType>
         {
             EntityMapper = casing,
             PropertyMappings = casing,
         });
-        var rolesRepo = ds.CreateReadonlyRepository<UserRole>(connection, new ReadonlyRepositoryOptions<UserRole>
+        var rolesRepo = ds.CreateReadonlyRepository<UserRole>(connection, new ReadonlyRepositoryMappingOptions<UserRole>
         {
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserRole"] = "user_roles" }),
             PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -467,7 +467,7 @@ public class UsersViewRoleTests
         var connection = await Open(ds);
         await SchemaSpec.Apply(connection, "user-roles-read");
         await Execute(connection, Seed());
-        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+        var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
         {
             Entity = "User",
             EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>

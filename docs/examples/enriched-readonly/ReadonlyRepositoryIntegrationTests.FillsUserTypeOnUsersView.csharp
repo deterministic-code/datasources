@@ -10,7 +10,7 @@ await Execute(connection, $"""
         ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
     """);
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -22,7 +22,7 @@ var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<Users
         ["UserType"] = "user_type_id",
     }),
 });
-var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryMappingOptions<UserType>
 {
     EntityMapper = casing,
     PropertyMappings = casing,

@@ -11,14 +11,14 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
-    options.entity_mapper = Box::new(snake());
-    options.property_mappings = Box::new(columns());
+    options.entity_mapper = Some(std::sync::Arc::new(snake()));
+    options.property_mappings = Some(std::sync::Arc::new(columns()));
     options.row_converter = Some(RowTypeConverter::new(vec!["Id".into(), "Name".into()]));
     let repo = CRUDRepository::new(connection, options)?;
     let row = repo
         .read_single(
             Some(&Where::new(Operator::equals("Name", Value::from(name)))),
-            None,
+            None, None
         )
         .await?
         .ok_or_else(|| DatasourceError::message(format!("{entity} '{name}' missing")))?;

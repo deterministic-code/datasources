@@ -57,7 +57,7 @@ async fn reads_boolean_as_bool_and_leaves_integer() {
     apply_schema(connection.as_ref(), "flags").await.unwrap();
     let command = connection.create_command();
     command
-        .execute("INSERT INTO flags (enabled, count) VALUES (1, 1)", None)
+        .execute_native(&Native::new("INSERT INTO flags (enabled, count) VALUES (1, 1)"), None)
         .await
         .unwrap();
     let reader = command
@@ -81,15 +81,15 @@ async fn run_execute_reader_on_a_simple_list() {
     let command = ds.create_command(None).await.unwrap();
     apply_schema(ds.create_connection().await.unwrap().as_ref(), "items").await.unwrap();
     command
-        .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+        .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (1, 'ada')"), None)
         .await
         .unwrap();
     command
-        .execute("INSERT INTO items (id, name) VALUES (2, 'grace')", None)
+        .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (2, 'grace')"), None)
         .await
         .unwrap();
     command
-        .execute("INSERT INTO items (id, name) VALUES (3, 'bea')", None)
+        .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (3, 'bea')"), None)
         .await
         .unwrap();
     let reader = command
@@ -113,8 +113,8 @@ async fn read_and_apply_case_mappings() {
     let command = ds.create_command(None).await.unwrap();
     apply_schema(ds.create_connection().await.unwrap().as_ref(), "case-contacts").await.unwrap();
     command
-        .execute(
-            "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
+        .execute_native(
+            &Native::new("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"),
             None,
         )
         .await
@@ -146,15 +146,15 @@ async fn execute_reader_then_apply_flat_to_nested_mapper() {
     let command = ds.create_command(None).await.unwrap();
     apply_schema(ds.create_connection().await.unwrap().as_ref(), "flat-users").await.unwrap();
     command
-        .execute(
-            "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
+        .execute_native(
+            &Native::new("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"),
             None,
         )
         .await
         .unwrap();
     command
-        .execute(
-            "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')",
+        .execute_native(
+            &Native::new("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"),
             None,
         )
         .await
@@ -203,22 +203,22 @@ async fn run_execute_reader_and_return_name_values() {
     let command = connection.create_command();
     apply_schema(connection.as_ref(), "settings").await.unwrap();
     command
-        .execute(
-            "INSERT INTO settings (name, value) VALUES ('theme', 'dark')",
+        .execute_native(
+            &Native::new("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"),
             None,
         )
         .await
         .unwrap();
     command
-        .execute(
-            "INSERT INTO settings (name, value) VALUES ('lang', 'en')",
+        .execute_native(
+            &Native::new("INSERT INTO settings (name, value) VALUES ('lang', 'en')"),
             None,
         )
         .await
         .unwrap();
     command
-        .execute(
-            "INSERT INTO settings (name, value) VALUES ('size', 'lg')",
+        .execute_native(
+            &Native::new("INSERT INTO settings (name, value) VALUES ('size', 'lg')"),
             None,
         )
         .await
@@ -333,9 +333,9 @@ async fn execute_reader_maps_flat_contacts() {
     .await
     .unwrap();
     command
-        .execute(
-            "INSERT INTO users (id, username, email, contact_name1, contact_name2)
-             VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+        .execute_native(
+            &Native::new("INSERT INTO users (id, username, email, contact_name1, contact_name2)
+             VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"),
             None,
         )
         .await

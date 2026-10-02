@@ -36,7 +36,7 @@ pub(crate) async fn load(
     writer
         .read(
             Some(&Where::new(Operator::equals(enrichment.related_key.clone(), key))),
-            None,
+            None, None
         )
         .await
 }
@@ -96,9 +96,9 @@ mod tests {
             None,
         );
         parents.delete(&created, None).await.unwrap();
-        let left = children.read(None, None).await.unwrap();
+        let left = children.read(None, None, None).await.unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].get("label"), Some(&Value::from("a")));
-        assert!(parents.read(None, None).await.unwrap().is_empty());
+        assert!(parents.read(None, None, None).await.unwrap().is_empty());
     }
 }
