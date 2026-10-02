@@ -414,16 +414,18 @@ impl IReadonlyRepository for BulkCRUDRepository {
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
-        self.crud.read_single(query, parameters).await
+        self.crud.read_single(query, parameters, options).await
     }
 
     async fn read(
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
-        self.crud.read(query, parameters).await
+        self.crud.read(query, parameters, options).await
     }
 }
 

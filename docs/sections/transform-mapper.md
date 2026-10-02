@@ -148,7 +148,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ## Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](./identity-mapper.md).
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](./identity-mapper.md).
 
 ## Examples
 

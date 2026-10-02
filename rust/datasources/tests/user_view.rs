@@ -179,8 +179,8 @@ async fn create_update_and_delete_syncs_link_rows() {
         ))
         .await
         .unwrap();
-    let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-    let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+    let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+    let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
     let mut next = ada(
         &seeded,
         encode_rows(&[seeded.editor_role.clone()]),
@@ -193,8 +193,8 @@ async fn create_update_and_delete_syncs_link_rows() {
         .await
         .unwrap()
         .unwrap();
-    let updated_role_links = seeded.user_roles.read(None, None).await.unwrap();
-    let updated_group_links = seeded.user_groups.read(None, None).await.unwrap();
+    let updated_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+    let updated_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
     let removed = users
         .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
         .await
@@ -277,30 +277,30 @@ async fn create_update_and_delete_syncs_link_rows() {
         ints(&[seeded.engineering.clone(), seeded.ops.clone()], "id")
     );
     assert_eq!(removed.rows_affected, 1);
-    assert_eq!(users.read(None, None).await.unwrap().is_empty(), true);
+    assert_eq!(users.read(None, None, None).await.unwrap().is_empty(), true);
     assert_eq!(
-        seeded.user_roles.read(None, None).await.unwrap().is_empty(),
+        seeded.user_roles.read(None, None, None).await.unwrap().is_empty(),
         true
     );
     assert_eq!(
         seeded
             .user_groups
-            .read(None, None)
+            .read(None, None, None)
             .await
             .unwrap()
             .is_empty(),
         true
     );
     assert_eq!(
-        names(&seeded.roles.read(None, None).await.unwrap()),
+        names(&seeded.roles.read(None, None, None).await.unwrap()),
         vec!["admin".to_string(), "editor".to_string()]
     );
     assert_eq!(
-        names(&seeded.groups.read(None, None).await.unwrap()),
+        names(&seeded.groups.read(None, None, None).await.unwrap()),
         vec!["engineering".to_string(), "ops".to_string()]
     );
     assert_eq!(
-        seeded.user_types.read(None, None).await.unwrap()[0]["name"],
+        seeded.user_types.read(None, None, None).await.unwrap()[0]["name"],
         Value::from("admin")
     );
 }
@@ -324,8 +324,8 @@ async fn null_list_clears_that_association() {
         .await
         .unwrap()
         .unwrap();
-    let user_roles = seeded.user_roles.read(None, None).await.unwrap();
-    let user_groups = seeded.user_groups.read(None, None).await.unwrap();
+    let user_roles = seeded.user_roles.read(None, None, None).await.unwrap();
+    let user_groups = seeded.user_groups.read(None, None, None).await.unwrap();
     assert_eq!(num(&created, "id") > 0, true);
     assert_eq!(saved.rows_affected, 1);
     assert_eq!(num(&loaded, "id"), num(&created, "id"));
@@ -347,11 +347,11 @@ async fn null_list_clears_that_association() {
         vec![num(&seeded.engineering, "id")]
     );
     assert_eq!(
-        names(&seeded.roles.read(None, None).await.unwrap()),
+        names(&seeded.roles.read(None, None, None).await.unwrap()),
         vec!["admin".to_string(), "editor".to_string()]
     );
     assert_eq!(
-        names(&seeded.groups.read(None, None).await.unwrap()),
+        names(&seeded.groups.read(None, None, None).await.unwrap()),
         vec!["engineering".to_string(), "ops".to_string()]
     );
 }
@@ -376,8 +376,8 @@ async fn empty_list_clears_that_association() {
         .await
         .unwrap()
         .unwrap();
-    let user_roles = seeded.user_roles.read(None, None).await.unwrap();
-    let user_groups = seeded.user_groups.read(None, None).await.unwrap();
+    let user_roles = seeded.user_roles.read(None, None, None).await.unwrap();
+    let user_groups = seeded.user_groups.read(None, None, None).await.unwrap();
     assert_eq!(num(&created, "id") > 0, true);
     assert_eq!(saved.rows_affected, 1);
     assert_eq!(num(&loaded, "id"), num(&created, "id"));
@@ -399,11 +399,11 @@ async fn empty_list_clears_that_association() {
         vec![num(&seeded.engineering, "id")]
     );
     assert_eq!(
-        names(&seeded.roles.read(None, None).await.unwrap()),
+        names(&seeded.roles.read(None, None, None).await.unwrap()),
         vec!["admin".to_string(), "editor".to_string()]
     );
     assert_eq!(
-        names(&seeded.groups.read(None, None).await.unwrap()),
+        names(&seeded.groups.read(None, None, None).await.unwrap()),
         vec!["engineering".to_string(), "ops".to_string()]
     );
 }
@@ -414,8 +414,8 @@ async fn duplicate_related_ids_insert_one_row() {
     let roles = encode_rows(&[seeded.admin_role.clone(), seeded.admin_role.clone()]);
     let groups = encode_rows(&[seeded.engineering.clone()]);
     let created = create_ada(&mut users, &seeded, roles, groups).await;
-    let role_links = seeded.user_roles.read(None, None).await.unwrap();
-    let group_links = seeded.user_groups.read(None, None).await.unwrap();
+    let role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+    let group_links = seeded.user_groups.read(None, None, None).await.unwrap();
     assert_eq!(num(&created, "id") > 0, true);
     assert_eq!(ints(&role_links, "user_id"), vec![num(&created, "id")]);
     assert_eq!(
@@ -428,7 +428,7 @@ async fn duplicate_related_ids_insert_one_row() {
         vec![num(&seeded.engineering, "id")]
     );
     assert_eq!(
-        names(&seeded.roles.read(None, None).await.unwrap()),
+        names(&seeded.roles.read(None, None, None).await.unwrap()),
         vec!["admin".to_string(), "editor".to_string()]
     );
 }
@@ -448,12 +448,12 @@ async fn missing_related_id_throws() {
         ))
         .await
         .unwrap_err();
-    let stored = users.read(None, None).await.unwrap();
+    let stored = users.read(None, None, None).await.unwrap();
     assert!(error.to_string().contains("requires \"id\""));
     assert_eq!(stored.len(), 1);
     assert_eq!(num(&stored[0], "id") > 0, true);
     assert_eq!(stored[0].get("username"), Some(&Value::from("ada")));
-    assert!(seeded.user_roles.read(None, None).await.unwrap().is_empty());
+    assert!(seeded.user_roles.read(None, None, None).await.unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -470,8 +470,8 @@ async fn lazy_write_skips_unloaded_links() {
         ("groups", encode_rows(&[seeded.engineering.clone()])),
     ]);
     let created = users.create(&mut creating).await.unwrap();
-    let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-    let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+    let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+    let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
     let next = record(&[
         ("id", created.get("id").unwrap().clone()),
         ("username", Value::from("ada")),
@@ -484,8 +484,8 @@ async fn lazy_write_skips_unloaded_links() {
         .await
         .unwrap()
         .unwrap();
-    let skipped_role_links = seeded.user_roles.read(None, None).await.unwrap();
-    let skipped_group_links = seeded.user_groups.read(None, None).await.unwrap();
+    let skipped_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+    let skipped_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
     let linked_row = record(&[
         ("id", created.get("id").unwrap().clone()),
         ("username", Value::from("ada")),
@@ -494,8 +494,8 @@ async fn lazy_write_skips_unloaded_links() {
         ("roles", encode_rows(&[seeded.editor_role.clone()])),
     ]);
     let linked = users.update(&linked_row, None).await.unwrap();
-    let linked_role_links = seeded.user_roles.read(None, None).await.unwrap();
-    let linked_group_links = seeded.user_groups.read(None, None).await.unwrap();
+    let linked_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+    let linked_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
     let removed = users
         .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
         .await
@@ -541,19 +541,19 @@ async fn lazy_write_skips_unloaded_links() {
         vec![num(&seeded.engineering, "id")]
     );
     assert_eq!(
-        names(&seeded.roles.read(None, None).await.unwrap()),
+        names(&seeded.roles.read(None, None, None).await.unwrap()),
         vec!["admin".to_string(), "editor".to_string()]
     );
     assert_eq!(
-        names(&seeded.groups.read(None, None).await.unwrap()),
+        names(&seeded.groups.read(None, None, None).await.unwrap()),
         vec!["engineering".to_string(), "ops".to_string()]
     );
     assert_eq!(removed.rows_affected, 1);
-    assert!(users.read(None, None).await.unwrap().is_empty());
-    assert!(seeded.user_roles.read(None, None).await.unwrap().is_empty());
+    assert!(users.read(None, None, None).await.unwrap().is_empty());
+    assert!(seeded.user_roles.read(None, None, None).await.unwrap().is_empty());
     assert!(seeded
         .user_groups
-        .read(None, None)
+        .read(None, None, None)
         .await
         .unwrap()
         .is_empty());

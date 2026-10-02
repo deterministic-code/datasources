@@ -14,6 +14,7 @@ mod contact;
 mod datasource;
 mod datasource_factory;
 mod datasource_url_parser;
+mod statement_compile;
 mod statement_mappers;
 mod statement_parser;
 mod transaction;
@@ -600,25 +601,25 @@ async fn stubs_throw() {
     let ds: &dyn Datasource = &*ds;
     let repo = ds.create_repository::<Cells>(None, None);
     let mut empty = Row::new();
-    assert!(repo.read_single(None, None).await.is_err());
-    assert!(repo.read(None, None).await.is_err());
+    assert!(repo.read_single(None, None, None).await.is_err());
+    assert!(repo.read(None, None, None).await.is_err());
     assert!(repo
-        .read_single(Some(&WhereText::new("1=1")), None)
+        .read_single(Some(&WhereText::new("1=1")), None, None)
         .await
         .is_err());
-    assert!(repo.read(Some(&WhereText::new("1=1")), None).await.is_err());
+    assert!(repo.read(Some(&WhereText::new("1=1")), None, None).await.is_err());
     assert!(repo.create(&mut empty).await.is_err());
     assert!(repo.update(&empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
     let readonly = ds.create_readonly_repository::<Cells>(None, None);
-    assert!(readonly.read_single(None, None).await.is_err());
-    assert!(readonly.read(None, None).await.is_err());
+    assert!(readonly.read_single(None, None, None).await.is_err());
+    assert!(readonly.read(None, None, None).await.is_err());
     assert!(readonly
-        .read_single(Some(&WhereText::new("1=1")), None)
+        .read_single(Some(&WhereText::new("1=1")), None, None)
         .await
         .is_err());
     assert!(readonly
-        .read(Some(&WhereText::new("1=1")), None)
+        .read(Some(&WhereText::new("1=1")), None, None)
         .await
         .is_err());
     let txn = StubTransaction::new("text");
@@ -697,30 +698,30 @@ async fn published_mocks() {
     assert!(reader.next().await.is_err());
 
     let repo = MockRepository::new();
-    assert!(repo.read_single(None, None).await.unwrap().is_none());
+    assert!(repo.read_single(None, None, None).await.unwrap().is_none());
     repo.items
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(1))]));
     assert!(repo
-        .read_single(Some(&WhereText::new("id=1")), None)
+        .read_single(Some(&WhereText::new("id=1")), None, None)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(Some(&MockSelectStatement::new("all")), None)
+        repo.read(Some(&MockSelectStatement::new("all")), None, None)
             .await
             .unwrap()
             .len(),
         1
     );
     assert!(repo
-        .read_single(Some(&MockWhere::new("id=1")), None)
+        .read_single(Some(&MockWhere::new("id=1")), None, None)
         .await
         .unwrap()
         .is_some());
     assert_eq!(
-        repo.read(Some(&MockWhere::new("all")), None)
+        repo.read(Some(&MockWhere::new("all")), None, None)
             .await
             .unwrap()
             .len(),
@@ -745,9 +746,9 @@ async fn published_mocks() {
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
     repo.set_read_single_error("gs");
-    assert!(repo.read_single(None, None).await.is_err());
+    assert!(repo.read_single(None, None, None).await.is_err());
     repo.set_read_error("g");
-    assert!(repo.read(None, None).await.is_err());
+    assert!(repo.read(None, None, None).await.is_err());
     repo.set_add_error("ad");
     assert!(repo.create(&mut Row::new()).await.is_err());
     repo.set_update_error("up");
@@ -1624,7 +1625,7 @@ async fn read_calls_stored_procedure() {
     let repo = CRUDRepository::new(connection, options).unwrap();
     let parameters = [Parameter::new("id", 9_i64)];
     let call = ExecuteStoredProcedureStatement::new("get_user", &parameters);
-    let rows = repo.read(Some(&call), Some(&parameters)).await.unwrap();
+    let rows = repo.read(Some(&call), Some(&parameters), None).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["id"], Value::Int(1));
     assert_eq!(rows[0]["name"], Value::from("a"));
@@ -1638,7 +1639,7 @@ async fn read_calls_stored_procedure() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     assert_eq!(
-        repo.read_single(Some(&call), Some(&parameters))
+        repo.read_single(Some(&call), Some(&parameters), None)
             .await
             .unwrap()
             .unwrap()["id"],
@@ -1663,13 +1664,13 @@ async fn table_repository() {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
     }));
-    let rows = repo.read(None, None).await.unwrap();
+    let rows = repo.read(None, None, None).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT id, name FROM users"
     );
-    assert!(repo.read_single(None, None).await.unwrap().is_some());
+    assert!(repo.read_single(None, None, None).await.unwrap().is_some());
 
     let where_clause = Where::new(Operator::equals("id", 9_i64));
     let query = SelectStatement::new(SelectStatementOptions {
@@ -1678,7 +1679,7 @@ async fn table_repository() {
     });
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single(Some(&query), None)
+        .read_single(Some(&query), None, None)
         .await
         .unwrap()
         .is_none());
@@ -1689,7 +1690,7 @@ async fn table_repository() {
 
     command.reader_rows.lock().unwrap().clear();
     assert!(repo
-        .read_single(Some(&Where::new(Operator::equals("id", 9_i64))), None)
+        .read_single(Some(&Where::new(Operator::equals("id", 9_i64))), None, None)
         .await
         .unwrap()
         .is_none());
@@ -1698,7 +1699,7 @@ async fn table_repository() {
     assert_eq!(last.1[0].name, "id");
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
-        .read(Some(&Where::new(Operator::equals("id", 9_i64))), None)
+        .read(Some(&Where::new(Operator::equals("id", 9_i64))), None, None)
         .await
         .unwrap()
         .is_empty());
@@ -1851,24 +1852,24 @@ async fn table_repository_crud_mapper() {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(users_mapping());
-    options.entity_mapper = Box::new(TransformMapper::new(
+    options.entity_mapper = Some(std::sync::Arc::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "users" => "people".into(),
             _ => name,
         },
         |name| name,
-    ));
-    options.property_mappings = Box::new(TransformMapper::new(
+    )));
+    options.property_mappings = Some(std::sync::Arc::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "id" => "user_id".into(),
             "name" => "full_name".into(),
             _ => name,
         },
         |name| name,
-    ));
+    )));
     let repo = CRUDRepository::new(connection, options).unwrap();
     command.reader_rows.lock().unwrap().clear();
-    assert!(repo.read_single(None, None).await.unwrap().is_none());
+    assert!(repo.read_single(None, None, None).await.unwrap().is_none());
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
         "SELECT full_name, user_id FROM people"
@@ -1892,6 +1893,85 @@ async fn table_repository_crud_mapper() {
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
         "DELETE FROM people WHERE user_id = $user_id"
+    );
+}
+
+#[tokio::test]
+async fn read_uses_per_call_object_and_row_converters() {
+    struct FixedLabel(&'static str);
+    impl TypeConverter<Row, Row> for FixedLabel {
+        fn convert(&self, _from: &Row) -> Result<Row> {
+            Ok(record(&[("Label", Value::from(self.0))]))
+        }
+        fn reverse_convert(&self, to: &Row) -> Result<Row> {
+            Ok(to.clone())
+        }
+    }
+
+    struct TagLabel;
+    impl TypeConverter<Row, Row> for TagLabel {
+        fn convert(&self, from: &Row) -> Result<Row> {
+            let label = match from.get("Label") {
+                Some(Value::Text(text)) => format!("tag:{text}"),
+                _ => "tag:".into(),
+            };
+            Ok(record(&[("Label", Value::from(label))]))
+        }
+        fn reverse_convert(&self, to: &Row) -> Result<Row> {
+            Ok(to.clone())
+        }
+    }
+
+    struct UpperLabel;
+    impl TypeConverter<Value, Value> for UpperLabel {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(match from {
+                Value::Text(text) => Value::from(text.to_uppercase()),
+                other => other.clone(),
+            })
+        }
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(to.clone())
+        }
+    }
+
+    let command = Arc::new(MockCommand::new());
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("Label", Value::from("ada"))]));
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = ReadonlyRepositoryMappingOptions::default();
+    options.entity = "items".into();
+    options.row_converter = Some(RowTypeConverter::new(vec!["Label".into()]));
+    options.object_converter = Some(Box::new(FixedLabel("default")));
+    let repo = ReadonlyRepository::new(connection, options).unwrap();
+    assert_eq!(
+        repo.read_single(None, None, None).await.unwrap().unwrap()["Label"],
+        Value::from("default")
+    );
+
+    command.reader_rows.lock().unwrap().clear();
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("Label", Value::from("ada"))]));
+    let mut per_call = ReadonlyRepositoryMappingOptions::default();
+    per_call.object_converter = Some(Box::new(TagLabel));
+    per_call.row_converter = Some(RowTypeConverter::new(vec!["Label".into()]).with_fields(
+        HashMap::from([(
+            "Label".into(),
+            Box::new(UpperLabel) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+        )]),
+    ));
+    assert_eq!(
+        repo.read_single(None, None, Some(&per_call))
+            .await
+            .unwrap()
+            .unwrap()["Label"],
+        Value::from("tag:ADA")
     );
 }
 

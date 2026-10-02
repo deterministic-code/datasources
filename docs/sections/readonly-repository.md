@@ -103,10 +103,10 @@ readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement)
 
 **Returns** `Promise<T | undefined>`
 
-#### ReadonlyRepositoryOptions
+#### ReadonlyRepositoryMappingOptions
 
 ```typescript
-type ReadonlyRepositoryOptions<T = Cells>
+type ReadonlyRepositoryMappingOptions<T = Cells>
 ```
 
 Constructor bag for a read repository. [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions) extends it.
@@ -358,10 +358,10 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 
 **Returns** `Task<T?>`
 
-#### ReadonlyRepositoryOptions
+#### ReadonlyRepositoryMappingOptions
 
 ```csharp
-public class ReadonlyRepositoryOptions<T> where T : new()
+public class ReadonlyRepositoryMappingOptions<T> where T : new()
 ```
 
 Constructor bag for a read repository. [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions) extends it.
@@ -546,10 +546,10 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 
 **Returns** [ReadonlyRepository](#readonlyrepository)
 
-#### ReadonlyRepositoryOptions
+#### ReadonlyRepositoryMappingOptions
 
 ```rust
-pub struct ReadonlyRepositoryOptions
+pub struct ReadonlyRepositoryMappingOptions
 ```
 
 Constructor bag for a read repository. [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions) embeds this struct and derefs to it. `Default` sets `entity` to `"items"`.

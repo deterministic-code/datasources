@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MemoryDriver } from "@datasources/memory";
 import { collectAsync } from "./collectAsync.ts";
+import type { Cells } from "./converters/Cell.ts";
+import { TypeConverter } from "./converters/TypeConverter.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";
 import { HashsetOptimizedReadonlyEnrichmentStrategy } from "./HashsetOptimizedReadonlyEnrichmentStrategy.ts";
@@ -12,6 +14,9 @@ import type { IMapper } from "./mappers/IMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import { MockCommand } from "./mocks/mock-command.ts";
+import { MockConnection } from "./mocks/mock-connection.ts";
+import { MockReader } from "./mocks/mock-reader.ts";
 import { Operator, Where } from "./statements/index.ts";
 import { WhereText } from "./statements/WhereText.ts";
 
@@ -321,7 +326,7 @@ describe("ReadonlyRepository", () => {
     expect(items.map((item) => item.TypeName)).toEqual(["person", "org"]);
   });
 
-  it("lookup key comes from renamed row", async () => {
+    it("lookup key comes from renamed row", async () => {
     const admin: Seed = { name: "admin" };
     const typesConnection = await setup([admin]);
     const typesRepo = repo(UserType, typesConnection);
@@ -333,6 +338,53 @@ describe("ReadonlyRepository", () => {
     usersRepo.addEnriched({ destinationProperty: "UserType", sourceProperty: "UserType", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
     const item = await usersRepo.readSingle();
     expect(item?.UserType).toBe("admin");
+  });
+
+  it("uses per-call object and row converters when provided", async () => {
+    class Item {
+      Label = "";
+    }
+    class FixedLabel extends TypeConverter<Item, Cells> {
+      constructor(private readonly label: string) {
+        super();
+      }
+      convert = (_from: Cells): Item => Object.assign(new Item(), { Label: this.label });
+      reverseConvert = (to: Item): Cells => ({ Label: to.Label });
+    }
+    class TagLabel extends TypeConverter<Item, Cells> {
+      convert = (from: Cells): Item =>
+        Object.assign(new Item(), { Label: `tag:${String(from.Label)}` });
+      reverseConvert = (to: Item): Cells => ({ Label: to.Label });
+    }
+    class UpperLabel extends TypeConverter<Cells, Cells> {
+      convert = (from: Cells): Cells => ({
+        ...from,
+        Label: String(from.Label).toUpperCase(),
+      });
+      reverseConvert = (to: Cells): Cells => to;
+    }
+
+    const connection = new MockConnection();
+    const command = new MockCommand(connection);
+    connection.command = command;
+    command.reader = new MockReader([{ Label: "ada" }]);
+    const itemsRepo = new ReadonlyRepository(connection, {
+      type: Item,
+      entity: "items",
+      readProperties: ["Label"],
+      objectConverter: new FixedLabel("default"),
+    });
+    expect((await itemsRepo.readSingle())?.Label).toBe("default");
+
+    command.reader = new MockReader([{ Label: "ada" }]);
+    expect(
+      (
+        await itemsRepo.readSingle(undefined, undefined, {
+          objectConverter: new TagLabel(),
+          rowConverter: new UpperLabel(),
+        })
+      )?.Label,
+    ).toBe("tag:ADA");
   });
 
   it("public include uses the node binder", async () => {

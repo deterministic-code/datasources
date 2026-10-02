@@ -4,7 +4,7 @@ import type { ICommand } from "./ICommand.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
-import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 
 export interface IDatasource {
   readonly provider: string;
@@ -18,6 +18,6 @@ export interface IDatasource {
   createReadonlyRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
-    options?: ReadonlyRepositoryOptions<T>,
+    options?: ReadonlyRepositoryMappingOptions<T>,
   ): IReadonlyRepository<T>;
 }

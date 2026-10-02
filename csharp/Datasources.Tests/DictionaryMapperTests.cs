@@ -59,7 +59,7 @@ public class DictionaryMapperTests
         var connection = new MockConnection { Provider = "memory" };
         var command = new MockCommand(connection);
         connection.Command = command;
-        var repo = new ReadonlyRepository<Account>(connection, new ReadonlyRepositoryOptions<Account>
+        var repo = new ReadonlyRepository<Account>(connection, new ReadonlyRepositoryMappingOptions<Account>
         {
             Entity = "user",
             PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>

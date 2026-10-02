@@ -6,7 +6,7 @@ use crate::connection::Connection;
 use crate::converters::TypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource::Datasource;
-use crate::readonly_repository_options::ReadonlyRepositoryOptions;
+use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::value::Value;
@@ -79,7 +79,7 @@ impl Datasource for StubDatasource {
     fn readonly_repository_from(
         &self,
         _connection: Arc<dyn Connection>,
-        _options: ReadonlyRepositoryOptions,
+        _options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository> {
         as_readonly(Arc::new(StubRepository::new(self.provider.clone())))
     }

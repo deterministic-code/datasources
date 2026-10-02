@@ -1,6 +1,6 @@
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
 await Execute(connection, Seed());
-var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
 {
     Entity = "User",
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>

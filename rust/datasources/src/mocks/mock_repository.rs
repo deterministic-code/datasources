@@ -65,6 +65,7 @@ impl IReadonlyRepository for MockRepository {
         &self,
         _query: Option<&dyn ReadInput>,
         _parameters: Option<&[crate::Parameter]>,
+        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
         if let Some(error) = &*self.read_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
@@ -76,6 +77,7 @@ impl IReadonlyRepository for MockRepository {
         &self,
         _query: Option<&dyn ReadInput>,
         _parameters: Option<&[crate::Parameter]>,
+        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
@@ -109,6 +111,6 @@ impl ICRUDRepository for MockRepository {
     }
 
     async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {
-        self.read_single(None, None).await
+        self.read_single(None, None, None).await
     }
 }

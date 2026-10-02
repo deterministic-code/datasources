@@ -5,7 +5,7 @@ await Execute(connection, """
         (1, 'ada', 1),
         (2, 'grace', 0);
     """);
-var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
     PropertyMappings = Snake(),

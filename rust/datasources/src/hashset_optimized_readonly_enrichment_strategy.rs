@@ -33,8 +33,8 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
                     enrichment.related_key.clone(),
                     keys.values().cloned().collect(),
                 ))),
-                None,
-            )
+                None, None
+        )
             .await?;
         let mut index = HashMap::new();
         for related in loaded {
@@ -80,8 +80,8 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
                     enrichment.related_key.clone(),
                     keys.values().cloned().collect(),
                 ))),
-                None,
-            )
+                None, None
+        )
             .await?;
         let mut index: HashMap<String, Vec<Row>> = HashMap::new();
         for row in loaded {

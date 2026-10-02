@@ -72,8 +72,8 @@ export { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts"
 export { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
 export { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
-export { createReadonlyRepositoryOptions } from "./createReadonlyRepositoryOptions.ts";
-export type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+export { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
+export type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 export type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 export { Response } from "./Response.ts";
 export type { ITransaction } from "./ITransaction.ts";

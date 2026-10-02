@@ -1,4 +1,4 @@
-use crate::readonly_repository_options::ReadonlyRepositoryOptions;
+use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -6,7 +6,7 @@ use std::sync::Arc;
 pub struct CRUDRepositoryOptions {
     pub ids: Vec<String>,
     pub write: Option<Arc<dyn WriteEnrichmentStrategy>>,
-    pub read: ReadonlyRepositoryOptions,
+    pub read: ReadonlyRepositoryMappingOptions,
 }
 
 impl Default for CRUDRepositoryOptions {
@@ -14,13 +14,13 @@ impl Default for CRUDRepositoryOptions {
         Self {
             ids: vec!["id".into()],
             write: None,
-            read: ReadonlyRepositoryOptions::default(),
+            read: ReadonlyRepositoryMappingOptions::default(),
         }
     }
 }
 
 impl Deref for CRUDRepositoryOptions {
-    type Target = ReadonlyRepositoryOptions;
+    type Target = ReadonlyRepositoryMappingOptions;
 
     fn deref(&self) -> &Self::Target {
         &self.read

@@ -225,10 +225,10 @@ addLinked<TRelated extends object, TLink extends object>(enrichment: Enrichment,
 #### CRUDRepositoryOptions
 
 ```typescript
-type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
+type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryMappingOptions<T> & { ... }
 ```
 
-Extends [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Constructor bag for [CRUDRepository](#repository).
+Extends [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Constructor bag for [CRUDRepository](#repository).
 
 **Properties**
 
@@ -563,10 +563,10 @@ public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyR
 #### CRUDRepositoryOptions
 
 ```csharp
-public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> where T : new()
+public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryMappingOptions<T> where T : new()
 ```
 
-Extends [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Constructor bag for [CRUDRepository](#repository).
+Extends [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Constructor bag for [CRUDRepository](#repository).
 
 **Properties**
 
@@ -807,7 +807,7 @@ pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>
 pub struct CRUDRepositoryOptions
 ```
 
-Embeds [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions) and derefs to it. Constructor bag for [CRUDRepository](#repository). `Default` sets `ids` to `["id"]`.
+Embeds [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions) and derefs to it. Constructor bag for [CRUDRepository](#repository). `Default` sets `ids` to `["id"]`.
 
 **Properties**
 
@@ -829,10 +829,10 @@ pub write: Option<Arc<dyn WriteEnrichmentStrategy>>
 
 ##### read
 
-The embedded [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions). Field access goes through `Deref`.
+The embedded [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Field access goes through `Deref`.
 
 ```rust
-pub read: ReadonlyRepositoryOptions
+pub read: ReadonlyRepositoryMappingOptions
 ```
 
 #### BuiltRepository

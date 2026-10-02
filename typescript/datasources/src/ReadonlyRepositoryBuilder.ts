@@ -1,10 +1,10 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
-import { fieldNamesOf } from "./createReadonlyRepositoryOptions.ts";
+import { fieldNamesOf } from "./createReadonlyRepositoryMappingOptions.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
-import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 
@@ -12,7 +12,7 @@ export class ReadonlyRepositoryBuilder<T = object> {
   protected entityMapper: IMapper<string, string> = new IdentityMapper();
   protected propertyMapper: IMapper<string, string> = new IdentityMapper();
 
-  parts = (connection: IConnection, options: ReadonlyRepositoryOptions<T>): BuiltRepository<T> => {
+  parts = (connection: IConnection, options: ReadonlyRepositoryMappingOptions<T>): BuiltRepository<T> => {
     const rowConverter = options.rowConverter;
     const objectConverter = options.objectConverter ?? new MetaDataRowTypeConverter<T>();
     const entityMapper = options.entityMapper ?? new IdentityMapper<string>();
@@ -46,7 +46,7 @@ export class ReadonlyRepositoryBuilder<T = object> {
     };
   };
 
-  protected ids = (_options: ReadonlyRepositoryOptions<T>): string[] => [];
+  protected ids = (_options: ReadonlyRepositoryMappingOptions<T>): string[] => [];
 
   protected statements = (table: string, columns: string[]): ReadonlyRepositoryStatements =>
     new ReadonlyRepositoryStatements(table, columns);

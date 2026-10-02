@@ -2,6 +2,7 @@ use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
+use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -22,11 +23,13 @@ pub trait IReadonlyRepository: IRepository {
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>>;
     async fn read(
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>>;
 }
 
@@ -56,16 +59,18 @@ impl IReadonlyRepository for AsReadonly {
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
-        self.0.read_single(query, parameters).await
+        self.0.read_single(query, parameters, options).await
     }
 
     async fn read(
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[crate::Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
-        self.0.read(query, parameters).await
+        self.0.read(query, parameters, options).await
     }
 }
 

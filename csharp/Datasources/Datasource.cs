@@ -31,7 +31,7 @@ public sealed class Datasource(
 
     public IReadonlyRepository<T> CreateReadonlyRepository<T>(
         IConnection? connection = null,
-        ReadonlyRepositoryOptions<T>? options = null) where T : new() =>
+        ReadonlyRepositoryMappingOptions<T>? options = null) where T : new() =>
         new ReadonlyRepository<T>(connection ?? DefaultConnection(), Apply(options));
 
     CRUDRepositoryOptions<T> Apply<T>(CRUDRepositoryOptions<T>? options) where T : new()
@@ -47,9 +47,9 @@ public sealed class Datasource(
         };
     }
 
-    ReadonlyRepositoryOptions<T> Apply<T>(ReadonlyRepositoryOptions<T>? options) where T : new()
+    ReadonlyRepositoryMappingOptions<T> Apply<T>(ReadonlyRepositoryMappingOptions<T>? options) where T : new()
     {
-        var built = CreateReadonlyRepositoryOptions.FromType<T>(driver.RowTypeConverters);
+        var built = CreateReadonlyRepositoryMappingOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         var rows = RowTypeConverter.From(types, Columns(typeof(T)));
         return (options ?? built) with

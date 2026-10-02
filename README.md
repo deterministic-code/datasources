@@ -1617,7 +1617,7 @@ Creates a read-only repository.
 **Definition**
 
 ```typescript
-createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryOptions<T>): IReadonlyRepository<T>
+createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, options?: ReadonlyRepositoryMappingOptions<T>): IReadonlyRepository<T>
 ```
 
 **Parameters**
@@ -1626,7 +1626,7 @@ createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, op
 | --- | --- |
 | `type` | class constructor. Its fields become columns, `id` or `Id` becomes the id, and `type.name` becomes the entity |
 | `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
-| `options` | optional [ReadonlyRepositoryOptions](#typescript-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
+| `options` | optional [ReadonlyRepositoryMappingOptions](#typescript-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
 
 **Returns**
 
@@ -1766,7 +1766,7 @@ Creates a read-only repository.
 **Definition**
 
 ```csharp
-IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryOptions<T>? options = null)
+IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = null, ReadonlyRepositoryMappingOptions<T>? options = null)
 ```
 
 **Parameters**
@@ -1774,7 +1774,7 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 | Name | Description |
 | --- | --- |
 | `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
-| `options` | optional [ReadonlyRepositoryOptions](#csharp-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
+| `options` | optional [ReadonlyRepositoryMappingOptions](#csharp-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults |
 
 **Returns**
 
@@ -1943,7 +1943,7 @@ Creates a read-only repository.
 **Definition**
 
 ```rust
-fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryOptions>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryMappingOptions>) -> Arc<dyn IReadonlyRepository>
 ```
 
 **Parameters**
@@ -1951,7 +1951,7 @@ fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Opt
 | Name | Description |
 | --- | --- |
 | `connection` | optional [Connection](#connection); omitted uses the datasource connection |
-| `options` | optional [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults |
+| `options` | optional [ReadonlyRepositoryMappingOptions](#rust-readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults |
 
 **Returns**
 
@@ -6011,7 +6011,7 @@ var ds = Datasource.Default;
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
-var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
     PropertyMappings = Snake(),
@@ -6076,7 +6076,7 @@ execute_sql(
     "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
-let mut options = create_readonly_repository_options::<User>();
+let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
@@ -7072,10 +7072,10 @@ readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement)
 
 `Promise<T | undefined>`
 
-##### ReadonlyRepositoryOptions {#typescript-readonlyrepositoryoptions}
+##### ReadonlyRepositoryMappingOptions {#typescript-readonlyrepositoryoptions}
 
 ```typescript
-type ReadonlyRepositoryOptions<T = Cells>
+type ReadonlyRepositoryMappingOptions<T = Cells>
 ```
 
 **Properties**
@@ -7304,10 +7304,10 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 
 `Task<T?>`
 
-##### ReadonlyRepositoryOptions {#csharp-readonlyrepositoryoptions}
+##### ReadonlyRepositoryMappingOptions {#csharp-readonlyrepositoryoptions}
 
 ```csharp
-public class ReadonlyRepositoryOptions<T> where T : new()
+public class ReadonlyRepositoryMappingOptions<T> where T : new()
 ```
 
 **Properties**
@@ -7458,10 +7458,10 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 
 [ReadonlyRepository](#rust-readonlyrepository)
 
-##### ReadonlyRepositoryOptions {#rust-readonlyrepositoryoptions}
+##### ReadonlyRepositoryMappingOptions {#rust-readonlyrepositoryoptions}
 
 ```rust
-pub struct ReadonlyRepositoryOptions
+pub struct ReadonlyRepositoryMappingOptions
 ```
 
 **Properties**
@@ -7559,7 +7559,7 @@ var ds = Datasource.Default;
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (1, 'ada', 1)");
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (2, 'grace', 0)");
 await Execute(connection, "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)");
-var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+var repo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
     PropertyMappings = Snake(),
@@ -7610,7 +7610,7 @@ execute_sql(
     "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
 )
 .await;
-let mut options = create_readonly_repository_options::<User>();
+let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
@@ -7727,7 +7727,7 @@ await Execute(connection, """
         (1, 'ada', 1),
         (2, 'grace', 0);
     """);
-var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryOptions<User>
+var usersRepo = ds.CreateReadonlyRepository<User>(connection, new ReadonlyRepositoryMappingOptions<User>
 {
     EntityMapper = SnakeThenPlural(),
     PropertyMappings = Snake(),
@@ -7785,7 +7785,7 @@ execute_sql(
     ",
 )
 .await;
-let mut options = create_readonly_repository_options::<User>();
+let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Box::new(snake_then_plural());
 options.property_mappings = Box::new(snake());
 options.object_converter = Some(Box::new(UserConverter));
@@ -7875,7 +7875,7 @@ await Execute(connection, $"""
         ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z', 3);
     """);
 var casing = new ChangeCasingMapper(Casing.Pascal, Casing.Snake);
-var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UsersView"] = "user" }),
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -7887,7 +7887,7 @@ var usersRepo = (ReadonlyRepository<UsersView>)ds.CreateReadonlyRepository<Users
         ["UserType"] = "user_type_id",
     }),
 });
-var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryOptions<UserType>
+var typesRepo = ds.CreateReadonlyRepository<UserType>(connection, new ReadonlyRepositoryMappingOptions<UserType>
 {
     EntityMapper = casing,
     PropertyMappings = casing,
@@ -7929,7 +7929,7 @@ execute_sql(
     ),
 )
 .await;
-let mut users_options = create_readonly_repository_options::<UserAccount>();
+let mut users_options = create_readonly_repository_mapping_options::<UserAccount>();
 users_options.entity = "user".into();
 users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
@@ -7938,7 +7938,7 @@ users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_readonly_repository_options::<UserType>();
+let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
@@ -8047,7 +8047,7 @@ await Execute(connection, $"""
         ('{Grace}', 'grace', 1, '2024-06-01T00:00:00.000Z'),
         ('{Lin}', 'lin', 0, '2024-06-01T00:00:00.000Z');
     """);
-var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryOptions<UserAccount>
+var repo = ds.CreateReadonlyRepository<UserAccount>(connection, new ReadonlyRepositoryMappingOptions<UserAccount>
 {
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["UserAccount"] = "user" }),
     PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -8123,7 +8123,7 @@ execute_sql(
     ),
 )
 .await;
-let mut options = create_readonly_repository_options::<UserAccount>();
+let mut options = create_readonly_repository_mapping_options::<UserAccount>();
 options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserAccount".to_string(),
     "user".to_string(),
@@ -8447,7 +8447,7 @@ The repository type is `UsersView`. The select reads `User`, joined to `UserType
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
 await Execute(connection, Seed());
-var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryOptions<UsersView>
+var usersRepo = new ReadonlyRepository<UsersView>(connection, new ReadonlyRepositoryMappingOptions<UsersView>
 {
     Entity = "User",
     EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -9126,7 +9126,7 @@ addLinked<TRelated extends object, TLink extends object>(enrichment: Enrichment,
 ##### CRUDRepositoryOptions {#typescript-crudrepositoryoptions}
 
 ```typescript
-type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryOptions<T> & { ... }
+type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryMappingOptions<T> & { ... }
 ```
 
 **Properties**
@@ -9549,7 +9549,7 @@ public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyR
 ##### CRUDRepositoryOptions {#csharp-crudrepositoryoptions}
 
 ```csharp
-public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryOptions<T> where T : new()
+public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryMappingOptions<T> where T : new()
 ```
 
 **Properties**
@@ -9852,7 +9852,7 @@ pub struct CRUDRepositoryOptions
 | --- | --- |
 | ids | Id column names. Default `["id"]`. |
 | write | Write enrichment strategy. `None` uses the default strategy. |
-| read | The embedded [ReadonlyRepositoryOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
+| read | The embedded [ReadonlyRepositoryMappingOptions](#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
 
 ##### BuiltRepository {#rust-builtrepository}
 
@@ -13036,7 +13036,7 @@ const flat = mapper.reverseMap(nested);
 - [ChangeCasingMapper](#change-casing-mapper)
 - [TransformMapper](#transform-mapper)
 - [FlatToNestedMapper](#flat-to-nested-mapper)
-- [ReadonlyRepositoryOptions](#readonlyrepositoryoptions)
+- [ReadonlyRepositoryMappingOptions](#readonlyrepositoryoptions)
 
 ## IdentityMapper
 
@@ -14715,7 +14715,7 @@ fn reverse_map(&self, value: TTo) -> TFrom
 
 ### Remarks
 
-Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryOptions](#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](#identity-mapper).
+Use [TransformMapper](#transformmapper) when the mapping is a pair of closures. [ReadonlyRepositoryMappingOptions](#readonlyrepositoryoptions) accepts it for entity, column, and row mapping. The default is [IdentityMapper](#identity-mapper).
 
 ### Examples
 
@@ -25484,7 +25484,7 @@ var items = await parentsRepo.Read().ToListAsync();
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
-let mut users_options = create_readonly_repository_options::<UsersView>();
+let mut users_options = create_readonly_repository_mapping_options::<UsersView>();
 users_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
@@ -25496,12 +25496,12 @@ users_options.property_mappings = Box::new(DictionaryMapper::new([
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
 ]));
-let mut type_options = create_readonly_repository_options::<UserType>();
+let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity_mapper =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
 type_options.property_mappings =
     Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-let mut role_options = create_readonly_repository_options::<UserRole>();
+let mut role_options = create_readonly_repository_mapping_options::<UserRole>();
 role_options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserRole".to_string(),
     "user_roles".to_string(),
@@ -25790,7 +25790,7 @@ var items = parents;
 let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
-let mut options = ReadonlyRepositoryOptions::default();
+let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity = "User".into();
 options.entity_mapper = Box::new(DictionaryMapper::new([
     ("User".into(), "user".into()),

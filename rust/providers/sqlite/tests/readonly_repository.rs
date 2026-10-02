@@ -1,6 +1,6 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    create_readonly_repository_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
+    create_readonly_repository_mapping_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
     Connection, ConvertSchema, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper,
     Result, Row, TransformMapper, TypeConverter, Value, Where,
 };
@@ -86,19 +86,19 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
         "INSERT INTO users (id, username, is_enabled) VALUES (3, 'bea', 1)",
     )
     .await;
-    let mut options = create_readonly_repository_options::<User>();
-    options.entity_mapper = Box::new(snake_then_plural());
-    options.property_mappings = Box::new(snake());
+    let mut options = create_readonly_repository_mapping_options::<User>();
+    options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
+    options.property_mappings = Some(std::sync::Arc::new(snake()));
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
     let by_id = repo
-        .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
+        .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
         .await
         .unwrap()
         .unwrap();
     let row = repo
         .read(
             Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
-            None,
+            None, None
         )
         .await
         .unwrap()
@@ -153,13 +153,13 @@ async fn maps_an_object_explicitly() {
         ",
     )
     .await;
-    let mut options = create_readonly_repository_options::<User>();
-    options.entity_mapper = Box::new(snake_then_plural());
-    options.property_mappings = Box::new(snake());
+    let mut options = create_readonly_repository_mapping_options::<User>();
+    options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
+    options.property_mappings = Some(std::sync::Arc::new(snake()));
     options.object_converter = Some(Box::new(UserConverter));
     let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
     let user = users_repo
-        .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
+        .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
         .await
         .unwrap()
         .unwrap();
@@ -186,23 +186,23 @@ async fn reads_user_by_guid_username_and_created() {
         ),
     )
     .await;
-    let mut options = create_readonly_repository_options::<UserAccount>();
-    options.entity_mapper = Box::new(DictionaryMapper::new([(
+    let mut options = create_readonly_repository_mapping_options::<UserAccount>();
+    options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
         "UserAccount".to_string(),
         "user".to_string(),
-    )]));
-    options.property_mappings = Box::new(DictionaryMapper::new([
+    )])));
+    options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
         ("Key".to_string(), "id".to_string()),
         ("Login".to_string(), "username".to_string()),
         ("Active".to_string(), "is_enabled".to_string()),
         ("Opened".to_string(), "created".to_string()),
-    ]));
+    ])));
     let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
         .read_single(
             Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-            None,
+            None, None
         )
         .await
         .unwrap()
@@ -210,14 +210,14 @@ async fn reads_user_by_guid_username_and_created() {
     let by_login = repo
         .read(
             Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-            None,
+            None, None
         )
         .await
         .unwrap();
     let later = repo
         .read(
             Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-            None,
+            None, None
         )
         .await
         .unwrap();
@@ -257,7 +257,7 @@ async fn execute_sql(connection: &Arc<dyn Connection>, sql: &str) {
 mod user_view {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
-        create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Value, Where,
     };
     use uuid::Uuid;
@@ -306,21 +306,21 @@ mod user_view {
             ),
         )
         .await;
-        let mut users_options = create_readonly_repository_options::<UserAccount>();
+        let mut users_options = create_readonly_repository_mapping_options::<UserAccount>();
         users_options.entity = "user".into();
-        users_options.property_mappings = Box::new(DictionaryMapper::new([
+        users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
             ("Opened".to_string(), "created".to_string()),
             ("UserTypeId".to_string(), "user_type_id".to_string()),
-        ]));
-        let mut type_options = create_readonly_repository_options::<UserType>();
+        ])));
+        let mut type_options = create_readonly_repository_mapping_options::<UserType>();
         type_options.entity = "UserType".into();
         type_options.entity_mapper =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         type_options.property_mappings =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         let mut users_repo =
             ReadonlyRepository::new(connection.clone(), users_options).unwrap();
         let types =
@@ -339,8 +339,8 @@ mod user_view {
         let account = users_repo
             .read_single(
                 Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-                None,
-            )
+                None, None
+        )
             .await
             .unwrap()
             .unwrap();
@@ -362,9 +362,9 @@ mod user_view {
 mod users_view_roles {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use datasources::{
-        create_readonly_repository_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
-        NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryOptions,
+        NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryMappingOptions,
         SelectStatement, SelectStatementOptions, TypeMap,
         TypeMapField, TypeMapGroup, Value, Where,
     };
@@ -469,32 +469,32 @@ mod users_view_roles {
             .await
             .unwrap();
         execute_sql(&connection, &seed()).await;
-        let mut users_options = create_readonly_repository_options::<UsersView>();
-        users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+        let mut users_options = create_readonly_repository_mapping_options::<UsersView>();
+        users_options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
             "UsersView".to_string(),
             "user".to_string(),
-        )]));
-        users_options.property_mappings = Box::new(DictionaryMapper::new([
+        )])));
+        users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
             ("Opened".to_string(), "created".to_string()),
             ("UserType".to_string(), "user_type_id".to_string()),
-        ]));
-        let mut type_options = create_readonly_repository_options::<UserType>();
+        ])));
+        let mut type_options = create_readonly_repository_mapping_options::<UserType>();
         type_options.entity_mapper =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         type_options.property_mappings =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        let mut role_options = create_readonly_repository_options::<UserRole>();
-        role_options.entity_mapper = Box::new(DictionaryMapper::new([(
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+        let mut role_options = create_readonly_repository_mapping_options::<UserRole>();
+        role_options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
             "UserRole".to_string(),
             "user_roles".to_string(),
-        )]));
-        role_options.property_mappings = Box::new(DictionaryMapper::new([
+        )])));
+        role_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("UserId".to_string(), "user_id".to_string()),
             ("Name".to_string(), "name".to_string()),
-        ]));
+        ])));
         let mut users_repo =
             ReadonlyRepository::new(connection.clone(), users_options).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
@@ -515,7 +515,7 @@ mod users_view_roles {
             Some(strategy),
         );
         let users_view = users_repo
-            .read_single(Some(&Where::binary("Key", eq, ADA)), None)
+            .read_single(Some(&Where::binary("Key", eq, ADA)), None, None)
             .await
             .unwrap()
             .unwrap();
@@ -539,15 +539,15 @@ mod users_view_roles {
             .await
             .unwrap();
         execute_sql(&connection, &seed()).await;
-        let mut options = ReadonlyRepositoryOptions::default();
+        let mut options = ReadonlyRepositoryMappingOptions::default();
         options.entity = "User".into();
-        options.entity_mapper = Box::new(DictionaryMapper::new([
+        options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("User".into(), "user".into()),
             ("UserType".into(), "user_type".into()),
             ("UserRole".into(), "user_roles".into()),
             ("Role".into(), "roles".into()),
-        ]));
-        options.property_mappings = Box::new(DictionaryMapper::new([
+        ])));
+        options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("Key".into(), "id".into()),
             ("Login".into(), "username".into()),
             ("Active".into(), "is_enabled".into()),
@@ -558,7 +558,7 @@ mod users_view_roles {
             ("RoleId".into(), "role_id".into()),
             ("Name".into(), "roles.name".into()),
             ("Id".into(), "id".into()),
-        ]));
+        ])));
         let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
@@ -588,7 +588,7 @@ mod users_view_roles {
             ))),
         );
         let joined = joined_users();
-        let items = users_repo.read(Some(&joined), None).await.unwrap();
+        let items = users_repo.read(Some(&joined), None, None).await.unwrap();
         let view = |login: &str| {
             items
                 .iter()
@@ -657,7 +657,7 @@ mod user_crud {
         let connection = open(ds.as_ref()).await;
         apply_schema(connection.as_ref(), "user-pascal").await.unwrap();
         let mut options = create_crud_repository_options::<User>();
-        options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+        options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         options.ids = vec!["Id".into()];
         let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
         let mut created = datasources::Row::new();
@@ -676,8 +676,8 @@ mod user_crud {
                     eq,
                     Value::Bool(true),
                 )),
-                None,
-            )
+                None, None
+        )
             .await
             .unwrap();
         created.insert("Username".into(), Value::from("ada-v2"));
@@ -766,15 +766,15 @@ mod user_crud {
         let mut users_options = create_crud_repository_options::<User>();
         users_options.ids = vec!["Key".into()];
         users_options.entity_mapper =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        users_options.property_mappings = Box::new(DictionaryMapper::new([
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+        users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),
             ("Active".to_string(), "is_enabled".to_string()),
             ("Opened".to_string(), "created".to_string()),
             ("UserType".to_string(), "user_type_id".to_string()),
             ("Version".to_string(), "version".to_string()),
-        ]));
+        ])));
         users_options.row_converter = Some(RowTypeConverter::of::<User>());
         users_options.object_converter = Some(Box::new(
             MetaDataRowTypeConverter::of::<User>().with_references(
@@ -792,14 +792,14 @@ mod user_crud {
         let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
         let mut type_options = create_crud_repository_options::<UserType>();
         type_options.entity_mapper =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        type_options.property_mappings = Box::new(casing);
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+        type_options.property_mappings = Some(std::sync::Arc::new(casing));
         type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
         let mut role_options = create_crud_repository_options::<UserRole>();
         role_options.entity_mapper =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         role_options.property_mappings =
-            Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+            Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
         let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
         let user_types_repo =
@@ -848,7 +848,7 @@ mod user_crud {
         let grace = users_repo.create(&mut grace).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
-            .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+            .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
             .await
             .unwrap()
             .unwrap();
@@ -877,7 +877,7 @@ mod user_crud {
             .await
             .unwrap();
         let current = users_repo
-            .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+            .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
             .await
             .unwrap()
             .unwrap();
@@ -898,7 +898,7 @@ mod user_crud {
         current_names.sort();
         assert_eq!(current_names, ["admin", "editor", "owner"]);
         let roles = user_roles_repo
-            .read(Some(&Where::binary("UserId", eq, key.clone())), None)
+            .read(Some(&Where::binary("UserId", eq, key.clone())), None, None)
             .await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
@@ -942,8 +942,8 @@ mod user_crud {
         .await;
         let mut options = create_crud_repository_options::<Account>();
         let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-        options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-        options.property_mappings = Box::new(casing);
+        options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+        options.property_mappings = Some(std::sync::Arc::new(casing));
         options.ids = vec!["TenantId".into(), "Id".into()];
         options.row_converter = Some(RowTypeConverter::of::<Account>());
         let accounts_repo = CRUDRepository::new(connection, options).unwrap();

@@ -33,6 +33,31 @@ public class ReadonlyRepositoryTests
         public string UserType { get; set; } = "";
     }
 
+    sealed class Item
+    {
+        public string Label { get; set; } = "";
+    }
+
+    sealed class FixedLabel(string label) : TypeConverter<Item, Row>
+    {
+        public override Item Convert(Row from) => new() { Label = label };
+        public override Row ReverseConvert(Item to) => new() { ["Label"] = to.Label };
+    }
+
+    sealed class TagLabel : TypeConverter<Item, Row>
+    {
+        public override Item Convert(Row from) =>
+            new() { Label = $"tag:{(string)from["Label"].ToObject()!}" };
+        public override Row ReverseConvert(Item to) => new() { ["Label"] = to.Label };
+    }
+
+    sealed class UpperLabel : TypeConverter<Row, Row>
+    {
+        public override Row Convert(Row from) =>
+            new(from) { ["Label"] = ((string)from["Label"].ToObject()!).ToUpperInvariant() };
+        public override Row ReverseConvert(Row to) => to;
+    }
+
     static readonly ChangeCasingMapper Snake = new(Casing.Pascal, Casing.Snake);
 
     static readonly DictionaryMapper<string> References = new(new Dictionary<string, string>
@@ -212,7 +237,7 @@ public class ReadonlyRepositoryTests
         var typesConnection = await Setup(admin);
         var typesRepo = Open<UserType>(typesConnection);
         var usersConnection = await Setup(new Row { ["user_type_id"] = admin["id"] });
-        var usersRepo = new ReadonlyRepository<View>(usersConnection, new ReadonlyRepositoryOptions<View>
+        var usersRepo = new ReadonlyRepository<View>(usersConnection, new ReadonlyRepositoryMappingOptions<View>
         {
             PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
             {
@@ -224,8 +249,33 @@ public class ReadonlyRepositoryTests
         Assert.Equal("admin", item!.UserType);
     }
 
+    [Fact]
+    public async Task ReadUsesPerCallObjectAndRowConvertersWhenProvided()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        command.Reader = new MockReader<Row>([new Row { ["Label"] = "ada" }]);
+        var itemsRepo = new ReadonlyRepository<Item>(connection, new ReadonlyRepositoryMappingOptions<Item>
+        {
+            Entity = "items",
+            ReadProperties = ["Label"],
+            ObjectConverter = new FixedLabel("default"),
+        });
+        Assert.Equal("default", (await itemsRepo.ReadSingle())!.Label);
+
+        command.Reader = new MockReader<Row>([new Row { ["Label"] = "ada" }]);
+        Assert.Equal(
+            "tag:ADA",
+            (await itemsRepo.ReadSingle(options: new ReadonlyRepositoryMappingOptions<Item>
+            {
+                ObjectConverter = new TagLabel(),
+                RowConverter = new UpperLabel(),
+            }))!.Label);
+    }
+
     static ReadonlyRepository<T> Open<T>(IConnection connection) where T : new() =>
-        new(connection, new ReadonlyRepositoryOptions<T> { PropertyMappings = Columns });
+        new(connection, new ReadonlyRepositoryMappingOptions<T> { PropertyMappings = Columns });
 
     static async Task<IConnection> Setup(params Row[] rows)
     {

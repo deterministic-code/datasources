@@ -7,9 +7,9 @@ import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
-import type { ReadonlyRepositoryOptions } from "./ReadonlyRepositoryOptions.ts";
+import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
 
-const isCrud = <T>(options: ReadonlyRepositoryOptions<T>): options is CRUDRepositoryOptions<T> =>
+const isCrud = <T>(options: ReadonlyRepositoryMappingOptions<T>): options is CRUDRepositoryOptions<T> =>
   "ids" in options || "write" in options;
 
 const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>
@@ -38,7 +38,7 @@ export const repositoryParts = <T>(
 export class CRUDRepositoryBuilder<T = object> extends ReadonlyRepositoryBuilder<T> {
   crudStatements?: CRUDRepositoryStatements;
 
-  protected override ids = (options: ReadonlyRepositoryOptions<T>): string[] =>
+  protected override ids = (options: ReadonlyRepositoryMappingOptions<T>): string[] =>
     isCrud(options)
       ? (options.ids ?? (options.type ? defaultId(fieldNamesOf(options.type)) : ["id"]))
       : [];

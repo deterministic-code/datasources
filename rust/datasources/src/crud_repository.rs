@@ -502,16 +502,18 @@ impl IReadonlyRepository for CRUDRepository {
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[Parameter]>,
+        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
-        self.readonly.read_single(query, parameters).await
+        self.readonly.read_single(query, parameters, options).await
     }
 
     async fn read(
         &self,
         query: Option<&dyn ReadInput>,
         parameters: Option<&[Parameter]>,
+        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
-        self.readonly.read(query, parameters).await
+        self.readonly.read(query, parameters, options).await
     }
 }
 
@@ -562,7 +564,7 @@ impl ICRUDRepository for CRUDRepository {
         }
         let record = self.id_record(id)?;
         let clause = self.id_where(&record)?;
-        self.read_single(Some(&clause), None).await
+        self.read_single(Some(&clause), None, None).await
     }
 }
 

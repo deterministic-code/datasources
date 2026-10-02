@@ -32,7 +32,7 @@ public class ObjectConverterTests
         var command = new MockCommand(connection);
         connection.Command = command;
         command.Reader = new MockReader<Row>([new Row { ["id"] = 1L, ["is_enabled"] = 1L }]);
-        var flagsRepo = new ReadonlyRepository<Flag>(connection, new ReadonlyRepositoryOptions<Flag>
+        var flagsRepo = new ReadonlyRepository<Flag>(connection, new ReadonlyRepositoryMappingOptions<Flag>
         {
             Entity = "flags",
             ReadProperties = ["id", "is_enabled"],

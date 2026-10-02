@@ -255,4 +255,4 @@ Address
 - [ChangeCasingMapper](./change-casing-mapper.md)
 - [TransformMapper](./transform-mapper.md)
 - [FlatToNestedMapper](./flat-to-nested-mapper.md)
-- [ReadonlyRepositoryOptions](./readonly-repository.md#readonlyrepositoryoptions)
+- [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions)

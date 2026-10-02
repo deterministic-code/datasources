@@ -49,8 +49,8 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
                     association.parent.clone(),
                     parent_key.clone(),
                 ))),
-                None,
-            )
+                None, None
+        )
             .await?;
         for row in &existing {
             let Some(related) = row.get(&association.related).cloned() else {

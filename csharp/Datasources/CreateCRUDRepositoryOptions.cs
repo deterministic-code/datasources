@@ -15,7 +15,7 @@ public static class CreateCRUDRepositoryOptions
         IReadOnlyDictionary<string, TypeConverter<Value, Value>>? types = null)
         where T : new()
     {
-        var read = CreateReadonlyRepositoryOptions.FromType<T>(type, types);
+        var read = CreateReadonlyRepositoryMappingOptions.FromType<T>(type, types);
         return new()
         {
             Ids = DefaultId(type),

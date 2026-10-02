@@ -74,7 +74,7 @@ async fn maps_join_rows_to_nested_contacts() {
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
         join_repo
-            .read(Some(&contacts_join_query()), None)
+            .read(Some(&contacts_join_query()), None, None)
             .await
             .unwrap(),
     ));
@@ -97,12 +97,12 @@ fn contact_repo(
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
-    options.entity_mapper = if contact {
-        Box::new(contact_entity())
+    options.entity_mapper = Some(std::sync::Arc::new(if contact {
+        contact_entity()
     } else {
-        Box::new(snake())
-    };
-    options.property_mappings = Box::new(columns());
+        snake()
+    }));
+    options.property_mappings = Some(std::sync::Arc::new(columns()));
     let converters = [
         ("Uuid", "uuid"),
         ("Created", "datetime"),
@@ -230,7 +230,7 @@ async fn writes_enriched_contact() {
     let loaded = contacts_repo
         .read_single(
             Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
-            None,
+            None, None
         )
         .await
         .unwrap()

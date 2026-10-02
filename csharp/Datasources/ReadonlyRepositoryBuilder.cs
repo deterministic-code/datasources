@@ -8,20 +8,22 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
     protected IMapper<string, string> EntityMappers { get; private set; } = new IdentityMapper<string>();
     protected IMapper<string, string> PropertyMappers { get; private set; } = new IdentityMapper<string>();
 
-    public BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryOptions<T> options)
+    public BuiltRepository<T> Parts(IConnection connection, ReadonlyRepositoryMappingOptions<T> options)
     {
-        EntityMappers = options.EntityMapper;
-        PropertyMappers = options.PropertyMappings;
+        var entity = options.EntityMapper ?? new IdentityMapper<string>();
+        var property = options.PropertyMappings ?? new IdentityMapper<string>();
+        EntityMappers = entity;
+        PropertyMappers = property;
         var names = options.ReadProperties is { Count: > 0 } listed ? listed : Columns();
         var columns = names
-            .Select(options.PropertyMappings.Map)
+            .Select(property.Map)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
         var converter = options.ObjectConverter ?? new MetaDataRowTypeConverter<T> { ShouldCoerceId = true };
         if (converter is MetaDataRowTypeConverter<T> meta)
         {
             meta.References.Clear();
-            meta.ReferenceColumns = options.PropertyMappings;
+            meta.ReferenceColumns = property;
             foreach (var name in names)
                 if (typeof(T).GetProperty(name) is { } prop && IsReference(prop.PropertyType))
                     meta.References.Add(name);
@@ -30,13 +32,13 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
             connection,
             options.RowConverter,
             converter,
-            options.PropertyMappings,
-            options.EntityMapper,
-            Statements(options.EntityMapper.Map(options.Entity ?? typeof(T).Name), columns),
+            property,
+            entity,
+            Statements(entity.Map(options.Entity ?? typeof(T).Name), columns),
             Ids(options));
     }
 
-    protected virtual IReadOnlyList<string> Ids(ReadonlyRepositoryOptions<T> options) => [];
+    protected virtual IReadOnlyList<string> Ids(ReadonlyRepositoryMappingOptions<T> options) => [];
 
     protected virtual ReadonlyRepositoryStatements Statements(string table, IReadOnlyList<string> columns) =>
         new(table, columns);

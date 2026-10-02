@@ -12,7 +12,7 @@ execute_sql(
     ),
 )
 .await;
-let mut options = create_readonly_repository_options::<UserAccount>();
+let mut options = create_readonly_repository_mapping_options::<UserAccount>();
 options.entity_mapper = Box::new(DictionaryMapper::new([(
     "UserAccount".to_string(),
     "user".to_string(),

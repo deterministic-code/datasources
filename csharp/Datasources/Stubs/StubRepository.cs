@@ -8,7 +8,10 @@ public sealed class StubRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
 
     public IReadOnlyList<string> Ids { get; } = [];
 
-    public override IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public override IAsyncEnumerable<T> Read(
+        IStatement? query = null,
+        IReadOnlyList<Parameter>? parameters = null,
+        ReadonlyRepositoryMappingOptions<T>? options = null) =>
         throw new ProviderNotImplementedException(provider);
     public Task<T> Create(T item) => throw new ProviderNotImplementedException(provider);
     public Task<Response> Update(T item, IWhere? byWhere = null) => throw new ProviderNotImplementedException(provider);

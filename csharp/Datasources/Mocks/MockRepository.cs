@@ -10,12 +10,18 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     public Exception? DeleteError { get; set; }
     public MockRepository(IConnection _) { }
 
-    public override Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null) =>
+    public override Task<T?> ReadSingle(
+        IStatement? query = null,
+        IReadOnlyList<Parameter>? parameters = null,
+        ReadonlyRepositoryMappingOptions<T>? options = null) =>
         ReadSingleError is not null
             ? throw ReadSingleError
             : Task.FromResult(Items.Count == 0 ? default : Items[0]);
 
-    public override async IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null)
+    public override async IAsyncEnumerable<T> Read(
+        IStatement? query = null,
+        IReadOnlyList<Parameter>? parameters = null,
+        ReadonlyRepositoryMappingOptions<T>? options = null)
     {
         if (ReadError is not null) throw ReadError;
         await Task.Yield();
