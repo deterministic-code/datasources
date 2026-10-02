@@ -1,3 +1,2 @@
 "items",
 [new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
-[new ForeignKey("fk_items_user", ["id"], "users", ["id"])]).GetText());

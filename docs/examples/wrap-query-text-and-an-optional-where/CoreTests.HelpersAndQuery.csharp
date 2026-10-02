@@ -1,3 +1,3 @@
-var select = new SelectStatement("SELECT 1");
+var select = new SelectStatement(new() { Table = "dual", Fields = ["1"] });
 var byId = new WhereText("id = 1");
-var withWhere = new SelectStatement("SELECT 1", byId);
+var withWhere = new SelectStatement(new() { Table = "dual", Fields = ["1"], Where = byId });

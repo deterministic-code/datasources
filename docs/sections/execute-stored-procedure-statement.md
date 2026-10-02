@@ -43,13 +43,15 @@ constructor(name: string, parameters: Parameter[])
 
 **Methods**
 
-##### getText()
+##### accept(visitor)
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 ```typescript
-getText(): string
+accept(visitor: IStatementVisitor): string
 ```
+
+- `visitor` — [IStatementVisitor](./statements.md#istatementvisitor)
 
 **Returns** `string`
 
@@ -91,13 +93,15 @@ public ExecuteStoredProcedureStatement(string name, IReadOnlyList<Parameter> par
 
 **Methods**
 
-##### GetText()
+##### Accept(visitor)
 
-Command text.
+Dispatches to a statement visitor that renders command text.
 
 ```csharp
-public string GetText()
+public string Accept(IStatementVisitor visitor)
 ```
+
+- `visitor` — [IStatementVisitor](./statements.md#istatementvisitor)
 
 **Returns** `string`
 
@@ -137,13 +141,15 @@ pub fn new(name: impl AsRef<str>, parameters: &[Parameter]) -> Self
 
 **Methods**
 
-##### get_text()
+##### accept()
 
-Command text.
+Dispatches through the renderer's statement visitor.
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+- `text` — [StatementTextRenderer](./statements.md#statementtextrenderer)
 
 **Returns** `String`
 :::

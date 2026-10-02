@@ -1,5 +1,1 @@
-    Join.inner("orders", "users.id", "orders.user_id"),
-    Join.left("payments", "orders.id", "payments.order_id"),
-    Join.right("profiles", "users.id", "profiles.user_id"),
-  ],
-}).getText(),
+const update = new UpdateStatement("users", [...fields], where);

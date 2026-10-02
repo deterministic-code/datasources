@@ -57,13 +57,15 @@ get parameters(): Parameter[]
 
 **Methods**
 
-##### getText()
+##### accept(visitor)
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 ```typescript
-getText(): string
+accept(visitor: IConditionVisitor): string
 ```
+
+- `visitor` — [IConditionVisitor](#iconditionvisitor)
 
 **Returns** `string`
 
@@ -95,10 +97,59 @@ map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell)
 
 **Returns** [Where](#where)
 
+#### ICondition
+
+```typescript
+interface ICondition
+```
+
+**Methods**
+
+##### accept(visitor)
+
+Dispatches to a condition visitor that renders predicate text.
+
+```typescript
+accept(visitor: IConditionVisitor): string
+```
+
+- `visitor` — [IConditionVisitor](#iconditionvisitor)
+
+**Returns** `string`
+
+#### IConditionVisitor
+
+```typescript
+interface IConditionVisitor
+```
+
+Visitor that turns a where into predicate text. [ConditionRenderer](#conditionrenderer) is the default.
+
+**Methods**
+
+##### visit(where)
+
+```typescript
+visit(where: Where): string
+visit(where: WhereText): string
+```
+
+- `where` — [Where](#where) or [WhereText](#wheretext)
+
+**Returns** `string`
+
+#### ConditionRenderer
+
+```typescript
+class ConditionRenderer implements IConditionVisitor
+```
+
+Default [IConditionVisitor](#iconditionvisitor).
+
 #### IWhere
 
 ```typescript
-interface IWhere extends IExpression, IText {}
+interface IWhere extends IExpression, ICondition {}
 ```
 
 #### WhereText
@@ -121,13 +172,15 @@ constructor(text: string)
 
 **Methods**
 
-##### getText()
+##### accept(visitor)
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 ```typescript
-getText(): string
+accept(visitor: IConditionVisitor): string
 ```
+
+- `visitor` — [IConditionVisitor](#iconditionvisitor)
 
 **Returns** `string`
 
@@ -191,13 +244,15 @@ public IReadOnlyList<Parameter> Parameters { get; }
 
 **Methods**
 
-##### GetText()
+##### Accept(visitor)
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 ```csharp
-public string GetText()
+public string Accept(IConditionVisitor visitor)
 ```
+
+- `visitor` — [IConditionVisitor](#iconditionvisitor)
 
 **Returns** `string`
 
@@ -229,10 +284,59 @@ public Where Map(Func<string, string> column, Func<string, Value, Value> value)
 
 **Returns** [Where](#where)
 
+#### ICondition
+
+```csharp
+public interface ICondition
+```
+
+**Methods**
+
+##### Accept(visitor)
+
+Dispatches to a condition visitor that renders predicate text.
+
+```csharp
+string Accept(IConditionVisitor visitor)
+```
+
+- `visitor` — [IConditionVisitor](#iconditionvisitor)
+
+**Returns** `string`
+
+#### IConditionVisitor
+
+```csharp
+public interface IConditionVisitor
+```
+
+Visitor that turns a where into predicate text. [ConditionRenderer](#conditionrenderer) is the default.
+
+**Methods**
+
+##### Visit(where)
+
+```csharp
+string Visit(Where where)
+string Visit(WhereText where)
+```
+
+- `where` — [Where](#where) or [WhereText](#wheretext)
+
+**Returns** `string`
+
+#### ConditionRenderer
+
+```csharp
+public class ConditionRenderer : IConditionVisitor
+```
+
+Default [IConditionVisitor](#iconditionvisitor).
+
 #### IWhere
 
 ```csharp
-public interface IWhere : IExpression, IText
+public interface IWhere : IExpression, ICondition
 ```
 
 #### WhereText
@@ -255,13 +359,15 @@ public WhereText(string text)
 
 **Methods**
 
-##### GetText()
+##### Accept(visitor)
 
-Predicate text.
+Dispatches to a condition visitor that renders predicate text.
 
 ```csharp
-string GetText()
+string Accept(IConditionVisitor visitor)
 ```
+
+- `visitor` — [IConditionVisitor](#iconditionvisitor)
 
 **Returns** `string`
 
@@ -331,13 +437,15 @@ where
 
 **Returns** `Result<`[Where](#where)`>`
 
-##### get_text()
+##### accept()
 
-Predicate text.
+Dispatches through the renderer's condition visitor.
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+- `text` — [StatementTextRenderer](./statements.md#statementtextrenderer)
 
 **Returns** `String`
 
@@ -351,10 +459,46 @@ fn parameters(&self) -> Vec<Parameter>
 
 **Returns** `Vec<`[Parameter](./command.md#parameter)`>`
 
+#### ICondition
+
+```rust
+pub trait ICondition: Send + Sync
+```
+
+**Methods**
+
+##### accept()
+
+Dispatches through the renderer's condition visitor.
+
+```rust
+fn accept(&self, text: &StatementTextRenderer) -> String
+```
+
+- `text` — [StatementTextRenderer](./statements.md#statementtextrenderer)
+
+**Returns** `String`
+
+#### ConditionVisitor
+
+```rust
+pub trait ConditionVisitor: Send + Sync
+```
+
+Visitor that turns a where into predicate text. [ConditionRenderer](#conditionrenderer) is the default.
+
+#### ConditionRenderer
+
+```rust
+pub struct ConditionRenderer
+```
+
+Default [ConditionVisitor](#conditionvisitor).
+
 #### IWhere
 
 ```rust
-pub trait IWhere: Text {}
+pub trait IWhere: ICondition
 ```
 
 #### WhereText
@@ -379,20 +523,22 @@ pub fn new(text: impl Into<String>) -> Self
 
 **Methods**
 
-##### get_text()
+##### accept()
 
-Predicate text.
+Dispatches through the renderer's condition visitor.
 
 ```rust
-fn get_text(&self) -> String
+fn accept(&self, text: &StatementTextRenderer) -> String
 ```
+
+- `text` — [StatementTextRenderer](./statements.md#statementtextrenderer)
 
 **Returns** `String`
 :::
 
 ## Remarks
 
-Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](./select-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed `Where.GetText()` in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [ExpressionEvaluator](./expression-evaluator.md) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
+Construct the predicate with [Operator](./expressions.md#operator) records, then wrap it: `new Where(new Operator.Equals("id", 9))`. A column, [Cmp](./expressions.md#cmp) alias, and literal is the same tree: `new Where("id", eq, 9)`. [SelectStatement](./select-statement.md) / [UpdateStatement](./update-statement.md) / [DeleteStatement](./delete-statement.md) embed {{StatementTextRenderer.Render|StatementTextRenderer.render|StatementTextRenderer::render}} of the where in the command SQL. Keep the [Where](#where) when the caller needs bound parameters. [ExpressionEvaluator](./expression-evaluator.md) interprets the same tree against a parameter map. Raw text [WhereText](#wheretext) is not evaluable.
 
 ## Examples
 

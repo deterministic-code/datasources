@@ -218,7 +218,7 @@ fn column_type(&self, name: &str) -> Result<String>
 
 {{RowTypeConverters|rowTypeConverters|row_type_converters}} maps a canonical type name to a [TypeConverter](./sections/type-converters.md). SQL dialects register `bool`, `datetime`, `uuid`, `decimal`, and `binary` when the engine cannot return those as canonical cells. Memory, document, and file providers return an empty map.
 
-The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. The statement's own {{GetText|getText|get_text}} throws until a provider formats it.
+The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. {{SelectInsertedIdStatementTextRenderer.Render|SelectInsertedIdStatementTextRenderer.render|SelectInsertedIdStatementTextRenderer::render}} throws until a provider overrides it.
 
 {{ColumnType|columnType|column_type}} maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
@@ -231,7 +231,7 @@ Inherit the default method.
 Inherit the default method.
 :::
 
-SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement {{Execute|executeStatement|execute_statement}} and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
+SQLite, MySQL, and Postgres each keep create-table rendering on their own `CreateTableStatementTextRenderer`. The statement factory does not subclass that renderer. It maps a compiled create table to the rendered text and maps `SelectInsertedIdStatement` to `SELECT last_insert_rowid()`, `SELECT LAST_INSERT_ID()`, or `SELECT lastval()`. Statement {{Execute|executeStatement|execute_statement}} and the reader overloads call the factory before the string execute. The renderer overrides column type. MySQL and Postgres also override default and identity. A Postgres `bool` default goes through the bool type converter, so `1` becomes `TRUE`. SQLite leaves identity empty. Every other statement is left unchanged. The factory is not exported.
 
 The package exports only the driver type.
 
