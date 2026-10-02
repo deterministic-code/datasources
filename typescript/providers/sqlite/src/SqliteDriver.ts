@@ -6,6 +6,7 @@ import {
   type ICommand,
   type IConnection,
   type IDriver,
+  type Information,
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
@@ -23,6 +24,17 @@ const statements = new StatementTextRenderer(t => new SqliteStatementRenderer(t)
 
 export class SqliteDriver implements IDriver {
   readonly statementRenderer = statements;
+  readonly information: Information = {
+    descriptions: [
+      "Embedded SQL database for local development and tests.",
+      "Full connection, command, transaction, and repository support.",
+    ],
+    overrides: [
+      "Overrides SelectInsertedIdStatement to SELECT last_insert_rowid() AS {column}",
+      "Overrides CreateTableStatement type mapping (int→INTEGER, bool→BOOLEAN, uuid/string/datetime→TEXT, decimal→NUMERIC, float→REAL, binary→BLOB)",
+    ],
+    changeLogs: [],
+  };
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   columnType = (name: string): string =>
     columnTypes[name] ??

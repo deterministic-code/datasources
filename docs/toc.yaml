@@ -6,6 +6,8 @@ pages:
     title: Quick Start
   - path: features.md
     title: Features
+  - path: drivers.md
+    title: Languages
   - path: examples.md
     title: Examples
   - path: tutorials/mapping-converting-pipelines.md

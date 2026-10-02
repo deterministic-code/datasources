@@ -8,6 +8,16 @@ public sealed class SqliteDriver : IDriver
         new(t => new SqliteStatementRenderer(t));
 
     public StatementTextRenderer? StatementRenderer => Statements;
+    public Information? Information { get; } = new(
+        [
+            "Embedded SQL database for local development and tests.",
+            "Full connection, command, transaction, and repository support.",
+        ],
+        [
+            "Overrides SelectInsertedIdStatement to SELECT last_insert_rowid() AS {column}",
+            "Overrides CreateTableStatement type mapping (int→INTEGER, bool→BOOLEAN, uuid/string/datetime→TEXT, decimal→NUMERIC, float→REAL, binary→BLOB)",
+        ],
+        []);
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new SqliteConnection(options);
     public ICommand Command(IConnection connection) =>
         new SqliteCommand((SqliteConnection)connection, Statements);

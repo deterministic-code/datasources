@@ -40,6 +40,7 @@ export default defineConfig({
         "src/IRepositoryTreeNode.ts",
         "src/IWriteEnrichmentStrategy.ts",
         "src/Enrichment.ts",
+        "src/Information.ts",
         "src/WriteMode.ts",
         "src/mappers/IFlatToNestedMapper.ts",
         "src/mappers/TypeMap.ts",

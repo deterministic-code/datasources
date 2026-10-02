@@ -23,16 +23,18 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 ## Providers
 
+Implemented drivers (SQLite, MySQL, PostgreSQL) are listed per language on [Languages](./drivers.md).
+
 | Provider | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
 | json | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | memory | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| sqlite | ✅ | ✅ | ✅ |
+| [sqlite](./drivers.md#csharp-sqlite) | ✅ | ✅ | ✅ |
 | xml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | yaml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| mysql | ✅ | ✅ | ✅ |
+| [mysql](./drivers.md#csharp-mysql) | ✅ | ✅ | ✅ |
 | sqlserver | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| postgres | ✅ | ✅ | ✅ |
+| [postgres](./drivers.md#csharp-postgres) | ✅ | ✅ | ✅ |
 | oracle | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
 | dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |

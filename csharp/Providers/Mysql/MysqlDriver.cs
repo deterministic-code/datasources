@@ -8,6 +8,17 @@ public sealed class MysqlDriver : IDriver
         new(t => new MysqlStatementRenderer(t));
 
     public StatementTextRenderer? StatementRenderer => Statements;
+    public Information? Information { get; } = new(
+        [
+            "MySQL / MariaDB server driver.",
+            "Full connection, command, transaction, and repository support.",
+        ],
+        [
+            "Overrides SelectInsertedIdStatement to SELECT LAST_INSERT_ID() AS {column}",
+            "Overrides CreateTableStatement identity to AUTO_INCREMENT",
+            "Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)",
+        ],
+        []);
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new MysqlConnection(options);
     public ICommand Command(IConnection connection) =>
         new MysqlCommand((MysqlConnection)connection, Statements);

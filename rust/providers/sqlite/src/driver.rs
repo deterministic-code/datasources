@@ -3,8 +3,8 @@ use crate::converters;
 use crate::statement_renderer::SqliteStatementRenderer;
 use crate::transaction::SqliteTransaction;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, Driver, IsolationLevel, Result,
-    StatementTextRenderer, Transaction, TypeConverter, Value,
+    downcast_connection, Command, Connection, DatasourceError, Driver, Information, IsolationLevel,
+    Result, StatementTextRenderer, Transaction, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -13,6 +13,20 @@ pub struct SqliteDriver;
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
     LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(SqliteStatementRenderer)), None));
+
+static INFORMATION: LazyLock<Information> = LazyLock::new(|| {
+    Information::new(
+        [
+            "Embedded SQL database for local development and tests.",
+            "Full connection, command, transaction, and repository support.",
+        ],
+        [
+            "Overrides SelectInsertedIdStatement to SELECT last_insert_rowid() AS {column}",
+            "Overrides CreateTableStatement type mapping (int→INTEGER, bool→BOOLEAN, uuid/string/datetime→TEXT, decimal→NUMERIC, float→REAL, binary→BLOB)",
+        ],
+        [] as [&str; 0],
+    )
+});
 
 pub(crate) fn column_sql(name: &str) -> Option<&'static str> {
     Some(match name {
@@ -58,6 +72,10 @@ impl Driver for SqliteDriver {
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
         Some(&STATEMENTS)
+    }
+
+    fn information(&self) -> Option<&Information> {
+        Some(&INFORMATION)
     }
 }
 
