@@ -1,0 +1,4 @@
+let limited = SelectStatement::new(SelectStatementOptions {
+    limit: Some(10),
+    ..SelectStatementOptions::new("users", &["id"])
+});

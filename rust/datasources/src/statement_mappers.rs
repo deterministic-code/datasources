@@ -34,13 +34,26 @@ impl StatementMappers {
         Mapper::reverse_map(self, key.to_string())
     }
 
+    fn map_select_field(&self, field: &str) -> String {
+        if let Some(as_index) = field.to_uppercase().find(" AS ") {
+            let expression = field[..as_index].trim();
+            let alias = field[as_index + 4..].trim();
+            return format!("{} AS {alias}", self.column(expression));
+        }
+        self.column(field)
+    }
+
     pub fn apply_select(
         &self,
         select: &SelectStatement,
         cell: &dyn Fn(&str, &Value) -> Result<Value>,
     ) -> Result<SelectStatement> {
         let table = self.entity(&select.table);
-        let fields: Vec<String> = select.fields.iter().map(|field| self.column(field)).collect();
+        let fields: Vec<String> = select
+            .fields
+            .iter()
+            .map(|field| self.map_select_field(field))
+            .collect();
         let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
         let group: Vec<String> = select.group_by.iter().map(|column| self.column(column)).collect();
         let group_refs: Vec<&str> = group.iter().map(String::as_str).collect();

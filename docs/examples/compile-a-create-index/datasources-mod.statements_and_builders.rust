@@ -1,4 +1,0 @@
-        ..SelectStatementOptions::new("users", &["users.id"])
-    })),
-    "SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id"
-);

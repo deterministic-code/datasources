@@ -27,8 +27,8 @@ let created = users
     ))
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
@@ -41,8 +41,8 @@ let updated = users
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let updated_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await

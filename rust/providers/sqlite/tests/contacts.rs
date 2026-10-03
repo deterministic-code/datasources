@@ -7,7 +7,7 @@ use datasources::{
 };
 use datasources_sql_specs::{
     add_extra_contact, apply_schema, apply_sql, as_contacts_view, columns, contact_entity,
-    contact_lookup_ids, contact_seed, contact_with, contacts_join_query, contacts_parity,
+    contact_lookup_ids, contact_seed, contact_with, contacts_join_query, contacts_parity, join_entity,
     contacts_service_of, contacts_view, expect_contacts_view, from_mapped_contacts, references,
     seed_contacts_sql, snake, statements_of, SEED_CONTACT_COUNT,
 };
@@ -68,13 +68,14 @@ async fn maps_join_rows_to_nested_contacts() {
     apply_sql(&command, &sql).await.unwrap();
 
     let mut cells = CRUDRepositoryOptions::default();
-    cells.entity = "contacts_base".into();
+    cells.entity_mapper = Some(Arc::new(join_entity()));
+    cells.property_mappings = Some(Arc::new(columns()));
     cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
     let join_repo = CRUDRepository::new(conn, cells).expect("join repo");
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
         join_repo
-            .read(Some(&contacts_join_query()), None, None)
+            .read(Some(&contacts_join_query(None)), None, None)
             .await
             .unwrap(),
     ));

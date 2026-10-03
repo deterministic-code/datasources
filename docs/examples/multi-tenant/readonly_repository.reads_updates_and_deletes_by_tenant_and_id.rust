@@ -11,8 +11,8 @@ execute_sql(
 .await;
 let mut options = create_crud_repository_options::<Account>();
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-options.property_mappings = Box::new(casing);
+options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+options.property_mappings = Some(std::sync::Arc::new(casing));
 options.ids = vec!["TenantId".into(), "Id".into()];
 options.row_converter = Some(RowTypeConverter::of::<Account>());
 let accounts_repo = CRUDRepository::new(connection, options).unwrap();

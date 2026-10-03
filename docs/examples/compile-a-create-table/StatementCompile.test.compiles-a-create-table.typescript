@@ -1,0 +1,4 @@
+const createTable = new CreateTableStatement("users", [
+  { name: "id", type: "INTEGER" },
+  { name: "name", type: "TEXT" },
+]);

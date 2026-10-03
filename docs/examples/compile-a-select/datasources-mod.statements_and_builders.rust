@@ -1,6 +1,0 @@
-    where_sql(&Where::new(Operator::Equals {
-        left: Box::new(Expression::Literal(Literal::new(true))),
-        right: Box::new(Expression::Literal(Literal::new(false))),
-    })),
-    "true = false"
-);

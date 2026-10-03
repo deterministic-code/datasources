@@ -58,7 +58,7 @@ Closes the connection.
 close(): Promise<void>
 ```
 
-##### [Symbol.asyncDispose]()
+##### `Symbol.asyncDispose`
 
 Closes the connection. `await using` calls this.
 

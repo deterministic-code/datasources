@@ -1,0 +1,2 @@
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var insert = new InsertStatement("users", fields);

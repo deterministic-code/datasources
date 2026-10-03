@@ -1096,3 +1096,29 @@ The repository type is `UsersView`. The select reads `User`, joined to `UserType
 ]
 ```
 :::
+
+### Read with where clause and custom flat to nested custom object mapping options
+
+The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](./readonly-repository.md#propertymappings) stay in effect when a later read passes only an [EntityMapper](./repository.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](./nested-to-object-enrichment-strategy.md) collapses flat join rows using a [TypeMap](./flat-to-nested-mapper.md#typemap).
+
+::: example
+```csharp csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptions
+```
+```rust rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
+```
+```typescript typescript/datasources/src/readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions.test.ts#read-with-where-clause-and-custom-flat-to-nested-object-mapping-options
+```
+
+```output [Parent from join]
+[
+  {
+    Id: 1,
+    TypeName: 'person',
+    Children: [
+      { Id: 10, Label: 'a' },
+      { Id: 11, Label: 'b' }
+    ]
+  }
+]
+```
+:::

@@ -1,3 +1,0 @@
-    ))),
-    "(NOT (id = $id)) AND age = $age"
-);

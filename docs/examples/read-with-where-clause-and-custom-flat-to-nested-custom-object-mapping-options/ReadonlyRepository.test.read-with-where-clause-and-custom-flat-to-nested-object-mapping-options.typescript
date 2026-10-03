@@ -1,0 +1,44 @@
+const person: Seed = { name: "person" };
+const typesConnection = await setup([person]);
+const typesRepo = repo(UserType, typesConnection);
+const row1: Seed = { Id: 1, TypeName: "person", ChildId: 10, Label: "a" };
+const row2: Seed = { Id: 1, TypeName: "person", ChildId: 11, Label: "b" };
+const connection = new MockConnection({ provider: "memory" });
+const command = new MockCommand(connection);
+connection.command = command;
+const parentsRepo = new ReadonlyRepository(connection, {
+  type: Parent,
+  entity: "Parent",
+  propertyMappings: columns,
+});
+parentsRepo.addEnriched(
+  { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
+  typesRepo,
+);
+parentsRepo.addEnriched(
+  { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
+  parentsRepo,
+  new NestedToObjectEnrichmentStrategy<Parent>({
+    key: "Id",
+    fields: {
+      Id: "Id",
+      TypeName: "TypeName",
+      Children: {
+        key: "ChildId",
+        fields: { Id: "ChildId", Label: "Label" },
+      },
+    },
+  }),
+);
+const join = new SelectStatement({
+  table: "Parent",
+  fields: [
+    "Parent.Id AS Id",
+    "Parent.TypeName AS TypeName",
+    "Child.Id AS ChildId",
+    "Child.Label AS Label",
+  ],
+  joins: [Join.left("Child", "Parent.Id", "Child.ParentId")],
+  where: new Where(new Operator.Equals("Parent.Id", 1)),
+});
+command.reader = new MockReader([{ id: 1, type_id: person.id }]);

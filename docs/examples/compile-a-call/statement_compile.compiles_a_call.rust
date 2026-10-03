@@ -1,0 +1,2 @@
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let call = ExecuteStoredProcedureStatement::new("save", &fields);

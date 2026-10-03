@@ -1,2 +1,0 @@
-const where = new Where(new Operator.Equals("id", 1));
-const query = new SelectStatement({ table: "users", fields: ["id", "name"], where });

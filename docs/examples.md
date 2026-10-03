@@ -59,6 +59,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 - [Read and read single](./sections/readonly-repository.md#read-and-read-single)
 - [Fill a lookup](./sections/readonly-repository.md#fill-a-lookup)
 - [Fill roles from one join](./sections/readonly-repository.md#fill-roles-from-one-join)
+- [Read with where clause and custom flat to nested custom object mapping options](./sections/readonly-repository.md#read-with-where-clause-and-custom-flat-to-nested-custom-object-mapping-options)
 
 ## CRUD Repository
 
@@ -122,6 +123,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Wrap query text and an optional where](./sections/select-statement.md#wrap-query-text-and-an-optional-where)
 - [Compile a SELECT](./sections/select-statement.md#compile-a-select)
+- [Join tables](./sections/select-statement.md#join-tables)
 - [Group, aggregate, order, and limit](./sections/select-statement.md#group-aggregate-order-and-limit)
 - [Group rows](./sections/select-statement.md#group-rows)
 - [Aggregate without grouping](./sections/select-statement.md#aggregate-without-grouping)

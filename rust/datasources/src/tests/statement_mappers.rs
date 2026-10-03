@@ -161,6 +161,36 @@ fn leaves_raw_and_other_statements() {
 }
 
 #[test]
+fn maps_select_field_alias() {
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
+        ("Contact".to_string(), "contacts_base".to_string()),
+        ("Address".to_string(), "address".to_string()),
+    ]));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("Id".to_string(), "id".to_string()),
+            ("FirstName".to_string(), "first_name".to_string()),
+            ("ContactId".to_string(), "contact_id".to_string()),
+        ]));
+    let mappings = StatementMappers::new(entities, properties);
+    let fields = [
+        "Contact.Id AS Id",
+        "Contact.FirstName AS FirstName",
+        "Address.Id AS AddressId",
+    ];
+    let joins = [Join::left("Address", "Contact.Id", "Address.ContactId")];
+    let select = SelectStatement::new(SelectStatementOptions {
+        joins: &joins,
+        ..SelectStatementOptions::new("Contact", &fields)
+    });
+    let mapped = mappings.apply_select(&select, &mapper).unwrap();
+    assert_eq!(
+        stmt_text(&mapped),
+        "SELECT contacts_base.id AS Id, contacts_base.first_name AS FirstName, address.id AS AddressId FROM contacts_base LEFT JOIN address ON contacts_base.id = address.contact_id"
+    );
+}
+
+#[test]
 fn maps_contacts_select() {
     let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
         ("Contact".to_string(), "contacts_base".to_string()),

@@ -1,0 +1,7 @@
+class Child {
+  Id = 0;
+  ParentId = 0;
+  Type = new UserType();
+  TypeName = "";
+  Label = "";
+}

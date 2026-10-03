@@ -1,0 +1,5 @@
+const fields = [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+];
+const ret = new ReturnStatement("add", fields);

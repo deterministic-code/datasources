@@ -10,8 +10,8 @@ let mut creating = record(&[
     ("groups", encode_rows(&[seeded.engineering.clone()])),
 ]);
 let created = users.create(&mut creating).await.unwrap();
-let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let next = record(&[
     ("id", created.get("id").unwrap().clone()),
     ("username", Value::from("ada")),
@@ -24,8 +24,8 @@ let after_skip = users
     .await
     .unwrap()
     .unwrap();
-let skipped_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let skipped_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let skipped_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let skipped_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let linked_row = record(&[
     ("id", created.get("id").unwrap().clone()),
     ("username", Value::from("ada")),
@@ -34,8 +34,8 @@ let linked_row = record(&[
     ("roles", encode_rows(&[seeded.editor_role.clone()])),
 ]);
 let linked = users.update(&linked_row, None).await.unwrap();
-let linked_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let linked_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let linked_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let linked_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await

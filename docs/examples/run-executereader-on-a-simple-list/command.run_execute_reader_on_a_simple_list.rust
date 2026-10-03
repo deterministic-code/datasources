@@ -1,15 +1,15 @@
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (1, 'ada')"), None)
     .await
     .unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (2, 'grace')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (2, 'grace')"), None)
     .await
     .unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (3, 'bea')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (3, 'bea')"), None)
     .await
     .unwrap();
 let reader = command

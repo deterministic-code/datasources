@@ -1,0 +1,7 @@
+class Parent {
+  Id = 0;
+  Type = new UserType();
+  TypeName = "";
+  Children: Child[] = [];
+  Child?: Child | string;
+}

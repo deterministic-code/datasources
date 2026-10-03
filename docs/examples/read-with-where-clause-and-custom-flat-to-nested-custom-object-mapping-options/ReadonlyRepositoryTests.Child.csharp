@@ -1,0 +1,8 @@
+sealed class Child
+{
+    public long Id { get; set; }
+    public long ParentId { get; set; }
+    public UserType Type { get; set; } = new();
+    public string TypeName { get; set; } = "";
+    public string Label { get; set; } = "";
+}

@@ -1,4 +1,0 @@
-    .not_null(NotNull::new(Some("nn_id"))),
-Column::new("tenant_id", "INTEGER"),
-Column::new("user_id", "INTEGER"),
-Column::new("qty", "INTEGER"),

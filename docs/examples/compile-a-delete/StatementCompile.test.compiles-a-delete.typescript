@@ -1,0 +1,4 @@
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
+const del = new DeleteStatement("users", where);

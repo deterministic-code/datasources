@@ -1,6 +1,7 @@
 let write = Arc::new(DefaultWriteEnrichmentStrategy::new(
     Some(Arc::new(SkipDelete)),
     None,
+    None,
     false,
 ));
 let children = Arc::new(CRUDRepository::memory(vec![]));
@@ -17,4 +18,4 @@ parents.add_enriched(
     None,
 );
 parents.delete(&created, None).await.unwrap();
-let left = children.read(None, None).await.unwrap();
+let left = children.read(None, None, None).await.unwrap();

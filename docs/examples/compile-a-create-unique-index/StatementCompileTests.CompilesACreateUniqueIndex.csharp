@@ -1,0 +1,1 @@
+var createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);

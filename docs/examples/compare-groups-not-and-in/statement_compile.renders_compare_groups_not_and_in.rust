@@ -1,0 +1,5 @@
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let in_ids = Where::new(Operator::in_list("id", vec![Value::Int(1), Value::Int(2)]));

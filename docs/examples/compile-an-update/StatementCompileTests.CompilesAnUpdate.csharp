@@ -1,0 +1,5 @@
+var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
+var update = new UpdateStatement("users", fields, where);

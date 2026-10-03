@@ -1,2 +1,0 @@
-var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
-var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });

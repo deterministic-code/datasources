@@ -1,3 +1,0 @@
-    OrderBy = [OrderBy.Desc("total"), OrderBy.Asc("status")],
-    Limit = 10,
-});

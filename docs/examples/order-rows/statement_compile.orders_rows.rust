@@ -1,0 +1,4 @@
+let ordered = SelectStatement::new(SelectStatementOptions {
+    order_by: &[OrderBy::asc("id"), OrderBy::desc("name")],
+    ..SelectStatementOptions::new("users", &["id"])
+});

@@ -18,19 +18,19 @@ execute_sql(
 .await;
 let mut users_options = create_readonly_repository_mapping_options::<UserAccount>();
 users_options.entity = "user".into();
-users_options.property_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
-]));
+])));
 let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types =
@@ -49,8 +49,8 @@ users_repo.add_enriched(
 let account = users_repo
     .read_single(
         Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None,
-    )
+        None, None
+)
     .await
     .unwrap()
     .unwrap();

@@ -1,8 +1,8 @@
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute(
-        "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
+    .execute_native(
+        &Native::new("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"),
         None,
     )
     .await

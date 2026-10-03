@@ -1,0 +1,8 @@
+const equals = new Where("username", eq, "grace");
+const notEquals = new Where("id", ne, 2);
+const greater = new Where("n", gt, 0);
+const less = new Where("n", lt, 0);
+const greaterOrEqual = new Where("n", ge, 0);
+const lessOrEqual = new Where("n", le, 0);
+const both = equals.and("is_enabled", eq, 0);
+const either = equals.or("is_enabled", eq, 0);

@@ -1,0 +1,5 @@
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let delete = DeleteStatement::new("users", Some(&where_clause));

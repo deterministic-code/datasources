@@ -1,0 +1,6 @@
+let select = SelectStatement::new(SelectStatementOptions::new("dual", &["1"]));
+let by_id = WhereText::new("id = 1");
+let with_where = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&by_id),
+    ..SelectStatementOptions::new("dual", &["1"])
+});

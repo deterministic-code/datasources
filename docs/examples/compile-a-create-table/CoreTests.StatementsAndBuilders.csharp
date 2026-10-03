@@ -1,2 +1,0 @@
-Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
-GroupBy = ["status"],

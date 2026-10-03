@@ -756,11 +756,17 @@ export const syncExamples = ({ files, check = false, edits = null, base = root }
                 nextBody = edited;
               }
             }
-            if (!found) throw new Error(`slice not in ${pointer.name}`);
-            if (found.ambiguous) throw new Error(`slice is ambiguous in ${pointer.name}`);
-            body = nextBody;
-            from = found.from;
-            to = found.to;
+            if (!found) {
+              if (check) throw new Error(`slice not in ${pointer.name}`);
+              body = readLines(source, region.from, region.to);
+              from = region.from;
+              to = region.to;
+            } else if (found.ambiguous) throw new Error(`slice is ambiguous in ${pointer.name}`);
+            else {
+              body = nextBody;
+              from = found.from;
+              to = found.to;
+            }
             if (
               check &&
               (stored.from !== from ||

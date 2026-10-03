@@ -41,7 +41,7 @@ public sealed class StatementMappers : IMapper<string, string>
         {
             Distinct = select.Distinct,
             Table = entityMappers.Map(table),
-            Fields = [.. select.Fields.Select(Column)],
+            Fields = [.. select.Fields.Select(MapSelectField)],
             Where = Apply(select.Where, cell),
             Joins = [.. select.Joins.Select(join => Apply(join, cell))],
             GroupBy = [.. select.GroupBy.Select(Column)],
@@ -73,6 +73,14 @@ public sealed class StatementMappers : IMapper<string, string>
         join.On is { } on
             ? join with { Table = entityMappers.Map(join.Table), On = new Where(on).Map(Column, cell).Condition }
             : join with { Table = entityMappers.Map(join.Table) };
+
+    string MapSelectField(string field)
+    {
+        var asIndex = field.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
+        return asIndex >= 0
+            ? $"{Map(field[..asIndex].Trim())} AS {field[(asIndex + 4)..].Trim()}"
+            : Map(field);
+    }
 
     static int LastDot(string name)
     {

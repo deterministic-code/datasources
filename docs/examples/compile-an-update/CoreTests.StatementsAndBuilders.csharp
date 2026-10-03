@@ -1,1 +1,0 @@
-var update = new UpdateStatement("users", fields, where);

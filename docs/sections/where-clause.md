@@ -545,11 +545,11 @@ Construct the predicate with [Operator](./expressions.md#operator) records, then
 ### Compare, groups, not, and in
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#RendersCompareGroupsNotAndIn
 ```
-```rust rust/datasources/src/tests/mod.rs#published_mocks
+```rust rust/datasources/src/tests/statement_compile.rs#renders_compare_groups_not_and_in
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#renders-compare-groups-not-and-in
 ```
 
 ```output [After: and]
@@ -568,7 +568,7 @@ id IN ($id_0, $id_1)
 ```
 ```rust rust/datasources/src/tests/mod.rs#comparison_aliases
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/builders/builders.test.ts#renders-comparison-symbols
 ```
 
 ```output [After: equals]
@@ -583,18 +583,14 @@ username = $username AND is_enabled = $is_enabled
 ### Attach to a query
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#AttachesWhereToAQuery
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#attaches_where_to_a_query
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#evaluates-compare-groups-not-and-in
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#attaches-where-to-a-query
 ```
 
 ```output [After: select]
 SELECT id, name FROM users WHERE id = $id AND age > $age
-```
-
-```output:typescript [After: select]
-SELECT id, name FROM users WHERE id = $id
 ```
 :::

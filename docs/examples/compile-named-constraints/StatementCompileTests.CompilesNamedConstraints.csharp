@@ -1,0 +1,14 @@
+var namedTable = new CreateTableStatement(
+    "orders",
+    [
+        new Column("id", "INTEGER", new ColumnDefault("0", "df_id"), new NotNull("nn_id")),
+        new Column("tenant_id", "INTEGER"),
+        new Column("user_id", "INTEGER"),
+        new Column("qty", "INTEGER")
+    ],
+    [
+        new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+        new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+        new UniqueConstraint("uq_orders_user", ["user_id"]),
+        new CheckConstraint("chk_orders_qty", "qty > 0")
+    ]);

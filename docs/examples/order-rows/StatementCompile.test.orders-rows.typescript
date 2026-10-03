@@ -1,0 +1,5 @@
+const ordered = new SelectStatement({
+  table: "users",
+  fields: ["id"],
+  orderBy: [OrderBy.asc("id"), OrderBy.desc("name")],
+});

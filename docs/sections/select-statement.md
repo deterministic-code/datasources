@@ -925,41 +925,52 @@ pub enum JoinKind
 ### Wrap query text and an optional where
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#HelpersAndQuery
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#WrapsQueryTextAndAnOptionalWhere
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#wraps_query_text_and_an_optional_where
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#keeps-optional-where-on-the-query
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#wraps-query-text-and-an-optional-where
 ```
 :::
 
 ### Compile a SELECT
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompilesASelect
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#compiles_a_select
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compiles-a-select
 ```
 
 ```output [After: select]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
+:::
 
-```output:typescript [After: select]
-SELECT id, name FROM users WHERE id = $id
+### Join tables
+
+::: example
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#JoinsTables
+```
+```rust rust/datasources/src/tests/statement_compile.rs#joins_tables
+```
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#joins-tables
+```
+
+```output [After: joins]
+SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id
 ```
 :::
 
 ### Group, aggregate, order, and limit
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#GroupsAggregatesOrdersAndLimits
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#groups_aggregates_orders_and_limits
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#groups-aggregates-orders-and-limits
 ```
 
 ```output [After: grouped select]
@@ -970,11 +981,11 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 ### Group rows
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#GroupsRows
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#groups_rows
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#groups-rows
 ```
 
 ```output [After: group by]
@@ -985,11 +996,11 @@ SELECT id FROM users GROUP BY id
 ### Aggregate without grouping
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#AggregatesWithoutGrouping
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#aggregates_without_grouping
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#aggregates-without-grouping
 ```
 
 ```output [After: min and max]
@@ -1000,11 +1011,11 @@ SELECT MIN(n), MAX(n) FROM users
 ### Order rows
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#OrdersRows
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#orders_rows
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#orders-rows
 ```
 
 ```output [After: order by]
@@ -1015,11 +1026,11 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 ### Limit rows
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#LimitsRows
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#limits_rows
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#limits-rows
 ```
 
 ```output [After: limit]

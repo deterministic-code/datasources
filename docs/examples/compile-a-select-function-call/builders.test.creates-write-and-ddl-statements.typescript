@@ -1,2 +1,0 @@
-[
-  { name: "id", type: "INTEGER", default: new ColumnDefault("0") },
