@@ -187,11 +187,11 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](./command.
 ### Compile an INSERT
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompilesAnInsert
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#compiles_an_insert
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compiles-an-insert
 ```
 
 ```output [After: insert]

@@ -1,2 +1,0 @@
-let count = Aggregate::count("*", Some("n"));
-let total = Aggregate::sum("amount", Some("total"));

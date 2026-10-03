@@ -1,3 +1,0 @@
-{
-    Table = "orders",
-    Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],

@@ -1,0 +1,49 @@
+var person = new Row { ["name"] = "person" };
+var typesConnection = await Setup(person);
+var typesRepo = Open<UserType>(typesConnection);
+var row1 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 10L, ["Label"] = "a" };
+var row2 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 11L, ["Label"] = "b" };
+var connection = new MockConnection { Provider = "memory" };
+var command = new MockCommand(connection);
+connection.Command = command;
+var parentsRepo = new ReadonlyRepository<Parent>(connection, new ReadonlyRepositoryMappingOptions<Parent>
+{
+    Entity = "Parent",
+    PropertyMappings = Columns,
+});
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+parentsRepo.AddEnriched(
+    new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
+    parentsRepo,
+    new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+    {
+        Key = "Id",
+        Fields = new Dictionary<string, TypeMapField>
+        {
+            ["Id"] = "Id",
+            ["TypeName"] = "TypeName",
+            ["Children"] = new TypeMapGroup
+            {
+                Key = "ChildId",
+                Fields = new Dictionary<string, TypeMapField>
+                {
+                    ["Id"] = "ChildId",
+                    ["Label"] = "Label",
+                },
+            },
+        },
+    }));
+var join = new SelectStatement(new()
+{
+    Table = "Parent",
+    Fields =
+    [
+        "Parent.Id AS Id",
+        "Parent.TypeName AS TypeName",
+        "Child.Id AS ChildId",
+        "Child.Label AS Label",
+    ],
+    Joins = [Join.Left("Child", "Parent.Id", "Child.ParentId")],
+    Where = new Where(new Operator.Equals("Parent.Id", 1)),
+});
+command.Reader = new MockReader<Row>([new Row { ["id"] = 1L, ["type_id"] = person["id"] }]);

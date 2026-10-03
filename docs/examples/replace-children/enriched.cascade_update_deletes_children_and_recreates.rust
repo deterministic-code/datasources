@@ -3,6 +3,7 @@ let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+        None,
         false,
     ),
 ));

@@ -1,0 +1,24 @@
+let named_table = CreateTableStatement::new(
+    "orders",
+    &[
+        Column::new("id", "INTEGER")
+            .default(ColumnDefault::new("0", Some("df_id")))
+            .not_null(NotNull::new(Some("nn_id"))),
+        Column::new("tenant_id", "INTEGER"),
+        Column::new("user_id", "INTEGER"),
+        Column::new("qty", "INTEGER"),
+    ],
+    &[
+        PrimaryKey::new("pk_orders", &["id", "tenant_id"]),
+        ForeignKey::new(
+            "fk_orders_user",
+            &["user_id"],
+            "users",
+            &["id"],
+            Some(ReferentialAction::Cascade),
+            None,
+        ),
+        UniqueConstraint::new("uq_orders_user", &["user_id"]),
+        CheckConstraint::new("chk_orders_qty", "qty > 0"),
+    ],
+);

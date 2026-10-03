@@ -128,6 +128,29 @@ describe("StatementMappers", () => {
     expect(DefaultStatementTextRenderer.instance.render(kept)).toBe("DELETE FROM people WHERE name = $name");
   });
 
+  it("maps a select field alias", () => {
+    const mappings = new StatementMappers(
+      new DictionaryMapper([
+        ["Contact", "contacts_base"],
+        ["Address", "address"],
+      ]),
+      new DictionaryMapper([
+        ["Id", "id"],
+        ["FirstName", "first_name"],
+        ["ContactId", "contact_id"],
+      ]),
+    );
+    const select = new SelectStatement({
+      table: "Contact",
+      fields: ["Contact.Id AS Id", "Contact.FirstName AS FirstName", "Address.Id AS AddressId"],
+      joins: [Join.left("Address", "Contact.Id", "Address.ContactId")],
+    });
+    const mapped = mappings.apply(select, mapper) as SelectStatement;
+    expect(DefaultStatementTextRenderer.instance.render(mapped)).toBe(
+      "SELECT contacts_base.id AS Id, contacts_base.first_name AS FirstName, address.id AS AddressId FROM contacts_base LEFT JOIN address ON contacts_base.id = address.contact_id",
+    );
+  });
+
   it("maps a contacts select", () => {
     const mappings = new StatementMappers(
       new DictionaryMapper([

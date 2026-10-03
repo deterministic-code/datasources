@@ -1,0 +1,15 @@
+const namedTable = new CreateTableStatement(
+  "orders",
+  [
+    { name: "id", type: "INTEGER", default: new ColumnDefault("0", "df_id"), notNull: new NotNull("nn_id") },
+    { name: "tenant_id", type: "INTEGER" },
+    { name: "user_id", type: "INTEGER" },
+    { name: "qty", type: "INTEGER" },
+  ],
+  [
+    new PrimaryKey("pk_orders", ["id", "tenant_id"]),
+    new ForeignKey("fk_orders_user", ["user_id"], "users", ["id"], ReferentialAction.Cascade),
+    new UniqueConstraint("uq_orders_user", ["user_id"]),
+    new CheckConstraint("chk_orders_qty", "qty > 0"),
+  ],
+);

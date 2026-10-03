@@ -17,7 +17,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
-import { Operator, Where } from "./statements/index.ts";
+import { Join, Operator, SelectStatement, Where } from "./statements/index.ts";
 import { WhereText } from "./statements/WhereText.ts";
 
 class UserType {

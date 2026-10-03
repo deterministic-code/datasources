@@ -1,0 +1,1 @@
+let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);

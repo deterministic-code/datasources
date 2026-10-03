@@ -98,6 +98,31 @@ public class StatementMappersTests
     }
 
     [Fact]
+    public void MapsSelectFieldAlias()
+    {
+        var mappings = new StatementMappers(
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts_base", ["Address"] = "address" }),
+            new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Id"] = "id",
+                ["FirstName"] = "first_name",
+                ["ContactId"] = "contact_id",
+            }));
+        Value Mapper(string name, Value value) => value;
+
+        var select = new SelectStatement(new SelectStatementOptions
+        {
+            Table = "Contact",
+            Fields = ["Contact.Id AS Id", "Contact.FirstName AS FirstName", "Address.Id AS AddressId"],
+            Joins = [Join.Left("Address", "Contact.Id", "Address.ContactId")],
+        });
+        var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
+        Assert.Equal(
+            "SELECT contacts_base.id AS Id, contacts_base.first_name AS FirstName, address.id AS AddressId FROM contacts_base LEFT JOIN address ON contacts_base.id = address.contact_id",
+            DefaultStatementTextRenderer.Instance.Render(mapped));
+    }
+
+    [Fact]
     public void MapsContactsSelect()
     {
         var mappings = new StatementMappers(

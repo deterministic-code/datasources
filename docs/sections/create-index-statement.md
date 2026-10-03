@@ -169,11 +169,11 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 ### Compile a CREATE INDEX
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompilesACreateIndex
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#compiles_a_create_index
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compiles-a-create-index
 ```
 
 ```output [After: create index]
@@ -184,11 +184,11 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 ### Compile a CREATE UNIQUE INDEX
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompilesACreateUniqueIndex
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#compiles_a_create_unique_index
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compiles-a-create-unique-index
 ```
 
 ```output [After: create unique index]

@@ -1,0 +1,16 @@
+let count = Aggregate::count("*", Some("n"));
+let total = Aggregate::sum("amount", Some("total"));
+let grouped_fields = ["status", count.as_str(), total.as_str()];
+let where_clause = Where::new(Operator::equals("status", "open"));
+let grouped = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&where_clause),
+    joins: &[Join::inner(
+        "customers",
+        "orders.customer_id",
+        "customers.id",
+    )],
+    group_by: &["status"],
+    order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
+    limit: Some(10),
+    ..SelectStatementOptions::new("orders", &grouped_fields)
+});

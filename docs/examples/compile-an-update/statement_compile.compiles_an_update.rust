@@ -1,0 +1,6 @@
+let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
+let where_clause = Where::new(Operator::and(
+    Operator::equals("id", 1_i64),
+    Operator::greater_than("age", 18_i64),
+));
+let update = UpdateStatement::new("users", &fields, Some(&where_clause));

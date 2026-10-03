@@ -1,0 +1,4 @@
+let by_status = SelectStatement::new(SelectStatementOptions {
+    group_by: &["id"],
+    ..SelectStatementOptions::new("users", &["id"])
+});

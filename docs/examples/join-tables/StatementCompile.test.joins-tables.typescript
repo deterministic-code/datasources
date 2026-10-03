@@ -1,0 +1,10 @@
+const query = new SelectStatement({
+  table: "users",
+  fields: ["users.id"],
+  where: new Where(new Operator.Equals("users.id", 1)),
+  joins: [
+    Join.inner("orders", "users.id", "orders.user_id"),
+    Join.left("payments", "orders.id", "payments.order_id"),
+    Join.right("profiles", "users.id", "profiles.user_id"),
+  ],
+});

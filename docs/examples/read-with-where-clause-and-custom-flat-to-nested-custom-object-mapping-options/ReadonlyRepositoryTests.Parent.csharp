@@ -1,0 +1,7 @@
+sealed class Parent
+{
+    public long Id { get; set; }
+    public UserType Type { get; set; } = new();
+    public string TypeName { get; set; } = "";
+    public List<Child> Children { get; set; } = [];
+}

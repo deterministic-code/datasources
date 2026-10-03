@@ -1,5 +1,0 @@
-).toEqual([]);
-class Ghost extends Operator {}
-expect(() => evaluator.evaluate(new Ghost(), row)).toThrow("empty expression");
-expect(() => DefaultStatementTextRenderer.instance.render(new Where(new Ghost()))).toThrow("empty expression");
-expect(() => new Where(new Ghost()).parameters).toThrow("empty expression");

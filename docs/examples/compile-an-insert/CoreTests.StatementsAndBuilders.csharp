@@ -1,2 +1,0 @@
-Join.Inner("orders", "users.id", "orders.user_id"),
-Join.Left("payments", "orders.id", "payments.order_id"),

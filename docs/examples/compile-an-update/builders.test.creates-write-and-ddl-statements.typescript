@@ -1,1 +1,0 @@
-const update = new UpdateStatement("users", [...fields], where);

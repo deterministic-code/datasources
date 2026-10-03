@@ -2,15 +2,15 @@ let ds = default().unwrap();
 let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-users_options.property_mappings = Box::new(DictionaryMapper::new([
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
-]));
+])));
 users_options.row_converter = Some(RowTypeConverter::of::<User>());
 users_options.object_converter = Some(Box::new(
     MetaDataRowTypeConverter::of::<User>().with_references(
@@ -28,14 +28,14 @@ users_options.object_converter = Some(Box::new(
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.property_mappings = Box::new(casing);
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+type_options.property_mappings = Some(std::sync::Arc::new(casing));
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
@@ -84,7 +84,7 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(&mut grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
     .await
     .unwrap()
     .unwrap();
@@ -113,7 +113,7 @@ let updated = users_repo
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
     .await
     .unwrap()
     .unwrap();

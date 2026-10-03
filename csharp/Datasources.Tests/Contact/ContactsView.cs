@@ -9,31 +9,31 @@ internal static class ContactsView
         Key = "id",
         Fields = new Dictionary<string, TypeMapField>
         {
-            ["id"] = "id",
-            ["first_name"] = "first_name",
-            ["last_name"] = "last_name",
-            ["email"] = "email",
-            ["contact_source_name"] = "contact_source_name",
-            ["contact_type_name"] = "contact_type_name",
+            ["id"] = "Id",
+            ["first_name"] = "FirstName",
+            ["last_name"] = "LastName",
+            ["email"] = "Email",
+            ["contact_source_name"] = "ContactSourceName",
+            ["contact_type_name"] = "ContactTypeName",
             ["addresses"] = new TypeMapGroup
             {
-                Key = "address_id",
+                Key = "AddressId",
                 Fields = new Dictionary<string, TypeMapField>
                 {
-                    ["id"] = "address_id",
-                    ["line1"] = "address_line1",
-                    ["city"] = "address_city",
-                    ["address_type_name"] = "address_type_name",
+                    ["id"] = "AddressId",
+                    ["line1"] = "Line1",
+                    ["city"] = "City",
+                    ["address_type_name"] = "AddressTypeName",
                 },
             },
             ["phones"] = new TypeMapGroup
             {
-                Key = "phone_id",
+                Key = "PhoneId",
                 Fields = new Dictionary<string, TypeMapField>
                 {
-                    ["id"] = "phone_id",
-                    ["number"] = "phone_number",
-                    ["phone_type_name"] = "phone_type_name",
+                    ["id"] = "PhoneId",
+                    ["number"] = "Number",
+                    ["phone_type_name"] = "PhoneTypeName",
                 },
             },
         },

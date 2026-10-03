@@ -220,18 +220,14 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](./where-claus
 ### Compile a DELETE
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompilesADelete
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#compiles_a_delete
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compiles-a-delete
 ```
 
 ```output [After: delete]
 DELETE FROM users WHERE id = $id AND age > $age
-```
-
-```output:typescript [After: delete]
-DELETE FROM users WHERE id = $id
 ```
 :::

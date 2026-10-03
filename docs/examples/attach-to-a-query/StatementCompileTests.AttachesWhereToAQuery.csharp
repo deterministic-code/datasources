@@ -1,0 +1,4 @@
+var where = new Where(new Operator.And(
+    new Operator.Equals("id", 1),
+    new Operator.GreaterThan("age", 18)));
+var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"], Where = where });

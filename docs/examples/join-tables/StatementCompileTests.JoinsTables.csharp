@@ -1,0 +1,12 @@
+var query = new SelectStatement(new()
+{
+    Table = "users",
+    Fields = ["users.id"],
+    Where = new Where(new Operator.Equals("users.id", 1)),
+    Joins =
+    [
+        Join.Inner("orders", "users.id", "orders.user_id"),
+        Join.Left("payments", "orders.id", "payments.order_id"),
+        Join.Right("profiles", "users.id", "profiles.user_id"),
+    ],
+});

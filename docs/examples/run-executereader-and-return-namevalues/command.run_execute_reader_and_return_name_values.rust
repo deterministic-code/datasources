@@ -3,22 +3,22 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute(
-        "INSERT INTO settings (name, value) VALUES ('theme', 'dark')",
+    .execute_native(
+        &Native::new("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"),
         None,
     )
     .await
     .unwrap();
 command
-    .execute(
-        "INSERT INTO settings (name, value) VALUES ('lang', 'en')",
+    .execute_native(
+        &Native::new("INSERT INTO settings (name, value) VALUES ('lang', 'en')"),
         None,
     )
     .await
     .unwrap();
 command
-    .execute(
-        "INSERT INTO settings (name, value) VALUES ('size', 'lg')",
+    .execute_native(
+        &Native::new("INSERT INTO settings (name, value) VALUES ('size', 'lg')"),
         None,
     )
     .await

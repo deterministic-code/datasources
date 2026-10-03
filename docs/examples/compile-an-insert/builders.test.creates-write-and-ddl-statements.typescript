@@ -1,4 +1,0 @@
-table: "users",
-fields: ["users.id"],
-where: new Where(new Operator.Equals("users.id", 1)),
-joins: [

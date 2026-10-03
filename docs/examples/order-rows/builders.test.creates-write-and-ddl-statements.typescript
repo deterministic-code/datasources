@@ -1,2 +1,0 @@
-);
-const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });

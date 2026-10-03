@@ -1,5 +1,0 @@
-assert!(txn.commit().await.is_err());
-txn.set_abort_error("a");
-assert!(txn.abort().await.is_err());
-
-let command = MockCommand::new();

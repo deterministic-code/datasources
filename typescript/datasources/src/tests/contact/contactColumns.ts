@@ -27,3 +27,14 @@ export const columns: IMapper<string, string> = new TransformMapper(
 );
 
 export const contactEntity = new DictionaryMapper<string>([["Contact", "contacts_base"]]);
+
+export const joinEntity: IMapper<string, string> = new TransformMapper(
+  (name) => {
+    const mapped = contactEntity.map(name);
+    return mapped !== name ? mapped : snake.map(name);
+  },
+  (name) => {
+    const from = contactEntity.reverseMap(name);
+    return from !== name ? from : snake.reverseMap(name);
+  },
+);

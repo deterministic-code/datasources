@@ -13,22 +13,22 @@ execute_sql(
 )
 .await;
 let mut options = create_readonly_repository_mapping_options::<UserAccount>();
-options.entity_mapper = Box::new(DictionaryMapper::new([(
+options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
     "UserAccount".to_string(),
     "user".to_string(),
-)]));
-options.property_mappings = Box::new(DictionaryMapper::new([
+)])));
+options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
-]));
+])));
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
     .read_single(
         Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None,
+        None, None
     )
     .await
     .unwrap()
@@ -36,14 +36,14 @@ let by_id = repo
 let by_login = repo
     .read(
         Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-        None,
+        None, None
     )
     .await
     .unwrap();
 let later = repo
     .read(
         Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-        None,
+        None, None
     )
     .await
     .unwrap();

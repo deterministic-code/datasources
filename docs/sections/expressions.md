@@ -400,11 +400,11 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 ### Compare tree
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompareTree
 ```
-```rust rust/datasources/src/tests/mod.rs#published_mocks
+```rust rust/datasources/src/tests/statement_compile.rs#compare_tree
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#renders-compare-groups-and-not
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compare-tree
 ```
 :::
 
@@ -415,7 +415,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 ```
 ```rust rust/datasources/src/tests/mod.rs#comparison_aliases
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/builders/builders.test.ts#renders-comparison-symbols
 ```
 
 ```output [After: equals]

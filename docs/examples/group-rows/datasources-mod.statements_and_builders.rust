@@ -1,4 +1,0 @@
-    left: Box::new(Expression::Literal(Literal::new(1_i64))),
-    right: Box::new(Expression::Literal(Literal::new(2_i64))),
-})
-.parameters()

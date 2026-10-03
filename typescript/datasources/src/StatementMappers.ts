@@ -48,7 +48,7 @@ export class StatementMappers implements IMapper<string, string> {
       return new SelectStatement({
         distinct: query.distinct,
         table: this.entityMappers.map(query.table),
-        fields: query.fields.map(this.column),
+        fields: query.fields.map(this.mapSelectField),
         where: query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
         joins: query.joins.map((join) => ({
           kind: join.kind,
@@ -87,6 +87,16 @@ export class StatementMappers implements IMapper<string, string> {
     cell: (property: string, value: Cell) => Cell,
   ): IWhere | undefined =>
     where instanceof Where ? where.map(this.column, cell) : where;
+
+  private mapSelectField = (field: string): string => {
+    const asIndex = field.toUpperCase().indexOf(" AS ");
+    if (asIndex >= 0) {
+      const expression = field.slice(0, asIndex).trim();
+      const alias = field.slice(asIndex + 4).trim();
+      return `${this.map(expression)} AS ${alias}`;
+    }
+    return this.map(field);
+  };
 }
 
 const lastDot = (name: string): number => {

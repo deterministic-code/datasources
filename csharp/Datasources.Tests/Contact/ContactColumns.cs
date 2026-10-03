@@ -23,4 +23,8 @@ internal static class ContactColumns
 
     public static readonly IMapper<string, string> ContactEntity = new DictionaryMapper<string>(
         new Dictionary<string, string> { ["Contact"] = "contacts_base" });
+
+    public static readonly IMapper<string, string> JoinEntity = new TransformMapper<string, string>(
+        name => ContactEntity.Map(name) is var mapped && mapped != name ? mapped : Snake.Map(name),
+        name => ContactEntity.ReverseMap(name) is var from && from != name ? from : Snake.ReverseMap(name));
 }

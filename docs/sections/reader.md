@@ -64,7 +64,7 @@ dispose(): Promise<void>
 
 **Returns** `Promise<void>`
 
-##### [Symbol.asyncDispose]()
+##### `Symbol.asyncDispose`
 
 `await using` calls [dispose](#ireader-dispose).
 

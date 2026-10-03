@@ -44,6 +44,33 @@ pub fn contact_entity() -> DictionaryMapper<String> {
     DictionaryMapper::new([("Contact".to_string(), "contacts_base".to_string())])
 }
 
+pub fn join_entity() -> TransformMapper<String, String> {
+    let contact = Arc::new(contact_entity());
+    let snake = Arc::new(snake());
+    let forward_contact = contact.clone();
+    let forward_snake = snake.clone();
+    let reverse_contact = contact;
+    let reverse_snake = snake;
+    TransformMapper::new(
+        move |name: String| {
+            let mapped = Mapper::map(forward_contact.as_ref(), name.clone());
+            if mapped != name {
+                mapped
+            } else {
+                Mapper::map(forward_snake.as_ref(), name)
+            }
+        },
+        move |name: String| {
+            let from = Mapper::reverse_map(reverse_contact.as_ref(), name.clone());
+            if from != name {
+                from
+            } else {
+                Mapper::reverse_map(reverse_snake.as_ref(), name)
+            }
+        },
+    )
+}
+
 pub fn references() -> Vec<String> {
     ["Contact", "AddressType", "ContactType", "ContactSource", "PhoneType"]
         .into_iter()

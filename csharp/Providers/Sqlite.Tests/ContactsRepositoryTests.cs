@@ -61,8 +61,9 @@ public class ContactsRepositoryTests
         var rows = new List<Row>();
         await foreach (var row in new CRUDRepository<Row>(conn, new CRUDRepositoryOptions<Row>
         {
-            Entity = "contacts_base"
-        }).Read(ContactsJoinQuery.Create()))
+            EntityMapper = ContactColumns.JoinEntity,
+            PropertyMappings = ContactColumns.Columns,
+        }).Read(ContactsParity.JoinSelect()))
             rows.Add(row);
         var contacts = AsContactsView.FromMapped(new FlatToNestedMapper(ContactsView.TypeMap).Map(rows));
         var mapped = ExpectContactsView.With(contacts, 2, 1);

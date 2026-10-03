@@ -1,0 +1,8 @@
+const fields = [
+  { name: "id", value: 1 },
+  { name: "name", value: "a" },
+];
+const where = new Where(
+  new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
+);
+const update = new UpdateStatement("users", fields, where);

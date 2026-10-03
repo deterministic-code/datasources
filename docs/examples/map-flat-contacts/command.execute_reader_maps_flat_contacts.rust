@@ -1,9 +1,9 @@
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute(
-        "INSERT INTO users (id, username, email, contact_name1, contact_name2)
-         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+    .execute_native(
+        &Native::new("INSERT INTO users (id, username, email, contact_name1, contact_name2)
+         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"),
         None,
     )
     .await

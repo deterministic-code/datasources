@@ -2,7 +2,7 @@ let connection = setup(&mut []).await;
 let mut options = CRUDRepositoryOptions::default();
 options.entity = "Parent".into();
 options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
-    None, None, true,
+    None, None, None, true,
 )));
 let parents = BulkCRUDRepository::new(connection, options).unwrap();
 let created = parents

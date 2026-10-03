@@ -1,5 +1,0 @@
-assert!(where_sql(&Where::new(Operator::Equals {
-    left: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-    right: Box::new(Expression::Literal(Literal::new(Value::Binary(vec![1])))),
-}))
-.contains('='));

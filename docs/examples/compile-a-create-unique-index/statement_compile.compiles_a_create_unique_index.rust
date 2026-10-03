@@ -1,0 +1,1 @@
+let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code"], true);

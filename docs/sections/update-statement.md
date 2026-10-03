@@ -219,18 +219,14 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](./w
 ### Compile an UPDATE
 
 ::: example
-```csharp csharp/Datasources.Tests/CoreTests.cs#StatementsAndBuilders
+```csharp csharp/Datasources.Tests/StatementCompileTests.cs#CompilesAnUpdate
 ```
-```rust rust/datasources/src/tests/mod.rs#statements_and_builders
+```rust rust/datasources/src/tests/statement_compile.rs#compiles_an_update
 ```
-```typescript typescript/datasources/src/builders/builders.test.ts#creates-write-and-ddl-statements
+```typescript typescript/datasources/src/statements/StatementCompile.test.ts#compiles-an-update
 ```
 
 ```output [After: update]
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
-```
-
-```output:typescript [After: update]
-UPDATE users SET id = $id, name = $name WHERE id = $id
 ```
 :::

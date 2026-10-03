@@ -1,6 +1,6 @@
 let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
-options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
 let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
@@ -19,8 +19,8 @@ let matches = users_repo
             eq,
             Value::Bool(true),
         )),
-        None,
-    )
+        None, None
+)
     .await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));

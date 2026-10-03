@@ -1,0 +1,10 @@
+let where_clause = Where::new(Operator::equals("users.id", 1_i64));
+let query = SelectStatement::new(SelectStatementOptions {
+    where_clause: Some(&where_clause),
+    joins: &[
+        Join::inner("orders", "users.id", "orders.user_id"),
+        Join::left("payments", "orders.id", "payments.order_id"),
+        Join::right("profiles", "users.id", "profiles.user_id"),
+    ],
+    ..SelectStatementOptions::new("users", &["users.id"])
+});

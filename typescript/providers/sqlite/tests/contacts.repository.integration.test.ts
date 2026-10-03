@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { collectAsync } from "../../../datasources/src/collectAsync.ts";
 import { asContactsView } from "../../../datasources/src/tests/contact/asContactsView.ts";
-import { contactsJoinQuery } from "../../../datasources/src/tests/contact/contactsJoinQuery.ts";
+import { contactsJoinSelect } from "../../../datasources/src/tests/contact/contactsParity.ts";
 import { contactsParity } from "../../../datasources/src/tests/contact/contactsParity.ts";
 import { contactsView } from "../../../datasources/src/tests/contact/contactsView.ts";
 import { contactLookupIds } from "../../../datasources/src/tests/contact/contactLookupIds.ts";
@@ -18,7 +18,7 @@ import { Address } from "../../../datasources/src/tests/contact/Address.ts";
 import { AddressType } from "../../../datasources/src/tests/contact/AddressType.ts";
 import { Phone } from "../../../datasources/src/tests/contact/Phone.ts";
 import { PhoneType } from "../../../datasources/src/tests/contact/PhoneType.ts";
-import { columns, contactEntity, snake } from "../../../datasources/src/tests/contact/contactColumns.ts";
+import { columns, contactEntity, joinEntity, snake } from "../../../datasources/src/tests/contact/contactColumns.ts";
 import { Operator, Where } from "@datasources/core";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
@@ -81,7 +81,9 @@ describe("contacts readonly repository", () => {
 
     const contacts = new FlatToNestedMapper(contactsView).map(
       await collectAsync(
-        new CRUDRepository<Cells>(connection, { entity: "contacts_base" }).read(contactsJoinQuery()),
+        new CRUDRepository<Cells>(connection, { entityMapper: joinEntity, propertyMappings: columns }).read(
+          contactsJoinSelect(),
+        ),
       ),
     );
     const mapped = contactWith(contacts, 2, 1);
