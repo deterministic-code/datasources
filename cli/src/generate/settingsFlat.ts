@@ -27,5 +27,6 @@ export const flattenSettings = (text: string): Record<string, string> => {
 
 export const settingsFrom = (text: string | undefined): Record<string, string> => ({
   "backend.datasources": "sqlite",
+  "languages.typescript.casing.fields": "camel",
   ...(text === undefined ? {} : flattenSettings(text)),
 });

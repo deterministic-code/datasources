@@ -3,6 +3,6 @@ import { CRUDRepository, DictionaryMapper, type IConnection } from "@datasources
 
 export class LegacyMigrationResultRepository extends CRUDRepository<LegacyMigrationResult> {
   constructor(connection: IConnection) {
-    super(connection, { entity: "legacy_migration_result", entityMapper: new DictionaryMapper([["legacy_migration_result", "legacy_migration_results"]]), ids: [], readProperties: ["migrated_count", "skipped_count", "completed_at"] });
+    super(connection, { entity: "LegacyMigrationResult", entityMapper: new DictionaryMapper([["LegacyMigrationResult", "legacy_migration_results"]]), propertyMappings: new DictionaryMapper([["migratedCount", "migrated_count"], ["skippedCount", "skipped_count"], ["completedAt", "completed_at"]]), ids: [], readProperties: ["migratedCount", "skippedCount", "completedAt"] });
   }
 }

@@ -2,7 +2,7 @@
 import type { Base } from "./base";
 /** Type PhonesBase. */
 export interface PhonesBase extends Base {
-  contact_id: string;
+  contactId: string;
   number: string;
   label: string | null;
 }

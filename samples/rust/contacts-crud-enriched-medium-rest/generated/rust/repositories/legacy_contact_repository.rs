@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 pub fn legacy_contact_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {
     let mut options = CRUDRepositoryOptions::default();
-    options.entity = "legacy_contact".into();
+    options.entity = "LegacyContact".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("legacy_contact".into(), "OldContactsTbl".into()),
+        ("LegacyContact".into(), "OldContactsTbl".into()),
     ])));
     options.property_mappings = Some(Arc::new(DictionaryMapper::new([
         ("key".into(), "CntID".into()),

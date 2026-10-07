@@ -4,17 +4,17 @@ import type { LegacyContact } from "../generated/typescript/types/generated/view
 export class LegacyContactWriteRepository extends CRUDRepository<LegacyContact> {
   constructor(connection: IConnection) {
     super(connection, {
-      entity: "legacy_contact",
-      entityMapper: new DictionaryMapper([["legacy_contact", "OldContactsTbl"]]),
+      entity: "LegacyContact",
+      entityMapper: new DictionaryMapper([["LegacyContact", "OldContactsTbl"]]),
       propertyMappings: new DictionaryMapper([
         ["key", "CntID"],
-        ["first_name", "FirstNm"],
-        ["last_name", "LastNm"],
+        ["firstName", "FirstNm"],
+        ["lastName", "LastNm"],
         ["email", "EmailAddr"],
-        ["imported_at", "ImpDate"],
+        ["importedAt", "ImpDate"],
       ]),
       ids: [],
-      readProperties: ["key", "first_name", "last_name", "email", "imported_at"],
+      readProperties: ["key", "firstName", "lastName", "email", "importedAt"],
     });
   }
 }

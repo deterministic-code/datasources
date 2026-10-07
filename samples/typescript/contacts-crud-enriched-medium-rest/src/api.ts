@@ -7,7 +7,7 @@ import { ContactRepository } from "../generated/typescript/repositories/contact-
 import { clock } from "./clock.ts";
 import { LegacyContactWriteRepository } from "./legacy-write-repository.ts";
 
-export type ContactWrite = Contact & { contact_source_id: string };
+export type ContactWrite = Contact & { contactSourceId: string };
 export type HttpResult = { status: number; body: string };
 
 export class Api {
@@ -44,7 +44,7 @@ export class Api {
   };
 
   private getContacts = async (query: Record<string, string>): Promise<HttpResult> =>
-    ({ status: 200, body: JSON.stringify(await list(this.contacts, where(query, ["id", "first_name", "last_name", "email"]))) });
+    ({ status: 200, body: JSON.stringify(await list(this.contacts, where(query, ["id", "firstName", "lastName", "email"]))) });
 
   private postContact = async (body: string | undefined): Promise<HttpResult> => {
     const contact = await this.bind(read<ContactWrite>(body));
@@ -69,7 +69,7 @@ export class Api {
   };
 
   private getLegacy = async (query: Record<string, string>): Promise<HttpResult> =>
-    ({ status: 200, body: JSON.stringify(await list(this.legacy, where(query, ["key", "first_name", "last_name", "email"]))) });
+    ({ status: 200, body: JSON.stringify(await list(this.legacy, where(query, ["key", "firstName", "lastName", "email"]))) });
 
   private postLegacy = async (body: string | undefined): Promise<HttpResult> => {
     const row = textLegacy(read<LegacyContact>(body));
@@ -95,7 +95,7 @@ export class Api {
   };
 
   private bind = async (contact: ContactWrite): Promise<ContactWrite> => {
-    contact.contact_source_id = String(await this.lookupId(contact.contact_source_name));
+    contact.contactSourceId = String(await this.lookupId(contact.contactSourceName));
     contact.email = text(contact.email);
     contact.notes = text(contact.notes);
     stampContact(contact);
@@ -135,7 +135,7 @@ const stampAddress = (address: Address): void => {
   address.line2 = text(address.line2);
   address.city = text(address.city);
   address.region = text(address.region);
-  address.postal_code = text(address.postal_code);
+  address.postalCode = text(address.postalCode);
   address.country = text(address.country);
   address.uuid = address.uuid || clock.uuid();
   address.created = address.created || clock.now();
@@ -175,10 +175,10 @@ const read = <T>(body: string | undefined): T => {
 const textLegacy = (row: LegacyContact): LegacyContact => ({
   ...row,
   key: text(row.key),
-  first_name: text(row.first_name),
-  last_name: text(row.last_name),
+  firstName: text(row.firstName),
+  lastName: text(row.lastName),
   email: text(row.email),
-  imported_at: row.imported_at ?? clock.now(),
+  importedAt: row.importedAt ?? clock.now(),
 });
 
 const text = (value: string | null | undefined): string => value ?? "";

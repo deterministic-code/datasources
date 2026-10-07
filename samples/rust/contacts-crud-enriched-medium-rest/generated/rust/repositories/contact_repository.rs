@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 pub fn contact_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {
     let mut options = CRUDRepositoryOptions::default();
-    options.entity = "contacts_base".into();
+    options.entity = "Contact".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("contacts_base".into(), "contacts".into()),
+        ("Contact".into(), "contacts".into()),
     ])));
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()];

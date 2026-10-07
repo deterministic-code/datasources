@@ -3,6 +3,6 @@ import { CRUDRepository, DictionaryMapper, type IConnection } from "@datasources
 
 export class AddressRepository extends CRUDRepository<Address> {
   constructor(connection: IConnection) {
-    super(connection, { entity: "addresses_base", entityMapper: new DictionaryMapper([["addresses_base", "addresses"]]), ids: ["id"], readProperties: ["id", "uuid", "created", "updated", "version", "contact_id", "line1", "line2", "city", "region", "postal_code", "country"] });
+    super(connection, { entity: "Address", entityMapper: new DictionaryMapper([["Address", "addresses"]]), propertyMappings: new DictionaryMapper([["contactId", "contact_id"], ["postalCode", "postal_code"]]), ids: ["id"], readProperties: ["id", "uuid", "created", "updated", "version", "contactId", "line1", "line2", "city", "region", "postalCode", "country"] });
   }
 }

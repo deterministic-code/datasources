@@ -66,7 +66,7 @@ export const planRepositories = (
         specName: authored.name,
         typeName: casing.convertTypes(authored.name),
         typeHome: authored.tags.includes("view_type") ? "view" : "datasource",
-        entity: table.name,
+        entity: casing.convertTypes(authored.name),
         table: naming.resolveTable(table.name, table.mapping),
         propertyMappings: columns.flatMap((field) => {
           const from = property(field.name);

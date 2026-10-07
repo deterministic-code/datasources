@@ -75,9 +75,9 @@ pub fn open(
 
 fn contact_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {
     let mut options = CRUDRepositoryOptions::default();
-    options.entity = "contacts_base".into();
+    options.entity = "Contact".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([(
-        "contacts_base".into(),
+        "Contact".into(),
         "contacts".into(),
     )])));
     options.ids = vec!["id".into()];

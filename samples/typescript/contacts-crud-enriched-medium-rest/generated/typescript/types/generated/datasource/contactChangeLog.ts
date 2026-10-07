@@ -1,6 +1,6 @@
 export interface ContactChangeLog {
-  occurred_at: Date | string;
-  contact_id: number;
-  changed_by: string;
-  change_summary: string;
+  occurredAt: Date | string;
+  contactId: number;
+  changedBy: string;
+  changeSummary: string;
 }

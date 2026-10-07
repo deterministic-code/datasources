@@ -20,7 +20,10 @@ const typesYaml = readFileSync(join(specDir, "types.yaml"), "utf8");
 const datasourceYaml = readFileSync(join(specDir, "datasource.yaml"), "utf8");
 const contactsFiles = (): Record<string, string> => ({ "types.yaml": typesYaml, "datasource.yaml": datasourceYaml });
 
-const request = (dialect: Dialect, settings: Record<string, string> = { "backend.datasources": "sqlite" }) => ({
+const request = (
+  dialect: Dialect,
+  settings: Record<string, string> = { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" },
+) => ({
   dialect,
   reader: memoryReader(contactsFiles()),
   settings,
@@ -73,8 +76,15 @@ describe("generate", () => {
     expect(flattenSettings("plain")).toEqual({});
     expect(flattenSettings("- a\n- b\n")).toEqual({});
     expect(flattenSettings("null")).toEqual({});
-    expect(settingsFrom(undefined)).toEqual({ "backend.datasources": "sqlite" });
-    expect(settingsFrom("count: 2\n")).toEqual({ "backend.datasources": "sqlite", count: "2" });
+    expect(settingsFrom(undefined)).toEqual({
+      "backend.datasources": "sqlite",
+      "languages.typescript.casing.fields": "camel",
+    });
+    expect(settingsFrom("count: 2\n")).toEqual({
+      "backend.datasources": "sqlite",
+      "languages.typescript.casing.fields": "camel",
+      count: "2",
+    });
   });
 
   it("writes content and patches", async () => {
@@ -113,7 +123,7 @@ describe("generate", () => {
     const contactTs = textOf(typescript, "contact-repository.ts");
     const legacyRs = textOf(rust, "legacy_contact_repository.rs");
     const contactRs = textOf(rust, "contact_repository.rs");
-    expect(legacyCs).toContain('["legacy_contact"] = "OldContactsTbl"');
+    expect(legacyCs).toContain('["LegacyContact"] = "OldContactsTbl"');
     expect(legacyCs).toContain('["Key"] = "CntID"');
     expect(legacyCs).toContain('["FirstName"] = "FirstNm"');
     expect(legacyCs).toContain('Ids = ["Key"]');
@@ -127,14 +137,21 @@ describe("generate", () => {
     expect(csharp.some((entry) => entry.filename.includes("BaseRepository"))).toBe(false);
     expect(textOf(csharp, "ContactSourceRepository.cs")).toContain("ContactSource");
     expect(textOf(csharp, "ImportContactsRequestRepository.cs")).toContain("Ids = []");
-    expect(legacyTs).toContain('["legacy_contact", "OldContactsTbl"]');
+    expect(legacyTs).toContain('["LegacyContact", "OldContactsTbl"]');
+    expect(contactTs).toContain('entity: "Contact"');
+    expect(contactTs).toContain('["Contact", "contacts"]');
     expect(legacyTs).toContain('["key", "CntID"]');
+    expect(legacyTs).toContain('["firstName", "FirstNm"]');
     expect(legacyTs).toContain('ids: ["key"]');
+    expect(contactTs).toContain('["firstName", "first_name"]');
     expect(contactTs).toContain('destinationProperty: "addresses"');
     expect(contactTs).toContain('destinationProperty: "phones"');
+    expect(contactTs).toContain('destinationProperty: "contactSourceName"');
     expect(contactTs).toContain('type: "list"');
     expect(textOf(typescript, "contact-group-repository.ts")).toContain("addLinked");
+    expect(legacyRs).toContain('"LegacyContact"');
     expect(legacyRs).toContain('"OldContactsTbl"');
+    expect(contactRs).toContain('"Contact"');
     expect(legacyRs).toContain('"key".into(), "CntID".into()');
     expect(legacyRs).toContain('vec!["key".into()]');
     expect(contactRs).toContain("EnrichmentPropertyType::List");
@@ -145,7 +162,10 @@ describe("generate", () => {
 
   it("emits a typescript Contact type and sqlite tables", async () => {
     const types = await deterministic.generateTypes(request("typescript"));
-    expect(types.some((entry) => entry.kind === "content" && entry.contents.includes("export interface Contact"))).toBe(true);
+    const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
+    expect(text).toContain("export interface Contact");
+    expect(text).toContain("firstName");
+    expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
     const script = sql.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(script).toMatch(/CREATE TABLE/);

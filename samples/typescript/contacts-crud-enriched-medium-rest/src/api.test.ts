@@ -56,56 +56,56 @@ describe("api", () => {
     clock.uuid = () => `00000000-0000-0000-0000-${String(++n).padStart(12, "0")}`;
     const api = await open(middleware);
     const created = await api.handle("POST", "/contacts/", JSON.stringify({
-      first_name: "Ada",
-      last_name: "Lovelace",
+      firstName: "Ada",
+      lastName: "Lovelace",
       email: "ada@example.com",
-      contact_source_name: "Manual",
+      contactSourceName: "Manual",
       addresses: [{ line1: "12 Analytical Engine", city: "London" }],
       phones: [{ number: "555-0100", label: "Mobile" }],
     }));
     expect(created.status).toBe(201);
     expect(created.body).not.toContain("OldContactsTbl");
-    const saved = JSON.parse(created.body) as { id: number; first_name: string; contact_source_name: string; addresses: { city: string }[]; phones: { number: string }[] };
-    expect(saved.first_name).toBe("Ada");
-    expect(saved.contact_source_name).toBe("Manual");
+    const saved = JSON.parse(created.body) as { id: number; firstName: string; contactSourceName: string; addresses: { city: string }[]; phones: { number: string }[] };
+    expect(saved.firstName).toBe("Ada");
+    expect(saved.contactSourceName).toBe("Manual");
     expect(saved.addresses[0]?.city).toBe("London");
     expect(saved.phones[0]?.number).toBe("555-0100");
     await api.handle("POST", "/contacts", JSON.stringify({
-      first_name: "Grace",
-      last_name: "Hopper",
+      firstName: "Grace",
+      lastName: "Hopper",
       uuid: "22222222-2222-2222-2222-222222222222",
       created: "2024-01-02T00:00:00Z",
-      contact_source_name: "Imported",
+      contactSourceName: "Imported",
       addresses: [{ uuid: "33333333-3333-3333-3333-333333333333", created: "2024-01-02T00:00:00Z", line1: "1", city: "NY" }],
       phones: [{ uuid: "44444444-4444-4444-4444-444444444444", created: "2024-01-02T00:00:00Z", number: "1" }],
     }));
-    const filtered = await api.handle("GET", `/contacts/?first_name=Ada&last_name=Lovelace&id=${saved.id}`, undefined);
+    const filtered = await api.handle("GET", `/contacts/?firstName=Ada&lastName=Lovelace&id=${saved.id}`, undefined);
     expect(JSON.parse(filtered.body)).toHaveLength(1);
     const updated = await api.handle("PUT", `/contacts/?id=${saved.id}`, JSON.stringify({
-      first_name: "Ada",
-      last_name: "Byron",
+      firstName: "Ada",
+      lastName: "Byron",
       email: null,
-      contact_source_name: "Manual",
+      contactSourceName: "Manual",
       addresses: [{ line1: "1 Strand", city: "London" }],
       phones: [],
     }));
     expect(updated.status).toBe(200);
-    const changed = JSON.parse(updated.body) as { last_name: string; addresses: { line1: string }[]; phones: unknown[] };
-    expect(changed.last_name).toBe("Byron");
+    const changed = JSON.parse(updated.body) as { lastName: string; addresses: { line1: string }[]; phones: unknown[] };
+    expect(changed.lastName).toBe("Byron");
     expect(changed.addresses[0]?.line1).toBe("1 Strand");
     expect(changed.phones).toHaveLength(0);
     expect((await api.handle("DELETE", `/contacts/?id=${saved.id}`, undefined)).status).toBe(204);
     expect(JSON.parse((await api.handle("get", "/contacts/", undefined)).body)).toHaveLength(1);
     const legacy = await api.handle("POST", "/legacy_contacts/", JSON.stringify({
       key: "ada",
-      first_name: "Ada",
-      last_name: "Lovelace",
+      firstName: "Ada",
+      lastName: "Lovelace",
       email: "ada@example.com",
-      imported_at: "2024-06-01T00:00:00Z",
+      importedAt: "2024-06-01T00:00:00Z",
     }));
     expect(legacy.status).toBe(201);
-    expect((JSON.parse((await api.handle("GET", "/legacy_contacts/?first_name=Ada", undefined)).body) as { key: string }[])[0]?.key).toBe("ada");
-    const legacyPut = await api.handle("PUT", "/legacy_contacts/?key=ada", JSON.stringify({ first_name: "Augusta", last_name: "Lovelace", email: "" }));
+    expect((JSON.parse((await api.handle("GET", "/legacy_contacts/?firstName=Ada", undefined)).body) as { key: string }[])[0]?.key).toBe("ada");
+    const legacyPut = await api.handle("PUT", "/legacy_contacts/?key=ada", JSON.stringify({ firstName: "Augusta", lastName: "Lovelace", email: "" }));
     expect(legacyPut.status).toBe(200);
     expect(legacyPut.body).toContain("Augusta");
     expect((await api.handle("DELETE", "/legacy_contacts/?key=ada", undefined)).status).toBe(204);
@@ -125,20 +125,20 @@ describe("api", () => {
     expect((await api.handle("POST", "/contacts/", " ")).status).toBe(400);
     expect((await api.handle("POST", "/contacts/", "null")).status).toBe(400);
     expect((await api.handle("POST", "/contacts/", "{")).status).toBe(400);
-    const unknown = await api.handle("POST", "/contacts/", JSON.stringify({ first_name: "Ada", last_name: "Lovelace", contact_source_name: "Nope" }));
+    const unknown = await api.handle("POST", "/contacts/", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Nope" }));
     expect(unknown.status).toBe(400);
     expect(unknown.body).toContain("Unknown contact_source");
-    expect((await api.handle("POST", "/contacts/", JSON.stringify({ first_name: "Ada", last_name: "Lovelace" }))).status).toBe(400);
+    expect((await api.handle("POST", "/contacts/", JSON.stringify({ firstName: "Ada", lastName: "Lovelace" }))).status).toBe(400);
     expect((await api.handle("PUT", "/contacts/?id=abc", "{}")).status).toBe(400);
-    expect((await api.handle("PUT", "/contacts/?id=99", JSON.stringify({ first_name: "Ada", last_name: "Lovelace", contact_source_name: "Manual" }))).status).toBe(404);
+    expect((await api.handle("PUT", "/contacts/?id=99", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Manual" }))).status).toBe(404);
     expect((await api.handle("DELETE", "/contacts/?id=99", undefined)).status).toBe(404);
     expect((await api.handle("DELETE", "/contacts/", undefined)).status).toBe(400);
     expect((await api.handle("POST", "/legacy_contacts/", "{}")).status).toBe(400);
-    expect((await api.handle("PUT", "/legacy_contacts/?key=missing", JSON.stringify({ first_name: "A", last_name: "B" }))).status).toBe(404);
+    expect((await api.handle("PUT", "/legacy_contacts/?key=missing", JSON.stringify({ firstName: "A", lastName: "B" }))).status).toBe(404);
     expect((await api.handle("DELETE", "/legacy_contacts/?key=missing", undefined)).status).toBe(404);
     expect((await api.handle("DELETE", "/legacy_contacts/?key=", undefined)).status).toBe(400);
-    expect((await api.handle("GET", "/contacts/?id=&lonely&first_name=Ada%20Lovelace", undefined)).status).toBe(200);
-    expect((await api.handle("POST", "/contacts/", JSON.stringify({ first_name: "Ada", last_name: "Lovelace", contact_source_name: "Manual" }))).status).toBe(201);
+    expect((await api.handle("GET", "/contacts/?id=&lonely&firstName=Ada%20Lovelace", undefined)).status).toBe(200);
+    expect((await api.handle("POST", "/contacts/", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Manual" }))).status).toBe(201);
   });
 
   it("maps datasource errors", async () => {
