@@ -44,8 +44,8 @@ public class CRUDRepositoryOptionsTests
         await repo.ReadSingle();
         Assert.Equal("SELECT full_name, user_id FROM people", command.ExecuteReaderCalls[0].Text);
         command.Response = new Response(Value.Null.Instance, 1);
-        var created = await repo.Create(new UserRow { id = 1, name = "a" });
-        Assert.Equal(1, created.id);
+        var created = await repo.Create(new UserRow { id = 0, name = "a" });
+        Assert.Equal(0, created.id);
         Assert.Equal("INSERT INTO people (full_name) VALUES ($full_name)", command.ExecuteCalls[0].Text);
         var updated = await repo.Update(new UserRow { id = 1, name = "a" });
         Assert.Equal(1, updated.RowsAffected);

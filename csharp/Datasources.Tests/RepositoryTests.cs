@@ -123,7 +123,7 @@ public class RepositoryTests
         var (repo, command) = Create();
         command.Response = new Response(new Value.Int(9), 1);
         command.Reader = new MockReader<Row>([new Row { ["id"] = 9 }]);
-        var obj = new UserRow { id = 1, name = "a" };
+        var obj = new UserRow { id = 0, name = "a" };
         var created = await repo.Create(obj);
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         Assert.Equal("users.id", command.ExecuteReaderCalls[0].Text);
@@ -139,6 +139,17 @@ public class RepositoryTests
     }
 
     [Fact]
+    public async Task CreateIncludesAssignedId()
+    {
+        var (repo, command) = Create();
+        command.Response = new Response(Value.Null.Instance, 1);
+        var created = await repo.Create(new UserRow { id = 42, name = "ada" });
+        Assert.Equal("INSERT INTO users (id, name) VALUES ($id, $name)", command.ExecuteCalls[0].Text);
+        Assert.Empty(command.ExecuteReaderCalls);
+        Assert.Equal(42, created.id);
+    }
+
+    [Fact]
     public async Task CreateMapperWritesConfiguredId()
     {
         var (repo, command) = Create<Item>(id: ["Id"]);
@@ -151,13 +162,13 @@ public class RepositoryTests
     }
 
     [Fact]
-    public async Task CompositeIdOmitsIdsOnCreate()
+    public async Task CompositeIdIncludesAssignedIdsOnCreate()
     {
         var (repo, command) = Create<Composite>(id: ["org_id", "user_id"]);
         var created = await repo.Create(new Composite { org_id = 1, user_id = 2, name = 3 });
         Assert.Equal(1, created.org_id);
         Assert.Equal(2, created.user_id);
-        Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
+        Assert.Equal("INSERT INTO users (name, org_id, user_id) VALUES ($name, $org_id, $user_id)", command.ExecuteCalls[0].Text);
         Assert.Equal(new Value.Int(3), command.ExecuteCalls[0].Parameters![0].Value);
         command.Response = new Response(Value.Null.Instance, 1);
         var updated = await repo.Update(new Composite { org_id = 1, user_id = 2, name = 4 });
@@ -193,7 +204,7 @@ public class RepositoryTests
         rowCommand.Reader = new MockReader<Row>([new Row { ["id"] = 7 }]);
         var createdRow = await rows.Create(new Row
         {
-            ["id"] = 1,
+            ["id"] = 0,
             ["name"] = "ada",
             ["created"] = Value.Null.Instance,
             ["version"] = Value.Null.Instance

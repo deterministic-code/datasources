@@ -207,7 +207,7 @@ describe("CRUDRepository", () => {
     }));
     expect(updated.rowsAffected).toBe(1);
     const created = (await collectAsync(childrenRepo.read())).find((row) => row.Label === "fresh");
-    expect(created?.Id).not.toBe(child?.Id);
+    expect(created?.Id).toBe(child?.Id);
     expect(created?.Label).toBe("fresh");
     expect(created?.ParentId).toBe(parent?.Id);
     expect(await collectAsync(notesRepo.read())).toEqual([]);

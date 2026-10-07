@@ -510,7 +510,7 @@ async fn cascade_update_deletes_children_and_recreates() {
         .find(|row| row.get("Label") == Some(&Value::from("fresh")))
         .unwrap();
     assert_eq!(stored.len(), 2);
-    assert_ne!(created.get("Id"), Some(&child_id));
+    assert_eq!(created.get("Id"), Some(&child_id));
     assert_eq!(created.get("Label"), Some(&Value::from("fresh")));
     assert_eq!(created.get("ParentId"), Some(&parent_id));
     assert!(notes.read(None, None, None).await.unwrap().is_empty());

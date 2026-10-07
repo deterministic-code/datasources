@@ -99,7 +99,8 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 
     BulkCommand Insert(T item)
     {
-        var statement = crudStatements.Insert(Fields(Reverse(item), col => !Ids.Contains(col)));
+        var record = Reverse(item);
+        var statement = crudStatements.Insert(Fields(record, col => !Ids.Contains(col) || Assigned(record, col)));
         return new(DefaultStatementTextRenderer.Instance.Render(statement), statement.Fields);
     }
 
@@ -145,6 +146,15 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
+
+    static bool Assigned(Row record, string col) =>
+        record.TryGetValue(col, out var value) && value switch
+        {
+            Value.Null => false,
+            Value.Text(var text) => text.Length > 0,
+            Value.Int(0) => false,
+            _ => true
+        };
 
     IWhere IdWhere(Row record) =>
         new Where(Ids.Select(col =>

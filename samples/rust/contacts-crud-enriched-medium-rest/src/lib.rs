@@ -5,7 +5,6 @@ mod repositories;
 pub mod api;
 pub mod clock;
 pub mod json_row;
-pub mod legacy_write_repository;
 pub mod migrate;
 pub mod repos;
 pub mod schema;

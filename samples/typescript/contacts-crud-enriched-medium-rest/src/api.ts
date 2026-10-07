@@ -5,7 +5,7 @@ import type { Phone } from "../generated/typescript/types/generated/views/phone.
 import type { LegacyContact } from "../generated/typescript/types/generated/views/legacyContact.ts";
 import { ContactRepository } from "../generated/typescript/repositories/contact-repository.ts";
 import { clock } from "./clock.ts";
-import { LegacyContactWriteRepository } from "./legacy-write-repository.ts";
+import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
 
 export type ContactWrite = Contact & { contactSourceId: string };
 export type HttpResult = { status: number; body: string };
@@ -13,7 +13,7 @@ export type HttpResult = { status: number; body: string };
 export class Api {
   constructor(
     private readonly contacts: ContactRepository,
-    private readonly legacy: LegacyContactWriteRepository,
+    private readonly legacy: LegacyContactRepository,
   ) {}
 
   handle = async (method: string, target: string, body: string | undefined): Promise<HttpResult> => {

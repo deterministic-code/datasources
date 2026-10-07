@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { Api } from "./api.ts";
 import { clock } from "./clock.ts";
-import { LegacyContactWriteRepository } from "./legacy-write-repository.ts";
+import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
 import { migrate } from "./migrate.ts";
 import { ContactRepository } from "../generated/typescript/repositories/contact-repository.ts";
 
@@ -18,7 +18,7 @@ const open = async (middleware?: ICommandMiddleware) => {
   await connection.open();
   await migrate(connection.createCommand());
   const contacts = new ContactRepository(connection);
-  const legacy = new LegacyContactWriteRepository(connection);
+  const legacy = new LegacyContactRepository(connection);
   if (middleware) {
     contacts.addMiddleware(middleware);
     contacts.address.addMiddleware(middleware);
@@ -145,7 +145,7 @@ describe("api", () => {
     const connection = new SqliteDriver().connection({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const contacts = new ContactRepository(connection);
-    const api = new Api(contacts, new LegacyContactWriteRepository(connection));
+    const api = new Api(contacts, new LegacyContactRepository(connection));
     expect((await api.handle("GET", "/contacts", undefined)).status).toBe(400);
   });
 
