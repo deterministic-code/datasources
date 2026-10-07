@@ -1,7 +1,6 @@
-use crate::legacy_write_repository::legacy_contact_write_repository;
 use crate::repositories::{
     address_repository::address_repository, contact_source_repository::contact_source_repository,
-    phone_repository::phone_repository,
+    legacy_contact_repository::legacy_contact_repository, phone_repository::phone_repository,
 };
 use datasources::{
     CommandMiddleware, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper,
@@ -24,7 +23,7 @@ pub fn open(
     let mut contact_source = contact_source_repository(Arc::clone(&connection))?;
     let mut contact_source_lookup = contact_source_repository(Arc::clone(&connection))?;
     let mut contacts = contact_repository(Arc::clone(&connection))?;
-    let mut legacy = legacy_contact_write_repository(connection)?;
+    let mut legacy = legacy_contact_repository(connection)?;
     if let Some(middleware) = middleware {
         address.add_middleware(Arc::clone(&middleware));
         phone.add_middleware(Arc::clone(&middleware));

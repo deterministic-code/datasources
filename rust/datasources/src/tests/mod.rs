@@ -1704,7 +1704,7 @@ async fn table_repository() {
         .unwrap()
         .is_empty());
 
-    let mut obj = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
+    let mut obj = record(&[("id", Value::Int(0)), ("name", Value::from("a"))]);
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut include_id = CRUDRepositoryOptions::default();
     include_id.entity = "users".into();
@@ -1735,6 +1735,27 @@ async fn table_repository() {
         "DELETE FROM users WHERE id = $id"
     );
 
+    let assigned = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(assigned.clone(), "memory");
+    let mut assigned_options = CRUDRepositoryOptions::default();
+    assigned_options.entity = "users".into();
+    assigned_options.row_converter = Some(users_mapping());
+    let repo = CRUDRepository::new(connection, assigned_options).unwrap();
+    *assigned.response.lock().unwrap() = Response::new(Value::Null, 1, None);
+    let created = repo
+        .create(&mut record(&[
+            ("id", Value::Int(42)),
+            ("name", Value::from("ada")),
+        ]))
+        .await
+        .unwrap();
+    assert_eq!(
+        assigned.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO users (id, name) VALUES ($id, $name)"
+    );
+    assert!(assigned.reader_logs.lock().unwrap().is_empty());
+    assert_eq!(created["id"], Value::Int(42));
+
     let generated = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(generated.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
@@ -1755,7 +1776,7 @@ async fn table_repository() {
     assert_eq!(created["user_id"], Value::Int(2));
     assert_eq!(
         generated.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO users (name) VALUES ($name)"
+        "INSERT INTO users (name, org_id, user_id) VALUES ($name, $org_id, $user_id)"
     );
     assert_eq!(
         generated.execute_logs.lock().unwrap()[0].1[0].value,
@@ -1875,9 +1896,9 @@ async fn table_repository_crud_mapper() {
         "SELECT full_name, user_id FROM people"
     );
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    let mut row = record(&[("id", Value::Int(1)), ("name", Value::from("a"))]);
+    let mut row = record(&[("id", Value::Int(0)), ("name", Value::from("a"))]);
     let created = repo.create(&mut row).await.unwrap();
-    assert_eq!(created["id"], Value::Int(1));
+    assert_eq!(created["id"], Value::Int(0));
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO people (full_name) VALUES ($full_name)"
@@ -2096,7 +2117,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
         .push(record(&[("id", Value::Int(7))]));
     let created_ada = repo
         .create(&mut record(&[
-            ("id", Value::Int(1)),
+            ("id", Value::Int(0)),
             ("name", Value::from("ada")),
             ("created", Value::Null),
             ("version", Value::Null),
@@ -2127,7 +2148,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
     );
     let created_grace = repo
         .create(&mut record(&[
-            ("id", Value::Int(1)),
+            ("id", Value::Int(0)),
             ("name", Value::from("grace")),
             ("created", Value::DateTime(created)),
             ("version", Value::Binary(vec![9, 9])),

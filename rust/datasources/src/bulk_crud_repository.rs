@@ -248,7 +248,7 @@ fn insert_command(
 ) -> Result<(String, Vec<Parameter>)> {
     let readonly = stored_repo(repo);
     let record = readonly.reverse_convert(item)?;
-    let fields = params(repo, &record, false)?;
+    let fields = insert_params(repo, &record)?;
     let statement = statements.insert(&fields);
     Ok((DefaultStatementTextRenderer::instance().render(&statement), statement.fields().to_vec()))
 }
@@ -334,12 +334,36 @@ fn stored_row(
     Ok(row)
 }
 
+fn insert_params(repo: &CRUDRepository, record: &Row) -> Result<Vec<Parameter>> {
+    let ids = repo.id_names();
+    fields(repo, record, |key, value| {
+        !ids.iter().any(|id| id == key) || assigned(value)
+    })
+}
+
 fn params(repo: &CRUDRepository, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
     let ids = repo.id_names();
+    fields(repo, record, |key, _| include_ids || !ids.iter().any(|id| id == key))
+}
+
+fn assigned(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Text(text) => !text.is_empty(),
+        Value::Int(0) => false,
+        _ => true,
+    }
+}
+
+fn fields(
+    repo: &CRUDRepository,
+    record: &Row,
+    include: impl Fn(&str, &Value) -> bool,
+) -> Result<Vec<Parameter>> {
     let mut pairs: Vec<_> = record
         .iter()
         .filter(|(key, value)| {
-            (include_ids || !ids.iter().any(|id| id == *key))
+            include(key, value)
                 && !repo.enrichment_into(key)
                 && !matches!(value, Value::Null)
         })

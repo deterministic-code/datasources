@@ -30,6 +30,9 @@ import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 
 type Props = Record<string, Scalar | object>;
 
+const assigned = (value: Cell): boolean =>
+  value !== null && value !== "" && value !== 0 && value !== 0n;
+
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
@@ -157,15 +160,17 @@ export class CRUDRepository<T = Cells>
     this.readSingle(this.byId(id));
 
   private insert = async (item: T): Promise<Response> => {
+    const record = this.reverseConvert(item);
     const fields = fieldsOf(
-      this.reverseConvert(item),
-      (col) => !this.ids.includes(col),
+      record,
+      (col) => !this.ids.includes(col) || assigned(record[col] ?? null),
       this.cell,
       this.enrichmentInto,
     );
     const statement = this.crudStatements.insert(fields);
     const response = await execute(this.command(), statement, statement.fields);
-    if (this.ids.length === 1) await this.copyInsertedId(item, fields);
+    if (this.ids.length === 1 && !fields.some((field) => field.name === this.ids[0]))
+      await this.copyInsertedId(item, fields);
     return response;
   };
 

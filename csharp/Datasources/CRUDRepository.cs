@@ -136,10 +136,11 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Insert(T item)
     {
-        var fields = Params(ReverseConvert(item), col => !ids.Contains(col));
+        var record = ReverseConvert(item);
+        var fields = Params(record, col => !ids.Contains(col) || Assigned(record, col));
         var statement = CRUDStatements.Insert(fields);
         var response = await Command().Execute(statement, statement.Fields);
-        if (ids.Count == 1)
+        if (ids.Count == 1 && fields.All(field => field.Name != ids[0]))
             await CopyInsertedId(item, statement.Fields);
         return response;
     }
@@ -221,6 +222,15 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         [.. record.Where(pair => include(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
+
+    static bool Assigned(Row record, string col) =>
+        record.TryGetValue(col, out var value) && value switch
+        {
+            Value.Null => false,
+            Value.Text(var text) => text.Length > 0,
+            Value.Int(0) => false,
+            _ => true
+        };
 
     protected bool EnrichmentInto(string name) =>
         ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.DestinationProperty == name);

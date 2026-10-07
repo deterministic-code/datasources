@@ -161,7 +161,7 @@ public class CRUDRepositoryTests
         });
         Assert.Equal(1, updated.RowsAffected);
         var created = (await childrenRepo.Read().ToListAsync()).Single(row => row.Label == "fresh");
-        Assert.NotEqual(child.Id, created.Id);
+        Assert.Equal(child.Id, created.Id);
         Assert.Equal("fresh", created.Label);
         Assert.Equal(parent.Id, created.ParentId);
         Assert.Empty(await notesRepo.Read().ToListAsync());

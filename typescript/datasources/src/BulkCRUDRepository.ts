@@ -19,6 +19,9 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
+const assigned = (value: Cell): boolean =>
+  value !== null && value !== "" && value !== 0 && value !== 0n;
+
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
@@ -120,8 +123,14 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     this.ids.length === 1 ? scalarOf((item as Record<string, Scalar | object>)[this.ids[0]!]) : undefined;
 
   private insertCommand = (item: T): BulkCommand => {
+    const record = this.reverse(item);
     const statement = this.crudStatements.insert(
-      fieldsOf(this.reverse(item), (col) => !this.ids.includes(col), this.cell, this.enrichmentInto),
+      fieldsOf(
+        record,
+        (col) => !this.ids.includes(col) || assigned(record[col] ?? null),
+        this.cell,
+        this.enrichmentInto,
+      ),
     );
     return { text: DefaultStatementTextRenderer.instance.render(statement), parameters: statement.fields };
   };

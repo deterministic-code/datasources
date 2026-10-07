@@ -258,11 +258,25 @@ impl CRUDRepository {
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
+        self.fields(record, |key, _| include_ids || !self.ids.iter().any(|id| id == key))
+    }
+
+    fn insert_params(&self, record: &Row) -> Result<Vec<Parameter>> {
+        self.fields(record, |key, value| {
+            !self.ids.iter().any(|id| id == key) || assigned(value)
+        })
+    }
+
+    fn fields(
+        &self,
+        record: &Row,
+        include: impl Fn(&str, &Value) -> bool,
+    ) -> Result<Vec<Parameter>> {
         let entries = self.readonly.enrichments.lock().expect("enrichments");
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, value)| {
-                (include_ids || !self.ids.contains(*key))
+                include(key, value)
                     && !entries
                         .iter()
                         .any(|entry| entry.enrichment.destination_property == **key)
@@ -311,14 +325,14 @@ impl CRUDRepository {
 
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
         let record = self.readonly.reverse_convert(stored)?;
-        let fields = self.params(&record, false)?;
+        let fields = self.insert_params(&record)?;
         let statement = self.crud_statements.insert(&fields);
         let response = self
             .readonly
             .command()
             .execute_statement(&statement, Some(statement.fields()))
             .await?;
-        if self.ids.len() == 1 {
+        if self.ids.len() == 1 && !fields.iter().any(|field| field.name == self.ids[0]) {
             self.copy_inserted_id(target, statement.fields()).await?;
         }
         Ok(response)
@@ -586,6 +600,15 @@ fn identified(row: Row, column: &str) -> Row {
     let mut named = Row::new();
     named.insert(column.to_string(), value);
     named
+}
+
+fn assigned(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Text(text) => !text.is_empty(),
+        Value::Int(0) => false,
+        _ => true,
+    }
 }
 
 fn and_all(parts: Vec<Expression>) -> Expression {
