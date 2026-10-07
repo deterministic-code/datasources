@@ -31,7 +31,8 @@ async fn open(middleware: Option<Arc<dyn CommandMiddleware>>) -> Api {
     migrate::apply(connection.create_command().as_ref(), connection.provider())
         .await
         .unwrap();
-    Api::new(repos::open(connection, middleware).unwrap(), Clock::new())
+    let (contacts, legacy) = repos::open(connection, middleware).unwrap();
+    Api::new(contacts, legacy, Clock::new())
 }
 
 #[tokio::test]
@@ -80,7 +81,8 @@ async fn round_trips_contacts_and_legacy_contacts() {
     migrate::apply(connection.create_command().as_ref(), connection.provider())
         .await
         .unwrap();
-    let api = Api::new(repos::open(connection, Some(middleware)).unwrap(), clock);
+    let (contacts, legacy) = repos::open(connection, Some(middleware)).unwrap();
+    let api = Api::new(contacts, legacy, clock);
     let created = api
         .handle(
             "POST",
@@ -291,7 +293,8 @@ async fn rejects_unknown_routes_lookups_and_missing_rows() {
 #[tokio::test]
 async fn maps_datasource_errors() {
     let connection = connection().await;
-    let api = Api::new(repos::open(connection, None).unwrap(), Clock::new());
+    let (contacts, legacy) = repos::open(connection, None).unwrap();
+    let api = Api::new(contacts, legacy, Clock::new());
     assert_eq!(api.handle("GET", "/contacts", None).await.unwrap().status, 400);
 }
 

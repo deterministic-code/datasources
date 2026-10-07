@@ -1,3 +1,4 @@
+use crate::command_middleware::CommandMiddleware;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
@@ -43,6 +44,8 @@ pub trait ICRUDRepository: IReadonlyRepository {
     fn id_names(&self) -> Vec<String> {
         Vec::new()
     }
+
+    fn add_middleware(&self, _middleware: Arc<dyn CommandMiddleware>) {}
 }
 
 struct AsReadonly(Arc<dyn ICRUDRepository>);

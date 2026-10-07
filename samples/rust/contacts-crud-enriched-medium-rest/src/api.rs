@@ -2,9 +2,10 @@ use crate::clock::Clock;
 use crate::json_row::{
     ensure_text, json_to_row, object_from, row_to_json, rows_to_json, set_text, text,
 };
-use crate::repos::Repos;
+use crate::repositories::contact_repository::ContactRepository;
 use datasources::{
-    DatasourceError, Operator, ReadInput, Row, Value, Where, ICRUDRepository, IReadonlyRepository,
+    DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository, ICRUDRepository,
+    IReadonlyRepository,
 };
 use serde_json::{Map, Value as Json};
 use std::collections::HashMap;
@@ -15,13 +16,14 @@ pub struct HttpResult {
 }
 
 pub struct Api {
-    repos: Repos,
+    contacts: ContactRepository,
+    legacy: CRUDRepository,
     clock: Clock,
 }
 
 impl Api {
-    pub fn new(repos: Repos, clock: Clock) -> Self {
-        Self { repos, clock }
+    pub fn new(contacts: ContactRepository, legacy: CRUDRepository, clock: Clock) -> Self {
+        Self { contacts, legacy, clock }
     }
 
     pub async fn handle(
@@ -53,12 +55,12 @@ impl Api {
     }
 
     async fn get_contacts(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
-        Ok(ok(200, rows_to_json(&self.read_rows(&self.repos.contacts, query, &["id", "first_name", "last_name", "email"]).await?)))
+        Ok(ok(200, rows_to_json(&self.read_rows(&*self.contacts, query, &["id", "first_name", "last_name", "email"]).await?)))
     }
 
     async fn post_contact(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
         let mut row = self.bind(object_from(body).map_err(ApiError::bad)?).await?;
-        Ok(ok(201, row_to_json(&self.repos.contacts.create(&mut row).await?)))
+        Ok(ok(201, row_to_json(&self.contacts.create(&mut row).await?)))
     }
 
     async fn put_contact(
@@ -68,27 +70,27 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        if self.repos.contacts.read_single(Some(&by), None, None).await?.is_none() {
+        if self.contacts.read_single(Some(&by), None, None).await?.is_none() {
             return Ok(empty(404));
         }
         let mut row = self.bind(object_from(body).map_err(ApiError::bad)?).await?;
         row.insert("id".into(), Value::Int(id));
-        self.repos.contacts.update(&row, Some(&by)).await?;
-        Ok(ok(200, row_to_json(&self.repos.contacts.read_single(Some(&by), None, None).await?.unwrap_or_default())))
+        self.contacts.update(&row, Some(&by)).await?;
+        Ok(ok(200, row_to_json(&self.contacts.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 
     async fn delete_contact(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        let Some(row) = self.repos.contacts.read_single(Some(&by), None, None).await? else {
+        let Some(row) = self.contacts.read_single(Some(&by), None, None).await? else {
             return Ok(empty(404));
         };
-        self.repos.contacts.delete(&row, Some(&by)).await?;
+        self.contacts.delete(&row, Some(&by)).await?;
         Ok(empty(204))
     }
 
     async fn get_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
-        Ok(ok(200, rows_to_json(&self.read_rows(&self.repos.legacy, query, &["key", "first_name", "last_name", "email"]).await?)))
+        Ok(ok(200, rows_to_json(&self.read_rows(&self.legacy, query, &["key", "first_name", "last_name", "email"]).await?)))
     }
 
     async fn post_legacy(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
@@ -96,7 +98,7 @@ impl Api {
         if text(row.get("key")).is_empty() {
             return Err(ApiError::bad("key is required"));
         }
-        Ok(ok(201, row_to_json(&self.repos.legacy.create(&mut row).await?)))
+        Ok(ok(201, row_to_json(&self.legacy.create(&mut row).await?)))
     }
 
     async fn put_legacy(
@@ -106,22 +108,22 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let key = required(query, "key")?;
         let by = Where::new(Operator::equals("key", key.clone()));
-        if self.repos.legacy.read_single(Some(&by), None, None).await?.is_none() {
+        if self.legacy.read_single(Some(&by), None, None).await?.is_none() {
             return Ok(empty(404));
         }
         let mut row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
         row.insert("key".into(), Value::Text(key));
-        self.repos.legacy.update(&row, Some(&by)).await?;
-        Ok(ok(200, row_to_json(&self.repos.legacy.read_single(Some(&by), None, None).await?.unwrap_or_default())))
+        self.legacy.update(&row, Some(&by)).await?;
+        Ok(ok(200, row_to_json(&self.legacy.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 
     async fn delete_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let key = required(query, "key")?;
         let by = Where::new(Operator::equals("key", key));
-        let Some(row) = self.repos.legacy.read_single(Some(&by), None, None).await? else {
+        let Some(row) = self.legacy.read_single(Some(&by), None, None).await? else {
             return Ok(empty(404));
         };
-        self.repos.legacy.delete(&row, Some(&by)).await?;
+        self.legacy.delete(&row, Some(&by)).await?;
         Ok(empty(204))
     }
 
@@ -152,7 +154,7 @@ impl Api {
 
     async fn lookup(&self, name: &str) -> Result<i64, ApiError> {
         let found = self
-            .repos
+            .contacts
             .contact_source
             .read_single(Some(&Where::new(Operator::equals("name", name))), None, None)
             .await?

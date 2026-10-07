@@ -158,8 +158,8 @@ impl CRUDRepository {
         self
     }
 
-    pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
-        self.readonly.add_middleware(middleware);
+    pub fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        crate::push_middleware(&self.readonly, middleware);
     }
 
     fn enriched(&self) -> bool {
@@ -562,6 +562,10 @@ impl ICRUDRepository for CRUDRepository {
 
     fn id_names(&self) -> Vec<String> {
         self.ids.clone()
+    }
+
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        crate::push_middleware(&self.readonly, middleware);
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
