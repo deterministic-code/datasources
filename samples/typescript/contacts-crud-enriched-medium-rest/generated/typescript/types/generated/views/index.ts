@@ -1,0 +1,9 @@
+export type { Contact } from "./contact";
+export type { Address } from "./address";
+export type { Phone } from "./phone";
+export type { ContactGroup } from "./contactGroup";
+export type { LegacyContact } from "./legacyContact";
+export type { ContactChangeLog } from "./contactChangeLog";
+export type { ImportContactsRequest } from "./importContactsRequest";
+export type { ImportContactsResult } from "./importContactsResult";
+export type { LegacyMigrationResult } from "./legacyMigrationResult";

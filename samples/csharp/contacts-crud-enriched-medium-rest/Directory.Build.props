@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ContactsCrudEnrichedMediumRest.Tests'">
-    <BaseIntermediateOutputPath>obj/ContactsCrudEnrichedMediumRest.Tests/</BaseIntermediateOutputPath>
-    <BaseOutputPath>bin/ContactsCrudEnrichedMediumRest.Tests/</BaseOutputPath>
-  </PropertyGroup>
-</Project>
