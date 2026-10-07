@@ -1659,7 +1659,7 @@ async fn table_repository() {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(users_mapping());
-    let mut repo = CRUDRepository::new(connection, options).unwrap();
+    let repo = Arc::new(CRUDRepository::new(connection, options).unwrap());
     repo.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),

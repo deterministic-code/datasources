@@ -33,6 +33,7 @@ use std::sync::{Arc, Mutex};
 pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
+    middleware_slot: Arc<Mutex<Vec<Arc<dyn CommandMiddleware>>>>,
     pub(crate) row_converter: Option<RowTypeConverter>,
     pub(crate) object_converter: Box<dyn TypeConverter<Row, Row> + Send + Sync>,
     entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync>,
@@ -67,6 +68,7 @@ impl ReadonlyRepository {
         Self {
             connection: built.connection,
             middlewares: Vec::new(),
+            middleware_slot: Arc::new(Mutex::new(Vec::new())),
             row_converter: built.row_converter,
             object_converter: built.object_converter,
             entity_mapper: Arc::clone(&built.entity_mapper),
@@ -88,6 +90,7 @@ impl ReadonlyRepository {
         Self {
             connection: Arc::new(StubConnection::new("memory")),
             middlewares: Vec::new(),
+            middleware_slot: Arc::new(Mutex::new(Vec::new())),
             row_converter: None,
             object_converter: Box::new(MetaDataRowTypeConverter::new(Vec::new())),
             entity_mapper: Arc::clone(&entity),
@@ -120,7 +123,7 @@ impl ReadonlyRepository {
     }
 
     pub fn add_middleware(&mut self, middleware: Arc<dyn CommandMiddleware>) {
-        self.middlewares.push(middleware);
+        push_middleware(self, middleware);
     }
 
     pub(crate) fn enriched(&self) -> bool {
@@ -133,7 +136,9 @@ impl ReadonlyRepository {
 
     pub(crate) fn command(&self) -> Arc<dyn Command> {
         let command = self.connection.create_command();
-        for middleware in &self.middlewares {
+        let extra = self.middleware_slot.lock().expect("middleware").clone();
+        let middlewares: Vec<_> = self.middlewares.iter().cloned().chain(extra).collect();
+        for middleware in &middlewares {
             command.add_middleware(middleware.clone());
         }
         command
@@ -438,4 +443,14 @@ impl IReadonlyRepository for ReadonlyRepository {
             .map(|(item, _)| item)
             .collect())
     }
+}
+
+pub(crate) fn push_middleware(
+    repo: &ReadonlyRepository,
+    middleware: Arc<dyn CommandMiddleware>,
+) {
+    repo.middleware_slot
+        .lock()
+        .expect("middleware")
+        .push(middleware);
 }

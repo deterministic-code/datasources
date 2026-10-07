@@ -1,6 +1,7 @@
 use crate::bulk_command::BulkCommand;
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command::Command;
+use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::crud_repository::{open_for_bulk, CRUDRepository};
 use crate::crud_repository_options::CRUDRepositoryOptions;
@@ -457,6 +458,10 @@ impl IReadonlyRepository for BulkCRUDRepository {
 impl ICRUDRepository for BulkCRUDRepository {
     fn id_names(&self) -> Vec<String> {
         self.crud.id_names()
+    }
+
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.crud.add_middleware(middleware);
     }
 
     async fn create(&self, item: &mut Row) -> Result<Row> {

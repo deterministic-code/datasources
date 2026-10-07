@@ -156,7 +156,13 @@ describe("generate", () => {
     expect(legacyRs).toContain('vec!["key".into()]');
     expect(contactRs).toContain("EnrichmentPropertyType::List");
     expect(contactRs).toContain('"addresses"');
+    expect(contactRs).toContain("pub struct ContactRepository");
+    expect(contactRs).toContain("pub address: Arc<CRUDRepository>");
+    expect(contactRs).toContain("pub phone: Arc<CRUDRepository>");
+    expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository>");
+    expect(contactRs).toContain("Arc::clone(&address)");
     expect(textOf(rust, "contact_group_repository.rs")).toContain("add_linked");
+    expect(textOf(rust, "contact_group_repository.rs")).toContain("pub struct ContactGroupRepository");
     expect(textOf(rust, "mod.rs")).toContain("pub mod contact_repository;");
   });
 

@@ -65,6 +65,7 @@ mod read_input;
 mod reader;
 mod readonly_enrichment_strategy;
 mod readonly_repository;
+pub(crate) use readonly_repository::push_middleware;
 mod readonly_repository_mapping_options;
 mod register;
 mod registered;

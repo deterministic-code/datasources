@@ -144,4 +144,8 @@ impl ICRUDRepository for ContactsService {
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
         self.contacts.read_single_by_id(id).await
     }
+
+    fn add_middleware(&self, middleware: Arc<dyn crate::CommandMiddleware>) {
+        self.contacts.add_middleware(middleware);
+    }
 }
