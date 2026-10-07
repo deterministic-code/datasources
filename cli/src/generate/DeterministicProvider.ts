@@ -1,0 +1,47 @@
+import { generate as csharpDatasourceTypes } from "@deterministic-code/csharp-generators/generate-datasource-types";
+import { generate as csharpViewTypes } from "@deterministic-code/csharp-generators/generate-view-types";
+import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
+import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
+import { generate as generateSql } from "@deterministic-code/generators-sql/generate-sql";
+import { generate as rustDatasourceTypes } from "@deterministic-code/rust-generators/generate-datasource-types";
+import { generate as rustViewTypes } from "@deterministic-code/rust-generators/generate-view-types";
+import { generate as typescriptDatasourceTypes } from "@deterministic-code/typescript-generators/generate-datasource-types";
+import { generate as typescriptViewTypes } from "@deterministic-code/typescript-generators/generate-view-types";
+import { DeterministicParser } from "@deterministic-code/deterministic-specifications-typescript/parser";
+import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
+import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
+import { csharpRepositories } from "./CSharpRepositories.ts";
+import { rustRepositories } from "./RustRepositories.ts";
+import { typescriptRepositories } from "./TypeScriptRepositories.ts";
+import { planRepositories } from "./RepositoryPlan.ts";
+
+const place = (dir: string, entries: GenerateEntry[]): GenerateEntry[] =>
+  entries.map((entry) => ({ ...entry, filename: `${dir}/${entry.filename}` }));
+
+const typePacks: Record<Dialect, { datasource: (ctx: GenerateContext) => Promise<GenerateEntry[]>; views: (ctx: GenerateContext) => Promise<GenerateEntry[]> }> = {
+  csharp: { datasource: csharpDatasourceTypes, views: csharpViewTypes },
+  typescript: { datasource: typescriptDatasourceTypes, views: typescriptViewTypes },
+  rust: { datasource: rustDatasourceTypes, views: rustViewTypes },
+};
+
+const repositoryPacks: Record<Dialect, typeof csharpRepositories> = {
+  csharp: csharpRepositories,
+  typescript: typescriptRepositories,
+  rust: rustRepositories,
+};
+
+const context = (request: GenerateRequest): GenerateContext => ({ reader: request.reader, settings: request.settings });
+
+export const deterministic: CodeGenerationProvider = {
+  name: "deterministic",
+  generateTypes: async (request) => {
+    const pack = typePacks[request.dialect];
+    const ctx = context(request);
+    return place(request.dialect, [...(await pack.datasource(ctx)), ...(await pack.views(ctx))]);
+  },
+  generateRepositories: async (request) => {
+    const spec = await DeterministicParser(request.reader).parse(request.settings);
+    return place(`${request.dialect}/repositories`, repositoryPacks[request.dialect](planRepositories(spec, request.dialect, request.settings)));
+  },
+  generateDatasource: async (request) => place("sql", await generateSql(context(request))),
+};

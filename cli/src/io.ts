@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { checkbox, input, select } from "@inquirer/prompts";
 import type { Prompter } from "./setup.ts";
 
@@ -13,7 +14,10 @@ export type Runner = (command: string, args: string[], cwd: string) => Promise<v
 
 export const nodeFs: Fs = {
   readFile: (path) => readFile(path, "utf8"),
-  writeFile: (path, text) => writeFile(path, text),
+  writeFile: async (path, text) => {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, text);
+  },
   readdir,
 };
 

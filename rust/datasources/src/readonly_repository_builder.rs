@@ -28,6 +28,7 @@ pub(crate) fn assemble(
         entity,
         entity_mapper,
         property_mappings,
+        read_properties,
         row_converter,
         object_converter,
         row_type_converters,
@@ -40,16 +41,23 @@ pub(crate) fn assemble(
     let property_mappings: Arc<dyn Mapper<String, String> + Send + Sync> =
         property_mappings.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
     let table = Mapper::map(&entity_mapper, entity);
-    let mut names: Vec<String> = row_converter
-        .as_ref()
-        .map(|converter| {
-            converter
-                .column_names()
-                .iter()
-                .map(|name| Mapper::map(&property_mappings, name.clone()))
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut names: Vec<String> = if read_properties.is_empty() {
+        row_converter
+            .as_ref()
+            .map(|converter| {
+                converter
+                    .column_names()
+                    .iter()
+                    .map(|name| Mapper::map(&property_mappings, name.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    } else {
+        read_properties
+            .into_iter()
+            .map(|name| Mapper::map(&property_mappings, name))
+            .collect()
+    };
     names.sort();
     let mappings = StatementMappers::new(Arc::clone(&entity_mapper), Arc::clone(&property_mappings));
     Ok(BuiltRepository {

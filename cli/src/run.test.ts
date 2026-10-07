@@ -1,3 +1,5 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
@@ -160,6 +162,27 @@ describe("run", () => {
     const mixed = deps(mem(["package.json", "Cargo.toml"]).fs);
     expect(await run(["add", "sqlite"], mixed, cwd)).toBe(1);
     expect(mixed.errors[0]).toMatch(/Multiple project types/);
+  });
+
+  it("copies a built rust plugin", async () => {
+    const root = await mkdtemp(join(tmpdir(), "datasources-cli-"));
+    const app = join(root, "app");
+    const library = join(app, "target", "debug", "datasources_sqlite.dll");
+    await mkdir(join(app, "target", "debug"), { recursive: true });
+    await writeFile(library, "plugin");
+    const platform = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { value: "win32" });
+    try {
+      const { fs } = mem(["Cargo.toml"], { [join(app, "Cargo.toml")]: "datasources-json = { version = \"0.1.0\" }\n" });
+      const io = deps(fs);
+      expect(await run(["add", "sqlite", "--cwd", app, "--ecosystem", "rust"], io)).toBe(0);
+      expect(io.logs.some((line) => line.includes("datasources_sqlite.dll"))).toBe(true);
+      Object.defineProperty(process, "platform", { value: "linux" });
+      expect(await run(["add", "sqlite", "--cwd", app, "--ecosystem", "rust"], deps(fs))).toBe(0);
+    } finally {
+      if (platform) Object.defineProperty(process, "platform", platform);
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("maps non-Error throws to a generic message", async () => {
