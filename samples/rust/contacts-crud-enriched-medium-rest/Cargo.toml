@@ -1,0 +1,13 @@
+[package]
+name = "contacts-crud-enriched-medium-rest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+datasources = { path = "../../../rust/datasources" }
+datasources-sqlite = { path = "../../../rust/providers/sqlite" }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints.rust]
+warnings = "deny"
