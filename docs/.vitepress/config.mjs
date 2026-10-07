@@ -87,6 +87,7 @@ export default withMermaid(defineConfig({
     },
   },
   vite: {
+    server: { port: 5174 },
     plugins: [dialectsVitePlugin(), watchToc()],
     optimizeDeps: {
       include: ["mermaid", "fastdom"],

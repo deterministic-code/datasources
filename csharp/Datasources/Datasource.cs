@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Dynamic;
 using System.Reflection;
 
 namespace Datasources;
@@ -6,11 +7,12 @@ namespace Datasources;
 public sealed class Datasource(
     string provider,
     IDriver driver,
-    IReadOnlyDictionary<string, string?>? options = null) : IDatasource
+    IReadOnlyDictionary<string, string?>? options = null) : DynamicObject, IDatasource
 {
     public static IDatasource Default => DatasourceFactory.Create();
     IConnection? _connection;
     public string Provider { get; } = provider;
+    public RepositoryFactory Repositories { get; } = new();
     IConnection DefaultConnection() => _connection ??= driver.Connection(options);
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public async Task<ICommand> CreateCommand(IConnection? connection = null)
@@ -29,10 +31,22 @@ public sealed class Datasource(
         CRUDRepositoryOptions<T>? options = null) where T : new() =>
         new CRUDRepository<T>(connection ?? DefaultConnection(), Apply(options));
 
+    public object CreateRepository(string typeName, IConnection? connection = null) =>
+        Repositories.Create(typeName, connection ?? DefaultConnection());
+
     public IReadonlyRepository<T> CreateReadonlyRepository<T>(
         IConnection? connection = null,
         ReadonlyRepositoryMappingOptions<T>? options = null) where T : new() =>
         new ReadonlyRepository<T>(connection ?? DefaultConnection(), Apply(options));
+
+    public object CreateReadonlyRepository(string typeName, IConnection? connection = null) =>
+        Repositories.CreateReadonly(typeName, connection ?? DefaultConnection());
+
+    public override bool TryGetMember(GetMemberBinder binder, out object? result)
+    {
+        result = Repositories.Access(binder.Name, DefaultConnection());
+        return true;
+    }
 
     CRUDRepositoryOptions<T> Apply<T>(CRUDRepositoryOptions<T>? options) where T : new()
     {

@@ -5,9 +5,11 @@ import type { IConnection } from "./IConnection.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
+import type { RepositoryFactory } from "./RepositoryFactory.ts";
 
 export interface IDatasource {
   readonly provider: string;
+  readonly repositories: RepositoryFactory;
   createConnection(): Promise<IConnection>;
   createCommand(connection?: IConnection): Promise<ICommand>;
   createRepository<T>(
@@ -15,9 +17,11 @@ export interface IDatasource {
     connection?: IConnection,
     options?: CRUDRepositoryOptions<T>,
   ): ICRUDRepository<T>;
+  createRepository(typeName: string, connection?: IConnection): ICRUDRepository;
   createReadonlyRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
     options?: ReadonlyRepositoryMappingOptions<T>,
   ): IReadonlyRepository<T>;
+  createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository;
 }

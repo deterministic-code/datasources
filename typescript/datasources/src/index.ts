@@ -35,6 +35,7 @@ export { ReadonlyRepository, untyped } from "./ReadonlyRepository.ts";
 export type { IRepositoryFactory } from "./IRepositoryFactory.ts";
 export type { ICRUDRepositoryFactory } from "./ICRUDRepositoryFactory.ts";
 export { RepositoryFactory } from "./RepositoryFactory.ts";
+export { RepositoryAccess } from "./RepositoryAccess.ts";
 export { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
 export type { IEnriched } from "./IEnriched.ts";
 export type { IRepositoryTree } from "./IRepositoryTree.ts";

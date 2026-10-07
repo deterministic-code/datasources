@@ -7,6 +7,7 @@ public sealed class MockDatasource : IDatasource
     public ICommand? Command { get; set; }
     public object? Repository { get; set; }
     public string Provider { get; }
+    public RepositoryFactory Repositories { get; } = new();
 
     public MockDatasource(string provider = "mock")
     {
@@ -35,4 +36,10 @@ public sealed class MockDatasource : IDatasource
         IConnection? connection = null,
         CRUDRepositoryOptions<T>? options = null) where T : new() =>
         Repository as ICRUDRepository<T> ?? new MockRepository<T>(connection ?? Connection);
+
+    public object CreateRepository(string typeName, IConnection? connection = null) =>
+        Repositories.Create(typeName, connection ?? Connection);
+
+    public object CreateReadonlyRepository(string typeName, IConnection? connection = null) =>
+        Repositories.CreateReadonly(typeName, connection ?? Connection);
 }

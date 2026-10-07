@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, MockConnection, MockDriver } from "./index.ts";
+import { Datasource, DatasourceFactory, MockConnection, MockDriver, MockRepository, RepositoryNotRegisteredError } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -24,6 +24,23 @@ afterAll(() => {
 });
 
 describe("Datasource", () => {
+  it("creates from plural name", () => {
+    const ds = new Datasource("mock", new MockDriver());
+    const connection = new MockConnection();
+    class Item {}
+    const crud = new MockRepository<Item>(connection, Item);
+    const read = new MockRepository<Item>(connection, Item);
+    ds.repositories.register("Contact", "contacts", () => crud, () => read);
+    const dsDynamic = ds as Datasource & { contacts: { create: () => unknown; createReadonly: () => unknown } };
+
+    expect(dsDynamic.contacts.create()).toBe(crud);
+    expect(dsDynamic.contacts.createReadonly()).toBe(read);
+    expect(ds.createRepository("Contact")).toBe(crud);
+    expect(ds.createReadonlyRepository("contacts")).toBe(read);
+    expect(() => (ds as Datasource & { missing: unknown }).missing).toThrow(RepositoryNotRegisteredError);
+    expect((ds as unknown as Record<symbol, unknown>)[Symbol.toStringTag]).toBeUndefined();
+  });
+
   it("create default from env settings", async () => {
     const ds = Datasource.default;
     const command = await ds.createCommand();

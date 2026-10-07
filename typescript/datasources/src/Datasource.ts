@@ -12,18 +12,32 @@ import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappi
 import { DatasourceError } from "./DatasourceError.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
+import { RepositoryFactory } from "./RepositoryFactory.ts";
+import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 import { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
 
 export class Datasource implements IDatasource {
   private connection?: IConnection;
+  readonly repositories = new RepositoryFactory();
 
   constructor(
     readonly provider: string,
     private readonly driver: IDriver,
     private readonly options?: DatasourceOptions,
-  ) {}
+  ) {
+    const self = this;
+    return new Proxy(this, {
+      get(target, prop, receiver) {
+        if (typeof prop !== "string" || Reflect.has(target, prop))
+          return Reflect.get(target, prop, receiver);
+        if (self.repositories.has(prop))
+          return self.repositories.access(prop, self.defaultConnection());
+        throw new RepositoryNotRegisteredError(prop);
+      },
+    });
+  }
 
   private defaultConnection = (): IConnection =>
     (this.connection ??= this.driver.connection(this.options));
@@ -72,25 +86,43 @@ export class Datasource implements IDatasource {
     };
   };
 
-  createRepository = <T>(
+  createRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
     options?: CRUDRepositoryOptions<T>,
-  ): ICRUDRepository<T> =>
-    new CRUDRepository(
+  ): ICRUDRepository<T>;
+  createRepository(typeName: string, connection?: IConnection): ICRUDRepository;
+  createRepository<T>(
+    typeOrName: Constructable<T> | string,
+    connection?: IConnection,
+    options?: CRUDRepositoryOptions<T>,
+  ): ICRUDRepository<T> {
+    if (typeof typeOrName === "string")
+      return this.repositories.create(typeOrName, connection ?? this.defaultConnection()) as ICRUDRepository<T>;
+    return new CRUDRepository(
       connection ?? this.defaultConnection(),
-      this.applyCrud(type, options),
+      this.applyCrud(typeOrName, options),
     );
+  }
 
-  createReadonlyRepository = <T>(
+  createReadonlyRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
     options?: ReadonlyRepositoryMappingOptions<T>,
-  ): IReadonlyRepository<T> =>
-    new ReadonlyRepository(
+  ): IReadonlyRepository<T>;
+  createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository;
+  createReadonlyRepository<T>(
+    typeOrName: Constructable<T> | string,
+    connection?: IConnection,
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): IReadonlyRepository<T> {
+    if (typeof typeOrName === "string")
+      return this.repositories.createReadonly(typeOrName, connection ?? this.defaultConnection()) as IReadonlyRepository<T>;
+    return new ReadonlyRepository(
       connection ?? this.defaultConnection(),
-      this.applyReadonly(type, options),
+      this.applyReadonly(typeOrName, options),
     );
+  }
 
   static create: (options?: DatasourceOptions) => IDatasource;
 

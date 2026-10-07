@@ -7,6 +7,7 @@ use crate::connection::Connection;
 use crate::converters::TypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource::Datasource;
+use crate::repository_factory::RepositoryFactory;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
@@ -20,6 +21,7 @@ pub struct MockDatasource {
     connection: Arc<dyn Connection>,
     command: Arc<dyn Command>,
     repository: Arc<dyn ICRUDRepository>,
+    repositories: RepositoryFactory,
 }
 
 impl MockDatasource {
@@ -29,6 +31,7 @@ impl MockDatasource {
             connection: MockConnection::new(),
             command: Arc::new(MockCommand::new()),
             repository: Arc::new(MockRepository::new()),
+            repositories: RepositoryFactory::new(),
         }
     }
 }
@@ -80,5 +83,9 @@ impl Datasource for MockDatasource {
         _options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository> {
         as_readonly(self.repository.clone())
+    }
+
+    fn repositories(&self) -> &RepositoryFactory {
+        &self.repositories
     }
 }

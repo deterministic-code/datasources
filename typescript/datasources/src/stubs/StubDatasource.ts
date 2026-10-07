@@ -5,11 +5,13 @@ import type { IDatasource } from "../IDatasource.ts";
 import type { IReadonlyRepository } from "../IReadonlyRepository.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
 import { DatasourceError } from "../DatasourceError.ts";
+import { RepositoryFactory } from "../RepositoryFactory.ts";
 import { StubCommand } from "./StubCommand.ts";
 import { StubConnection } from "./StubConnection.ts";
 import { StubRepository } from "./StubRepository.ts";
 export class StubDatasource implements IDatasource {
   private connection?: IConnection;
+  readonly repositories = new RepositoryFactory();
 
   constructor(readonly provider: string) {}
 
@@ -28,14 +30,31 @@ export class StubDatasource implements IDatasource {
     return new StubCommand(this.provider, connection);
   };
 
-  createRepository = <T>(
+  createRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
-  ): ICRUDRepository<T> =>
-    new StubRepository<T>(this.provider, connection ?? this.defaultConnection(), type);
+  ): ICRUDRepository<T>;
+  createRepository(typeName: string, connection?: IConnection): ICRUDRepository;
+  createRepository<T>(
+    typeOrName: Constructable<T> | string,
+    connection?: IConnection,
+  ): ICRUDRepository<T> {
+    if (typeof typeOrName === "string")
+      return this.repositories.create(typeOrName, connection ?? this.defaultConnection()) as ICRUDRepository<T>;
+    return new StubRepository<T>(this.provider, connection ?? this.defaultConnection(), typeOrName);
+  }
 
-  createReadonlyRepository = <T>(
+  createReadonlyRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
-  ): IReadonlyRepository<T> => this.createRepository(type, connection);
+  ): IReadonlyRepository<T>;
+  createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository;
+  createReadonlyRepository<T>(
+    typeOrName: Constructable<T> | string,
+    connection?: IConnection,
+  ): IReadonlyRepository<T> {
+    if (typeof typeOrName === "string")
+      return this.repositories.createReadonly(typeOrName, connection ?? this.defaultConnection()) as IReadonlyRepository<T>;
+    return this.createRepository(typeOrName, connection);
+  }
 }

@@ -10,6 +10,8 @@ use crate::driver::Driver;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
+use crate::repository_access::RepositoryAccess;
+use crate::repository_factory::RepositoryFactory;
 use crate::result::Result;
 use crate::value::Value;
 use async_trait::async_trait;
@@ -41,6 +43,7 @@ pub trait Datasource: Send + Sync {
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository>;
+    fn repositories(&self) -> &RepositoryFactory;
 }
 
 impl dyn Datasource {
@@ -60,6 +63,29 @@ impl dyn Datasource {
     ) -> Arc<dyn IReadonlyRepository> {
         let bound = self.bind_connection(connection);
         self.readonly_repository_from(bound, apply_readonly::<T>(self, options))
+    }
+
+    pub fn create_repository_by_name(
+        &self,
+        name: &str,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Result<Arc<dyn ICRUDRepository>> {
+        self.repositories()
+            .create_named(name, self.bind_connection(connection))
+    }
+
+    pub fn create_readonly_repository_by_name(
+        &self,
+        name: &str,
+        connection: Option<Arc<dyn Connection>>,
+    ) -> Result<Arc<dyn IReadonlyRepository>> {
+        self.repositories()
+            .create_readonly_named(name, self.bind_connection(connection))
+    }
+
+    pub fn access(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> RepositoryAccess {
+        self.repositories()
+            .access(name, self.bind_connection(connection))
     }
 }
 
@@ -114,6 +140,7 @@ pub struct BuiltDatasource {
     driver: Arc<dyn Driver>,
     options: Option<HashMap<String, String>>,
     connection: Mutex<Option<Arc<dyn Connection>>>,
+    repositories: RepositoryFactory,
 }
 
 impl BuiltDatasource {
@@ -127,6 +154,7 @@ impl BuiltDatasource {
             driver,
             options,
             connection: Mutex::new(None),
+            repositories: RepositoryFactory::new(),
         }
     }
 
@@ -188,5 +216,9 @@ impl Datasource for BuiltDatasource {
         options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository> {
         Arc::new(ReadonlyRepository::new(connection, options).expect("repository"))
+    }
+
+    fn repositories(&self) -> &RepositoryFactory {
+        &self.repositories
     }
 }
