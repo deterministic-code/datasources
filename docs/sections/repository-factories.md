@@ -106,6 +106,58 @@ create<T>(type: Constructable<T>): ICRUDRepository<T>
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
+##### register(typeName, pluralName, create, createReadonly)
+
+Registers CRUD and readonly factories by entity name and plural name.
+
+```typescript
+register(typeName: string, pluralName: string, create: (connection: IConnection) => ICRUDRepository, createReadonly: (connection: IConnection) => IReadonlyRepository): void
+```
+
+- `typeName` — entity name (`Contact`)
+- `pluralName` — plural name (`contacts`)
+- `create` — builds the CRUD repository from a [IConnection](./connection.md)
+- `createReadonly` — builds the readonly repository from a [IConnection](./connection.md)
+
+##### create(name, connection)
+
+Creates a registered CRUD repository by entity or plural name.
+
+```typescript
+create(name: string, connection: IConnection): ICRUDRepository
+```
+
+- `name` — entity name or plural name
+- `connection` — [IConnection](./connection.md) passed to the factory
+
+**Returns** [ICRUDRepository](./crud-repository.md)
+
+##### createReadonly(name, connection)
+
+Creates a registered read-only repository by entity or plural name.
+
+```typescript
+createReadonly(name: string, connection: IConnection): IReadonlyRepository
+```
+
+- `name` — entity name or plural name
+- `connection` — [IConnection](./connection.md) passed to the factory
+
+**Returns** [IReadonlyRepository](./readonly-repository.md)
+
+##### access(name, connection)
+
+Returns a [RepositoryAccess](./datasource.md#repositoryaccess) for a registered name.
+
+```typescript
+access(name: string, connection: IConnection): RepositoryAccess
+```
+
+- `name` — entity name or plural name
+- `connection` — [IConnection](./connection.md) used by `create` / `createReadonly`
+
+**Returns** [RepositoryAccess](./datasource.md#repositoryaccess)
+
 #### RepositoryNotRegisteredError
 
 ```typescript
@@ -220,6 +272,58 @@ public ICRUDRepository<T> Create<T>()
 ```
 
 **Returns** [ICRUDRepository](./crud-repository.md)`<T>`
+
+##### Register(typeName, pluralName, create, createReadonly)
+
+Registers CRUD and readonly factories by entity name and plural name.
+
+```csharp
+public void Register(string typeName, string pluralName, Func<IConnection, object> create, Func<IConnection, object> createReadonly)
+```
+
+- `typeName` — entity name (`Contact`)
+- `pluralName` — plural name (`Contacts`)
+- `create` — builds the CRUD repository from an [IConnection](./connection.md)
+- `createReadonly` — builds the readonly repository from an [IConnection](./connection.md)
+
+##### Create(name, connection)
+
+Creates a registered CRUD repository by entity or plural name.
+
+```csharp
+public object Create(string name, IConnection connection)
+```
+
+- `name` — entity name or plural name
+- `connection` — [IConnection](./connection.md) passed to the factory
+
+**Returns** `object`
+
+##### CreateReadonly(name, connection)
+
+Creates a registered read-only repository by entity or plural name.
+
+```csharp
+public object CreateReadonly(string name, IConnection connection)
+```
+
+- `name` — entity name or plural name
+- `connection` — [IConnection](./connection.md) passed to the factory
+
+**Returns** `object`
+
+##### Access(name, connection)
+
+Returns a [RepositoryAccess](./datasource.md#repositoryaccess) for a registered name.
+
+```csharp
+public RepositoryAccess Access(string name, IConnection connection)
+```
+
+- `name` — entity name or plural name
+- `connection` — [IConnection](./connection.md) used by `Create` / `CreateReadonly`
+
+**Returns** [RepositoryAccess](./datasource.md#repositoryaccess)
 
 #### RepositoryNotRegisteredException
 
@@ -345,6 +449,58 @@ pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 ```
 
 **Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
+
+##### register_named(type_name, plural_name, create, create_readonly)
+
+Registers CRUD and readonly factories by entity name and plural name.
+
+```rust
+pub fn register_named(&self, type_name: impl Into<String>, plural_name: impl Into<String>, create: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static, create_readonly: impl Fn(Arc<dyn Connection>) -> Arc<dyn IReadonlyRepository> + Send + Sync + 'static)
+```
+
+- `type_name` — entity name (`Contact`)
+- `plural_name` — plural name (`contacts`)
+- `create` — builds the CRUD repository from a [Connection](./connection.md)
+- `create_readonly` — builds the readonly repository from a [Connection](./connection.md)
+
+##### create_named(name, connection)
+
+Creates a registered CRUD repository by entity or plural name.
+
+```rust
+pub fn create_named(&self, name: &str, connection: Arc<dyn Connection>) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+- `name` — entity name or plural name
+- `connection` — [Connection](./connection.md) passed to the factory
+
+**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
+
+##### create_readonly_named(name, connection)
+
+Creates a registered read-only repository by entity or plural name.
+
+```rust
+pub fn create_readonly_named(&self, name: &str, connection: Arc<dyn Connection>) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+- `name` — entity name or plural name
+- `connection` — [Connection](./connection.md) passed to the factory
+
+**Returns** `Result<Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>>`
+
+##### access(name, connection)
+
+Returns a [RepositoryAccess](./datasource.md#repositoryaccess) for a registered name.
+
+```rust
+pub fn access(&self, name: &str, connection: Arc<dyn Connection>) -> RepositoryAccess
+```
+
+- `name` — entity name or plural name
+- `connection` — [Connection](./connection.md) used by `create` / `create_readonly`
+
+**Returns** [RepositoryAccess](./datasource.md#repositoryaccess)
 :::
 
 ## Remarks

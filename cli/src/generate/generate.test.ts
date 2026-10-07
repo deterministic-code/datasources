@@ -11,6 +11,7 @@ import type { Prompter } from "../setup.ts";
 import { deterministic } from "./DeterministicProvider.ts";
 import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
+import { pluralCamel, pluralPascal, pluralSnake } from "./RepositoryModel.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
@@ -65,6 +66,31 @@ const deps = (fs: Fs): Deps & { logs: string[] } => {
 };
 
 describe("generate", () => {
+  it("pluralizes the last word of an entity name", () => {
+    expect(pluralPascal("Contact")).toBe("Contacts");
+    expect(pluralPascal("ContactGroup")).toBe("ContactGroups");
+    expect(pluralPascal("Address")).toBe("Addresses");
+    expect(pluralPascal("Child")).toBe("Children");
+    expect(pluralPascal("Person")).toBe("People");
+    expect(pluralPascal("City")).toBe("Cities");
+    expect(pluralPascal("Box")).toBe("Boxes");
+    expect(pluralPascal("News")).toBe("News");
+    expect(pluralPascal("Sheep")).toBe("Sheep");
+    expect(pluralPascal("Contacts")).toBe("Contacts");
+    expect(pluralPascal("Cities")).toBe("Cities");
+    expect(pluralPascal("Boxes")).toBe("Boxes");
+    expect(pluralPascal("People")).toBe("People");
+    expect(pluralPascal("Church")).toBe("Churches");
+    expect(pluralPascal("Dish")).toBe("Dishes");
+    expect(pluralPascal("Buzz")).toBe("Buzzes");
+    expect(pluralPascal("Class")).toBe("Classes");
+    expect(pluralPascal("Bus")).toBe("Buses");
+    expect(pluralPascal("Fish")).toBe("Fish");
+    expect(pluralPascal("_")).toBe("_s");
+    expect(pluralSnake("contact_group")).toBe("contact_groups");
+    expect(pluralCamel("ContactGroup")).toBe("contactGroups");
+  });
+
   it("flattens settings", () => {
     expect(flattenSettings("settings:\n  backend:\n    datasources: sqlite\n  names:\n    - a\n    - b\n  on: false\n  empty: null\n")).toEqual({
       "backend.datasources": "sqlite",
@@ -164,6 +190,18 @@ describe("generate", () => {
     expect(textOf(rust, "contact_group_repository.rs")).toContain("add_linked");
     expect(textOf(rust, "contact_group_repository.rs")).toContain("pub struct ContactGroupRepository");
     expect(textOf(rust, "mod.rs")).toContain("pub mod contact_repository;");
+    expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
+    expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
+    expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
+    expect(textOf(typescript, "repository-registry.ts")).toContain('"Contact", "contacts"');
+    expect(textOf(typescript, "repository-registry.ts")).toContain('"ContactGroup", "contactGroups"');
+    expect(textOf(typescript, "contact-repository.ts")).toContain("createReadonly");
+    expect(textOf(rust, "repository_registry.rs")).toContain('"Contact"');
+    expect(textOf(rust, "repository_registry.rs")).toContain('"contacts"');
+    expect(textOf(rust, "repository_registry.rs")).toContain('"contact_groups"');
+    expect(textOf(rust, "repository_registry.rs")).toContain("fn contacts(&self)");
+    expect(textOf(rust, "repository_registry.rs")).toContain("fn contact_groups(&self)");
+    expect(textOf(rust, "mod.rs")).toContain("pub mod repository_registry;");
   });
 
   it("emits a typescript Contact type and sqlite tables", async () => {

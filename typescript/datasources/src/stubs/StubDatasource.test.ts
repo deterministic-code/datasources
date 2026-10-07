@@ -91,5 +91,9 @@ describe("StubDatasource", () => {
 
     const named = new StubDatasource("yaml");
     await expect(named.createCommand()).rejects.toThrow(ProviderNotImplementedError);
+    const stub = new StubRepository(named.provider, provided);
+    named.repositories.register("Item", "items", () => stub, () => stub);
+    expect(named.createRepository("items")).toBe(stub);
+    expect(named.createReadonlyRepository("Item")).toBe(stub);
   });
 });

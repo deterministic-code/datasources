@@ -1,0 +1,7 @@
+const ds = new Datasource("mock", new MockDriver());
+const connection = new MockConnection();
+class Item {}
+const crud = new MockRepository<Item>(connection, Item);
+const read = new MockRepository<Item>(connection, Item);
+ds.repositories.register("Contact", "contacts", () => crud, () => read);
+const dsDynamic = ds as Datasource & { contacts: { create: () => unknown; createReadonly: () => unknown } };

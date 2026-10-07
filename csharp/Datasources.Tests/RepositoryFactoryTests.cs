@@ -35,6 +35,21 @@ public class RepositoryFactoryTests
     }
 
     [Fact]
+    public void RegistersAndCreatesByName()
+    {
+        var factory = new RepositoryFactory();
+        var connection = new StubConnection("memory");
+        var crud = new StubRepository<Item>("crud", connection);
+        var read = new StubRepository<Item>("read", connection);
+        factory.Register("Contact", "Contacts", _ => crud, _ => read);
+
+        Assert.Same(crud, factory.Create("Contact", connection));
+        Assert.Same(read, factory.CreateReadonly("Contacts", connection));
+        Assert.Same(crud, factory.Access("Contacts", connection).Create());
+        Assert.Same(read, factory.Access("Contact", connection).CreateReadonly());
+    }
+
+    [Fact]
     public void MissingThrows()
     {
         var factory = new RepositoryFactory();

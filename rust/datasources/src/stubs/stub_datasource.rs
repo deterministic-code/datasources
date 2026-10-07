@@ -6,6 +6,7 @@ use crate::connection::Connection;
 use crate::converters::TypeConverter;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource::Datasource;
+use crate::repository_factory::RepositoryFactory;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
@@ -16,12 +17,14 @@ use std::sync::Arc;
 
 pub struct StubDatasource {
     provider: String,
+    repositories: RepositoryFactory,
 }
 
 impl StubDatasource {
     pub fn new(provider: impl Into<String>) -> Self {
         Self {
             provider: provider.into(),
+            repositories: RepositoryFactory::new(),
         }
     }
 
@@ -82,5 +85,9 @@ impl Datasource for StubDatasource {
         _options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository> {
         as_readonly(Arc::new(StubRepository::new(self.provider.clone())))
+    }
+
+    fn repositories(&self) -> &RepositoryFactory {
+        &self.repositories
     }
 }

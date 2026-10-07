@@ -40,8 +40,23 @@ describe("RepositoryFactory", () => {
     }
   });
 
+  it("registers and creates by name", () => {
+    const factory = new RepositoryFactory();
+    const connection = new MockConnection();
+    const crud = new MockRepository<Item>(connection, Item);
+    const read = emptyReadonly();
+    factory.register("Contact", "contacts", () => crud, () => read);
+
+    expect(factory.create("Contact", connection)).toBe(crud);
+    expect(factory.createReadonly("contacts", connection)).toBe(read);
+    expect(factory.access("contacts", connection).create()).toBe(crud);
+    expect(factory.access("Contact", connection).createReadonly()).toBe(read);
+  });
+
   it("throws when missing", () => {
     const factory = new RepositoryFactory();
     expect(() => factory.create(Item)).toThrow(RepositoryNotRegisteredError);
+    expect(() => factory.create("Contacts", new MockConnection())).toThrow(RepositoryNotRegisteredError);
+    expect(() => factory.createReadonly("Contacts", new MockConnection())).toThrow(RepositoryNotRegisteredError);
   });
 });

@@ -1,13 +1,21 @@
+use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use crate::repository_access::RepositoryAccess;
 use crate::result::Result;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+struct Named {
+    create: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync>,
+    create_readonly: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn IReadonlyRepository> + Send + Sync>,
+}
+
 struct Maps {
     readonly: HashMap<TypeId, Arc<dyn IReadonlyRepository>>,
     crud: HashMap<TypeId, Arc<dyn ICRUDRepository>>,
+    named: HashMap<String, Named>,
 }
 
 pub trait ReadonlyRepositoryFactory: Send + Sync {
@@ -20,8 +28,9 @@ pub trait CRUDRepositoryFactory: Send + Sync {
     fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>;
 }
 
+#[derive(Clone)]
 pub struct RepositoryFactory {
-    maps: Mutex<Maps>,
+    maps: Arc<Mutex<Maps>>,
 }
 
 impl Default for RepositoryFactory {
@@ -33,10 +42,11 @@ impl Default for RepositoryFactory {
 impl RepositoryFactory {
     pub fn new() -> Self {
         Self {
-            maps: Mutex::new(Maps {
+            maps: Arc::new(Mutex::new(Maps {
                 readonly: HashMap::new(),
                 crud: HashMap::new(),
-            }),
+                named: HashMap::new(),
+            })),
         }
     }
 
@@ -48,6 +58,25 @@ impl RepositoryFactory {
         maps.crud.insert(type_id, repository);
     }
 
+    pub fn register_named(
+        &self,
+        type_name: impl Into<String>,
+        plural_name: impl Into<String>,
+        create: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static,
+        create_readonly: impl Fn(Arc<dyn Connection>) -> Arc<dyn IReadonlyRepository>
+            + Send
+            + Sync
+            + 'static,
+    ) {
+        let named = Named {
+            create: Arc::new(create),
+            create_readonly: Arc::new(create_readonly),
+        };
+        let mut maps = self.lock();
+        maps.named.insert(type_name.into(), named.clone_entry());
+        maps.named.insert(plural_name.into(), named);
+    }
+
     pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>> {
         let type_id = TypeId::of::<T>();
         let repository = {
@@ -57,8 +86,47 @@ impl RepositoryFactory {
         repository.ok_or_else(|| missing(&short_name::<T>()))
     }
 
+    pub fn create_named(
+        &self,
+        name: &str,
+        connection: Arc<dyn Connection>,
+    ) -> Result<Arc<dyn ICRUDRepository>> {
+        let create = {
+            let maps = self.lock();
+            maps.named.get(name).map(|named| Arc::clone(&named.create))
+        };
+        Ok((create.ok_or_else(|| missing_named(name))?)(connection))
+    }
+
+    pub fn create_readonly_named(
+        &self,
+        name: &str,
+        connection: Arc<dyn Connection>,
+    ) -> Result<Arc<dyn IReadonlyRepository>> {
+        let create = {
+            let maps = self.lock();
+            maps.named
+                .get(name)
+                .map(|named| Arc::clone(&named.create_readonly))
+        };
+        Ok((create.ok_or_else(|| missing_named(name))?)(connection))
+    }
+
+    pub fn access(&self, name: &str, connection: Arc<dyn Connection>) -> RepositoryAccess {
+        RepositoryAccess::new(self.clone(), name, connection)
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Maps> {
         self.maps.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+impl Named {
+    fn clone_entry(&self) -> Self {
+        Self {
+            create: Arc::clone(&self.create),
+            create_readonly: Arc::clone(&self.create_readonly),
+        }
     }
 }
 
@@ -100,10 +168,14 @@ fn missing(name: &str) -> DatasourceError {
     DatasourceError::message(format!("CRUDRepository \"{name}\" is not registered"))
 }
 
+fn missing_named(name: &str) -> DatasourceError {
+    DatasourceError::message(format!("Repository \"{name}\" is not registered"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stubs::StubRepository;
+    use crate::stubs::{StubConnection, StubRepository};
 
     struct Item;
 
@@ -143,6 +215,38 @@ mod tests {
         match factory.create::<Item>() {
             Ok(_) => panic!("expected missing type"),
             Err(err) => assert_eq!(err.to_string(), "CRUDRepository \"Item\" is not registered"),
+        }
+    }
+
+    #[test]
+    fn registers_and_creates_by_name() {
+        let factory = RepositoryFactory::new();
+        factory.register_named(
+            "Contact",
+            "contacts",
+            |_| Arc::new(StubRepository::typed::<Item>("crud")),
+            |_| as_readonly(Arc::new(StubRepository::typed::<Item>("read"))),
+        );
+        let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
+        let created = factory
+            .create_named("contacts", Arc::clone(&connection))
+            .unwrap();
+        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        let readonly = factory
+            .create_readonly_named("Contact", connection)
+            .unwrap();
+        assert_eq!(readonly.entity_type(), TypeId::of::<Item>());
+    }
+
+    #[test]
+    fn missing_name_throws() {
+        let factory = RepositoryFactory::new();
+        let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
+        match factory.create_named("Contacts", connection) {
+            Ok(_) => panic!("expected missing name"),
+            Err(err) => {
+                assert_eq!(err.to_string(), "Repository \"Contacts\" is not registered")
+            }
         }
     }
 }

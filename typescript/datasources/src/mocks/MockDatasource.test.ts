@@ -32,5 +32,9 @@ describe("MockDatasource", () => {
 
     const named = new MockDatasource("custom");
     expect(named.provider).toBe("custom");
+    const customRepo = new MockRepository(named.connection);
+    named.repositories.register("Item", "items", () => customRepo, () => customRepo);
+    expect(named.createRepository("items")).toBe(customRepo);
+    expect(named.createReadonlyRepository("Item")).toBe(customRepo);
   });
 });

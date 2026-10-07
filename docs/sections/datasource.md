@@ -38,6 +38,16 @@ static get default(): IDatasource
 
 **Returns** [IDatasource](#idatasource)
 
+##### repositories
+
+Named repository catalog for this datasource.
+
+```typescript
+readonly repositories: RepositoryFactory
+```
+
+**Returns** [RepositoryFactory](./repository-factories.md#repositoryfactory)
+
 **Methods**
 
 ##### create(options?)
@@ -67,6 +77,16 @@ Registered provider name.
 ```typescript
 readonly provider: string
 ```
+
+##### repositories
+
+Named repository catalog for this datasource.
+
+```typescript
+readonly repositories: RepositoryFactory
+```
+
+**Returns** [RepositoryFactory](./repository-factories.md#repositoryfactory)
 
 **Methods**
 
@@ -119,6 +139,62 @@ createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, op
 - `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
+
+##### createRepository(typeName, connection?)
+
+Creates a registered CRUD repository by entity or plural name.
+
+```typescript
+createRepository(typeName: string, connection?: IConnection): ICRUDRepository
+```
+
+- `typeName` — entity name (`Contact`) or plural name (`contacts`)
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
+
+**Returns** [ICRUDRepository](./crud-repository.md)
+
+##### createReadonlyRepository(typeName, connection?)
+
+Creates a registered read-only repository by entity or plural name.
+
+```typescript
+createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository
+```
+
+- `typeName` — entity name (`Contact`) or plural name (`contacts`)
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
+
+**Returns** [IReadonlyRepository](./readonly-repository.md)
+
+#### RepositoryAccess
+
+Handle returned by a plural name on [Datasource](#datasource). `create` builds the generated CRUD repository. `createReadonly` builds the readonly repository.
+
+```typescript
+class RepositoryAccess
+```
+
+**Methods**
+
+##### create()
+
+Creates the registered CRUD repository.
+
+```typescript
+create(): ICRUDRepository
+```
+
+**Returns** [ICRUDRepository](./crud-repository.md)
+
+##### createReadonly()
+
+Creates the registered read-only repository.
+
+```typescript
+createReadonly(): IReadonlyRepository
+```
+
+**Returns** [IReadonlyRepository](./readonly-repository.md)
 
 #### DatasourceOptions
 
@@ -179,6 +255,16 @@ public static IDatasource Default { get; }
 
 **Returns** [IDatasource](#idatasource)
 
+##### Repositories
+
+Named repository catalog for this datasource.
+
+```csharp
+public RepositoryFactory Repositories { get; }
+```
+
+**Returns** [RepositoryFactory](./repository-factories.md#repositoryfactory)
+
 #### IDatasource
 
 ```csharp
@@ -194,6 +280,16 @@ Registered provider name.
 ```csharp
 string Provider { get; }
 ```
+
+##### Repositories
+
+Named repository catalog for this datasource.
+
+```csharp
+RepositoryFactory Repositories { get; }
+```
+
+**Returns** [RepositoryFactory](./repository-factories.md#repositoryfactory)
 
 **Methods**
 
@@ -244,6 +340,62 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 - `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
+
+##### CreateRepository(typeName, connection)
+
+Creates a registered CRUD repository by entity or plural name.
+
+```csharp
+object CreateRepository(string typeName, IConnection? connection = null)
+```
+
+- `typeName` — entity name (`Contact`) or plural name (`Contacts`)
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
+
+**Returns** `object` (the generated repository)
+
+##### CreateReadonlyRepository(typeName, connection)
+
+Creates a registered read-only repository by entity or plural name.
+
+```csharp
+object CreateReadonlyRepository(string typeName, IConnection? connection = null)
+```
+
+- `typeName` — entity name (`Contact`) or plural name (`Contacts`)
+- `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
+
+**Returns** `object` (the generated readonly repository)
+
+#### RepositoryAccess
+
+Handle returned by a plural name on `dynamic` [Datasource](#datasource). `Create` builds the generated CRUD repository. `CreateReadonly` builds the readonly repository.
+
+```csharp
+public sealed class RepositoryAccess
+```
+
+**Methods**
+
+##### Create()
+
+Creates the registered CRUD repository.
+
+```csharp
+public object Create()
+```
+
+**Returns** `object`
+
+##### CreateReadonly()
+
+Creates the registered read-only repository.
+
+```csharp
+public object CreateReadonly()
+```
+
+**Returns** `object`
 
 #### DatasourceOptions
 
@@ -376,6 +528,85 @@ fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Opt
 
 **Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
 
+##### repositories()
+
+Named repository catalog for this datasource.
+
+```rust
+fn repositories(&self) -> &RepositoryFactory
+```
+
+**Returns** `&`[RepositoryFactory](./repository-factories.md#repositoryfactory)
+
+##### create_repository_by_name(name, connection)
+
+Creates a registered CRUD repository by entity or plural name.
+
+```rust
+fn create_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+- `name` — entity name (`Contact`) or plural name (`contacts`)
+- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
+
+**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
+
+##### create_readonly_repository_by_name(name, connection)
+
+Creates a registered read-only repository by entity or plural name.
+
+```rust
+fn create_readonly_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+- `name` — entity name (`Contact`) or plural name (`contacts`)
+- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
+
+**Returns** `Result<Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>>`
+
+##### access(name, connection)
+
+Returns a [RepositoryAccess](#repositoryaccess) for a registered name.
+
+```rust
+fn access(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> RepositoryAccess
+```
+
+- `name` — entity name or plural name
+- `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
+
+**Returns** [RepositoryAccess](#repositoryaccess)
+
+#### RepositoryAccess
+
+Handle returned by a generated plural method such as `contacts()`. `create` builds the generated CRUD repository. `create_readonly` builds the readonly repository.
+
+```rust
+pub struct RepositoryAccess
+```
+
+**Methods**
+
+##### create()
+
+Creates the registered CRUD repository.
+
+```rust
+pub fn create(&self) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+**Returns** `Result<Arc<dyn `[ICRUDRepository](./crud-repository.md)`>>`
+
+##### create_readonly()
+
+Creates the registered read-only repository.
+
+```rust
+pub fn create_readonly(&self) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+**Returns** `Result<Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`>>`
+
 #### DatasourceOptions
 
 ```rust
@@ -420,6 +651,8 @@ Load the provider cdylib.
 
 {{Reset|reset|reset}} clears the registry. Use it in tests.
 
+After `generate repositories`, call the generated `Register` on {{Repositories|repositories|repositories()}}. A registered plural name then builds that repository: C# `dynamic` `Contacts.Create()`, TypeScript `contacts.create()`, Rust `contacts().create()`. {{CreateRepository|createRepository|create_repository_by_name}} takes the entity or plural name as a string.
+
 See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
 
 ## Examples
@@ -443,6 +676,17 @@ See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [
 ```rust rust/datasources/src/tests/datasource_factory.rs#default_from_environment
 ```
 ```typescript typescript/datasources/src/DatasourceFactory.test.ts#default-from-environment
+```
+:::
+
+### Create from a plural name
+
+::: example
+```csharp csharp/Datasources.Tests/DatasourceTests.cs#CreatesFromPluralName
+```
+```rust rust/datasources/src/tests/datasource.rs#creates_from_plural_name
+```
+```typescript typescript/datasources/src/Datasource.test.ts#creates-from-plural-name
 ```
 :::
 
