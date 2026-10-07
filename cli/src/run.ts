@@ -18,6 +18,7 @@ import {
   npmProviders,
   type NpmManifest,
 } from "./installed.ts";
+import { applyGenerate } from "./generate/applyGenerate.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { promptSetup, type Prompter, type SetupAnswers } from "./setup.ts";
 
@@ -40,14 +41,13 @@ export const run = async (argv: string[], deps: Deps, cwd = "."): Promise<number
   }
 };
 
-const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<void> =>
-  command.kind === "help"
-    ? deps.log(help.trimEnd())
-    : command.kind === "setup"
-      ? applySetup(flags, deps)
-      : command.kind === "add"
-        ? applyAddRemove(flags, deps, requireProviders(needNames(command.providers, "add")), [])
-        : applyAddRemove(flags, deps, [], requireProviders(needNames(command.providers, "remove")));
+const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<void> => {
+  if (command.kind === "help") return deps.log(help.trimEnd());
+  if (command.kind === "setup") return applySetup(flags, deps);
+  if (command.kind === "add") return applyAddRemove(flags, deps, requireProviders(needNames(command.providers, "add")), []);
+  if (command.kind === "remove") return applyAddRemove(flags, deps, [], requireProviders(needNames(command.providers, "remove")));
+  return applyGenerate(command, flags, deps);
+};
 
 const needNames = (names: string[], verb: string): string[] =>
   names.length

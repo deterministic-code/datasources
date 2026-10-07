@@ -6,6 +6,7 @@
 npx @datasources/cli setup
 npx @datasources/cli add sqlite
 npx @datasources/cli remove sqlite
+npx @datasources/cli generate all --dialect typescript
 ```
 
 Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
@@ -53,6 +54,24 @@ npx @datasources/cli remove postgres
 | `--cwd <dir>` | Consumer project directory (default: `.`) |
 | `--ecosystem ts\|rust\|csharp` | Required when more than one project type exists |
 | `--dry-run` | Print package-manager commands without running them |
+
+## Generate
+
+`generate` reads a deterministic project and writes one language dialect. The word after `generate` is `all`, `types`, `repositories`, or `datasource`. `--dialect` is `csharp`, `typescript`, or `rust`. SQL dialects come from `settings.yaml` (`backend.datasources`, default `sqlite`).
+
+```sh
+npx @datasources/cli generate all --dialect typescript --input ./deterministic --output ./generated
+npx @datasources/cli generate repositories --dialect csharp
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--dialect csharp\|typescript\|rust` | Language of the generated types and repositories |
+| `--provider <name>` | Spec provider (default: `deterministic`) |
+| `--input <dir>` | Deterministic project (default: `./deterministic`) |
+| `--output <dir>` | Generated files (default: `./generated`) |
+
+`types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
 ## .env
 

@@ -31,4 +31,36 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["--ecosystem=go"])).toThrow(/Unknown --ecosystem/);
     expect(() => parseArgs(["wat"])).toThrow(/Unknown command: wat/);
   });
+
+  it("parses generate", () => {
+    expect(parseArgs(["generate", "all", "--dialect", "rust", "--provider", "deterministic", "--input", "in", "--output", "out"]).command).toEqual({
+      kind: "generate",
+      target: "all",
+      dialect: "rust",
+      provider: "deterministic",
+      input: "in",
+      output: "out",
+    });
+    expect(parseArgs(["generate", "types", "--dialect=csharp", "--provider=deterministic", "--input=in", "--output=out"]).command).toMatchObject({
+      target: "types",
+      dialect: "csharp",
+      provider: "deterministic",
+      input: "in",
+      output: "out",
+    });
+    expect(parseArgs(["generate", "repositories", "--dialect", "typescript"]).command).toMatchObject({
+      target: "repositories",
+      dialect: "typescript",
+      provider: "deterministic",
+      input: "deterministic",
+      output: "generated",
+    });
+    expect(parseArgs(["generate", "datasource", "--dialect", "typescript"]).command).toMatchObject({ target: "datasource" });
+    expect(() => parseArgs(["generate"])).toThrow(/Usage: datasources generate/);
+    expect(() => parseArgs(["generate", "nope", "--dialect", "typescript"])).toThrow(/Usage: datasources generate/);
+    expect(() => parseArgs(["generate", "all", "extra", "--dialect", "typescript"])).toThrow(/Usage: datasources generate/);
+    expect(() => parseArgs(["generate", "all"])).toThrow(/--dialect is required/);
+    expect(() => parseArgs(["generate", "all", "--dialect"])).toThrow(/Missing value for --dialect/);
+    expect(help).toMatch(/generate <all\|types\|repositories\|datasource>/);
+  });
 });
