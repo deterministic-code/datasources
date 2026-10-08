@@ -1,0 +1,87 @@
+now: "2026-09-22T00:00:00.000Z"
+steps:
+  - method: POST
+    path: /contacts/
+    saveId: true
+    body:
+      firstName: Ada
+      lastName: Lovelace
+      email: ada@example.com
+      contactSourceName: Manual
+      addresses:
+        - line1: 12 Analytical Engine
+          city: London
+          addressTypeName: Home
+      phones:
+        - number: "555-0100"
+          label: Mobile
+          phoneTypeName: Mobile
+      settings:
+        theme: dark
+      prefs:
+        home:
+          locale: en-GB
+          timezone: Europe/London
+  - method: POST
+    path: /contacts
+    body:
+      firstName: Grace
+      lastName: Hopper
+      uuid: "22222222-2222-2222-2222-222222222222"
+      created: "2024-01-02T00:00:00Z"
+      contactSourceName: Imported
+      addresses:
+        - uuid: "33333333-3333-3333-3333-333333333333"
+          created: "2024-01-02T00:00:00Z"
+          line1: "1"
+          city: NY
+          addressTypeName: Home
+      phones:
+        - uuid: "44444444-4444-4444-4444-444444444444"
+          created: "2024-01-02T00:00:00Z"
+          number: "1"
+          phoneTypeName: Mobile
+  - method: GET
+    path: /contacts/?firstName=Ada&lastName=Lovelace&id=$id
+  - method: PUT
+    path: /contacts/?id=$id
+    body:
+      firstName: Ada
+      lastName: Byron
+      email: null
+      contactSourceName: Manual
+      addresses:
+        - line1: 1 Strand
+          city: London
+          addressTypeName: Home
+      phones: []
+      settings:
+        density: compact
+      prefs:
+        work:
+          locale: en-US
+          timezone: America/New_York
+  - method: DELETE
+    path: /contacts/?id=$id
+  - method: GET
+    path: /contacts/
+  - method: POST
+    path: /legacy_contacts/
+    body:
+      key: ada
+      firstName: Ada
+      lastName: Lovelace
+      email: ada@example.com
+      importedAt: "2024-06-01T00:00:00Z"
+  - method: GET
+    path: /legacy_contacts/?firstName=Ada
+  - method: PUT
+    path: /legacy_contacts/?key=ada
+    body:
+      firstName: Augusta
+      lastName: Lovelace
+      email: ""
+  - method: DELETE
+    path: /legacy_contacts/?key=ada
+  - method: GET
+    path: /legacy_contacts

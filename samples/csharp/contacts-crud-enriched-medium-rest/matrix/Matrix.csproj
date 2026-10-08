@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CollectCoverage>false</CollectCoverage>
+    <NoWarn>CS8618</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Clock.cs" />
+    <Compile Include="..\Api.cs" />
+    <Compile Include="$(E2E_MATRIX_GENERATED)\csharp\**\*.cs" Condition="'$(E2E_MATRIX_GENERATED)' != ''" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\csharp\Datasources\Datasources.csproj" />
+    <ProjectReference Include="..\..\..\..\csharp\Providers\Sqlite\Datasources.Sqlite.csproj" />
+    <ProjectReference Include="..\..\..\..\csharp\Providers\Sqlite.Microsoft\Datasources.Sqlite.Microsoft.csproj" />
+    <ProjectReference Include="..\..\..\..\csharp\Providers\Mysql\Datasources.Mysql.csproj" />
+    <ProjectReference Include="..\..\..\..\csharp\Providers\Postgres\Datasources.Postgres.csproj" />
+  </ItemGroup>
+</Project>
