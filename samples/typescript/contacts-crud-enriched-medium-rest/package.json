@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage --exclude tests/**/*.e2e.test.ts",
+    "test:e2e": "vitest run tests/*.e2e.test.ts"
   },
   "dependencies": {
     "@datasources/core": "file:../../../typescript/datasources",
