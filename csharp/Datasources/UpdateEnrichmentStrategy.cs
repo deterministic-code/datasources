@@ -9,26 +9,29 @@ public abstract class UpdateEnrichmentStrategy<T>
 
     public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent);
 
-    protected static List<object> RelatedIds<TParent>(TParent parent, Enrichment enrichment)
+    protected static List<Value> RelatedIds<TParent>(TParent parent, Enrichment enrichment)
     {
-        var ids = new List<object>();
+        var ids = new List<Value>();
         var seen = new HashSet<string>();
         foreach (var related in Payload(parent, enrichment.DestinationProperty))
         {
-            if (Get(related, enrichment.RelatedKey) is not object id || Missing(id))
+            var id = Value.From(Get(related, enrichment.RelatedKey));
+            if (Missing(id))
                 throw new DatasourceException($"{enrichment.DestinationProperty} requires \"{enrichment.RelatedKey}\"");
-            if (seen.Add(id.ToString() ?? ""))
+            if (seen.Add(Text(id)))
                 ids.Add(id);
         }
         return ids;
     }
 
-    protected static object Required<TParent>(TParent parent, string name, string into) =>
-        Get(parent, name) is { } key && !Missing(key)
+    protected static Value Required<TParent>(TParent parent, string name, string into) =>
+        Value.From(Get(parent, name)) is var key && !Missing(key)
             ? key
             : throw new DatasourceException($"{into} requires \"{name}\"");
 
-    protected static bool Missing(object? value) => value is null or 0 or 0L or 0u or "";
+    protected static bool Missing(Value? value) => value is null or Value.Null or Value.Int(0) or Value.Text("");
+
+    protected static string Text(Value value) => value.ToObject()?.ToString() ?? "";
 
     protected static IReadOnlyList<object> Payload<TParent>(TParent parent, string into) =>
         Get(parent, into) switch

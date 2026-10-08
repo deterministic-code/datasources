@@ -16,7 +16,7 @@ public sealed class CascadeDeleteUpdateEnrichmentStrategy<T> : UpdateEnrichmentS
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
         foreach (var row in await DeleteEnrichmentStrategy<T>.LoadLinks(writer, association.Parent, parentKey))
-            await writer.Delete(row, DeleteEnrichmentStrategy<T>.LinkWhere(association, parentKey, Get(row, association.Related)));
+            await writer.Delete(row, DeleteEnrichmentStrategy<T>.LinkWhere(association, parentKey, Value.From(Get(row, association.Related))));
         await create.CreateLinked(writer, enrichment, parent);
     }
 }

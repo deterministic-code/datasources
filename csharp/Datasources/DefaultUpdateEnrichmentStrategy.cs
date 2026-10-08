@@ -27,20 +27,20 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
         var existing = await DeleteEnrichmentStrategy<T>.LoadLinks(writer, association.Parent, parentKey);
         var wanted = RelatedIds(parent, enrichment);
-        var keep = wanted.Select(id => id.ToString()).ToHashSet();
+        var keep = wanted.Select(Text).ToHashSet();
         foreach (var row in existing)
         {
-            var id = Get(row, association.Related);
-            if (id?.ToString() is { } key && keep.Contains(key)) continue;
+            var id = Value.From(Get(row, association.Related));
+            if (id is not Value.Null && keep.Contains(Text(id))) continue;
             await writer.Delete(row, DeleteEnrichmentStrategy<T>.LinkWhere(association, parentKey, id));
         }
         foreach (var id in wanted)
         {
-            if (existing.Any(row => Get(row, association.Related)?.ToString() == id.ToString()))
+            if (existing.Any(row => Text(Value.From(Get(row, association.Related))) == Text(id)))
                 continue;
             var row = writer.New();
-            Set(row, association.Parent, parentKey);
-            Set(row, association.Related, id);
+            Set(row, association.Parent, parentKey.ToObject());
+            Set(row, association.Related, id.ToObject());
             await writer.Create(row);
         }
     }

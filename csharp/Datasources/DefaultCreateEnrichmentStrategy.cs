@@ -18,8 +18,8 @@ public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrateg
         foreach (var id in RelatedIds(parent, enrichment))
         {
             var row = writer.New();
-            Set(row, association.Parent, parentKey);
-            Set(row, association.Related, id);
+            Set(row, association.Parent, parentKey.ToObject());
+            Set(row, association.Related, id.ToObject());
             await writer.Create(row);
         }
     }

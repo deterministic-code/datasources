@@ -31,18 +31,18 @@ public abstract class DeleteEnrichmentStrategy<T>
     internal static async Task<List<object>> LoadLinks(
         IChildPersist writer,
         string column,
-        object key)
+        Value key)
     {
         var items = new List<object>();
-        await foreach (var item in writer.Read(new Where(new Operator.Equals(column, Value.From(key)))))
+        await foreach (var item in writer.Read(new Where(new Operator.Equals(column, key))))
             items.Add(item);
         return items;
     }
 
-    internal static IWhere LinkWhere(Association association, object parentKey, object? relatedKey) =>
+    internal static IWhere LinkWhere(Association association, Value parentKey, Value relatedKey) =>
         new Where(new Operator.And(
-            new Operator.Equals(association.Parent, Value.From(parentKey)),
-            new Operator.Equals(association.Related, Value.From(relatedKey))));
+            new Operator.Equals(association.Parent, parentKey),
+            new Operator.Equals(association.Related, relatedKey)));
 
     protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
 
