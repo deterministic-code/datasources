@@ -20,6 +20,7 @@ import {
   CreateTableStatement,
   InsertStatement,
   Native,
+  SelectInsertedIdStatement,
   SelectStatement,
   UpdateStatement,
   WhereText,
@@ -300,12 +301,12 @@ describe("JsonCommand and CRUDRepository", () => {
     ).toBe(0);
     expect(
       (await repo.update({ name: "C" }, new WhereText('{"id":2}'))).rowsAffected,
-    ).toBe(0);
+    ).toBe(1);
     expect((await repo.delete({ id: 1 })).rowsAffected).toBe(1);
     expect(
       (await repo.delete({ id: 2 }, new WhereText('{"id":2}'))).rowsAffected,
     ).toBe(0);
-    expect(await collectAsync(repo.read())).toEqual([{ name: "b" }]);
+    expect(await collectAsync(repo.read())).toEqual([{ id: 2, name: "C" }]);
   });
 
   it("rejects command and repository IO when closed", async () => {
@@ -357,6 +358,9 @@ describe("Json datasource", () => {
       command.executeStatement(new CreateTableStatement("t", [{ name: "id", type: "INTEGER" }])),
     ).rejects.toThrow("Unsupported JSON");
     await command.executeReaderStatement(new InsertStatement("t", []));
+    expect(
+      await (await command.executeReaderStatement(new SelectInsertedIdStatement("t", "id"))).next(),
+    ).toBe(false);
     await command.executeReaderStatement({
       accept: () => '{"id":1}',
     } as SelectStatement);
