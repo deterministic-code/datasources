@@ -14,6 +14,10 @@ pub fn open(
         contacts.address.add_middleware(Arc::clone(&middleware));
         contacts.phone.add_middleware(Arc::clone(&middleware));
         contacts.contact_source.add_middleware(Arc::clone(&middleware));
+        contacts.contact_settings.add_middleware(Arc::clone(&middleware));
+        contacts.contact_preferences.add_middleware(Arc::clone(&middleware));
+        contacts.address.address_type.add_middleware(Arc::clone(&middleware));
+        contacts.phone.phone_type.add_middleware(Arc::clone(&middleware));
         legacy.add_middleware(middleware);
     }
     Ok((contacts, legacy))

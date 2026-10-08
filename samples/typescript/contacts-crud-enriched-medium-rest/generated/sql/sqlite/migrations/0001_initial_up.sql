@@ -1,22 +1,6 @@
 -- Generated initial migration for sqlite
 
 -- Create added tables
-CREATE TABLE "bases" (
-  "id" INTEGER CONSTRAINT "bases_primary_key" PRIMARY KEY AUTOINCREMENT,
-  "uuid" VARCHAR(36) NOT NULL,
-  "created" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-  "updated" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-  "version" BLOB NOT NULL,
-  CONSTRAINT "bases_uuid_unique_constraint" UNIQUE ("uuid")
-);
-CREATE TRIGGER "trg_bases_updated_at"
-AFTER UPDATE ON "bases"
-FOR EACH ROW
-WHEN NEW."updated" IS OLD."updated"
-BEGIN
-  UPDATE "bases" SET "updated" = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE "id" = OLD."id";
-END;
-
 CREATE TABLE "contact_sources" (
   "id" INTEGER CONSTRAINT "contact_sources_primary_key" PRIMARY KEY AUTOINCREMENT,
   "uuid" VARCHAR(36) NOT NULL,
@@ -36,13 +20,49 @@ BEGIN
   UPDATE "contact_sources" SET "updated" = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE "id" = OLD."id";
 END;
 
+CREATE TABLE "address_types" (
+  "id" INTEGER CONSTRAINT "address_types_primary_key" PRIMARY KEY AUTOINCREMENT,
+  "uuid" VARCHAR(36) NOT NULL,
+  "created" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  "updated" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  "version" BLOB NOT NULL,
+  "name" VARCHAR(64) NOT NULL,
+  "description" TEXT,
+  CONSTRAINT "address_types_uuid_unique_constraint" UNIQUE ("uuid")
+);
+CREATE TRIGGER "trg_address_types_updated_at"
+AFTER UPDATE ON "address_types"
+FOR EACH ROW
+WHEN NEW."updated" IS OLD."updated"
+BEGIN
+  UPDATE "address_types" SET "updated" = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE "id" = OLD."id";
+END;
+
+CREATE TABLE "phone_types" (
+  "id" INTEGER CONSTRAINT "phone_types_primary_key" PRIMARY KEY AUTOINCREMENT,
+  "uuid" VARCHAR(36) NOT NULL,
+  "created" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  "updated" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  "version" BLOB NOT NULL,
+  "name" VARCHAR(64) NOT NULL,
+  "description" TEXT,
+  CONSTRAINT "phone_types_uuid_unique_constraint" UNIQUE ("uuid")
+);
+CREATE TRIGGER "trg_phone_types_updated_at"
+AFTER UPDATE ON "phone_types"
+FOR EACH ROW
+WHEN NEW."updated" IS OLD."updated"
+BEGIN
+  UPDATE "phone_types" SET "updated" = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE "id" = OLD."id";
+END;
+
 CREATE TABLE "contacts" (
   "id" INTEGER CONSTRAINT "contacts_primary_key" PRIMARY KEY AUTOINCREMENT,
   "uuid" VARCHAR(36) NOT NULL,
   "created" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   "updated" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   "version" BLOB NOT NULL,
-  "contact_source_id" TEXT NOT NULL,
+  "contact_source_id" INTEGER NOT NULL,
   "first_name" VARCHAR(128) NOT NULL,
   "last_name" VARCHAR(128) NOT NULL,
   "email" VARCHAR(256),
@@ -64,7 +84,8 @@ CREATE TABLE "addresses" (
   "created" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   "updated" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   "version" BLOB NOT NULL,
-  "contact_id" TEXT NOT NULL,
+  "contact_id" INTEGER NOT NULL,
+  "address_type_id" INTEGER NOT NULL,
   "line1" VARCHAR(256) NOT NULL,
   "line2" VARCHAR(256),
   "city" VARCHAR(128) NOT NULL,
@@ -72,7 +93,8 @@ CREATE TABLE "addresses" (
   "postal_code" VARCHAR(32),
   "country" VARCHAR(64),
   CONSTRAINT "addresses_uuid_unique_constraint" UNIQUE ("uuid"),
-  CONSTRAINT "addresses_contact_id_foreign_key" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id")
+  CONSTRAINT "addresses_contact_id_foreign_key" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id"),
+  CONSTRAINT "addresses_address_type_id_foreign_key" FOREIGN KEY ("address_type_id") REFERENCES "address_types"("id")
 );
 CREATE TRIGGER "trg_addresses_updated_at"
 AFTER UPDATE ON "addresses"
@@ -88,11 +110,13 @@ CREATE TABLE "phones" (
   "created" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   "updated" TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   "version" BLOB NOT NULL,
-  "contact_id" TEXT NOT NULL,
+  "contact_id" INTEGER NOT NULL,
+  "phone_type_id" INTEGER NOT NULL,
   "number" VARCHAR(32) NOT NULL,
   "label" VARCHAR(32),
   CONSTRAINT "phones_uuid_unique_constraint" UNIQUE ("uuid"),
-  CONSTRAINT "phones_contact_id_foreign_key" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id")
+  CONSTRAINT "phones_contact_id_foreign_key" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id"),
+  CONSTRAINT "phones_phone_type_id_foreign_key" FOREIGN KEY ("phone_type_id") REFERENCES "phone_types"("id")
 );
 CREATE TRIGGER "trg_phones_updated_at"
 AFTER UPDATE ON "phones"
@@ -120,6 +144,23 @@ WHEN NEW."updated" IS OLD."updated"
 BEGIN
   UPDATE "contact_groups" SET "updated" = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE "id" = OLD."id";
 END;
+
+CREATE TABLE "contact_settings" (
+  "contact_id" TEXT NOT NULL,
+  "key" VARCHAR(64) NOT NULL,
+  "value" TEXT NOT NULL,
+  CONSTRAINT "contact_settings_contact_id_foreign_key" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id")
+);
+CREATE UNIQUE INDEX "contact_settings_owner_key_index" ON "contact_settings" ("contact_id", "key");
+
+CREATE TABLE "contact_preferences" (
+  "contact_id" TEXT NOT NULL,
+  "key" VARCHAR(64) NOT NULL,
+  "locale" VARCHAR(16) NOT NULL,
+  "timezone" VARCHAR(64) NOT NULL,
+  CONSTRAINT "contact_preferences_contact_id_foreign_key" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id")
+);
+CREATE UNIQUE INDEX "contact_preferences_owner_key_index" ON "contact_preferences" ("contact_id", "key");
 
 CREATE TABLE "contact_group_members" (
   "id" INTEGER CONSTRAINT "contact_group_members_primary_key" PRIMARY KEY AUTOINCREMENT,
@@ -158,28 +199,17 @@ CREATE TABLE "contact_change_logs" (
   "change_summary" TEXT NOT NULL
 );
 
-CREATE TABLE "import_contacts_requests" (
-  "source" VARCHAR(64) NOT NULL,
-  "payload" TEXT NOT NULL
-);
-
-CREATE TABLE "import_contacts_results" (
-  "imported_count" INTEGER NOT NULL,
-  "skipped_count" INTEGER NOT NULL,
-  "failed_count" INTEGER NOT NULL
-);
-
-CREATE TABLE "legacy_migration_results" (
-  "migrated_count" INTEGER NOT NULL,
-  "skipped_count" INTEGER NOT NULL,
-  "completed_at" TEXT
-);
-
 -- Seed data
 -- Seeds: contact_sources
 INSERT INTO "contact_sources" ("id", "uuid", "name") VALUES (1, '1d3e841c-6a99-5e61-8283-879f22e8d932', 'Manual');
 INSERT INTO "contact_sources" ("id", "uuid", "name", "description") VALUES (2, '38dd404e-9605-5681-a425-678204a8ae48', 'Imported', 'Loaded from a CSV or vCard import.');
 INSERT INTO "contact_sources" ("id", "uuid", "name", "description") VALUES (3, 'ef86312e-ba98-502a-90c7-96af9357a65b', 'OAuth', 'Synced from a third-party provider.');
+
+-- Seeds: address_types
+INSERT INTO "address_types" ("id", "uuid", "name") VALUES (1, '1e75343a-f291-5115-a555-47c1f64a2c69', 'Home');
+
+-- Seeds: phone_types
+INSERT INTO "phone_types" ("id", "uuid", "name") VALUES (1, '775f24d4-e8cb-505c-9671-1d53c44f2780', 'Mobile');
 
 -- Seeds: contact_groups
 INSERT INTO "contact_groups" ("id", "uuid", "name", "description") VALUES (1, 'd02c4d97-b6bf-5ac2-b735-9721f41896f3', 'Friends', 'Friends');

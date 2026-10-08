@@ -9,6 +9,12 @@ seeds:
       - id3:
           name: OAuth
           description: Synced from a third-party provider.
+  - address_type:
+      - id1:
+          name: Home
+  - phone_type:
+      - id1:
+          name: Mobile
   - contact_groups_base:
       - id1:
           name: Friends

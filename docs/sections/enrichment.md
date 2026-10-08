@@ -92,7 +92,7 @@ List: "list"
 
 ##### Dictionary
 
-Rejected until its fill is defined.
+Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
 
 ```typescript
 Dictionary: "dictionary"
@@ -238,7 +238,7 @@ List
 
 ##### Dictionary
 
-Rejected until its fill is defined.
+Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
 
 ```csharp
 Dictionary
@@ -410,7 +410,7 @@ List
 
 ##### Dictionary
 
-Rejected until its fill is defined.
+Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
 
 ```rust
 Dictionary
@@ -468,7 +468,7 @@ pub related: String
 
 ## Remarks
 
-`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` and `Custom` are rejected. [AddLinked](./crud-repository.md) sets `association` and writes the junction. Pass the value to [IEnriched](./i-enriched.md).
+`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` loads child rows into a map keyed by `key` and writes one row per entry. `Custom` is rejected. [AddLinked](./crud-repository.md) sets `association` and writes the junction. Pass the value to [IEnriched](./i-enriched.md).
 
 ## Examples
 

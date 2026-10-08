@@ -9,7 +9,7 @@ const enrichment = (item: PlannedEnrichment, host: "this" | "repo"): string => {
     ? `this.${childField("typescript", item.via, item.viaType)}`
     : childField("typescript", item.via, item.viaType);
   const related = item.relatedProperty === undefined ? "" : `, relatedProperty: "${quote(item.relatedProperty)}"`;
-  const type = item.kind === "object" ? "object" : "list";
+  const type = item.kind === "object" ? "object" : item.kind === "dictionary" ? "dictionary" : "list";
   if (host === "this" && isLinked(item)) {
     const link = `this.${childField("typescript", item.link, item.linkType)}`;
     return `this.addLinked({ destinationProperty: "${quote(item.destination)}", sourceProperty: "${quote(item.source)}", relatedKey: "${quote(item.relatedKey)}"${related}, association: { parent: "${quote(item.parentFk)}", related: "${quote(item.relatedFk)}" }, type: "${type}" }, ${via}, ${link});`;

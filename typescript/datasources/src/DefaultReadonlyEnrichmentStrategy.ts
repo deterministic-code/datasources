@@ -22,6 +22,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     const run = {
       [EnrichmentPropertyType.List]: () => this.applyList(via, enrichment, parents, sources),
       [EnrichmentPropertyType.Object]: () => this.applyObject(via, enrichment, parents, sources),
+      [EnrichmentPropertyType.Dictionary]: () => this.applyDictionary(via, enrichment, parents, sources),
     }[type];
     return run ? run() : Promise.reject(new DatasourceError(`Unsupported enrichment type "${type}"`));
   }
@@ -94,6 +95,35 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     }
   }
 
+  protected async applyDictionary<TRelated extends object>(
+    via: IReadonlyRepository<TRelated>,
+    enrichment: Enrichment,
+    parents: T[],
+    sources?: (Row | undefined)[],
+  ): Promise<void> {
+    const mapKey = mapKeyName(enrichment.relatedKey);
+    for (const [index, parent] of parents.entries()) {
+      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
+      if (key === undefined || key === null) continue;
+      const map: Record<string, Scalar | object> = {};
+      for await (const item of via.read(
+        new Where(new Operator.Equals(enrichment.relatedKey, this.scalar(key))),
+      )) {
+        const row = this.props(item);
+        const entry = row[mapKey];
+        if (entry === undefined || entry === null || typeof entry === "object") continue;
+        map[String(entry)] = enrichment.relatedProperty
+          ? (row[enrichment.relatedProperty] ?? null)
+          : Object.fromEntries(
+              Object.entries(row).filter(
+                ([name]) => name !== mapKey && name !== enrichment.relatedKey && name !== "Id" && name !== "id",
+              ),
+            );
+      }
+      Object.assign(parent, { [enrichment.destinationProperty]: map });
+    }
+  }
+
   protected sourceKey(
     parent: object,
     name: string,
@@ -101,22 +131,34 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     index: number,
   ): Scalar | object | undefined {
     const cell = sources?.[index]?.[name];
-    if (cell !== undefined && cell !== null) return cell;
-    return this.props(parent)[name];
+    const raw = cell !== undefined && cell !== null ? cell : this.props(parent)[name];
+    return this.lookupKey(raw);
   }
 
   protected props = (item: object): Props => item as Props;
 
-  protected keyOf = (key: Scalar | object): string => String(key);
+  protected keyOf = (key: Scalar | object): string => String(this.lookupKey(key));
 
-  protected scalar = (value: Scalar | object): Scalar =>
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
-      ? value
+  protected lookupKey = (value: Scalar | object | undefined): Scalar | object | undefined => {
+    if (value === undefined || value === null || typeof value !== "object") return value;
+    const id = this.props(value).Id ?? this.props(value).id;
+    return id !== undefined && id !== null && typeof id !== "object" ? id : value;
+  };
+
+  protected scalar = (value: Scalar | object): Scalar => {
+    const key = this.lookupKey(value);
+    return key === null ||
+      typeof key === "string" ||
+      typeof key === "number" ||
+      typeof key === "boolean" ||
+      typeof key === "bigint"
+      ? key
       : (() => {
           throw new DatasourceError("Enrichment key must be a scalar");
         })();
+  };
 }
+
+const mapKeyName = (relatedKey: string): string =>
+  relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
+

@@ -20,7 +20,7 @@ const enrichment = (item: PlannedEnrichment, host: "ctor" | "readonly" = "ctor")
     return `AddLinked(new(${head}, Association: new("${quote(item.parentFk)}", "${quote(item.relatedFk)}")), ${via}, ${link});`;
   }
   const related = item.relatedProperty === undefined ? "" : `, "${quote(item.relatedProperty)}"`;
-  const type = item.kind === "object" ? "" : ", Type: EnrichmentPropertyType.List";
+  const type = item.kind === "object" ? "" : item.kind === "dictionary" ? ", Type: EnrichmentPropertyType.Dictionary" : ", Type: EnrichmentPropertyType.List";
   const call = host === "readonly" ? "repo.AddEnriched" : "AddEnriched";
   return `${call}(new(${head}${related}${type}), ${via});`;
 };

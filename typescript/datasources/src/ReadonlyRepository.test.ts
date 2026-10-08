@@ -262,7 +262,7 @@ describe("ReadonlyRepository", () => {
       new DefaultReadonlyEnrichmentStrategy<Parent>().apply(
         typesRepo,
         { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
-        [Object.assign(new Parent(), { Id: 1 })],
+        [Object.assign(new Parent(), { Id: 1, Type: { Name: "x" } })],
       ),
     ).rejects.toThrow(/scalar/);
   });

@@ -38,6 +38,33 @@ public abstract class CreateEnrichmentStrategy<T>
             _ => []
         };
 
+    protected static IReadOnlyList<object> Owned(IChildPersist writer, Enrichment enrichment, object parent) =>
+        enrichment.Type is EnrichmentPropertyType.Dictionary
+            ? DictionaryOwned(writer, enrichment, parent)
+            : Payload(parent, enrichment.DestinationProperty);
+
+    static List<object> DictionaryOwned(IChildPersist writer, Enrichment enrichment, object parent)
+    {
+        if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];
+        var rows = new List<object>();
+        foreach (DictionaryEntry entry in map)
+        {
+            if (entry.Key is null) continue;
+            var row = writer.New();
+            Set(row, MapKey(enrichment.RelatedKey), entry.Key);
+            if (enrichment.RelatedProperty is { } select)
+                Set(row, select, entry.Value);
+            else if (entry.Value is not null)
+                foreach (var prop in entry.Value.GetType().GetProperties())
+                    Set(row, prop.Name, prop.GetValue(entry.Value));
+            rows.Add(row);
+        }
+        return rows;
+    }
+
+    static string MapKey(string relatedKey) =>
+        relatedKey.Contains('_') || relatedKey.Length > 0 && char.IsLower(relatedKey[0]) ? "key" : "Key";
+
     protected static void Stamp(object related, string by, object? key)
     {
         if (key is not null)

@@ -5,7 +5,7 @@ import type { ICRUDRepository } from "./ICRUDRepository.ts";
 
 export class DefaultCreateEnrichmentStrategy<T> extends CreateEnrichmentStrategy<T> {
   async createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
-    for (const related of this.payloadOf(parent, enrichment.destinationProperty)) {
+    for (const related of this.payloadOf(parent, enrichment.destinationProperty, enrichment)) {
       this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
       await writer.create(related);
     }

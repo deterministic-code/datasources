@@ -4,6 +4,9 @@ use crate::schema::{sql_path, statements, with_seed_version, GENERATED_SQL};
 fn loads_generated_sql() {
     let sql = statements(GENERATED_SQL);
     assert!(sql.iter().any(|item| item.starts_with("CREATE TABLE \"contacts\"")));
+    assert!(sql.iter().any(|item| item.starts_with("CREATE TABLE \"contact_settings\"")));
+    assert!(sql.iter().any(|item| item.starts_with("CREATE TABLE \"contact_preferences\"")));
+    assert!(sql.iter().all(|item| !item.contains("CREATE TABLE \"bases\"")));
     assert!(sql.iter().any(|item| item.contains("INSERT INTO \"contact_sources\"")));
     assert!(sql.iter().all(|item| item.ends_with(';')));
 }

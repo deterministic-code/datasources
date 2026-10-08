@@ -20,6 +20,33 @@ class UserType {
   Name = "";
 }
 
+class Pref {
+  Locale = "";
+  Timezone = "";
+}
+
+class Setting {
+  Id = 0;
+  ParentId = 0;
+  Key = "";
+  Value = "";
+}
+
+class PrefRow {
+  Id = 0;
+  ParentId = 0;
+  Key = "";
+  Locale = "";
+  Timezone = "";
+}
+
+class Host {
+  Id = 0;
+  Label = "";
+  Settings: Record<string, string> = {};
+  Prefs: Record<string, Pref> = {};
+}
+
 class Parent {
   Id = 0;
   Type = new UserType();
@@ -116,6 +143,44 @@ const relate = (
 };
 
 describe("CRUDRepository", () => {
+  it("round-trips string and object dictionaries", async () => {
+    const connection = await setup();
+    const hostsRepo = repo(Host, connection);
+    const settingsRepo = repo(Setting, connection);
+    const prefsRepo = repo(PrefRow, connection);
+    hostsRepo.addEnriched(
+      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", type: "dictionary" },
+      settingsRepo,
+    );
+    hostsRepo.addEnriched(
+      { destinationProperty: "Prefs", sourceProperty: "Id", relatedKey: "ParentId", type: "dictionary" },
+      prefsRepo,
+    );
+    const created = await hostsRepo.create(
+      Object.assign(new Host(), {
+        Label: "ada",
+        Settings: { theme: "dark" },
+        Prefs: { home: Object.assign(new Pref(), { Locale: "en-GB", Timezone: "Europe/London" }) },
+      }),
+    );
+    expect(created.Id).toBeGreaterThan(0);
+    const loaded = await hostsRepo.readSingle();
+    expect(loaded?.Settings).toEqual({ theme: "dark" });
+    expect(loaded?.Prefs.home).toEqual({ Locale: "en-GB", Timezone: "Europe/London" });
+    await hostsRepo.update(
+      Object.assign(new Host(), {
+        Id: created.Id,
+        Label: "ada",
+        Settings: { density: "compact" },
+        Prefs: { work: Object.assign(new Pref(), { Locale: "en-US", Timezone: "America/New_York" }) },
+      }),
+    );
+    const updated = await hostsRepo.readSingle();
+    expect(updated?.Settings).toEqual({ density: "compact" });
+    expect(updated?.Prefs.work).toEqual({ Locale: "en-US", Timezone: "America/New_York" });
+    expect(updated?.Prefs.home).toBeUndefined();
+  });
+
   it("creates children, stamps FK, and skips select", async () => {
     const connection = await setup();
     const parentsRepo = repo(Parent, connection);

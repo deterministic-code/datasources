@@ -210,6 +210,87 @@ async fn deep_create_writes_children_stamps_fk() {
 }
 
 #[tokio::test]
+async fn round_trips_string_and_object_dictionaries() {
+    let connection = setup(&mut []).await;
+    let mut hosts = mapped_crud(connection.clone(), "Host");
+    let settings = Arc::new(mapped_crud(connection.clone(), "Setting"));
+    let prefs = Arc::new(mapped_crud(connection, "Pref"));
+    hosts
+        .add_enriched(
+            Enrichment::new(
+                "Settings",
+                "Id",
+                "ParentId",
+                Some("Value".into()),
+                datasources::EnrichmentPropertyType::Dictionary,
+            ),
+            settings.clone(),
+            None,
+        )
+        .add_enriched(
+            Enrichment::new(
+                "Prefs",
+                "Id",
+                "ParentId",
+                None,
+                datasources::EnrichmentPropertyType::Dictionary,
+            ),
+            prefs.clone(),
+            None,
+        );
+    let created = hosts
+        .create(&mut record(&[
+            ("Label", Value::from("ada")),
+            (
+                "Settings",
+                encode_rows(&[record(&[
+                    ("Key", Value::from("theme")),
+                    ("Value", Value::from("dark")),
+                ])]),
+            ),
+        ]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    let stored = settings.read(None, None, None).await.unwrap();
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0]["ParentId"], created["Id"]);
+    assert_eq!(stored[0]["Key"], Value::from("theme"));
+    assert_eq!(stored[0]["Value"], Value::from("dark"));
+    hosts
+        .update(
+            &record(&[
+                ("Id", created["Id"].clone()),
+                ("Label", Value::from("ada")),
+                (
+                    "Settings",
+                    encode_rows(&[record(&[
+                        ("Key", Value::from("density")),
+                        ("Value", Value::from("compact")),
+                    ])]),
+                ),
+                (
+                    "Prefs",
+                    encode_rows(&[record(&[
+                        ("Key", Value::from("home")),
+                        ("Locale", Value::from("en-GB")),
+                        ("Timezone", Value::from("Europe/London")),
+                    ])]),
+                ),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    let settings_rows = settings.read(None, None, None).await.unwrap();
+    assert_eq!(settings_rows.len(), 1);
+    assert_eq!(settings_rows[0]["Key"], Value::from("density"));
+    let pref_rows = prefs.read(None, None, None).await.unwrap();
+    assert_eq!(pref_rows.len(), 1);
+    assert_eq!(pref_rows[0]["Locale"], Value::from("en-GB"));
+}
+
+#[tokio::test]
 async fn contacts_service_fills_names_and_child_lists() {
     let mut person = [record(&[("name", Value::from("person"))])];
     let types_connection = setup(&mut person).await;

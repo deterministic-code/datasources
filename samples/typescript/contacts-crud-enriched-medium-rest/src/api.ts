@@ -7,7 +7,7 @@ import { ContactRepository } from "../generated/typescript/repositories/contact-
 import { clock } from "./clock.ts";
 import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
 
-export type ContactWrite = Contact & { contactSourceId: string };
+export type ContactWrite = Contact;
 export type HttpResult = { status: number; body: string };
 
 export class Api {
@@ -95,21 +95,33 @@ export class Api {
   };
 
   private bind = async (contact: ContactWrite): Promise<ContactWrite> => {
-    contact.contactSourceId = String(await this.lookupId(contact.contactSourceName));
+    contact.contactSourceId = await this.lookupId(this.contacts.contactSource, contact.contactSourceName, "contact_source");
     contact.email = text(contact.email);
     contact.notes = text(contact.notes);
     stampContact(contact);
     contact.addresses ??= [];
     contact.phones ??= [];
-    for (const address of contact.addresses) stampAddress(address);
-    for (const phone of contact.phones) stampPhone(phone);
+    contact.settings ??= {};
+    contact.prefs ??= {};
+    for (const address of contact.addresses) {
+      address.addressTypeId = await this.lookupId(this.contacts.address.addressType, address.addressTypeName, "address_type");
+      stampAddress(address);
+    }
+    for (const phone of contact.phones) {
+      phone.phoneTypeId = await this.lookupId(this.contacts.phone.phoneType, phone.phoneTypeName, "phone_type");
+      stampPhone(phone);
+    }
     return contact;
   };
 
-  private lookupId = async (name: string | undefined): Promise<number> => {
-    if (name == null || name.trim() === "") throw new RequestError("contact_source is required");
-    const found = await this.contacts.contactSource.readSingle(new Where(new Operator.Equals("name", name)));
-    if (found == null) throw new RequestError(`Unknown contact_source "${name}"`);
+  private lookupId = async (
+    repo: { readSingle: (query: IWhere) => Promise<{ id: number } | undefined> },
+    name: string | undefined,
+    label: string,
+  ): Promise<number> => {
+    if (name == null || name.trim() === "") throw new RequestError(`${label} is required`);
+    const found = await repo.readSingle(new Where(new Operator.Equals("name", name)));
+    if (found == null) throw new RequestError(`Unknown ${label} "${name}"`);
     return found.id;
   };
 }

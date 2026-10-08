@@ -1,11 +1,13 @@
 pub mod address_repository;
+pub mod address_type_repository;
 pub mod contact_repository;
 pub mod contact_change_log_repository;
 pub mod contact_group_repository;
 pub mod contact_group_member_repository;
+pub mod contact_preferences_repository;
+pub mod contact_settings_repository;
 pub mod contact_source_repository;
-pub mod import_contacts_request_repository;
-pub mod import_contacts_result_repository;
 pub mod legacy_contact_repository;
-pub mod legacy_migration_result_repository;
 pub mod phone_repository;
+pub mod phone_type_repository;
+pub mod repository_registry;

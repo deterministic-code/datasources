@@ -11,6 +11,37 @@ public class CRUDRepositoryTests
         public string Name { get; set; } = "";
     }
 
+    sealed class Pref
+    {
+        public string Locale { get; set; } = "";
+        public string Timezone { get; set; } = "";
+    }
+
+    sealed class Setting
+    {
+        public long Id { get; set; }
+        public long ParentId { get; set; }
+        public string Key { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    sealed class PrefRow
+    {
+        public long Id { get; set; }
+        public long ParentId { get; set; }
+        public string Key { get; set; } = "";
+        public string Locale { get; set; } = "";
+        public string Timezone { get; set; } = "";
+    }
+
+    sealed class Host
+    {
+        public long Id { get; set; }
+        public string Label { get; set; } = "";
+        public Dictionary<string, string> Settings { get; set; } = [];
+        public Dictionary<string, Pref> Prefs { get; set; } = [];
+    }
+
     sealed class Parent
     {
         public long Id { get; set; }
@@ -105,6 +136,39 @@ public class CRUDRepositoryTests
         var child = Assert.Single(await childrenRepo.Read().ToListAsync());
         Assert.Equal(created.Id, parent.Id);
         Assert.Equal(parent.Id, child.ParentId);
+    }
+
+    [Fact]
+    public async Task RoundTripsStringAndObjectDictionaries()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<Host>(connection);
+        var settingsRepo = Open<Setting>(connection);
+        var prefsRepo = Open<PrefRow>(connection);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
+        hostsRepo.AddEnriched(new("Prefs", "Id", "ParentId", Type: EnrichmentPropertyType.Dictionary), prefsRepo);
+        var created = await hostsRepo.Create(new Host
+        {
+            Label = "ada",
+            Settings = { ["theme"] = "dark" },
+            Prefs = { ["home"] = new Pref { Locale = "en-GB", Timezone = "Europe/London" } },
+        });
+        Assert.True(created.Id > 0);
+        var loaded = await hostsRepo.ReadSingle();
+        Assert.Equal("dark", loaded!.Settings["theme"]);
+        Assert.Equal("en-GB", loaded.Prefs["home"].Locale);
+        Assert.Equal("Europe/London", loaded.Prefs["home"].Timezone);
+        await hostsRepo.Update(new Host
+        {
+            Id = created.Id,
+            Label = "ada",
+            Settings = { ["density"] = "compact" },
+            Prefs = { ["work"] = new Pref { Locale = "en-US", Timezone = "America/New_York" } },
+        });
+        var updated = await hostsRepo.ReadSingle();
+        Assert.Equal(new Dictionary<string, string> { ["density"] = "compact" }, updated!.Settings);
+        Assert.False(updated.Prefs.ContainsKey("home"));
+        Assert.Equal("en-US", updated.Prefs["work"].Locale);
     }
 
     [Fact]

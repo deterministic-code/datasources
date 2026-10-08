@@ -1,6 +1,6 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
-import { identityColumns, isCollectionField } from "@deterministic-code/generators-common/spec-types";
+import { identityColumns, isCollectionField, isDictionaryType, isOwnerIdentityRef, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-specifications-typescript/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
@@ -58,9 +58,11 @@ export const planRepositories = (
     if (abstractParent(table)) return [];
     const authored = viewByTable.get(table.name) ?? (types.get(table.name) as Type);
     const full = expanded.get(authored.name) as Type;
+    const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
     const projected = new Set(Object.values(authored.mapping ?? {}));
-    const columns = full.fields.filter((field) => !isCollectionField(field) && !projected.has(field.name));
+    const columns = (isDictionaryType(tableType) ? persistedColumnFields(tableType, expanded) : tableType.fields)
+      .filter((field) => !isCollectionField(field) && !projected.has(field.name));
     return [
       {
         specName: authored.name,
@@ -73,7 +75,7 @@ export const planRepositories = (
           const to = naming.resolveColumn(field.name, overlays.get(field.name)?.mapping);
           return from === to ? [] : [{ from, to }];
         }),
-        ids: identityColumns(full, table).map(property),
+        ids: identityColumns(tableType, table).map(property),
         readProperties: columns.map((field) => property(field.name)),
         enrichments: relations(authored, full, casing, types, expanded, repoName, identity),
       },
@@ -98,14 +100,32 @@ const relations = (
     return { via, viaType: casing.convertTypes(via) };
   };
   const planned: PlannedEnrichment[] = [];
+  const source = identity(authored.inherits ?? authored.name);
   for (const field of authored.fields) {
     if (!isCollectionField(field)) continue;
+    if (field.isMap === true) {
+      const dict = expanded.get(field.base) ?? types.get(field.base);
+      const owner = dict?.fields.find((item) => isOwnerIdentityRef(item.references, dict.name, expanded));
+      if (dict === undefined || owner === undefined) continue;
+      const via = named(dict.name);
+      const value = dict.fields.find((item) => item.name === "value");
+      const nested = value === undefined ? undefined : expanded.get(value.base) ?? types.get(value.base);
+      planned.push({
+        destination: property(field.name),
+        source,
+        relatedKey: property(owner.name),
+        relatedProperty: nested === undefined ? property("value") : undefined,
+        kind: "dictionary",
+        via: via.via,
+        viaType: via.viaType,
+      });
+      continue;
+    }
     const ref = referenceOf(field.references);
     if (!ref) continue;
     const target = types.get(ref.type);
     const other = target?.fields.find((item) => item.name !== ref.field);
     const otherRef = other === undefined ? undefined : referenceOf(other.references);
-    const source = identity(authored.inherits ?? authored.name);
     if (target?.tags.includes("many_to_many") === true && other !== undefined && otherRef !== undefined) {
       const via = named(otherRef.type);
       const link = named(ref.type);

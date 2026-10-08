@@ -4,7 +4,7 @@ public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrateg
 {
     public override async Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
     {
-        foreach (var related in Payload(parent, enrichment.DestinationProperty))
+        foreach (var related in Owned(writer, enrichment, parent))
         {
             Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
             await writer.Create(related);

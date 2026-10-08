@@ -5,7 +5,7 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
     public override async Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
     {
         var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
-        var payload = Payload(parent, enrichment.DestinationProperty);
+        var payload = Owned(writer, enrichment, parent);
         foreach (var related in payload)
             Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
         var keys = writer.Ids;

@@ -4,5 +4,5 @@ use super::*;
 /// View Phone.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Phone {
-    pub base: crate::types::generated::datasource::PhonesBase,
+    pub base: crate::types::generated::datasource::PhoneBase,
 }

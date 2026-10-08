@@ -102,10 +102,7 @@ impl DefaultWriteEnrichmentStrategy {
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let enrichment = &entry.enrichment;
-            if matches!(
-                enrichment.r#type,
-                crate::EnrichmentPropertyType::Dictionary | crate::EnrichmentPropertyType::Custom
-            ) {
+            if matches!(enrichment.r#type, crate::EnrichmentPropertyType::Custom) {
                 return Err(DatasourceError::message(format!(
                     "Unsupported enrichment type \"{:?}\"",
                     enrichment.r#type
@@ -142,8 +139,13 @@ impl DefaultWriteEnrichmentStrategy {
                 }
                 return Ok(());
             }
+            if enrichment.r#type == crate::EnrichmentPropertyType::List
+                && enrichment.related_property.is_some()
+            {
+                return Ok(());
+            }
             if enrichment.r#type != crate::EnrichmentPropertyType::List
-                || enrichment.related_property.is_some()
+                && enrichment.r#type != crate::EnrichmentPropertyType::Dictionary
             {
                 return Ok(());
             }

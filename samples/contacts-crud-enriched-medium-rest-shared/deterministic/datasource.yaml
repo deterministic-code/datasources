@@ -9,9 +9,9 @@ types:
             is_unique: true
   - contacts_base:
       mapping: contacts
-  - addresses_base:
+  - address_base:
       mapping: addresses
-  - phones_base:
+  - phone_base:
       mapping: phones
   - contact_groups_base:
       mapping: contact_groups

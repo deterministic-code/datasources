@@ -8,6 +8,9 @@ describe("schema", () => {
   it("loads generated sql", () => {
     const sql = statements();
     expect(sql.some((item) => item.startsWith('CREATE TABLE "contacts"'))).toBe(true);
+    expect(sql.some((item) => item.startsWith('CREATE TABLE "contact_settings"'))).toBe(true);
+    expect(sql.some((item) => item.startsWith('CREATE TABLE "contact_preferences"'))).toBe(true);
+    expect(sql.every((item) => !item.includes('CREATE TABLE "bases"'))).toBe(true);
     expect(sql.some((item) => item.includes("INSERT INTO \"contact_sources\""))).toBe(true);
     expect(sql.every((item) => item.endsWith(";"))).toBe(true);
   });

@@ -24,6 +24,10 @@ const open = async (middleware?: ICommandMiddleware) => {
     contacts.address.addMiddleware(middleware);
     contacts.phone.addMiddleware(middleware);
     contacts.contactSource.addMiddleware(middleware);
+    contacts.contactSettings.addMiddleware(middleware);
+    contacts.contactPreferences.addMiddleware(middleware);
+    contacts.address.addressType.addMiddleware(middleware);
+    contacts.phone.phoneType.addMiddleware(middleware);
     legacy.addMiddleware(middleware);
   }
   return new Api(contacts, legacy);
@@ -60,24 +64,36 @@ describe("api", () => {
       lastName: "Lovelace",
       email: "ada@example.com",
       contactSourceName: "Manual",
-      addresses: [{ line1: "12 Analytical Engine", city: "London" }],
-      phones: [{ number: "555-0100", label: "Mobile" }],
+      addresses: [{ line1: "12 Analytical Engine", city: "London", addressTypeName: "Home" }],
+      phones: [{ number: "555-0100", label: "Mobile", phoneTypeName: "Mobile" }],
+      settings: { theme: "dark" },
+      prefs: { home: { locale: "en-GB", timezone: "Europe/London" } },
     }));
     expect(created.status).toBe(201);
     expect(created.body).not.toContain("OldContactsTbl");
-    const saved = JSON.parse(created.body) as { id: number; firstName: string; contactSourceName: string; addresses: { city: string }[]; phones: { number: string }[] };
+    const saved = JSON.parse(created.body) as {
+      id: number;
+      firstName: string;
+      contactSourceName: string;
+      addresses: { city: string }[];
+      phones: { number: string }[];
+      settings: { theme: string };
+      prefs: { home: { locale: string; timezone: string } };
+    };
     expect(saved.firstName).toBe("Ada");
     expect(saved.contactSourceName).toBe("Manual");
     expect(saved.addresses[0]?.city).toBe("London");
     expect(saved.phones[0]?.number).toBe("555-0100");
+    expect(saved.settings.theme).toBe("dark");
+    expect(saved.prefs.home).toEqual({ locale: "en-GB", timezone: "Europe/London" });
     await api.handle("POST", "/contacts", JSON.stringify({
       firstName: "Grace",
       lastName: "Hopper",
       uuid: "22222222-2222-2222-2222-222222222222",
       created: "2024-01-02T00:00:00Z",
       contactSourceName: "Imported",
-      addresses: [{ uuid: "33333333-3333-3333-3333-333333333333", created: "2024-01-02T00:00:00Z", line1: "1", city: "NY" }],
-      phones: [{ uuid: "44444444-4444-4444-4444-444444444444", created: "2024-01-02T00:00:00Z", number: "1" }],
+      addresses: [{ uuid: "33333333-3333-3333-3333-333333333333", created: "2024-01-02T00:00:00Z", line1: "1", city: "NY", addressTypeName: "Home" }],
+      phones: [{ uuid: "44444444-4444-4444-4444-444444444444", created: "2024-01-02T00:00:00Z", number: "1", phoneTypeName: "Mobile" }],
     }));
     const filtered = await api.handle("GET", `/contacts/?firstName=Ada&lastName=Lovelace&id=${saved.id}`, undefined);
     expect(JSON.parse(filtered.body)).toHaveLength(1);
@@ -86,14 +102,25 @@ describe("api", () => {
       lastName: "Byron",
       email: null,
       contactSourceName: "Manual",
-      addresses: [{ line1: "1 Strand", city: "London" }],
+      addresses: [{ line1: "1 Strand", city: "London", addressTypeName: "Home" }],
       phones: [],
+      settings: { density: "compact" },
+      prefs: { work: { locale: "en-US", timezone: "America/New_York" } },
     }));
     expect(updated.status).toBe(200);
-    const changed = JSON.parse(updated.body) as { lastName: string; addresses: { line1: string }[]; phones: unknown[] };
+    const changed = JSON.parse(updated.body) as {
+      lastName: string;
+      addresses: { line1: string }[];
+      phones: unknown[];
+      settings: { density?: string; theme?: string };
+      prefs: { work?: { locale: string }; home?: unknown };
+    };
     expect(changed.lastName).toBe("Byron");
     expect(changed.addresses[0]?.line1).toBe("1 Strand");
     expect(changed.phones).toHaveLength(0);
+    expect(changed.settings).toEqual({ density: "compact" });
+    expect(changed.prefs.work?.locale).toBe("en-US");
+    expect(changed.prefs.home).toBeUndefined();
     expect((await api.handle("DELETE", `/contacts/?id=${saved.id}`, undefined)).status).toBe(204);
     expect(JSON.parse((await api.handle("get", "/contacts/", undefined)).body)).toHaveLength(1);
     const legacy = await api.handle("POST", "/legacy_contacts/", JSON.stringify({

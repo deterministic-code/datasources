@@ -37,7 +37,14 @@ export const deterministic: CodeGenerationProvider = {
   generateTypes: async (request) => {
     const pack = typePacks[request.dialect];
     const ctx = context(request);
-    return place(request.dialect, [...(await pack.datasource(ctx)), ...(await pack.views(ctx))]);
+    const datasource = await pack.datasource(ctx);
+    const views = await pack.views(ctx);
+    return request.dialect === "typescript"
+      ? [
+          ...place("typescript/types/generated/datasource", datasource),
+          ...place("typescript/types/generated/views", views),
+        ]
+      : place(request.dialect, [...datasource, ...views]);
   },
   generateRepositories: async (request) => {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
