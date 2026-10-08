@@ -20,9 +20,9 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
         T parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
-        var parentKey = Get(parent, enrichment.SourceProperty);
-        if (parentKey is null) return;
+        if (Get(parent, enrichment.SourceProperty) is not { } raw) return;
+        var parentKey = Value.From(raw);
         foreach (var row in await LoadLinks(writer, association.Parent, parentKey))
-            await writer.Delete(row, LinkWhere(association, parentKey, Get(row, association.Related)));
+            await writer.Delete(row, LinkWhere(association, parentKey, Value.From(Get(row, association.Related))));
     }
 }
