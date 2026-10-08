@@ -35,9 +35,12 @@ public class SqliteStatementRendererTests
     public void RendersCanonicalTypes()
     {
         var create = new CreateTableStatement("users", [new Column("id", "int", new ColumnDefault("0"), new NotNull(), true)]);
-        Assert.Equal("CREATE TABLE users (id INTEGER DEFAULT 0 NOT NULL)", Renderer.Render(create));
+        Assert.Equal("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)", Renderer.Render(create));
         Assert.Equal(
             "CREATE TABLE users (id int DEFAULT 0 NOT NULL)",
             DefaultStatementTextRenderer.Instance.Render(create));
+        Assert.Equal(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)",
+            Renderer.Render(new CreateTableStatement("users", [new Column("id", "int", null, null, true)], [new PrimaryKey("pk_users", ["id"])])));
     }
 }

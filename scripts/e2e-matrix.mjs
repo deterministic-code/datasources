@@ -168,11 +168,86 @@ const diffLines = (left, right) => {
   return out;
 };
 
+const escape = (text) =>
+  String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+
+const readText = (path) => (existsSync(path) ? readFileSync(path, "utf8") : "");
+
+const panel = (title, text) =>
+  text.trim().length === 0 ? "" : `<h4>${escape(title)}</h4><pre>${escape(text)}</pre>`;
+
+const cellId = (sample, dialect, provider) => `${sample}--${dialect}--${provider}`;
+
+const firstHunk = (text, limit = 8) => {
+  const lines = text.split(/\r?\n/).filter((line) => line.startsWith("+") || line.startsWith("-"));
+  return lines.slice(0, limit).join("\n");
+};
+
+const firstError = (text) =>
+  text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0 && !line.startsWith("Determining") && !line.startsWith("Restored")) ?? "";
+
+const failuresOf = (cells) => {
+  const crashed = cells.filter((cell) => !cell.ok);
+  const diffs = cells.filter((cell) => cell.ok && cell.match === false);
+  return { crashed, diffs };
+};
+
 const report = (cells, durationMs, cleanup) => {
   mkdirSync(join(artifacts, "normalized"), { recursive: true });
   mkdirSync(join(artifacts, "diffs"), { recursive: true });
+  const { crashed, diffs } = failuresOf(cells);
+  const summaryLines = [
+    `e2e-matrix: ${cells.length} cells · ${crashed.length} failed to run · ${diffs.length} log diffs vs typescript/sqlite`,
+    "",
+    "Failed to run",
+    ...(crashed.length
+      ? crashed.map((cell) => {
+          const err = firstError(readText(join(artifacts, "logs", cell.sample, cell.dialect, `${cell.provider}.stderr.txt`)));
+          return `- ${cell.sample} ${cell.dialect}/${cell.provider}${err ? `: ${err}` : ""}`;
+        })
+      : ["- none"]),
+    "",
+    "Log diffs",
+    ...(diffs.length
+      ? diffs.map((cell) => {
+          const hunk = firstHunk(readText(join(artifacts, "diffs", cell.sample, `${cell.dialect}-${cell.provider}.txt`)));
+          return `- ${cell.sample} ${cell.dialect}/${cell.provider}${hunk ? `\n${hunk}` : ""}`;
+        })
+      : ["- none"]),
+    "",
+  ];
+  writeFileSync(join(artifacts, "summary.txt"), `${summaryLines.join("\n")}\n`);
   const bySample = {};
   for (const cell of cells) (bySample[cell.sample] ??= []).push(cell);
+  const summaryHtml = `<section id="failures"><h2>Failures</h2>
+<p>${crashed.length} failed to run · ${diffs.length} log diffs · open <code>artifacts/e2e-matrix/summary.txt</code> for the same list</p>
+<h3>Failed to run</h3><ul>${
+    crashed.length
+      ? crashed
+          .map((cell) => {
+            const err = firstError(readText(join(artifacts, "logs", cell.sample, cell.dialect, `${cell.provider}.stderr.txt`)));
+            return `<li><a href="#${cellId(cell.sample, cell.dialect, cell.provider)}">${escape(cell.sample)} ${escape(cell.dialect)}/${escape(cell.provider)}</a>${err ? ` — ${escape(err)}` : ""}</li>`;
+          })
+          .join("")
+      : "<li>none</li>"
+  }</ul>
+<h3>Log diffs vs typescript/sqlite</h3><ul>${
+    diffs.length
+      ? diffs
+          .map((cell) => {
+            const hunk = firstHunk(readText(join(artifacts, "diffs", cell.sample, `${cell.dialect}-${cell.provider}.txt`)));
+            return `<li><a href="#${cellId(cell.sample, cell.dialect, cell.provider)}">${escape(cell.sample)} ${escape(cell.dialect)}/${escape(cell.provider)}</a>${hunk ? `<pre>${escape(hunk)}</pre>` : ""}</li>`;
+          })
+          .join("")
+      : "<li>none</li>"
+  }</ul></section>`;
   const sections = samples.map(({ name }) => {
     const rows = dialects
       .map((dialect) => {
@@ -181,7 +256,8 @@ const report = (cells, durationMs, cleanup) => {
             const cell = (bySample[name] ?? []).find((item) => item.dialect === dialect && item.provider === provider);
             const cls = !cell?.ok ? "fail" : cell.match === false ? "mismatch" : "ok";
             const compare = cell?.match === true ? "match" : cell?.match === false ? "diff" : "";
-            return `<td class="${cls}"><a href="logs/${name}/${dialect}/${provider}.log">${provider}</a><div>${cell?.ok ? "ran" : "failed"} ${compare}</div></td>`;
+            const id = cellId(name, dialect, provider);
+            return `<td class="${cls}"><a href="#${id}">${provider}</a><div>${cell?.ok ? "ran" : "failed"} ${compare}</div></td>`;
           })
           .join("");
         return `<tr><th>${dialect}</th>${tds}</tr>`;
@@ -189,9 +265,21 @@ const report = (cells, durationMs, cleanup) => {
       .join("");
     const mismatches = (bySample[name] ?? [])
       .filter((cell) => cell.match === false)
-      .map((cell) => `<li><a href="diffs/${name}/${cell.dialect}-${cell.provider}.txt">${cell.dialect}/${cell.provider}</a></li>`)
+      .map((cell) => `<li><a href="#${cellId(name, cell.dialect, cell.provider)}">${cell.dialect}/${cell.provider}</a></li>`)
       .join("");
-    return `<h2>${name}</h2><table><thead><tr><th></th>${providers.map((p) => `<th>${p}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table><h3>Mismatches vs typescript/sqlite</h3><ul>${mismatches || "<li>none</li>"}</ul>`;
+    const details = dialects
+      .flatMap((dialect) =>
+        providers.map((provider) => {
+          const id = cellId(name, dialect, provider);
+          const raw = readText(join(artifacts, "logs", name, dialect, `${provider}.log`));
+          const err = readText(join(artifacts, "logs", name, dialect, `${provider}.stderr.txt`));
+          const norm = readText(join(artifacts, "normalized", name, `${dialect}-${provider}.txt`));
+          const diff = readText(join(artifacts, "diffs", name, `${dialect}-${provider}.txt`));
+          return `<article id="${id}"><h3>${escape(name)} ${escape(dialect)} ${escape(provider)} <a href="#top">top</a></h3>${panel("log", raw)}${panel("normalized", norm)}${panel("diff vs typescript/sqlite", diff)}${panel("stderr", err) || (raw.trim() || err.trim() ? "" : "<p>no log</p>")}</article>`;
+        }),
+      )
+      .join("");
+    return `<h2 id="${name}">${name}</h2><table><thead><tr><th></th>${providers.map((p) => `<th>${p}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table><h3>Mismatches vs typescript/sqlite</h3><ul>${mismatches || "<li>none</li>"}</ul>${details}`;
   });
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>e2e-matrix</title>
 <style>
@@ -203,13 +291,44 @@ a{color:#8cf}
 .fail{background:#411}
 .mismatch{background:#542}
 footer{margin-top:2rem;color:#aaa}
+article{margin:2rem 0;padding-top:1rem;border-top:1px solid #444}
+pre{white-space:pre-wrap;background:#1a1a1a;padding:1rem;overflow:auto}
+h3{scroll-margin-top:1rem}
 </style></head><body>
-<h1>e2e-matrix</h1>
+<h1 id="top">e2e-matrix</h1>
+${summaryHtml}
 ${sections.join("\n")}
 <footer>duration ${Math.round(durationMs / 1000)}s · cleanup ${cleanup} · reference typescript/sqlite</footer>
 </body></html>`;
   writeFileSync(join(artifacts, "index.html"), html);
 };
+
+const scanCells = () =>
+  samples.flatMap(({ name }) =>
+    dialects.flatMap((dialect) =>
+      providers.map((provider) => {
+        const log = join(artifacts, "logs", name, dialect, `${provider}.log`);
+        const stderr = join(artifacts, "logs", name, dialect, `${provider}.stderr.txt`);
+        const diff = join(artifacts, "diffs", name, `${dialect}-${provider}.txt`);
+        const norm = join(artifacts, "normalized", name, `${dialect}-${provider}.txt`);
+        return {
+          sample: name,
+          dialect,
+          provider,
+          ok: existsSync(log) && !existsSync(stderr),
+          match: existsSync(diff) ? false : existsSync(norm) ? true : undefined,
+          log,
+        };
+      }),
+    ),
+  );
+
+if (process.argv.includes("--report-only")) {
+  report(scanCells(), 0, "rebuilt");
+  process.stderr.write(`report ${join(artifacts, "index.html")}\n`);
+  process.stderr.write(`summary ${join(artifacts, "summary.txt")}\n`);
+  process.exit(0);
+}
 
 const runCell = (sample, dialect, provider, sql, csharpOut) => {
   const log = join(artifacts, "logs", sample.name, dialect, `${provider}.log`);
@@ -304,4 +423,5 @@ try {
 report(cells, Date.now() - started, cleanup);
 const failed = cells.some((cell) => !cell.ok || cell.match === false);
 process.stderr.write(`report ${join(artifacts, "index.html")}\n`);
+process.stderr.write(`summary ${join(artifacts, "summary.txt")}\n`);
 process.exit(failed ? 1 : 0);

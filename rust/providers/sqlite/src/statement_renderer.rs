@@ -87,11 +87,21 @@ mod tests {
         let create = CreateTableStatement::new("users", &columns, &[]);
         assert_eq!(
             renderer().render(&create),
-            "CREATE TABLE users (id INTEGER DEFAULT 0 NOT NULL)"
+            "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)"
         );
         assert_eq!(
             DefaultStatementTextRenderer::instance().render(&create),
             "CREATE TABLE users (id int DEFAULT 0 NOT NULL)"
+        );
+
+        let keyed = CreateTableStatement::new(
+            "users",
+            &[Column::new("id", "int").identity()],
+            &[PrimaryKey::new("pk_users", &["id"])],
+        );
+        assert_eq!(
+            renderer().render(&keyed),
+            "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)"
         );
     }
 }

@@ -43,9 +43,18 @@ describe("SqliteStatementRenderer", () => {
     const create = new CreateTableStatement("users", [
       { name: "id", type: "int", default: new ColumnDefault("0"), notNull: new NotNull(), identity: true },
     ]);
-    expect(renderer.render(create)).toBe("CREATE TABLE users (id INTEGER DEFAULT 0 NOT NULL)");
+    expect(renderer.render(create)).toBe(
+      "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)",
+    );
     expect(DefaultStatementTextRenderer.instance.render(create)).toBe(
       "CREATE TABLE users (id int DEFAULT 0 NOT NULL)",
     );
+
+    const keyed = new CreateTableStatement(
+      "users",
+      [{ name: "id", type: "int", identity: true }],
+      [new PrimaryKey("pk_users", ["id"])],
+    );
+    expect(renderer.render(keyed)).toBe("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)");
   });
 });
