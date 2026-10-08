@@ -31,12 +31,12 @@ constructor()
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 ```typescript
-updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -45,12 +45,12 @@ updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 Replaces the junction set for the parent key.
 
 ```typescript
-updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -80,12 +80,12 @@ public DefaultUpdateEnrichmentStrategy()
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 ```csharp
-public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 
@@ -94,12 +94,12 @@ public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, ob
 Replaces the junction set for the parent key.
 
 ```csharp
-public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 

@@ -31,7 +31,7 @@ constructor()
 Fills a lookup from a cached related row, or a list from the rows for that parent key.
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
@@ -46,7 +46,7 @@ apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: E
 Reads the junction for each parent key, then each related row.
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)

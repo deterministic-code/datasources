@@ -19,12 +19,12 @@ abstract class UpdateEnrichmentStrategy<T>
 Writes the owned `List` for one parent.
 
 ```typescript
-abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -33,12 +33,12 @@ abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 Writes the junction rows for one parent.
 
 ```typescript
-abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -56,12 +56,12 @@ public abstract class UpdateEnrichmentStrategy<T>
 Writes the owned `List` for one parent.
 
 ```csharp
-public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — child [IChildPersist](#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 
@@ -70,12 +70,12 @@ public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, ob
 Writes the junction rows for one parent.
 
 ```csharp
-public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — link [IChildPersist](#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 

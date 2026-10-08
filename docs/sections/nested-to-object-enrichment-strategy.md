@@ -33,7 +33,7 @@ constructor(typeMap: TypeMap<T>)
 Replaces `parents` with the objects collapsed from `sources`.
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — unused

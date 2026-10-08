@@ -31,7 +31,7 @@ constructor()
 Fills lookups and lists from one `IN` read of the related repository.
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)

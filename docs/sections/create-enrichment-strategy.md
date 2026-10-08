@@ -19,12 +19,12 @@ abstract class CreateEnrichmentStrategy<T>
 Creates the owned `List` for one parent.
 
 ```typescript
-abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -33,12 +33,12 @@ abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 Creates the junction rows for one parent.
 
 ```typescript
-abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -56,12 +56,12 @@ public abstract class CreateEnrichmentStrategy<T>
 Creates the owned `List` for one parent.
 
 ```csharp
-public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 
@@ -70,12 +70,12 @@ public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, ob
 Creates the junction rows for one parent.
 
 ```csharp
-public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 

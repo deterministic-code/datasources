@@ -31,12 +31,12 @@ constructor()
 Stamps each child and creates the payload.
 
 ```typescript
-createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -45,12 +45,12 @@ createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 Inserts one junction row per related id.
 
 ```typescript
-createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -80,12 +80,12 @@ public DefaultCreateEnrichmentStrategy()
 Stamps each child and creates the payload.
 
 ```csharp
-public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 
@@ -94,12 +94,12 @@ public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, ob
 Inserts one junction row per related id.
 
 ```csharp
-public override Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 
