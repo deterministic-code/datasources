@@ -25,3 +25,4 @@ coverage.info
 *.nupkg
 .deterministic-cache/
 file:*
+artifacts/e2e-matrix/
