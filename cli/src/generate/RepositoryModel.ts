@@ -5,7 +5,7 @@ export type PlannedEnrichment = {
   source: string;
   relatedKey: string;
   relatedProperty?: string;
-  kind: "list" | "object" | "linked";
+  kind: "list" | "object" | "linked" | "dictionary";
   via: string;
   viaType: string;
   link?: string;

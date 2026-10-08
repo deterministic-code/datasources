@@ -1,0 +1,12 @@
+export type { ContactSource } from "./contactSource";
+export type { AddressType } from "./addressType";
+export type { PhoneType } from "./phoneType";
+export type { ContactsBase } from "./contactsBase";
+export type { AddressBase } from "./addressBase";
+export type { PhoneBase } from "./phoneBase";
+export type { ContactGroupsBase } from "./contactGroupsBase";
+export type { ContactSettings } from "./contactSettings";
+export type { ContactPreferences } from "./contactPreferences";
+export type { ContactGroupMember } from "./contactGroupMember";
+export type { LegacyContact } from "./legacyContact";
+export type { ContactChangeLog } from "./contactChangeLog";

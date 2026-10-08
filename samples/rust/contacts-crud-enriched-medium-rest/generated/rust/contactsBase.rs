@@ -7,7 +7,7 @@ pub struct ContactsBase {
     pub created: chrono::DateTime<chrono::Utc>,
     pub updated: chrono::DateTime<chrono::Utc>,
     pub version: Vec<u8>,
-    pub contact_source_id: String,
+    pub contact_source_id: i32,
     pub first_name: String,
     pub last_name: String,
     pub email: Option<String>,

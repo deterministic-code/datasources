@@ -17,14 +17,8 @@ export abstract class CreateEnrichmentStrategy<T> {
   protected presentCell = (value: Scalar | object | undefined): value is Scalar =>
     value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
-  protected payloadOf = (parent: object, into: string): object[] => {
-    const value = this.getCell(parent, into);
-    return value === undefined || value === null || typeof value === "string"
-      ? []
-      : Array.isArray(value)
-        ? value.filter((item) => item !== null && typeof item === "object")
-        : [];
-  };
+  protected payloadOf = (parent: object, into: string, enrichment?: Enrichment): object[] =>
+    mapPayload(this.getCell(parent, into), enrichment);
 
   protected stampCell = (related: object, by: string, key: Scalar | object | undefined): void => {
     if (key === undefined || key === null || typeof key === "object") return;
@@ -58,3 +52,20 @@ export abstract class CreateEnrichmentStrategy<T> {
     return key;
   };
 }
+
+const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment): object[] => {
+  if (value === undefined || value === null || typeof value === "string") return [];
+  if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
+  if (enrichment?.type !== "dictionary" || typeof value !== "object") return [];
+  const keyName = mapKeyName(enrichment.relatedKey);
+  const valueName = enrichment.relatedProperty ?? (keyName === "Key" ? "Value" : "value");
+  return Object.entries(value as Record<string, Scalar | object>).map(([key, cell]) =>
+    cell !== null && typeof cell === "object" && !Array.isArray(cell)
+      ? { [keyName]: key, ...(cell as object) }
+      : { [keyName]: key, [valueName]: cell },
+  );
+};
+
+const mapKeyName = (relatedKey: string): string =>
+  relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
+

@@ -1,5 +1,8 @@
+// schema-version: 1.0
+/** Type ContactChangeLog. */
 export interface ContactChangeLog {
-  occurredAt: Date | string;
+  id: number;
+  occurredAt: Date;
   contactId: number;
   changedBy: string;
   changeSummary: string;

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 
 namespace Datasources;
@@ -13,6 +14,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         {
             EnrichmentPropertyType.List => ApplyList(via, enrichment, parents, sources),
             EnrichmentPropertyType.Object => ApplyObject(via, enrichment, parents, sources),
+            EnrichmentPropertyType.Dictionary => ApplyDictionary(via, enrichment, parents, sources),
             _ => throw new DatasourceException($"Unsupported enrichment type \"{enrichment.Type}\"")
         };
 
@@ -81,13 +83,63 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         }
     }
 
+    protected virtual async Task ApplyDictionary<TRelated>(
+        IReadonlyRepository<TRelated> via,
+        Enrichment enrichment,
+        IList<T> parents,
+        IReadOnlyList<Row?>? sources)
+    {
+        for (var i = 0; i < parents.Count; i++)
+        {
+            var parent = parents[i];
+            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
+            if (key is null) continue;
+            var map = (IDictionary)Activator.CreateInstance(Prop(parent, enrichment.DestinationProperty).PropertyType)!;
+            await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
+            {
+                if (Get(item!, MapKey(enrichment.RelatedKey)) is not { } entry) continue;
+                map[entry] = enrichment.RelatedProperty is { } select
+                    ? Get(item, select)
+                    : CopyValue(item!, enrichment, Prop(parent, enrichment.DestinationProperty).PropertyType);
+            }
+            Set(parent, enrichment.DestinationProperty, map);
+        }
+    }
+
+    static string MapKey(string relatedKey) =>
+        relatedKey.Contains('_') || relatedKey.Length > 0 && char.IsLower(relatedKey[0]) ? "key" : "Key";
+
+    static object? CopyValue(object item, Enrichment enrichment, Type mapType)
+    {
+        var valueType = mapType.IsGenericType ? mapType.GetGenericArguments()[1] : typeof(object);
+        if (valueType == typeof(string) || valueType.IsValueType)
+            return Get(item, "Value") ?? Get(item, "value");
+        var copy = Activator.CreateInstance(valueType)!;
+        var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { MapKey(enrichment.RelatedKey), enrichment.RelatedKey };
+        foreach (var prop in item.GetType().GetProperties())
+        {
+            if (skip.Contains(prop.Name)) continue;
+            valueType.GetProperty(prop.Name)?.SetValue(copy, prop.GetValue(item));
+        }
+        return copy;
+    }
+
     protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
         sources is not null && index < sources.Count ? sources[index] : null;
 
     protected static object? SourceKey<TParent>(TParent parent, string name, Row? source) =>
-        source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
-            ? cell.ToObject()
-            : parent!.GetType().GetProperty(name)?.GetValue(parent);
+        LookupKey(
+            source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+                ? cell.ToObject()
+                : parent!.GetType().GetProperty(name)?.GetValue(parent));
+
+    static object? LookupKey(object? value)
+    {
+        if (value is null || value is string || value.GetType().IsPrimitive || value is Value) return value;
+        return value.GetType().GetProperty("Id")?.GetValue(value)
+            ?? value.GetType().GetProperty("id")?.GetValue(value)
+            ?? value;
+    }
 
     protected static string KeyOf(object? key) => key?.ToString() ?? "";
 

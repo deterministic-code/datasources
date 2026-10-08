@@ -71,7 +71,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   ): Promise<void> => {
     const enrichment = entry.enrichment;
     const type = enrichment.type ?? EnrichmentPropertyType.Object;
-    if (type === EnrichmentPropertyType.Dictionary || type === EnrichmentPropertyType.Custom)
+    if (type === EnrichmentPropertyType.Custom)
       throw new DatasourceError(`Unsupported enrichment type "${type}"`);
     if (enrichment.association) {
       const writer = linkWriter(entry, enrichment.destinationProperty);
@@ -85,7 +85,8 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
       }
       return;
     }
-    if (type !== EnrichmentPropertyType.List || enrichment.relatedProperty) return;
+    if (type === EnrichmentPropertyType.List && enrichment.relatedProperty) return;
+    if (type !== EnrichmentPropertyType.List && type !== EnrichmentPropertyType.Dictionary) return;
     const writer = childWriter(entry, enrichment.destinationProperty);
     for (const parent of parents) {
       if (this.skip(parent, enrichment.destinationProperty, mode)) continue;

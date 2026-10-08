@@ -447,32 +447,25 @@ describe("enrichment edges", () => {
     ).rejects.toThrow(/Tags/);
   });
 
-  it("rejects dictionary and custom fills", async () => {
+  it("rejects custom fills", async () => {
     const { connection } = mock([]);
     const via = new CRUDRepository<Item>(connection, { type: Item, entity: "items" });
     const read = new DefaultReadonlyEnrichmentStrategy<Item>();
-    const fill = (type: "dictionary" | "custom") => ({
+    const fill = {
       destinationProperty: "name",
       sourceProperty: "id",
       relatedKey: "id",
-      type,
-    });
-    await expect(read.apply(via, fill("dictionary"), [])).rejects.toThrow(
-      'Unsupported enrichment type "dictionary"',
-    );
-    await expect(read.apply(via, fill("custom"), [])).rejects.toThrow(
-      'Unsupported enrichment type "custom"',
-    );
-    const host = new CRUDRepository<Item>(connection, { type: Item, entity: "parents" });
-    const write = new DefaultWriteEnrichmentStrategy<Item>();
-    host.addEnriched(fill("dictionary"), via);
-    await expect(
-      write.persist(new RepositoryTree(new RepositoryTreeNode(host, "")), [new Item()], "create"),
-    ).rejects.toThrow('Unsupported enrichment type "dictionary"');
+      type: "custom" as const,
+    };
+    await expect(read.apply(via, fill, [])).rejects.toThrow('Unsupported enrichment type "custom"');
     const custom = new CRUDRepository<Item>(connection, { type: Item, entity: "parents" });
-    custom.addEnriched(fill("custom"), via);
+    custom.addEnriched(fill, via);
     await expect(
-      write.persist(new RepositoryTree(new RepositoryTreeNode(custom, "")), [new Item()], "create"),
+      new DefaultWriteEnrichmentStrategy<Item>().persist(
+        new RepositoryTree(new RepositoryTreeNode(custom, "")),
+        [new Item()],
+        "create",
+      ),
     ).rejects.toThrow('Unsupported enrichment type "custom"');
   });
 });

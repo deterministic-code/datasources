@@ -34,7 +34,7 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
 
     async Task PersistEntry(StoredEnrichment entry, IReadOnlyList<object> parents, WriteMode mode)
     {
-        if (entry.Enrichment.Type is EnrichmentPropertyType.Dictionary or EnrichmentPropertyType.Custom)
+        if (entry.Enrichment.Type is EnrichmentPropertyType.Custom)
             throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
         if (entry.Enrichment is { Association: { } } enrichment)
         {
@@ -53,8 +53,11 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             }
             return;
         }
-        if (entry.Enrichment is not { Type: EnrichmentPropertyType.List, RelatedProperty: null } owned)
+        if (entry.Enrichment is { Type: EnrichmentPropertyType.List, RelatedProperty: not null })
             return;
+        if (entry.Enrichment.Type is not (EnrichmentPropertyType.List or EnrichmentPropertyType.Dictionary))
+            return;
+        var owned = entry.Enrichment;
         var childWriter = entry.Persist
             ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{owned.DestinationProperty}\"");
         foreach (var parent in parents)

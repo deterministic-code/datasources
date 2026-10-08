@@ -19,18 +19,16 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         match enrichment.r#type {
-            crate::EnrichmentPropertyType::List => {
+            crate::EnrichmentPropertyType::List | crate::EnrichmentPropertyType::Dictionary => {
                 self.apply_list(via, enrichment, parents, sources).await
             }
             crate::EnrichmentPropertyType::Object => {
                 self.apply_object(via, enrichment, parents, sources).await
             }
-            crate::EnrichmentPropertyType::Dictionary | crate::EnrichmentPropertyType::Custom => {
-                Err(crate::DatasourceError::message(format!(
-                    "Unsupported enrichment type \"{:?}\"",
-                    enrichment.r#type
-                )))
-            }
+            crate::EnrichmentPropertyType::Custom => Err(crate::DatasourceError::message(format!(
+                "Unsupported enrichment type \"{:?}\"",
+                enrichment.r#type
+            ))),
         }
     }
 

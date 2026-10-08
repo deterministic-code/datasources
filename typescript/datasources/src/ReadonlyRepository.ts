@@ -173,7 +173,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
           options?.propertyMappings ?? this.propertyMappers,
         );
 
-  private rows = (options?: ReadonlyRepositoryMappingOptions<T>): TypeConverter<Cells, Cells> | undefined =>
+  private rowConverterOf = (options?: ReadonlyRepositoryMappingOptions<T>): TypeConverter<Cells, Cells> | undefined =>
     options?.rowConverter ?? this.rowConverter;
 
   private objects = (options?: ReadonlyRepositoryMappingOptions<T>): TypeConverter<T, Cells> =>
@@ -196,7 +196,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     const listed =
       parameters ??
       (statement instanceof SelectStatement ? statement.where?.parameters : undefined);
-    yield* this.apply(this.readItems(statement, listed, mappers, this.rows(options), this.objects(options)));
+    yield* this.apply(this.readItems(statement, listed, mappers, this.rowConverterOf(options), this.objects(options)));
   }
 
   private async *apply(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {

@@ -1,4 +1,4 @@
-use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, Result};
+use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};
 use std::sync::Arc;
 
 pub fn contact_change_log_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {
@@ -10,4 +10,15 @@ pub fn contact_change_log_repository(connection: Arc<dyn Connection>) -> Result<
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()];
     CRUDRepository::new(connection, options)
+}
+
+pub fn contact_change_log_readonly_repository(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository> {
+    let mut options = ReadonlyRepositoryMappingOptions::default();
+    options.entity = "ContactChangeLog".into();
+    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+        ("ContactChangeLog".into(), "contact_change_logs".into()),
+    ])));
+    options.read_properties = vec!["id".into(), "occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()];
+        let repo = ReadonlyRepository::new(connection, options)?;
+        Ok(repo)
 }

@@ -2,6 +2,7 @@ use datasources::{encode_rows, Row, Value};
 use serde_json::{Map, Number, Value as Json};
 
 const LISTS: [&str; 2] = ["addresses", "phones"];
+const MAPS: [&str; 2] = ["settings", "prefs"];
 
 pub fn json_to_row(value: &Json) -> Result<Row, String> {
     let object = value
@@ -14,6 +15,8 @@ pub fn json_to_row(value: &Json) -> Result<Row, String> {
                 key.clone(),
                 if LISTS.contains(&key.as_str()) {
                     encode_rows(&array_rows(cell))
+                } else if MAPS.contains(&key.as_str()) {
+                    encode_rows(&map_rows(cell))
                 } else {
                     json_value(cell)
                 },
@@ -35,6 +38,8 @@ pub fn row_to_json(row: &Row) -> Json {
                                 .map(row_to_json)
                                 .collect(),
                         )
+                    } else if MAPS.contains(&key.as_str()) {
+                        rows_to_map(value)
                     } else {
                         value_json(value)
                     },
@@ -46,6 +51,57 @@ pub fn row_to_json(row: &Row) -> Json {
 
 pub fn rows_to_json(rows: &[Row]) -> Json {
     Json::Array(rows.iter().map(row_to_json).collect())
+}
+
+fn map_rows(value: &Json) -> Vec<Row> {
+    value
+        .as_object()
+        .map(|items| {
+            items
+                .iter()
+                .map(|(key, cell)| {
+                    let mut row = if cell.is_object() {
+                        json_to_row(cell).unwrap_or_default()
+                    } else {
+                        let mut row = Row::new();
+                        row.insert("value".into(), json_value(cell));
+                        row
+                    };
+                    row.insert("key".into(), Value::Text(key.clone()));
+                    row
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn rows_to_map(value: &Value) -> Json {
+    Json::Object(
+        decode_rows(Some(value))
+            .into_iter()
+            .filter_map(|row| {
+                let key = text(row.get("key"));
+                if key.is_empty() {
+                    return None;
+                }
+                let rest: Map<String, Json> = row
+                    .iter()
+                    .filter(|(name, _)| {
+                        *name != "key" && *name != "contact_id" && *name != "id"
+                    })
+                    .map(|(name, cell)| (name.clone(), value_json(cell)))
+                    .collect();
+                Some((
+                    key,
+                    if rest.len() == 1 {
+                        rest.get("value").cloned().unwrap_or(Json::Object(rest))
+                    } else {
+                        Json::Object(rest)
+                    },
+                ))
+            })
+            .collect(),
+    )
 }
 
 fn array_rows(value: &Json) -> Vec<Row> {

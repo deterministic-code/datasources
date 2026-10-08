@@ -88,7 +88,7 @@ async fn round_trips_contacts_and_legacy_contacts() {
             "POST",
             "/contacts/",
             Some(
-                r#"{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.com","contact_source_name":"Manual","addresses":[{"line1":"12 Analytical Engine","city":"London"}],"phones":[{"number":"555-0100","label":"Mobile"}]}"#,
+                r#"{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.com","contact_source_name":"Manual","addresses":[{"line1":"12 Analytical Engine","city":"London","address_type_name":"Home"}],"phones":[{"number":"555-0100","label":"Mobile","phone_type_name":"Mobile"}],"settings":{"theme":"dark"},"prefs":{"home":{"locale":"en-GB","timezone":"Europe/London"}}}"#,
             ),
         )
         .await
@@ -100,11 +100,14 @@ async fn round_trips_contacts_and_legacy_contacts() {
     assert_eq!(saved["contact_source_name"], "Manual");
     assert_eq!(saved["addresses"][0]["city"], "London");
     assert_eq!(saved["phones"][0]["number"], "555-0100");
+    assert_eq!(saved["settings"]["theme"], "dark");
+    assert_eq!(saved["prefs"]["home"]["locale"], "en-GB");
+    assert_eq!(saved["prefs"]["home"]["timezone"], "Europe/London");
     api.handle(
         "POST",
         "/contacts",
         Some(
-            r#"{"first_name":"Grace","last_name":"Hopper","uuid":"22222222-2222-2222-2222-222222222222","created":"2024-01-02T00:00:00Z","contact_source_name":"Imported","addresses":[{"uuid":"33333333-3333-3333-3333-333333333333","created":"2024-01-02T00:00:00Z","line1":"1","city":"NY"}],"phones":[{"uuid":"44444444-4444-4444-4444-444444444444","created":"2024-01-02T00:00:00Z","number":"1"}]}"#,
+            r#"{"first_name":"Grace","last_name":"Hopper","uuid":"22222222-2222-2222-2222-222222222222","created":"2024-01-02T00:00:00Z","contact_source_name":"Imported","addresses":[{"uuid":"33333333-3333-3333-3333-333333333333","created":"2024-01-02T00:00:00Z","line1":"1","city":"NY","address_type_name":"Home"}],"phones":[{"uuid":"44444444-4444-4444-4444-444444444444","created":"2024-01-02T00:00:00Z","number":"1","phone_type_name":"Mobile"}]}"#,
         ),
     )
     .await
@@ -124,7 +127,7 @@ async fn round_trips_contacts_and_legacy_contacts() {
             "PUT",
             &format!("/contacts/?id={id}"),
             Some(
-                r#"{"first_name":"Ada","last_name":"Byron","email":null,"contact_source_name":"Manual","addresses":[{"line1":"1 Strand","city":"London"}],"phones":[]}"#,
+                r#"{"first_name":"Ada","last_name":"Byron","email":null,"contact_source_name":"Manual","addresses":[{"line1":"1 Strand","city":"London","address_type_name":"Home"}],"phones":[],"settings":{"density":"compact"},"prefs":{"work":{"locale":"en-US","timezone":"America/New_York"}}}"#,
             ),
         )
         .await
@@ -134,6 +137,10 @@ async fn round_trips_contacts_and_legacy_contacts() {
     assert_eq!(changed["last_name"], "Byron");
     assert_eq!(changed["addresses"][0]["line1"], "1 Strand");
     assert_eq!(changed["phones"].as_array().unwrap().len(), 0);
+    assert_eq!(changed["settings"]["density"], "compact");
+    assert!(changed["settings"].get("theme").is_none());
+    assert_eq!(changed["prefs"]["work"]["locale"], "en-US");
+    assert!(changed["prefs"].get("home").is_none());
     assert_eq!(
         api.handle("DELETE", &format!("/contacts/?id={id}"), None)
             .await

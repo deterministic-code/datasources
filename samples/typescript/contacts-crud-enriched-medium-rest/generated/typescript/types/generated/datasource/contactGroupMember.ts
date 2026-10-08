@@ -1,7 +1,11 @@
 // schema-version: 1.0
-import type { Base } from "./base";
 /** Type ContactGroupMember. */
-export interface ContactGroupMember extends Base {
+export interface ContactGroupMember {
+  id: number;
+  uuid: string;
+  created: Date;
+  updated: Date;
+  version: string;
   contactId: string;
   contactGroupId: string;
 }
