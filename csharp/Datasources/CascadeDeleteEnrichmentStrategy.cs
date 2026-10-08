@@ -5,7 +5,7 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
     public override async Task DeleteOwned(
         IChildPersist writer,
         Enrichment enrichment,
-        object parent,
+        T parent,
         Func<IReadOnlyList<object>, Task> deleteNested)
     {
         var existing = await Load(writer, enrichment, parent);
@@ -17,7 +17,7 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
     public override async Task DeleteLinked(
         IChildPersist writer,
         Enrichment enrichment,
-        object parent)
+        T parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var parentKey = Get(parent, enrichment.SourceProperty);

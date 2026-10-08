@@ -2,7 +2,7 @@ namespace Datasources;
 
 public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
 {
-    public override async Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+    public override async Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
     {
         var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
         var payload = Owned(writer, enrichment, parent);
@@ -21,7 +21,7 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         }
     }
 
-    public override async Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+    public override async Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);

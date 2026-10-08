@@ -367,11 +367,11 @@ public class CRUDRepositoryTests
         public override Task DeleteOwned(
             IChildPersist _writer,
             Enrichment _enrichment,
-            object _parent,
+            T _parent,
             Func<IReadOnlyList<object>, Task> _deleteNested) =>
             Task.CompletedTask;
 
-        public override Task DeleteLinked(IChildPersist _writer, Enrichment _enrichment, object _parent) =>
+        public override Task DeleteLinked(IChildPersist _writer, Enrichment _enrichment, T _parent) =>
             Task.CompletedTask;
     }
 

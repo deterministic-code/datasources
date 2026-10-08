@@ -7,9 +7,8 @@ import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
-const props = (item: object): Props => item as Props;
-
-const get = (item: object, name: string): Scalar | object | undefined => props(item)[name];
+const get = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
+  (item as never as Props)[name];
 
 const present = (value: Scalar | object | undefined): value is Scalar =>
   value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
@@ -30,7 +29,7 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
   async deleteOwned(
     writer: ICRUDRepository<object>,
     enrichment: Enrichment,
-    parent: object,
+    parent: T,
     deleteNested: (rows: object[]) => Promise<void>,
   ): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
@@ -38,7 +37,7 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
     for (const row of existing) await writer.delete(row);
   }
 
-  async deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
+  async deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const key = get(parent, enrichment.sourceProperty);
@@ -49,4 +48,4 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
       await writer.delete(row, linkWhere(association, key, id));
     }
   }
-}
+};

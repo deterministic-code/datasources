@@ -5,11 +5,11 @@ namespace Datasources;
 
 public abstract class CreateEnrichmentStrategy<T>
 {
-    public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent);
+    public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent);
 
-    public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent);
+    public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent);
 
-    protected static List<object> RelatedIds(object parent, Enrichment enrichment)
+    protected static List<object> RelatedIds<TParent>(TParent parent, Enrichment enrichment)
     {
         var ids = new List<object>();
         var seen = new HashSet<string>();
@@ -23,14 +23,14 @@ public abstract class CreateEnrichmentStrategy<T>
         return ids;
     }
 
-    protected static object Required(object parent, string name, string into) =>
+    protected static object Required<TParent>(TParent parent, string name, string into) =>
         Get(parent, name) is { } key && !Missing(key)
             ? key
             : throw new DatasourceException($"{into} requires \"{name}\"");
 
     protected static bool Missing(object? value) => value is null or 0 or 0L or 0u or "";
 
-    protected static IReadOnlyList<object> Payload(object parent, string into) =>
+    protected static IReadOnlyList<object> Payload<TParent>(TParent parent, string into) =>
         Get(parent, into) switch
         {
             null or string => [],
@@ -38,12 +38,12 @@ public abstract class CreateEnrichmentStrategy<T>
             _ => []
         };
 
-    protected static IReadOnlyList<object> Owned(IChildPersist writer, Enrichment enrichment, object parent) =>
+    protected static IReadOnlyList<object> Owned<TParent>(IChildPersist writer, Enrichment enrichment, TParent parent) =>
         enrichment.Type is EnrichmentPropertyType.Dictionary
             ? DictionaryOwned(writer, enrichment, parent)
             : Payload(parent, enrichment.DestinationProperty);
 
-    static List<object> DictionaryOwned(IChildPersist writer, Enrichment enrichment, object parent)
+    static List<object> DictionaryOwned<TParent>(IChildPersist writer, Enrichment enrichment, TParent parent)
     {
         if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];
         var rows = new List<object>();
@@ -65,15 +65,15 @@ public abstract class CreateEnrichmentStrategy<T>
     static string MapKey(string relatedKey) =>
         relatedKey.Contains('_') || relatedKey.Length > 0 && char.IsLower(relatedKey[0]) ? "key" : "Key";
 
-    protected static void Stamp(object related, string by, object? key)
+    protected static void Stamp<TItem>(TItem related, string by, object? key)
     {
         if (key is not null)
             Set(related, by, key);
     }
 
-    protected static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
+    protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
 
-    protected static void Set(object obj, string name, object? value)
+    protected static void Set<TItem>(TItem obj, string name, object? value)
     {
         var prop = Prop(obj, name);
         var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
@@ -96,7 +96,7 @@ public abstract class CreateEnrichmentStrategy<T>
     static bool IsReference(Type type) =>
         type.IsClass && type != typeof(string) && !typeof(IEnumerable).IsAssignableFrom(type);
 
-    static PropertyInfo Prop(object obj, string name) =>
-        obj.GetType().GetProperty(name)
+    static PropertyInfo Prop<TItem>(TItem obj, string name) =>
+        obj!.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
 }

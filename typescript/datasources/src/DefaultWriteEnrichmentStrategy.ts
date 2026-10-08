@@ -14,8 +14,8 @@ import type { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 import type { WriteMode } from "./WriteMode.ts";
 
-const unloaded = (parent: object, into: string): boolean => {
-  const value = (parent as Record<string, Scalar | object>)[into];
+const unloaded = <TParent>(parent: TParent, into: string): boolean => {
+  const value = (parent as never as Record<string, Scalar | object>)[into];
   return value === undefined || value === null;
 };
 
@@ -55,10 +55,10 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   }
 
   persist = async (tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void> => {
-    await this.walk(tree.parent.value, items as object[], mode);
+    await this.walk(tree.parent.value, items, mode);
   };
 
-  private walk = async (host: object, parents: object[], mode: WriteMode): Promise<void> => {
+  private walk = async (host: object, parents: T[], mode: WriteMode): Promise<void> => {
     const entries = enrichmentsOf(host);
     if (!entries) return;
     for (const entry of entries) await this.persistEntry(entry, parents, mode);
@@ -66,7 +66,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
 
   private persistEntry = async (
     entry: StoredEnrichment,
-    parents: object[],
+    parents: T[],
     mode: WriteMode,
   ): Promise<void> => {
     const enrichment = entry.enrichment;
@@ -98,6 +98,6 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     }
   };
 
-  private skip = (parent: object, into: string, mode: string): boolean =>
+  private skip = (parent: T, into: string, mode: string): boolean =>
     this.skipUnloaded && mode !== "delete" && unloaded(parent, into);
 }

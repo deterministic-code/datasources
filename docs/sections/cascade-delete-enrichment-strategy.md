@@ -31,12 +31,12 @@ constructor()
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```typescript
-deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 - `deleteNested` — deletes nested rows of the children before the children themselves
 
 **Returns** `Promise<void>`
@@ -46,12 +46,12 @@ deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 Deletes junction rows for the parent key. Related rows stay.
 
 ```typescript
-deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [association](./enrichment.md#association)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Promise<void>`
 
@@ -81,12 +81,12 @@ public CascadeDeleteEnrichmentStrategy()
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```csharp
-public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, T parent, Func<IReadOnlyList<object>, Task> deleteNested)
 ```
 
 - `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md)
-- `parent` — parent object
+- `parent` — parent entity
 - `deleteNested` — deletes nested rows of the children before the children themselves
 
 **Returns** `Task`
@@ -96,12 +96,12 @@ public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, ob
 Deletes junction rows for the parent key. Related rows stay.
 
 ```csharp
-public override Task DeleteLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task DeleteLinked(IChildPersist writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
-- `parent` — parent object
+- `parent` — parent entity
 
 **Returns** `Task`
 

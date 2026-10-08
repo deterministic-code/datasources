@@ -8,23 +8,22 @@ import { Operator, Where } from "./statements/index.ts";
 type Props = Record<string, Scalar | object>;
 
 export abstract class UpdateEnrichmentStrategy<T> {
-  declare private readonly subject: T;
+  abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>;
+  abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>;
-
-  protected getCell = (item: object, name: string): Scalar | object | undefined => (item as Props)[name];
+  protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
+    (item as never as Props)[name];
 
   protected presentCell = (value: Scalar | object | undefined): value is Scalar =>
     value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
-  protected payloadOf = (parent: object, into: string, enrichment?: Enrichment): object[] =>
+  protected payloadOf = <TParent>(parent: TParent, into: string, enrichment?: Enrichment): object[] =>
     mapPayload(this.getCell(parent, into), enrichment);
 
-  protected stampCell = (related: object, by: string, key: Scalar | object | undefined): void => {
+  protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
     if (key === undefined || key === null || typeof key === "object") return;
-    const current = (related as Props)[by];
+    const current = this.getCell(related, by);
     if (current !== null && typeof current === "object" && !Array.isArray(current)) {
       const target = current as Props;
       const id = "Id" in target ? "Id" : "id";
@@ -34,13 +33,13 @@ export abstract class UpdateEnrichmentStrategy<T> {
     Object.assign(related, { [by]: key });
   };
 
-  protected hasKey = (item: object, keys: readonly string[]): boolean =>
+  protected hasKey = <TItem extends object>(item: TItem, keys: readonly string[]): boolean =>
     keys.length > 0 && keys.every((name) => this.presentCell(this.getCell(item, name)));
 
-  protected keyOf = (item: object, keys: readonly string[]): string =>
+  protected keyOf = <TItem extends object>(item: TItem, keys: readonly string[]): string =>
     keys.map((name) => String(this.getCell(item, name) ?? "")).join("\u001f");
 
-  protected namesOf = (writer: ICRUDRepository<object>, item: object): readonly string[] =>
+  protected namesOf = <TItem extends object>(writer: ICRUDRepository<object>, item: TItem): readonly string[] =>
     writer.ids.length > 0 ? writer.ids : defaultId(Object.keys(item));
 
   protected linkWhere = (
@@ -55,7 +54,7 @@ export abstract class UpdateEnrichmentStrategy<T> {
       ),
     );
 
-  protected relatedIds = (parent: object, enrichment: Enrichment): Scalar[] => {
+  protected relatedIds = <TParent>(parent: TParent, enrichment: Enrichment): Scalar[] => {
     const ids: Scalar[] = [];
     const seen = new Set<string>();
     for (const related of this.payloadOf(parent, enrichment.destinationProperty)) {
@@ -69,7 +68,7 @@ export abstract class UpdateEnrichmentStrategy<T> {
     return ids;
   };
 
-  protected requiredKey = (parent: object, enrichment: Enrichment): Scalar => {
+  protected requiredKey = <TParent>(parent: TParent, enrichment: Enrichment): Scalar => {
     const key = this.getCell(parent, enrichment.sourceProperty);
     if (!this.presentCell(key)) throw new DatasourceError(`${enrichment.destinationProperty} requires "${enrichment.sourceProperty}"`);
     return key;
@@ -91,4 +90,3 @@ const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment)
 
 const mapKeyName = (relatedKey: string): string =>
   relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
-

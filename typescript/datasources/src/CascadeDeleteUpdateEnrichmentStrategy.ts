@@ -8,12 +8,12 @@ import { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 export class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T> {
   private readonly create = new DefaultCreateEnrichmentStrategy<T>();
 
-  async updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
+  async updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
     for (const row of await DeleteEnrichmentStrategy.load(writer, enrichment, parent)) await writer.delete(row);
     await this.create.createOwned(writer, enrichment, parent);
   }
 
-  async updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void> {
+  async updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const parentKey = this.requiredKey(parent, enrichment);

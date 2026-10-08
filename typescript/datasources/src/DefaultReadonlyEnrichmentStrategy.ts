@@ -125,7 +125,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   }
 
   protected sourceKey(
-    parent: object,
+    parent: T,
     name: string,
     sources: (Row | undefined)[] | undefined,
     index: number,
@@ -135,7 +135,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     return this.lookupKey(raw);
   }
 
-  protected props = (item: object): Props => item as Props;
+  protected props = <TItem>(item: TItem): Props => item as never as Props;
 
   protected keyOf = (key: Scalar | object): string => String(this.lookupKey(key));
 

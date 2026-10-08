@@ -5,26 +5,23 @@ import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
 
-const props = (item: object): Props => item as Props;
-
-const get = (item: object, name: string): Scalar | object | undefined => props(item)[name];
+const get = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
+  (item as never as Props)[name];
 
 export abstract class DeleteEnrichmentStrategy<T> {
-  declare private readonly subject: T; // keeps T paired with the write strategy
-
   abstract deleteOwned(
     writer: ICRUDRepository<object>,
     enrichment: Enrichment,
-    parent: object,
+    parent: T,
     deleteNested: (rows: object[]) => Promise<void>,
   ): Promise<void>;
 
-  abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>;
+  abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  static load = async (
+  static load = async <TParent>(
     writer: ICRUDRepository<object>,
     enrichment: Enrichment,
-    parent: object,
+    parent: TParent,
   ): Promise<object[]> => {
     const key = get(parent, enrichment.sourceProperty);
     if (key === undefined || key === null || typeof key === "object") return [];
@@ -44,4 +41,4 @@ export abstract class DeleteEnrichmentStrategy<T> {
       items.push(item);
     return items;
   };
-}
+};

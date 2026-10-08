@@ -19,7 +19,7 @@ interface IReadonlyEnrichmentStrategy<T extends object>
 Fills each parent from the related repository.
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)
@@ -34,7 +34,7 @@ apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: E
 Fills each parent by reading the link table, then the related repository.
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 - `via` — related [IReadonlyRepository](./readonly-repository.md)

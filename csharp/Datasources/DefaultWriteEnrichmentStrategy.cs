@@ -21,18 +21,18 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     public bool UseTransaction { get; }
 
     public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode) =>
-        Walk(tree.Parent.Value, [.. items.Cast<object>()], mode);
+        Walk(tree.Parent.Value, items, mode);
 
     protected virtual bool SkipUnloaded => false;
 
-    async Task Walk(object host, IReadOnlyList<object> parents, WriteMode mode)
+    async Task Walk(object host, IList<T> parents, WriteMode mode)
     {
         if (host is not IEnrichmentHost enriched) return;
         foreach (var entry in enriched.Enrichments)
             await PersistEntry(entry, parents, mode);
     }
 
-    async Task PersistEntry(StoredEnrichment entry, IReadOnlyList<object> parents, WriteMode mode)
+    async Task PersistEntry(StoredEnrichment entry, IList<T> parents, WriteMode mode)
     {
         if (entry.Enrichment.Type is EnrichmentPropertyType.Custom)
             throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
@@ -73,6 +73,6 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         }
     }
 
-    bool Skip(object parent, string into, WriteMode mode) =>
-        SkipUnloaded && mode is not WriteMode.Delete && parent.GetType().GetProperty(into)?.GetValue(parent) is null;
+    bool Skip(T parent, string into, WriteMode mode) =>
+        SkipUnloaded && mode is not WriteMode.Delete && parent!.GetType().GetProperty(into)?.GetValue(parent) is null;
 }

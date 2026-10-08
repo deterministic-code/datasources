@@ -34,22 +34,24 @@ class Item {
   name = "";
 }
 
+type Bag = Record<string, Scalar | object>;
+
 class Plain extends TypeConverter<Item, Cells> {
   convert = (row: Cells): Item => Object.assign(new Item(), row);
   reverseConvert = (row: Item): Cells => ({ id: row.id, name: row.name });
 }
 
 class OpenUpdate extends DefaultUpdateEnrichmentStrategy<Item> {
-  stamp = (related: object, by: string, key: Scalar | object | undefined): void =>
+  stamp = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void =>
     this.stampCell(related, by, key);
 
-  payload = (parent: object, into: string): object[] => this.payloadOf(parent, into);
+  payload = <TParent extends object>(parent: TParent, into: string): object[] => this.payloadOf(parent, into);
 
-  key = (item: object, keys: readonly string[]): string => this.keyOf(item, keys);
+  key = <TItem extends object>(item: TItem, keys: readonly string[]): string => this.keyOf(item, keys);
 }
 
 class OpenCreate extends DefaultCreateEnrichmentStrategy<Item> {
-  payload = (parent: object, into: string): object[] => this.payloadOf(parent, into);
+  payload = <TParent extends object>(parent: TParent, into: string): object[] => this.payloadOf(parent, into);
 }
 
 class DropId extends TypeConverter<Item, Cells> {
@@ -200,15 +202,15 @@ describe("statement and repository edges", () => {
 describe("enrichment edges", () => {
   it("requires a writer and an association", async () => {
     const owned = enrichment("Children");
-    const cascade = new CascadeDeleteEnrichmentStrategy<Item>();
+    const cascade = new CascadeDeleteEnrichmentStrategy<Bag>();
     await expect(cascade.deleteLinked(new CRUDRepository<Item>(mock([]).connection, { entity: "items" }), owned, {})).rejects.toThrow(
       "Missing association",
     );
-    const update = new CascadeDeleteUpdateEnrichmentStrategy<Item>();
+    const update = new CascadeDeleteUpdateEnrichmentStrategy<Bag>();
     await expect(update.updateLinked(new CRUDRepository<Item>(mock([]).connection, { entity: "items" }), owned, {})).rejects.toThrow(
       "Missing association",
     );
-    const replacing = new DefaultUpdateEnrichmentStrategy<Item>();
+    const replacing = new DefaultUpdateEnrichmentStrategy<Bag>();
     await expect(replacing.updateLinked(new CRUDRepository<Item>(mock([]).connection, { entity: "items" }), owned, {})).rejects.toThrow(
       "Missing association",
     );
@@ -276,7 +278,7 @@ describe("enrichment edges", () => {
     const children = { destinationProperty: "Children", sourceProperty: "id", relatedKey: "parent_id", type: "list" };
     const quiet = mock([]);
     const writer = new CRUDRepository<Item>(quiet.connection, { type: Item, entity: "children", ids: ["id"] });
-    const replacing = new DefaultUpdateEnrichmentStrategy<Item>();
+    const replacing = new DefaultUpdateEnrichmentStrategy<Bag>();
     await replacing.updateOwned(writer, children, { id: 1 });
     const existing = mock([
       { id: 1, parent_id: 1, name: "old" },
@@ -291,7 +293,7 @@ describe("enrichment edges", () => {
     const linkedRows = mock([{ tag_id: 0 }, { tag_id: 2 }, {}]);
     const linkWriter = new CRUDRepository<Item>(linkedRows.connection, { entity: "links", ids: ["id"] });
     await replacing.updateLinked(linkWriter, tags, { id: 1, Tags: [{ id: 2 }, { id: 2 }, { id: 3 }] });
-    await expect(new DefaultCreateEnrichmentStrategy<Item>().createLinked(writer, { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id" }, { id: 1 })).rejects.toThrow(
+    await expect(new DefaultCreateEnrichmentStrategy<Bag>().createLinked(writer, { destinationProperty: "Tags", sourceProperty: "id", relatedKey: "id" }, { id: 1 })).rejects.toThrow(
       "Missing association",
     );
     const noIds = new CRUDRepository<Item>(mock([]).connection, { entity: "children", ids: [] });
@@ -299,7 +301,7 @@ describe("enrichment edges", () => {
       id: 1,
       Children: [{ name: "a" }],
     });
-    const creating = new DefaultCreateEnrichmentStrategy<Item>();
+    const creating = new DefaultCreateEnrichmentStrategy<Bag>();
     await expect(creating.createLinked(writer, tags, { id: 0, Tags: [{ id: 1 }] })).rejects.toThrow(/requires/);
     await expect(creating.createLinked(writer, tags, { id: 1, Tags: [{ id: 0 }] })).rejects.toThrow(/requires/);
 
@@ -422,11 +424,11 @@ describe("enrichment edges", () => {
     open.stamp(withArray, "parent_id", 7);
     expect(withArray.parent_id).toBe(7);
 
-    const cascade = new CascadeDeleteEnrichmentStrategy<Item>();
+    const cascade = new CascadeDeleteEnrichmentStrategy<Bag>();
     const cascadeRows = mock([{ tag_id: 0 }, { tag_id: 2 }]);
     const cascadeWriter = new CRUDRepository<Item>(cascadeRows.connection, { entity: "links", ids: ["id"] });
     await cascade.deleteLinked(cascadeWriter, tags, { id: 1 });
-    const cascadeUpdate = new CascadeDeleteUpdateEnrichmentStrategy<Item>();
+    const cascadeUpdate = new CascadeDeleteUpdateEnrichmentStrategy<Bag>();
     const cascadeUpdateRows = mock([{ tag_id: 0 }, { tag_id: 3 }]);
     const cascadeUpdateWriter = new CRUDRepository<Item>(cascadeUpdateRows.connection, { entity: "links", ids: ["id"] });
     await cascadeUpdate.updateLinked(cascadeUpdateWriter, tags, { id: 1, Tags: [{ id: 4 }] });

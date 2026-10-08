@@ -7,18 +7,18 @@ public abstract class DeleteEnrichmentStrategy<T>
     public abstract Task DeleteOwned(
         IChildPersist writer,
         Enrichment enrichment,
-        object parent,
+        T parent,
         Func<IReadOnlyList<object>, Task> deleteNested);
 
     public abstract Task DeleteLinked(
         IChildPersist writer,
         Enrichment enrichment,
-        object parent);
+        T parent);
 
-    internal static async Task<List<object>> Load(
+    internal static async Task<List<object>> Load<TParent>(
         IChildPersist writer,
         Enrichment enrichment,
-        object parent)
+        TParent parent)
     {
         var key = Get(parent, enrichment.SourceProperty);
         if (key is null) return [];
@@ -44,9 +44,9 @@ public abstract class DeleteEnrichmentStrategy<T>
             new Operator.Equals(association.Parent, Value.From(parentKey)),
             new Operator.Equals(association.Related, Value.From(relatedKey))));
 
-    protected static object? Get(object obj, string name) => Prop(obj, name).GetValue(obj);
+    protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
 
-    static PropertyInfo Prop(object obj, string name) =>
-        obj.GetType().GetProperty(name)
+    static PropertyInfo Prop<TItem>(TItem obj, string name) =>
+        obj!.GetType().GetProperty(name)
         ?? throw new DatasourceException($"Unknown property \"{name}\"");
 }
