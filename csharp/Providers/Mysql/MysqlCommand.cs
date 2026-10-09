@@ -23,7 +23,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
             var reader = await Open(query, Helpers.ParametersToRecord(paramsList));
-            return (reader, (IReadOnlyList<Row>)[]);
+            return await FirstResultReader.Capture(reader);
         });
 
     public Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null) =>

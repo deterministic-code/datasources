@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   ChangeCasingMapper,
+  ConsoleCommandMiddleware,
   Datasource,
   DatasourceFactory,
   FlatToNestedMapper,
@@ -244,6 +245,20 @@ describe("command", () => {
     expect(again).toBe(false);
     expect(first[0]?.id).toBe(1);
     expect(second[0]?.id).toBe(2);
+  });
+
+  it("logs AfterCommand rows for a select", async () => {
+    const ds = Datasource.default;
+    const command = await ds.createCommand();
+    const lines: string[] = [];
+    command.addMiddleware(
+      new ConsoleCommandMiddleware((line) => lines.push(line), () => new Date("2026-09-22T00:00:00.000Z"), {
+        isVerbose: "true",
+      }),
+    );
+    await using reader = await command.executeReaderNative(new Native("SELECT 1 AS id"));
+    expect(await reader.next()).toBe(true);
+    expect(lines.some((line) => line.includes("[AfterCommand]-[{id: 1}]"))).toBe(true);
   });
 });
 

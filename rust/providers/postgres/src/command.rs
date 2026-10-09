@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
     parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, Native, Parameter, ParameterDirection, Reader, Response,
+    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response,
     Result, ReturnStatement, Statement, StatementKind, StatementTextRenderer, Value,
 };
 use rust_decimal::Decimal;
@@ -103,17 +103,15 @@ impl Command for PostgresCommand {
                             vec![],
                         ));
                     }
-                    Ok((
-                        Box::new(
-                            PostgresReader::open(
-                                &connection,
-                                statements,
-                                parameters_to_map(params.as_deref()),
-                            )
-                            .await?,
-                        ) as Box<dyn Reader>,
-                        vec![],
+                    FirstResultReader::capture(Box::new(
+                        PostgresReader::open(
+                            &connection,
+                            statements,
+                            parameters_to_map(params.as_deref()),
+                        )
+                        .await?,
                     ))
+                    .await
                 }
             })
             .await

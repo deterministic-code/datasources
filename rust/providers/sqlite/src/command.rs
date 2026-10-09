@@ -4,7 +4,7 @@ use crate::statement_renderer::SqliteStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, Native, Parameter, Reader, Response, Result, ReturnStatement, Statement,
+    DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement, Statement,
     StatementKind, StatementTextRenderer, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
@@ -92,7 +92,7 @@ impl Command for SqliteCommand {
                         &sql,
                         &parameters_to_map(params.as_deref()),
                     )?;
-                    Ok((Box::new(reader) as Box<dyn Reader>, vec![]))
+                    FirstResultReader::capture(Box::new(reader)).await
                 }
             })
             .await
