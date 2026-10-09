@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(stored.get("Login"), Some(&Value::from("ada")));
         assert_eq!(
             stored.get("Created"),
-            Some(&Value::from("2020-01-02T03:04:05.000Z"))
+            Some(&Value::from("2020-01-02 03:04:05.000"))
         );
     }
 }

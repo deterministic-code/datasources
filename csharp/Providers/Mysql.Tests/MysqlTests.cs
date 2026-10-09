@@ -16,6 +16,14 @@ public class MysqlTests
     {
         Assert.Equal("SELECT * FROM t WHERE id = @id", MysqlBind.ToMysql("SELECT * FROM t WHERE id = $id"));
         Assert.Equal("INSERT INTO t (id) VALUES (@id)", MysqlBind.ToMysql("INSERT INTO t (id) VALUES ($id) RETURNING id"));
+        Assert.Equal(
+            "INSERT INTO contact_settings (contact_id, `key`, value) VALUES (@contact_id, @key, @value)",
+            MysqlBind.ToMysql("INSERT INTO contact_settings (contact_id, key, value) VALUES ($contact_id, $key, $value)"));
+        Assert.Equal("CREATE TABLE t (id INT PRIMARY KEY)", MysqlBind.ToMysql("CREATE TABLE t (id INT PRIMARY KEY)"));
+        Assert.Equal(
+            "CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))",
+            MysqlBind.ToMysql("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"));
+        Assert.Equal("INSERT INTO `OldContactsTbl` (`CntID`) VALUES (@CntID)", MysqlBind.ToMysql("INSERT INTO OldContactsTbl (CntID) VALUES ($CntID)"));
         Assert.Equal("READ UNCOMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadUncommitted));
         Assert.Equal("READ COMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadCommitted));
         Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.RepeatableRead));

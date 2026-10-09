@@ -43,6 +43,27 @@ END;`,
       'INSERT INTO "t" ("id", "version") VALUES (1, X\'00\');',
     );
     expect(withSeedVersion("INSERT INTO \"t\" id VALUES 1;")).toBe('INSERT INTO "t" id VALUES 1;');
+    expect(withSeedVersion("INSERT INTO `t` (`id`) VALUES (1);")).toBe(
+      "INSERT INTO `t` (`id`, `version`) VALUES (1, X'00');",
+    );
+    expect(
+      statements(`CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TABLE "t" ("id" INTEGER);
+`),
+    ).toEqual([
+      `CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;`,
+      'CREATE TABLE "t" ("id" INTEGER);',
+    ]);
     expect(statements("BEGIN")).toEqual([]);
     expect(statements(";")).toEqual([";"]);
     expect(statements("END;")).toEqual(["END;"]);

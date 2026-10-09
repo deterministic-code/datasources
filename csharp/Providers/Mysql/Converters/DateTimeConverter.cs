@@ -15,7 +15,16 @@ internal sealed class DateTimeConverter : TypeConverter<Value, Value>
 
     public override Value ReverseConvert(Value to) => to switch
     {
-        Value.DateTime => new Value.Text(to.IsoDateTime()),
+        Value.DateTime => new Value.Text(Stamp(to.IsoDateTime())),
+        Value.Text(var text) when text.Contains('T') && DateTime.TryParse(
+            text, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out _) =>
+            new Value.Text(Stamp(text)),
         _ => to
     };
+
+    static string Stamp(string iso) =>
+        DateTime.Parse(iso, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal)
+            .ToUniversalTime()
+            .ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
 }

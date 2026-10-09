@@ -88,6 +88,23 @@ impl Command for MysqlCommand {
                             vec![],
                         ));
                     }
+                    let head = statements[0].trim_start();
+                    if head.len() >= 6 {
+                        let verb = head[..6].to_ascii_uppercase();
+                        if verb == "INSERT" || verb == "UPDATE" || verb == "DELETE" {
+                            let mapped = parameters_to_map(params.as_deref());
+                            let result = MysqlCommand::execute_sql(&connection, &sql, &mapped).await?;
+                            let logged = logged_response(&Response::new(
+                                result.result,
+                                result.rows_affected,
+                                params.map(|list| list.to_vec()),
+                            ));
+                            return Ok((
+                                Box::new(ArrayReader::new(vec![])) as Box<dyn Reader>,
+                                logged,
+                            ));
+                        }
+                    }
                     FirstResultReader::capture(Box::new(
                         MysqlReader::open(
                             &connection,
@@ -121,14 +138,13 @@ impl Command for MysqlCommand {
                     connection.ensure_open()?;
                     let mapped = parameters_to_map(params.as_deref());
                     let result = MysqlCommand::execute_sql(&connection, &sql, &mapped).await?;
-                    Ok((
-                        Response::new(
-                            result.result,
-                            result.rows_affected,
-                            params.map(|list| list.to_vec()),
-                        ),
-                        vec![],
-                    ))
+                    let response = Response::new(
+                        result.result,
+                        result.rows_affected,
+                        params.map(|list| list.to_vec()),
+                    );
+                    let logged = logged_response(&response);
+                    Ok((response, logged))
                 }
             })
             .await
@@ -178,6 +194,21 @@ impl MysqlCommand {
     }
 }
 
+fn logged_response(response: &Response) -> Vec<datasources::Row> {
+    vec![[
+        (
+            "result".into(),
+            match &response.result {
+                Value::Null => Value::Text("null".into()),
+                other => other.clone(),
+            },
+        ),
+        ("rowsAffected".into(), Value::Int(response.rows_affected)),
+    ]
+    .into_iter()
+    .collect()]
+}
+
 fn to_mysql_value(value: &Value) -> MysqlValue {
     match converters::reverse(value) {
         Value::Null => MysqlValue::NULL,
@@ -197,7 +228,15 @@ fn from_mysql_value(value: MysqlValue) -> Value {
         MysqlValue::Float(value) => Value::Float(value as f64),
         MysqlValue::Double(value) => Value::Float(value),
         MysqlValue::Bytes(bytes) => Value::Text(String::from_utf8_lossy(&bytes).into_owned()),
-        MysqlValue::Date(..) | MysqlValue::Time(..) => Value::Text(format!("{value:?}")),
+        MysqlValue::Date(year, month, day, hour, min, sec, micros) => chrono::NaiveDate::from_ymd_opt(
+            year as i32,
+            month as u32,
+            day as u32,
+        )
+        .and_then(|date| date.and_hms_micro_opt(hour as u32, min as u32, sec as u32, micros))
+        .map(|naive| Value::DateTime(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive, chrono::Utc)))
+        .unwrap_or_else(|| Value::Text(format!("{value:?}"))),
+        MysqlValue::Time(..) => Value::Text(format!("{value:?}")),
     }
 }
 
@@ -205,10 +244,19 @@ pub(crate) fn named_params(params: &HashMap<String, Value>) -> Params {
     if params.is_empty() {
         return Params::Empty;
     }
+    let owned: Vec<(String, MysqlValue)> = params
+        .iter()
+        .map(|(name, value)| {
+            (
+                name.trim_start_matches(['$', '@', ':']).to_ascii_lowercase(),
+                to_mysql_value(value),
+            )
+        })
+        .collect();
     Params::from(
-        params
+        owned
             .iter()
-            .map(|(name, value)| (name.as_str(), to_mysql_value(value)))
+            .map(|(name, value)| (name.as_str(), value.clone()))
             .collect::<Vec<_>>(),
     )
 }

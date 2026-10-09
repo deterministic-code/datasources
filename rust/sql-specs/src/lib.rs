@@ -629,7 +629,7 @@ pub async fn run(
     options.entity = spec.type_spec.table.clone();
     options.row_converter = Some(mapping_of(&spec, dialect));
     apply_mappers(&mut options, &spec, dialect);
-    let mut repo = CRUDRepository::new(connection, options).unwrap();
+    let repo = CRUDRepository::new(connection, options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
     let middleware: Arc<dyn CommandMiddleware> = Arc::new(
         ConsoleCommandMiddleware::with_sink(

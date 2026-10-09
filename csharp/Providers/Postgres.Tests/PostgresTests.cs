@@ -17,6 +17,10 @@ public class PostgresTests
         var (sql, values) = PostgresBind.ToPostgres("SELECT * FROM t WHERE id = $id AND n = $id", new Row { ["id"] = 1 });
         Assert.Equal("SELECT * FROM t WHERE id = $1 AND n = $1", sql);
         Assert.Equal(new object?[] { 1L }, values);
+        Assert.Equal(
+            "INSERT INTO \"contact_sources\" (\"name\") VALUES ('Manual')",
+            PostgresBind.ToPostgres("INSERT INTO \"contact_sources\" (\"name\") VALUES ('Manual')", new Row()).Sql);
+        Assert.Equal("SELECT * FROM \"OldContactsTbl\"", PostgresBind.ToPostgres("SELECT * FROM OldContactsTbl", new Row()).Sql);
         var stamp = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
         var (_, dates) = PostgresBind.ToPostgres("SELECT $at", new Row { ["at"] = stamp });
         Assert.Equal(new object?[] { "2020-01-02T03:04:05.000Z" }, dates);

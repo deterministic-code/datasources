@@ -77,6 +77,13 @@ mod tests {
         );
         assert_eq!(sql, "SELECT * FROM t WHERE id = $1 AND n = $1");
         assert_eq!(values, vec![Value::Int(1)]);
+        let (seed, _) = to_postgres(
+            "INSERT INTO \"contact_sources\" (\"name\") VALUES ('Manual')",
+            &HashMap::new(),
+        );
+        assert_eq!(seed, "INSERT INTO \"contact_sources\" (\"name\") VALUES ('Manual')");
+        let (legacy, _) = to_postgres("SELECT * FROM OldContactsTbl", &HashMap::new());
+        assert_eq!(legacy, "SELECT * FROM \"OldContactsTbl\"");
         let (_, missing) = to_postgres("SELECT $missing", &HashMap::new());
         assert_eq!(missing, vec![Value::Null]);
         assert_eq!(
@@ -121,6 +128,16 @@ mod tests {
         .expect("postgres");
         assert_eq!(from.url, "postgres://db/app?schema=s");
         assert_eq!(from.schema.as_deref(), Some("s"));
+        assert_eq!(
+            crate::connection::connect_url("postgres://db/app?schema=s"),
+            "postgres://db/app"
+        );
+        assert_eq!(
+            crate::connection::connect_url(
+                "postgres://ds:ds@127.0.0.1:15432/datasources?schema=ds_x"
+            ),
+            "postgres://ds:ds@127.0.0.1:15432/datasources"
+        );
         reset();
         register("postgres", Arc::new(With(Some("postgres://db/app".into()))));
         let ds = create(Some(&HashMap::from([(

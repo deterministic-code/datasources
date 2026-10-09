@@ -129,6 +129,10 @@ public sealed class Api
         {
             address.AddressTypeId = await LookupId(contacts.Address.AddressType, address.AddressTypeName, "address_type");
             address.Line1 = address.Line1 ?? "";
+            address.Line2 = address.Line2 ?? "";
+            address.Region = address.Region ?? "";
+            address.PostalCode = address.PostalCode ?? "";
+            address.Country = address.Country ?? "";
             address.Uuid = string.IsNullOrEmpty(address.Uuid) ? Clock.Uuid() : address.Uuid;
             address.Created = address.Created == default ? Clock.Now() : address.Created;
             address.Updated = Clock.Now();
@@ -138,6 +142,7 @@ public sealed class Api
         {
             phone.PhoneTypeId = await LookupId(contacts.Phone.PhoneType, phone.PhoneTypeName, "phone_type");
             phone.Number = phone.Number ?? "";
+            phone.Label = phone.Label ?? "";
             phone.Uuid = string.IsNullOrEmpty(phone.Uuid) ? Clock.Uuid() : phone.Uuid;
             phone.Created = phone.Created == default ? Clock.Now() : phone.Created;
             phone.Updated = Clock.Now();

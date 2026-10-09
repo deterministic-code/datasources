@@ -44,6 +44,32 @@ fn covers_seed_and_word_edges() {
         with_seed_version(r#"INSERT INTO "t" id VALUES 1;"#),
         r#"INSERT INTO "t" id VALUES 1;"#
     );
+    assert_eq!(
+        with_seed_version("INSERT INTO `t` (`id`) VALUES (1);"),
+        "INSERT INTO `t` (`id`, `version`) VALUES (1, X'00');"
+    );
+    assert_eq!(
+        statements(
+            r#"CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TABLE "t" ("id" INTEGER);
+"#
+        ),
+        vec![
+            r#"CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;"#
+                .to_string(),
+            r#"CREATE TABLE "t" ("id" INTEGER);"#.to_string(),
+        ]
+    );
     assert!(statements("BEGIN").is_empty());
     assert_eq!(statements(";"), vec![";"]);
     assert_eq!(statements("END;"), vec!["END;"]);

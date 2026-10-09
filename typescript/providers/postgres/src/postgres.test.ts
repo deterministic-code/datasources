@@ -64,6 +64,9 @@ describe("bind", () => {
       text: "SELECT * FROM t WHERE id = $1",
       values: [null],
     });
+    expect(toPostgres(`INSERT INTO "contact_sources" ("name") VALUES ('Manual')`).text)
+      .toBe(`INSERT INTO "contact_sources" ("name") VALUES ('Manual')`);
+    expect(toPostgres("SELECT * FROM OldContactsTbl").text).toBe(`SELECT * FROM "OldContactsTbl"`);
   });
 });
 

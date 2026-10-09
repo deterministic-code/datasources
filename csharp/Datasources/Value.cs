@@ -40,6 +40,7 @@ public abstract record Value
         int n => new Int(n),
         uint n => new Int(n),
         long n => new Int(n),
+        ulong n => new Int((long)n),
         float n => new Float(n),
         double n => new Float(n),
         string text => new Text(text),

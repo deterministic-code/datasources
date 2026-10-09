@@ -30,7 +30,14 @@ export const statements = (sql = readFileSync(sqlPath(), "utf8")): string[] => {
   const out: string[] = [];
   let depth = 0;
   let start = 0;
+  let dollar = false;
   for (let i = 0; i < cleaned.length; i++) {
+    if (cleaned.startsWith("$$", i)) {
+      dollar = !dollar;
+      i += 1;
+      continue;
+    }
+    if (dollar) continue;
     if (word(cleaned, i, "BEGIN")) depth++;
     if (cleaned[i] !== ";") continue;
     if (endsWithWord(cleaned, start, i, "END") && depth > 0) depth--;
@@ -43,11 +50,13 @@ export const statements = (sql = readFileSync(sqlPath(), "utf8")): string[] => {
 };
 
 export const withSeedVersion = (sql: string): string => {
-  if (!sql.startsWith("INSERT INTO") || sql.includes('"version"')) return sql;
+  if (!sql.startsWith("INSERT INTO") || sql.includes('"version"') || sql.includes("`version`"))
+    return sql;
   const values = sql.indexOf(") VALUES (");
+  const quote = sql.includes("`") ? "`" : '"';
   return values < 0
     ? sql
-    : `${sql.slice(0, values)}, "version") VALUES (${sql.slice(values + ") VALUES (".length, -2)}, X'00');`;
+    : `${sql.slice(0, values)}, ${quote}version${quote}) VALUES (${sql.slice(values + ") VALUES (".length, -2)}, X'00');`;
 };
 
 const exists = (path: string): boolean => {

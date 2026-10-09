@@ -113,7 +113,7 @@ impl Connection for PostgresConnection {
             *self.opened.lock().unwrap() = true;
             return Ok(());
         }
-        let (client, connection) = tokio_postgres::connect(&self.url, NoTls)
+        let (client, connection) = tokio_postgres::connect(&connect_url(&self.url), NoTls)
             .await
             .map_err(map_err)?;
         tokio::spawn(async move {
@@ -151,4 +151,37 @@ impl Connection for PostgresConnection {
         .await?;
         Ok(Arc::new(PostgresTransaction::new(self.share(), isolation)))
     }
+}
+
+pub(crate) fn connect_url(url: &str) -> String {
+    let Some(parsed) = DatasourceUrlParser::parse(url) else {
+        return url.to_string();
+    };
+    if parsed.schema.is_none() {
+        return url.to_string();
+    }
+    let mut out = format!("{}://", parsed.provider);
+    match (&parsed.username, &parsed.password) {
+        (Some(user), Some(password)) => out.push_str(&format!("{user}:{password}@")),
+        (Some(user), None) => out.push_str(&format!("{user}@")),
+        _ => {}
+    }
+    if let Some(host) = &parsed.host {
+        out.push_str(host);
+    }
+    if let Some(port) = parsed.port {
+        out.push_str(&format!(":{port}"));
+    }
+    out.push_str(&parsed.path);
+    if !parsed.options.is_empty() {
+        let query = parsed
+            .options
+            .iter()
+            .map(|(key, value)| format!("{key}={value}"))
+            .collect::<Vec<_>>()
+            .join("&");
+        out.push('?');
+        out.push_str(&query);
+    }
+    out
 }

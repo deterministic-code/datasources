@@ -38,12 +38,11 @@ impl MysqlReader {
         statements: Vec<String>,
         params: HashMap<String, Value>,
     ) -> Result<Self> {
-        let conn = connection
-            .conn
-            .lock()
-            .await
-            .take()
-            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        let conn = {
+            let mut slot = connection.lock_conn().await?;
+            slot.take()
+                .ok_or_else(|| DatasourceError::message("Connection is not open"))?
+        };
         let slot = connection.conn.clone();
         let opened = connection.opened.clone();
         let ready = connection.ready.clone();

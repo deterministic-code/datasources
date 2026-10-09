@@ -38,12 +38,11 @@ impl PostgresReader {
         statements: Vec<String>,
         params: HashMap<String, Value>,
     ) -> Result<Self> {
-        let client = connection
-            .client
-            .lock()
-            .await
-            .take()
-            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        let client = {
+            let mut slot = connection.lock_client().await?;
+            slot.take()
+                .ok_or_else(|| DatasourceError::message("Connection is not open"))?
+        };
         let slot = connection.client.clone();
         let opened = connection.opened.clone();
         let ready = connection.ready.clone();

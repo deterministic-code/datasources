@@ -349,7 +349,9 @@ const runCell = (sample, dialect, provider, sql, csharpOut) => {
     if (csharpOut) env.E2E_MATRIX_GENERATED = csharpOut;
     const result = spawnSync(command, args, { cwd, env, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
     const ok = (result.status ?? 1) === 0;
-    if (!ok) writeFileSync(join(artifacts, "logs", sample.name, dialect, `${provider}.stderr.txt`), `${result.stdout}\n${result.stderr}`);
+    const stderr = join(artifacts, "logs", sample.name, dialect, `${provider}.stderr.txt`);
+    if (ok) rmSync(stderr, { force: true });
+    else writeFileSync(stderr, `${result.stdout}\n${result.stderr}`);
     return { sample: sample.name, dialect, provider, ok, ms: Date.now() - started, log };
   } finally {
     db.drop();
