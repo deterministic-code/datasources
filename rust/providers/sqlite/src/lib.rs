@@ -11,6 +11,7 @@ mod statement_renderer;
 mod transaction;
 
 pub use driver::SqliteDriver;
+pub use statement_renderer::SqliteStatementRenderer;
 
 #[cfg(test)]
 pub(crate) fn env_lock() -> std::sync::MutexGuard<'static, ()> {

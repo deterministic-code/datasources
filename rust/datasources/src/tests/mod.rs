@@ -107,6 +107,64 @@ async fn readers() {
     assert!(reader.current().is_some());
     assert!(!reader.next().await.unwrap());
     assert!(!reader.next_result().await.unwrap());
+
+    struct Sets {
+        sets: Vec<Vec<Row>>,
+        set: Mutex<usize>,
+        row: Mutex<isize>,
+        closed: Arc<Mutex<bool>>,
+    }
+    impl Drop for Sets {
+        fn drop(&mut self) {
+            *self.closed.lock().expect("reader") = true;
+        }
+    }
+    #[async_trait]
+    impl Reader for Sets {
+        fn current(&self) -> Option<Row> {
+            let set = *self.set.lock().expect("reader");
+            let row = *self.row.lock().expect("reader");
+            if row < 0 {
+                return None;
+            }
+            self.sets.get(set).and_then(|rows| rows.get(row as usize).cloned())
+        }
+        async fn next(&self) -> Result<bool> {
+            let set = *self.set.lock().expect("reader");
+            let mut row = self.row.lock().expect("reader");
+            *row += 1;
+            Ok(self.sets.get(set).is_some_and(|rows| (*row as usize) < rows.len()))
+        }
+        async fn next_result(&self) -> Result<bool> {
+            let mut set = self.set.lock().expect("reader");
+            *set += 1;
+            *self.row.lock().expect("reader") = -1;
+            Ok(*set < self.sets.len())
+        }
+    }
+    let closed = Arc::new(Mutex::new(false));
+    let live = Sets {
+        sets: vec![
+            vec![record(&[("id", Value::Int(1))]), record(&[("id", Value::Int(2))])],
+            vec![record(&[("id", Value::Int(3))])],
+        ],
+        set: Mutex::new(0),
+        row: Mutex::new(-1),
+        closed: closed.clone(),
+    };
+    let (reader, rows) = FirstResultReader::capture(Box::new(live)).await.unwrap();
+    assert_eq!(rows.len(), 2);
+    assert!(reader.next().await.unwrap());
+    assert_eq!(reader.current().unwrap().get("id"), Some(&Value::Int(1)));
+    assert!(reader.next().await.unwrap());
+    assert_eq!(reader.current().unwrap().get("id"), Some(&Value::Int(2)));
+    assert!(!reader.next().await.unwrap());
+    assert!(reader.next_result().await.unwrap());
+    assert!(reader.next().await.unwrap());
+    assert_eq!(reader.current().unwrap().get("id"), Some(&Value::Int(3)));
+    drop(reader);
+    assert!(*closed.lock().expect("reader"));
+
     let collected: Vec<_> = ArrayReader::new(vec![record(&[("id", Value::Int(2))])])
         .read()
         .try_collect()

@@ -249,6 +249,18 @@ public class SqliteCommandIntegrationTests
     }
 
     [Fact]
+    public async Task LogsAfterCommandRowsForASelect()
+    {
+        var ds = Datasource.Default;
+        var command = await ds.CreateCommand();
+        var lines = new List<string>();
+        command.AddMiddleware(new ConsoleCommandMiddleware(lines.Add, () => DateTimeOffset.Parse("2026-09-22T00:00:00Z"), new Dictionary<string, string> { ["isVerbose"] = "true" }));
+        await using var reader = await command.ExecuteReader(Native.N("SELECT 1 AS id"));
+        Assert.True(await reader.Next());
+        Assert.Contains(lines, line => line.Contains("[AfterCommand]-[{id: 1}]"));
+    }
+
+    [Fact]
     public async Task SharedSpecs()
     {
         var dialect = SqlSpec.Dialect.Load("sqlite", static statement =>

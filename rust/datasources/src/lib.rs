@@ -1,4 +1,5 @@
 mod array_reader;
+mod first_result_reader;
 mod association;
 mod batch_command_i_bulk_write_strategy;
 pub mod builders;
@@ -102,6 +103,7 @@ mod write_enrichment_strategy;
 mod write_mode;
 
 pub use array_reader::ArrayReader;
+pub use first_result_reader::FirstResultReader;
 pub use association::Association;
 pub use batch_command_i_bulk_write_strategy::BatchCommandIBulkWriteStrategy;
 pub use builders::{Column, Join, JoinKind};

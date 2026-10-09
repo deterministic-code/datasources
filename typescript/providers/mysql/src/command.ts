@@ -1,6 +1,7 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  FirstResultReader,
   DatasourceError,
   ExecuteStoredProcedureStatement,
   Native,
@@ -51,12 +52,9 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       if (statements.some((sql) => /^\s*call\b/i.test(sql))) {
         const sets: Cells[][] = [];
         for (const sql of statements) sets.push(...(await this.callResults(sql, bound)));
-        return { value: resultSetsReader(sets), rows: [] };
+        return FirstResultReader.capture(resultSetsReader(sets));
       }
-      return {
-        value: statementReader(statements, (sql) => this.query(sql, bound)),
-        rows: [],
-      };
+      return FirstResultReader.capture(statementReader(statements, (sql) => this.query(sql, bound)));
     });
   }
 

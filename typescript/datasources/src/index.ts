@@ -143,6 +143,7 @@ export { ParameterDirection } from "./ParameterDirection.ts";
 export type { ParameterDirection as ParameterDirectionName } from "./ParameterDirection.ts";
 export type { Row } from "./Row.ts";
 export { ArrayReader } from "./ArrayReader.ts";
+export { FirstResultReader } from "./FirstResultReader.ts";
 export { StreamingReader, statementReader } from "./StreamingReader.ts";
 export { splitStatements } from "./splitStatements.ts";
 export { collectAsync } from "./collectAsync.ts";

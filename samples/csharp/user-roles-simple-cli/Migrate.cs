@@ -1,15 +1,18 @@
 using Datasources;
+using Datasources.Sqlite;
 
 namespace UserRolesSimpleCli;
 
 public static class Migrate
 {
+    static readonly StatementTextRenderer Sqlite = new(text => new SqliteStatementRenderer(text));
+
     public static async Task Apply(ICommand command)
     {
         var provider = command.Connection.Provider;
         foreach (var table in Schema.Tables(provider))
             await (provider == "sqlite"
-                ? command.Execute(Native.N(IfNotExists(DefaultStatementTextRenderer.Instance.Render(table))))
+                ? command.Execute(Native.N(IfNotExists(Sqlite.Render(table))))
                 : command.Execute(table));
         if (command.Connection.Provider == "mysql")
             foreach (var sql in Schema.MysqlProcedures())

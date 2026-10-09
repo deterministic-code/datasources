@@ -7,7 +7,7 @@ public static class LookupId
     public static async Task<int> Of(ICommand command, string table, string column, string value)
     {
         var where = new Where(new Datasources.Operator.Equals(column, value));
-        var reader = await command.ExecuteReader(new SelectStatement(new() { Table = table, Fields = ["id"], Where = where }), where.Parameters);
+        await using var reader = await command.ExecuteReader(new SelectStatement(new() { Table = table, Fields = ["id"], Where = where }), where.Parameters);
         return await reader.Next() && reader.Current is { } row
             ? row["id"] switch
             {

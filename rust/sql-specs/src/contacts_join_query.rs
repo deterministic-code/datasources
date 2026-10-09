@@ -14,9 +14,9 @@ pub fn contacts_join_query(where_clause: Option<&Where>) -> SelectStatement {
                 "ContactType.Id",
             ),
             Join::left("Address", "Contact.Id", "Address.ContactId"),
-            Join.left("AddressType", "Address.AddressTypeId", "AddressType.Id"),
-            Join.left("Phone", "Contact.Id", "Phone.ContactId"),
-            Join.left("PhoneType", "Phone.PhoneTypeId", "PhoneType.Id"),
+            Join::left("AddressType", "Address.AddressTypeId", "AddressType.Id"),
+            Join::left("Phone", "Contact.Id", "Phone.ContactId"),
+            Join::left("PhoneType", "Phone.PhoneTypeId", "PhoneType.Id"),
         ],
         where_clause: where_clause.map(|clause| clause as &dyn IWhere),
         ..SelectStatementOptions::new(

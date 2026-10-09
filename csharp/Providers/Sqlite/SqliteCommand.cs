@@ -19,7 +19,7 @@ internal sealed class SqliteCommand : CommandMiddlewareHost, ICommand
                 return ((IReader<Row>)new ArrayReader<Row>([]), (IReadOnlyList<Row>)[]);
             Typed.EnsureOpen();
             var reader = await Typed.Commands.Open(query, Helpers.ParametersToRecord(paramsList));
-            return (reader, (IReadOnlyList<Row>)[]);
+            return await FirstResultReader.Capture(reader);
         });
 
     public Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null) =>

@@ -1,6 +1,7 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  FirstResultReader,
   DatasourceError,
   Native,
   ParameterDirection,
@@ -40,10 +41,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
       const statements = splitStatements(query);
       if (statements.length === 0) return { value: new ArrayReader([]), rows: [] };
       const bound = bindParameters(params);
-      return {
-        value: statementReader(statements, (sql) => this.query(sql, bound)),
-        rows: [],
-      };
+      return FirstResultReader.capture(statementReader(statements, (sql) => this.query(sql, bound)));
     });
   }
 

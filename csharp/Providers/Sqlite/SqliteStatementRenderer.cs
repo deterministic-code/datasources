@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-internal sealed class SqliteStatementRenderer(StatementTextRenderer text) : StatementRenderer(text)
+public sealed class SqliteStatementRenderer(StatementTextRenderer text) : StatementRenderer(text)
 {
     public override string Visit(SelectInsertedIdStatement inserted) =>
         new SqliteSelectInsertedIdStatementTextRenderer().Render(inserted);

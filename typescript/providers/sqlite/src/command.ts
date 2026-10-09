@@ -1,6 +1,7 @@
 import {
   ArrayReader,
   CommandMiddlewareHost,
+  FirstResultReader,
   DatasourceError,
   Native,
   ReturnStatement,
@@ -50,8 +51,8 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
       const paramsBound = bound(params);
       let index = 0;
       let iter = this.iterate(statements[0] as string, paramsBound);
-      return {
-        value: new StreamingReader(
+      return FirstResultReader.capture(
+        new StreamingReader(
           async () => {
             const step = iter.next();
             return step.done ? undefined : step.value;
@@ -68,8 +69,7 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
             iter.return();
           },
         ),
-        rows: [],
-      };
+      );
     });
   }
 
