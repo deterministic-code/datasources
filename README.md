@@ -27321,7 +27321,7 @@ const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" 
 
 ## LazyWriteEnrichmentStrategy
 
-Nested write that skips a null list on create and update. Delete still removes the junction rows and owned children. The rest matches [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy).
+Nested write that skips a null list on create and update. Delete still removes the junction rows and children. The rest matches [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy).
 
 ### Classes
 
@@ -27438,7 +27438,7 @@ pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc
 
 ### Remarks
 
-A null list on create or update leaves that association as it is. An empty list still clears it. Delete still removes junction rows and owned children. Set it as the repository `write` option.
+A null list on create or update leaves that association as it is. An empty list still clears it. Delete still removes junction rows and children. Set it as the repository `write` option.
 
 > **Rust**
 >
@@ -27588,7 +27588,7 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 
 ## CreateEnrichmentStrategy
 
-How a create writes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods after the parent row is created. [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) is the default.
+How a create writes children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods after the parent row is created. [DefaultCreateEnrichmentStrategy](#defaultcreateenrichmentstrategy) is the default.
 
 ### Classes
 
@@ -27604,17 +27604,17 @@ abstract class CreateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [createOwned(writer, enrichment, parent)](#typescript-createenrichmentstrategy-createowned-writer-enrichment-parent) | Creates the owned `List` for one parent. |
+| [createChildren(writer, enrichment, parent)](#typescript-createenrichmentstrategy-createchildren-writer-enrichment-parent) | Creates the child `List` for one parent. |
 | [createLinked(writer, enrichment, parent)](#typescript-createenrichmentstrategy-createlinked-writer-enrichment-parent) | Creates the junction rows for one parent. |
 
-###### createOwned(writer, enrichment, parent) {#typescript-createenrichmentstrategy-createowned-writer-enrichment-parent}
+###### createChildren(writer, enrichment, parent) {#typescript-createenrichmentstrategy-createchildren-writer-enrichment-parent}
 
-Creates the owned `List` for one parent.
+Creates the child `List` for one parent.
 
 **Definition**
 
 ```typescript
-abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27636,7 +27636,7 @@ Creates the junction rows for one parent.
 **Definition**
 
 ```typescript
-abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27663,17 +27663,17 @@ public abstract class CreateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [CreateOwned(writer, enrichment, parent)](#csharp-createenrichmentstrategy-createowned-writer-enrichment-parent) | Creates the owned `List` for one parent. |
+| [CreateChildren(writer, enrichment, parent)](#csharp-createenrichmentstrategy-createchildren-writer-enrichment-parent) | Creates the child `List` for one parent. |
 | [CreateLinked(writer, enrichment, parent)](#csharp-createenrichmentstrategy-createlinked-writer-enrichment-parent) | Creates the junction rows for one parent. |
 
-###### CreateOwned(writer, enrichment, parent) {#csharp-createenrichmentstrategy-createowned-writer-enrichment-parent}
+###### CreateChildren(writer, enrichment, parent) {#csharp-createenrichmentstrategy-createchildren-writer-enrichment-parent}
 
-Creates the owned `List` for one parent.
+Creates the child `List` for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
+public abstract Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
@@ -27722,17 +27722,17 @@ pub trait CreateEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [create_owned(writer, enrichment, parent)](#rust-createenrichmentstrategy-create_owned-writer-enrichment-parent) | Creates the owned `List` for one parent. |
+| [create_children(writer, enrichment, parent)](#rust-createenrichmentstrategy-create_children-writer-enrichment-parent) | Creates the child `List` for one parent. |
 | [create_linked(writer, enrichment, parent)](#rust-createenrichmentstrategy-create_linked-writer-enrichment-parent) | Creates the junction rows for one parent. |
 
-###### create_owned(writer, enrichment, parent) {#rust-createenrichmentstrategy-create_owned-writer-enrichment-parent}
+###### create_children(writer, enrichment, parent) {#rust-createenrichmentstrategy-create_children-writer-enrichment-parent}
 
-Creates the owned `List` for one parent.
+Creates the child `List` for one parent.
 
 **Definition**
 
 ```rust
-async fn create_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn create_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
@@ -27797,7 +27797,7 @@ class DefaultCreateEnrichmentStrategy<T> extends CreateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [createOwned(writer, enrichment, parent)](#typescript-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent) | Stamps each child and creates the payload. |
+| [createChildren(writer, enrichment, parent)](#typescript-defaultcreateenrichmentstrategy-createchildren-writer-enrichment-parent) | Stamps each child and creates the payload. |
 | [createLinked(writer, enrichment, parent)](#typescript-defaultcreateenrichmentstrategy-createlinked-writer-enrichment-parent) | Inserts one junction row per related id. |
 
 ###### new DefaultCreateEnrichmentStrategy() {#typescript-defaultcreateenrichmentstrategy-new-defaultcreateenrichmentstrategy}
@@ -27814,14 +27814,14 @@ constructor()
 
 [DefaultCreateEnrichmentStrategy](#typescript-defaultcreateenrichmentstrategy)
 
-###### createOwned(writer, enrichment, parent) {#typescript-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent}
+###### createChildren(writer, enrichment, parent) {#typescript-defaultcreateenrichmentstrategy-createchildren-writer-enrichment-parent}
 
 Stamps each child and creates the payload.
 
 **Definition**
 
 ```typescript
-createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27843,7 +27843,7 @@ Inserts one junction row per related id.
 **Definition**
 
 ```typescript
-createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27876,7 +27876,7 @@ public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrateg
 
 | Name | Description |
 | --- | --- |
-| [CreateOwned(writer, enrichment, parent)](#csharp-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent) | Stamps each child and creates the payload. |
+| [CreateChildren(writer, enrichment, parent)](#csharp-defaultcreateenrichmentstrategy-createchildren-writer-enrichment-parent) | Stamps each child and creates the payload. |
 | [CreateLinked(writer, enrichment, parent)](#csharp-defaultcreateenrichmentstrategy-createlinked-writer-enrichment-parent) | Inserts one junction row per related id. |
 
 ###### DefaultCreateEnrichmentStrategy() {#csharp-defaultcreateenrichmentstrategy-defaultcreateenrichmentstrategy}
@@ -27893,14 +27893,14 @@ public DefaultCreateEnrichmentStrategy()
 
 [DefaultCreateEnrichmentStrategy](#csharp-defaultcreateenrichmentstrategy)`<T>`
 
-###### CreateOwned(writer, enrichment, parent) {#csharp-defaultcreateenrichmentstrategy-createowned-writer-enrichment-parent}
+###### CreateChildren(writer, enrichment, parent) {#csharp-defaultcreateenrichmentstrategy-createchildren-writer-enrichment-parent}
 
 Stamps each child and creates the payload.
 
 **Definition**
 
 ```csharp
-public override Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+public override Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
@@ -27949,17 +27949,17 @@ pub struct DefaultCreateEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [create_owned(writer, enrichment, parent)](#rust-defaultcreateenrichmentstrategy-create_owned-writer-enrichment-parent) | Stamps each child and creates the payload. |
+| [create_children(writer, enrichment, parent)](#rust-defaultcreateenrichmentstrategy-create_children-writer-enrichment-parent) | Stamps each child and creates the payload. |
 | [create_linked(writer, enrichment, parent)](#rust-defaultcreateenrichmentstrategy-create_linked-writer-enrichment-parent) | Inserts one junction row per related id. |
 
-###### create_owned(writer, enrichment, parent) {#rust-defaultcreateenrichmentstrategy-create_owned-writer-enrichment-parent}
+###### create_children(writer, enrichment, parent) {#rust-defaultcreateenrichmentstrategy-create_children-writer-enrichment-parent}
 
 Stamps each child and creates the payload.
 
 **Definition**
 
 ```rust
-async fn create_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn create_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
@@ -28002,7 +28002,7 @@ This is the create strategy [DefaultWriteEnrichmentStrategy](#defaultwriteenrich
 
 ## UpdateEnrichmentStrategy
 
-How an update writes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods. [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) replace-syncs. [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes, then inserts.
+How an update writes children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods. [DefaultUpdateEnrichmentStrategy](#defaultupdateenrichmentstrategy) replace-syncs. [CascadeDeleteUpdateEnrichmentStrategy](#cascadedeleteupdateenrichmentstrategy) deletes, then inserts.
 
 ### Classes
 
@@ -28018,17 +28018,17 @@ abstract class UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-updateowned-writer-enrichment-parent) | Writes the owned `List` for one parent. |
+| [updateChildren(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-updatechildren-writer-enrichment-parent) | Writes the child `List` for one parent. |
 | [updateLinked(writer, enrichment, parent)](#typescript-updateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Writes the junction rows for one parent. |
 
-###### updateOwned(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-updateowned-writer-enrichment-parent}
+###### updateChildren(writer, enrichment, parent) {#typescript-updateenrichmentstrategy-updatechildren-writer-enrichment-parent}
 
-Writes the owned `List` for one parent.
+Writes the child `List` for one parent.
 
 **Definition**
 
 ```typescript
-abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28050,7 +28050,7 @@ Writes the junction rows for one parent.
 **Definition**
 
 ```typescript
-abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28077,17 +28077,17 @@ public abstract class UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(writer, enrichment, parent)](#csharp-updateenrichmentstrategy-updateowned-writer-enrichment-parent) | Writes the owned `List` for one parent. |
+| [UpdateChildren(writer, enrichment, parent)](#csharp-updateenrichmentstrategy-updatechildren-writer-enrichment-parent) | Writes the child `List` for one parent. |
 | [UpdateLinked(writer, enrichment, parent)](#csharp-updateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Writes the junction rows for one parent. |
 
-###### UpdateOwned(writer, enrichment, parent) {#csharp-updateenrichmentstrategy-updateowned-writer-enrichment-parent}
+###### UpdateChildren(writer, enrichment, parent) {#csharp-updateenrichmentstrategy-updatechildren-writer-enrichment-parent}
 
-Writes the owned `List` for one parent.
+Writes the child `List` for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
+public abstract Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
@@ -28136,17 +28136,17 @@ pub trait UpdateEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [update_owned(writer, enrichment, parent)](#rust-updateenrichmentstrategy-update_owned-writer-enrichment-parent) | Writes the owned `List` for one parent. |
+| [update_children(writer, enrichment, parent)](#rust-updateenrichmentstrategy-update_children-writer-enrichment-parent) | Writes the child `List` for one parent. |
 | [update_linked(writer, enrichment, parent)](#rust-updateenrichmentstrategy-update_linked-writer-enrichment-parent) | Writes the junction rows for one parent. |
 
-###### update_owned(writer, enrichment, parent) {#rust-updateenrichmentstrategy-update_owned-writer-enrichment-parent}
+###### update_children(writer, enrichment, parent) {#rust-updateenrichmentstrategy-update_children-writer-enrichment-parent}
 
-Writes the owned `List` for one parent.
+Writes the child `List` for one parent.
 
 **Definition**
 
 ```rust
-async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
@@ -28288,7 +28288,7 @@ const parent = await parentsRepo.create(new Parent());
 
 ## DefaultUpdateEnrichmentStrategy
 
-Replace-sync for an owned list and a link. Matching children update. Missing children delete. New children insert. A link is replaced the same way: junction rows that are gone are deleted, and new related ids are inserted.
+Replace-sync for a child list and a link. Matching children update. Missing children delete. New children insert. A link is replaced the same way: junction rows that are gone are deleted, and new related ids are inserted.
 
 ### Classes
 
@@ -28310,7 +28310,7 @@ class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(writer, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [updateChildren(writer, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updatechildren-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
 | [updateLinked(writer, enrichment, parent)](#typescript-defaultupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Replaces the junction set for the parent key. |
 
 ###### new DefaultUpdateEnrichmentStrategy() {#typescript-defaultupdateenrichmentstrategy-new-defaultupdateenrichmentstrategy}
@@ -28327,14 +28327,14 @@ constructor()
 
 [DefaultUpdateEnrichmentStrategy](#typescript-defaultupdateenrichmentstrategy)
 
-###### updateOwned(writer, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
+###### updateChildren(writer, enrichment, parent) {#typescript-defaultupdateenrichmentstrategy-updatechildren-writer-enrichment-parent}
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 **Definition**
 
 ```typescript
-updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28356,7 +28356,7 @@ Replaces the junction set for the parent key.
 **Definition**
 
 ```typescript
-updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28389,7 +28389,7 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(writer, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [UpdateChildren(writer, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updatechildren-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
 | [UpdateLinked(writer, enrichment, parent)](#csharp-defaultupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Replaces the junction set for the parent key. |
 
 ###### DefaultUpdateEnrichmentStrategy() {#csharp-defaultupdateenrichmentstrategy-defaultupdateenrichmentstrategy}
@@ -28406,14 +28406,14 @@ public DefaultUpdateEnrichmentStrategy()
 
 [DefaultUpdateEnrichmentStrategy](#csharp-defaultupdateenrichmentstrategy)`<T>`
 
-###### UpdateOwned(writer, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
+###### UpdateChildren(writer, enrichment, parent) {#csharp-defaultupdateenrichmentstrategy-updatechildren-writer-enrichment-parent}
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 **Definition**
 
 ```csharp
-public override Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+public override Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
@@ -28462,17 +28462,17 @@ pub struct DefaultUpdateEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [update_owned(writer, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_owned-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
+| [update_children(writer, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_children-writer-enrichment-parent) | Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest. |
 | [update_linked(writer, enrichment, parent)](#rust-defaultupdateenrichmentstrategy-update_linked-writer-enrichment-parent) | Replaces the junction set for the parent key. |
 
-###### update_owned(writer, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_owned-writer-enrichment-parent}
+###### update_children(writer, enrichment, parent) {#rust-defaultupdateenrichmentstrategy-update_children-writer-enrichment-parent}
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 **Definition**
 
 ```rust
-async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
@@ -28614,7 +28614,7 @@ class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<
 
 | Name | Description |
 | --- | --- |
-| [updateOwned(writer, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [updateChildren(writer, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updatechildren-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
 | [updateLinked(writer, enrichment, parent)](#typescript-cascadedeleteupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
 
 ###### new CascadeDeleteUpdateEnrichmentStrategy() {#typescript-cascadedeleteupdateenrichmentstrategy-new-cascadedeleteupdateenrichmentstrategy}
@@ -28631,14 +28631,14 @@ constructor()
 
 [CascadeDeleteUpdateEnrichmentStrategy](#typescript-cascadedeleteupdateenrichmentstrategy)
 
-###### updateOwned(writer, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
+###### updateChildren(writer, enrichment, parent) {#typescript-cascadedeleteupdateenrichmentstrategy-updatechildren-writer-enrichment-parent}
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 **Definition**
 
 ```typescript
-updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28660,7 +28660,7 @@ Deletes every junction row for the parent key, then inserts the payload ids.
 **Definition**
 
 ```typescript
-updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28693,7 +28693,7 @@ public sealed class CascadeDeleteUpdateEnrichmentStrategy<T> : UpdateEnrichmentS
 
 | Name | Description |
 | --- | --- |
-| [UpdateOwned(writer, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [UpdateChildren(writer, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updatechildren-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
 | [UpdateLinked(writer, enrichment, parent)](#csharp-cascadedeleteupdateenrichmentstrategy-updatelinked-writer-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
 
 ###### CascadeDeleteUpdateEnrichmentStrategy() {#csharp-cascadedeleteupdateenrichmentstrategy-cascadedeleteupdateenrichmentstrategy}
@@ -28710,14 +28710,14 @@ public CascadeDeleteUpdateEnrichmentStrategy()
 
 [CascadeDeleteUpdateEnrichmentStrategy](#csharp-cascadedeleteupdateenrichmentstrategy)`<T>`
 
-###### UpdateOwned(writer, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updateowned-writer-enrichment-parent}
+###### UpdateChildren(writer, enrichment, parent) {#csharp-cascadedeleteupdateenrichmentstrategy-updatechildren-writer-enrichment-parent}
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 **Definition**
 
 ```csharp
-public override Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+public override Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
@@ -28766,17 +28766,17 @@ pub struct CascadeDeleteUpdateEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [update_owned(writer, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_owned-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
+| [update_children(writer, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_children-writer-enrichment-parent) | Deletes every existing child for the parent key, then inserts the payload. |
 | [update_linked(writer, enrichment, parent)](#rust-cascadedeleteupdateenrichmentstrategy-update_linked-writer-enrichment-parent) | Deletes every junction row for the parent key, then inserts the payload ids. |
 
-###### update_owned(writer, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_owned-writer-enrichment-parent}
+###### update_children(writer, enrichment, parent) {#rust-cascadedeleteupdateenrichmentstrategy-update_children-writer-enrichment-parent}
 
 Deletes every existing child for the parent key, then inserts the payload.
 
 **Definition**
 
 ```rust
-async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 **Parameters**
@@ -28918,7 +28918,7 @@ const parent = await parentsRepo.create(new Parent());
 
 ## DeleteEnrichmentStrategy
 
-How a delete removes owned children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods before the parent row is deleted. [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default.
+How a delete removes children and links. [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy) calls these methods before the parent row is deleted. [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) is the default.
 
 ### Classes
 
@@ -28934,19 +28934,19 @@ abstract class DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [deleteOwned(writer, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
+| [deleteChildren(writer, enrichment, parent, deleteNested)](#typescript-deleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested) | Removes the child `List` for one parent. |
 | [deleteLinked(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Removes the junction rows for one parent. |
-| [load(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent) | Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`. |
+| [load(writer, enrichment, parent)](#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent) | Reads the child rows whose `RelatedKey` matches the parent `SourceProperty`. |
 | [loadLinks(writer, column, key)](#typescript-deleteenrichmentstrategy-loadlinks-writer-column-key) | Reads junction rows whose `column` equals `key`. |
 
-###### deleteOwned(writer, enrichment, parent, deleteNested) {#typescript-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
+###### deleteChildren(writer, enrichment, parent, deleteNested) {#typescript-deleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested}
 
-Removes the owned `List` for one parent.
+Removes the child `List` for one parent.
 
 **Definition**
 
 ```typescript
-abstract deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
+abstract deleteChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 **Parameters**
@@ -28986,7 +28986,7 @@ abstract deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, en
 
 ###### load(writer, enrichment, parent) {#typescript-deleteenrichmentstrategy-load-writer-enrichment-parent}
 
-Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`.
+Reads the child rows whose `RelatedKey` matches the parent `SourceProperty`.
 
 **Definition**
 
@@ -29040,17 +29040,17 @@ public abstract class DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [DeleteOwned(writer, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Removes the owned `List` for one parent. |
+| [DeleteChildren(writer, enrichment, parent, deleteNested)](#csharp-deleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested) | Removes the child `List` for one parent. |
 | [DeleteLinked(writer, enrichment, parent)](#csharp-deleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Removes the junction rows for one parent. |
 
-###### DeleteOwned(writer, enrichment, parent, deleteNested) {#csharp-deleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
+###### DeleteChildren(writer, enrichment, parent, deleteNested) {#csharp-deleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested}
 
-Removes the owned `List` for one parent.
+Removes the child `List` for one parent.
 
 **Definition**
 
 ```csharp
-public abstract Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested) where TChild : new()
+public abstract Task DeleteChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested) where TChild : new()
 ```
 
 **Parameters**
@@ -29100,17 +29100,17 @@ pub trait DeleteEnrichmentStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [delete_owned(writer, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested) | Removes the owned `List` for one parent. |
+| [delete_children(writer, enrichment, parent, delete_nested)](#rust-deleteenrichmentstrategy-delete_children-writer-enrichment-parent-delete_nested) | Removes the child `List` for one parent. |
 | [delete_linked(writer, enrichment, parent)](#rust-deleteenrichmentstrategy-delete_linked-writer-enrichment-parent) | Removes the junction rows for one parent. |
 
-###### delete_owned(writer, enrichment, parent, delete_nested) {#rust-deleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested}
+###### delete_children(writer, enrichment, parent, delete_nested) {#rust-deleteenrichmentstrategy-delete_children-writer-enrichment-parent-delete_nested}
 
-Removes the owned `List` for one parent.
+Removes the child `List` for one parent.
 
 **Definition**
 
 ```rust
-async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
 **Parameters**
@@ -29150,7 +29150,7 @@ async fn delete_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enr
 
 ### Remarks
 
-Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy). A strategy that leaves `DeleteOwned` / `deleteOwned` / `delete_owned` empty keeps the children when the parent is deleted. The default [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) loads existing children by foreign key and does not trust the payload lists.
+Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](#defaultwriteenrichmentstrategy). A strategy that leaves `DeleteChildren` / `deleteChildren` / `delete_children` empty keeps the children when the parent is deleted. The default [CascadeDeleteEnrichmentStrategy](#cascadedeleteenrichmentstrategy) loads existing children by foreign key and does not trust the payload lists.
 
 ### Examples
 
@@ -29223,7 +29223,7 @@ class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy<T>
 
 | Name | Description |
 | --- | --- |
-| [deleteOwned(writer, enrichment, parent, deleteNested)](#typescript-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [deleteChildren(writer, enrichment, parent, deleteNested)](#typescript-cascadedeleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
 | [deleteLinked(writer, enrichment, parent)](#typescript-cascadedeleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
 
 ###### new CascadeDeleteEnrichmentStrategy() {#typescript-cascadedeleteenrichmentstrategy-new-cascadedeleteenrichmentstrategy}
@@ -29240,14 +29240,14 @@ constructor()
 
 [CascadeDeleteEnrichmentStrategy](#typescript-cascadedeleteenrichmentstrategy)
 
-###### deleteOwned(writer, enrichment, parent, deleteNested) {#typescript-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
+###### deleteChildren(writer, enrichment, parent, deleteNested) {#typescript-cascadedeleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested}
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 **Definition**
 
 ```typescript
-deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
+deleteChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 **Parameters**
@@ -29303,7 +29303,7 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
 
 | Name | Description |
 | --- | --- |
-| [DeleteOwned(writer, enrichment, parent, deleteNested)](#csharp-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [DeleteChildren(writer, enrichment, parent, deleteNested)](#csharp-cascadedeleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
 | [DeleteLinked(writer, enrichment, parent)](#csharp-cascadedeleteenrichmentstrategy-deletelinked-writer-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
 
 ###### CascadeDeleteEnrichmentStrategy() {#csharp-cascadedeleteenrichmentstrategy-cascadedeleteenrichmentstrategy}
@@ -29320,14 +29320,14 @@ public CascadeDeleteEnrichmentStrategy()
 
 [CascadeDeleteEnrichmentStrategy](#csharp-cascadedeleteenrichmentstrategy)`<T>`
 
-###### DeleteOwned(writer, enrichment, parent, deleteNested) {#csharp-cascadedeleteenrichmentstrategy-deleteowned-writer-enrichment-parent-deletenested}
+###### DeleteChildren(writer, enrichment, parent, deleteNested) {#csharp-cascadedeleteenrichmentstrategy-deletechildren-writer-enrichment-parent-deletenested}
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 **Definition**
 
 ```csharp
-public override Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested)
+public override Task DeleteChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested)
 ```
 
 **Parameters**
@@ -29377,17 +29377,17 @@ pub struct CascadeDeleteEnrichmentStrategy
 
 | Name | Description |
 | --- | --- |
-| [delete_owned(writer, enrichment, parent, delete_nested)](#rust-cascadedeleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
+| [delete_children(writer, enrichment, parent, delete_nested)](#rust-cascadedeleteenrichmentstrategy-delete_children-writer-enrichment-parent-delete_nested) | Loads children by foreign key, deletes their nested rows, then deletes the children. |
 | [delete_linked(writer, enrichment, parent)](#rust-cascadedeleteenrichmentstrategy-delete_linked-writer-enrichment-parent) | Deletes junction rows for the parent key. Related rows stay. |
 
-###### delete_owned(writer, enrichment, parent, delete_nested) {#rust-cascadedeleteenrichmentstrategy-delete_owned-writer-enrichment-parent-delete_nested}
+###### delete_children(writer, enrichment, parent, delete_nested) {#rust-cascadedeleteenrichmentstrategy-delete_children-writer-enrichment-parent-delete_nested}
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 **Definition**
 
 ```rust
-async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
 **Parameters**

@@ -1,5 +1,5 @@
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childField, isLinked, ownedChildren, pluralSnake, repositoryFile, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
+import { childField, children as childModels, isLinked, pluralSnake, repositoryFile, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
 
 const rustString = (value: string): string => `"${value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}"`;
 
@@ -20,7 +20,7 @@ const readonlyOptions = (model: RepositoryModel): string => {
 };
 
 const nestedOf = (models: RepositoryModel[]): Set<string> =>
-  new Set(models.filter((model) => ownedChildren(model).length > 0).map((model) => model.specName));
+  new Set(models.filter((model) => childModels(model).length > 0).map((model) => model.specName));
 
 const viaClone = (name: string, specName: string, nested: Set<string>): string =>
   nested.has(specName) ? `Arc::clone(&${name}.repo)` : `Arc::clone(&${name})`;
@@ -65,23 +65,23 @@ const plain = (model: RepositoryModel, nested: Set<string>): string =>
 
 const wrapped = (model: RepositoryModel, nested: Set<string>): string => {
   const type = `${model.typeName}Repository`;
-  const owned = ownedChildren(model);
-  const fields = owned
+  const children = childModels(model);
+  const fields = children
     .map((child) =>
       nested.has(child.specName)
         ? `    pub ${child.specName}: Arc<super::${child.specName}_repository::${child.typeName}Repository>,`
         : `    pub ${child.specName}: Arc<CRUDRepository>,`,
     )
     .join("\n");
-  const assign = owned.map((child) => child.specName).join(", ");
+  const assign = children.map((child) => child.specName).join(", ");
   const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, nested)}`).join("\n");
-  return `${uses}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model))}\n${childLets(owned, nested)}\n        let mut repo = CRUDRepository::new(Arc::clone(&connection), options)?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${model.specName}_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${readonlyFn(model, nested)}\n`;
+  return `${uses}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model))}\n${childLets(children, nested)}\n        let mut repo = CRUDRepository::new(Arc::clone(&connection), options)?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${model.specName}_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${readonlyFn(model, nested)}\n`;
 };
 
 export const rustRepositories = (models: RepositoryModel[]): GenerateEntry[] => {
   const nested = nestedOf(models);
   const files = models.map((model) =>
-    content(repositoryFile("rust", model), ownedChildren(model).length === 0 ? plain(model, nested) : wrapped(model, nested)),
+    content(repositoryFile("rust", model), childModels(model).length === 0 ? plain(model, nested) : wrapped(model, nested)),
   );
   const register = models.map((model) => {
     const module = `${model.specName}_repository`;

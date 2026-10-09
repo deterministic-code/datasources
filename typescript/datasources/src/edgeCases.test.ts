@@ -279,13 +279,13 @@ describe("enrichment edges", () => {
     const quiet = mock([]);
     const writer = new CRUDRepository<Item>(quiet.connection, { type: Item, entity: "children", ids: ["id"] });
     const replacing = new DefaultUpdateEnrichmentStrategy<Bag>();
-    await replacing.updateOwned(writer, children, { id: 1 });
+    await replacing.updateChildren(writer, children, { id: 1 });
     const existing = mock([
       { id: 1, parent_id: 1, name: "old" },
       { id: 9, parent_id: 1, name: "gone" },
     ]);
     const existingRepo = new CRUDRepository<Item>(existing.connection, { type: Item, entity: "children", ids: ["id"] });
-    await replacing.updateOwned(existingRepo, children, {
+    await replacing.updateChildren(existingRepo, children, {
       id: 1,
       Children: [{ id: 1, name: "kept" }, { name: "fresh" }, null, "skip"],
     });
@@ -297,7 +297,7 @@ describe("enrichment edges", () => {
       "Missing association",
     );
     const noIds = new CRUDRepository<Item>(mock([]).connection, { entity: "children", ids: [] });
-    await replacing.updateOwned(noIds, children, {
+    await replacing.updateChildren(noIds, children, {
       id: 1,
       Children: [{ name: "a" }],
     });

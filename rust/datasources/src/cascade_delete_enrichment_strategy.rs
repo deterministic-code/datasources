@@ -1,4 +1,4 @@
-use crate::delete_enrichment_strategy::{load, owned_where, DeleteEnrichmentStrategy};
+use crate::delete_enrichment_strategy::{load, children_where, DeleteEnrichmentStrategy};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
@@ -13,7 +13,7 @@ pub struct CascadeDeleteEnrichmentStrategy;
 
 #[async_trait]
 impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
-    async fn delete_owned(
+    async fn delete_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
@@ -23,7 +23,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
         let mut existing = load(writer.as_ref(), enrichment, parent).await?;
         delete_nested.delete_nested(&mut existing).await?;
         for row in existing {
-            match owned_where(writer.as_ref(), enrichment, parent) {
+            match children_where(writer.as_ref(), enrichment, parent) {
                 Some(clause) => writer.delete(&row, Some(&clause)).await?,
                 None => writer.delete(&row, None).await?,
             };

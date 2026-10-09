@@ -6,9 +6,9 @@ import { DatasourceError } from "./DatasourceError.ts";
 type Props = Record<string, Scalar | object>;
 
 export abstract class CreateEnrichmentStrategy<T> {
-  abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
+  abstract createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
+  abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
   protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
     (item as never as Props)[name];

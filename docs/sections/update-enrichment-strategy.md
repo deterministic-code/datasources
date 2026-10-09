@@ -1,6 +1,6 @@
 # UpdateEnrichmentStrategy
 
-How an update writes owned children and links. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) calls these methods. [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md) replace-syncs. [CascadeDeleteUpdateEnrichmentStrategy](./cascade-delete-update-enrichment-strategy.md) deletes, then inserts.
+How an update writes children and links. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) calls these methods. [DefaultUpdateEnrichmentStrategy](./default-update-enrichment-strategy.md) replace-syncs. [CascadeDeleteUpdateEnrichmentStrategy](./cascade-delete-update-enrichment-strategy.md) deletes, then inserts.
 
 ## Classes
 
@@ -14,12 +14,12 @@ abstract class UpdateEnrichmentStrategy<T>
 
 **Methods**
 
-##### updateOwned(writer, enrichment, parent)
+##### updateChildren(writer, enrichment, parent)
 
-Writes the owned `List` for one parent.
+Writes the child `List` for one parent.
 
 ```typescript
-abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -33,7 +33,7 @@ abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 Writes the junction rows for one parent.
 
 ```typescript
-abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
@@ -51,12 +51,12 @@ public abstract class UpdateEnrichmentStrategy<T>
 
 **Methods**
 
-##### UpdateOwned(writer, enrichment, parent)
+##### UpdateChildren(writer, enrichment, parent)
 
-Writes the owned `List` for one parent.
+Writes the child `List` for one parent.
 
 ```csharp
-public abstract Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
+public abstract Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -88,12 +88,12 @@ pub trait UpdateEnrichmentStrategy: Send + Sync
 
 **Methods**
 
-##### update_owned(writer, enrichment, parent)
+##### update_children(writer, enrichment, parent)
 
-Writes the owned `List` for one parent.
+Writes the child `List` for one parent.
 
 ```rust
-async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)

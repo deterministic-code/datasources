@@ -1,6 +1,6 @@
 use crate::default_create_enrichment_strategy::{create_children, create_links};
 use crate::default_write_enrichment_strategy::required;
-use crate::delete_enrichment_strategy::{load, owned_where};
+use crate::delete_enrichment_strategy::{load, children_where};
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
@@ -15,7 +15,7 @@ pub struct CascadeDeleteUpdateEnrichmentStrategy;
 
 #[async_trait]
 impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
-    async fn update_owned(
+    async fn update_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
@@ -23,7 +23,7 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
     ) -> Result<()> {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         for row in &existing {
-            match owned_where(writer.as_ref(), enrichment, parent) {
+            match children_where(writer.as_ref(), enrichment, parent) {
                 Some(clause) => writer.delete(row, Some(&clause)).await?,
                 None => writer.delete(row, None).await?,
             };

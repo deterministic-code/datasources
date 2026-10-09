@@ -1,6 +1,6 @@
 # DefaultUpdateEnrichmentStrategy
 
-Replace-sync for an owned list and a link. Matching children update. Missing children delete. New children insert. A link is replaced the same way: junction rows that are gone are deleted, and new related ids are inserted.
+Replace-sync for a child list and a link. Matching children update. Missing children delete. New children insert. A link is replaced the same way: junction rows that are gone are deleted, and new related ids are inserted.
 
 ## Classes
 
@@ -26,12 +26,12 @@ constructor()
 
 **Methods**
 
-##### updateOwned(writer, enrichment, parent)
+##### updateChildren(writer, enrichment, parent)
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 ```typescript
-updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -45,7 +45,7 @@ updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T):
 Replaces the junction set for the parent key.
 
 ```typescript
-updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
@@ -75,12 +75,12 @@ public DefaultUpdateEnrichmentStrategy()
 
 **Methods**
 
-##### UpdateOwned(writer, enrichment, parent)
+##### UpdateChildren(writer, enrichment, parent)
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 ```csharp
-public override Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+public override Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -112,12 +112,12 @@ pub struct DefaultUpdateEnrichmentStrategy
 
 **Methods**
 
-##### update_owned(writer, enrichment, parent)
+##### update_children(writer, enrichment, parent)
 
 Loads existing children, deletes rows missing from the payload, updates matches, and creates the rest.
 
 ```rust
-async fn update_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn update_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)

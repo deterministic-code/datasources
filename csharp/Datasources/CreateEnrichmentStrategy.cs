@@ -5,7 +5,7 @@ namespace Datasources;
 
 public abstract class CreateEnrichmentStrategy<T>
 {
-    public abstract Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+    public abstract Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
         where TChild : new();
 
     public abstract Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
@@ -43,16 +43,16 @@ public abstract class CreateEnrichmentStrategy<T>
             _ => []
         };
 
-    protected static IReadOnlyList<TChild> Owned<TParent, TChild>(
+    protected static IReadOnlyList<TChild> Children<TParent, TChild>(
         ICRUDRepository<TChild> writer,
         Enrichment enrichment,
         TParent parent)
         where TChild : new() =>
         enrichment.Type is EnrichmentPropertyType.Dictionary
-            ? DictionaryOwned<TParent, TChild>(enrichment, parent)
+            ? DictionaryChildren<TParent, TChild>(enrichment, parent)
             : Payload<TParent, TChild>(parent, enrichment.DestinationProperty);
 
-    static List<TChild> DictionaryOwned<TParent, TChild>(Enrichment enrichment, TParent parent)
+    static List<TChild> DictionaryChildren<TParent, TChild>(Enrichment enrichment, TParent parent)
         where TChild : new()
     {
         if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];

@@ -1,6 +1,6 @@
 # DeleteEnrichmentStrategy
 
-How a delete removes owned children and links. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) calls these methods before the parent row is deleted. [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md) is the default.
+How a delete removes children and links. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) calls these methods before the parent row is deleted. [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md) is the default.
 
 ## Classes
 
@@ -14,12 +14,12 @@ abstract class DeleteEnrichmentStrategy<T>
 
 **Methods**
 
-##### deleteOwned(writer, enrichment, parent, deleteNested)
+##### deleteChildren(writer, enrichment, parent, deleteNested)
 
-Removes the owned `List` for one parent.
+Removes the child `List` for one parent.
 
 ```typescript
-abstract deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
+abstract deleteChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -45,7 +45,7 @@ abstract deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, en
 
 ##### load(writer, enrichment, parent)
 
-Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`.
+Reads the child rows whose `RelatedKey` matches the parent `SourceProperty`.
 
 ```typescript
 static load<TParent, TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: TParent): Promise<TChild[]>
@@ -80,12 +80,12 @@ public abstract class DeleteEnrichmentStrategy<T>
 
 **Methods**
 
-##### DeleteOwned(writer, enrichment, parent, deleteNested)
+##### DeleteChildren(writer, enrichment, parent, deleteNested)
 
-Removes the owned `List` for one parent.
+Removes the child `List` for one parent.
 
 ```csharp
-public abstract Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested) where TChild : new()
+public abstract Task DeleteChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested) where TChild : new()
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -118,12 +118,12 @@ pub trait DeleteEnrichmentStrategy: Send + Sync
 
 **Methods**
 
-##### delete_owned(writer, enrichment, parent, delete_nested)
+##### delete_children(writer, enrichment, parent, delete_nested)
 
-Removes the owned `List` for one parent.
+Removes the child `List` for one parent.
 
 ```rust
-async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -150,7 +150,7 @@ async fn delete_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enr
 
 ## Remarks
 
-Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md). A strategy that leaves {{DeleteOwned|deleteOwned|delete_owned}} empty keeps the children when the parent is deleted. The default [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md) loads existing children by foreign key and does not trust the payload lists.
+Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md). A strategy that leaves {{DeleteChildren|deleteChildren|delete_children}} empty keeps the children when the parent is deleted. The default [CascadeDeleteEnrichmentStrategy](./cascade-delete-enrichment-strategy.md) loads existing children by foreign key and does not trust the payload lists.
 
 ## Examples
 

@@ -26,12 +26,12 @@ constructor()
 
 **Methods**
 
-##### deleteOwned(writer, enrichment, parent, deleteNested)
+##### deleteChildren(writer, enrichment, parent, deleteNested)
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```typescript
-deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
+deleteChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -76,12 +76,12 @@ public CascadeDeleteEnrichmentStrategy()
 
 **Methods**
 
-##### DeleteOwned(writer, enrichment, parent, deleteNested)
+##### DeleteChildren(writer, enrichment, parent, deleteNested)
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```csharp
-public override Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested)
+public override Task DeleteChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested)
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -114,12 +114,12 @@ pub struct CascadeDeleteEnrichmentStrategy
 
 **Methods**
 
-##### delete_owned(writer, enrichment, parent, delete_nested)
+##### delete_children(writer, enrichment, parent, delete_nested)
 
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```rust
-async fn delete_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
+async fn delete_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &Row, delete_nested: &dyn DeleteNested) -> Result<()>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)

@@ -47,7 +47,7 @@ export type LinkedEnrichment = PlannedEnrichment & {
 
 export const isLinked = (item: PlannedEnrichment): item is LinkedEnrichment => item.kind === "linked";
 
-export const ownedChildren = (model: RepositoryModel): Array<{ specName: string; typeName: string }> => {
+export const children = (model: RepositoryModel): Array<{ specName: string; typeName: string }> => {
   const rows = new Map<string, string>();
   for (const item of model.enrichments) {
     rows.set(item.via, item.viaType);

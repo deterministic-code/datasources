@@ -87,7 +87,7 @@ class ParentTag {
 }
 
 class SkipDelete<T extends object> extends DeleteEnrichmentStrategy<T> {
-  deleteOwned(): Promise<void> {
+  deleteChildren(): Promise<void> {
     return Promise.resolve();
   }
 

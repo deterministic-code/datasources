@@ -2,7 +2,7 @@ namespace Datasources;
 
 public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrategy<T>
 {
-    public override async Task DeleteOwned<TChild>(
+    public override async Task DeleteChildren<TChild>(
         ICRUDRepository<TChild> writer,
         Enrichment enrichment,
         T parent,
@@ -11,7 +11,7 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
         var existing = await Load(writer, enrichment, parent);
         await deleteNested(existing);
         foreach (var row in existing)
-            await writer.Delete(row, OwnedWhere(writer, enrichment, parent));
+            await writer.Delete(row, ChildrenWhere(writer, enrichment, parent));
     }
 
     public override async Task DeleteLinked<TChild>(

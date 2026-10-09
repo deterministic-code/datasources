@@ -4,18 +4,18 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 
 export class DefaultCreateEnrichmentStrategy<T> extends CreateEnrichmentStrategy<T> {
-  async createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
-    for (const related of this.payloadOf<object, T>(parent, enrichment.destinationProperty, enrichment)) {
+  async createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
+    for (const related of this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment)) {
       this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
       await writer.create(related);
     }
   }
 
-  async createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
+  async createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const parentKey = this.requiredKey(parent, enrichment);
     for (const id of this.relatedIds(parent, enrichment))
-      await writer.create({ [association.parent]: parentKey, [association.related]: id });
+      await writer.create({ [association.parent]: parentKey, [association.related]: id } as TChild);
   }
 }
