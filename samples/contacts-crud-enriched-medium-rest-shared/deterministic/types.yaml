@@ -58,7 +58,6 @@ types:
       inherits: base
       fields:
         - contact_source_id:
-            type: integer
             references: contact_source.id
         - first_name:
             type: string
@@ -80,10 +79,8 @@ types:
       inherits: base
       fields:
         - contact_id:
-            type: integer
             references: contacts_base.id
         - address_type_id:
-            type: integer
             references: address_type.id
         - line1:
             type: string
@@ -113,10 +110,8 @@ types:
       inherits: base
       fields:
         - contact_id:
-            type: integer
             references: contacts_base.id
         - phone_type_id:
-            type: integer
             references: phone_type.id
         - number:
             type: string
