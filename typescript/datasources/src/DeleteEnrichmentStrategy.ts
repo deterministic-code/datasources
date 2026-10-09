@@ -9,30 +9,30 @@ const get = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
   (item as never as Props)[name];
 
 export abstract class DeleteEnrichmentStrategy<T> {
-  abstract deleteOwned(
-    writer: ICRUDRepository<object>,
+  abstract deleteOwned<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: T,
-    deleteNested: (rows: object[]) => Promise<void>,
+    deleteNested: (rows: TChild[]) => Promise<void>,
   ): Promise<void>;
 
-  abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
+  abstract deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  static load = async <TParent>(
-    writer: ICRUDRepository<object>,
+  static load = async <TParent, TChild extends object>(
+    writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: TParent,
-  ): Promise<object[]> => {
+  ): Promise<TChild[]> => {
     const key = get(parent, enrichment.sourceProperty);
     if (key === undefined || key === null || typeof key === "object") return [];
-    const items: object[] = [];
+    const items: TChild[] = [];
     for await (const item of writer.read(new Where(new Operator.Equals(enrichment.relatedKey, key))))
       items.push(item);
     return items;
   };
 
-  static ownedWhere = <TParent>(
-    writer: ICRUDRepository<object>,
+  static ownedWhere = <TParent, TChild extends object>(
+    writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: TParent,
   ): Where | undefined => {
@@ -43,12 +43,12 @@ export abstract class DeleteEnrichmentStrategy<T> {
       : new Where(new Operator.Equals(enrichment.relatedKey, key));
   };
 
-  static loadLinks = async (
-    writer: ICRUDRepository<object>,
+  static loadLinks = async <TChild extends object>(
+    writer: ICRUDRepository<TChild>,
     column: string,
     key: Scalar,
-  ): Promise<object[]> => {
-    const items: object[] = [];
+  ): Promise<TChild[]> => {
+    const items: TChild[] = [];
     for await (const item of writer.read(new Where(new Operator.Equals(column, key))))
       items.push(item);
     return items;

@@ -7,7 +7,7 @@ import { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy<T> {
   async updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
-    const rows = this.payloadOf(parent, enrichment.destinationProperty, enrichment);
+    const rows = this.payloadOf<object, T>(parent, enrichment.destinationProperty, enrichment);
     for (const related of rows) this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
     const keys = this.namesOf(writer, rows[0] ?? existing[0] ?? {});
     const keep = new Set(rows.filter((row) => this.hasKey(row, keys)).map((row) => this.keyOf(row, keys)));

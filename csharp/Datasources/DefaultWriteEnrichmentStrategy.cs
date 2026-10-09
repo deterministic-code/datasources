@@ -36,20 +36,13 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     {
         if (entry.Enrichment.Type is EnrichmentPropertyType.Custom)
             throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
+        var stored = (StoredEnrichment<T>)entry;
         if (entry.Enrichment is { Association: { } } enrichment)
         {
-            var writer = entry.Link
-                ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{enrichment.DestinationProperty}\"");
             foreach (var parent in parents)
             {
                 if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
-                await (mode switch
-                {
-                    WriteMode.Create => create.CreateLinked(writer, enrichment, parent),
-                    WriteMode.Update => update.UpdateLinked(writer, enrichment, parent),
-                    WriteMode.Delete => delete.DeleteLinked(writer, enrichment, parent),
-                    _ => throw new DatasourceException("Unknown persist mode")
-                });
+                await stored.WriteLinked(create, update, delete, mode, parent);
             }
             return;
         }
@@ -58,18 +51,10 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         if (entry.Enrichment.Type is not (EnrichmentPropertyType.List or EnrichmentPropertyType.Dictionary))
             return;
         var owned = entry.Enrichment;
-        var childWriter = entry.Persist
-            ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{owned.DestinationProperty}\"");
         foreach (var parent in parents)
         {
             if (Skip(parent, owned.DestinationProperty, mode)) continue;
-            await (mode switch
-            {
-                WriteMode.Create => create.CreateOwned(childWriter, owned, parent),
-                WriteMode.Update => update.UpdateOwned(childWriter, owned, parent),
-                WriteMode.Delete => delete.DeleteOwned(childWriter, owned, parent, _ => Task.CompletedTask),
-                _ => throw new DatasourceException("Unknown persist mode")
-            });
+            await stored.WriteOwned(create, update, delete, mode, parent);
         }
     }
 

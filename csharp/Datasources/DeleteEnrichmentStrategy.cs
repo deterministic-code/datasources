@@ -4,42 +4,47 @@ namespace Datasources;
 
 public abstract class DeleteEnrichmentStrategy<T>
 {
-    public abstract Task DeleteOwned(
-        IChildPersist writer,
+    public abstract Task DeleteOwned<TChild>(
+        ICRUDRepository<TChild> writer,
         Enrichment enrichment,
         T parent,
-        Func<IReadOnlyList<object>, Task> deleteNested);
+        Func<IReadOnlyList<TChild>, Task> deleteNested)
+        where TChild : new();
 
-    public abstract Task DeleteLinked(
-        IChildPersist writer,
+    public abstract Task DeleteLinked<TChild>(
+        ICRUDRepository<TChild> writer,
         Enrichment enrichment,
-        T parent);
+        T parent)
+        where TChild : new();
 
-    internal static async Task<List<object>> Load<TParent>(
-        IChildPersist writer,
+    internal static async Task<List<TChild>> Load<TParent, TChild>(
+        ICRUDRepository<TChild> writer,
         Enrichment enrichment,
         TParent parent)
     {
         var key = Get(parent, enrichment.SourceProperty);
         if (key is null) return [];
-        var items = new List<object>();
+        var items = new List<TChild>();
         await foreach (var item in writer.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
             items.Add(item);
         return items;
     }
 
-    internal static async Task<List<object>> LoadLinks(
-        IChildPersist writer,
+    internal static async Task<List<TChild>> LoadLinks<TChild>(
+        ICRUDRepository<TChild> writer,
         string column,
         Value key)
     {
-        var items = new List<object>();
+        var items = new List<TChild>();
         await foreach (var item in writer.Read(new Where(new Operator.Equals(column, key))))
             items.Add(item);
         return items;
     }
 
-    internal static IWhere? OwnedWhere<TParent>(IChildPersist writer, Enrichment enrichment, TParent parent) =>
+    internal static IWhere? OwnedWhere<TParent, TChild>(
+        ICRUDRepository<TChild> writer,
+        Enrichment enrichment,
+        TParent parent) =>
         writer.Ids.Count > 0 || Get(parent, enrichment.SourceProperty) is not { } key
             ? null
             : new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)));

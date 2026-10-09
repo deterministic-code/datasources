@@ -5,15 +5,17 @@ namespace Datasources;
 
 public abstract class CreateEnrichmentStrategy<T>
 {
-    public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent);
+    public abstract Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+        where TChild : new();
 
-    public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent);
+    public abstract Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+        where TChild : new();
 
     protected static List<Value> RelatedIds<TParent>(TParent parent, Enrichment enrichment)
     {
         var ids = new List<Value>();
         var seen = new HashSet<string>();
-        foreach (var related in Payload(parent, enrichment.DestinationProperty))
+        foreach (var related in Payload<TParent, object>(parent, enrichment.DestinationProperty))
         {
             var id = Value.From(Get(related, enrichment.RelatedKey));
             if (Missing(id))
@@ -33,27 +35,32 @@ public abstract class CreateEnrichmentStrategy<T>
 
     protected static string Text(Value value) => value.ToObject()?.ToString() ?? "";
 
-    protected static IReadOnlyList<object> Payload<TParent>(TParent parent, string into) =>
+    protected static IReadOnlyList<TItem> Payload<TParent, TItem>(TParent parent, string into) =>
         Get(parent, into) switch
         {
             null or string => [],
-            IEnumerable rows => [.. rows.Cast<object>().Where(item => item is not null and not string)],
+            IEnumerable rows => [.. rows.OfType<TItem>().Where(item => item is not string)],
             _ => []
         };
 
-    protected static IReadOnlyList<object> Owned<TParent>(IChildPersist writer, Enrichment enrichment, TParent parent) =>
+    protected static IReadOnlyList<TChild> Owned<TParent, TChild>(
+        ICRUDRepository<TChild> writer,
+        Enrichment enrichment,
+        TParent parent)
+        where TChild : new() =>
         enrichment.Type is EnrichmentPropertyType.Dictionary
-            ? DictionaryOwned(writer, enrichment, parent)
-            : Payload(parent, enrichment.DestinationProperty);
+            ? DictionaryOwned<TParent, TChild>(enrichment, parent)
+            : Payload<TParent, TChild>(parent, enrichment.DestinationProperty);
 
-    static List<object> DictionaryOwned<TParent>(IChildPersist writer, Enrichment enrichment, TParent parent)
+    static List<TChild> DictionaryOwned<TParent, TChild>(Enrichment enrichment, TParent parent)
+        where TChild : new()
     {
         if (Get(parent, enrichment.DestinationProperty) is not IDictionary map) return [];
-        var rows = new List<object>();
+        var rows = new List<TChild>();
         foreach (DictionaryEntry entry in map)
         {
             if (entry.Key is null) continue;
-            var row = writer.New();
+            var row = new TChild();
             Set(row, MapKey(enrichment.RelatedKey), entry.Key);
             if (enrichment.RelatedProperty is { } select)
                 Set(row, select, entry.Value);
