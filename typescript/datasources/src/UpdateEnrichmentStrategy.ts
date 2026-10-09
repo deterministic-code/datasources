@@ -8,9 +8,9 @@ import { Operator, Where } from "./statements/index.ts";
 type Props = Record<string, Scalar | object>;
 
 export abstract class UpdateEnrichmentStrategy<T> {
-  abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
+  abstract updateChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>;
+  abstract updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
   protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
     (item as never as Props)[name];
@@ -42,7 +42,7 @@ export abstract class UpdateEnrichmentStrategy<T> {
   protected keyOf = <TItem extends object>(item: TItem, keys: readonly string[]): string =>
     keys.map((name) => String(this.getCell(item, name) ?? "")).join("\u001f");
 
-  protected namesOf = <TItem extends object>(writer: ICRUDRepository<object>, item: TItem): readonly string[] =>
+  protected namesOf = <TChild extends object>(writer: ICRUDRepository<TChild>, item: TChild): readonly string[] =>
     writer.ids.length > 0 ? writer.ids : defaultId(Object.keys(item));
 
   protected linkWhere = (

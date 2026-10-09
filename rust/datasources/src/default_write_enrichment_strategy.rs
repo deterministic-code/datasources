@@ -162,17 +162,17 @@ impl DefaultWriteEnrichmentStrategy {
                 match mode {
                     WriteMode::Create => {
                         self.create
-                            .create_owned(writer.clone(), enrichment, parent)
+                            .create_children(writer.clone(), enrichment, parent)
                             .await?
                     }
                     WriteMode::Update => {
                         self.update
-                            .update_owned(writer.clone(), enrichment, parent)
+                            .update_children(writer.clone(), enrichment, parent)
                             .await?
                     }
                     WriteMode::Delete => {
                         self.delete
-                            .delete_owned(writer.clone(), enrichment, parent, self)
+                            .delete_children(writer.clone(), enrichment, parent, self)
                             .await?
                     }
                 }

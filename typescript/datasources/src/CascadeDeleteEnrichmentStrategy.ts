@@ -26,7 +26,7 @@ const linkWhere = (
   );
 
 export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy<T> {
-  async deleteOwned<TChild extends object>(
+  async deleteChildren<TChild extends object>(
     writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: T,
@@ -34,7 +34,7 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
   ): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
-    for (const row of existing) await writer.delete(row, DeleteEnrichmentStrategy.ownedWhere(writer, enrichment, parent));
+    for (const row of existing) await writer.delete(row, DeleteEnrichmentStrategy.childrenWhere(writer, enrichment, parent));
   }
 
   async deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {

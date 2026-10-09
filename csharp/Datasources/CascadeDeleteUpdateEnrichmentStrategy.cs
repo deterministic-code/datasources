@@ -4,11 +4,11 @@ public sealed class CascadeDeleteUpdateEnrichmentStrategy<T> : UpdateEnrichmentS
 {
     readonly CreateEnrichmentStrategy<T> create = new DefaultCreateEnrichmentStrategy<T>();
 
-    public override async Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+    public override async Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
         foreach (var row in await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent))
-            await writer.Delete(row, DeleteEnrichmentStrategy<T>.OwnedWhere(writer, enrichment, parent));
-        await create.CreateOwned(writer, enrichment, parent);
+            await writer.Delete(row, DeleteEnrichmentStrategy<T>.ChildrenWhere(writer, enrichment, parent));
+        await create.CreateChildren(writer, enrichment, parent);
     }
 
     public override async Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)

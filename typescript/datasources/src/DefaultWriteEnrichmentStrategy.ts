@@ -91,9 +91,9 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     for (const parent of parents) {
       if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
       await dispatch(mode, {
-        create: () => this.createStrategy.createOwned(writer, enrichment, parent),
-        update: () => this.updateStrategy.updateOwned(writer, enrichment, parent),
-        delete: () => this.deleteStrategy.deleteOwned(writer, enrichment, parent, async () => {}),
+        create: () => this.createStrategy.createChildren(writer, enrichment, parent),
+        update: () => this.updateStrategy.updateChildren(writer, enrichment, parent),
+        delete: () => this.deleteStrategy.deleteChildren(writer, enrichment, parent, async () => {}),
       });
     }
   };

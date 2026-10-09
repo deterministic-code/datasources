@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait UpdateEnrichmentStrategy: Send + Sync {
-    async fn update_owned(
+    async fn update_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,

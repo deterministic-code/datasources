@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait DeleteEnrichmentStrategy: Send + Sync {
-    async fn delete_owned(
+    async fn delete_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
@@ -41,7 +41,7 @@ pub(crate) async fn load(
         .await
 }
 
-pub(crate) fn owned_where(
+pub(crate) fn children_where(
     writer: &dyn ICRUDRepository,
     enrichment: &Enrichment,
     parent: &Row,
@@ -68,7 +68,7 @@ mod tests {
 
     #[async_trait]
     impl DeleteEnrichmentStrategy for SkipDelete {
-        async fn delete_owned(
+        async fn delete_children(
             &self,
             _writer: Arc<dyn ICRUDRepository>,
             _enrichment: &Enrichment,

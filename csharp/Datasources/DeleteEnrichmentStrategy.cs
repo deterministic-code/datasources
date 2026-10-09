@@ -4,7 +4,7 @@ namespace Datasources;
 
 public abstract class DeleteEnrichmentStrategy<T>
 {
-    public abstract Task DeleteOwned<TChild>(
+    public abstract Task DeleteChildren<TChild>(
         ICRUDRepository<TChild> writer,
         Enrichment enrichment,
         T parent,
@@ -41,7 +41,7 @@ public abstract class DeleteEnrichmentStrategy<T>
         return items;
     }
 
-    internal static IWhere? OwnedWhere<TParent, TChild>(
+    internal static IWhere? ChildrenWhere<TParent, TChild>(
         ICRUDRepository<TChild> writer,
         Enrichment enrichment,
         TParent parent) =>

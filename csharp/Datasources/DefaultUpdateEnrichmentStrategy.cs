@@ -2,16 +2,16 @@ namespace Datasources;
 
 public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
 {
-    public override async Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+    public override async Task UpdateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
         var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
-        var payload = Owned(writer, enrichment, parent);
+        var payload = Children(writer, enrichment, parent);
         foreach (var related in payload)
             Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
         var keys = writer.Ids;
         var keep = payload.Where(row => HasKey(row, keys)).Select(row => KeyOf(row, keys)).ToHashSet();
         foreach (var row in existing.Where(row => !keep.Contains(KeyOf(row, keys))))
-            await writer.Delete(row, DeleteEnrichmentStrategy<T>.OwnedWhere(writer, enrichment, parent));
+            await writer.Delete(row, DeleteEnrichmentStrategy<T>.ChildrenWhere(writer, enrichment, parent));
         foreach (var related in payload)
         {
             if (HasKey(related, keys) && existing.Any(row => KeyOf(row, keys) == KeyOf(related, keys)))

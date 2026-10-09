@@ -22,9 +22,9 @@ internal sealed class StoredEnrichment<T> : StoredEnrichment
         where TChild : new() =>
         persistWrite = (create, update, delete, mode, parent) => mode switch
         {
-            WriteMode.Create => create.CreateOwned(repository, Enrichment, parent),
-            WriteMode.Update => update.UpdateOwned(repository, Enrichment, parent),
-            WriteMode.Delete => delete.DeleteOwned(repository, Enrichment, parent, _ => Task.CompletedTask),
+            WriteMode.Create => create.CreateChildren(repository, Enrichment, parent),
+            WriteMode.Update => update.UpdateChildren(repository, Enrichment, parent),
+            WriteMode.Delete => delete.DeleteChildren(repository, Enrichment, parent, _ => Task.CompletedTask),
             _ => throw new DatasourceException("Unknown persist mode")
         };
 
@@ -41,7 +41,7 @@ internal sealed class StoredEnrichment<T> : StoredEnrichment
         };
     }
 
-    internal Task WriteOwned(
+    internal Task WriteChildren(
         CreateEnrichmentStrategy<T> create,
         UpdateEnrichmentStrategy<T> update,
         DeleteEnrichmentStrategy<T> delete,

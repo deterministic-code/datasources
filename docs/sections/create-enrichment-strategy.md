@@ -1,6 +1,6 @@
 # CreateEnrichmentStrategy
 
-How a create writes owned children and links. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) calls these methods after the parent row is created. [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md) is the default.
+How a create writes children and links. [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) calls these methods after the parent row is created. [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md) is the default.
 
 ## Classes
 
@@ -14,12 +14,12 @@ abstract class CreateEnrichmentStrategy<T>
 
 **Methods**
 
-##### createOwned(writer, enrichment, parent)
+##### createChildren(writer, enrichment, parent)
 
-Creates the owned `List` for one parent.
+Creates the child `List` for one parent.
 
 ```typescript
-abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -33,7 +33,7 @@ abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 Creates the junction rows for one parent.
 
 ```typescript
-abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
@@ -51,12 +51,12 @@ public abstract class CreateEnrichmentStrategy<T>
 
 **Methods**
 
-##### CreateOwned(writer, enrichment, parent)
+##### CreateChildren(writer, enrichment, parent)
 
-Creates the owned `List` for one parent.
+Creates the child `List` for one parent.
 
 ```csharp
-public abstract Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
+public abstract Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -88,12 +88,12 @@ pub trait CreateEnrichmentStrategy: Send + Sync
 
 **Methods**
 
-##### create_owned(writer, enrichment, parent)
+##### create_children(writer, enrichment, parent)
 
-Creates the owned `List` for one parent.
+Creates the child `List` for one parent.
 
 ```rust
-async fn create_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn create_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)

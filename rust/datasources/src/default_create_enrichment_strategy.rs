@@ -15,7 +15,7 @@ pub struct DefaultCreateEnrichmentStrategy;
 
 #[async_trait]
 impl CreateEnrichmentStrategy for DefaultCreateEnrichmentStrategy {
-    async fn create_owned(
+    async fn create_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,

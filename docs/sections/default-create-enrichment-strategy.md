@@ -26,12 +26,12 @@ constructor()
 
 **Methods**
 
-##### createOwned(writer, enrichment, parent)
+##### createChildren(writer, enrichment, parent)
 
 Stamps each child and creates the payload.
 
 ```typescript
-createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -45,7 +45,7 @@ createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T):
 Inserts one junction row per related id.
 
 ```typescript
-createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
@@ -75,12 +75,12 @@ public DefaultCreateEnrichmentStrategy()
 
 **Methods**
 
-##### CreateOwned(writer, enrichment, parent)
+##### CreateChildren(writer, enrichment, parent)
 
 Stamps each child and creates the payload.
 
 ```csharp
-public override Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+public override Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -112,12 +112,12 @@ pub struct DefaultCreateEnrichmentStrategy
 
 **Methods**
 
-##### create_owned(writer, enrichment, parent)
+##### create_children(writer, enrichment, parent)
 
 Stamps each child and creates the payload.
 
 ```rust
-async fn create_owned(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
+async fn create_children(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enrichment, parent: &mut Row) -> Result<()>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)

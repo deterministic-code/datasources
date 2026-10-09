@@ -3,7 +3,7 @@ import {
   childClass,
   childField,
   isLinked,
-  ownedChildren,
+  children as childModels,
   pluralPascal,
   repositoryFile,
   type PlannedEnrichment,
@@ -26,10 +26,10 @@ const enrichment = (item: PlannedEnrichment, host: "ctor" | "readonly" = "ctor")
 };
 
 const createReadonly = (model: RepositoryModel, type: string): string => {
-  const owned = ownedChildren(model);
-  if (owned.length === 0 && model.enrichments.length === 0)
+  const children = childModels(model);
+  if (children.length === 0 && model.enrichments.length === 0)
     return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection) =>\n        new ReadonlyRepository<${type}>(connection, Options());`;
-  const locals = owned.map((child) => `        var ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`);
+  const locals = children.map((child) => `        var ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`);
   const enrich = model.enrichments.map((item) => `        ${enrichment(item, "readonly")}`);
   return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection)\n    {\n        var repo = new ReadonlyRepository<${type}>(connection, Options());\n${locals.join("\n")}\n${enrich.join("\n")}\n        return repo;\n    }`;
 };
@@ -37,10 +37,10 @@ const createReadonly = (model: RepositoryModel, type: string): string => {
 export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] => {
   const files = models.map((model) => {
     const type = `${model.typeHome === "view" ? "Backend.Types.View" : "Backend.Types.Datasource"}.${model.typeName}`;
-    const owned = ownedChildren(model);
-    const fields = owned.map((child) => `    public ${childClass(child.typeName)} ${childField("csharp", child.specName, child.typeName)} { get; }`);
+    const children = childModels(model);
+    const fields = children.map((child) => `    public ${childClass(child.typeName)} ${childField("csharp", child.specName, child.typeName)} { get; }`);
     const lines = [
-      ...owned.map((child) => `        ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`),
+      ...children.map((child) => `        ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`),
       ...model.enrichments.map((item) => `        ${enrichment(item)}`),
     ];
     const mapping = `        PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>\n        {\n${model.propertyMappings.map((pair) => `            ["${quote(pair.from)}"] = "${quote(pair.to)}",`).join("\n")}\n        }),\n`;

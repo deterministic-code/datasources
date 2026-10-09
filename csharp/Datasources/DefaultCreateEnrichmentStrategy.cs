@@ -2,9 +2,9 @@ namespace Datasources;
 
 public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrategy<T>
 {
-    public override async Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+    public override async Task CreateChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
-        foreach (var related in Owned(writer, enrichment, parent))
+        foreach (var related in Children(writer, enrichment, parent))
         {
             Stamp(related, enrichment.RelatedKey, Get(parent, enrichment.SourceProperty));
             await writer.Create(related);

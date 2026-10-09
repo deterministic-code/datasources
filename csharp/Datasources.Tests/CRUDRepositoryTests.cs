@@ -375,7 +375,7 @@ public class CRUDRepositoryTests
 
     sealed class SkipDelete<T> : DeleteEnrichmentStrategy<T>
     {
-        public override Task DeleteOwned<TChild>(
+        public override Task DeleteChildren<TChild>(
             ICRUDRepository<TChild> _writer,
             Enrichment _enrichment,
             T _parent,

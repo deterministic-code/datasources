@@ -1,6 +1,6 @@
 # LazyWriteEnrichmentStrategy
 
-Nested write that skips a null list on create and update. Delete still removes the junction rows and owned children. The rest matches [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md).
+Nested write that skips a null list on create and update. Delete still removes the junction rows and children. The rest matches [DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md).
 
 ## Classes
 
@@ -80,7 +80,7 @@ pub fn new(delete: Option<Arc<dyn DeleteEnrichmentStrategy>>, update: Option<Arc
 
 ## Remarks
 
-A null list on create or update leaves that association as it is. An empty list still clears it. Delete still removes junction rows and owned children. Set it as the repository `write` option.
+A null list on create or update leaves that association as it is. An empty list still clears it. Delete still removes junction rows and children. Set it as the repository `write` option.
 
 ::: prose
 ### rust

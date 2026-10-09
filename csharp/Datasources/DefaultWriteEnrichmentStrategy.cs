@@ -50,11 +50,11 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             return;
         if (entry.Enrichment.Type is not (EnrichmentPropertyType.List or EnrichmentPropertyType.Dictionary))
             return;
-        var owned = entry.Enrichment;
+        var children = entry.Enrichment;
         foreach (var parent in parents)
         {
-            if (Skip(parent, owned.DestinationProperty, mode)) continue;
-            await stored.WriteOwned(create, update, delete, mode, parent);
+            if (Skip(parent, children.DestinationProperty, mode)) continue;
+            await stored.WriteChildren(create, update, delete, mode, parent);
         }
     }
 

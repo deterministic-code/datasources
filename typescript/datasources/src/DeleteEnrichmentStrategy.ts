@@ -9,7 +9,7 @@ const get = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
   (item as never as Props)[name];
 
 export abstract class DeleteEnrichmentStrategy<T> {
-  abstract deleteOwned<TChild extends object>(
+  abstract deleteChildren<TChild extends object>(
     writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: T,
@@ -31,7 +31,7 @@ export abstract class DeleteEnrichmentStrategy<T> {
     return items;
   };
 
-  static ownedWhere = <TParent, TChild extends object>(
+  static childrenWhere = <TParent, TChild extends object>(
     writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: TParent,
