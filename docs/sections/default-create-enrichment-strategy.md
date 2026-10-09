@@ -80,10 +80,10 @@ public DefaultCreateEnrichmentStrategy()
 Stamps each child and creates the payload.
 
 ```csharp
-public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent)
+public override Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
-- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 
@@ -94,10 +94,10 @@ public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, T 
 Inserts one junction row per related id.
 
 ```csharp
-public override Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent)
+public override Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
-- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
 - `parent` — parent entity
 

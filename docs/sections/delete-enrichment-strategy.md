@@ -19,7 +19,7 @@ abstract class DeleteEnrichmentStrategy<T>
 Removes the owned `List` for one parent.
 
 ```typescript
-abstract deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+abstract deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -34,7 +34,7 @@ abstract deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 Removes the junction rows for one parent.
 
 ```typescript
-abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+abstract deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
@@ -48,28 +48,28 @@ abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, p
 Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`.
 
 ```typescript
-static load<TParent>(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: TParent): Promise<object[]>
+static load<TParent, TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: TParent): Promise<TChild[]>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 
-**Returns** `Promise<object[]>`
+**Returns** `Promise<TChild[]>`
 
 ##### loadLinks(writer, column, key)
 
 Reads junction rows whose `column` equals `key`.
 
 ```typescript
-static loadLinks(writer: ICRUDRepository<object>, column: string, key: Scalar): Promise<object[]>
+static loadLinks<TChild extends object>(writer: ICRUDRepository<TChild>, column: string, key: Scalar): Promise<TChild[]>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
 - `column` — junction column
 - `key` — parent key
 
-**Returns** `Promise<object[]>`
+**Returns** `Promise<TChild[]>`
 
 ### csharp
 #### DeleteEnrichmentStrategy
@@ -85,10 +85,10 @@ public abstract class DeleteEnrichmentStrategy<T>
 Removes the owned `List` for one parent.
 
 ```csharp
-public abstract Task DeleteOwned(IChildPersist writer, Enrichment enrichment, T parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public abstract Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested) where TChild : new()
 ```
 
-- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 - `deleteNested` — deletes nested rows of the children before the children themselves
@@ -100,10 +100,10 @@ public abstract Task DeleteOwned(IChildPersist writer, Enrichment enrichment, T 
 Removes the junction rows for one parent.
 
 ```csharp
-public abstract Task DeleteLinked(IChildPersist writer, Enrichment enrichment, T parent)
+public abstract Task DeleteLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
-- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 

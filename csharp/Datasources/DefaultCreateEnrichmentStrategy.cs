@@ -2,7 +2,7 @@ namespace Datasources;
 
 public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrategy<T>
 {
-    public override async Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent)
+    public override async Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
         foreach (var related in Owned(writer, enrichment, parent))
         {
@@ -11,13 +11,13 @@ public sealed class DefaultCreateEnrichmentStrategy<T> : CreateEnrichmentStrateg
         }
     }
 
-    public override async Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent)
+    public override async Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
         foreach (var id in RelatedIds(parent, enrichment))
         {
-            var row = writer.New();
+            var row = new TChild();
             Set(row, association.Parent, parentKey.ToObject());
             Set(row, association.Related, id.ToObject());
             await writer.Create(row);

@@ -31,7 +31,7 @@ constructor()
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```typescript
-deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 - `writer` — child [ICRUDRepository](./crud-repository.md)
@@ -46,7 +46,7 @@ deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T, 
 Deletes junction rows for the parent key. Related rows stay.
 
 ```typescript
-deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
+deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 - `writer` — link [ICRUDRepository](./crud-repository.md)
@@ -81,10 +81,10 @@ public CascadeDeleteEnrichmentStrategy()
 Loads children by foreign key, deletes their nested rows, then deletes the children.
 
 ```csharp
-public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, T parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public override Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested)
 ```
 
-- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 - `deleteNested` — deletes nested rows of the children before the children themselves
@@ -96,10 +96,10 @@ public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, T 
 Deletes junction rows for the parent key. Related rows stay.
 
 ```csharp
-public override Task DeleteLinked(IChildPersist writer, Enrichment enrichment, T parent)
+public override Task DeleteLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
-- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
 - `parent` — parent entity
 

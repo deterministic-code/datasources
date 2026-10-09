@@ -56,10 +56,10 @@ public abstract class UpdateEnrichmentStrategy<T>
 Writes the owned `List` for one parent.
 
 ```csharp
-public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
+public abstract Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
-- `writer` — child [IChildPersist](#ichildpersist)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 
@@ -70,94 +70,14 @@ public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T 
 Writes the junction rows for one parent.
 
 ```csharp
-public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent)
+public abstract Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
-- `writer` — link [IChildPersist](#ichildpersist)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 
 **Returns** `Task`
-
-#### IChildPersist
-
-```csharp
-public interface IChildPersist
-```
-
-Erased CRUD writer for an owned list or junction.
-
-**Methods**
-
-##### Create(item)
-
-Creates one child or link row.
-
-```csharp
-Task<object> Create(object item)
-```
-
-- `item` — row to create
-
-**Returns** `Task<object>`
-
-##### Update(item, byWhere)
-
-Updates one child or link row.
-
-```csharp
-Task<Response> Update(object item, IWhere? byWhere = null)
-```
-
-- `item` — row to update
-- `byWhere` — optional predicate
-
-**Returns** `Task` of `Response`
-
-##### Delete(item, byWhere)
-
-Deletes one child or link row.
-
-```csharp
-Task<Response> Delete(object item, IWhere? byWhere = null)
-```
-
-- `item` — row to delete
-- `byWhere` — optional predicate
-
-**Returns** `Task` of `Response`
-
-##### Read(where)
-
-Reads child or link rows.
-
-```csharp
-IAsyncEnumerable<object> Read(IWhere where)
-```
-
-- `where` — filter
-
-**Returns** `IAsyncEnumerable<object>`
-
-##### New()
-
-Builds an empty child or link row.
-
-```csharp
-object New()
-```
-
-**Returns** `object`
-
-**Properties**
-
-##### Ids
-
-Id property names on the child or link type.
-
-```csharp
-IReadOnlyList<string> Ids { get; }
-```
 
 ### rust
 #### UpdateEnrichmentStrategy

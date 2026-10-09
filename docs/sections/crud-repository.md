@@ -536,7 +536,7 @@ public Task<T?> ReadSingleById(Row ids)
 Registers the same read fill as [ReadonlyRepository](./readonly-repository.md#addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent.
 
 ```csharp
-public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null) where TRelated : new()
 ```
 
 - `enrichment` — [Enrichment](./enrichment.md)
@@ -550,7 +550,7 @@ public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyReposi
 Registers an association. `via` is read. `link` is the CRUD writer.
 
 ```csharp
-public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null) where TLink : new()
 ```
 
 - `enrichment` — [Enrichment](./enrichment.md) with `Association`

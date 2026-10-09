@@ -56,10 +56,10 @@ public abstract class CreateEnrichmentStrategy<T>
 Creates the owned `List` for one parent.
 
 ```csharp
-public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, T parent)
+public abstract Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
-- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 
@@ -70,10 +70,10 @@ public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, T 
 Creates the junction rows for one parent.
 
 ```csharp
-public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, T parent)
+public abstract Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
-- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 

@@ -50,10 +50,11 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         Enrichment enrichment,
         IReadonlyRepository<TRelated> via,
         IReadonlyEnrichmentStrategy<T>? strategy = null)
+        where TRelated : new()
     {
         base.AddEnriched(enrichment, via, strategy);
         if (via is ICRUDRepository<TRelated> crud)
-            ((IEnrichmentHost)this).Enrichments[^1].AttachPersist(ChildPersist.For(crud));
+            ((StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1]).AttachPersist(crud);
         return this;
     }
 
@@ -62,12 +63,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         IReadonlyRepository<TRelated> via,
         ICRUDRepository<TLink> link,
         IReadonlyEnrichmentStrategy<T>? strategy = null)
+        where TLink : new()
     {
         var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
         base.AddEnriched(enrichment, via, strategy);
         ((StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1]).AttachLink(
             (parents, sources) => chosen.ApplyLinked(via, link, enrichment, parents, sources),
-            ChildPersist.For(link));
+            link);
         return this;
     }
 

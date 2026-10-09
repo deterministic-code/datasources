@@ -18,8 +18,11 @@ export abstract class UpdateEnrichmentStrategy<T> {
   protected presentCell = (value: Scalar | object | undefined): value is Scalar =>
     value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
-  protected payloadOf = <TParent>(parent: TParent, into: string, enrichment?: Enrichment): object[] =>
-    mapPayload(this.getCell(parent, into), enrichment);
+  protected payloadOf = <TChild extends object, TParent>(
+    parent: TParent,
+    into: string,
+    enrichment?: Enrichment,
+  ): TChild[] => mapPayload(this.getCell(parent, into), enrichment) as TChild[];
 
   protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
     if (key === undefined || key === null || typeof key === "object") return;
@@ -57,7 +60,7 @@ export abstract class UpdateEnrichmentStrategy<T> {
   protected relatedIds = <TParent>(parent: TParent, enrichment: Enrichment): Scalar[] => {
     const ids: Scalar[] = [];
     const seen = new Set<string>();
-    for (const related of this.payloadOf(parent, enrichment.destinationProperty)) {
+    for (const related of this.payloadOf<object, TParent>(parent, enrichment.destinationProperty)) {
       const id = this.getCell(related, enrichment.relatedKey);
       if (!this.presentCell(id)) throw new DatasourceError(`${enrichment.destinationProperty} requires "${enrichment.relatedKey}"`);
       const key = String(id);

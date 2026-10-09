@@ -2,7 +2,7 @@ namespace Datasources;
 
 public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrategy<T>
 {
-    public override async Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
+    public override async Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
         var existing = await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent);
         var payload = Owned(writer, enrichment, parent);
@@ -21,7 +21,7 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         }
     }
 
-    public override async Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent)
+    public override async Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
     {
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         var parentKey = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
@@ -38,7 +38,7 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         {
             if (existing.Any(row => Text(Value.From(Get(row, association.Related))) == Text(id)))
                 continue;
-            var row = writer.New();
+            var row = new TChild();
             Set(row, association.Parent, parentKey.ToObject());
             Set(row, association.Related, id.ToObject());
             await writer.Create(row);

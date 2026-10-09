@@ -375,14 +375,14 @@ public class CRUDRepositoryTests
 
     sealed class SkipDelete<T> : DeleteEnrichmentStrategy<T>
     {
-        public override Task DeleteOwned(
-            IChildPersist _writer,
+        public override Task DeleteOwned<TChild>(
+            ICRUDRepository<TChild> _writer,
             Enrichment _enrichment,
             T _parent,
-            Func<IReadOnlyList<object>, Task> _deleteNested) =>
+            Func<IReadOnlyList<TChild>, Task> _deleteNested) =>
             Task.CompletedTask;
 
-        public override Task DeleteLinked(IChildPersist _writer, Enrichment _enrichment, T _parent) =>
+        public override Task DeleteLinked<TChild>(ICRUDRepository<TChild> _writer, Enrichment _enrichment, T _parent) =>
             Task.CompletedTask;
     }
 

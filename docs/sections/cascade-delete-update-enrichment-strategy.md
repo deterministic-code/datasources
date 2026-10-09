@@ -80,10 +80,10 @@ public CascadeDeleteUpdateEnrichmentStrategy()
 Deletes every existing child for the parent key, then inserts the payload.
 
 ```csharp
-public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
+public override Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
-- `writer` — child [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — child [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md)
 - `parent` — parent entity
 
@@ -94,10 +94,10 @@ public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T 
 Deletes every junction row for the parent key, then inserts the payload ids.
 
 ```csharp
-public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, T parent)
+public override Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
-- `writer` — link [IChildPersist](./update-enrichment-strategy.md#ichildpersist)
+- `writer` — link [ICRUDRepository](./crud-repository.md)
 - `enrichment` — [Enrichment](./enrichment.md) with [Association](./enrichment.md#association)
 - `parent` — parent entity
 

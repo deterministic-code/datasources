@@ -620,6 +620,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Create default from .env settings](#create-default-from-env-settings)
 - [Default using environment variables](#default-using-environment-variables)
+- [Create from a plural name](#create-from-a-plural-name)
 - [Create from a driver](#create-from-a-driver)
 
 ### Connection
@@ -669,6 +670,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 - [Read and read single](#read-and-read-single)
 - [Fill a lookup](#fill-a-lookup)
 - [Fill roles from one join](#fill-roles-from-one-join)
+- [Read with where clause and custom flat to nested custom object mapping options](#read-with-where-clause-and-custom-flat-to-nested-custom-object-mapping-options)
 
 ### CRUD Repository
 
@@ -1488,6 +1490,7 @@ class Datasource implements IDatasource
 | Name | Description |
 | --- | --- |
 | default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [create](#typescript-create-options) with no options. |
+| repositories | Named repository catalog for this datasource. |
 
 **Methods**
 
@@ -1544,6 +1547,7 @@ interface IDatasource
 | Name | Description |
 | --- | --- |
 | provider | Registered provider name. |
+| repositories | Named repository catalog for this datasource. |
 
 **Methods**
 
@@ -1553,6 +1557,8 @@ interface IDatasource
 | [createCommand(connection?)](#typescript-idatasource-createcommand-connection) | Creates a command. |
 | [createRepository(type, connection?, options?)](#typescript-idatasource-createrepository-type-connection-options) | Creates a CRUD repository. |
 | [createReadonlyRepository(type, connection?, options?)](#typescript-idatasource-createreadonlyrepository-type-connection-options) | Creates a read-only repository. |
+| [createRepository(typeName, connection?)](#typescript-idatasource-createrepository-typename-connection) | Creates a registered CRUD repository by entity or plural name. |
+| [createReadonlyRepository(typeName, connection?)](#typescript-idatasource-createreadonlyrepository-typename-connection) | Creates a registered read-only repository by entity or plural name. |
 
 ###### createConnection() {#typescript-idatasource-createconnection}
 
@@ -1632,6 +1638,89 @@ createReadonlyRepository<T>(type: Constructable<T>, connection?: IConnection, op
 
 [IReadonlyRepository](#readonly-repository)`<T>`
 
+###### createRepository(typeName, connection?) {#typescript-idatasource-createrepository-typename-connection}
+
+Creates a registered CRUD repository by entity or plural name.
+
+**Definition**
+
+```typescript
+createRepository(typeName: string, connection?: IConnection): ICRUDRepository
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeName` | entity name (`Contact`) or plural name (`contacts`) |
+| `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)
+
+###### createReadonlyRepository(typeName, connection?) {#typescript-idatasource-createreadonlyrepository-typename-connection}
+
+Creates a registered read-only repository by entity or plural name.
+
+**Definition**
+
+```typescript
+createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeName` | entity name (`Contact`) or plural name (`contacts`) |
+| `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+[IReadonlyRepository](#readonly-repository)
+
+##### RepositoryAccess {#typescript-repositoryaccess}
+
+```typescript
+class RepositoryAccess
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create()](#typescript-repositoryaccess-create) | Creates the registered CRUD repository. |
+| [createReadonly()](#typescript-repositoryaccess-createreadonly) | Creates the registered read-only repository. |
+
+###### create() {#typescript-repositoryaccess-create}
+
+Creates the registered CRUD repository.
+
+**Definition**
+
+```typescript
+create(): ICRUDRepository
+```
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)
+
+###### createReadonly() {#typescript-repositoryaccess-createreadonly}
+
+Creates the registered read-only repository.
+
+**Definition**
+
+```typescript
+createReadonly(): IReadonlyRepository
+```
+
+**Returns**
+
+[IReadonlyRepository](#readonly-repository)
+
 ##### DatasourceOptions {#typescript-datasourceoptions}
 
 ```typescript
@@ -1664,6 +1753,7 @@ public sealed class Datasource : IDatasource
 | Name | Description |
 | --- | --- |
 | Default | Loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Throws when `PROVIDER` is not set. Calls [DatasourceFactory.Create](#csharp-create-options) with no options. |
+| Repositories | Named repository catalog for this datasource. |
 
 ###### Datasource(provider, driver, options) {#csharp-datasource-datasource-provider-driver-options}
 
@@ -1694,6 +1784,7 @@ public interface IDatasource
 | Name | Description |
 | --- | --- |
 | Provider | Registered provider name. |
+| Repositories | Named repository catalog for this datasource. |
 
 **Methods**
 
@@ -1703,6 +1794,8 @@ public interface IDatasource
 | [CreateCommand(connection)](#csharp-idatasource-createcommand-connection) | Creates a command. |
 | [CreateRepository(connection, options)](#csharp-idatasource-createrepository-connection-options) | Creates a CRUD repository. |
 | [CreateReadonlyRepository(connection, options)](#csharp-idatasource-createreadonlyrepository-connection-options) | Creates a read-only repository. |
+| [CreateRepository(typeName, connection)](#csharp-idatasource-createrepository-typename-connection) | Creates a registered CRUD repository by entity or plural name. |
+| [CreateReadonlyRepository(typeName, connection)](#csharp-idatasource-createreadonlyrepository-typename-connection) | Creates a registered read-only repository by entity or plural name. |
 
 ###### CreateConnection() {#csharp-idatasource-createconnection}
 
@@ -1779,6 +1872,89 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 **Returns**
 
 [IReadonlyRepository](#readonly-repository)`<T>`
+
+###### CreateRepository(typeName, connection) {#csharp-idatasource-createrepository-typename-connection}
+
+Creates a registered CRUD repository by entity or plural name.
+
+**Definition**
+
+```csharp
+object CreateRepository(string typeName, IConnection? connection = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeName` | entity name (`Contact`) or plural name (`Contacts`) |
+| `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+`object` (the generated repository)
+
+###### CreateReadonlyRepository(typeName, connection) {#csharp-idatasource-createreadonlyrepository-typename-connection}
+
+Creates a registered read-only repository by entity or plural name.
+
+**Definition**
+
+```csharp
+object CreateReadonlyRepository(string typeName, IConnection? connection = null)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeName` | entity name (`Contact`) or plural name (`Contacts`) |
+| `connection` | optional [IConnection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+`object` (the generated readonly repository)
+
+##### RepositoryAccess {#csharp-repositoryaccess}
+
+```csharp
+public sealed class RepositoryAccess
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [Create()](#csharp-repositoryaccess-create) | Creates the registered CRUD repository. |
+| [CreateReadonly()](#csharp-repositoryaccess-createreadonly) | Creates the registered read-only repository. |
+
+###### Create() {#csharp-repositoryaccess-create}
+
+Creates the registered CRUD repository.
+
+**Definition**
+
+```csharp
+public object Create()
+```
+
+**Returns**
+
+`object`
+
+###### CreateReadonly() {#csharp-repositoryaccess-createreadonly}
+
+Creates the registered read-only repository.
+
+**Definition**
+
+```csharp
+public object CreateReadonly()
+```
+
+**Returns**
+
+`object`
 
 ##### DatasourceOptions {#csharp-datasourceoptions}
 
@@ -1866,6 +2042,10 @@ pub trait Datasource
 | [create_command(connection)](#rust-datasource-create_command-connection) | Creates a command. |
 | [create_repository(connection, options)](#rust-datasource-create_repository-connection-options) | Creates a CRUD repository. |
 | [create_readonly_repository(connection, options)](#rust-datasource-create_readonly_repository-connection-options) | Creates a read-only repository. |
+| [repositories()](#rust-datasource-repositories) | Named repository catalog for this datasource. |
+| [create_repository_by_name(name, connection)](#rust-datasource-create_repository_by_name-name-connection) | Creates a registered CRUD repository by entity or plural name. |
+| [create_readonly_repository_by_name(name, connection)](#rust-datasource-create_readonly_repository_by_name-name-connection) | Creates a registered read-only repository by entity or plural name. |
+| [access(name, connection)](#rust-datasource-access-name-connection) | Returns a [RepositoryAccess](#rust-repositoryaccess) for a registered name. |
 
 ###### provider() {#rust-datasource-provider}
 
@@ -1957,6 +2137,124 @@ fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Opt
 
 `Arc<dyn `[ReadonlyRepository](#readonly-repository)`>`
 
+###### repositories() {#rust-datasource-repositories}
+
+Named repository catalog for this datasource.
+
+**Definition**
+
+```rust
+fn repositories(&self) -> &RepositoryFactory
+```
+
+**Returns**
+
+`&`[RepositoryFactory](#rust-repositoryfactory)
+
+###### create_repository_by_name(name, connection) {#rust-datasource-create_repository_by_name-name-connection}
+
+Creates a registered CRUD repository by entity or plural name.
+
+**Definition**
+
+```rust
+fn create_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name (`Contact`) or plural name (`contacts`) |
+| `connection` | optional [Connection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
+
+###### create_readonly_repository_by_name(name, connection) {#rust-datasource-create_readonly_repository_by_name-name-connection}
+
+Creates a registered read-only repository by entity or plural name.
+
+**Definition**
+
+```rust
+fn create_readonly_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name (`Contact`) or plural name (`contacts`) |
+| `connection` | optional [Connection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+`Result<Arc<dyn `[IReadonlyRepository](#readonly-repository)`>>`
+
+###### access(name, connection) {#rust-datasource-access-name-connection}
+
+Returns a [RepositoryAccess](#rust-repositoryaccess) for a registered name.
+
+**Definition**
+
+```rust
+fn access(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> RepositoryAccess
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | optional [Connection](#connection); omitted uses the datasource connection |
+
+**Returns**
+
+[RepositoryAccess](#rust-repositoryaccess)
+
+##### RepositoryAccess {#rust-repositoryaccess}
+
+```rust
+pub struct RepositoryAccess
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [create()](#rust-repositoryaccess-create) | Creates the registered CRUD repository. |
+| [create_readonly()](#rust-repositoryaccess-create_readonly) | Creates the registered read-only repository. |
+
+###### create() {#rust-repositoryaccess-create}
+
+Creates the registered CRUD repository.
+
+**Definition**
+
+```rust
+pub fn create(&self) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
+
+###### create_readonly() {#rust-repositoryaccess-create_readonly}
+
+Creates the registered read-only repository.
+
+**Definition**
+
+```rust
+pub fn create_readonly(&self) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+**Returns**
+
+`Result<Arc<dyn `[IReadonlyRepository](#readonly-repository)`>>`
+
 ##### DatasourceOptions {#rust-datasourceoptions}
 
 ```rust
@@ -1990,27 +2288,29 @@ Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalo
 
 `Reset` / `reset` / `reset` clears the registry. Use it in tests.
 
+After `generate repositories`, call the generated `Register` on `Repositories` / `repositories` / `repositories()`. A registered plural name then builds that repository: C# `dynamic` `Contacts.Create()`, TypeScript `contacts.create()`, Rust `contacts().create()`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
+
 See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 
 ### Examples
 
 #### Create default from .env settings
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceTests.cs#L24-L31)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceTests.cs#L42-L49)
 
 ```csharp
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L13-L21)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L42-L50)
 
 ```rust
 let ds = default().expect("default");
 let command = ds.create_command(None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L42)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L44-L59)
 
 ```typescript
 const ds = Datasource.default;
@@ -2041,6 +2341,45 @@ let ds = default().expect("default");
 DatasourceFactory.register("sqlite", new MockDriver());
 process.env.PROVIDER = "sqlite";
 const ds = Datasource.default;
+```
+
+#### Create from a plural name
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceTests.cs#L24-L40)
+
+```csharp
+var ds = new Datasource("mock", new MockDriver());
+var connection = new StubConnection("mock");
+var crud = new StubRepository<object>("crud", connection);
+var read = new StubRepository<object>("read", connection);
+ds.Repositories.Register("Contact", "Contacts", _ => crud, _ => read);
+dynamic dsDynamic = ds;
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L18-L40)
+
+```rust
+let built = BuiltDatasource::new("mock", MockDriver::arc(), None);
+built.repositories().register_named(
+    "Contact",
+    "contacts",
+    |_| Arc::new(StubRepository::typed::<Item>("crud")),
+    |_| as_readonly(Arc::new(StubRepository::typed::<Item>("read"))),
+);
+let ds: &dyn Datasource = &built;
+let created = ds.create_repository_by_name("Contact", None).unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L42)
+
+```typescript
+const ds = new Datasource("mock", new MockDriver());
+const connection = new MockConnection();
+class Item {}
+const crud = new MockRepository<Item>(connection, Item);
+const read = new MockRepository<Item>(connection, Item);
+ds.repositories.register("Contact", "contacts", () => crud, () => read);
+const dsDynamic = ds as Datasource & { contacts: { create: () => unknown; createReadonly: () => unknown } };
 ```
 
 #### Create from a driver
@@ -2104,7 +2443,7 @@ interface IConnection
 | [createCommand()](#typescript-iconnection-createcommand) | Creates a command bound to this connection. |
 | [open()](#typescript-iconnection-open) | Opens the connection. Throws if it is already open. |
 | [close()](#typescript-iconnection-close) | Closes the connection. |
-| [[Symbol.asyncDispose]()](#typescript-iconnection-symbol-asyncdispose) | Closes the connection. `await using` calls this. |
+| [`Symbol.asyncDispose`](#typescript-iconnection-symbol-asyncdispose) | Closes the connection. `await using` calls this. |
 | [startTransaction(isolation?)](#typescript-iconnection-starttransaction-isolation) | Begins a transaction. The connection must be open. |
 
 ###### createCommand() {#typescript-iconnection-createcommand}
@@ -2141,7 +2480,7 @@ Closes the connection.
 close(): Promise<void>
 ```
 
-###### [Symbol.asyncDispose]() {#typescript-iconnection-symbol-asyncdispose}
+###### `Symbol.asyncDispose` {#typescript-iconnection-symbol-asyncdispose}
 
 Closes the connection. `await using` calls this.
 
@@ -4045,15 +4384,15 @@ var rows = await reader.Read().ToListAsync();
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (1, 'ada')"), None)
     .await
     .unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (2, 'grace')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (2, 'grace')"), None)
     .await
     .unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (3, 'bea')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (3, 'bea')"), None)
     .await
     .unwrap();
 let reader = command
@@ -4073,7 +4412,7 @@ let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L90-L104)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L105)
 
 ```typescript
 const ds = Datasource.default;
@@ -4148,22 +4487,22 @@ let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
 let command = connection.create_command();
 command
-    .execute(
-        "INSERT INTO settings (name, value) VALUES ('theme', 'dark')",
+    .execute_native(
+        &Native::new("INSERT INTO settings (name, value) VALUES ('theme', 'dark')"),
         None,
     )
     .await
     .unwrap();
 command
-    .execute(
-        "INSERT INTO settings (name, value) VALUES ('lang', 'en')",
+    .execute_native(
+        &Native::new("INSERT INTO settings (name, value) VALUES ('lang', 'en')"),
         None,
     )
     .await
     .unwrap();
 command
-    .execute(
-        "INSERT INTO settings (name, value) VALUES ('size', 'lg')",
+    .execute_native(
+        &Native::new("INSERT INTO settings (name, value) VALUES ('size', 'lg')"),
         None,
     )
     .await
@@ -4191,7 +4530,7 @@ let items: Vec<_> = reader
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L29-L32) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L145-L162)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L30-L33) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L146-L163)
 
 ```typescript
 class NameValue {
@@ -4398,7 +4737,7 @@ let gone: Vec<_> = gone_reader
 []
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L34-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L164-L196)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L35-L38) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L165-L197)
 
 ```typescript
 class Item {
@@ -4549,9 +4888,9 @@ struct User {
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute(
-        "INSERT INTO users (id, username, email, contact_name1, contact_name2)
-         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+    .execute_native(
+        &Native::new("INSERT INTO users (id, username, email, contact_name1, contact_name2)
+         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"),
         None,
     )
     .await
@@ -4638,7 +4977,7 @@ let users: Vec<_> = reader
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L41) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L43-L50) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L198-L231)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L40-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L44-L51) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L199-L232)
 
 ```typescript
 class Contact {
@@ -4876,7 +5215,7 @@ interface IReader<T>
 | [read()](#typescript-ireader-read) | Reads the current result set. Skips a step whose [current](#typescript-ireader-current) is undefined. |
 | [nextResult()](#typescript-ireader-nextresult) | Moves to the next result set and clears [current](#typescript-ireader-current). Returns false when there is no further set. [next](#typescript-ireader-next) then reads that set. Calling only [next](#typescript-ireader-next) leaves later sets unread. |
 | [dispose()](#typescript-ireader-dispose) | Releases the reader. |
-| [[Symbol.asyncDispose]()](#typescript-ireader-symbol-asyncdispose) | `await using` calls [dispose](#typescript-ireader-dispose). |
+| [`Symbol.asyncDispose`](#typescript-ireader-symbol-asyncdispose) | `await using` calls [dispose](#typescript-ireader-dispose). |
 
 ###### next() {#typescript-ireader-next}
 
@@ -4934,7 +5273,7 @@ dispose(): Promise<void>
 
 `Promise<void>`
 
-###### [Symbol.asyncDispose]() {#typescript-ireader-symbol-asyncdispose}
+###### `Symbol.asyncDispose` {#typescript-ireader-symbol-asyncdispose}
 
 `await using` calls [dispose](#typescript-ireader-dispose).
 
@@ -5138,15 +5477,15 @@ var rows = await reader.Read().ToListAsync();
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (1, 'ada')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (1, 'ada')"), None)
     .await
     .unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (2, 'grace')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (2, 'grace')"), None)
     .await
     .unwrap();
 command
-    .execute("INSERT INTO items (id, name) VALUES (3, 'bea')", None)
+    .execute_native(&Native::new("INSERT INTO items (id, name) VALUES (3, 'bea')"), None)
     .await
     .unwrap();
 let reader = command
@@ -5166,7 +5505,7 @@ let rows: Vec<_> = reader.read().try_collect().await.unwrap();
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L90-L104)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L91-L105)
 
 ```typescript
 const ds = Datasource.default;
@@ -5222,8 +5561,8 @@ var mapped = await reader.Read().Select(source =>
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute(
-        "INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')",
+    .execute_native(
+        &Native::new("INSERT INTO contacts (user_id, first_name) VALUES (1, 'Ada')"),
         None,
     )
     .await
@@ -5254,7 +5593,7 @@ let mapped: Vec<Row> = reader
 ]
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L106-L117)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L107-L118)
 
 ```typescript
 const ds = Datasource.default;
@@ -5328,15 +5667,15 @@ var nested = mapper.Map(rows);
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute(
-        "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')",
+    .execute_native(
+        &Native::new("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'bob')"),
         None,
     )
     .await
     .unwrap();
 command
-    .execute(
-        "INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')",
+    .execute_native(
+        &Native::new("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"),
         None,
     )
     .await
@@ -5376,7 +5715,7 @@ let nested = Mapper::map(&mapper, rows);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L119-L143)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L120-L144)
 
 ```typescript
 const ds = Datasource.default;
@@ -5500,9 +5839,9 @@ struct User {
 let ds = default().unwrap();
 let command = ds.create_command(None).await.unwrap();
 command
-    .execute(
-        "INSERT INTO users (id, username, email, contact_name1, contact_name2)
-         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')",
+    .execute_native(
+        &Native::new("INSERT INTO users (id, username, email, contact_name1, contact_name2)
+         VALUES (1, 'bobby', 'bob@asdf.com', 'bob', 'roberta')"),
         None,
     )
     .await
@@ -5589,7 +5928,7 @@ let users: Vec<_> = reader
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L39-L41) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L43-L50) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L198-L231)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L40-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L44-L51) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L199-L232)
 
 ```typescript
 class Contact {
@@ -5728,7 +6067,7 @@ assert!(!again);
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L233-L247)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/sqlite.integration.test.ts#L234-L248)
 
 ```typescript
 const ds = Datasource.default;
@@ -6077,18 +6416,18 @@ execute_sql(
 )
 .await;
 let mut options = create_readonly_repository_mapping_options::<User>();
-options.entity_mapper = Box::new(snake_then_plural());
-options.property_mappings = Box::new(snake());
+options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
+options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
+    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
     .await
     .unwrap()
     .unwrap();
 let row = repo
     .read(
         Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
-        None,
+        None, None
     )
     .await
     .unwrap()
@@ -6213,7 +6552,7 @@ impl ConvertSchema for User {
 
 let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
-options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
 let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
@@ -6232,8 +6571,8 @@ let matches = users_repo
             eq,
             Value::Bool(true),
         )),
-        None,
-    )
+        None, None
+)
     .await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
@@ -6492,15 +6831,15 @@ let ds = default().unwrap();
 let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-users_options.property_mappings = Box::new(DictionaryMapper::new([
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
-]));
+])));
 users_options.row_converter = Some(RowTypeConverter::of::<User>());
 users_options.object_converter = Some(Box::new(
     MetaDataRowTypeConverter::of::<User>().with_references(
@@ -6518,14 +6857,14 @@ users_options.object_converter = Some(Box::new(
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.property_mappings = Box::new(casing);
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+type_options.property_mappings = Some(std::sync::Arc::new(casing));
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
@@ -6574,7 +6913,7 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(&mut grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
     .await
     .unwrap()
     .unwrap();
@@ -6603,7 +6942,7 @@ let updated = users_repo
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
     .await
     .unwrap()
     .unwrap();
@@ -6854,7 +7193,7 @@ var parents = await parentsRepo.Read().ToListAsync();
 var children = await childrenRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L779-L819)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L900-L940)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -6885,7 +7224,7 @@ let response = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(None, None).await.unwrap();
+let stored_parents = parents.read(None, None, None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L50)
@@ -7072,7 +7411,7 @@ readSingle(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement)
 
 `Promise<T | undefined>`
 
-##### ReadonlyRepositoryMappingOptions {#typescript-readonlyrepositoryoptions}
+##### ReadonlyRepositoryMappingOptions {#typescript-readonlyrepositorymappingoptions}
 
 ```typescript
 type ReadonlyRepositoryMappingOptions<T = Cells>
@@ -7304,7 +7643,7 @@ public virtual Task<T?> ReadSingle(IStatement? query = null)
 
 `Task<T?>`
 
-##### ReadonlyRepositoryMappingOptions {#csharp-readonlyrepositoryoptions}
+##### ReadonlyRepositoryMappingOptions {#csharp-readonlyrepositorymappingoptions}
 
 ```csharp
 public class ReadonlyRepositoryMappingOptions<T> where T : new()
@@ -7458,7 +7797,7 @@ pub fn with_strategy(inner: Arc<dyn IReadonlyRepository>, strategy: Arc<dyn Read
 
 [ReadonlyRepository](#rust-readonlyrepository)
 
-##### ReadonlyRepositoryMappingOptions {#rust-readonlyrepositoryoptions}
+##### ReadonlyRepositoryMappingOptions {#rust-readonlyrepositorymappingoptions}
 
 ```rust
 pub struct ReadonlyRepositoryMappingOptions
@@ -7611,18 +7950,18 @@ execute_sql(
 )
 .await;
 let mut options = create_readonly_repository_mapping_options::<User>();
-options.entity_mapper = Box::new(snake_then_plural());
-options.property_mappings = Box::new(snake());
+options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
+options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
+    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
     .await
     .unwrap()
     .unwrap();
 let row = repo
     .read(
         Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
-        None,
+        None, None
     )
     .await
     .unwrap()
@@ -7786,12 +8125,12 @@ execute_sql(
 )
 .await;
 let mut options = create_readonly_repository_mapping_options::<User>();
-options.entity_mapper = Box::new(snake_then_plural());
-options.property_mappings = Box::new(snake());
+options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
+options.property_mappings = Some(std::sync::Arc::new(snake()));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let user = users_repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None)
+    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
     .await
     .unwrap()
     .unwrap();
@@ -7931,19 +8270,19 @@ execute_sql(
 .await;
 let mut users_options = create_readonly_repository_mapping_options::<UserAccount>();
 users_options.entity = "user".into();
-users_options.property_mappings = Box::new(DictionaryMapper::new([
+users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
-]));
+])));
 let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types =
@@ -7962,8 +8301,8 @@ users_repo.add_enriched(
 let account = users_repo
     .read_single(
         Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None,
-    )
+        None, None
+)
     .await
     .unwrap()
     .unwrap();
@@ -8124,22 +8463,22 @@ execute_sql(
 )
 .await;
 let mut options = create_readonly_repository_mapping_options::<UserAccount>();
-options.entity_mapper = Box::new(DictionaryMapper::new([(
+options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
     "UserAccount".to_string(),
     "user".to_string(),
-)]));
-options.property_mappings = Box::new(DictionaryMapper::new([
+)])));
+options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
-]));
+])));
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
     .read_single(
         Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None,
+        None, None
     )
     .await
     .unwrap()
@@ -8147,14 +8486,14 @@ let by_id = repo
 let by_login = repo
     .read(
         Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-        None,
+        None, None
     )
     .await
     .unwrap();
 let later = repo
     .read(
         Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-        None,
+        None, None
     )
     .await
     .unwrap();
@@ -8289,7 +8628,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1468-L1484)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1526-L1542)
 
 ```rust
         &row
@@ -8348,7 +8687,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1505-L1511)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1563-L1569)
 
 ```rust
 
@@ -8396,7 +8735,7 @@ for await (const row of repo.read()) rows.push(row);
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L72-L88)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -8424,7 +8763,7 @@ parents_repo.add_enriched(
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -8561,17 +8900,21 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L543-L601)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L533-L642)
 
 ```rust
+let built = datasource();
+let ds: &dyn Datasource = &*built;
+execute_sql(&connection, &seed()).await;
+let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity = "User".into();
-options.entity_mapper = Box::new(DictionaryMapper::new([
+options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("User".into(), "user".into()),
     ("UserType".into(), "user_type".into()),
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
-]));
-options.property_mappings = Box::new(DictionaryMapper::new([
+])));
+options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".into(), "id".into()),
     ("Login".into(), "username".into()),
     ("Active".into(), "is_enabled".into()),
@@ -8582,7 +8925,7 @@ options.property_mappings = Box::new(DictionaryMapper::new([
     ("RoleId".into(), "role_id".into()),
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
-]));
+])));
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
     datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
@@ -8612,7 +8955,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(Some(&joined), None).await.unwrap();
+let items = users_repo.read(Some(&joined), None, None).await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -8763,6 +9106,323 @@ CREATE TABLE user_type (id int, name string NOT NULL, CONSTRAINT pk_user_type PR
 CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, created datetime NOT NULL, user_type_id int NOT NULL, CONSTRAINT pk_user PRIMARY KEY (id));
 CREATE TABLE roles (id int, name string NOT NULL, CONSTRAINT pk_roles PRIMARY KEY (id));
 CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL)
+```
+
+#### Read with where clause and custom flat to nested custom object mapping options
+
+The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](#propertymappings) stay in effect when a later read passes only an [EntityMapper](#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](#nestedtoobjectenrichmentstrategy) collapses flat join rows using a [TypeMap](#typemap).
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L46-L108)
+
+```csharp
+var connection = await Setup();
+var typesRepo = TypesRepo(connection);
+var type = await typesRepo.Create(new UserType { Name = "person" });
+var parentsRepo = ParentsRepo(connection);
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+await parentsRepo.Create(new Parent { Type = new UserType { Id = type.Id } });
+var enriched = await parentsRepo.ReadSingle();
+
+var row1 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 10L, ["Label"] = "a" };
+var row2 = new Row { ["Id"] = 1L, ["TypeName"] = "person", ["ChildId"] = 11L, ["Label"] = "b" };
+var mockConnection = new MockConnection { Provider = "memory" };
+var command = new MockCommand(mockConnection);
+mockConnection.Command = command;
+var joinRepo = ParentsRepo(mockConnection);
+joinRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+joinRepo.AddEnriched(
+    new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
+    joinRepo,
+    new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+    {
+        Key = "Id",
+        Fields = new Dictionary<string, TypeMapField>
+        {
+            ["Id"] = "Id",
+            ["TypeName"] = "TypeName",
+            ["Children"] = new TypeMapGroup
+            {
+                Key = "ChildId",
+                Fields = new Dictionary<string, TypeMapField>
+                {
+                    ["Id"] = "ChildId",
+                    ["Label"] = "Label",
+                },
+            },
+        },
+    }));
+var join = new SelectStatement(new()
+{
+    Table = "Parent",
+    Fields =
+    [
+        "Parent.Id AS Id",
+        "Parent.TypeName AS TypeName",
+        "Child.Id AS ChildId",
+        "Child.Label AS Label",
+    ],
+    Joins = [Join.Left("Child", "Parent.Id", "Child.ParentId")],
+    Where = new Where(new Operator.Equals("Parent.Id", 1)),
+});
+command.Reader = new MockReader<Row>([row1, row2]);
+var items = await joinRepo.Read(
+    join,
+    null,
+    new ReadonlyRepositoryMappingOptions<Parent> { EntityMapper = JoinEntity }).ToListAsync();
+```
+
+**Parent from join**
+
+```
+[
+  {
+    Id: 1,
+    TypeName: 'person',
+    Children: [
+      { Id: 10, Label: 'a' },
+      { Id: 11, Label: 'b' }
+    ]
+  }
+]
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L60-L170)
+
+```rust
+let connection = MemoryDriver.connection(None);
+connection.open().await.unwrap();
+let types = Arc::new(types_repo(connection.clone()));
+let mut created_type = record(&[("Name", Value::from("person"))]);
+let created_type = types.create(&mut created_type).await.unwrap();
+let mut parents = parents_repo(connection);
+parents.add_enriched(
+    Enrichment::new(
+        "TypeName",
+        "Type",
+        "Id",
+        Some("Name".into()),
+        EnrichmentPropertyType::Object,
+    ),
+    as_readonly(types.clone()),
+    None,
+);
+let mut parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
+parents.create(&mut parent).await.unwrap();
+let enriched = parents.read_single(None, None, None).await.unwrap();
+
+let command = Arc::new(MockCommand::new());
+command.reader_rows.lock().unwrap().extend([
+    record(&[
+        ("Id", Value::Int(1)),
+        ("TypeName", Value::from("person")),
+        ("ChildId", Value::Int(10)),
+        ("Label", Value::from("a")),
+    ]),
+    record(&[
+        ("Id", Value::Int(1)),
+        ("TypeName", Value::from("person")),
+        ("ChildId", Value::Int(11)),
+        ("Label", Value::from("b")),
+    ]),
+]);
+let mut join_repo = parents_repo(MockConnection::with_command_provider(
+    command,
+    "memory",
+));
+join_repo.add_enriched(
+    Enrichment::new(
+        "TypeName",
+        "Type",
+        "Id",
+        Some("Name".into()),
+        EnrichmentPropertyType::Object,
+    ),
+    as_readonly(types),
+    None,
+);
+join_repo.add_enriched(
+    Enrichment::new(
+        "Children",
+        "Id",
+        "ParentId",
+        None,
+        EnrichmentPropertyType::List,
+    ),
+    Arc::new(CRUDRepository::memory(vec![])),
+    Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
+        "Id",
+        vec![
+            ("Id".into(), TypeMapField::column("Id")),
+            ("TypeName".into(), TypeMapField::column("TypeName")),
+            (
+                "Children".into(),
+                TypeMapField::Group(TypeMapGroup::new(
+                    "ChildId",
+                    vec![
+                        ("Id".into(), TypeMapField::column("ChildId")),
+                        ("Label".into(), TypeMapField::column("Label")),
+                    ],
+                )),
+            ),
+        ],
+    )))),
+);
+let where_clause = Where::new(Operator::equals("Parent.Id", Value::Int(1)));
+let join = SelectStatement::new(SelectStatementOptions {
+    joins: &[Join::left("Child", "Parent.Id", "Child.ParentId")],
+    where_clause: Some(&where_clause),
+    ..SelectStatementOptions::new(
+        "Parent",
+        &[
+            "Parent.Id AS Id",
+            "Parent.TypeName AS TypeName",
+            "Child.Id AS ChildId",
+            "Child.Label AS Label",
+        ],
+    )
+});
+let mut options = ReadonlyRepositoryMappingOptions::default();
+options.entity_mapper = Some(Arc::new(join_entity()));
+let items = join_repo
+    .read(Some(&join), None, Some(&options))
+    .await
+    .unwrap();
+```
+
+**Parent from join**
+
+```
+[
+  {
+    Id: 1,
+    TypeName: 'person',
+    Children: [
+      { Id: 10, Label: 'a' },
+      { Id: 11, Label: 'b' }
+    ]
+  }
+]
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions.test.ts#L18-L125)
+
+```typescript
+class UserType {
+  Id = 0;
+  Name = "";
+}
+
+class Parent {
+  Id = 0;
+  Type = new UserType();
+  TypeName = "";
+  Children: Child[] = [];
+}
+
+class Child {
+  Id = 0;
+  ParentId = 0;
+  Label = "";
+}
+
+type Seed = Record<string, Scalar>;
+
+const snake = new ChangeCasingMapper("pascalCase", "snakeCase");
+const references = new DictionaryMapper<string>([["Type", "type_id"]]);
+const columns: IMapper<string, string> = new TransformMapper(
+  (name) => {
+    const mapped = references.map(name);
+    return mapped !== name ? mapped : snake.map(name);
+  },
+  (name) => {
+    const from = references.reverseMap(name);
+    return from !== name ? from : snake.reverseMap(name);
+  },
+);
+
+const joinEntity = new DictionaryMapper([
+  ["Parent", "parent"],
+  ["Child", "child"],
+]);
+
+const setup = async (): Promise<IConnection> => {
+  const connection = new MemoryDriver().connection();
+  await connection.open();
+  return connection;
+};
+
+const typesRepo = (connection: IConnection) =>
+  new CRUDRepository(connection, { type: UserType, ids: ["Id"], propertyMappings: columns });
+
+const parentsRepo = (connection: IConnection) =>
+  new CRUDRepository(connection, { type: Parent, ids: ["Id"], propertyMappings: columns });
+
+const connection = await setup();
+const types = typesRepo(connection);
+const type = await types.create(Object.assign(new UserType(), { Name: "person" }));
+const parents = parentsRepo(connection);
+parents.addEnriched(
+  { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
+  types,
+);
+await parents.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: type.Id }) }));
+const enriched = await parents.readSingle();
+
+const row1: Seed = { Id: 1, TypeName: "person", ChildId: 10, Label: "a" };
+const row2: Seed = { Id: 1, TypeName: "person", ChildId: 11, Label: "b" };
+const mockConnection = new MockConnection({ provider: "memory" });
+const command = new MockCommand(mockConnection);
+mockConnection.command = command;
+const joinParents = parentsRepo(mockConnection);
+joinParents.addEnriched(
+  { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
+  types,
+);
+joinParents.addEnriched(
+  { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
+  joinParents,
+  new NestedToObjectEnrichmentStrategy<Parent>({
+    key: "Id",
+    fields: {
+      Id: "Id",
+      TypeName: "TypeName",
+      Children: {
+        key: "ChildId",
+        fields: { Id: "ChildId", Label: "Label" },
+      },
+    },
+  }),
+);
+const join = new SelectStatement({
+  table: "Parent",
+  fields: [
+    "Parent.Id AS Id",
+    "Parent.TypeName AS TypeName",
+    "Child.Id AS ChildId",
+    "Child.Label AS Label",
+  ],
+  joins: [Join.left("Child", "Parent.Id", "Child.ParentId")],
+  where: new Where(new Operator.Equals("Parent.Id", 1)),
+});
+command.reader = new MockReader([row1, row2]);
+const items = await collectAsync(
+  joinParents.read(join, undefined, { entityMapper: joinEntity }),
+);
+```
+
+**Parent from join**
+
+```
+[
+  {
+    Id: 1,
+    TypeName: 'person',
+    Children: [
+      { Id: 10, Label: 'a' },
+      { Id: 11, Label: 'b' }
+    ]
+  }
+]
 ```
 
 ## CRUD repository
@@ -9508,7 +10168,7 @@ Registers the same read fill as [ReadonlyRepository](#csharp-addenrichedenrichme
 **Definition**
 
 ```csharp
-public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public IEnriched<T> AddEnriched<TRelated>(Enrichment enrichment, IReadonlyRepository<TRelated> via, IReadonlyEnrichmentStrategy<T>? strategy = null) where TRelated : new()
 ```
 
 **Parameters**
@@ -9530,7 +10190,7 @@ Registers an association. `via` is read. `link` is the CRUD writer.
 **Definition**
 
 ```csharp
-public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null)
+public IEnriched<T> AddLinked<TRelated, TLink>(Enrichment enrichment, IReadonlyRepository<TRelated> via, ICRUDRepository<TLink> link, IReadonlyEnrichmentStrategy<T>? strategy = null) where TLink : new()
 ```
 
 **Parameters**
@@ -9956,7 +10616,7 @@ no row
 ```rust
 let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
-options.property_mappings = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
 let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
@@ -9975,8 +10635,8 @@ let matches = users_repo
             eq,
             Value::Bool(true),
         )),
-        None,
-    )
+        None, None
+)
     .await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
@@ -10185,8 +10845,8 @@ let created = users
     ))
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
@@ -10199,8 +10859,8 @@ let updated = users
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let updated_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
@@ -10366,8 +11026,8 @@ execute_sql(
 .await;
 let mut options = create_crud_repository_options::<Account>();
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
-options.entity_mapper = Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-options.property_mappings = Box::new(casing);
+options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+options.property_mappings = Some(std::sync::Arc::new(casing));
 options.ids = vec!["TenantId".into(), "Id".into()];
 options.row_converter = Some(RowTypeConverter::of::<Account>());
 let accounts_repo = CRUDRepository::new(connection, options).unwrap();
@@ -10449,7 +11109,7 @@ CREATE TABLE account (tenant_id int NOT NULL, id int NOT NULL, name string NOT N
 
 `AddEnriched` / `addEnriched` / `add_enriched` fills the contact type and source names, and writes the address and phone lists with the contact.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ContactsRepositoryTests.cs#L73-L149)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ContactsRepositoryTests.cs#L74-L150)
 
 ```csharp
 var conn = new SqliteConnection(new SqliteConnectionOptions
@@ -10525,7 +11185,7 @@ var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/contacts.rs#L129-L273)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/contacts.rs#L130-L274)
 
 ```rust
 let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
@@ -10629,7 +11289,7 @@ let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
 let loaded = contacts_repo
     .read_single(
         Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
-        None,
+        None, None
     )
     .await
     .unwrap()
@@ -10647,7 +11307,7 @@ let loaded = contacts_repo
 }
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/contacts.repository.integration.test.ts#L92-L133)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/contacts.repository.integration.test.ts#L94-L135)
 
 ```typescript
 const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
@@ -10848,15 +11508,15 @@ let ds = default().unwrap();
 let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
 users_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-users_options.property_mappings = Box::new(DictionaryMapper::new([
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
-]));
+])));
 users_options.row_converter = Some(RowTypeConverter::of::<User>());
 users_options.object_converter = Some(Box::new(
     MetaDataRowTypeConverter::of::<User>().with_references(
@@ -10874,14 +11534,14 @@ users_options.object_converter = Some(Box::new(
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
 type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
-type_options.property_mappings = Box::new(casing);
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+type_options.property_mappings = Some(std::sync::Arc::new(casing));
 type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
@@ -10930,7 +11590,7 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(&mut grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
     .await
     .unwrap()
     .unwrap();
@@ -10959,7 +11619,7 @@ let updated = users_repo
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None)
+    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
     .await
     .unwrap()
     .unwrap();
@@ -11604,7 +12264,7 @@ var response = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L779-L819)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L900-L940)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -11635,7 +12295,7 @@ let response = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(None, None).await.unwrap();
+let stored_parents = parents.read(None, None, None).await.unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L39)
@@ -11773,6 +12433,10 @@ class RepositoryFactory implements ICRUDRepositoryFactory
 | --- | --- |
 | [register(repository)](#typescript-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
 | [create(type)](#typescript-repositoryfactory-create-type) | Creates a CRUD repository. |
+| [register(typeName, pluralName, create, createReadonly)](#typescript-repositoryfactory-register-typename-pluralname-create-createreadonly) | Registers CRUD and readonly factories by entity name and plural name. |
+| [create(name, connection)](#typescript-repositoryfactory-create-name-connection) | Creates a registered CRUD repository by entity or plural name. |
+| [createReadonly(name, connection)](#typescript-repositoryfactory-createreadonly-name-connection) | Creates a registered read-only repository by entity or plural name. |
+| [access(name, connection)](#typescript-repositoryfactory-access-name-connection) | Returns a [RepositoryAccess](#typescript-repositoryaccess) for a registered name. |
 
 ###### register(repository) {#typescript-repositoryfactory-register-repository}
 
@@ -11809,6 +12473,88 @@ create<T>(type: Constructable<T>): ICRUDRepository<T>
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
+
+###### register(typeName, pluralName, create, createReadonly) {#typescript-repositoryfactory-register-typename-pluralname-create-createreadonly}
+
+Registers CRUD and readonly factories by entity name and plural name.
+
+**Definition**
+
+```typescript
+register(typeName: string, pluralName: string, create: (connection: IConnection) => ICRUDRepository, createReadonly: (connection: IConnection) => IReadonlyRepository): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeName` | entity name (`Contact`) |
+| `pluralName` | plural name (`contacts`) |
+| `create` | builds the CRUD repository from a [IConnection](#connection) |
+| `createReadonly` | builds the readonly repository from a [IConnection](#connection) |
+
+###### create(name, connection) {#typescript-repositoryfactory-create-name-connection}
+
+Creates a registered CRUD repository by entity or plural name.
+
+**Definition**
+
+```typescript
+create(name: string, connection: IConnection): ICRUDRepository
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [IConnection](#connection) passed to the factory |
+
+**Returns**
+
+[ICRUDRepository](#crud-repository)
+
+###### createReadonly(name, connection) {#typescript-repositoryfactory-createreadonly-name-connection}
+
+Creates a registered read-only repository by entity or plural name.
+
+**Definition**
+
+```typescript
+createReadonly(name: string, connection: IConnection): IReadonlyRepository
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [IConnection](#connection) passed to the factory |
+
+**Returns**
+
+[IReadonlyRepository](#readonly-repository)
+
+###### access(name, connection) {#typescript-repositoryfactory-access-name-connection}
+
+Returns a [RepositoryAccess](#typescript-repositoryaccess) for a registered name.
+
+**Definition**
+
+```typescript
+access(name: string, connection: IConnection): RepositoryAccess
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [IConnection](#connection) used by `create` / `createReadonly` |
+
+**Returns**
+
+[RepositoryAccess](#typescript-repositoryaccess)
 
 ##### RepositoryNotRegisteredError {#typescript-repositorynotregisterederror}
 
@@ -11950,6 +12696,10 @@ public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFacto
 | --- | --- |
 | [Register(repository)](#csharp-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
 | [Create()](#csharp-repositoryfactory-create) | Creates a CRUD repository by `T`. |
+| [Register(typeName, pluralName, create, createReadonly)](#csharp-repositoryfactory-register-typename-pluralname-create-createreadonly) | Registers CRUD and readonly factories by entity name and plural name. |
+| [Create(name, connection)](#csharp-repositoryfactory-create-name-connection) | Creates a registered CRUD repository by entity or plural name. |
+| [CreateReadonly(name, connection)](#csharp-repositoryfactory-createreadonly-name-connection) | Creates a registered read-only repository by entity or plural name. |
+| [Access(name, connection)](#csharp-repositoryfactory-access-name-connection) | Returns a [RepositoryAccess](#csharp-repositoryaccess) for a registered name. |
 
 ###### Register(repository) {#csharp-repositoryfactory-register-repository}
 
@@ -11980,6 +12730,88 @@ public ICRUDRepository<T> Create<T>()
 **Returns**
 
 [ICRUDRepository](#crud-repository)`<T>`
+
+###### Register(typeName, pluralName, create, createReadonly) {#csharp-repositoryfactory-register-typename-pluralname-create-createreadonly}
+
+Registers CRUD and readonly factories by entity name and plural name.
+
+**Definition**
+
+```csharp
+public void Register(string typeName, string pluralName, Func<IConnection, object> create, Func<IConnection, object> createReadonly)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `typeName` | entity name (`Contact`) |
+| `pluralName` | plural name (`Contacts`) |
+| `create` | builds the CRUD repository from an [IConnection](#connection) |
+| `createReadonly` | builds the readonly repository from an [IConnection](#connection) |
+
+###### Create(name, connection) {#csharp-repositoryfactory-create-name-connection}
+
+Creates a registered CRUD repository by entity or plural name.
+
+**Definition**
+
+```csharp
+public object Create(string name, IConnection connection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [IConnection](#connection) passed to the factory |
+
+**Returns**
+
+`object`
+
+###### CreateReadonly(name, connection) {#csharp-repositoryfactory-createreadonly-name-connection}
+
+Creates a registered read-only repository by entity or plural name.
+
+**Definition**
+
+```csharp
+public object CreateReadonly(string name, IConnection connection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [IConnection](#connection) passed to the factory |
+
+**Returns**
+
+`object`
+
+###### Access(name, connection) {#csharp-repositoryfactory-access-name-connection}
+
+Returns a [RepositoryAccess](#csharp-repositoryaccess) for a registered name.
+
+**Definition**
+
+```csharp
+public RepositoryAccess Access(string name, IConnection connection)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [IConnection](#connection) used by `Create` / `CreateReadonly` |
+
+**Returns**
+
+[RepositoryAccess](#csharp-repositoryaccess)
 
 ##### RepositoryNotRegisteredException {#csharp-repositorynotregisteredexception}
 
@@ -12121,6 +12953,10 @@ pub struct RepositoryFactory
 | --- | --- |
 | [register(repository)](#rust-repositoryfactory-register-repository) | Registers CRUD and readonly for the same repository. |
 | [create()](#rust-repositoryfactory-create) | Creates a CRUD repository by `T`. |
+| [register_named(type_name, plural_name, create, create_readonly)](#rust-repositoryfactory-register_named-type_name-plural_name-create-create_readonly) | Registers CRUD and readonly factories by entity name and plural name. |
+| [create_named(name, connection)](#rust-repositoryfactory-create_named-name-connection) | Creates a registered CRUD repository by entity or plural name. |
+| [create_readonly_named(name, connection)](#rust-repositoryfactory-create_readonly_named-name-connection) | Creates a registered read-only repository by entity or plural name. |
+| [access(name, connection)](#rust-repositoryfactory-access-name-connection) | Returns a [RepositoryAccess](#rust-repositoryaccess) for a registered name. |
 
 ###### new() {#rust-repositoryfactory-new}
 
@@ -12166,6 +13002,88 @@ pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>
 
 `Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
 
+###### register_named(type_name, plural_name, create, create_readonly) {#rust-repositoryfactory-register_named-type_name-plural_name-create-create_readonly}
+
+Registers CRUD and readonly factories by entity name and plural name.
+
+**Definition**
+
+```rust
+pub fn register_named(&self, type_name: impl Into<String>, plural_name: impl Into<String>, create: impl Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync + 'static, create_readonly: impl Fn(Arc<dyn Connection>) -> Arc<dyn IReadonlyRepository> + Send + Sync + 'static)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `type_name` | entity name (`Contact`) |
+| `plural_name` | plural name (`contacts`) |
+| `create` | builds the CRUD repository from a [Connection](#connection) |
+| `create_readonly` | builds the readonly repository from a [Connection](#connection) |
+
+###### create_named(name, connection) {#rust-repositoryfactory-create_named-name-connection}
+
+Creates a registered CRUD repository by entity or plural name.
+
+**Definition**
+
+```rust
+pub fn create_named(&self, name: &str, connection: Arc<dyn Connection>) -> Result<Arc<dyn ICRUDRepository>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [Connection](#connection) passed to the factory |
+
+**Returns**
+
+`Result<Arc<dyn `[ICRUDRepository](#crud-repository)`>>`
+
+###### create_readonly_named(name, connection) {#rust-repositoryfactory-create_readonly_named-name-connection}
+
+Creates a registered read-only repository by entity or plural name.
+
+**Definition**
+
+```rust
+pub fn create_readonly_named(&self, name: &str, connection: Arc<dyn Connection>) -> Result<Arc<dyn IReadonlyRepository>>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [Connection](#connection) passed to the factory |
+
+**Returns**
+
+`Result<Arc<dyn `[IReadonlyRepository](#readonly-repository)`>>`
+
+###### access(name, connection) {#rust-repositoryfactory-access-name-connection}
+
+Returns a [RepositoryAccess](#rust-repositoryaccess) for a registered name.
+
+**Definition**
+
+```rust
+pub fn access(&self, name: &str, connection: Arc<dyn Connection>) -> RepositoryAccess
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `name` | entity name or plural name |
+| `connection` | [Connection](#connection) used by `create` / `create_readonly` |
+
+**Returns**
+
+[RepositoryAccess](#rust-repositoryaccess)
+
 ### Remarks
 
 > **TypeScript**
@@ -12196,7 +13114,7 @@ See [Datasource](#datasource) for `CreateRepository` / `createRepository` / `cre
     var created = factory.Create<Item>();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L112-L116)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L184-L188)
 
 ```rust
 let factory = RepositoryFactory::new();
@@ -22573,7 +23491,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1979-L1985)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2137-L2143)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -23195,7 +24113,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1979-L1985)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2137-L2143)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -23363,14 +24281,14 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 #### Match and miss
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L266-L345)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L273-L352)
 
 ```csharp
 var evaluator = new ExpressionEvaluator();
 IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1354-L1539)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1412-L1597)
 
 ```rust
 let evaluator = ExpressionEvaluator;
@@ -24333,7 +25251,7 @@ Rust has no separate trait. `AddEnriched` / `addEnriched` / `add_enriched` is a 
 
 #### Register a fill
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L72-L88)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -24372,10 +25290,10 @@ parents_repo.add_enriched(
     types_repo,
     None,
 );
-let items = parents_repo.read(None, None).await.unwrap();
+let items = parents_repo.read(None, None, None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -24426,7 +25344,7 @@ const EnrichmentPropertyType
 | --- | --- |
 | Object | One related row. `relatedProperty` copies one field. |
 | List | Related rows. Written with the parent when the repository can persist. |
-| Dictionary | Rejected until its fill is defined. |
+| Dictionary | Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
 | Custom | Rejected until its fill is defined. |
 
 ##### Association {#typescript-association}
@@ -24504,7 +25422,7 @@ public enum EnrichmentPropertyType
 | --- | --- |
 | Object | One related row. `RelatedProperty` copies one field. |
 | List | Related rows. Written with the parent when the repository can persist. |
-| Dictionary | Rejected until its fill is defined. |
+| Dictionary | Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
 | Custom | Rejected until its fill is defined. |
 
 ##### Association {#csharp-association}
@@ -24629,7 +25547,7 @@ pub enum EnrichmentPropertyType
 | --- | --- |
 | Object | One related row. `related_property` copies one field. |
 | List | Related rows. Written with the parent when the repository can persist. |
-| Dictionary | Rejected until its fill is defined. |
+| Dictionary | Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
 | Custom | Rejected until its fill is defined. |
 
 ##### Association {#rust-association}
@@ -24674,13 +25592,13 @@ pub fn new(parent: impl Into<String>, related: impl Into<String>) -> Self
 
 ### Remarks
 
-`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` and `Custom` are rejected. [AddLinked](#crud-repository) sets `association` and writes the junction. Pass the value to [IEnriched](#ienriched).
+`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` loads child rows into a map keyed by `key` and writes one row per entry. `Custom` is rejected. [AddLinked](#crud-repository) sets `association` and writes the junction. Pass the value to [IEnriched](#ienriched).
 
 ### Examples
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L72-L88)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -24708,7 +25626,7 @@ parents_repo.add_enriched(
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -24750,7 +25668,7 @@ Fills each parent from the related repository.
 **Definition**
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -24773,7 +25691,7 @@ Fills each parent by reading the link table, then the related repository.
 **Definition**
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -24970,7 +25888,7 @@ Pass the strategy to [IEnriched](#ienriched) for one edge. The repository calls 
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L72-L88)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -24998,7 +25916,7 @@ parents_repo.add_enriched(
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -25060,7 +25978,7 @@ Fills a lookup from a cached related row, or a list from the rows for that paren
 **Definition**
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -25083,7 +26001,7 @@ Reads the junction for each parent key, then each related row.
 **Definition**
 
 ```typescript
-applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+applyLinked<TRelated extends object, TLink extends object>(via: IReadonlyRepository<TRelated>, link: IReadonlyRepository<TLink>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -25252,7 +26170,7 @@ async fn apply_linked(&self, via: Arc<dyn IReadonlyRepository>, link: Arc<dyn IR
 
 #### Fill a lookup
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L47-L63)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L72-L88)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -25280,7 +26198,7 @@ parents_repo.add_enriched(
 );
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L89-L101)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -25341,7 +26259,7 @@ Fills lookups and lists from one `IN` read of the related repository.
 **Definition**
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -25459,7 +26377,7 @@ Pass it as the strategy on [IEnriched](#ienriched). Linked fills stay on [Defaul
 
 #### Fill with one query
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L65-L84)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L90-L109)
 
 ```csharp
 var person = new Row { ["name"] = "person" };
@@ -25485,31 +26403,31 @@ let built = datasource();
 let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
 let mut users_options = create_readonly_repository_mapping_options::<UsersView>();
-users_options.entity_mapper = Box::new(DictionaryMapper::new([(
+users_options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
     "UsersView".to_string(),
     "user".to_string(),
-)]));
-users_options.property_mappings = Box::new(DictionaryMapper::new([
+)])));
+users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".to_string(), "id".to_string()),
     ("Login".to_string(), "username".to_string()),
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
     ("UserType".to_string(), "user_type_id".to_string()),
-]));
+])));
 let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity_mapper =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings =
-    Box::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake));
+    Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 let mut role_options = create_readonly_repository_mapping_options::<UserRole>();
-role_options.entity_mapper = Box::new(DictionaryMapper::new([(
+role_options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([(
     "UserRole".to_string(),
     "user_roles".to_string(),
-)]));
-role_options.property_mappings = Box::new(DictionaryMapper::new([
+)])));
+role_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("UserId".to_string(), "user_id".to_string()),
     ("Name".to_string(), "name".to_string()),
-]));
+])));
 let mut users_repo =
     ReadonlyRepository::new(connection.clone(), users_options).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
@@ -25530,13 +26448,13 @@ users_repo.add_enriched(
     Some(strategy),
 );
 let users_view = users_repo
-    .read_single(Some(&Where::binary("Key", eq, ADA)), None)
+    .read_single(Some(&Where::binary("Key", eq, ADA)), None, None)
     .await
     .unwrap()
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L103-L119)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L108-L124)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -25616,7 +26534,7 @@ Replaces `parents` with the objects collapsed from `sources`.
 **Definition**
 
 ```typescript
-apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: object[], sources?: (Row | undefined)[]): Promise<void>
+apply<TRelated extends object>(via: IReadonlyRepository<TRelated>, enrichment: Enrichment, parents: T[], sources?: (Row | undefined)[]): Promise<void>
 ```
 
 **Parameters**
@@ -25766,7 +26684,7 @@ This is the read-side collapse. [FlatToNestedMapper](#flat-to-nested-mapper) is 
 
 #### Collapse join rows
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L188-L206)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadonlyRepositoryTests.cs#L213-L231)
 
 ```csharp
 var person = new Row { ["TypeName"] = "person" };
@@ -25792,13 +26710,13 @@ let ds: &dyn Datasource = &*built;
 execute_sql(&connection, &seed()).await;
 let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity = "User".into();
-options.entity_mapper = Box::new(DictionaryMapper::new([
+options.entity_mapper = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("User".into(), "user".into()),
     ("UserType".into(), "user_type".into()),
     ("UserRole".into(), "user_roles".into()),
     ("Role".into(), "roles".into()),
-]));
-options.property_mappings = Box::new(DictionaryMapper::new([
+])));
+options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Key".into(), "id".into()),
     ("Login".into(), "username".into()),
     ("Active".into(), "is_enabled".into()),
@@ -25809,7 +26727,7 @@ options.property_mappings = Box::new(DictionaryMapper::new([
     ("RoleId".into(), "role_id".into()),
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
-]));
+])));
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
     datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
@@ -25839,7 +26757,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(Some(&joined), None).await.unwrap();
+let items = users_repo.read(Some(&joined), None, None).await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -25852,7 +26770,7 @@ let grace = view("grace");
 let lin = view("lin");
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L307-L322)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L312-L327)
 
 ```typescript
 const person: Seed = { TypeName: "person" };
@@ -26072,14 +26990,14 @@ var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryO
 var first = await parentsRepo.Create(new Parent { label = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L649-L696)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L770-L817)
 
 ```rust
 let connection = setup(&mut []).await;
 let mut options = CRUDRepositoryOptions::default();
 options.entity = "Parent".into();
 options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
-    None, None, true,
+    None, None, None, true,
 )));
 let parents = BulkCRUDRepository::new(connection, options).unwrap();
 let created = parents
@@ -26372,14 +27290,14 @@ var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryO
 var first = await parentsRepo.Create(new Parent { label = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L649-L696)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L770-L817)
 
 ```rust
 let connection = setup(&mut []).await;
 let mut options = CRUDRepositoryOptions::default();
 options.entity = "Parent".into();
 options.write = Some(Arc::new(DefaultWriteEnrichmentStrategy::new(
-    None, None, true,
+    None, None, None, true,
 )));
 let parents = BulkCRUDRepository::new(connection, options).unwrap();
 let created = parents
@@ -26590,8 +27508,8 @@ let mut creating = record(&[
     ("groups", encode_rows(&[seeded.engineering.clone()])),
 ]);
 let created = users.create(&mut creating).await.unwrap();
-let created_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let next = record(&[
     ("id", created.get("id").unwrap().clone()),
     ("username", Value::from("ada")),
@@ -26604,8 +27522,8 @@ let after_skip = users
     .await
     .unwrap()
     .unwrap();
-let skipped_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let skipped_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let skipped_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let skipped_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let linked_row = record(&[
     ("id", created.get("id").unwrap().clone()),
     ("username", Value::from("ada")),
@@ -26614,8 +27532,8 @@ let linked_row = record(&[
     ("roles", encode_rows(&[seeded.editor_role.clone()])),
 ]);
 let linked = users.update(&linked_row, None).await.unwrap();
-let linked_role_links = seeded.user_roles.read(None, None).await.unwrap();
-let linked_group_links = seeded.user_groups.read(None, None).await.unwrap();
+let linked_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
+let linked_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
 let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
@@ -26696,7 +27614,7 @@ Creates the owned `List` for one parent.
 **Definition**
 
 ```typescript
-abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -26705,7 +27623,7 @@ abstract createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -26718,7 +27636,7 @@ Creates the junction rows for one parent.
 **Definition**
 
 ```typescript
-abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -26727,7 +27645,7 @@ abstract createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, p
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -26755,16 +27673,16 @@ Creates the owned `List` for one parent.
 **Definition**
 
 ```csharp
-public abstract Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -26777,16 +27695,16 @@ Creates the junction rows for one parent.
 **Definition**
 
 ```csharp
-public abstract Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -26903,7 +27821,7 @@ Stamps each child and creates the payload.
 **Definition**
 
 ```typescript
-createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -26912,7 +27830,7 @@ createOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -26925,7 +27843,7 @@ Inserts one junction row per related id.
 **Definition**
 
 ```typescript
-createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -26934,7 +27852,7 @@ createLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: ob
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -26982,16 +27900,16 @@ Stamps each child and creates the payload.
 **Definition**
 
 ```csharp
-public override Task CreateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task CreateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27004,16 +27922,16 @@ Inserts one junction row per related id.
 **Definition**
 
 ```csharp
-public override Task CreateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task CreateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27110,7 +28028,7 @@ Writes the owned `List` for one parent.
 **Definition**
 
 ```typescript
-abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27119,7 +28037,7 @@ abstract updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27132,7 +28050,7 @@ Writes the junction rows for one parent.
 **Definition**
 
 ```typescript
-abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27141,7 +28059,7 @@ abstract updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, p
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27169,16 +28087,16 @@ Writes the owned `List` for one parent.
 **Definition**
 
 ```csharp
-public abstract Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27191,138 +28109,20 @@ Writes the junction rows for one parent.
 **Definition**
 
 ```csharp
-public abstract Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
 `Task`
-
-##### IChildPersist {#csharp-ichildpersist}
-
-```csharp
-public interface IChildPersist
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [Create(item)](#csharp-ichildpersist-create-item) | Creates one child or link row. |
-| [Update(item, byWhere)](#csharp-ichildpersist-update-item-bywhere) | Updates one child or link row. |
-| [Delete(item, byWhere)](#csharp-ichildpersist-delete-item-bywhere) | Deletes one child or link row. |
-| [Read(where)](#csharp-ichildpersist-read-where) | Reads child or link rows. |
-| [New()](#csharp-ichildpersist-new) | Builds an empty child or link row. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Ids | Id property names on the child or link type. |
-
-###### Create(item) {#csharp-ichildpersist-create-item}
-
-Creates one child or link row.
-
-**Definition**
-
-```csharp
-Task<object> Create(object item)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to create |
-
-**Returns**
-
-`Task<object>`
-
-###### Update(item, byWhere) {#csharp-ichildpersist-update-item-bywhere}
-
-Updates one child or link row.
-
-**Definition**
-
-```csharp
-Task<Response> Update(object item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to update |
-| `byWhere` | optional predicate |
-
-**Returns**
-
-`Task` of `Response`
-
-###### Delete(item, byWhere) {#csharp-ichildpersist-delete-item-bywhere}
-
-Deletes one child or link row.
-
-**Definition**
-
-```csharp
-Task<Response> Delete(object item, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `item` | row to delete |
-| `byWhere` | optional predicate |
-
-**Returns**
-
-`Task` of `Response`
-
-###### Read(where) {#csharp-ichildpersist-read-where}
-
-Reads child or link rows.
-
-**Definition**
-
-```csharp
-IAsyncEnumerable<object> Read(IWhere where)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `where` | filter |
-
-**Returns**
-
-`IAsyncEnumerable<object>`
-
-###### New() {#csharp-ichildpersist-new}
-
-Builds an empty child or link row.
-
-**Definition**
-
-```csharp
-object New()
-```
-
-**Returns**
-
-`object`
 
 ##### Rust
 
@@ -27391,7 +28191,7 @@ A subclass implements the two update methods. Pass a subclass to [DefaultWriteEn
 
 #### Replace children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L140-L168)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L215-L243)
 
 ```csharp
 var connection = await Setup();
@@ -27400,7 +28200,7 @@ var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L437-L516)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L556-L636)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -27408,6 +28208,7 @@ let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+        None,
         false,
     ),
 ));
@@ -27471,7 +28272,7 @@ let updated = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L185-L214)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L258-L287)
 
 ```typescript
 const connection = await setup();
@@ -27533,7 +28334,7 @@ Loads existing children, deletes rows missing from the payload, updates matches,
 **Definition**
 
 ```typescript
-updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27542,7 +28343,7 @@ updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27555,7 +28356,7 @@ Replaces the junction set for the parent key.
 **Definition**
 
 ```typescript
-updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27564,7 +28365,7 @@ updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: ob
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27612,16 +28413,16 @@ Loads existing children, deletes rows missing from the payload, updates matches,
 **Definition**
 
 ```csharp
-public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27634,16 +28435,16 @@ Replaces the junction set for the parent key.
 **Definition**
 
 ```csharp
-public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27716,7 +28517,7 @@ This is the update strategy [DefaultWriteEnrichmentStrategy](#defaultwriteenrich
 
 #### Replace-sync children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L110-L138)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L185-L213)
 
 ```csharp
 var connection = await Setup();
@@ -27725,7 +28526,7 @@ var childrenRepo = Open<Child>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L363-L435)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L482-L554)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -27780,7 +28581,7 @@ let updated = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L159-L183)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L232-L256)
 
 ```typescript
 const connection = await setup();
@@ -27837,7 +28638,7 @@ Deletes every existing child for the parent key, then inserts the payload.
 **Definition**
 
 ```typescript
-updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27846,7 +28647,7 @@ updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27859,7 +28660,7 @@ Deletes every junction row for the parent key, then inserts the payload ids.
 **Definition**
 
 ```typescript
-updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -27868,7 +28669,7 @@ updateLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: ob
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27916,16 +28717,16 @@ Deletes every existing child for the parent key, then inserts the payload.
 **Definition**
 
 ```csharp
-public override Task UpdateOwned(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task UpdateOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -27938,16 +28739,16 @@ Deletes every junction row for the parent key, then inserts the payload ids.
 **Definition**
 
 ```csharp
-public override Task UpdateLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task UpdateLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -28020,7 +28821,7 @@ Pass it as the `update` argument of [DefaultWriteEnrichmentStrategy](#defaultwri
 
 #### Recreate children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L140-L168)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L215-L243)
 
 ```csharp
 var connection = await Setup();
@@ -28029,7 +28830,7 @@ var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L437-L516)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L556-L636)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -28037,6 +28838,7 @@ let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
+        None,
         false,
     ),
 ));
@@ -28100,7 +28902,7 @@ let updated = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L185-L214)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L258-L287)
 
 ```typescript
 const connection = await setup();
@@ -28144,7 +28946,7 @@ Removes the owned `List` for one parent.
 **Definition**
 
 ```typescript
-abstract deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+abstract deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 **Parameters**
@@ -28153,7 +28955,7 @@ abstract deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, pa
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
 
 **Returns**
@@ -28167,7 +28969,7 @@ Removes the junction rows for one parent.
 **Definition**
 
 ```typescript
-abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+abstract deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28176,7 +28978,7 @@ abstract deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, p
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -28189,7 +28991,7 @@ Reads the owned rows whose `RelatedKey` matches the parent `SourceProperty`.
 **Definition**
 
 ```typescript
-static load(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<object[]>
+static load<TParent, TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: TParent): Promise<TChild[]>
 ```
 
 **Parameters**
@@ -28198,11 +29000,11 @@ static load(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
-`Promise<object[]>`
+`Promise<TChild[]>`
 
 ###### loadLinks(writer, column, key) {#typescript-deleteenrichmentstrategy-loadlinks-writer-column-key}
 
@@ -28211,7 +29013,7 @@ Reads junction rows whose `column` equals `key`.
 **Definition**
 
 ```typescript
-static loadLinks(writer: ICRUDRepository<object>, column: string, key: Scalar): Promise<object[]>
+static loadLinks<TChild extends object>(writer: ICRUDRepository<TChild>, column: string, key: Scalar): Promise<TChild[]>
 ```
 
 **Parameters**
@@ -28224,7 +29026,7 @@ static loadLinks(writer: ICRUDRepository<object>, column: string, key: Scalar): 
 
 **Returns**
 
-`Promise<object[]>`
+`Promise<TChild[]>`
 
 ##### C#
 
@@ -28248,16 +29050,16 @@ Removes the owned `List` for one parent.
 **Definition**
 
 ```csharp
-public abstract Task DeleteOwned(IChildPersist writer, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public abstract Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested) where TChild : new()
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
 
 **Returns**
@@ -28271,16 +29073,16 @@ Removes the junction rows for one parent.
 **Definition**
 
 ```csharp
-public abstract Task DeleteLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public abstract Task DeleteLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent) where TChild : new()
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -28354,7 +29156,7 @@ Pass a subclass as the `delete` argument of [DefaultWriteEnrichmentStrategy](#de
 
 #### Skip child deletes
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L223-L238)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L298-L313)
 
 ```csharp
 var connection = await Setup();
@@ -28362,11 +29164,12 @@ var childrenRepo = Open<Child>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/delete_enrichment_strategy.rs#L77-L102)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/delete_enrichment_strategy.rs#L91-L117)
 
 ```rust
 let write = Arc::new(DefaultWriteEnrichmentStrategy::new(
     Some(Arc::new(SkipDelete)),
+    None,
     None,
     false,
 ));
@@ -28384,10 +29187,10 @@ parents.add_enriched(
     None,
 );
 parents.delete(&created, None).await.unwrap();
-let left = children.read(None, None).await.unwrap();
+let left = children.read(None, None, None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L278-L291)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L351-L364)
 
 ```typescript
 const connection = await setup();
@@ -28444,7 +29247,7 @@ Loads children by foreign key, deletes their nested rows, then deletes the child
 **Definition**
 
 ```typescript
-deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object, deleteNested: (rows: object[]) => Promise<void>): Promise<void>
+deleteOwned<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T, deleteNested: (rows: TChild[]) => Promise<void>): Promise<void>
 ```
 
 **Parameters**
@@ -28453,7 +29256,7 @@ deleteOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: obj
 | --- | --- |
 | `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
 
 **Returns**
@@ -28467,7 +29270,7 @@ Deletes junction rows for the parent key. Related rows stay.
 **Definition**
 
 ```typescript
-deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: object): Promise<void>
+deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>
 ```
 
 **Parameters**
@@ -28476,7 +29279,7 @@ deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: ob
 | --- | --- |
 | `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [association](#typescript-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -28524,16 +29327,16 @@ Loads children by foreign key, deletes their nested rows, then deletes the child
 **Definition**
 
 ```csharp
-public override Task DeleteOwned(IChildPersist writer, Enrichment enrichment, object parent, Func<IReadOnlyList<object>, Task> deleteNested)
+public override Task DeleteOwned<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent, Func<IReadOnlyList<TChild>, Task> deleteNested)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | child [IChildPersist](#csharp-ichildpersist) |
+| `writer` | child [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) |
-| `parent` | parent object |
+| `parent` | parent entity |
 | `deleteNested` | deletes nested rows of the children before the children themselves |
 
 **Returns**
@@ -28547,16 +29350,16 @@ Deletes junction rows for the parent key. Related rows stay.
 **Definition**
 
 ```csharp
-public override Task DeleteLinked(IChildPersist writer, Enrichment enrichment, object parent)
+public override Task DeleteLinked<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `writer` | link [IChildPersist](#csharp-ichildpersist) |
+| `writer` | link [ICRUDRepository](#crud-repository) |
 | `enrichment` | [Enrichment](#enrichment) with [Association](#csharp-association) |
-| `parent` | parent object |
+| `parent` | parent entity |
 
 **Returns**
 
@@ -28630,7 +29433,7 @@ async fn delete_linked(&self, writer: Arc<dyn ICRUDRepository>, enrichment: &Enr
 
 #### Cascade delete
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L199-L221)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L274-L296)
 
 ```csharp
 var connection = await Setup();
@@ -28640,7 +29443,7 @@ var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L698-L758)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L819-L879)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -28696,7 +29499,7 @@ let removed = parents
     .unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L256-L276)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L329-L349)
 
 ```typescript
 const connection = await setup();
@@ -30117,6 +30920,7 @@ expect(command.executeCalls).toHaveLength(1);
 npx @datasources/cli setup
 npx @datasources/cli add sqlite
 npx @datasources/cli remove sqlite
+npx @datasources/cli generate all --dialect typescript
 ```
 
 Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
@@ -30164,6 +30968,24 @@ npx @datasources/cli remove postgres
 | `--cwd <dir>` | Consumer project directory (default: `.`) |
 | `--ecosystem ts\|rust\|csharp` | Required when more than one project type exists |
 | `--dry-run` | Print package-manager commands without running them |
+
+### Generate
+
+`generate` reads a deterministic project and writes one language dialect. The word after `generate` is `all`, `types`, `repositories`, or `datasource`. `--dialect` is `csharp`, `typescript`, or `rust`. SQL dialects come from `settings.yaml` (`backend.datasources`, default `sqlite`).
+
+```sh
+npx @datasources/cli generate all --dialect typescript --input ./deterministic --output ./generated
+npx @datasources/cli generate repositories --dialect csharp
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--dialect csharp\|typescript\|rust` | Language of the generated types and repositories |
+| `--provider <name>` | Spec provider (default: `deterministic`) |
+| `--input <dir>` | Deterministic project (default: `./deterministic`) |
+| `--output <dir>` | Generated files (default: `./generated`) |
+
+`types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
 ### .env
 

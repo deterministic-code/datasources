@@ -26,18 +26,18 @@ const linkWhere = (
   );
 
 export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy<T> {
-  async deleteOwned(
-    writer: ICRUDRepository<object>,
+  async deleteOwned<TChild extends object>(
+    writer: ICRUDRepository<TChild>,
     enrichment: Enrichment,
     parent: T,
-    deleteNested: (rows: object[]) => Promise<void>,
+    deleteNested: (rows: TChild[]) => Promise<void>,
   ): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
     for (const row of existing) await writer.delete(row, DeleteEnrichmentStrategy.ownedWhere(writer, enrichment, parent));
   }
 
-  async deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
+  async deleteLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
     const association = enrichment.association;
     if (!association) throw new DatasourceError("Missing association");
     const key = get(parent, enrichment.sourceProperty);
@@ -48,4 +48,4 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
       await writer.delete(row, linkWhere(association, key, id));
     }
   }
-};
+}
