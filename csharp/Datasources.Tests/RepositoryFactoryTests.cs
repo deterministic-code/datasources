@@ -43,8 +43,8 @@ public class RepositoryFactoryTests
         var read = new StubRepository<Item>("read", connection);
         factory.Register("Contact", "Contacts", _ => crud, _ => read);
 
-        Assert.Same(crud, factory.Create("Contact", connection));
-        Assert.Same(read, factory.CreateReadonly("Contacts", connection));
+        Assert.Same(crud, factory.Create<ICRUDRepository<Item>>("Contact", connection));
+        Assert.Same(read, factory.CreateReadonly<IReadonlyRepository<Item>>("Contacts", connection));
         Assert.Same(crud, factory.Access("Contacts", connection).Create());
         Assert.Same(read, factory.Access("Contact", connection).CreateReadonly());
     }

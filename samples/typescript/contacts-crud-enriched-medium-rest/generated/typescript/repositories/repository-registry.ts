@@ -1,4 +1,4 @@
-import type { RepositoryAccess, RepositoryFactory } from "@datasources/core";
+import type { RepositoryFactory } from "@datasources/core";
 import { AddressRepository } from "./address-repository.ts";
 import { AddressTypeRepository } from "./address-type-repository.ts";
 import { ContactRepository } from "./contact-repository.ts";
@@ -29,17 +29,17 @@ export const register = (factory: RepositoryFactory): void => {
 
 declare module "@datasources/core" {
   interface Datasource {
-    readonly addresses: RepositoryAccess;
-    readonly addressTypes: RepositoryAccess;
-    readonly contacts: RepositoryAccess;
-    readonly contactChangeLogs: RepositoryAccess;
-    readonly contactGroups: RepositoryAccess;
-    readonly contactGroupMembers: RepositoryAccess;
-    readonly contactPreferences: RepositoryAccess;
-    readonly contactSettings: RepositoryAccess;
-    readonly contactSources: RepositoryAccess;
-    readonly legacyContacts: RepositoryAccess;
-    readonly phones: RepositoryAccess;
-    readonly phoneTypes: RepositoryAccess;
+    readonly addresses: AddressRepository;
+    readonly addressTypes: AddressTypeRepository;
+    readonly contacts: ContactRepository;
+    readonly contactChangeLogs: ContactChangeLogRepository;
+    readonly contactGroups: ContactGroupRepository;
+    readonly contactGroupMembers: ContactGroupMemberRepository;
+    readonly contactPreferences: ContactPreferencesRepository;
+    readonly contactSettings: ContactSettingsRepository;
+    readonly contactSources: ContactSourceRepository;
+    readonly legacyContacts: LegacyContactRepository;
+    readonly phones: PhoneRepository;
+    readonly phoneTypes: PhoneTypeRepository;
   }
 }

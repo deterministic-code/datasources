@@ -12,9 +12,10 @@ const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(sample, "../../..");
 const spec = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/deterministic");
 
+type Contact = { id: number; firstName: string };
 type ContactRepo = {
-  create: (row: Record<string, string | number | object>) => Promise<{ id: number; firstName: string }>;
-  readSingle: (query: Where) => Promise<{ firstName: string } | undefined>;
+  create: (row: Record<string, string | number | object>) => Promise<Contact>;
+  readSingle: (query: Where) => Promise<Contact | undefined>;
 };
 
 describe("generate-and-register", () => {
@@ -42,14 +43,13 @@ describe("generate-and-register", () => {
       )) as { register: (factory: RepositoryFactory) => void };
       const ds = new Datasource("sqlite", new SqliteDriver(), {
         DATASOURCE_URL: "sqlite:///:memory:",
-      }) as Datasource & { contacts: { create: () => ContactRepo } };
+      }) as Datasource & { contacts: ContactRepo };
       register(ds.repositories);
       const command = await ds.createCommand();
       await command.executeNative(new Native("PRAGMA foreign_keys = ON"));
       for (const sql of statements(readFileSync(join(out, "sql/sqlite/migrations/0001_initial_up.sql"), "utf8")))
         await command.executeNative(new Native(sql));
-      const contacts = ds.contacts.create();
-      const created = await contacts.create({
+      const created: Contact = await ds.contacts.create({
         firstName: "Ada",
         lastName: "Lovelace",
         contactSourceId: 1,
@@ -61,7 +61,7 @@ describe("generate-and-register", () => {
         prefs: {},
       });
       expect(created.firstName).toBe("Ada");
-      const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", created.id)));
+      const loaded: Contact | undefined = await ds.contacts.readSingle(new Where(new Operator.Equals("id", created.id)));
       expect(loaded?.firstName).toBe("Ada");
     } finally {
       rmSync(out, { recursive: true, force: true });

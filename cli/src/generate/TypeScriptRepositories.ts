@@ -48,12 +48,12 @@ export const typescriptRepositories = (models: RepositoryModel[]): GenerateEntry
   });
   const registerImports = models.map((model) => `import { ${childClass(model.typeName)} } from "./${model.specName.replaceAll("_", "-")}-repository.ts";`);
   const registerCalls = models.map((model) => `  factory.register("${quote(model.entity)}", "${quote(pluralCamel(model.typeName))}", (connection) => new ${childClass(model.typeName)}(connection), (connection) => ${childClass(model.typeName)}.createReadonly(connection));`);
-  const props = models.map((model) => `    readonly ${pluralCamel(model.typeName)}: RepositoryAccess;`);
+  const props = models.map((model) => `    readonly ${pluralCamel(model.typeName)}: ${childClass(model.typeName)};`);
   return [
     ...files,
     content(
       "repository-registry.ts",
-      `import type { RepositoryAccess, RepositoryFactory } from "@datasources/core";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\n\ndeclare module "@datasources/core" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
+      `import type { RepositoryFactory } from "@datasources/core";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\n\ndeclare module "@datasources/core" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
     ),
   ];
 };
