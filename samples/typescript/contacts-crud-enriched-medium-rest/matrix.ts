@@ -13,15 +13,44 @@ import { ContactRepository } from "./generated/typescript/repositories/contact-r
 import { statements } from "./src/schema.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
+type Scalar = string | number | boolean | null;
+type Node = Scalar | Node[] | { [key: string]: Node };
+
 const spec = parseYaml(
   readFileSync(resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/round-trip.yaml"), "utf8"),
-) as { now: string; steps: { method: string; path: string; body?: object; saveId?: boolean }[] };
+) as { now: string; steps: { method: string; path: string; body?: Node; saveId?: boolean; save?: Record<string, string> }[] };
 
 const driver = (provider: string) =>
   ({ sqlite: () => new SqliteDriver(), mysql: () => new MysqlDriver(), postgres: () => new PostgresDriver() })[provider]?.() ??
   (() => {
     throw new Error(provider);
   })();
+
+const substituteText = (text: string, saved: Record<string, string>) =>
+  Object.entries(saved)
+    .sort(([left], [right]) => right.length - left.length)
+    .reduce((current, [name, value]) => current.replaceAll(`$${name}`, value), text);
+
+const substituteNode = (node: Node, saved: Record<string, string>): Node =>
+  Array.isArray(node)
+    ? node.map((item) => substituteNode(item, saved))
+    : node && typeof node === "object"
+      ? Object.fromEntries(Object.entries(node).map(([key, value]) => [key, substituteNode(value, saved)]))
+      : typeof node === "string" && node.startsWith("$") && saved[node.slice(1)] != null
+        ? (Number.isFinite(Number(saved[node.slice(1)])) ? Number(saved[node.slice(1)]) : saved[node.slice(1)])
+        : node;
+
+const at = (root: Node | null, pointer: string): string => {
+  let current: Node | undefined = root ?? undefined;
+  for (const part of pointer.split(".")) {
+    current = Array.isArray(current)
+      ? current[Number(part)]
+      : current && typeof current === "object"
+        ? current[part]
+        : undefined;
+  }
+  return current == null ? "" : String(current);
+};
 
 const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, middleware: ICommandMiddleware) => {
   contacts.addMiddleware(middleware);
@@ -56,11 +85,14 @@ try {
   const legacy = new LegacyContactRepository(connection);
   attach(contacts, legacy, middleware);
   const api = new Api(contacts, legacy);
-  let id = "";
+  const saved: Record<string, string> = {};
   for (const step of spec.steps) {
-    const path = step.path.replaceAll("$id", id);
-    const result = await api.handle(step.method, path, step.body === undefined ? undefined : JSON.stringify(step.body));
-    if (step.saveId) id = String((JSON.parse(result.body) as { id: number }).id);
+    const path = substituteText(step.path, saved);
+    const result = await api.handle(step.method, path, step.body === undefined ? undefined : JSON.stringify(substituteNode(step.body, saved)));
+    const payload = result.body ? (JSON.parse(result.body) as Node) : null;
+    if (step.saveId && payload && typeof payload === "object" && !Array.isArray(payload) && payload.id != null)
+      saved.id = String(payload.id);
+    for (const [name, pointer] of Object.entries(step.save ?? {})) saved[name] = at(payload, pointer);
   }
 } finally {
   if (log) {

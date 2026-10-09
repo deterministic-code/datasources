@@ -50,8 +50,8 @@ try
     var saved = new Dictionary<string, string>(StringComparer.Ordinal);
     foreach (var step in spec.Steps)
     {
-        var path = Substitute(step.Path, saved);
-        var body = step.Body is null ? null : JsonSerializer.Serialize(Substitute(Normalize(step.Body), saved));
+        var path = SubstituteText(step.Path, saved);
+        var body = step.Body is null ? null : JsonSerializer.Serialize(SubstituteNode(Normalize(step.Body), saved));
         var result = await api.Handle(step.Method, path, body);
         if (step.SaveId)
             saved["id"] = JsonDocument.Parse(result.Body).RootElement.GetProperty("id").ToString();
@@ -84,14 +84,13 @@ static object? Normalize(object? node) => node switch
     _ => node
 };
 
-static string Substitute(string text, IReadOnlyDictionary<string, string> saved) =>
+static string SubstituteText(string text, IReadOnlyDictionary<string, string> saved) =>
     saved.Aggregate(text, (current, pair) => current.Replace($"${pair.Key}", pair.Value));
 
-static object? Substitute(object? node, IReadOnlyDictionary<string, string> saved) => node switch
+static object? SubstituteNode(object? node, IReadOnlyDictionary<string, string> saved) => node switch
 {
-    Dictionary<string, object?> map => map.ToDictionary(entry => entry.Key, entry => Substitute(entry.Value, saved)),
-    Dictionary<string, object> map => map.ToDictionary(entry => entry.Key, entry => Substitute(entry.Value, saved)),
-    List<object> list => list.Select(item => Substitute(item, saved)).ToList(),
+    Dictionary<string, object> map => map.ToDictionary(entry => entry.Key, entry => SubstituteNode(entry.Value, saved)),
+    List<object> list => list.Select(item => SubstituteNode(item, saved)).ToList(),
     string text when text.StartsWith('$') && saved.TryGetValue(text[1..], out var value) =>
         long.TryParse(value, out var number) ? number : value,
     _ => node

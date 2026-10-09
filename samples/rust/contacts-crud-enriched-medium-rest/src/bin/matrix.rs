@@ -21,6 +21,8 @@ struct Step {
     body: Option<Value>,
     #[serde(rename = "saveId", default)]
     save_id: bool,
+    #[serde(default)]
+    save: HashMap<String, String>,
 }
 
 #[tokio::main]
@@ -89,19 +91,21 @@ async fn main() {
     );
     let (contacts, legacy) = repos::open(connection, Some(middleware)).expect("repos");
     let api = Api::new(contacts, legacy, clock);
-    let mut id = String::new();
+    let mut saved = HashMap::<String, String>::new();
     let mut error = None;
     for step in spec.steps {
-        let path = step.path.replace("$id", &id);
-        let body = step.body.as_ref().map(|value| value.to_string());
+        let path = substitute_text(&step.path, &saved);
+        let body = step.body.as_ref().map(|value| substitute_node(value, &saved).to_string());
         match api.handle(&step.method, &path, body.as_deref()).await {
             Ok(result) => {
+                let payload = serde_json::from_str::<Value>(&result.body).unwrap_or(Value::Null);
                 if step.save_id {
-                    id = serde_json::from_str::<Value>(&result.body)
-                        .ok()
-                        .and_then(|value| value.get("id").cloned())
-                        .map(|value| value.to_string())
-                        .unwrap_or_default();
+                    if let Some(id) = payload.get("id") {
+                        saved.insert("id".into(), scalar(id));
+                    }
+                }
+                for (name, pointer) in &step.save {
+                    saved.insert(name.clone(), at(&payload, pointer));
                 }
             }
             Err(err) => {
@@ -116,5 +120,44 @@ async fn main() {
     std::fs::write(&log, format!("{}\n", lines.lock().expect("log").join("\n"))).expect("write");
     if let Some(err) = error {
         panic!("{err}");
+    }
+}
+
+fn substitute_text(text: &str, saved: &HashMap<String, String>) -> String {
+    let mut names: Vec<_> = saved.keys().cloned().collect();
+    names.sort_by(|left, right| right.len().cmp(&left.len()));
+    names.into_iter().fold(text.to_string(), |current, name| {
+        current.replace(&format!("${name}"), saved.get(&name).map(String::as_str).unwrap_or(""))
+    })
+}
+
+fn substitute_node(node: &Value, saved: &HashMap<String, String>) -> Value {
+    match node {
+        Value::Object(map) => Value::Object(map.iter().map(|(key, value)| (key.clone(), substitute_node(value, saved))).collect()),
+        Value::Array(items) => Value::Array(items.iter().map(|item| substitute_node(item, saved)).collect()),
+        Value::String(text) if text.starts_with('$') => saved
+            .get(&text[1..])
+            .map(|value| value.parse::<i64>().map(Value::from).unwrap_or_else(|_| Value::String(value.clone())))
+            .unwrap_or_else(|| node.clone()),
+        other => other.clone(),
+    }
+}
+
+fn at(root: &Value, pointer: &str) -> String {
+    let mut current = root;
+    for part in pointer.split('.') {
+        current = match part.parse::<usize>() {
+            Ok(index) => current.get(index).unwrap_or(&Value::Null),
+            Err(_) => current.get(part).unwrap_or(&Value::Null),
+        };
+    }
+    scalar(current)
+}
+
+fn scalar(value: &Value) -> String {
+    match value {
+        Value::Number(number) => number.to_string(),
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
     }
 }
