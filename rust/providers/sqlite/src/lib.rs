@@ -35,6 +35,9 @@ mod contacts;
 #[path = "../tests/create_from_driver.rs"]
 mod create_from_driver;
 #[cfg(test)]
+#[path = "../tests/datasource_plural.rs"]
+mod datasource_plural;
+#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]

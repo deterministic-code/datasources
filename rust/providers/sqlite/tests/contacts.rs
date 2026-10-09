@@ -98,11 +98,11 @@ fn contact_repo(
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
-    options.entity_mapper = Some(std::sync::Arc::new(if contact {
-        contact_entity()
+    options.entity_mapper = Some(if contact {
+        Arc::new(contact_entity()) as Arc<dyn Mapper<String, String> + Send + Sync>
     } else {
-        snake()
-    }));
+        Arc::new(snake()) as Arc<dyn Mapper<String, String> + Send + Sync>
+    });
     options.property_mappings = Some(std::sync::Arc::new(columns()));
     let converters = [
         ("Uuid", "uuid"),
