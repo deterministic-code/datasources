@@ -7,7 +7,10 @@ const token = (value) => (/\d/.test(value) && /[A-Za-z]/.test(value) ? "<token>"
 
 export const normalizeConsoleLine = (line) =>
   signature(line)
-    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, "<date>")
+    .replace(/Date\("?'?([^'"]+)'?"?\)/g, "$1")
+    .replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, "<date>")
+    .replace(/SELECT (?:last_insert_rowid|lastval|LAST_INSERT_ID)\(\) AS id/g, "SELECT last_insert_id() AS id")
+    .replace(/version: [^,}\]]*/g, "version: <token>")
     .replace(/\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g, "<uuid>")
     .replace(/["`]([A-Za-z_][A-Za-z0-9_]*)["`]/g, "$1")
     .replace(/password: [^,}\]]+/g, "password: <token>")

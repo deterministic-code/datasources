@@ -32,6 +32,10 @@ public class CoreTests
     }
 
     [Fact]
+    public void ValueFromUnsigned() =>
+        Assert.Equal(new Value.Int(1), Value.From(1UL));
+
+    [Fact]
     public void HelpersAndQuery()
     {
         Assert.Empty(Helpers.ParametersToRecord(null));

@@ -81,6 +81,13 @@ describe("bindParameters", () => {
     expect(toMysql("INSERT INTO t (id) VALUES ($id) RETURNING id")).toBe(
       "INSERT INTO t (id) VALUES (:id)",
     );
+    expect(toMysql("INSERT INTO contact_settings (contact_id, key, value) VALUES ($contact_id, $key, $value)"))
+      .toBe("INSERT INTO contact_settings (contact_id, `key`, value) VALUES (:contact_id, :key, :value)");
+    expect(toMysql("CREATE TABLE t (id INT PRIMARY KEY)")).toBe("CREATE TABLE t (id INT PRIMARY KEY)");
+    expect(toMysql("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"))
+      .toBe("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))");
+    expect(toMysql("INSERT INTO OldContactsTbl (CntID) VALUES ($CntID)"))
+      .toBe("INSERT INTO `OldContactsTbl` (`CntID`) VALUES (:CntID)");
   });
 });
 
@@ -329,7 +336,7 @@ describe("Mysql datasource", () => {
       Key: "11111111-1111-1111-1111-111111111111",
       Active: 1,
       Login: "ada",
-      Created: created,
+      Created: "2020-01-02 03:04:05.000",
     });
   });
 });

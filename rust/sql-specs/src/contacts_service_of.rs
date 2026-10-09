@@ -2,7 +2,7 @@ use crate::contact_columns::{columns, contact_entity, references, snake};
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, CRUDRepository, CRUDRepositoryOptions, CommandMiddleware, Connection,
-    ICRUDRepository, TypeConverter, Value,
+    ICRUDRepository, Mapper, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -36,11 +36,11 @@ fn open(
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
-    options.entity_mapper = Some(std::sync::Arc::new(if contact {
-        contact_entity()
+    options.entity_mapper = Some(if contact {
+        Arc::new(contact_entity()) as Arc<dyn Mapper<String, String> + Send + Sync>
     } else {
-        snake()
-    }));
+        Arc::new(snake())
+    });
     options.property_mappings = Some(std::sync::Arc::new(columns()));
     options.row_converter =
         Some(RowTypeConverter::new(name_list(names)).with_fields(stamp_fields(field)));
@@ -48,7 +48,7 @@ fn open(
         MetaDataRowTypeConverter::new(Vec::new())
             .with_references(references(), Box::new(columns())),
     ));
-    let mut repo = CRUDRepository::new(connection, options).expect("contacts repo");
+    let repo = CRUDRepository::new(connection, options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);
     }

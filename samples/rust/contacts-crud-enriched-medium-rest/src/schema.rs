@@ -44,20 +44,28 @@ pub fn statements(sql: &str) -> Vec<String> {
     let mut start = 0usize;
     let chars: Vec<char> = cleaned.chars().collect();
     let mut i = 0;
+    let mut dollar = false;
     while i < chars.len() {
-        if word(&cleaned, byte_index(&cleaned, i), "BEGIN") {
-            depth += 1;
+        if chars[i] == '$' && chars.get(i + 1) == Some(&'$') {
+            dollar = !dollar;
+            i += 2;
+            continue;
         }
-        if chars[i] == ';' {
-            if ends_with_word(&cleaned, start, byte_index(&cleaned, i), "END") && depth > 0 {
-                depth -= 1;
+        if !dollar {
+            if word(&cleaned, byte_index(&cleaned, i), "BEGIN") {
+                depth += 1;
             }
-            if depth == 0 {
-                let text = with_seed_version(cleaned[start..=byte_index(&cleaned, i)].trim());
-                if !text.is_empty() {
-                    out.push(text);
+            if chars[i] == ';' {
+                if ends_with_word(&cleaned, start, byte_index(&cleaned, i), "END") && depth > 0 {
+                    depth -= 1;
                 }
-                start = byte_index(&cleaned, i) + 1;
+                if depth == 0 {
+                    let text = with_seed_version(cleaned[start..=byte_index(&cleaned, i)].trim());
+                    if !text.is_empty() {
+                        out.push(text);
+                    }
+                    start = byte_index(&cleaned, i) + 1;
+                }
             }
         }
         i += 1;
@@ -66,16 +74,20 @@ pub fn statements(sql: &str) -> Vec<String> {
 }
 
 pub fn with_seed_version(sql: &str) -> String {
-    if !sql.starts_with("INSERT INTO") || sql.contains("\"version\"") {
+    if !sql.starts_with("INSERT INTO") || sql.contains("\"version\"") || sql.contains("`version`")
+    {
         return sql.to_string();
     }
     match sql.find(") VALUES (") {
         None => sql.to_string(),
-        Some(values) => format!(
-            "{}, \"version\") VALUES ({}, X'00');",
-            &sql[..values],
-            &sql[values + ") VALUES (".len()..sql.len() - 2]
-        ),
+        Some(values) => {
+            let quote = if sql.contains('`') { '`' } else { '"' };
+            format!(
+                "{}, {quote}version{quote}) VALUES ({}, X'00');",
+                &sql[..values],
+                &sql[values + ") VALUES (".len()..sql.len() - 2]
+            )
+        }
     }
 }
 

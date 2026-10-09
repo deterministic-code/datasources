@@ -16,6 +16,7 @@ internal static class MysqlRowTypeConverters
     {
         Value.Bool => All["bool"].ReverseConvert(value),
         Value.DateTime => All["datetime"].ReverseConvert(value),
+        Value.Text(var text) when text.Contains('T') && text.Contains('-') => All["datetime"].ReverseConvert(value),
         Value.Guid => All["uuid"].ReverseConvert(value),
         Value.Decimal => All["decimal"].ReverseConvert(value),
         Value.Binary => All["binary"].ReverseConvert(value),

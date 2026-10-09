@@ -77,6 +77,19 @@ mod tests {
         );
         assert_eq!(to_mysql("SELECT $1"), "SELECT $1");
         assert_eq!(
+            to_mysql("INSERT INTO contact_settings (contact_id, key, value) VALUES ($contact_id, $key, $value)"),
+            "INSERT INTO contact_settings (contact_id, `key`, value) VALUES (:contact_id, :key, :value)"
+        );
+        assert_eq!(to_mysql("CREATE TABLE t (id INT PRIMARY KEY)"), "CREATE TABLE t (id INT PRIMARY KEY)");
+        assert_eq!(
+            to_mysql("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"),
+            "CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"
+        );
+        assert_eq!(
+            to_mysql("INSERT INTO OldContactsTbl (CntID) VALUES ($CntID)"),
+            "INSERT INTO `OldContactsTbl` (`CntID`) VALUES (:cntid)"
+        );
+        assert_eq!(
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"
         );

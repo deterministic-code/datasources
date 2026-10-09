@@ -11,8 +11,9 @@ describe("MysqlRowTypeConverters", () => {
     const when = new Date("2024-01-02T00:00:00.000Z");
     expect(reverse(true)).toBe(1);
     expect(reverse(false)).toBe(0);
-    expect(reverse(when)).toBe(when.toISOString());
+    expect(reverse(when)).toBe(when.toISOString().replace("T", " ").replace("Z", ""));
     expect(reverse(new Uint8Array([1, 2]))).toEqual(new Uint8Array([1, 2]));
     expect(reverse("a")).toBe("a");
+    expect(reverse("2024-01-02T00:00:00Z")).toBe("2024-01-02 00:00:00.000");
   });
 });

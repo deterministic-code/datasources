@@ -4,12 +4,20 @@ import type { Scalar } from "./scalar.ts";
 
 const NAME = /\$([A-Za-z_][A-Za-z0-9_]*)/g;
 
+const quoteMixedCase = (sql: string): string =>
+  sql.replace(/\$[A-Za-z_][A-Za-z0-9_]*|'[^']*'|"[^"]*"|`[^`]*`|\b[A-Za-z_][A-Za-z0-9_]*\b/g, (token) =>
+    token.startsWith("$") || token.startsWith("'") || token.startsWith("\"") || token.startsWith("`")
+      || !/[A-Z]/.test(token) || !/[a-z]/.test(token)
+      ? token
+      : `"${token}"`,
+  );
+
 export const toPostgres = (
   sql: string,
   params?: Record<string, Scalar>,
 ): { text: string; values: Scalar[] } => {
   const names: string[] = [];
-  const text = sql.replace(NAME, (_match, name: string) => {
+  const text = quoteMixedCase(sql).replace(NAME, (_match, name: string) => {
     let index = names.indexOf(name);
     if (index < 0) {
       names.push(name);

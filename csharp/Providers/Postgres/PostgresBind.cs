@@ -24,10 +24,22 @@ internal static class PostgresBind
             : new Parameter(name, Value.Null.Instance)).ToArray());
     }
 
+    static readonly Regex Token = new(@"\$[A-Za-z_][A-Za-z0-9_]*|'[^']*'|""[^""]*""|`[^`]*`|\b[A-Za-z_][A-Za-z0-9_]*\b", RegexOptions.Compiled);
+
+    static string QuoteMixedCase(string sql) =>
+        Token.Replace(sql, match =>
+        {
+            var token = match.Value;
+            return token.StartsWith('$') || token.StartsWith('\'') || token.StartsWith('"') || token.StartsWith('`')
+                || !token.Any(char.IsUpper) || !token.Any(char.IsLower)
+                ? token
+                : $"\"{token}\"";
+        });
+
     static (string Sql, List<string> Names) Rewrite(string sql)
     {
         var names = new List<string>();
-        var text = Name.Replace(sql, match =>
+        var text = Name.Replace(QuoteMixedCase(sql), match =>
         {
             var name = match.Groups[1].Value;
             var index = names.IndexOf(name);

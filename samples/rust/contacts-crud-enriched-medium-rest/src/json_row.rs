@@ -203,13 +203,40 @@ pub fn ensure_text(row: &mut Row, key: &str) {
     row.insert(key.into(), Value::Text(value));
 }
 
+pub fn snake_key(key: &str) -> String {
+    let mut out = String::new();
+    for (index, ch) in key.chars().enumerate() {
+        if ch.is_uppercase() {
+            if index > 0 {
+                out.push('_');
+            }
+            out.extend(ch.to_lowercase());
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+pub fn snake_keys(value: Json) -> Json {
+    match value {
+        Json::Object(map) => Json::Object(
+            map.into_iter()
+                .map(|(key, cell)| (snake_key(&key), snake_keys(cell)))
+                .collect(),
+        ),
+        Json::Array(items) => Json::Array(items.into_iter().map(snake_keys).collect()),
+        other => other,
+    }
+}
+
 pub fn object_from(body: Option<&str>) -> Result<Json, String> {
     match body.map(str::trim).filter(|text| !text.is_empty()) {
         None => Ok(Json::Object(Map::new())),
         Some(text) => {
             let parsed: Json = serde_json::from_str(text).map_err(|error| error.to_string())?;
             match parsed {
-                Json::Object(_) => Ok(parsed),
+                Json::Object(_) => Ok(snake_keys(parsed)),
                 _ => Err("invalid json".into()),
             }
         }

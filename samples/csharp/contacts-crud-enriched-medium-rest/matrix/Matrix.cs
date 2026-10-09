@@ -87,16 +87,34 @@ static IEnumerable<string> Statements(string sql)
     var cleaned = string.Join('\n', sql.Split('\n').Where(line => !line.TrimStart().StartsWith("--", StringComparison.Ordinal)));
     var depth = 0;
     var start = 0;
+    var dollar = false;
     for (var i = 0; i < cleaned.Length; i++)
     {
+        if (i + 1 < cleaned.Length && cleaned[i] == '$' && cleaned[i + 1] == '$')
+        {
+            dollar = !dollar;
+            i++;
+            continue;
+        }
+        if (dollar) continue;
         if (Word(cleaned, i, "BEGIN")) depth++;
         if (cleaned[i] != ';') continue;
         if (EndsWithWord(cleaned, start, i, "END") && depth > 0) depth--;
         if (depth != 0) continue;
-        var text = cleaned[start..(i + 1)].Trim();
+        var text = WithSeedVersion(cleaned[start..(i + 1)].Trim());
         if (text.Length > 0) yield return text;
         start = i + 1;
     }
+}
+
+static string WithSeedVersion(string sql)
+{
+    if (!sql.StartsWith("INSERT INTO", StringComparison.Ordinal) || sql.Contains("\"version\"") || sql.Contains("`version`"))
+        return sql;
+    var values = sql.IndexOf(") VALUES (", StringComparison.Ordinal);
+    if (values < 0) return sql;
+    var quote = sql.Contains('`') ? "`" : "\"";
+    return $"{sql[..values]}, {quote}version{quote}) VALUES ({sql[(values + ") VALUES (".Length)..^2]}, X'00');";
 }
 
 static bool Word(string sql, int i, string token)

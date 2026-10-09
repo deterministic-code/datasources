@@ -315,8 +315,8 @@ fn parse(query: &str) -> HashMap<String, String> {
         .split('&')
         .filter(|part| !part.is_empty())
         .map(|part| match part.split_once('=') {
-            Some((key, value)) => (decode(key), decode(value)),
-            None => (decode(part), String::new()),
+            Some((key, value)) => (crate::json_row::snake_key(&decode(key)), decode(value)),
+            None => (crate::json_row::snake_key(&decode(part)), String::new()),
         })
         .collect()
 }

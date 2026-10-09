@@ -63,7 +63,7 @@ pub async fn contacts_parity(
     cells.entity_mapper = Some(Arc::new(join_entity()));
     cells.property_mappings = Some(Arc::new(crate::contact_columns::columns()));
     cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
-    let mut join_repo = CRUDRepository::new(connection.clone(), cells).expect("join repo");
+    let join_repo = CRUDRepository::new(connection.clone(), cells).expect("join repo");
     join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query(None);
     let eager = from_mapped_contacts(&Mapper::map(

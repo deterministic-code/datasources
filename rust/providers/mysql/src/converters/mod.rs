@@ -42,6 +42,7 @@ pub fn reverse(value: &Value) -> Value {
     let key = match value {
         Value::Bool(_) => "bool",
         Value::DateTime(_) => "datetime",
+        Value::Text(text) if text.contains('T') && text.contains('-') => "datetime",
         Value::Uuid(_) => "uuid",
         Value::Decimal(_) => "decimal",
         Value::Binary(_) => "binary",
