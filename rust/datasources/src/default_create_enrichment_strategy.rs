@@ -7,6 +7,7 @@ use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -39,6 +40,9 @@ pub(crate) async fn create_children(
     parent: &mut Row,
 ) -> Result<()> {
     let mut related = decode_rows(parent.get(&enrichment.destination_property));
+    if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
+        related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
+    }
     let key = parent.get(&enrichment.source_property).cloned();
     for row in &mut related {
         if let Some(key) = &key {
@@ -74,4 +78,11 @@ pub(crate) async fn create_links(
         writer.create(&mut row).await?;
     }
     Ok(())
+}
+
+fn dict_key(row: &Row) -> String {
+    row.get("Key")
+        .or_else(|| row.get("key"))
+        .map(Value::wire_text)
+        .unwrap_or_default()
 }

@@ -41,6 +41,20 @@ pub(crate) async fn load(
         .await
 }
 
+pub(crate) fn owned_where(
+    writer: &dyn ICRUDRepository,
+    enrichment: &Enrichment,
+    parent: &Row,
+) -> Option<Where> {
+    if !writer.id_names().is_empty() {
+        return None;
+    }
+    parent
+        .get(&enrichment.source_property)
+        .cloned()
+        .map(|key| Where::new(Operator::equals(enrichment.related_key.clone(), key)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

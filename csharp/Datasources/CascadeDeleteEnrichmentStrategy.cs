@@ -11,7 +11,7 @@ public sealed class CascadeDeleteEnrichmentStrategy<T> : DeleteEnrichmentStrateg
         var existing = await Load(writer, enrichment, parent);
         await deleteNested(existing);
         foreach (var row in existing)
-            await writer.Delete(row);
+            await writer.Delete(row, OwnedWhere(writer, enrichment, parent));
     }
 
     public override async Task DeleteLinked(

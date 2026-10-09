@@ -150,24 +150,35 @@ public class CRUDRepositoryTests
         var created = await hostsRepo.Create(new Host
         {
             Label = "ada",
-            Settings = { ["theme"] = "dark" },
-            Prefs = { ["home"] = new Pref { Locale = "en-GB", Timezone = "Europe/London" } },
+            Settings = { ["theme"] = "dark", ["density"] = "comfortable" },
+            Prefs =
+            {
+                ["home"] = new Pref { Locale = "en-GB", Timezone = "Europe/London" },
+                ["travel"] = new Pref { Locale = "en-US", Timezone = "America/New_York" },
+            },
         });
         Assert.True(created.Id > 0);
         var loaded = await hostsRepo.ReadSingle();
-        Assert.Equal("dark", loaded!.Settings["theme"]);
+        Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark", ["density"] = "comfortable" }, loaded!.Settings);
         Assert.Equal("en-GB", loaded.Prefs["home"].Locale);
         Assert.Equal("Europe/London", loaded.Prefs["home"].Timezone);
+        Assert.Equal("en-US", loaded.Prefs["travel"].Locale);
         await hostsRepo.Update(new Host
         {
             Id = created.Id,
             Label = "ada",
-            Settings = { ["density"] = "compact" },
-            Prefs = { ["work"] = new Pref { Locale = "en-US", Timezone = "America/New_York" } },
+            Settings = { ["theme"] = "light", ["locale"] = "en" },
+            Prefs =
+            {
+                ["home"] = new Pref { Locale = "en-GB", Timezone = "Europe/Paris" },
+                ["work"] = new Pref { Locale = "en-US", Timezone = "America/New_York" },
+            },
         });
         var updated = await hostsRepo.ReadSingle();
-        Assert.Equal(new Dictionary<string, string> { ["density"] = "compact" }, updated!.Settings);
-        Assert.False(updated.Prefs.ContainsKey("home"));
+        Assert.Equal(new Dictionary<string, string> { ["theme"] = "light", ["locale"] = "en" }, updated!.Settings);
+        Assert.False(updated.Settings.ContainsKey("density"));
+        Assert.Equal("Europe/Paris", updated.Prefs["home"].Timezone);
+        Assert.False(updated.Prefs.ContainsKey("travel"));
         Assert.Equal("en-US", updated.Prefs["work"].Locale);
     }
 

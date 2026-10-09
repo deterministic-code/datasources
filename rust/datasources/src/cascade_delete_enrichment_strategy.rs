@@ -1,4 +1,4 @@
-use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
+use crate::delete_enrichment_strategy::{load, owned_where, DeleteEnrichmentStrategy};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
@@ -23,7 +23,10 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
         let mut existing = load(writer.as_ref(), enrichment, parent).await?;
         delete_nested.delete_nested(&mut existing).await?;
         for row in existing {
-            writer.delete(&row, None).await?;
+            match owned_where(writer.as_ref(), enrichment, parent) {
+                Some(clause) => writer.delete(&row, Some(&clause)).await?,
+                None => writer.delete(&row, None).await?,
+            };
         }
         Ok(())
     }

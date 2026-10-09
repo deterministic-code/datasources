@@ -62,7 +62,7 @@ public abstract class CreateEnrichmentStrategy<T>
                     Set(row, prop.Name, prop.GetValue(entry.Value));
             rows.Add(row);
         }
-        return rows;
+        return [.. rows.OrderBy(row => Get(row, MapKey(enrichment.RelatedKey))?.ToString() ?? "", StringComparer.Ordinal)];
     }
 
     static string MapKey(string relatedKey) =>

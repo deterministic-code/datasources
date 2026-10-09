@@ -243,20 +243,43 @@ async fn round_trips_string_and_object_dictionaries() {
             ("Label", Value::from("ada")),
             (
                 "Settings",
-                encode_rows(&[record(&[
-                    ("Key", Value::from("theme")),
-                    ("Value", Value::from("dark")),
-                ])]),
+                encode_rows(&[
+                    record(&[("Key", Value::from("theme")), ("Value", Value::from("dark"))]),
+                    record(&[
+                        ("Key", Value::from("density")),
+                        ("Value", Value::from("comfortable")),
+                    ]),
+                ]),
+            ),
+            (
+                "Prefs",
+                encode_rows(&[
+                    record(&[
+                        ("Key", Value::from("home")),
+                        ("Locale", Value::from("en-GB")),
+                        ("Timezone", Value::from("Europe/London")),
+                    ]),
+                    record(&[
+                        ("Key", Value::from("travel")),
+                        ("Locale", Value::from("en-US")),
+                        ("Timezone", Value::from("America/New_York")),
+                    ]),
+                ]),
             ),
         ]))
         .await
         .unwrap();
     assert!(num(&created, "Id") > 0);
-    let stored = settings.read(None, None, None).await.unwrap();
-    assert_eq!(stored.len(), 1);
-    assert_eq!(stored[0]["ParentId"], created["Id"]);
-    assert_eq!(stored[0]["Key"], Value::from("theme"));
-    assert_eq!(stored[0]["Value"], Value::from("dark"));
+    let loaded = hosts.read_single(None, None, None).await.unwrap().unwrap();
+    let settings_text = loaded["Settings"].wire_text();
+    assert!(settings_text.contains("Key=theme"));
+    assert!(settings_text.contains("Value=dark"));
+    assert!(settings_text.contains("Key=density"));
+    assert!(settings_text.contains("Value=comfortable"));
+    let prefs_text = loaded["Prefs"].wire_text();
+    assert!(prefs_text.contains("Key=home"));
+    assert!(prefs_text.contains("Timezone=Europe/London"));
+    assert!(prefs_text.contains("Key=travel"));
     hosts
         .update(
             &record(&[
@@ -264,30 +287,45 @@ async fn round_trips_string_and_object_dictionaries() {
                 ("Label", Value::from("ada")),
                 (
                     "Settings",
-                    encode_rows(&[record(&[
-                        ("Key", Value::from("density")),
-                        ("Value", Value::from("compact")),
-                    ])]),
+                    encode_rows(&[
+                        record(&[("Key", Value::from("theme")), ("Value", Value::from("light"))]),
+                        record(&[("Key", Value::from("locale")), ("Value", Value::from("en"))]),
+                    ]),
                 ),
                 (
                     "Prefs",
-                    encode_rows(&[record(&[
-                        ("Key", Value::from("home")),
-                        ("Locale", Value::from("en-GB")),
-                        ("Timezone", Value::from("Europe/London")),
-                    ])]),
+                    encode_rows(&[
+                        record(&[
+                            ("Key", Value::from("home")),
+                            ("Locale", Value::from("en-GB")),
+                            ("Timezone", Value::from("Europe/Paris")),
+                        ]),
+                        record(&[
+                            ("Key", Value::from("work")),
+                            ("Locale", Value::from("en-US")),
+                            ("Timezone", Value::from("America/New_York")),
+                        ]),
+                    ]),
                 ),
             ]),
             None,
         )
         .await
         .unwrap();
+    let updated = hosts.read_single(None, None, None).await.unwrap().unwrap();
+    let settings_text = updated["Settings"].wire_text();
+    assert!(settings_text.contains("Key=theme"));
+    assert!(settings_text.contains("Value=light"));
+    assert!(settings_text.contains("Key=locale"));
+    assert!(!settings_text.contains("Key=density"));
+    let prefs_text = updated["Prefs"].wire_text();
+    assert!(prefs_text.contains("Timezone=Europe/Paris"));
+    assert!(prefs_text.contains("Key=work"));
+    assert!(!prefs_text.contains("Key=travel"));
     let settings_rows = settings.read(None, None, None).await.unwrap();
-    assert_eq!(settings_rows.len(), 1);
-    assert_eq!(settings_rows[0]["Key"], Value::from("density"));
+    assert_eq!(settings_rows.len(), 2);
     let pref_rows = prefs.read(None, None, None).await.unwrap();
-    assert_eq!(pref_rows.len(), 1);
-    assert_eq!(pref_rows[0]["Locale"], Value::from("en-GB"));
+    assert_eq!(pref_rows.len(), 2);
 }
 
 #[tokio::test]
