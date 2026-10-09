@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, MockConnection, MockDriver, MockRepository, RepositoryNotRegisteredError } from "./index.ts";
+import { Datasource, DatasourceFactory, MockConnection, MockDriver, MockRepository, RepositoryNotRegisteredError, Response } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -24,21 +24,27 @@ afterAll(() => {
 });
 
 describe("Datasource", () => {
-  it("creates from plural name", () => {
+  it("creates from plural name", async () => {
     const ds = new Datasource("mock", new MockDriver());
     const connection = new MockConnection();
     class Item {}
     const crud = new MockRepository<Item>(connection, Item);
     const read = new MockRepository<Item>(connection, Item);
     ds.repositories.register("Contact", "contacts", () => crud, () => read);
-    const dsDynamic = ds as Datasource & { contacts: { create: () => unknown; createReadonly: () => unknown } };
+    const dsDynamic = ds as Datasource & { contacts: MockRepository<Item> };
 
-    expect(dsDynamic.contacts.create()).toBe(crud);
-    expect(dsDynamic.contacts.createReadonly()).toBe(read);
+    const created: Item = await dsDynamic.contacts.create(new Item());
+    const loaded: Item | undefined = await dsDynamic.contacts.readSingle();
+    const updated: Response = await dsDynamic.contacts.update(created);
+    const deleted: Response = await dsDynamic.contacts.delete(created);
+    expect(created).toBeInstanceOf(Item);
+    expect(loaded).toBeInstanceOf(Item);
+    expect(updated.rowsAffected).toBe(1);
+    expect(deleted.rowsAffected).toBe(1);
     expect(ds.createRepository("Contact")).toBe(crud);
     expect(ds.createReadonlyRepository("contacts")).toBe(read);
-    expect(() => (ds as Datasource & { missing: unknown }).missing).toThrow(RepositoryNotRegisteredError);
-    expect((ds as unknown as Record<symbol, unknown>)[Symbol.toStringTag]).toBeUndefined();
+    expect(() => (ds as Datasource & { missing: MockRepository<Item> }).missing).toThrow(RepositoryNotRegisteredError);
+    expect(Reflect.get(ds, Symbol.toStringTag)).toBeUndefined();
   });
 
   it("create default from env settings", async () => {

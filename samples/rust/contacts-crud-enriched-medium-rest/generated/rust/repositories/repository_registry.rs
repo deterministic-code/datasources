@@ -1,4 +1,4 @@
-use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryAccess, RepositoryFactory};
+use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
 use std::sync::Arc;
 
 pub fn register(factory: &RepositoryFactory) {
@@ -77,55 +77,55 @@ pub fn register(factory: &RepositoryFactory) {
 }
 
 pub trait Repositories {
-    fn addresses(&self) -> RepositoryAccess;
-    fn address_types(&self) -> RepositoryAccess;
-    fn contacts(&self) -> RepositoryAccess;
-    fn contact_change_logs(&self) -> RepositoryAccess;
-    fn contact_groups(&self) -> RepositoryAccess;
-    fn contact_group_members(&self) -> RepositoryAccess;
-    fn contact_preferences(&self) -> RepositoryAccess;
-    fn contact_settings(&self) -> RepositoryAccess;
-    fn contact_sources(&self) -> RepositoryAccess;
-    fn legacy_contacts(&self) -> RepositoryAccess;
-    fn phones(&self) -> RepositoryAccess;
-    fn phone_types(&self) -> RepositoryAccess;
+    fn addresses(&self) -> Arc<dyn ICRUDRepository>;
+    fn address_types(&self) -> Arc<dyn ICRUDRepository>;
+    fn contacts(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_change_logs(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_groups(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_group_members(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_preferences(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_settings(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_sources(&self) -> Arc<dyn ICRUDRepository>;
+    fn legacy_contacts(&self) -> Arc<dyn ICRUDRepository>;
+    fn phones(&self) -> Arc<dyn ICRUDRepository>;
+    fn phone_types(&self) -> Arc<dyn ICRUDRepository>;
 }
 
 impl Repositories for dyn Datasource {
-    fn addresses(&self) -> RepositoryAccess {
-        self.access("addresses", None)
+    fn addresses(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("addresses", None).expect("addresses")
     }
-    fn address_types(&self) -> RepositoryAccess {
-        self.access("address_types", None)
+    fn address_types(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("address_types", None).expect("address_types")
     }
-    fn contacts(&self) -> RepositoryAccess {
-        self.access("contacts", None)
+    fn contacts(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contacts", None).expect("contacts")
     }
-    fn contact_change_logs(&self) -> RepositoryAccess {
-        self.access("contact_change_logs", None)
+    fn contact_change_logs(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_change_logs", None).expect("contact_change_logs")
     }
-    fn contact_groups(&self) -> RepositoryAccess {
-        self.access("contact_groups", None)
+    fn contact_groups(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_groups", None).expect("contact_groups")
     }
-    fn contact_group_members(&self) -> RepositoryAccess {
-        self.access("contact_group_members", None)
+    fn contact_group_members(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_group_members", None).expect("contact_group_members")
     }
-    fn contact_preferences(&self) -> RepositoryAccess {
-        self.access("contact_preferences", None)
+    fn contact_preferences(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_preferences", None).expect("contact_preferences")
     }
-    fn contact_settings(&self) -> RepositoryAccess {
-        self.access("contact_settings", None)
+    fn contact_settings(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_settings", None).expect("contact_settings")
     }
-    fn contact_sources(&self) -> RepositoryAccess {
-        self.access("contact_sources", None)
+    fn contact_sources(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_sources", None).expect("contact_sources")
     }
-    fn legacy_contacts(&self) -> RepositoryAccess {
-        self.access("legacy_contacts", None)
+    fn legacy_contacts(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("legacy_contacts", None).expect("legacy_contacts")
     }
-    fn phones(&self) -> RepositoryAccess {
-        self.access("phones", None)
+    fn phones(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("phones", None).expect("phones")
     }
-    fn phone_types(&self) -> RepositoryAccess {
-        self.access("phone_types", None)
+    fn phone_types(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("phone_types", None).expect("phone_types")
     }
 }

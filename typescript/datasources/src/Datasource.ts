@@ -33,7 +33,7 @@ export class Datasource implements IDatasource {
         if (typeof prop !== "string" || Reflect.has(target, prop))
           return Reflect.get(target, prop, receiver);
         if (self.repositories.has(prop))
-          return self.repositories.access(prop, self.defaultConnection());
+          return self.repositories.create(prop, self.defaultConnection());
         throw new RepositoryNotRegisteredError(prop);
       },
     });

@@ -35,7 +35,7 @@ async fn main() {
             .expect("migrate");
     }
     let ds: &dyn Datasource = &ds;
-    let contacts = ds.contacts().create().expect("contacts");
+    let contacts = ds.contacts();
     let mut row = Row::new();
     row.insert("first_name".into(), Value::from("Ada"));
     row.insert("last_name".into(), Value::from("Lovelace"));
@@ -45,7 +45,7 @@ async fn main() {
         Value::from("00000000-0000-0000-0000-000000000001"),
     );
     row.insert("version".into(), Value::from(vec![0u8]));
-    let created = contacts.create(&mut row).await.expect("create");
+    let created: Row = contacts.create(&mut row).await.expect("create");
     assert_eq!(
         created.get("first_name").map(Value::wire_text).as_deref(),
         Some("Ada")
@@ -54,11 +54,11 @@ async fn main() {
         Some(Value::Int(id)) => *id,
         _ => panic!("id"),
     };
-    let loaded = contacts
+    let loaded: Option<Row> = contacts
         .read_single(Some(&Where::new(Operator::equals("id", id))), None, None)
         .await
-        .expect("read")
-        .expect("row");
+        .expect("read");
+    let loaded = loaded.expect("row");
     assert_eq!(
         loaded.get("first_name").map(Value::wire_text).as_deref(),
         Some("Ada")

@@ -37,9 +37,9 @@ public sealed class MockDatasource : IDatasource
         CRUDRepositoryOptions<T>? options = null) where T : new() =>
         Repository as ICRUDRepository<T> ?? new MockRepository<T>(connection ?? Connection);
 
-    public object CreateRepository(string typeName, IConnection? connection = null) =>
-        Repositories.Create(typeName, connection ?? Connection);
+    public ICRUDRepository<T> CreateRepository<T>(string typeName, IConnection? connection = null) =>
+        Repositories.Create<ICRUDRepository<T>>(typeName, connection ?? Connection);
 
-    public object CreateReadonlyRepository(string typeName, IConnection? connection = null) =>
-        Repositories.CreateReadonly(typeName, connection ?? Connection);
+    public IReadonlyRepository<T> CreateReadonlyRepository<T>(string typeName, IConnection? connection = null) =>
+        Repositories.CreateReadonly<IReadonlyRepository<T>>(typeName, connection ?? Connection);
 }

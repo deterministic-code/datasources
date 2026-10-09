@@ -89,13 +89,13 @@ export const rustRepositories = (models: RepositoryModel[]): GenerateEntry[] => 
   });
   const methods = models.map((model) => {
     const name = pluralSnake(model.specName);
-    return `    fn ${name}(&self) -> RepositoryAccess;`;
+    return `    fn ${name}(&self) -> Arc<dyn ICRUDRepository>;`;
   });
   const impls = models.map((model) => {
     const name = pluralSnake(model.specName);
-    return `    fn ${name}(&self) -> RepositoryAccess {\n        self.access(${rustString(name)}, None)\n    }`;
+    return `    fn ${name}(&self) -> Arc<dyn ICRUDRepository> {\n        self.create_repository_by_name(${rustString(name)}, None).expect(${rustString(name)})\n    }`;
   });
-  const registry = `use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryAccess, RepositoryFactory};\nuse std::sync::Arc;\n\npub fn register(factory: &RepositoryFactory) {\n${register.join("\n")}\n}\n\npub trait Repositories {\n${methods.join("\n")}\n}\n\nimpl Repositories for dyn Datasource {\n${impls.join("\n")}\n}\n`;
+  const registry = `use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};\nuse std::sync::Arc;\n\npub fn register(factory: &RepositoryFactory) {\n${register.join("\n")}\n}\n\npub trait Repositories {\n${methods.join("\n")}\n}\n\nimpl Repositories for dyn Datasource {\n${impls.join("\n")}\n}\n`;
   return [
     ...files,
     content("repository_registry.rs", registry),

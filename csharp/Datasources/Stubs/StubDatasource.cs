@@ -24,9 +24,9 @@ public sealed class StubDatasource : IDatasource
         CRUDRepositoryOptions<T>? options = null) where T : new() =>
         new StubRepository<T>(Provider, connection ?? DefaultConnection());
 
-    public object CreateRepository(string typeName, IConnection? connection = null) =>
-        Repositories.Create(typeName, connection ?? DefaultConnection());
+    public ICRUDRepository<T> CreateRepository<T>(string typeName, IConnection? connection = null) =>
+        Repositories.Create<ICRUDRepository<T>>(typeName, connection ?? DefaultConnection());
 
-    public object CreateReadonlyRepository(string typeName, IConnection? connection = null) =>
-        Repositories.CreateReadonly(typeName, connection ?? DefaultConnection());
+    public IReadonlyRepository<T> CreateReadonlyRepository<T>(string typeName, IConnection? connection = null) =>
+        Repositories.CreateReadonly<IReadonlyRepository<T>>(typeName, connection ?? DefaultConnection());
 }

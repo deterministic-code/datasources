@@ -291,26 +291,26 @@ public void Register(string typeName, string pluralName, Func<IConnection, objec
 Creates a registered CRUD repository by entity or plural name.
 
 ```csharp
-public object Create(string name, IConnection connection)
+public TRepository Create<TRepository>(string name, IConnection connection) where TRepository : class
 ```
 
 - `name` — entity name or plural name
 - `connection` — [IConnection](./connection.md) passed to the factory
 
-**Returns** `object`
+**Returns** `TRepository`
 
 ##### CreateReadonly(name, connection)
 
 Creates a registered read-only repository by entity or plural name.
 
 ```csharp
-public object CreateReadonly(string name, IConnection connection)
+public TRepository CreateReadonly<TRepository>(string name, IConnection connection) where TRepository : class
 ```
 
 - `name` — entity name or plural name
 - `connection` — [IConnection](./connection.md) passed to the factory
 
-**Returns** `object`
+**Returns** `TRepository`
 
 ##### Access(name, connection)
 

@@ -31,20 +31,20 @@ public sealed class Datasource(
         CRUDRepositoryOptions<T>? options = null) where T : new() =>
         new CRUDRepository<T>(connection ?? DefaultConnection(), Apply(options));
 
-    public object CreateRepository(string typeName, IConnection? connection = null) =>
-        Repositories.Create(typeName, connection ?? DefaultConnection());
+    public ICRUDRepository<T> CreateRepository<T>(string typeName, IConnection? connection = null) =>
+        Repositories.Create<ICRUDRepository<T>>(typeName, connection ?? DefaultConnection());
 
     public IReadonlyRepository<T> CreateReadonlyRepository<T>(
         IConnection? connection = null,
         ReadonlyRepositoryMappingOptions<T>? options = null) where T : new() =>
         new ReadonlyRepository<T>(connection ?? DefaultConnection(), Apply(options));
 
-    public object CreateReadonlyRepository(string typeName, IConnection? connection = null) =>
-        Repositories.CreateReadonly(typeName, connection ?? DefaultConnection());
+    public IReadonlyRepository<T> CreateReadonlyRepository<T>(string typeName, IConnection? connection = null) =>
+        Repositories.CreateReadonly<IReadonlyRepository<T>>(typeName, connection ?? DefaultConnection());
 
     public override bool TryGetMember(GetMemberBinder binder, out object? result)
     {
-        result = Repositories.Access(binder.Name, DefaultConnection());
+        result = Repositories.Access(binder.Name, DefaultConnection()).Create();
         return true;
     }
 

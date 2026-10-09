@@ -2288,7 +2288,7 @@ Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalo
 
 `Reset` / `reset` / `reset` clears the registry. Use it in tests.
 
-After `generate repositories`, call the generated `Register` on `Repositories` / `repositories` / `repositories()`. A registered plural name then builds that repository: C# `dynamic` `Contacts.Create()`, TypeScript `contacts.create()`, Rust `contacts().create()`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
+After `generate repositories`, call the generated `Register` on `Repositories` / `repositories` / `repositories()`. A registered plural name is that CRUD repository. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?`, `Contact | undefined`, `Option<Row>`). `Create` / `create` returns that same entity. `Update` and `Delete` return `Response`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
 
 See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 

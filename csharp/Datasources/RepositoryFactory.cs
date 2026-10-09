@@ -26,10 +26,13 @@ public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFacto
     IReadonlyRepository<T> IRepositoryFactory.Create<T>() =>
         Get<IReadonlyRepository<T>>(readonlyByType, typeof(T));
 
-    public object Create(string name, IConnection connection) => Lookup(name).Create(connection);
+    public TRepository Create<TRepository>(string name, IConnection connection) where TRepository : class =>
+        Lookup(name).Create(connection) as TRepository
+        ?? throw new InvalidCastException($"Repository \"{name}\" is not {typeof(TRepository).Name}");
 
-    public object CreateReadonly(string name, IConnection connection) =>
-        Lookup(name).CreateReadonly(connection);
+    public TRepository CreateReadonly<TRepository>(string name, IConnection connection) where TRepository : class =>
+        Lookup(name).CreateReadonly(connection) as TRepository
+        ?? throw new InvalidCastException($"Repository \"{name}\" is not {typeof(TRepository).Name}");
 
     public RepositoryAccess Access(string name, IConnection connection)
     {

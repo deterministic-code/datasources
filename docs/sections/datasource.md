@@ -168,7 +168,7 @@ createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyR
 
 #### RepositoryAccess
 
-Handle returned by a plural name on [Datasource](#datasource). `create` builds the generated CRUD repository. `createReadonly` builds the readonly repository.
+Handle returned by [RepositoryFactory.access](./repository-factories.md). `create` builds the generated CRUD repository. `createReadonly` builds the readonly repository. A plural name on [Datasource](#datasource) is the CRUD repository.
 
 ```typescript
 class RepositoryAccess
@@ -346,30 +346,30 @@ IReadonlyRepository<T> CreateReadonlyRepository<T>(IConnection? connection = nul
 Creates a registered CRUD repository by entity or plural name.
 
 ```csharp
-object CreateRepository(string typeName, IConnection? connection = null)
+ICRUDRepository<T> CreateRepository<T>(string typeName, IConnection? connection = null)
 ```
 
 - `typeName` — entity name (`Contact`) or plural name (`Contacts`)
 - `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 
-**Returns** `object` (the generated repository)
+**Returns** [ICRUDRepository](./crud-repository.md)`<T>`
 
 ##### CreateReadonlyRepository(typeName, connection)
 
 Creates a registered read-only repository by entity or plural name.
 
 ```csharp
-object CreateReadonlyRepository(string typeName, IConnection? connection = null)
+IReadonlyRepository<T> CreateReadonlyRepository<T>(string typeName, IConnection? connection = null)
 ```
 
 - `typeName` — entity name (`Contact`) or plural name (`Contacts`)
 - `connection` — optional [IConnection](./connection.md); omitted uses the datasource connection
 
-**Returns** `object` (the generated readonly repository)
+**Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 
 #### RepositoryAccess
 
-Handle returned by a plural name on `dynamic` [Datasource](#datasource). `Create` builds the generated CRUD repository. `CreateReadonly` builds the readonly repository.
+Handle returned by [RepositoryFactory.Access](./repository-factories.md). `Create` builds the generated CRUD repository. `CreateReadonly` builds the readonly repository. A plural name on `dynamic` [Datasource](#datasource) is the CRUD repository.
 
 ```csharp
 public sealed class RepositoryAccess
@@ -579,7 +579,7 @@ fn access(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Reposit
 
 #### RepositoryAccess
 
-Handle returned by a generated plural method such as `contacts()`. `create` builds the generated CRUD repository. `create_readonly` builds the readonly repository.
+Handle returned by [RepositoryFactory.access](./repository-factories.md). `create` builds the generated CRUD repository. `create_readonly` builds the readonly repository. A generated plural method such as `contacts()` is the CRUD repository.
 
 ```rust
 pub struct RepositoryAccess
@@ -651,7 +651,7 @@ Load the provider cdylib.
 
 {{Reset|reset|reset}} clears the registry. Use it in tests.
 
-After `generate repositories`, call the generated `Register` on {{Repositories|repositories|repositories()}}. A registered plural name then builds that repository: C# `dynamic` `Contacts.Create()`, TypeScript `contacts.create()`, Rust `contacts().create()`. {{CreateRepository|createRepository|create_repository_by_name}} takes the entity or plural name as a string.
+After `generate repositories`, call the generated `Register` on {{Repositories|repositories|repositories()}}. A registered plural name is that CRUD repository. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?`, `Contact | undefined`, `Option<Row>`). `Create` / `create` returns that same entity. `Update` and `Delete` return `Response`. {{CreateRepository|createRepository|create_repository_by_name}} takes the entity or plural name as a string.
 
 See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
 
