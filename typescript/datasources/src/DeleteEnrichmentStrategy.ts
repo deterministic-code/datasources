@@ -31,6 +31,18 @@ export abstract class DeleteEnrichmentStrategy<T> {
     return items;
   };
 
+  static ownedWhere = <TParent>(
+    writer: ICRUDRepository<object>,
+    enrichment: Enrichment,
+    parent: TParent,
+  ): Where | undefined => {
+    if (writer.ids.length > 0) return undefined;
+    const key = get(parent, enrichment.sourceProperty);
+    return key === undefined || key === null || typeof key === "object"
+      ? undefined
+      : new Where(new Operator.Equals(enrichment.relatedKey, key));
+  };
+
   static loadLinks = async (
     writer: ICRUDRepository<object>,
     column: string,

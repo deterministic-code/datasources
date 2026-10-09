@@ -7,7 +7,7 @@ public sealed class CascadeDeleteUpdateEnrichmentStrategy<T> : UpdateEnrichmentS
     public override async Task UpdateOwned(IChildPersist writer, Enrichment enrichment, T parent)
     {
         foreach (var row in await DeleteEnrichmentStrategy<T>.Load(writer, enrichment, parent))
-            await writer.Delete(row);
+            await writer.Delete(row, DeleteEnrichmentStrategy<T>.OwnedWhere(writer, enrichment, parent));
         await create.CreateOwned(writer, enrichment, parent);
     }
 

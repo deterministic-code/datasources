@@ -1,6 +1,6 @@
 use crate::default_create_enrichment_strategy::{create_children, create_links};
 use crate::default_write_enrichment_strategy::required;
-use crate::delete_enrichment_strategy::load;
+use crate::delete_enrichment_strategy::{load, owned_where};
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
@@ -23,7 +23,10 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
     ) -> Result<()> {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         for row in &existing {
-            writer.delete(row, None).await?;
+            match owned_where(writer.as_ref(), enrichment, parent) {
+                Some(clause) => writer.delete(row, Some(&clause)).await?,
+                None => writer.delete(row, None).await?,
+            };
         }
         create_children(writer.as_ref(), enrichment, parent).await
     }

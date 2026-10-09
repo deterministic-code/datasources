@@ -58,11 +58,13 @@ const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment)
   if (enrichment?.type !== "dictionary" || typeof value !== "object") return [];
   const keyName = mapKeyName(enrichment.relatedKey);
   const valueName = enrichment.relatedProperty ?? (keyName === "Key" ? "Value" : "value");
-  return Object.entries(value as Record<string, Scalar | object>).map(([key, cell]) =>
-    cell !== null && typeof cell === "object" && !Array.isArray(cell)
-      ? { [keyName]: key, ...(cell as object) }
-      : { [keyName]: key, [valueName]: cell },
-  );
+  return Object.entries(value as Record<string, Scalar | object>)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, cell]) =>
+      cell !== null && typeof cell === "object" && !Array.isArray(cell)
+        ? { [keyName]: key, ...(cell as object) }
+        : { [keyName]: key, [valueName]: cell },
+    );
 };
 
 const mapKeyName = (relatedKey: string): string =>

@@ -159,26 +159,34 @@ describe("CRUDRepository", () => {
     const created = await hostsRepo.create(
       Object.assign(new Host(), {
         Label: "ada",
-        Settings: { theme: "dark" },
-        Prefs: { home: Object.assign(new Pref(), { Locale: "en-GB", Timezone: "Europe/London" }) },
+        Settings: { theme: "dark", density: "comfortable" },
+        Prefs: {
+          home: Object.assign(new Pref(), { Locale: "en-GB", Timezone: "Europe/London" }),
+          travel: Object.assign(new Pref(), { Locale: "en-US", Timezone: "America/New_York" }),
+        },
       }),
     );
     expect(created.Id).toBeGreaterThan(0);
     const loaded = await hostsRepo.readSingle();
-    expect(loaded?.Settings).toEqual({ theme: "dark" });
+    expect(loaded?.Settings).toEqual({ theme: "dark", density: "comfortable" });
     expect(loaded?.Prefs.home).toEqual({ Locale: "en-GB", Timezone: "Europe/London" });
+    expect(loaded?.Prefs.travel).toEqual({ Locale: "en-US", Timezone: "America/New_York" });
     await hostsRepo.update(
       Object.assign(new Host(), {
         Id: created.Id,
         Label: "ada",
-        Settings: { density: "compact" },
-        Prefs: { work: Object.assign(new Pref(), { Locale: "en-US", Timezone: "America/New_York" }) },
+        Settings: { theme: "light", locale: "en" },
+        Prefs: {
+          home: Object.assign(new Pref(), { Locale: "en-GB", Timezone: "Europe/Paris" }),
+          work: Object.assign(new Pref(), { Locale: "en-US", Timezone: "America/New_York" }),
+        },
       }),
     );
     const updated = await hostsRepo.readSingle();
-    expect(updated?.Settings).toEqual({ density: "compact" });
+    expect(updated?.Settings).toEqual({ theme: "light", locale: "en" });
+    expect(updated?.Prefs.home).toEqual({ Locale: "en-GB", Timezone: "Europe/Paris" });
     expect(updated?.Prefs.work).toEqual({ Locale: "en-US", Timezone: "America/New_York" });
-    expect(updated?.Prefs.home).toBeUndefined();
+    expect(updated?.Prefs.travel).toBeUndefined();
   });
 
   it("creates children, stamps FK, and skips select", async () => {

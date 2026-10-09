@@ -1,7 +1,7 @@
 use crate::default_write_enrichment_strategy::{
     decode_rows, encode_rows, related_ids, required, row_key,
 };
-use crate::delete_enrichment_strategy::load;
+use crate::delete_enrichment_strategy::{load, owned_where};
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
@@ -25,6 +25,21 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
     ) -> Result<()> {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         let mut related = decode_rows(parent.get(&enrichment.destination_property));
+        if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
+            related.sort_by(|left, right| {
+                left.get("Key")
+                    .or_else(|| left.get("key"))
+                    .map(Value::wire_text)
+                    .unwrap_or_default()
+                    .cmp(
+                        &right
+                            .get("Key")
+                            .or_else(|| right.get("key"))
+                            .map(Value::wire_text)
+                            .unwrap_or_default(),
+                    )
+            });
+        }
         if let Some(key) = parent.get(&enrichment.source_property).cloned() {
             for row in &mut related {
                 row.insert(enrichment.related_key.clone(), key.clone());
@@ -40,7 +55,10 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                 .map(|key| !keep.contains(&key))
                 .unwrap_or(true)
         }) {
-            writer.delete(row, None).await?;
+            match owned_where(writer.as_ref(), enrichment, parent) {
+                Some(clause) => writer.delete(row, Some(&clause)).await?,
+                None => writer.delete(row, None).await?,
+            };
         }
         for row in &mut related {
             match row_key(row, &ids) {

@@ -11,7 +11,7 @@ public sealed class DefaultUpdateEnrichmentStrategy<T> : UpdateEnrichmentStrateg
         var keys = writer.Ids;
         var keep = payload.Where(row => HasKey(row, keys)).Select(row => KeyOf(row, keys)).ToHashSet();
         foreach (var row in existing.Where(row => !keep.Contains(KeyOf(row, keys))))
-            await writer.Delete(row);
+            await writer.Delete(row, DeleteEnrichmentStrategy<T>.OwnedWhere(writer, enrichment, parent));
         foreach (var related in payload)
         {
             if (HasKey(related, keys) && existing.Any(row => KeyOf(row, keys) == KeyOf(related, keys)))

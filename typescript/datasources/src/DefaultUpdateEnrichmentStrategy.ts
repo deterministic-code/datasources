@@ -11,7 +11,8 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
     for (const related of rows) this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
     const keys = this.namesOf(writer, rows[0] ?? existing[0] ?? {});
     const keep = new Set(rows.filter((row) => this.hasKey(row, keys)).map((row) => this.keyOf(row, keys)));
-    for (const row of existing.filter((row) => !keep.has(this.keyOf(row, keys)))) await writer.delete(row);
+    for (const row of existing.filter((row) => !keep.has(this.keyOf(row, keys))))
+      await writer.delete(row, DeleteEnrichmentStrategy.ownedWhere(writer, enrichment, parent));
     for (const related of rows)
       this.hasKey(related, keys) && existing.some((row) => this.keyOf(row, keys) === this.keyOf(related, keys))
         ? await writer.update(related)

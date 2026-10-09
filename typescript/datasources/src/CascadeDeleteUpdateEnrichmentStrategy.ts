@@ -9,7 +9,8 @@ export class CascadeDeleteUpdateEnrichmentStrategy<T> extends UpdateEnrichmentSt
   private readonly create = new DefaultCreateEnrichmentStrategy<T>();
 
   async updateOwned(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {
-    for (const row of await DeleteEnrichmentStrategy.load(writer, enrichment, parent)) await writer.delete(row);
+    for (const row of await DeleteEnrichmentStrategy.load(writer, enrichment, parent))
+      await writer.delete(row, DeleteEnrichmentStrategy.ownedWhere(writer, enrichment, parent));
     await this.create.createOwned(writer, enrichment, parent);
   }
 

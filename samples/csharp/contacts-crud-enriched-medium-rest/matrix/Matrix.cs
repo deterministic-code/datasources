@@ -47,14 +47,16 @@ try
     contacts.Phone.PhoneType.AddMiddleware(middleware);
     legacy.AddMiddleware(middleware);
     var api = new Api(contacts, legacy);
-    var id = "";
+    var saved = new Dictionary<string, string>(StringComparer.Ordinal);
     foreach (var step in spec.Steps)
     {
-        var path = step.Path.Replace("$id", id);
-        var body = step.Body is null ? null : JsonSerializer.Serialize(Normalize(step.Body));
+        var path = Substitute(step.Path, saved);
+        var body = step.Body is null ? null : JsonSerializer.Serialize(Substitute(Normalize(step.Body), saved));
         var result = await api.Handle(step.Method, path, body);
         if (step.SaveId)
-            id = JsonDocument.Parse(result.Body).RootElement.GetProperty("id").ToString();
+            saved["id"] = JsonDocument.Parse(result.Body).RootElement.GetProperty("id").ToString();
+        foreach (var (name, pointer) in step.Save)
+            saved[name] = At(JsonDocument.Parse(result.Body).RootElement, pointer);
     }
 }
 finally
@@ -81,6 +83,32 @@ static object? Normalize(object? node) => node switch
     List<object> list => list.Select(Normalize).ToList(),
     _ => node
 };
+
+static string Substitute(string text, IReadOnlyDictionary<string, string> saved) =>
+    saved.Aggregate(text, (current, pair) => current.Replace($"${pair.Key}", pair.Value));
+
+static object? Substitute(object? node, IReadOnlyDictionary<string, string> saved) => node switch
+{
+    Dictionary<string, object?> map => map.ToDictionary(entry => entry.Key, entry => Substitute(entry.Value, saved)),
+    Dictionary<string, object> map => map.ToDictionary(entry => entry.Key, entry => Substitute(entry.Value, saved)),
+    List<object> list => list.Select(item => Substitute(item, saved)).ToList(),
+    string text when text.StartsWith('$') && saved.TryGetValue(text[1..], out var value) =>
+        long.TryParse(value, out var number) ? number : value,
+    _ => node
+};
+
+static string At(JsonElement root, string pointer)
+{
+    var current = root;
+    foreach (var part in pointer.Split('.'))
+        current = int.TryParse(part, out var index) ? current[index] : current.GetProperty(part);
+    return current.ValueKind switch
+    {
+        JsonValueKind.Number => current.GetRawText(),
+        JsonValueKind.String => current.GetString() ?? "",
+        _ => current.GetRawText()
+    };
+}
 
 static IEnumerable<string> Statements(string sql)
 {
@@ -147,4 +175,5 @@ sealed class RoundTripStep
     public string Path { get; set; } = "";
     public object? Body { get; set; }
     public bool SaveId { get; set; }
+    public Dictionary<string, string> Save { get; set; } = [];
 }

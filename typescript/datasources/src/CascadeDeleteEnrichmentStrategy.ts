@@ -34,7 +34,7 @@ export class CascadeDeleteEnrichmentStrategy<T> extends DeleteEnrichmentStrategy
   ): Promise<void> {
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     await deleteNested(existing);
-    for (const row of existing) await writer.delete(row);
+    for (const row of existing) await writer.delete(row, DeleteEnrichmentStrategy.ownedWhere(writer, enrichment, parent));
   }
 
   async deleteLinked(writer: ICRUDRepository<object>, enrichment: Enrichment, parent: T): Promise<void> {

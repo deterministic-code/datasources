@@ -39,6 +39,11 @@ public abstract class DeleteEnrichmentStrategy<T>
         return items;
     }
 
+    internal static IWhere? OwnedWhere<TParent>(IChildPersist writer, Enrichment enrichment, TParent parent) =>
+        writer.Ids.Count > 0 || Get(parent, enrichment.SourceProperty) is not { } key
+            ? null
+            : new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)));
+
     internal static IWhere LinkWhere(Association association, Value parentKey, Value relatedKey) =>
         new Where(new Operator.And(
             new Operator.Equals(association.Parent, parentKey),

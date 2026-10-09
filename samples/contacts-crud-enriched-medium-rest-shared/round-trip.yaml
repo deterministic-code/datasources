@@ -3,6 +3,11 @@ steps:
   - method: POST
     path: /contacts/
     saveId: true
+    save:
+      homeAddressId: addresses.0.id
+      strandAddressId: addresses.1.id
+      mobilePhoneId: phones.0.id
+      workPhoneId: phones.1.id
     body:
       firstName: Ada
       lastName: Lovelace
@@ -12,16 +17,26 @@ steps:
         - line1: 12 Analytical Engine
           city: London
           addressTypeName: Home
+        - line1: 1 Strand
+          city: London
+          addressTypeName: Home
       phones:
         - number: "555-0100"
           label: Mobile
           phoneTypeName: Mobile
+        - number: "555-0199"
+          label: Work
+          phoneTypeName: Mobile
       settings:
         theme: dark
+        density: comfortable
       prefs:
         home:
           locale: en-GB
           timezone: Europe/London
+        travel:
+          locale: en-US
+          timezone: America/New_York
   - method: POST
     path: /contacts
     body:
@@ -36,13 +51,25 @@ steps:
           line1: "1"
           city: NY
           addressTypeName: Home
+        - uuid: "55555555-5555-5555-5555-555555555555"
+          created: "2024-01-02T00:00:00Z"
+          line1: "2"
+          city: Boston
+          addressTypeName: Home
       phones:
         - uuid: "44444444-4444-4444-4444-444444444444"
           created: "2024-01-02T00:00:00Z"
           number: "1"
           phoneTypeName: Mobile
+        - uuid: "66666666-6666-6666-6666-666666666666"
+          created: "2024-01-02T00:00:00Z"
+          number: "2"
+          phoneTypeName: Mobile
+      settings:
+        imported: yes
+        source: csv
   - method: GET
-    path: /contacts/?firstName=Ada&lastName=Lovelace&id=$id
+    path: /contacts/
   - method: PUT
     path: /contacts/?id=$id
     body:
@@ -51,16 +78,33 @@ steps:
       email: null
       contactSourceName: Manual
       addresses:
-        - line1: 1 Strand
+        - id: $homeAddressId
+          line1: 12 Analytical Engine
+          city: Cambridge
+          addressTypeName: Home
+        - line1: 10 Downing
           city: London
           addressTypeName: Home
-      phones: []
+      phones:
+        - id: $mobilePhoneId
+          number: "555-0101"
+          label: Mobile
+          phoneTypeName: Mobile
+        - number: "555-0200"
+          label: Office
+          phoneTypeName: Mobile
       settings:
-        density: compact
+        theme: light
+        locale: en
       prefs:
+        home:
+          locale: en-GB
+          timezone: Europe/Paris
         work:
           locale: en-US
           timezone: America/New_York
+  - method: GET
+    path: /contacts/?firstName=Ada&lastName=Byron&id=$id
   - method: DELETE
     path: /contacts/?id=$id
   - method: GET
