@@ -286,6 +286,9 @@ fn from_cell(row: &Row, index: usize) -> Value {
     if let Ok(value) = row.try_get::<_, Option<Decimal>>(index) {
         return value.map(Value::Decimal).unwrap_or(Value::Null);
     }
+    if let Ok(value) = row.try_get::<_, serde_json::Value>(index) {
+        return Value::Text(value.to_string());
+    }
     if let Ok(value) = row.try_get::<_, String>(index) {
         return Value::Text(value);
     }

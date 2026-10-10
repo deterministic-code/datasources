@@ -6,6 +6,7 @@ use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
+use crate::parameter_direction::ParameterDirection;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -77,7 +78,7 @@ impl StoredProcedureBulkWriteStrategy {
             .unwrap_or_else(|| property.to_string())
     }
 
-    fn row_of(&self, item: &Row) -> Result<Row> {
+    fn row_of(&self, item: &Row, create: bool) -> Result<Row> {
         let stored = self.reverse(item)?;
         let connection = self
             .connection
@@ -88,6 +89,9 @@ impl StoredProcedureBulkWriteStrategy {
         let statements = write_statements(&built.statements);
         let mut row = Row::new();
         for name in statements.read_columns() {
+            if create && self.identity(name) && !assigned(stored.get(name).or_else(|| stored.get(self.ids()[0].as_str()))) {
+                continue;
+            }
             let value = stored
                 .iter()
                 .find(|(key, _)| self.column(key) == *name)
@@ -98,19 +102,60 @@ impl StoredProcedureBulkWriteStrategy {
         Ok(row)
     }
 
+    fn identity(&self, column: &str) -> bool {
+        self.ids().len() == 1 && self.ids()[0] == column
+    }
+
     async fn call(&self, name: &str, items: &[Row]) -> Result<Response> {
+        self.call_with(name, items, false).await
+    }
+
+    async fn call_with(&self, name: &str, items: &[Row], generated: bool) -> Result<Response> {
         if items.is_empty() {
             return Ok(Response::new(Value::Null, 0, None));
         }
         let rows = items
             .iter()
-            .map(|item| self.row_of(item))
+            .map(|item| self.row_of(item, generated))
             .collect::<Result<Vec<_>>>()?;
         let payload = Parameter::new("payload", json(&rows));
-        let statement = ExecuteStoredProcedureStatement::new(name, &[payload.clone()]);
-        self.command()?
-            .execute_statement(&statement, Some(&[payload]))
-            .await
+        let parameters = if generated && self.wants_ids(items) {
+            vec![
+                payload,
+                Parameter::with_direction("ids", Value::Null, ParameterDirection::InputOutput),
+            ]
+        } else {
+            vec![payload]
+        };
+        let statement = ExecuteStoredProcedureStatement::new(name, &parameters);
+        let response = self
+            .command()?
+            .execute_statement(&statement, Some(&parameters))
+            .await?;
+        Ok(response)
+    }
+
+    fn wants_ids(&self, items: &[Row]) -> bool {
+        self.ids().len() == 1 && items.iter().any(|item| !assigned(item.get(self.ids()[0].as_str())))
+    }
+
+    fn ids(&self) -> &[String] {
+        self.options
+            .get()
+            .map(|options| options.ids.as_slice())
+            .unwrap_or(&[])
+    }
+
+    fn apply_ids(&self, items: &mut [Row], parameters: Option<&[Parameter]>) {
+        if self.ids().len() != 1 {
+            return;
+        }
+        let found = parameters.and_then(|list| list.iter().find(|parameter| parameter.name == "ids"));
+        let ids = parse_ids(found.map(|parameter| &parameter.value));
+        let column = self.ids()[0].clone();
+        for (item, id) in items.iter_mut().zip(ids) {
+            item.insert(column.clone(), Value::Int(id));
+        }
     }
 }
 
@@ -132,7 +177,9 @@ impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
     }
 
     async fn create(&self, items: &mut [Row]) -> Result<Response> {
-        self.call(&self.create, items).await
+        let response = self.call_with(&self.create, items, true).await?;
+        self.apply_ids(items, response.parameters.as_deref());
+        Ok(response)
     }
 
     async fn update(&self, items: &[Row], _by_where: Option<&dyn IWhere>) -> Result<Response> {
@@ -142,6 +189,32 @@ impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
     async fn delete(&self, items: &[Row], _by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.call(&self.delete, items).await
     }
+}
+
+fn assigned(value: Option<&Value>) -> bool {
+    match value {
+        None | Some(Value::Null) => false,
+        Some(Value::Int(0)) => false,
+        Some(Value::Text(text)) => !text.is_empty(),
+        Some(_) => true,
+    }
+}
+
+fn parse_ids(value: Option<&Value>) -> Vec<i64> {
+    let text = match value {
+        Some(Value::Text(text)) => text.trim(),
+        Some(Value::Int(number)) => return vec![*number],
+        Some(Value::Binary(bytes)) => std::str::from_utf8(bytes).unwrap_or("").trim(),
+        _ => return vec![],
+    };
+    if text.is_empty() || text == "[]" || text == "null" {
+        return vec![];
+    }
+    text.trim_start_matches('[')
+        .trim_end_matches(']')
+        .split(',')
+        .filter_map(|part| part.trim().parse().ok())
+        .collect()
 }
 
 fn json(rows: &[Row]) -> String {

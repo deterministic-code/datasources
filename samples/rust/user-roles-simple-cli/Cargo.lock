@@ -599,6 +599,7 @@ dependencies = [
  "datasources",
  "futures-core",
  "rust_decimal",
+ "serde_json",
  "tokio",
  "tokio-postgres",
  "uuid",
@@ -1668,6 +1669,8 @@ dependencies = [
  "chrono",
  "fallible-iterator 0.2.0",
  "postgres-protocol",
+ "serde_core",
+ "serde_json",
  "uuid",
 ]
 

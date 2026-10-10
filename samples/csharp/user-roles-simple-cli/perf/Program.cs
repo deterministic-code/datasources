@@ -41,7 +41,7 @@ try
     var created = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     var users = Enumerable.Range(1, rows).Select(id => new User
     {
-        id = id,
+        id = strategyName == "batch" ? id : 0,
         username = $"user{id}",
         password = "hash",
         is_enabled = true,

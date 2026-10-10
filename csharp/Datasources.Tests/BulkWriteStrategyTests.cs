@@ -75,11 +75,12 @@ public class BulkWriteStrategyTests
             "bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"));
         await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
         Assert.Single(command.ExecuteCalls);
-        Assert.Equal("CALL bulk_create_parent($payload)", command.ExecuteCalls[0].Text);
+        Assert.Equal("CALL bulk_create_parent($payload, $ids)", command.ExecuteCalls[0].Text);
         Assert.Equal("payload", command.ExecuteCalls[0].Parameters![0].Name);
         Assert.Equal(
-            new Value.Text("""[{"id":null,"label":"a"},{"id":null,"label":"b"}]"""),
+            new Value.Text("""[{"label":"a"},{"label":"b"}]"""),
             command.ExecuteCalls[0].Parameters![0].Value);
+        Assert.Equal(ParameterDirection.InputOutput, command.ExecuteCalls[0].Parameters![1].Direction);
 
         await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
         Assert.Equal("CALL bulk_update_parent($payload)", command.ExecuteCalls[1].Text);
@@ -163,6 +164,23 @@ public class BulkWriteStrategyTests
         Assert.Equal(2, command.ExecuteCalls.Count);
         Assert.Equal("CALL bulk_create_parent($payload)", command.ExecuteCalls[0].Text);
         Assert.Equal("CALL bulk_create_child($payload)", command.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
+    public async Task StoredProcedureCreateWritesGeneratedIdsOntoItems()
+    {
+        var (repo, command) = Repo(new StoredProcedureBulkWriteStrategy<Parent>(
+            "bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"));
+        command.Response = new Response(Value.Null.Instance, 2,
+        [
+            new Parameter("payload", new Value.Text("[]")),
+            new Parameter("ids", new Value.Text("[7,8]"), ParameterDirection.InputOutput)
+        ]);
+        var items = new Parent[] { new() { label = "a" }, new() { label = "b" } };
+        await repo.Create(items);
+        Assert.Equal(7, items[0].id);
+        Assert.Equal(8, items[1].id);
+        Assert.Equal(1, ((MockConnection)command.Connection).StartTransactionCalls);
     }
 
     [Fact]

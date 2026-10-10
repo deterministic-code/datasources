@@ -68,7 +68,7 @@ try {
   const createdAt = new Date("2024-01-01T00:00:00.000Z");
   const users = Array.from({ length: rows }, (_, i) =>
     Object.assign(new User(), {
-      id: i + 1,
+      ...(strategyName === "batch" ? { id: i + 1 } : {}),
       username: `user${i + 1}`,
       password: "hash",
       is_enabled: true,

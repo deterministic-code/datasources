@@ -1,13 +1,23 @@
 DROP PROCEDURE IF EXISTS bulk_create_contact
 ---
-CREATE PROCEDURE bulk_create_contact(IN payload JSON)
-  INSERT INTO contacts (id, uuid, created, updated, version, contact_source_id, first_name, last_name, email, notes)
-  SELECT id, uuid, created, updated, FROM_BASE64(version), contact_source_id, first_name, last_name, email, notes
+CREATE PROCEDURE bulk_create_contact(IN payload JSON, OUT ids JSON)
+BEGIN
+  INSERT INTO contacts (uuid, created, updated, version, contact_source_id, first_name, last_name, email, notes)
+  SELECT uuid, created, updated, FROM_BASE64(version), contact_source_id, first_name, last_name, email, notes
   FROM JSON_TABLE(payload, '$[*]' COLUMNS (
-    id INT PATH '$.id', uuid TEXT PATH '$.uuid', created DATETIME PATH '$.created', updated DATETIME PATH '$.updated',
+    uuid TEXT PATH '$.uuid', created DATETIME PATH '$.created', updated DATETIME PATH '$.updated',
     version TEXT PATH '$.version', contact_source_id INT PATH '$.contact_source_id', first_name TEXT PATH '$.first_name',
     last_name TEXT PATH '$.last_name', email TEXT PATH '$.email', notes TEXT PATH '$.notes'
-  )) AS payload_rows
+  )) AS payload_rows;
+  GET DIAGNOSTICS @n = ROW_COUNT;
+  SET @first = LAST_INSERT_ID();
+  SET ids = JSON_ARRAY();
+  SET @i = 0;
+  WHILE @i < @n DO
+    SET ids = JSON_ARRAY_APPEND(ids, '$', @first + @i);
+    SET @i = @i + 1;
+  END WHILE;
+END
 ---
 DROP PROCEDURE IF EXISTS bulk_update_contact
 ---
@@ -29,15 +39,25 @@ CREATE PROCEDURE bulk_delete_contact(IN payload JSON)
 ---
 DROP PROCEDURE IF EXISTS bulk_create_address
 ---
-CREATE PROCEDURE bulk_create_address(IN payload JSON)
-  INSERT INTO addresses (id, uuid, created, updated, version, contact_id, address_type_id, line1, line2, city, region, postal_code, country)
-  SELECT id, uuid, created, updated, FROM_BASE64(version), contact_id, address_type_id, line1, line2, city, region, postal_code, country
+CREATE PROCEDURE bulk_create_address(IN payload JSON, OUT ids JSON)
+BEGIN
+  INSERT INTO addresses (uuid, created, updated, version, contact_id, address_type_id, line1, line2, city, region, postal_code, country)
+  SELECT uuid, created, updated, FROM_BASE64(version), contact_id, address_type_id, line1, line2, city, region, postal_code, country
   FROM JSON_TABLE(payload, '$[*]' COLUMNS (
-    id INT PATH '$.id', uuid TEXT PATH '$.uuid', created DATETIME PATH '$.created', updated DATETIME PATH '$.updated',
+    uuid TEXT PATH '$.uuid', created DATETIME PATH '$.created', updated DATETIME PATH '$.updated',
     version TEXT PATH '$.version', contact_id INT PATH '$.contact_id', address_type_id INT PATH '$.address_type_id',
     line1 TEXT PATH '$.line1', line2 TEXT PATH '$.line2', city TEXT PATH '$.city', region TEXT PATH '$.region',
     postal_code TEXT PATH '$.postal_code', country TEXT PATH '$.country'
-  )) AS payload_rows
+  )) AS payload_rows;
+  GET DIAGNOSTICS @n = ROW_COUNT;
+  SET @first = LAST_INSERT_ID();
+  SET ids = JSON_ARRAY();
+  SET @i = 0;
+  WHILE @i < @n DO
+    SET ids = JSON_ARRAY_APPEND(ids, '$', @first + @i);
+    SET @i = @i + 1;
+  END WHILE;
+END
 ---
 DROP PROCEDURE IF EXISTS bulk_update_address
 ---
@@ -58,14 +78,24 @@ CREATE PROCEDURE bulk_delete_address(IN payload JSON)
 ---
 DROP PROCEDURE IF EXISTS bulk_create_phone
 ---
-CREATE PROCEDURE bulk_create_phone(IN payload JSON)
-  INSERT INTO phones (id, uuid, created, updated, version, contact_id, phone_type_id, number, label)
-  SELECT id, uuid, created, updated, FROM_BASE64(version), contact_id, phone_type_id, number, label
+CREATE PROCEDURE bulk_create_phone(IN payload JSON, OUT ids JSON)
+BEGIN
+  INSERT INTO phones (uuid, created, updated, version, contact_id, phone_type_id, number, label)
+  SELECT uuid, created, updated, FROM_BASE64(version), contact_id, phone_type_id, number, label
   FROM JSON_TABLE(payload, '$[*]' COLUMNS (
-    id INT PATH '$.id', uuid TEXT PATH '$.uuid', created DATETIME PATH '$.created', updated DATETIME PATH '$.updated',
+    uuid TEXT PATH '$.uuid', created DATETIME PATH '$.created', updated DATETIME PATH '$.updated',
     version TEXT PATH '$.version', contact_id INT PATH '$.contact_id', phone_type_id INT PATH '$.phone_type_id',
     number TEXT PATH '$.number', label TEXT PATH '$.label'
-  )) AS payload_rows
+  )) AS payload_rows;
+  GET DIAGNOSTICS @n = ROW_COUNT;
+  SET @first = LAST_INSERT_ID();
+  SET ids = JSON_ARRAY();
+  SET @i = 0;
+  WHILE @i < @n DO
+    SET ids = JSON_ARRAY_APPEND(ids, '$', @first + @i);
+    SET @i = @i + 1;
+  END WHILE;
+END
 ---
 DROP PROCEDURE IF EXISTS bulk_update_phone
 ---

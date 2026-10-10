@@ -138,7 +138,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
           0,
           params?.map((parameter) =>
             row && parameter.direction && parameter.direction !== ParameterDirection.Input
-              ? { ...parameter, value: row[parameter.name] as Scalar }
+              ? { ...parameter, value: cellValue(row[parameter.name]) }
               : parameter,
           ),
         ),
@@ -168,6 +168,14 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     return result.filter((item): item is Cells[] => Array.isArray(item));
   }
 }
+
+const cellValue = (cell: Scalar | object | undefined): Scalar => {
+  if (cell === null || cell === undefined) return null;
+  if (typeof cell === "string" || typeof cell === "number" || typeof cell === "boolean" || typeof cell === "bigint")
+    return cell;
+  if (cell instanceof Uint8Array) return new TextDecoder().decode(cell);
+  return JSON.stringify(cell);
+};
 
 const resultSetsReader = (sets: Cells[][]): StreamingReader => {
   let set = 0;

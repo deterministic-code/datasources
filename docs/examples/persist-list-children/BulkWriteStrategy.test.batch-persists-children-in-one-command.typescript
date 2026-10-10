@@ -1,0 +1,10 @@
+const { parentsRepo, command } = family(new BatchCommandIBulkWriteStrategy<Family>());
+await parentsRepo.createBulk([
+  Object.assign(new Family(), { id: 1, label: "a", children: [Object.assign(new Child(), { id: 10, label: "x" })] }),
+  Object.assign(new Family(), { id: 2, label: "b", children: [Object.assign(new Child(), { id: 11, label: "y" })] }),
+]);
+expect(command.executeCalls).toHaveLength(2);
+expect(command.executeCalls[0]?.text).toContain("INSERT INTO parents");
+expect(command.executeCalls[1]?.text).toContain("INSERT INTO children");
+expect(command.executeCalls[1]?.text).toContain("label__0");
+expect(command.executeCalls[1]?.text).toContain("label__1");

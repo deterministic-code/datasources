@@ -6,7 +6,7 @@ use crate::statement_renderer::MysqlStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, split_statements, statement_uses_parameter, ArrayReader, Command, CommandMiddleware,
-    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement,
+    CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response, Result, ReturnStatement,
     Statement, StatementKind, StatementTextRenderer, Value,
 };
 use mysql_async::prelude::Queryable;
@@ -179,11 +179,105 @@ impl Command for MysqlCommand {
             return self.first_cell(statement, parameters).await;
         }
         let text = self.statements.render(statement);
+        if parameters.is_some_and(|list| {
+            list.iter()
+                .any(|parameter| parameter.direction != ParameterDirection::Input)
+        }) {
+            return self.execute_procedure(&text, parameters).await;
+        }
         self.execute_native(&Native::new(text), parameters).await
     }
 }
 
 impl MysqlCommand {
+    async fn execute_procedure(
+        &self,
+        sql: &str,
+        parameters: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let connection = self.connection.clone();
+        let sql = sql.to_string();
+        self.host
+            .run(&sql, parameters, move |sql, params| {
+                let connection = connection.clone();
+                async move {
+                    connection.ensure_open()?;
+                    let response = MysqlCommand::run_procedure(&connection, &sql, params.as_deref()).await?;
+                    let logged = logged_response(&response);
+                    Ok((response, logged))
+                }
+            })
+            .await
+    }
+
+    async fn run_procedure(
+        connection: &MysqlConnection,
+        sql: &str,
+        params: Option<&[Parameter]>,
+    ) -> Result<Response> {
+        let list = params.unwrap_or(&[]);
+        let mut slot = connection.lock_conn().await?;
+        let conn = slot
+            .as_mut()
+            .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
+        for parameter in list {
+            if parameter.direction == ParameterDirection::Input
+                || parameter.direction == ParameterDirection::InputOutput
+            {
+                let mut one = HashMap::new();
+                one.insert("value".into(), parameter.value.clone());
+                conn.exec_drop(
+                    format!("SET @{} = :value", parameter.name),
+                    named_params(&one),
+                )
+                .await
+                .map_err(map_err)?;
+            }
+        }
+        conn.query_drop(session_vars(&to_mysql(sql)))
+            .await
+            .map_err(map_err)?;
+        let outs: Vec<_> = list
+            .iter()
+            .filter(|parameter| parameter.direction != ParameterDirection::Input)
+            .collect();
+        if outs.is_empty() {
+            return Ok(Response::new(
+                Value::Null,
+                0,
+                params.map(|list| list.to_vec()),
+            ));
+        }
+        let select = format!(
+            "SELECT {}",
+            outs.iter()
+                .map(|parameter| format!("@{} AS `{}`", parameter.name, parameter.name))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        let row: Option<mysql_async::Row> = conn.query_first(select).await.map_err(map_err)?;
+        let record = row.map(row_record);
+        let applied = list
+            .iter()
+            .map(|parameter| {
+                if parameter.direction == ParameterDirection::Input {
+                    parameter.clone()
+                } else {
+                    let value = record
+                        .as_ref()
+                        .and_then(|cells| cells.get(&parameter.name))
+                        .cloned()
+                        .unwrap_or(Value::Null);
+                    Parameter {
+                        value,
+                        ..parameter.clone()
+                    }
+                }
+            })
+            .collect();
+        Ok(Response::new(Value::Null, 0, Some(applied)))
+    }
+
     async fn first_cell(
         &self,
         statement: &dyn Statement,
@@ -203,6 +297,29 @@ impl MysqlCommand {
         let cell = row.into_values().next().unwrap_or(Value::Null);
         Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
+}
+
+fn session_vars(sql: &str) -> String {
+    let mut out = String::with_capacity(sql.len());
+    let chars: Vec<char> = sql.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == ':'
+            && i + 1 < chars.len()
+            && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_')
+        {
+            out.push('@');
+            i += 1;
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                out.push(chars[i]);
+                i += 1;
+            }
+            continue;
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
 }
 
 fn logged_response(response: &Response) -> Vec<datasources::Row> {

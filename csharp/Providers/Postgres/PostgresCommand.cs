@@ -1,3 +1,4 @@
+using System.Data;
 using System.Globalization;
 using Npgsql;
 using NpgsqlTypes;
@@ -44,6 +45,8 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         statement switch
         {
             IReturnStatement or ISelectStatement => FirstCell(statement, parameters),
+            ExecuteStoredProcedureStatement { Name: { } name } when HasOutput(parameters) =>
+                ExecuteProcedure(name, parameters),
             _ => Execute(new Native(statements.Render(statement)), parameters)
         };
 
@@ -64,6 +67,26 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
                 await disposable.DisposeAsync();
         }
     }
+
+    Task<Response> ExecuteProcedure(string name, IReadOnlyList<Parameter>? parameters) =>
+        Run(name, parameters, async (_, list) =>
+        {
+            Typed.EnsureOpen();
+            using var command = Typed.Require().CreateCommand();
+            command.CommandType = CommandType.StoredProcedure;
+            command.CommandText = name;
+            foreach (var parameter in list ?? [])
+            {
+                var key = parameter.Name.TrimStart('$', '@', ':');
+                var native = Param(PostgresRowTypeConverters.Reverse(parameter.Value).ToObject());
+                native.ParameterName = key;
+                native.Direction = Native(parameter.Direction);
+                native.NpgsqlDbType = NpgsqlDbType.Jsonb;
+                command.Parameters.Add(native);
+            }
+            var rows = Math.Max(await command.ExecuteNonQueryAsync(), 0);
+            return (new Response(Value.Null.Instance, rows, AppliedNamed(command, list)), (IReadOnlyList<Row>)[]);
+        });
 
     async Task<PostgresExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
@@ -139,6 +162,20 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
             command.Parameters.Add(native);
         }
     }
+
+    static bool HasOutput(IReadOnlyList<Parameter>? parameters) =>
+        parameters?.Any(parameter => parameter.Direction != ParameterDirection.Input) == true;
+
+    static IReadOnlyList<Parameter>? AppliedNamed(NpgsqlCommand command, IReadOnlyList<Parameter>? parameters) =>
+        parameters is null ? null
+        : [.. parameters.Select(parameter =>
+        {
+            if (parameter.Direction == ParameterDirection.Input) return parameter;
+            var key = parameter.Name.TrimStart('$', '@', ':');
+            return command.Parameters.IndexOf(key) is var at and >= 0
+                ? parameter with { Value = Value.From(command.Parameters[at].Value) }
+                : parameter;
+        })];
 
     static IReadOnlyList<Parameter>? Applied(
         NpgsqlCommand command,

@@ -22,7 +22,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
 
     public async Task<IReadOnlyList<T>> Create(IReadOnlyList<T> items)
     {
-        await InTransaction(() => bulk.Create(items));
+        await InTransaction(() => bulk.Create(items), required: items.Count > 0);
         return items;
     }
 
@@ -32,9 +32,9 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
         InTransaction(() => bulk.Delete(items, byWhere));
 
-    async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write)
+    async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write, bool required = false)
     {
-        if (!useTransaction) return await write();
+        if (!required && !useTransaction) return await write();
         var work = new UnitOfWorkTransaction(Command().Connection);
         await work.Begin();
         try

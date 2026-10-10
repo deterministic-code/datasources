@@ -116,11 +116,12 @@ describe("bulk write strategies", () => {
       Object.assign(new Parent(), { label: "b" }),
     ]);
     expect(command.executeCalls).toHaveLength(1);
-    expect(command.executeCalls[0]?.text).toBe("CALL bulk_create_parent($payload)");
+    expect(command.executeCalls[0]?.text).toBe("CALL bulk_create_parent($payload, $ids)");
     expect(command.executeCalls[0]?.parameters?.[0]).toMatchObject({
       name: "payload",
-      value: '[{"id":null,"label":"a"},{"id":null,"label":"b"}]',
+      value: '[{"label":"a"},{"label":"b"}]',
     });
+    expect(command.executeCalls[0]?.parameters?.[1]).toMatchObject({ name: "ids", direction: "inputOutput" });
 
     await repo.updateBulk([
       Object.assign(new Parent(), { id: 1, label: "a" }),
@@ -243,6 +244,25 @@ describe("bulk write strategies", () => {
     expect(command.executeCalls).toHaveLength(2);
     expect(command.executeCalls[0]?.text).toBe("CALL bulk_create_parent($payload)");
     expect(command.executeCalls[1]?.text).toBe("CALL bulk_create_child($payload)");
+  });
+
+  it("stored procedure create writes generated ids onto items", async () => {
+    const { repo, command } = open(
+      Parent,
+      new StoredProcedureBulkWriteStrategy<Parent>("bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+    );
+    command.response = {
+      result: null,
+      rowsAffected: 2,
+      parameters: [
+        { name: "payload", value: "[]" },
+        { name: "ids", value: "[7,8]", direction: "inputOutput" },
+      ],
+    };
+    const items = [Object.assign(new Parent(), { label: "a" }), Object.assign(new Parent(), { label: "b" })];
+    await repo.createBulk(items);
+    expect(items[0]?.id).toBe(7);
+    expect(items[1]?.id).toBe(8);
   });
 
   it("batch create requires a parent id when children are present", async () => {

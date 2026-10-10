@@ -70,7 +70,9 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
   }
 
   createBulk = async (items: T[]): Promise<T[]> => {
-    await inTransaction(this.transactional, this.command().connection, () => this.strategy.create(items));
+    await inTransaction(this.transactional || items.length > 0, this.command().connection, () =>
+      this.strategy.create(items),
+    );
     return items;
   };
 

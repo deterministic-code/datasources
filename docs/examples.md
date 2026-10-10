@@ -254,10 +254,12 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## BatchCommandIBulkWriteStrategy
 
 - [Join statements](./sections/batch-command-i-bulk-write-strategy.md#join-statements)
+- [Persist list children](./sections/batch-command-i-bulk-write-strategy.md#persist-list-children)
 
 ## StoredProcedureBulkWriteStrategy
 
 - [One JSON call](./sections/stored-procedure-bulk-write-strategy.md#one-json-call)
+- [Persist list children](./sections/stored-procedure-bulk-write-strategy.md#persist-list-children)
 
 ## Driver
 

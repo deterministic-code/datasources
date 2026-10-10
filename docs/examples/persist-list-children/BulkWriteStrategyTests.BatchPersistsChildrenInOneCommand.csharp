@@ -1,0 +1,6 @@
+var (parentsRepo, childrenRepo, command) = FamilyRepos(new BatchCommandIBulkWriteStrategy<Family>());
+await parentsRepo.Create(
+[
+    new Family { id = 1, label = "a", children = [new Child { id = 10, label = "x" }] },
+    new Family { id = 2, label = "b", children = [new Child { id = 11, label = "y" }] }
+]);

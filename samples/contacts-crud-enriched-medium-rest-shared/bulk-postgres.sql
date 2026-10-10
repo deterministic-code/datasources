@@ -1,14 +1,18 @@
-DROP PROCEDURE IF EXISTS bulk_create_contact(jsonb)
+DROP PROCEDURE IF EXISTS bulk_create_contact(jsonb, jsonb)
 ---
-CREATE PROCEDURE bulk_create_contact(payload jsonb)
+CREATE PROCEDURE bulk_create_contact(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO contacts (id, uuid, created, updated, version, contact_source_id, first_name, last_name, email, notes)
-  SELECT id, uuid, created, updated, decode(version, 'base64'), contact_source_id, first_name, last_name, email, notes
-  FROM jsonb_to_recordset(payload) AS x(
-    id int, uuid text, created timestamptz, updated timestamptz, version text, contact_source_id int,
-    first_name text, last_name text, email text, notes text
-  );
+  WITH inserted AS (
+    INSERT INTO contacts (uuid, created, updated, version, contact_source_id, first_name, last_name, email, notes)
+    SELECT uuid, created, updated, decode(version, 'base64'), contact_source_id, first_name, last_name, email, notes
+    FROM jsonb_to_recordset(payload) AS x(
+      uuid text, created timestamptz, updated timestamptz, version text, contact_source_id int,
+      first_name text, last_name text, email text, notes text
+    )
+    RETURNING id
+  )
+  SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
 ---
@@ -38,17 +42,21 @@ BEGIN
 END;
 $$
 ---
-DROP PROCEDURE IF EXISTS bulk_create_address(jsonb)
+DROP PROCEDURE IF EXISTS bulk_create_address(jsonb, jsonb)
 ---
-CREATE PROCEDURE bulk_create_address(payload jsonb)
+CREATE PROCEDURE bulk_create_address(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO addresses (id, uuid, created, updated, version, contact_id, address_type_id, line1, line2, city, region, postal_code, country)
-  SELECT id, uuid, created, updated, decode(version, 'base64'), contact_id, address_type_id, line1, line2, city, region, postal_code, country
-  FROM jsonb_to_recordset(payload) AS x(
-    id int, uuid text, created timestamptz, updated timestamptz, version text, contact_id int, address_type_id int,
-    line1 text, line2 text, city text, region text, postal_code text, country text
-  );
+  WITH inserted AS (
+    INSERT INTO addresses (uuid, created, updated, version, contact_id, address_type_id, line1, line2, city, region, postal_code, country)
+    SELECT uuid, created, updated, decode(version, 'base64'), contact_id, address_type_id, line1, line2, city, region, postal_code, country
+    FROM jsonb_to_recordset(payload) AS x(
+      uuid text, created timestamptz, updated timestamptz, version text, contact_id int, address_type_id int,
+      line1 text, line2 text, city text, region text, postal_code text, country text
+    )
+    RETURNING id
+  )
+  SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
 ---
@@ -72,17 +80,21 @@ BEGIN
 END;
 $$
 ---
-DROP PROCEDURE IF EXISTS bulk_create_phone(jsonb)
+DROP PROCEDURE IF EXISTS bulk_create_phone(jsonb, jsonb)
 ---
-CREATE PROCEDURE bulk_create_phone(payload jsonb)
+CREATE PROCEDURE bulk_create_phone(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql AS $$
 BEGIN
-  INSERT INTO phones (id, uuid, created, updated, version, contact_id, phone_type_id, number, label)
-  SELECT id, uuid, created, updated, decode(version, 'base64'), contact_id, phone_type_id, number, label
-  FROM jsonb_to_recordset(payload) AS x(
-    id int, uuid text, created timestamptz, updated timestamptz, version text, contact_id int, phone_type_id int,
-    number text, label text
-  );
+  WITH inserted AS (
+    INSERT INTO phones (uuid, created, updated, version, contact_id, phone_type_id, number, label)
+    SELECT uuid, created, updated, decode(version, 'base64'), contact_id, phone_type_id, number, label
+    FROM jsonb_to_recordset(payload) AS x(
+      uuid text, created timestamptz, updated timestamptz, version text, contact_id int, phone_type_id int,
+      number text, label text
+    )
+    RETURNING id
+  )
+  SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
 ---

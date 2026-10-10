@@ -1,0 +1,39 @@
+let (repo, command) = family(
+    Arc::new(StoredProcedureBulkWriteStrategy::new(
+        "bulk_create_parent",
+        "bulk_update_parent",
+        "bulk_delete_parent",
+    )),
+    Arc::new(StoredProcedureBulkWriteStrategy::new(
+        "bulk_create_child",
+        "bulk_update_child",
+        "bulk_delete_child",
+    )),
+);
+repo.create_bulk(&mut [
+    row(&[
+        ("id", Value::Int(1)),
+        ("label", Value::from("a")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                ("id", Value::Int(10)),
+                ("label", Value::from("x")),
+            ])]),
+        ),
+    ]),
+    row(&[
+        ("id", Value::Int(2)),
+        ("label", Value::from("b")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                ("id", Value::Int(11)),
+                ("label", Value::from("y")),
+            ])]),
+        ),
+    ]),
+])
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
