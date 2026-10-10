@@ -201,10 +201,9 @@ describe("bulk write strategies", () => {
       const updated = await repo.updateBulk([]);
       const deleted = await repo.deleteBulk([]);
       expect(command.executeCalls).toEqual([]);
-      expect(created.rowsAffected).toBe(0);
+      expect(created).toEqual([]);
       expect(updated.rowsAffected).toBe(0);
       expect(deleted.rowsAffected).toBe(0);
-      expect(created.result).toBeNull();
     }
   });
 });

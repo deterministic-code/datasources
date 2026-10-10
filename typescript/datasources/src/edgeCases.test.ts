@@ -16,7 +16,9 @@ import { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStra
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
+import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
+import { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
 import type { Cells } from "./converters/Cell.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
@@ -116,7 +118,7 @@ describe("statement and repository edges", () => {
       strategy,
     );
     const created = await transactional.createBulk([Object.assign(new Item(), { name: "a" })]);
-    expect(created.rowsAffected).toBe(1);
+    expect(created).toHaveLength(1);
     expect(connection.startTransactionCalls).toBe(1);
 
     expect(() => new BulkCRUDRepository<Item>(connection, strategy)).toThrow();
@@ -128,41 +130,51 @@ describe("statement and repository edges", () => {
     await repo.deleteBulk([Object.assign(new Item(), { name: "a" })], new WhereText("id = $id"));
     await repo.deleteBulk([new Item()], new WhereText("1 = 1"));
 
-    const listed = repo.deletes([Object.assign(new Item(), { name: "a" })], new WhereText("id = $id"));
-    expect(listed[0]?.text).toContain("$id");
-    expect(repo.deletes([new Item()], new WhereText("1 = 1"))[0]?.parameters).toEqual([]);
-    expect(repo.deletes([new Item()])[0]?.text).toContain("1 = 1");
-    expect(await repo.createOne(new Item())).toBeUndefined();
-    const both = new BulkCRUDRepository<Item>(connection, {
-      type: Item,
-      entity: "items",
-      ids: ["id", "name"],
-    });
-    expect(() => both.updates([new Item()])).toThrow(/non-Id field/);
+    const batch = new BatchCommandIBulkWriteStrategy<Item>();
+    const listedRepo = new BulkCRUDRepository<Item>(connection, { type: Item, entity: "items", ids: [] }, batch);
+    command.executeCalls = [];
+    await listedRepo.deleteBulk([Object.assign(new Item(), { name: "a" })], new WhereText("id = $id"));
+    expect(command.executeCalls[0]?.text).toContain("$id");
+    command.executeCalls = [];
+    await listedRepo.deleteBulk([new Item()], new WhereText("1 = 1"));
+    expect(command.executeCalls[0]?.parameters).toEqual([]);
+    command.executeCalls = [];
+    await listedRepo.deleteBulk([new Item()]);
+    expect(command.executeCalls[0]?.text).toContain("1 = 1");
+    expect(await repo.createBulk([new Item()])).toEqual([new Item()]);
+    const both = new BulkCRUDRepository<Item>(
+      connection,
+      { type: Item, entity: "items", ids: ["id", "name"] },
+      new BatchCommandIBulkWriteStrategy<Item>(),
+    );
+    await expect(both.updateBulk([new Item()])).rejects.toThrow(/non-Id field/);
+    const stored = new StoredProcedureBulkWriteStrategy<Item>("create_item", "update_item", "delete_item");
     const wide = new BulkCRUDRepository<Item>(connection, {
       type: Item,
       entity: "items",
       ids: ["id", "name"],
       rowConverter: new RowTypeConverter({}),
       write: { persist: async () => {} },
-    });
-    expect(wide.rows([new Item()])[0]).toMatchObject({ id: 0, name: "" });
-    expect(await wide.createOne(new Item())).toBeUndefined();
+    }, stored);
+    command.executeCalls = [];
+    await wide.createBulk([new Item()]);
+    expect(String(command.executeCalls[0]?.parameters?.[0]?.value)).toContain('"id":0');
+    expect(String(command.executeCalls[0]?.parameters?.[0]?.value)).toContain('"name":""');
+    expect(await wide.createBulk([new Item()])).toEqual([new Item()]);
 
-    const dropped = new BulkCRUDRepository<Item>(connection, {
-      type: Item,
-      entity: "items",
-      objectConverter: new DropId(),
-    });
+    const dropped = new BulkCRUDRepository<Item>(
+      connection,
+      { type: Item, entity: "items", objectConverter: new DropId() },
+      new BatchCommandIBulkWriteStrategy<Item>(),
+    );
     command.response = { result: undefined, rowsAffected: 1 };
     await expect(dropped.deleteBulk([new Item()])).rejects.toThrow(/id/);
-    expect(() => dropped.deletes([new Item()])).toThrow(/Missing Id value/);
 
     const plain = new BulkCRUDRepository<Item>(connection, { type: Item, entity: "items" });
     command.reader = new MockReader([]);
     expect(
-      await plain.createOne(Object.assign(new Item(), { id: { nested: true } as unknown as number })),
-    ).toBeUndefined();
+      await plain.createBulk([Object.assign(new Item(), { id: { nested: true } as unknown as number })]),
+    ).toEqual([Object.assign(new Item(), { id: { nested: true } as unknown as number })]);
   });
 
   it("create follows enrichment and inserted-id edges", async () => {

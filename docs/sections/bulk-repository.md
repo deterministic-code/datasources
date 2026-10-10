@@ -1,6 +1,6 @@
 # Bulk repository
 
-[CRUDRepository](./crud-repository.md) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+[CRUDRepository](./crud-repository.md) plus list writes. Each item still runs the same deep create / update / delete. {{Create|createBulk|create_bulk}} returns the items with ids set. Update and delete responses sum `rowsAffected`.
 
 ## Classes
 
@@ -28,15 +28,15 @@ constructor(inner: ICRUDRepository<T>)
 
 ##### createBulk(items)
 
-Creates each item, including nested `List` children.
+Creates each item, including nested `List` children. Returns the items with ids set, including composite keys.
 
 ```typescript
-createBulk(items: T[]): Promise<Response>
+createBulk(items: T[]): Promise<T[]>
 ```
 
 - `items` — parents to insert
 
-**Returns** `Promise<Response>`
+**Returns** `Promise<T[]>`
 
 ##### updateBulk(items, byWhere?)
 
@@ -87,15 +87,15 @@ public BulkCRUDRepository(ICRUDRepository<T> inner)
 
 ##### Create(items)
 
-Creates each item, including nested `List` children.
+Creates each item, including nested `List` children. Returns the items with ids set, including composite keys.
 
 ```csharp
-public Task<Response> Create(IReadOnlyList<T> items)
+public Task<IReadOnlyList<T>> Create(IReadOnlyList<T> items)
 ```
 
 - `items` — parents to insert
 
-**Returns** `Task<Response>`
+**Returns** `Task<IReadOnlyList<T>>`
 
 ##### Update(items, byWhere)
 
@@ -116,44 +116,6 @@ Deletes nested `List` rows for each item, then the parents.
 
 ```csharp
 public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-- `items` — parents to delete
-- `byWhere` — optional predicate applied to each item
-
-**Returns** `Task<Response>`
-
-##### BulkCreate(items)
-
-Alias of [Create](#bulkcrudrepository-create-items).
-
-```csharp
-public Task<Response> BulkCreate(IReadOnlyList<T> items)
-```
-
-- `items` — parents to insert
-
-**Returns** `Task<Response>`
-
-##### BulkUpdate(items, byWhere)
-
-Alias of [Update](#bulkcrudrepository-update-items-bywhere).
-
-```csharp
-public Task<Response> BulkUpdate(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-- `items` — parents to update
-- `byWhere` — optional predicate applied to each item
-
-**Returns** `Task<Response>`
-
-##### BulkDelete(items, byWhere)
-
-Alias of [Delete](#bulkcrudrepository-delete-items-bywhere).
-
-```csharp
-public Task<Response> BulkDelete(IReadOnlyList<T> items, IWhere? byWhere = null)
 ```
 
 - `items` — parents to delete
@@ -200,15 +162,15 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 
 ##### create_bulk(items)
 
-Creates each item, including nested `List` children.
+Creates each item, including nested `List` children. Returns the items with ids set, including composite keys.
 
 ```rust
-pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
+pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Vec<Row>>
 ```
 
 - `items` — parents to insert
 
-**Returns** `Result<Response>`
+**Returns** `Result<Vec<`[Row](./repository.md)`>>`
 
 ##### update_bulk(items, by_where)
 
@@ -241,11 +203,11 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 
 ::: prose
 ### csharp
-List overloads are `Create(IReadOnlyList<T>)`, with `Bulk*` aliases.
+List writes are `Create(IReadOnlyList<T>)`, `Update`, and `Delete`.
 ### typescript
-Bulk writes use `createBulk` only.
+Bulk writes use `createBulk`, `updateBulk`, and `deleteBulk`.
 ### rust
-Bulk writes use `create_bulk` only.
+Bulk writes use `create_bulk`, `update_bulk`, and `delete_bulk`.
 :::
 
 Each item still runs the same deep persist as [CRUDRepository](./crud-repository.md). The list write goes through [IBulkWriteStrategy](./i-bulk-write-strategy.md). The default is [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.

@@ -27,7 +27,7 @@ fn parents(strategy: Arc<dyn crate::BulkWriteStrategy>) -> (BulkCRUDRepository, 
 
 #[tokio::test]
 async fn single_command_i_bulk_write_strategy_writes_one_statement_per_row() {
-    let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+    let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy::new()));
     *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
     let mut created = [
         row(&[("label", Value::from("a"))]),
@@ -70,7 +70,7 @@ async fn single_command_i_bulk_write_strategy_writes_one_statement_per_row() {
 
 #[tokio::test]
 async fn batch_command_i_bulk_write_strategy_joins_statements() {
-    let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy));
+    let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy::new()));
     let mut created = [
         row(&[("label", Value::from("a"))]),
         row(&[("label", Value::from("b"))]),
@@ -233,8 +233,8 @@ async fn payload_encodes_scalars() {
 #[tokio::test]
 async fn empty_list_does_not_execute() {
     for strategy in [
-        Arc::new(SingleCommandIBulkWriteStrategy) as Arc<dyn crate::BulkWriteStrategy>,
-        Arc::new(BatchCommandIBulkWriteStrategy),
+        Arc::new(SingleCommandIBulkWriteStrategy::new()) as Arc<dyn crate::BulkWriteStrategy>,
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
         Arc::new(StoredProcedureBulkWriteStrategy::new(
             "create_parent",
             "update_parent",
@@ -246,9 +246,43 @@ async fn empty_list_does_not_execute() {
         let updated = repo.update_bulk(&[], None).await.unwrap();
         let deleted = repo.delete_bulk(&[], None).await.unwrap();
         assert!(command.execute_logs.lock().unwrap().is_empty());
-        assert_eq!(created.rows_affected, 0);
+        assert!(created.is_empty());
         assert_eq!(updated.rows_affected, 0);
         assert_eq!(deleted.rows_affected, 0);
-        assert_eq!(created.result, Value::Null);
     }
+}
+
+#[tokio::test]
+async fn create_bulk_returns_composite_ids() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command, "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "coded".into();
+    options.ids = vec!["code".into(), "code_extra".into()];
+    options.row_converter = Some(RowTypeConverter::new(vec![
+        "code".into(),
+        "code_extra".into(),
+        "label".into(),
+    ]));
+    let repo = BulkCRUDRepository::new(connection, options).unwrap();
+    let ids = repo
+        .create_bulk(&mut [
+            row(&[
+                ("code", Value::from("a")),
+                ("code_extra", Value::from("ab")),
+                ("label", Value::from("one")),
+            ]),
+            row(&[
+                ("code", Value::from("b")),
+                ("code_extra", Value::from("ba")),
+                ("label", Value::from("two")),
+            ]),
+        ])
+        .await
+        .unwrap();
+    assert_eq!(ids.len(), 2);
+    assert_eq!(ids[0].get("code"), Some(&Value::from("a")));
+    assert_eq!(ids[0].get("code_extra"), Some(&Value::from("ab")));
+    assert_eq!(ids[1].get("code"), Some(&Value::from("b")));
+    assert_eq!(ids[1].get("code_extra"), Some(&Value::from("ba")));
 }

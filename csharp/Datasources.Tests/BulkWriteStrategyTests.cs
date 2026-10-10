@@ -133,10 +133,9 @@ public class BulkWriteStrategyTests
         var updated = await repo.Update([]);
         var deleted = await repo.Delete([]);
         Assert.Empty(command.ExecuteCalls);
-        Assert.Equal(0, created.RowsAffected);
+        Assert.Empty(created);
         Assert.Equal(0, updated.RowsAffected);
         Assert.Equal(0, deleted.RowsAffected);
-        Assert.IsType<Value.Null>(created.Result);
     }
 
     static (BulkCRUDRepository<Parent> Repo, MockCommand Command) Repo(IBulkWriteStrategy<Parent> strategy) =>

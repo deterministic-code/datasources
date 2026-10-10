@@ -9,24 +9,49 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
     readonly string update;
     readonly string delete;
 
+    public CRUDRepository<T> Repo { get; set; } = null!;
+    public ICommand Command { get; set; } = null!;
+    public CRUDRepositoryOptions<T> Options { get; set; } = null!;
+
     public StoredProcedureBulkWriteStrategy(string create, string update, string delete) =>
         (this.create, this.update, this.delete) = (create, update, delete);
 
-    public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo) =>
-        Call(repo, create, items);
+    public Task<Response> Create(IReadOnlyList<T> items) => Call(create, items);
 
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
-        Call(repo, update, items);
+    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere) => Call(update, items);
 
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo) =>
-        Call(repo, delete, items);
+    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere) => Call(delete, items);
 
-    static Task<Response> Call(BulkCRUDRepository<T> repo, string name, IReadOnlyList<T> items)
+    Task<Response> Call(string name, IReadOnlyList<T> items)
     {
         if (items.Count == 0)
             return Task.FromResult(new Response(Value.Null.Instance, 0));
-        var payload = new Parameter("payload", Json(repo.Rows(items)));
-        return repo.Command().Execute(new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
+        var payload = new Parameter("payload", Json([.. items.Select(RowOf)]));
+        return Command.Execute(new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
+    }
+
+    Row RowOf(T item)
+    {
+        var stored = Reverse(item);
+        var builder = new CRUDRepositoryBuilder<T>();
+        builder.Parts(Command.Connection, Options);
+        var row = new Row();
+        foreach (var name in builder.CRUDStatements?.ReadColumns ?? [])
+        {
+            var match = stored.FirstOrDefault(pair => Column(pair.Key) == name);
+            row[name] = match.Key is null ? Value.Null.Instance : match.Value;
+        }
+        return row;
+    }
+
+    string Column(string property) =>
+        Options.PropertyMappings?.Map(property) ?? property;
+
+    Row Reverse(T item)
+    {
+        var objects = Options.ObjectConverter ?? new MetaDataRowTypeConverter<T> { ShouldCoerceId = true };
+        var row = objects.ReverseConvert(item);
+        return Options.RowConverter?.ReverseConvert(row) ?? row;
     }
 
     static string Json(IReadOnlyList<Row> rows) =>

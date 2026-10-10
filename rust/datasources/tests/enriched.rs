@@ -734,10 +734,12 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         ])
         .await
         .unwrap();
-    assert_eq!(created.rows_affected, 2);
     let stored = parents.read(None, None, None).await.unwrap();
-    let last_id = stored.iter().map(|row| num(row, "id")).max().unwrap();
-    assert_eq!(created.result, Value::Int(last_id));
+    let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
+    let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
+    created_ids.sort();
+    stored_ids.sort();
+    assert_eq!(created_ids, stored_ids);
     let first_id = stored
         .iter()
         .find(|row| row.get("label") == Some(&Value::from("a")))
@@ -783,10 +785,12 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         ])
         .await
         .unwrap();
-    assert_eq!(created.rows_affected, 2);
     let stored = parents.read(None, None, None).await.unwrap();
-    let last_id = stored.iter().map(|row| num(row, "id")).max().unwrap();
-    assert_eq!(created.result, Value::Int(last_id));
+    let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
+    let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
+    created_ids.sort();
+    stored_ids.sort();
+    assert_eq!(created_ids, stored_ids);
     let first_id = stored
         .iter()
         .find(|row| row.get("label") == Some(&Value::from("a")))
@@ -911,7 +915,7 @@ async fn bulk_create_writes_parents_and_children() {
         children.clone(),
         None,
     );
-    let response = parents
+    let ids = parents
         .create_bulk(&mut [
             record(&[(
                 "children",
@@ -930,11 +934,9 @@ async fn bulk_create_writes_parents_and_children() {
     let stored_parents = parents.read(None, None, None).await.unwrap();
     assert_eq!(stored_parents.len(), 2);
     assert_eq!(children.read(None, None, None).await.unwrap().len(), 3);
-    assert_eq!(response.rows_affected, 2);
-    let last_id = stored_parents
-        .iter()
-        .map(|row| num(row, "id"))
-        .max()
-        .unwrap();
-    assert_eq!(response.result, Value::Int(last_id));
+    let mut created_ids: Vec<_> = ids.iter().map(|row| num(row, "id")).collect();
+    let mut stored_ids: Vec<_> = stored_parents.iter().map(|row| num(row, "id")).collect();
+    created_ids.sort();
+    stored_ids.sort();
+    assert_eq!(created_ids, stored_ids);
 }

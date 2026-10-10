@@ -34,7 +34,7 @@ describe("BulkCRUDRepository", () => {
     const connection = await setup();
     const parentsRepo = new BulkCRUDRepository(Parent, connection);
     const childrenRepo = new BulkCRUDRepository(Child, connection);
-    const response = await relate(parentsRepo, childrenRepo).createBulk([
+    const ids = await relate(parentsRepo, childrenRepo).createBulk([
       Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
       Object.assign(new Parent(), {
         children: [Object.assign(new Child(), { label: "b" }), Object.assign(new Child(), { label: "c" })],
@@ -45,20 +45,38 @@ describe("BulkCRUDRepository", () => {
     expect(parents).toHaveLength(2);
     expect(parents.every((parent) => parent.id > 0)).toBe(true);
     expect(children).toHaveLength(3);
-    expect(response.rowsAffected).toBe(2);
-    expect(response.result).toBe(Math.max(...parents.map((parent) => parent.id)));
+    expect(ids.map((row) => row.id).sort()).toEqual(parents.map((parent) => parent.id).sort());
   });
 
   it("createBulk writes each parent", async () => {
     const parentsRepo = new BulkCRUDRepository(Parent, await setup());
-    const response = await parentsRepo.createBulk([
+    const ids = await parentsRepo.createBulk([
       Object.assign(new Parent(), { label: "a" }),
       Object.assign(new Parent(), { label: "b" }),
     ]);
     const parents = await collectAsync(parentsRepo.read());
     expect(parents).toHaveLength(2);
-    expect(response.rowsAffected).toBe(2);
-    expect(response.result).toBe(Math.max(...parents.map((parent) => parent.id)));
+    expect(ids.map((row) => row.id).sort()).toEqual(parents.map((parent) => parent.id).sort());
+  });
+
+  it("createBulk returns composite ids", async () => {
+    class Coded {
+      code = "";
+      code_extra = "";
+      label = "";
+    }
+    const codesRepo = new BulkCRUDRepository<Coded>(await setup(), {
+      type: Coded,
+      ids: ["code", "code_extra"],
+    });
+    const ids = await codesRepo.createBulk([
+      Object.assign(new Coded(), { code: "a", code_extra: "ab", label: "one" }),
+      Object.assign(new Coded(), { code: "b", code_extra: "ba", label: "two" }),
+    ]);
+    expect(ids).toEqual([
+      Object.assign(new Coded(), { code: "a", code_extra: "ab", label: "one" }),
+      Object.assign(new Coded(), { code: "b", code_extra: "ba", label: "two" }),
+    ]);
   });
 
   it("keeps the first write when a later bulk update throws", async () => {

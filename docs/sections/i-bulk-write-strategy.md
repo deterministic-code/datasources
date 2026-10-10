@@ -1,6 +1,6 @@
 # IBulkWriteStrategy
 
-Writes a list of rows for a [BulkCRUDRepository](./bulk-repository.md). Create, update, and delete each receive the items and the repository. The default is [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md).
+Writes a list of rows for a [BulkCRUDRepository](./bulk-repository.md). Create, update, and delete each receive the items. The repository sets `Repo` after construction. The default is [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md).
 
 ## Classes
 
@@ -12,46 +12,53 @@ Writes a list of rows for a [BulkCRUDRepository](./bulk-repository.md). Create, 
 interface IBulkWriteStrategy<T extends object>
 ```
 
+**Properties**
+
+##### repo
+
+[CRUDRepository](./crud-repository.md) the orchestrator assigns after `base(...)`.
+
+```typescript
+repo: CRUDRepository<T>
+```
+
 **Methods**
 
-##### create(items, repo)
+##### create(items)
 
 Inserts `items`.
 
 ```typescript
-create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+create(items: T[]): Promise<Response>
 ```
 
 - `items` — rows to insert
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### update(items, byWhere, repo)
+##### update(items, byWhere)
 
 Updates `items`.
 
 ```typescript
-update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+update(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 - `items` — rows to update
 - `byWhere` — optional [IWhere](./where-clause.md) applied with each item
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### delete(items, byWhere, repo)
+##### delete(items, byWhere)
 
 Deletes `items`.
 
 ```typescript
-delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+delete(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 - `items` — rows to delete
 - `byWhere` — optional [IWhere](./where-clause.md) applied with each item
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
@@ -62,46 +69,53 @@ delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 public interface IBulkWriteStrategy<T> where T : new()
 ```
 
+**Properties**
+
+##### Repo
+
+[CRUDRepository](./crud-repository.md) the orchestrator assigns after `base(...)`.
+
+```csharp
+CRUDRepository<T> Repo { get; set; }
+```
+
 **Methods**
 
-##### Create(items, repo)
+##### Create(items)
 
 Inserts `items`.
 
 ```csharp
-Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+Task<Response> Create(IReadOnlyList<T> items)
 ```
 
 - `items` — rows to insert
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### Update(items, byWhere, repo)
+##### Update(items, byWhere)
 
 Updates `items`.
 
 ```csharp
-Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 - `items` — rows to update
 - `byWhere` — optional [IWhere](./where-clause.md) applied with each item
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### Delete(items, byWhere, repo)
+##### Delete(items, byWhere)
 
 Deletes `items`.
 
 ```csharp
-Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 - `items` — rows to delete
 - `byWhere` — optional [IWhere](./where-clause.md) applied with each item
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
@@ -114,51 +128,58 @@ pub trait BulkWriteStrategy: Send + Sync
 
 **Methods**
 
-##### create(items, repo)
+##### set_repo(repo)
+
+Stores the [CRUDRepository](./crud-repository.md). [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) uses it for one-row writes.
+
+```rust
+fn set_repo(&self, repo: Arc<dyn ICRUDRepository>)
+```
+
+- `repo` — [CRUDRepository](./crud-repository.md)
+
+##### create(items)
 
 Inserts `items`.
 
 ```rust
-async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+async fn create(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 - `items` — rows to insert
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** `Result<Response>`
 
-##### update(items, by_where, repo)
+##### update(items, by_where)
 
 Updates `items`.
 
 ```rust
-async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `items` — rows to update
 - `by_where` — optional [IWhere](./where-clause.md) applied with each item
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** `Result<Response>`
 
-##### delete(items, by_where, repo)
+##### delete(items, by_where)
 
 Deletes `items`.
 
 ```rust
-async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `items` — rows to delete
 - `by_where` — optional [IWhere](./where-clause.md) applied with each item
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** `Result<Response>`
 :::
 
 ## Remarks
 
-Pass the strategy to the bulk repository constructor. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) runs one statement per row. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) joins those statements. [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
+Pass the strategy to the bulk repository constructor. The orchestrator assigns `Repo` on every strategy. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) and [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) also receive `Command` and `Options`. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) runs one statement per row. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) joins those statements. [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
 
 ## Examples
 

@@ -9,6 +9,16 @@ pub struct CRUDRepositoryOptions {
     pub read: ReadonlyRepositoryMappingOptions,
 }
 
+impl Clone for CRUDRepositoryOptions {
+    fn clone(&self) -> Self {
+        Self {
+            ids: self.ids.clone(),
+            write: self.write.clone(),
+            read: self.read.clone(),
+        }
+    }
+}
+
 impl Default for CRUDRepositoryOptions {
     fn default() -> Self {
         Self {
