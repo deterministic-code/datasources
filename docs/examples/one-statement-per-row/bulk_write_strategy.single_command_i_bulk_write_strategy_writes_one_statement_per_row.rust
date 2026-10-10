@@ -1,4 +1,4 @@
-let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy::new()));
 *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
 let mut created = [
     row(&[("label", Value::from("a"))]),

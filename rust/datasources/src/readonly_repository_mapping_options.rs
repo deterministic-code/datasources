@@ -15,6 +15,20 @@ pub struct ReadonlyRepositoryMappingOptions {
     pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 
+impl Clone for ReadonlyRepositoryMappingOptions {
+    fn clone(&self) -> Self {
+        Self {
+            entity: self.entity.clone(),
+            entity_mapper: self.entity_mapper.clone(),
+            property_mappings: self.property_mappings.clone(),
+            read_properties: self.read_properties.clone(),
+            row_converter: self.row_converter.clone(),
+            object_converter: None,
+            row_type_converters: HashMap::new(),
+        }
+    }
+}
+
 impl Default for ReadonlyRepositoryMappingOptions {
     fn default() -> Self {
         Self {

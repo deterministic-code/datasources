@@ -1,5 +1,9 @@
-use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::bulk_write_strategy::BulkWriteStrategy;
+use crate::command::Command;
+use crate::connection::Connection;
+use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
+use crate::crud_repository_options::CRUDRepositoryOptions;
+use crate::datasource_error::DatasourceError;
 use crate::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::response::Response;
@@ -12,12 +16,16 @@ use base64::Engine;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use std::collections::BTreeMap;
+use std::sync::{Arc, OnceLock};
 use uuid::Uuid;
 
 pub struct StoredProcedureBulkWriteStrategy {
     create: String,
     update: String,
     delete: String,
+    command: OnceLock<Arc<dyn Command>>,
+    options: OnceLock<CRUDRepositoryOptions>,
+    connection: OnceLock<Arc<dyn Connection>>,
 }
 
 impl StoredProcedureBulkWriteStrategy {
@@ -30,44 +38,107 @@ impl StoredProcedureBulkWriteStrategy {
             create: create.into(),
             update: update.into(),
             delete: delete.into(),
+            command: OnceLock::new(),
+            options: OnceLock::new(),
+            connection: OnceLock::new(),
         }
+    }
+
+    fn command(&self) -> Result<Arc<dyn Command>> {
+        self.command
+            .get()
+            .cloned()
+            .ok_or_else(|| DatasourceError::message("Command required"))
+    }
+
+    fn options(&self) -> Result<&CRUDRepositoryOptions> {
+        self.options
+            .get()
+            .ok_or_else(|| DatasourceError::message("Options required"))
+    }
+
+    fn reverse(&self, item: &Row) -> Result<Row> {
+        let options = self.options()?;
+        let row = match &options.object_converter {
+            Some(converter) => converter.reverse_convert(item)?,
+            None => item.clone(),
+        };
+        match &options.row_converter {
+            Some(converter) => converter.reverse_convert(&row),
+            None => Ok(row),
+        }
+    }
+
+    fn column(&self, property: &str) -> String {
+        self.options()
+            .ok()
+            .and_then(|options| options.property_mappings.as_ref())
+            .map(|mapper| mapper.map(property.to_string()))
+            .unwrap_or_else(|| property.to_string())
+    }
+
+    fn row_of(&self, item: &Row) -> Result<Row> {
+        let stored = self.reverse(item)?;
+        let connection = self
+            .connection
+            .get()
+            .cloned()
+            .ok_or_else(|| DatasourceError::message("Connection required"))?;
+        let built = CRUDRepositoryBuilder::parts(connection, self.options()?.clone())?;
+        let statements = write_statements(&built.statements);
+        let mut row = Row::new();
+        for name in statements.read_columns() {
+            let value = stored
+                .iter()
+                .find(|(key, _)| self.column(key) == *name)
+                .map(|(_, value)| value.clone())
+                .unwrap_or(Value::Null);
+            row.insert(name.clone(), value);
+        }
+        Ok(row)
+    }
+
+    async fn call(&self, name: &str, items: &[Row]) -> Result<Response> {
+        if items.is_empty() {
+            return Ok(Response::new(Value::Null, 0, None));
+        }
+        let rows = items
+            .iter()
+            .map(|item| self.row_of(item))
+            .collect::<Result<Vec<_>>>()?;
+        let payload = Parameter::new("payload", json(&rows));
+        let statement = ExecuteStoredProcedureStatement::new(name, &[payload.clone()]);
+        self.command()?
+            .execute_statement(&statement, Some(&[payload]))
+            .await
     }
 }
 
 #[async_trait]
 impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
-    async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response> {
-        call(repo, &self.create, items).await
+    fn set_command(&self, command: Arc<dyn Command>) {
+        let _ = self.command.set(command);
     }
 
-    async fn update(
-        &self,
-        items: &[Row],
-        _by_where: Option<&dyn IWhere>,
-        repo: &BulkCRUDRepository,
-    ) -> Result<Response> {
-        call(repo, &self.update, items).await
+    fn set_options(&self, options: CRUDRepositoryOptions) {
+        let _ = self.options.set(options);
     }
 
-    async fn delete(
-        &self,
-        items: &[Row],
-        _by_where: Option<&dyn IWhere>,
-        repo: &BulkCRUDRepository,
-    ) -> Result<Response> {
-        call(repo, &self.delete, items).await
+    fn set_connection(&self, connection: Arc<dyn Connection>) {
+        let _ = self.connection.set(connection);
     }
-}
 
-async fn call(repo: &BulkCRUDRepository, name: &str, items: &[Row]) -> Result<Response> {
-    if items.is_empty() {
-        return Ok(Response::new(Value::Null, 0, None));
+    async fn create(&self, items: &mut [Row]) -> Result<Response> {
+        self.call(&self.create, items).await
     }
-    let payload = Parameter::new("payload", json(&repo.rows(items)?));
-    let statement = ExecuteStoredProcedureStatement::new(name, &[payload.clone()]);
-    repo.command()
-        .execute_statement(&statement, Some(&[payload]))
-        .await
+
+    async fn update(&self, items: &[Row], _by_where: Option<&dyn IWhere>) -> Result<Response> {
+        self.call(&self.update, items).await
+    }
+
+    async fn delete(&self, items: &[Row], _by_where: Option<&dyn IWhere>) -> Result<Response> {
+        self.call(&self.delete, items).await
+    }
 }
 
 fn json(rows: &[Row]) -> String {

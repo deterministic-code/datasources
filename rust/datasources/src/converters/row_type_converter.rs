@@ -11,6 +11,12 @@ pub struct RowTypeConverter {
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 }
 
+impl Clone for RowTypeConverter {
+    fn clone(&self) -> Self {
+        Self::new(self.columns.clone())
+    }
+}
+
 impl RowTypeConverter {
     pub fn of<T: ConvertSchema>() -> Self {
         let schema = T::schema();

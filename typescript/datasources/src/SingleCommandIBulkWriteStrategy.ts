@@ -1,4 +1,4 @@
-import type { BulkCRUDRepository } from "./BulkCRUDRepository.ts";
+import type { CRUDRepository } from "./CRUDRepository.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
@@ -18,18 +18,16 @@ const fold = async <T>(
 };
 
 export class SingleCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T> {
-  create = async (items: T[], repo: BulkCRUDRepository<T>): Promise<Response> => {
-    let result: Response["result"] = null;
-    for (const item of items) {
-      const id = await repo.createOne(item);
-      if (id !== undefined) result = id;
-    }
-    return { result, rowsAffected: items.length };
+  repo!: CRUDRepository<T>;
+
+  create = async (items: T[]): Promise<Response> => {
+    for (const item of items) await this.repo.create(item);
+    return { result: null, rowsAffected: items.length };
   };
 
-  update = (items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response> =>
-    fold(items, (item) => repo.updateOne(item, byWhere));
+  update = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>
+    fold(items, (item) => this.repo.update(item, byWhere));
 
-  delete = (items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response> =>
-    fold(items, (item) => repo.deleteOne(item, byWhere));
+  delete = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>
+    fold(items, (item) => this.repo.delete(item, byWhere));
 }

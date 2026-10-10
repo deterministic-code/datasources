@@ -1,6 +1,6 @@
 # StoredProcedureBulkWriteStrategy
 
-Bulk write that sends the rows as one JSON `payload` argument to a stored procedure. Create, update, and delete each name their own procedure.
+Bulk write that sends the rows as one JSON `payload` argument to a stored procedure. Create, update, and delete each name their own procedure. The orchestrator assigns `Repo`, `Command`, and `Options`.
 
 ## Classes
 
@@ -28,46 +28,65 @@ constructor(createName: string, updateName: string, deleteName: string)
 
 **Returns** [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy)
 
+**Properties**
+
+##### repo
+
+```typescript
+repo: CRUDRepository<T>
+```
+
+##### command
+
+```typescript
+command: ICommand
+```
+
+##### options
+
+Converters and column mappings used to project JSON rows.
+
+```typescript
+options: CRUDRepositoryOptions<T>
+```
+
 **Methods**
 
-##### create(items, repo)
+##### create(items)
 
 Calls the create procedure with a JSON `payload` of the rows.
 
 ```typescript
-create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+create(items: T[]): Promise<Response>
 ```
 
 - `items` — rows to insert
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### update(items, byWhere, repo)
+##### update(items, byWhere)
 
 Calls the update procedure with a JSON `payload` of the rows.
 
 ```typescript
-update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+update(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 - `items` — rows to update
 - `byWhere` — unused
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### delete(items, byWhere, repo)
+##### delete(items, byWhere)
 
 Calls the delete procedure with a JSON `payload` of the rows.
 
 ```typescript
-delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+delete(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 - `items` — rows to delete
 - `byWhere` — unused
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
@@ -94,46 +113,63 @@ public StoredProcedureBulkWriteStrategy(string create, string update, string del
 
 **Returns** [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy)`<T>`
 
+**Properties**
+
+##### Repo
+
+```csharp
+public CRUDRepository<T> Repo { get; set; }
+```
+
+##### Command
+
+```csharp
+public ICommand Command { get; set; }
+```
+
+##### Options
+
+```csharp
+public CRUDRepositoryOptions<T> Options { get; set; }
+```
+
 **Methods**
 
-##### Create(items, repo)
+##### Create(items)
 
 Calls the create procedure with a JSON `payload` of the rows.
 
 ```csharp
-public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+public Task<Response> Create(IReadOnlyList<T> items)
 ```
 
 - `items` — rows to insert
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### Update(items, byWhere, repo)
+##### Update(items, byWhere)
 
 Calls the update procedure with a JSON `payload` of the rows.
 
 ```csharp
-public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 - `items` — rows to update
 - `byWhere` — unused
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
-##### Delete(items, byWhere, repo)
+##### Delete(items, byWhere)
 
 Calls the delete procedure with a JSON `payload` of the rows.
 
 ```csharp
-public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 - `items` — rows to delete
 - `byWhere` — unused
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** [Response](./command.md#response)
 
@@ -162,44 +198,41 @@ pub fn new(create: impl Into<String>, update: impl Into<String>, delete: impl In
 
 **Methods**
 
-##### create(items, repo)
+##### create(items)
 
 Calls the create procedure with a JSON `payload` of the rows.
 
 ```rust
-async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+async fn create(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 - `items` — rows to insert
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** `Result<Response>`
 
-##### update(items, by_where, repo)
+##### update(items, by_where)
 
 Calls the update procedure with a JSON `payload` of the rows.
 
 ```rust
-async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `items` — rows to update
 - `by_where` — unused
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** `Result<Response>`
 
-##### delete(items, by_where, repo)
+##### delete(items, by_where)
 
 Calls the delete procedure with a JSON `payload` of the rows.
 
 ```rust
-async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 - `items` — rows to delete
 - `by_where` — unused
-- `repo` — [BulkCRUDRepository](./bulk-repository.md)
 
 **Returns** `Result<Response>`
 :::

@@ -1,4 +1,4 @@
-let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy));
+let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy::new()));
 let mut created = [
     row(&[("label", Value::from("a"))]),
     row(&[("label", Value::from("b"))]),

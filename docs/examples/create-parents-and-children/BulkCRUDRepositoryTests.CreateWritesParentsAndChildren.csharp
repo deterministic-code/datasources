@@ -1,6 +1,6 @@
 var connection = await Setup();
 var parentsRepo = new BulkCRUDRepository<Parent>(connection);
 var childrenRepo = new BulkCRUDRepository<Child>(connection);
-var response = await Repo(parentsRepo, childrenRepo).Create(
+var ids = await Repo(parentsRepo, childrenRepo).Create(
 [
     new Parent { children = [new Child { label = "a" }] },

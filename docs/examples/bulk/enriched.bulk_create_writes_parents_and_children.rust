@@ -10,7 +10,7 @@ parents.add_enriched(
     children.clone(),
     None,
 );
-let response = parents
+let ids = parents
     .create_bulk(&mut [
         record(&[(
             "children",
