@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Datasources;
 using Datasources.Mysql;
 using Datasources.Postgres;
@@ -10,6 +11,7 @@ var strategyName = Environment.GetEnvironmentVariable("PERF_STRATEGY") ?? "batch
 var rows = int.Parse(Environment.GetEnvironmentVariable("PERF_ROWS") ?? "1000");
 var chunk = int.Parse(Environment.GetEnvironmentVariable("PERF_CHUNK") ?? "500");
 var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? "sqlite:///:memory:";
+var batched = strategyName == "batch" || strategyName == "procedure" && provider == "sqlite";
 var shared = Shared("contacts-crud-enriched-medium-rest-shared");
 var connection = provider switch
 {
@@ -65,21 +67,7 @@ try
     contactsRepo.AddEnriched(new("addresses", "id", "contactId", Type: EnrichmentPropertyType.List), addressesRepo);
     contactsRepo.AddEnriched(new("phones", "id", "contactId", Type: EnrichmentPropertyType.List), phonesRepo);
     contactsRepo.AddEnriched(new("settings", "id", "contactId", "value", EnrichmentPropertyType.Dictionary), settingsRepo);
-    var contacts = Enumerable.Range(1, rows).Select(id => new Contact
-    {
-        id = strategyName == "batch" ? id : 0,
-        uuid = $"00000000-0000-0000-0000-{id:x12}",
-        created = now,
-        updated = now,
-        version = [1],
-        contactSourceId = 1,
-        firstName = $"First{id}",
-        lastName = $"Last{id}",
-        email = $"c{id}@ex.test",
-        addresses = [new Address { id = strategyName == "batch" ? id : 0, uuid = $"a{id}", created = now, updated = now, version = [1], addressTypeId = 1, line1 = "1 Main", city = "Town" }],
-        phones = [new Phone { id = strategyName == "batch" ? id : 0, uuid = $"p{id}", created = now, updated = now, version = [1], phoneTypeId = 1, number = "5550000", label = "m" }],
-        settings = new Dictionary<string, string> { ["theme"] = "light" }
-    }).ToList();
+    var contacts = LoadContacts();
     var createMs = await Time(() => Each(contacts, batch => contactsRepo.Create(batch)));
     var counts = new
     {
@@ -88,14 +76,19 @@ try
         phones = await Count(connection, "phones"),
         settings = await Count(connection, "contact_settings")
     };
-    if (counts.contacts != rows || counts.addresses != rows || counts.phones != rows || counts.settings != rows)
+    var each = (
+        addresses: contacts.FirstOrDefault()?.addresses.Count ?? 0,
+        phones: contacts.FirstOrDefault()?.phones.Count ?? 0,
+        settings: contacts.FirstOrDefault()?.settings.Count ?? 0
+    );
+    if (counts.contacts != contacts.Count || counts.addresses != contacts.Count * each.addresses || counts.phones != contacts.Count * each.phones || counts.settings != contacts.Count * each.settings)
         throw new InvalidOperationException($"create count {counts}");
     foreach (var contact in contacts)
     {
         contact.notes = "updated";
-        contact.addresses[0].city = "City";
-        contact.phones[0].label = "w";
-        contact.settings = new Dictionary<string, string> { ["theme"] = "dark" };
+        foreach (var address in contact.addresses) address.city = "City";
+        foreach (var phone in contact.phones) phone.label = "w";
+        foreach (var key in contact.settings.Keys.ToList()) contact.settings[key] = "dark";
     }
     var updateMs = await Time(() => Each(contacts, batch => contactsRepo.Update(batch)));
     Console.WriteLine(JsonSerializer.Serialize(new
@@ -104,12 +97,12 @@ try
         language = "csharp",
         provider,
         strategy = strategyName,
-        rows,
-        chunk = strategyName == "batch" ? chunk : rows,
+        rows = contacts.Count,
+        chunk = batched ? Math.Min(chunk, contacts.Count) : contacts.Count,
         createMs,
         updateMs,
-        createPerSec = rows / (createMs / 1000),
-        updatePerSec = rows / (updateMs / 1000),
+        createPerSec = contacts.Count / (createMs / 1000),
+        updatePerSec = contacts.Count / (updateMs / 1000),
         counts
     }));
 }
@@ -118,19 +111,45 @@ finally
     try { await connection.Close(); } catch { }
 }
 
+List<Contact> LoadContacts()
+{
+    var path = Environment.GetEnvironmentVariable("PERF_DATA");
+    if (!string.IsNullOrEmpty(path))
+        return JsonSerializer.Deserialize<List<Contact>>(File.ReadAllText(path), new JsonSerializerOptions { Converters = { new BytesFromArray() } })
+            ?? throw new InvalidOperationException(path);
+    var created = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    var each = int.Parse(Environment.GetEnvironmentVariable("PERF_RELATED") ?? "10");
+    int Child(int contactId, int index) => (contactId - 1) * each + index + 1;
+    return [.. Enumerable.Range(1, rows).Select(id => new Contact
+    {
+        id = id,
+        uuid = $"00000000-0000-0000-0000-{id:x12}",
+        created = created,
+        updated = created,
+        version = [1],
+        contactSourceId = 1,
+        firstName = $"First{id}",
+        lastName = $"Last{id}",
+        email = $"c{id}@ex.test",
+        addresses = [.. Enumerable.Range(0, each).Select(n => new Address { id = Child(id, n), uuid = $"a{Child(id, n)}", created = created, updated = created, version = [1], addressTypeId = 1, line1 = "1 Main", city = "Town" })],
+        phones = [.. Enumerable.Range(0, each).Select(n => new Phone { id = Child(id, n), uuid = $"p{Child(id, n)}", created = created, updated = created, version = [1], phoneTypeId = 1, number = "5550000", label = "m" })],
+        settings = Enumerable.Range(0, each).ToDictionary(n => $"k{n}", _ => "light")
+    })];
+}
+
 BulkCRUDRepository<T> Repo<T>(IConnection connection, CRUDRepositoryOptions<T> options, string create, string update, string delete)
     where T : new() =>
     strategyName switch
     {
         "single" => new BulkCRUDRepository<T>(connection, options),
-        "batch" => new BulkCRUDRepository<T>(connection, options, new BatchCommandIBulkWriteStrategy<T>()),
+        _ when batched => new BulkCRUDRepository<T>(connection, options, new BatchCommandIBulkWriteStrategy<T>()),
         "procedure" => new BulkCRUDRepository<T>(connection, options, new StoredProcedureBulkWriteStrategy<T>(create, update, delete)),
         _ => throw new InvalidOperationException(strategyName)
     };
 
 async Task Each<T>(List<T> items, Func<List<T>, Task> write)
 {
-    if (strategyName != "batch") { await write(items); return; }
+    if (!batched) { await write(items); return; }
     for (var at = 0; at < items.Count; at += chunk)
         await write(items.GetRange(at, Math.Min(chunk, items.Count - at)));
 }
@@ -164,6 +183,21 @@ static string Shared(string name)
         if (Directory.Exists(path)) return path;
     }
     throw new InvalidOperationException(name);
+}
+
+sealed class BytesFromArray : JsonConverter<byte[]>
+{
+    public override byte[] Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.StartArray) return reader.GetBytesFromBase64();
+        var bytes = new List<byte>();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            bytes.Add(reader.GetByte());
+        return [.. bytes];
+    }
+
+    public override void Write(Utf8JsonWriter writer, byte[] value, JsonSerializerOptions options) =>
+        writer.WriteBase64StringValue(value);
 }
 
 sealed class Contact

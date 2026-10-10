@@ -1,4 +1,4 @@
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use datasources::{
     BatchCommandIBulkWriteStrategy, BulkCRUDRepository, BulkWriteStrategy, CRUDRepositoryOptions,
     Driver, Native, Row, RowTypeConverter, StoredProcedureBulkWriteStrategy, Value,
@@ -58,15 +58,16 @@ async fn work(
                 .await?;
         }
     }
-    let strategy: Arc<dyn BulkWriteStrategy> = match strategy_name {
-        "single" => Arc::new(datasources::SingleCommandIBulkWriteStrategy::new()),
-        "batch" => Arc::new(BatchCommandIBulkWriteStrategy::new()),
-        "procedure" => Arc::new(StoredProcedureBulkWriteStrategy::new(
+    let batched = batched(provider, strategy_name);
+    let strategy: Arc<dyn BulkWriteStrategy> = match (strategy_name, batched) {
+        ("single", _) => Arc::new(datasources::SingleCommandIBulkWriteStrategy::new()),
+        (_, true) => Arc::new(BatchCommandIBulkWriteStrategy::new()),
+        ("procedure", _) => Arc::new(StoredProcedureBulkWriteStrategy::new(
             "bulk_create_user",
             "bulk_update_user",
             "bulk_delete_user",
         )),
-        name => panic!("{name}"),
+        (name, _) => panic!("{name}"),
     };
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
@@ -79,33 +80,18 @@ async fn work(
         "updated".into(),
     ]));
     let users_repo = BulkCRUDRepository::with_strategy(Arc::clone(&connection), options, strategy)?;
-    let created = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
-    let mut users: Vec<Row> = (1..=rows as i64)
-        .map(|id| {
-            let mut pairs = vec![
-                ("username", Value::from(format!("user{id}"))),
-                ("password", Value::from("hash")),
-                ("is_enabled", schema::flag(provider, true)),
-                ("created", created.into()),
-                ("updated", Value::from(vec![1_u8, 2, 3])),
-            ];
-            if strategy_name == "batch" {
-                pairs.insert(0, ("id", Value::Int(id)));
-            }
-            row(&pairs)
-        })
-        .collect();
+    let mut users = load_users(provider, rows)?;
     let create_started = Instant::now();
-    create_chunks(&users_repo, &mut users, strategy_name, chunk).await?;
+    create_chunks(&users_repo, &mut users, batched, chunk).await?;
     let create_ms = create_started.elapsed().as_secs_f64() * 1000.0;
-    if count(command.as_ref(), "users").await? != rows as i64 {
+    if count(command.as_ref(), "users").await? != users.len() as i64 {
         return Err(datasources::DatasourceError::message("create count"));
     }
     for user in &mut users {
         user.insert("is_enabled".into(), schema::flag(provider, false));
     }
     let update_started = Instant::now();
-    update_chunks(&users_repo, &users, strategy_name, chunk).await?;
+    update_chunks(&users_repo, &users, batched, chunk).await?;
     let update_ms = update_started.elapsed().as_secs_f64() * 1000.0;
     println!(
         "{}",
@@ -114,25 +100,80 @@ async fn work(
             "language": "rust",
             "provider": provider,
             "strategy": strategy_name,
-            "rows": rows,
-            "chunk": if strategy_name == "batch" { chunk } else { rows },
+            "rows": users.len(),
+            "chunk": if batched { chunk.min(users.len()) } else { users.len() },
             "createMs": create_ms,
             "updateMs": update_ms,
-            "createPerSec": rows as f64 / (create_ms / 1000.0),
-            "updatePerSec": rows as f64 / (update_ms / 1000.0),
-            "counts": { "users": rows },
+            "createPerSec": users.len() as f64 / (create_ms / 1000.0),
+            "updatePerSec": users.len() as f64 / (update_ms / 1000.0),
+            "counts": { "users": users.len() },
         })
     );
     Ok(())
 }
 
+fn load_users(provider: &str, rows: usize) -> datasources::Result<Vec<Row>> {
+    if let Ok(path) = std::env::var("PERF_DATA") {
+        let text = std::fs::read_to_string(&path)
+            .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
+        let items: Vec<serde_json::Value> = serde_json::from_str(&text)
+            .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
+        return items.iter().map(|item| user_from_json(provider, item)).collect();
+    }
+    let created = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+    Ok((1..=rows as i64)
+        .map(|id| {
+            row(&[
+                ("id", Value::Int(id)),
+                ("username", Value::from(format!("user{id}"))),
+                ("password", Value::from("hash")),
+                ("is_enabled", schema::flag(provider, true)),
+                ("created", created.into()),
+                ("updated", Value::from(vec![1_u8, 2, 3])),
+            ])
+        })
+        .collect())
+}
+
+fn user_from_json(provider: &str, item: &serde_json::Value) -> datasources::Result<Row> {
+    let id = item["id"].as_i64().unwrap_or(0);
+    let enabled = item["is_enabled"].as_bool().unwrap_or(true);
+    let created = item["created"]
+        .as_str()
+        .and_then(|text| DateTime::parse_from_rfc3339(text).ok())
+        .map(|stamp| stamp.with_timezone(&Utc))
+        .unwrap_or_else(|| Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap());
+    let updated = item["updated"]
+        .as_array()
+        .map(|bytes| bytes.iter().filter_map(|byte| byte.as_u64().map(|n| n as u8)).collect())
+        .unwrap_or_else(|| vec![1_u8, 2, 3]);
+    Ok(row(&[
+        ("id", Value::Int(id)),
+        (
+            "username",
+            Value::from(item["username"].as_str().unwrap_or("").to_string()),
+        ),
+        (
+            "password",
+            Value::from(item["password"].as_str().unwrap_or("").to_string()),
+        ),
+        ("is_enabled", schema::flag(provider, enabled)),
+        ("created", created.into()),
+        ("updated", Value::from(updated)),
+    ]))
+}
+
+fn batched(provider: &str, strategy_name: &str) -> bool {
+    strategy_name == "batch" || strategy_name == "procedure" && provider == "sqlite"
+}
+
 async fn create_chunks(
     repo: &BulkCRUDRepository,
     items: &mut [Row],
-    strategy_name: &str,
+    batched: bool,
     chunk: usize,
 ) -> datasources::Result<()> {
-    if strategy_name != "batch" {
+    if !batched {
         repo.create_bulk(items).await?;
         return Ok(());
     }
@@ -145,10 +186,10 @@ async fn create_chunks(
 async fn update_chunks(
     repo: &BulkCRUDRepository,
     items: &[Row],
-    strategy_name: &str,
+    batched: bool,
     chunk: usize,
 ) -> datasources::Result<()> {
-    if strategy_name != "batch" {
+    if !batched {
         repo.update_bulk(items, None).await?;
         return Ok(());
     }

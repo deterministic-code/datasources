@@ -94,7 +94,7 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
   private call = async (name: string, items: T[], generated = false): Promise<Response> => {
     if (items.length === 0) return empty();
     const payload = { name: "payload", value: json(items.map((item) => this.rowOf(item, generated))) };
-    const parameters: Parameter[] = generated && this.wantsIds(items)
+      const parameters: Parameter[] = generated && this.ids().length === 1
       ? [payload, { name: "ids", value: null, direction: ParameterDirection.InputOutput }]
       : [payload];
     const response = await execute(this.command, new ExecuteStoredProcedureStatement(name, parameters), parameters);
@@ -117,9 +117,6 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
   };
 
   private identity = (column: string): boolean => this.ids().length === 1 && this.ids()[0] === column;
-
-  private wantsIds = (items: T[]): boolean =>
-    this.ids().length === 1 && items.some((item) => !assigned(this.reverse(item)[this.ids()[0]!]));
 
   private applyIds = (items: T[], parameters?: Parameter[]): void => {
     if (this.ids().length !== 1) return;
