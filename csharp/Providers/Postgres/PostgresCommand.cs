@@ -67,20 +67,29 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
 
     async Task<PostgresExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
-        var (text, bound) = PostgresBind.ToPostgres(sql, parameters);
-        using var command = Typed.Require().CreateCommand();
-        command.CommandText = text;
-        Bind(command, bound);
-        if (parameters is not null)
-            foreach (var parameter in parameters)
-                if (parameter.Direction == ParameterDirection.ReturnValue)
-                    command.Parameters.Add(new NpgsqlParameter
-                    {
-                        Direction = DataDirection.ReturnValue,
-                        Value = parameter.Value.ToObject() ?? DBNull.Value
-                    });
-        var rows = await command.ExecuteNonQueryAsync();
-        return new PostgresExecuteResult(Math.Max(rows, 0), Value.Null.Instance, Applied(command, parameters, bound));
+        var rows = 0;
+        IReadOnlyList<Parameter>? applied = parameters;
+        foreach (var part in SplitStatements.Split(sql))
+        {
+            var used = parameters is null
+                ? null
+                : parameters.Where(parameter => SplitStatements.UsesParameter(part, parameter.Name)).ToArray();
+            var rewritten = PostgresBind.ToPostgres(part, used);
+            using var command = Typed.Require().CreateCommand();
+            command.CommandText = rewritten.Sql;
+            Bind(command, rewritten.Bound);
+            if (used is not null)
+                foreach (var parameter in used)
+                    if (parameter.Direction == ParameterDirection.ReturnValue)
+                        command.Parameters.Add(new NpgsqlParameter
+                        {
+                            Direction = DataDirection.ReturnValue,
+                            Value = parameter.Value.ToObject() ?? DBNull.Value
+                        });
+            rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
+            applied = Applied(command, parameters, rewritten.Bound);
+        }
+        return new PostgresExecuteResult(rows, Value.Null.Instance, applied);
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)

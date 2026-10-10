@@ -19,11 +19,18 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
     public StoredProcedureBulkWriteStrategy(string create, string update, string delete) =>
         (this.create, this.update, this.delete) = (create, update, delete);
 
-    public Task<Response> Create(IReadOnlyList<T> items) => Call(create, items);
+    public Task<Response> Create(IReadOnlyList<T> items) => Then(Call(create, items), items, WriteMode.Create);
 
-    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere) => Call(update, items);
+    public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere) => Then(Call(update, items), items, WriteMode.Update);
 
-    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere) => Call(delete, items);
+    public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere) => Then(Call(delete, items), items, WriteMode.Delete);
+
+    async Task<Response> Then(Task<Response> write, IReadOnlyList<T> items, WriteMode mode)
+    {
+        var response = await write;
+        await BulkWriteEnrichment.After(Repo, Options, items, mode);
+        return response;
+    }
 
     Task<Response> Call(string name, IReadOnlyList<T> items)
     {

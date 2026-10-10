@@ -10,13 +10,20 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         (Command, Options) = (command, options);
 
     public Task<Response> Create(IReadOnlyList<T> items) =>
-        Send([.. items.Select(Insert)]);
+        Then(Send([.. items.Select(Insert)]), items, WriteMode.Create);
 
     public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere) =>
-        Send([.. items.Select(item => UpdateCommand(item, byWhere))]);
+        Then(Send([.. items.Select(item => UpdateCommand(item, byWhere))]), items, WriteMode.Update);
 
     public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere) =>
-        Send([.. items.Select(item => DeleteCommand(item, byWhere))]);
+        Then(Send([.. items.Select(item => DeleteCommand(item, byWhere))]), items, WriteMode.Delete);
+
+    async Task<Response> Then(Task<Response> write, IReadOnlyList<T> items, WriteMode mode)
+    {
+        var response = await write;
+        await BulkWriteEnrichment.After(Repo, Options, items, mode);
+        return response;
+    }
 
     Task<Response> Send(IReadOnlyList<BulkCommand> commands)
     {

@@ -146,6 +146,7 @@ export { ArrayReader } from "./ArrayReader.ts";
 export { FirstResultReader } from "./FirstResultReader.ts";
 export { StreamingReader, statementReader } from "./StreamingReader.ts";
 export { splitStatements } from "./splitStatements.ts";
+export { statementUsesParameter } from "./statementUsesParameter.ts";
 export { collectAsync } from "./collectAsync.ts";
 export { CommandMiddlewareHost } from "./CommandMiddlewareHost.ts";
 export {

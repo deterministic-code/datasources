@@ -52,21 +52,6 @@ fn tree_for(readonly: &ReadonlyRepository) -> RepositoryTree {
     ))
 }
 
-pub(crate) fn open_for_bulk(
-    connection: Arc<dyn Connection>,
-    options: CRUDRepositoryOptions,
-) -> Result<(CRUDRepository, CRUDRepositoryStatements)> {
-    let write = options.write.clone();
-    let built = CRUDRepositoryBuilder::parts(connection, options)?;
-    let crud_statements = write_statements(&built.statements);
-    let bulk_statements = write_statements(&built.statements);
-    let mut repo = CRUDRepository::from_built(built, crud_statements)?;
-    if let Some(write) = write {
-        repo.write = write;
-    }
-    Ok((repo, bulk_statements))
-}
-
 impl CRUDRepository {
     pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
         let mut options = create_crud_repository_options::<T>();
@@ -385,6 +370,7 @@ impl CRUDRepository {
             .collect()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn enrichment_into(&self, name: &str) -> bool {
         self.readonly
             .enrichments

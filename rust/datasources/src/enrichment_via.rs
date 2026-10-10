@@ -1,4 +1,6 @@
+use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use std::any::Any;
 use std::sync::Arc;
 
 pub trait EnrichmentVia {
@@ -15,11 +17,15 @@ pub trait EnrichmentVia {
         Arc<dyn IReadonlyRepository>,
         Option<Arc<dyn ICRUDRepository>>,
     );
+
+    fn bulk_repo(&self) -> Option<Arc<BulkCRUDRepository>> {
+        None
+    }
 }
 
 impl<T> EnrichmentVia for Arc<T>
 where
-    T: IReadonlyRepository + 'static,
+    T: IReadonlyRepository + Any + 'static,
 {
     fn into_repos(
         self,
@@ -29,6 +35,11 @@ where
     ) {
         let write = self.clone().to_crud();
         (self, write)
+    }
+
+    fn bulk_repo(&self) -> Option<Arc<BulkCRUDRepository>> {
+        let any: Arc<dyn Any + Send + Sync> = self.clone();
+        any.downcast::<BulkCRUDRepository>().ok()
     }
 }
 

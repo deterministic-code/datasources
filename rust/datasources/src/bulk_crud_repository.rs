@@ -19,6 +19,7 @@ use crate::single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy
 use crate::stored_enrichment::StoredEnrichment;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
+use crate::write_mode::WriteMode;
 use async_trait::async_trait;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
@@ -28,6 +29,7 @@ pub struct BulkCRUDRepository {
     crud: Arc<CRUDRepository>,
     strategy: Arc<dyn BulkWriteStrategy>,
     use_transaction: bool,
+    write: Arc<dyn WriteEnrichmentStrategy>,
 }
 
 impl BulkCRUDRepository {
@@ -44,10 +46,11 @@ impl BulkCRUDRepository {
         options: CRUDRepositoryOptions,
         strategy: Arc<dyn BulkWriteStrategy>,
     ) -> Result<Self> {
-        let use_transaction = options
+        let write = options
             .write
-            .as_ref()
-            .is_some_and(|write| write.use_transaction());
+            .clone()
+            .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
+        let use_transaction = write.use_transaction();
         let crud = Arc::new(CRUDRepository::new(Arc::clone(&connection), options.clone())?);
         let _ = crud.column(
             crud.id_names()
@@ -62,6 +65,7 @@ impl BulkCRUDRepository {
             crud,
             strategy,
             use_transaction,
+            write,
         })
     }
 
@@ -70,7 +74,10 @@ impl BulkCRUDRepository {
     }
 
     pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
-        let use_transaction = write.as_ref().is_some_and(|write| write.use_transaction());
+        let resolved = write
+            .clone()
+            .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
+        let use_transaction = resolved.use_transaction();
         let crud = Arc::new(CRUDRepository::memory_with(items, write));
         let strategy = Arc::new(SingleCommandIBulkWriteStrategy::new());
         strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
@@ -78,6 +85,7 @@ impl BulkCRUDRepository {
             crud,
             strategy,
             use_transaction,
+            write: resolved,
         }
     }
 
@@ -88,12 +96,19 @@ impl BulkCRUDRepository {
         strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
+        let persist_bulk = via.bulk_repo();
         let (via, persist) = via.into_repos();
         self.crud
             .enrichments
             .lock()
             .expect("enrichments")
-            .push(StoredEnrichment::direct(enrichment, via, persist, strategy));
+            .push(StoredEnrichment::direct_bulk(
+                enrichment,
+                via,
+                persist,
+                persist_bulk,
+                strategy,
+            ));
         self
     }
 
@@ -133,6 +148,15 @@ impl BulkCRUDRepository {
             || self.strategy.create(items),
         )
         .await?;
+        if self.strategy.persist_children() {
+            crate::bulk_write_enrichment::after_bulk_write(
+                Some(&self.write),
+                Some(&self.crud.enrichments),
+                items,
+                WriteMode::Create,
+            )
+            .await?;
+        }
         Ok(items.to_vec())
     }
 
@@ -141,12 +165,23 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        Self::in_transaction(
+        let response = Self::in_transaction(
             self.use_transaction,
             Arc::clone(&self.crud.connection),
             || self.strategy.update(items, by_where),
         )
-        .await
+        .await?;
+        if self.strategy.persist_children() {
+            let mut owned = items.to_vec();
+            crate::bulk_write_enrichment::after_bulk_write(
+                Some(&self.write),
+                Some(&self.crud.enrichments),
+                &mut owned,
+                WriteMode::Update,
+            )
+            .await?;
+        }
+        Ok(response)
     }
 
     pub async fn delete_bulk(
@@ -154,12 +189,23 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        Self::in_transaction(
+        let response = Self::in_transaction(
             self.use_transaction,
             Arc::clone(&self.crud.connection),
             || self.strategy.delete(items, by_where),
         )
-        .await
+        .await?;
+        if self.strategy.persist_children() {
+            let mut owned = items.to_vec();
+            crate::bulk_write_enrichment::after_bulk_write(
+                Some(&self.write),
+                Some(&self.crud.enrichments),
+                &mut owned,
+                WriteMode::Delete,
+            )
+            .await?;
+        }
+        Ok(response)
     }
 }
 

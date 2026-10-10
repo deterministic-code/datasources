@@ -1,3 +1,4 @@
+use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
@@ -9,6 +10,7 @@ pub(crate) struct StoredEnrichment {
     pub enrichment: Enrichment,
     pub via: Arc<dyn IReadonlyRepository>,
     pub persist: Option<Arc<dyn ICRUDRepository>>,
+    pub persist_bulk: Option<Arc<BulkCRUDRepository>>,
     pub link: Option<Arc<dyn ICRUDRepository>>,
     pub strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     linked: bool,
@@ -21,10 +23,21 @@ impl StoredEnrichment {
         persist: Option<Arc<dyn ICRUDRepository>>,
         strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
     ) -> Self {
+        Self::direct_bulk(enrichment, via, persist, None, strategy)
+    }
+
+    pub(crate) fn direct_bulk(
+        enrichment: Enrichment,
+        via: Arc<dyn IReadonlyRepository>,
+        persist: Option<Arc<dyn ICRUDRepository>>,
+        persist_bulk: Option<Arc<BulkCRUDRepository>>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
         Self {
             enrichment,
             via,
             persist,
+            persist_bulk,
             link: None,
             strategy,
             linked: false,
@@ -41,6 +54,7 @@ impl StoredEnrichment {
             enrichment,
             via,
             persist: None,
+            persist_bulk: None,
             link: Some(link),
             strategy,
             linked: true,
@@ -79,6 +93,7 @@ impl Clone for StoredEnrichment {
             enrichment: self.enrichment.clone(),
             via: self.via.clone(),
             persist: self.persist.clone(),
+            persist_bulk: self.persist_bulk.clone(),
             link: self.link.clone(),
             strategy: self.strategy.clone(),
             linked: self.linked,

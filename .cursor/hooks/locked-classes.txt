@@ -7,8 +7,8 @@ ICRUDRepository
 CRUDRepository
 IConnection
 Connection
---IDataource
---Datasource
+IDataource
+Datasource
 DatasourceFactory
 IReader
 Reader
@@ -22,3 +22,4 @@ TransformConverterMapper
 RowTypeMapper
 IFlatToNestedMapper
 FlatToNestedMapper
+BulkCRUDRepository

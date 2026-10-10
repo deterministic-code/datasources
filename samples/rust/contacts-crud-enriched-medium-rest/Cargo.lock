@@ -350,6 +350,7 @@ dependencies = [
 name = "contacts-crud-enriched-medium-rest"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "datasources",
  "datasources-mysql",
  "datasources-postgres",

@@ -4,7 +4,8 @@ use crate::statement_renderer::SqliteStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
-    DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement, Statement,
+    DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement, split_statements,
+    statement_uses_parameter, Statement,
     StatementKind, StatementTextRenderer, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
@@ -115,15 +116,23 @@ impl Command for SqliteCommand {
                         ));
                     }
                     connection.ensure_open()?;
-                    let result = SqliteCommand::execute_sql(
-                        &connection,
-                        &sql,
-                        &parameters_to_map(params.as_deref()),
-                    )?;
+                    let map = parameters_to_map(params.as_deref());
+                    let mut rows_affected = 0;
+                    let mut result = Value::Null;
+                    for part in split_statements(&sql) {
+                        let used = map
+                            .iter()
+                            .filter(|(name, _)| statement_uses_parameter(&part, name))
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect();
+                        let executed = SqliteCommand::execute_sql(&connection, &part, &used)?;
+                        rows_affected += executed.rows_affected;
+                        result = executed.result;
+                    }
                     Ok((
                         Response::new(
-                            result.result,
-                            result.rows_affected,
+                            result,
+                            rows_affected,
                             params.map(|list| list.to_vec()),
                         ),
                         vec![],

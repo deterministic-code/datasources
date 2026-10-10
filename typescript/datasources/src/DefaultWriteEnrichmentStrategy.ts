@@ -58,10 +58,58 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     await this.walk(tree.parent.value, items, mode);
   };
 
+  persistBulk = async (tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void> => {
+    if (mode === "delete") return this.persist(tree, items, mode);
+    await this.walkBulk(tree.parent.value, items, mode);
+  };
+
   private walk = async (host: object, parents: T[], mode: WriteMode): Promise<void> => {
     const entries = enrichmentsOf(host);
     if (!entries) return;
     for (const entry of entries) await this.persistEntry(entry, parents, mode);
+  };
+
+  private walkBulk = async (host: object, parents: T[], mode: WriteMode): Promise<void> => {
+    const entries = enrichmentsOf(host);
+    if (!entries) return;
+    for (const entry of entries) await this.persistEntryBulk(entry, parents, mode);
+  };
+
+  private persistEntryBulk = async (
+    entry: StoredEnrichment,
+    parents: T[],
+    mode: WriteMode,
+  ): Promise<void> => {
+    const enrichment = entry.enrichment;
+    const type = enrichment.type ?? EnrichmentPropertyType.Object;
+    if (type === EnrichmentPropertyType.Custom)
+      throw new DatasourceError(`Unsupported enrichment type "${type}"`);
+    if (enrichment.association) {
+      const writer = linkWriter(entry, enrichment.destinationProperty);
+      for (const parent of parents) {
+        if (this.skip(parent, enrichment.destinationProperty, mode)) continue;
+        await dispatch(mode, {
+          create: () => this.createStrategy.createLinked(writer, enrichment, parent),
+          update: () => this.updateStrategy.updateLinked(writer, enrichment, parent),
+          delete: () => this.deleteStrategy.deleteLinked(writer, enrichment, parent),
+        });
+      }
+      return;
+    }
+    if (type === EnrichmentPropertyType.List && enrichment.relatedProperty) return;
+    if (type !== EnrichmentPropertyType.List && type !== EnrichmentPropertyType.Dictionary) return;
+    const writer = childWriter(entry, enrichment.destinationProperty);
+    const ready = parents.filter((parent) => !this.skip(parent, enrichment.destinationProperty, mode));
+    const children = ready.flatMap((parent) => this.createStrategy.collectChildren(writer, enrichment, parent));
+    if (children.length === 0) return;
+    const bulk = writer as ICRUDRepository<object> & { createBulk?: (items: object[]) => Promise<object[]>; updateBulk?: (items: object[]) => Promise<unknown> };
+    if (mode === "create") {
+      if (bulk.createBulk) await bulk.createBulk(children);
+      else for (const child of children) await writer.create(child);
+      return;
+    }
+    if (bulk.updateBulk) await bulk.updateBulk(children);
+    else for (const child of children) await writer.update(child);
   };
 
   private persistEntry = async (

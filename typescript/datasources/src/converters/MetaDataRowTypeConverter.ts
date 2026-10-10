@@ -54,6 +54,14 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
     const cells: Cells = {};
     for (const [key, value] of Object.entries(row as Record<string, Cell | object>)) {
       if (Array.isArray(value)) continue;
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        !(value instanceof Date) &&
+        !(value instanceof Uint8Array) &&
+        !this.references.has(key)
+      )
+        continue;
       if (this.references.has(key)) {
         const id = scalarId(value);
         if (id !== undefined && id !== null) cells[this.referenceColumns.map(key)] = this.converted(key, id);

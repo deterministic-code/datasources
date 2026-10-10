@@ -217,7 +217,7 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<R
 
 ## Remarks
 
-An empty list does not execute. The provider must accept several statements in one command. Nested persist still runs through the repository write strategy, separate from this batch.
+An empty list does not execute. The provider must accept several statements in one command. After the parent batch, list and dictionary enrichments registered with `AddEnriched` are written in one child bulk call when the related repository is a [BulkCRUDRepository](./bulk-repository.md). Parent ids must already be assigned. Object fills stay read-time lookups.
 
 ## Examples
 
@@ -229,5 +229,16 @@ An empty list does not execute. The provider must accept several statements in o
 ```rust rust/datasources/src/tests/bulk_write_strategy.rs#batch_command_i_bulk_write_strategy_joins_statements
 ```
 ```typescript typescript/datasources/src/BulkWriteStrategy.test.ts#batch-commands-joins-statements
+```
+:::
+
+### Persist list children
+
+::: example
+```csharp csharp/Datasources.Tests/BulkWriteStrategyTests.cs#BatchPersistsChildrenInOneCommand
+```
+```rust rust/datasources/src/tests/bulk_write_strategy.rs#batch_persists_children_in_one_command
+```
+```typescript typescript/datasources/src/BulkWriteStrategy.test.ts#batch-persists-children-in-one-command
 ```
 :::

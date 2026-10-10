@@ -10,7 +10,14 @@ use std::sync::{Arc, Mutex};
 use tokio_postgres::NoTls;
 
 pub(crate) fn map_err(error: tokio_postgres::Error) -> DatasourceError {
-    DatasourceError::message(error.to_string())
+    let mut text = error.to_string();
+    let mut current = std::error::Error::source(&error);
+    while let Some(next) = current {
+        text.push_str(": ");
+        text.push_str(&next.to_string());
+        current = next.source();
+    }
+    DatasourceError::message(text)
 }
 
 pub struct PostgresConnection {

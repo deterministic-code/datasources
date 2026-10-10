@@ -23,6 +23,9 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
     public Task Persist(IRepositoryTree tree, IList<T> items, WriteMode mode) =>
         Walk(tree.Parent.Value, items, mode);
 
+    public Task PersistBulk(IRepositoryTree tree, IList<T> items, WriteMode mode) =>
+        mode is WriteMode.Delete ? Persist(tree, items, mode) : WalkBulk(tree.Parent.Value, items, mode);
+
     protected virtual bool SkipUnloaded => false;
 
     async Task Walk(object host, IList<T> parents, WriteMode mode)
@@ -30,6 +33,36 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         if (host is not IEnrichmentHost enriched) return;
         foreach (var entry in enriched.Enrichments)
             await PersistEntry(entry, parents, mode);
+    }
+
+    async Task WalkBulk(object host, IList<T> parents, WriteMode mode)
+    {
+        if (host is not IEnrichmentHost enriched) return;
+        foreach (var entry in enriched.Enrichments)
+            await PersistEntryBulk(entry, parents, mode);
+    }
+
+    async Task PersistEntryBulk(StoredEnrichment entry, IList<T> parents, WriteMode mode)
+    {
+        if (entry.Enrichment.Type is EnrichmentPropertyType.Custom)
+            throw new DatasourceException($"Unsupported enrichment type \"{entry.Enrichment.Type}\"");
+        var stored = (StoredEnrichment<T>)entry;
+        if (entry.Enrichment is { Association: { } } enrichment)
+        {
+            foreach (var parent in parents)
+            {
+                if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
+                await stored.WriteLinked(create, update, delete, mode, parent);
+            }
+            return;
+        }
+        if (entry.Enrichment is { Type: EnrichmentPropertyType.List, RelatedProperty: not null })
+            return;
+        if (entry.Enrichment.Type is not (EnrichmentPropertyType.List or EnrichmentPropertyType.Dictionary))
+            return;
+        var ready = parents.Where(parent => !Skip(parent, entry.Enrichment.DestinationProperty, mode)).ToList();
+        if (ready.Count == 0) return;
+        await stored.WriteChildrenBulk(create, update, mode, ready);
     }
 
     async Task PersistEntry(StoredEnrichment entry, IList<T> parents, WriteMode mode)

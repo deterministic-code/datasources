@@ -7,7 +7,13 @@ type FieldSource = Record<string, string | number | boolean | bigint | null | ob
 
 export const fieldNamesOf = <T>(type: Constructable<T>): string[] => {
   const instance = new type() as FieldSource;
-  return Object.keys(instance).filter((key) => !Array.isArray(instance[key]));
+  return Object.keys(instance).filter((key) => {
+    const value = instance[key];
+    if (Array.isArray(value)) return false;
+    if (value !== null && typeof value === "object" && !(value instanceof Date) && !(value instanceof Uint8Array))
+      return "id" in value || "Id" in value;
+    return true;
+  });
 };
 
 export const createReadonlyRepositoryMappingOptions = <T>(

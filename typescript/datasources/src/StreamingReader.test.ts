@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitStatements, statementReader, StreamingReader } from "./index.ts";
+import { splitStatements, statementUsesParameter, statementReader, StreamingReader } from "./index.ts";
 
 describe("splitStatements", () => {
   it("splits on semicolons outside quotes and comments", () => {
@@ -26,6 +26,17 @@ describe("splitStatements", () => {
       "SELECT 1",
       "/* ; */ SELECT 2",
     ]);
+    const mysql = "CREATE PROCEDURE add_user()\nBEGIN\n  INSERT INTO t VALUES (1);\nEND";
+    expect(splitStatements(mysql)).toEqual([mysql]);
+    const postgres =
+      "CREATE PROCEDURE bulk_create_user(payload jsonb)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  INSERT INTO t VALUES (1);\nEND;\n$$";
+    expect(splitStatements(postgres)).toEqual([postgres]);
+  });
+
+  it("matches a parameter token at a word boundary", () => {
+    expect(statementUsesParameter("INSERT INTO t (is_enabled) VALUES ($is_enabled__10)", "is_enabled__10")).toBe(true);
+    expect(statementUsesParameter("INSERT INTO t (is_enabled) VALUES ($is_enabled__10)", "is_enabled__1")).toBe(false);
+    expect(statementUsesParameter("$is_enabled__1", "is_enabled__1")).toBe(true);
   });
 });
 

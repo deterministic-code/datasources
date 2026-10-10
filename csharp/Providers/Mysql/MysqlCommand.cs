@@ -77,9 +77,18 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
 
     async Task<MysqlExecuteResult> RunSql(string sql, IReadOnlyList<Parameter>? parameters)
     {
-        using var command = Bind(sql, parameters);
-        var rows = await command.ExecuteNonQueryAsync();
-        return new MysqlExecuteResult(Math.Max(rows, 0), Value.Null.Instance, Applied(command, parameters));
+        var rows = 0;
+        IReadOnlyList<Parameter>? applied = parameters;
+        foreach (var part in SplitStatements.Split(sql))
+        {
+            var used = parameters is null
+                ? null
+                : parameters.Where(parameter => SplitStatements.UsesParameter(part, parameter.Name)).ToArray();
+            using var command = Bind(part, used);
+            rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
+            applied = Applied(command, parameters);
+        }
+        return new MysqlExecuteResult(rows, Value.Null.Instance, applied);
     }
 
     async Task<StreamingReader> Open(string sql, Row parameters)

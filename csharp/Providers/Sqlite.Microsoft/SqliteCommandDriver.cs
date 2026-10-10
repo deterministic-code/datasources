@@ -60,9 +60,17 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
 
     async Task<SqliteExecuteResult> Run(string sql, IReadOnlyList<Parameter>? parameters)
     {
-        using var command = Bind(sql, Helpers.ParametersToRecord(parameters));
-        var rows = await command.ExecuteNonQueryAsync();
-        return new SqliteExecuteResult(Math.Max(rows, 0), Value.Null.Instance, parameters);
+        var rows = 0;
+        foreach (var part in SplitStatements.Split(sql))
+        {
+            var used = new Row();
+            foreach (var (name, value) in Helpers.ParametersToRecord(parameters))
+                if (SplitStatements.UsesParameter(part, name))
+                    used[name] = value;
+            using var command = Bind(part, used);
+            rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
+        }
+        return new SqliteExecuteResult(rows, Value.Null.Instance, parameters);
     }
 
     static (string[] Names, bool[] Booleans) Columns(Microsoft.Data.Sqlite.SqliteDataReader reader)
