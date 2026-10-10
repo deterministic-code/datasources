@@ -1,14 +1,18 @@
-DROP PROCEDURE IF EXISTS bulk_create_user(jsonb)
+DROP PROCEDURE IF EXISTS bulk_create_user(jsonb, jsonb)
 ---
-CREATE PROCEDURE bulk_create_user(payload jsonb)
+CREATE PROCEDURE bulk_create_user(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  INSERT INTO "users" (id, username, password, is_enabled, created, updated)
-  SELECT id, username, password, is_enabled, created, decode(updated, 'base64')
-  FROM jsonb_to_recordset(payload) AS x(
-    id int, username text, password text, is_enabled boolean, created timestamptz, updated text
-  );
+  WITH inserted AS (
+    INSERT INTO "users" (username, password, is_enabled, created, updated)
+    SELECT username, password, is_enabled, created, decode(updated, 'base64')
+    FROM jsonb_to_recordset(payload) AS x(
+      username text, password text, is_enabled boolean, created timestamptz, updated text
+    )
+    RETURNING id
+  )
+  SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
 ---

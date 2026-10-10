@@ -239,7 +239,7 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<R
 
 ## Remarks
 
-The payload is a JSON array of objects, one object per row, with column names in order. An empty list does not execute. The procedure is an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md) with a single `payload` parameter. After the parent call, list and dictionary enrichments registered with `AddEnriched` are written in one child bulk call when the related repository is a [BulkCRUDRepository](./bulk-repository.md). Parent ids must already be assigned.
+The payload is a JSON array of objects, one object per row, with column names in order. Create omits an unassigned identity column. An empty list does not execute. Bulk create runs in a transaction so generated keys from one insert stay consecutive and child writes see them. The create procedure is an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md) with `payload` and an `ids` input/output JSON array of generated keys in payload order; the strategy writes those values onto the items before child bulk writes. Update and delete send only `payload`. After the parent call, list and dictionary enrichments registered with `AddEnriched` are written in one child bulk call when the related repository is a [BulkCRUDRepository](./bulk-repository.md).
 
 ## Examples
 

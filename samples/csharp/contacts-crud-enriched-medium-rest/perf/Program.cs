@@ -67,7 +67,7 @@ try
     contactsRepo.AddEnriched(new("settings", "id", "contactId", "value", EnrichmentPropertyType.Dictionary), settingsRepo);
     var contacts = Enumerable.Range(1, rows).Select(id => new Contact
     {
-        id = id,
+        id = strategyName == "batch" ? id : 0,
         uuid = $"00000000-0000-0000-0000-{id:x12}",
         created = now,
         updated = now,
@@ -76,8 +76,8 @@ try
         firstName = $"First{id}",
         lastName = $"Last{id}",
         email = $"c{id}@ex.test",
-        addresses = [new Address { id = id, uuid = $"a{id}", created = now, updated = now, version = [1], addressTypeId = 1, line1 = "1 Main", city = "Town" }],
-        phones = [new Phone { id = id, uuid = $"p{id}", created = now, updated = now, version = [1], phoneTypeId = 1, number = "5550000", label = "m" }],
+        addresses = [new Address { id = strategyName == "batch" ? id : 0, uuid = $"a{id}", created = now, updated = now, version = [1], addressTypeId = 1, line1 = "1 Main", city = "Town" }],
+        phones = [new Phone { id = strategyName == "batch" ? id : 0, uuid = $"p{id}", created = now, updated = now, version = [1], phoneTypeId = 1, number = "5550000", label = "m" }],
         settings = new Dictionary<string, string> { ["theme"] = "light" }
     }).ToList();
     var createMs = await Time(() => Each(contacts, batch => contactsRepo.Create(batch)));

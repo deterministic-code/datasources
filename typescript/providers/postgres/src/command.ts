@@ -107,14 +107,14 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     return {
       rowsAffected: queried.rowCount ?? queried.rows.length,
       result: null,
-      parameters: parameters?.map((parameter) =>
-        parameter.direction &&
-        parameter.direction !== ParameterDirection.Input &&
-        row &&
-        parameter.name in row
-          ? { ...parameter, value: row[parameter.name] as Scalar }
-          : parameter,
-      ),
+      parameters: parameters?.map((parameter) => {
+        if (!parameter.direction || parameter.direction === ParameterDirection.Input || !row)
+          return parameter;
+        const cells = row as Record<string, Scalar | object>;
+        const cell = cells[parameter.name] ?? cells[parameter.name.toLowerCase()];
+        if (cell === undefined) return parameter;
+        return { ...parameter, value: cellValue(cell) };
+      }),
     };
   }
 
@@ -123,3 +123,6 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
     return this.connection.require().rows(text, values);
   }
 }
+
+const cellValue = (cell: Scalar | object): Scalar =>
+  cell !== null && typeof cell === "object" ? JSON.stringify(cell) : cell;

@@ -167,7 +167,7 @@ try {
   const contacts = Array.from({ length: rows }, (_, i) => {
     const id = i + 1;
     return Object.assign(new Contact(), {
-      id,
+      ...(strategyName === "batch" ? { id } : {}),
       uuid: `00000000-0000-0000-0000-${id.toString(16).padStart(12, "0")}`,
       created: now,
       updated: now,
@@ -177,8 +177,8 @@ try {
       lastName: `Last${id}`,
       email: `c${id}@ex.test`,
       notes: "",
-      addresses: [Object.assign(new Address(), { id, uuid: `a${id}`, created: now, updated: now, version: new Uint8Array([1]), addressTypeId: 1, line1: "1 Main", city: "Town" })],
-      phones: [Object.assign(new Phone(), { id, uuid: `p${id}`, created: now, updated: now, version: new Uint8Array([1]), phoneTypeId: 1, number: "5550000", label: "m" })],
+      addresses: [Object.assign(new Address(), { ...(strategyName === "batch" ? { id } : {}), uuid: `a${id}`, created: now, updated: now, version: new Uint8Array([1]), addressTypeId: 1, line1: "1 Main", city: "Town" })],
+      phones: [Object.assign(new Phone(), { ...(strategyName === "batch" ? { id } : {}), uuid: `p${id}`, created: now, updated: now, version: new Uint8Array([1]), phoneTypeId: 1, number: "5550000", label: "m" })],
       settings: { theme: "light" },
     });
   });

@@ -82,14 +82,17 @@ async fn work(
     let created = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let mut users: Vec<Row> = (1..=rows as i64)
         .map(|id| {
-            row(&[
-                ("id", Value::Int(id)),
+            let mut pairs = vec![
                 ("username", Value::from(format!("user{id}"))),
                 ("password", Value::from("hash")),
                 ("is_enabled", schema::flag(provider, true)),
                 ("created", created.into()),
                 ("updated", Value::from(vec![1_u8, 2, 3])),
-            ])
+            ];
+            if strategy_name == "batch" {
+                pairs.insert(0, ("id", Value::Int(id)));
+            }
+            row(&pairs)
         })
         .collect();
     let create_started = Instant::now();

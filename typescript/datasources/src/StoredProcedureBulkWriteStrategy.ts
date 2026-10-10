@@ -11,6 +11,8 @@ import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { afterBulkWrite } from "./BulkWriteEnrichment.ts";
+import { ParameterDirection } from "./ParameterDirection.ts";
+import type { Parameter } from "./Parameter.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
 
@@ -75,7 +77,7 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
     private readonly deleteName: string,
   ) {}
 
-  create = (items: T[]): Promise<Response> => this.then(this.call(this.createName, items), items, "create");
+  create = (items: T[]): Promise<Response> => this.then(this.call(this.createName, items, true), items, "create");
 
   update = (items: T[], _byWhere: IWhere | undefined): Promise<Response> =>
     this.then(this.call(this.updateName, items), items, "update");
@@ -89,21 +91,43 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
     return response;
   };
 
-  private call = (name: string, items: T[]): Promise<Response> => {
-    if (items.length === 0) return Promise.resolve(empty());
-    const payload = { name: "payload", value: json(items.map(this.rowOf)) };
-    return execute(this.command, new ExecuteStoredProcedureStatement(name, [payload]), [payload]);
+  private call = async (name: string, items: T[], generated = false): Promise<Response> => {
+    if (items.length === 0) return empty();
+    const payload = { name: "payload", value: json(items.map((item) => this.rowOf(item, generated))) };
+    const parameters: Parameter[] = generated && this.wantsIds(items)
+      ? [payload, { name: "ids", value: null, direction: ParameterDirection.InputOutput }]
+      : [payload];
+    const response = await execute(this.command, new ExecuteStoredProcedureStatement(name, parameters), parameters);
+    if (generated) this.applyIds(items, response.parameters);
+    return response;
   };
 
-  private rowOf = (item: T): Cells => {
+  private ids = (): readonly string[] => this.options.ids ?? this.repo.ids ?? ["id"];
+
+  private rowOf = (item: T, create = false): Cells => {
     const stored = this.reverse(item);
     const statements = repositoryParts(this.command.connection, this.options).statements;
     const row: Cells = {};
     for (const name of statements.readColumns) {
+      if (create && this.identity(name) && !assigned(stored[name] ?? stored[this.ids()[0]!])) continue;
       const match = Object.entries(stored).find(([key]) => this.column(key) === name);
       row[name] = match?.[1] ?? null;
     }
     return row;
+  };
+
+  private identity = (column: string): boolean => this.ids().length === 1 && this.ids()[0] === column;
+
+  private wantsIds = (items: T[]): boolean =>
+    this.ids().length === 1 && items.some((item) => !assigned(this.reverse(item)[this.ids()[0]!]));
+
+  private applyIds = (items: T[], parameters?: Parameter[]): void => {
+    if (this.ids().length !== 1) return;
+    const found = parameters?.find((parameter) => parameter.name === "ids");
+    const list = parseIds(found?.value);
+    const column = this.ids()[0]!;
+    for (let index = 0; index < items.length && index < list.length; index++)
+      stamp(items[index], column, list[index]!);
   };
 
   private column = (property: string): string => this.options.propertyMappings?.map(property) ?? property;
@@ -114,3 +138,30 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
     return this.options.rowConverter ? this.options.rowConverter.reverseConvert(row) : row;
   };
 }
+
+const assigned = (value: Cell | undefined): boolean => {
+  if (value === null || value === undefined) return false;
+  if (value === 0 || value === 0n) return false;
+  if (typeof value === "string") return value.length > 0;
+  return true;
+};
+
+const parseIds = (value: Cell | undefined): number[] => {
+  const text =
+    typeof value === "string" ? value.trim()
+    : typeof value === "number" || typeof value === "bigint" ? String(value)
+    : "";
+  if (text === "" || text === "[]" || text === "null") return [];
+  return text
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => Number(part));
+};
+
+const stamp = <T extends object>(item: T, column: string, id: number): void => {
+  const key = column in item ? column : "id" in item ? "id" : "Id" in item ? "Id" : column;
+  (item as Record<string, Cell>)[key] = id;
+};

@@ -143,20 +143,23 @@ impl BulkCRUDRepository {
 
     pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Vec<Row>> {
         Self::in_transaction(
-            self.use_transaction,
+            self.use_transaction || !items.is_empty(),
             Arc::clone(&self.crud.connection),
-            || self.strategy.create(items),
+            || async {
+                self.strategy.create(items).await?;
+                if self.strategy.persist_children() {
+                    crate::bulk_write_enrichment::after_bulk_write(
+                        Some(&self.write),
+                        Some(&self.crud.enrichments),
+                        items,
+                        WriteMode::Create,
+                    )
+                    .await?;
+                }
+                Ok(())
+            },
         )
         .await?;
-        if self.strategy.persist_children() {
-            crate::bulk_write_enrichment::after_bulk_write(
-                Some(&self.write),
-                Some(&self.crud.enrichments),
-                items,
-                WriteMode::Create,
-            )
-            .await?;
-        }
         Ok(items.to_vec())
     }
 

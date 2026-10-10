@@ -170,8 +170,14 @@ async fn work(
     );
     let mut contacts: Vec<Row> = (1..=rows as i64)
         .map(|id| {
-            row(&[
-                ("id", Value::Int(id)),
+            let keyed = |pairs: &[(&str, Value)]| {
+                let mut item = row(pairs);
+                if strategy_name == "batch" {
+                    item.insert("id".into(), Value::Int(id));
+                }
+                item
+            };
+            keyed(&[
                 (
                     "uuid",
                     Value::from(format!("00000000-0000-0000-0000-{id:012x}")),
@@ -186,8 +192,7 @@ async fn work(
                 ("notes", Value::from("")),
                 (
                     "addresses",
-                    encode_rows(&[row(&[
-                        ("id", Value::Int(id)),
+                    encode_rows(&[keyed(&[
                         ("uuid", Value::from(format!("a{id}"))),
                         ("created", now.into()),
                         ("updated", now.into()),
@@ -199,8 +204,7 @@ async fn work(
                 ),
                 (
                     "phones",
-                    encode_rows(&[row(&[
-                        ("id", Value::Int(id)),
+                    encode_rows(&[keyed(&[
                         ("uuid", Value::from(format!("p{id}"))),
                         ("created", now.into()),
                         ("updated", now.into()),

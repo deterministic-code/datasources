@@ -162,11 +162,11 @@ async fn stored_procedure_bulk_write_strategy_sends_one_json_call() {
     .unwrap();
     let logs = command.execute_logs.lock().unwrap();
     assert_eq!(logs.len(), 3);
-    assert_eq!(logs[0].0, "CALL bulk_create_parent($payload)");
+    assert_eq!(logs[0].0, "CALL bulk_create_parent($payload, $ids)");
     assert_eq!(logs[0].1[0].name, "payload");
     assert_eq!(
         logs[0].1[0].value,
-        Value::from(r#"[{"id":null,"label":"a"},{"id":null,"label":"b"}]"#)
+        Value::from(r#"[{"label":"a"},{"label":"b"}]"#)
     );
     assert_eq!(logs[1].0, "CALL bulk_update_parent($payload)");
     assert_eq!(
@@ -178,6 +178,34 @@ async fn stored_procedure_bulk_write_strategy_sends_one_json_call() {
         logs[2].1[0].value,
         Value::from(r#"[{"id":1,"label":""},{"id":2,"label":""}]"#)
     );
+}
+
+#[tokio::test]
+async fn stored_procedure_create_writes_generated_ids_onto_items() {
+    let (repo, command) = parents(Arc::new(StoredProcedureBulkWriteStrategy::new(
+        "bulk_create_parent",
+        "bulk_update_parent",
+        "bulk_delete_parent",
+    )));
+    *command.response.lock().unwrap() = crate::Response::new(
+        Value::Null,
+        2,
+        Some(vec![
+            crate::Parameter::new("payload", Value::from("[]")),
+            crate::Parameter::with_direction(
+                "ids",
+                Value::from("[7,8]"),
+                crate::ParameterDirection::InputOutput,
+            ),
+        ]),
+    );
+    let mut created = [
+        row(&[("label", Value::from("a"))]),
+        row(&[("label", Value::from("b"))]),
+    ];
+    repo.create_bulk(&mut created).await.unwrap();
+    assert_eq!(created[0].get("id"), Some(&Value::Int(7)));
+    assert_eq!(created[1].get("id"), Some(&Value::Int(8)));
 }
 
 #[tokio::test]
