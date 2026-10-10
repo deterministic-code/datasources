@@ -24,6 +24,17 @@ repo: CRUDRepository<T>
 
 **Methods**
 
+##### attach(command, options)
+
+Receives the repository command and options. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) ignores them.
+
+```typescript
+attach(command: ICommand, options: CRUDRepositoryOptions<T>): void
+```
+
+- `command` — middleware-wrapped [ICommand](./command.md)
+- `options` — [CRUDRepositoryOptions](./crud-repository.md)
+
 ##### create(items)
 
 Inserts `items`.
@@ -80,6 +91,17 @@ CRUDRepository<T> Repo { get; set; }
 ```
 
 **Methods**
+
+##### Attach(command, options)
+
+Receives the repository command and options. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) ignores them.
+
+```csharp
+void Attach(ICommand command, CRUDRepositoryOptions<T> options)
+```
+
+- `command` — middleware-wrapped [ICommand](./command.md)
+- `options` — [CRUDRepositoryOptions](./crud-repository.md)
 
 ##### Create(items)
 
@@ -138,6 +160,18 @@ fn set_repo(&self, repo: Arc<dyn ICRUDRepository>)
 
 - `repo` — [CRUDRepository](./crud-repository.md)
 
+##### attach(command, options, connection)
+
+Receives the repository command, options, and connection. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) ignores them.
+
+```rust
+fn attach(&self, command: Arc<dyn Command>, options: CRUDRepositoryOptions, connection: Arc<dyn Connection>)
+```
+
+- `command` — middleware-wrapped command
+- `options` — [CRUDRepositoryOptions](./crud-repository.md)
+- `connection` — used to build statements (Rust `Command` has no connection)
+
 ##### create(items)
 
 Inserts `items`.
@@ -179,7 +213,7 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<R
 
 ## Remarks
 
-Pass the strategy to the bulk repository constructor. The orchestrator assigns `Repo` on every strategy. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) and [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) also receive `Command` and `Options`. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) runs one statement per row. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) joins those statements. [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
+Pass the strategy to the bulk repository constructor. The orchestrator assigns `Repo` and calls `Attach` on the strategy interface. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) and [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) keep `Command` and `Options` from that call. [SingleCommandIBulkWriteStrategy](./single-command-i-bulk-write-strategy.md) runs one statement per row. [BatchCommandIBulkWriteStrategy](./batch-command-i-bulk-write-strategy.md) joins those statements. [StoredProcedureBulkWriteStrategy](./stored-procedure-bulk-write-strategy.md) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
 
 ## Examples
 

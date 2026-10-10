@@ -13,6 +13,9 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
     public ICommand Command { get; set; } = null!;
     public CRUDRepositoryOptions<T> Options { get; set; } = null!;
 
+    public void Attach(ICommand command, CRUDRepositoryOptions<T> options) =>
+        (Command, Options) = (command, options);
+
     public StoredProcedureBulkWriteStrategy(string create, string update, string delete) =>
         (this.create, this.update, this.delete) = (create, update, delete);
 

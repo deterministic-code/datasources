@@ -20,6 +20,8 @@ const fold = async <T>(
 export class SingleCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T> {
   repo!: CRUDRepository<T>;
 
+  attach = (): void => {};
+
   create = async (items: T[]): Promise<Response> => {
     for (const item of items) await this.repo.create(item);
     return { result: null, rowsAffected: items.length };

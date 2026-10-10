@@ -8,8 +8,6 @@ import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
-import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
-import { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 
 const isBulkStrategy = <T extends object>(value: object): value is IBulkWriteStrategy<T> =>
@@ -63,17 +61,12 @@ export class BulkCRUDRepository<T extends object = Cells> extends CRUDRepository
     this.strategy = strategy ?? new SingleCommandIBulkWriteStrategy<T>();
     this.transactional = transactional;
     this.strategy.repo = this;
-    const options =
+    this.strategy.attach(
+      this.command(),
       typeof typeOrConnection === "function"
         ? createCRUDRepositoryOptions(typeOrConnection)
-        : parent;
-    if (
-      this.strategy instanceof BatchCommandIBulkWriteStrategy ||
-      this.strategy instanceof StoredProcedureBulkWriteStrategy
-    ) {
-      this.strategy.command = this.command();
-      this.strategy.options = options;
-    }
+        : parent,
+    );
   }
 
   createBulk = async (items: T[]): Promise<T[]> => {

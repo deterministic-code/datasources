@@ -17,10 +17,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         this.bulk = bulk;
         useTransaction = options.Write?.UseTransaction ?? false;
         bulk.Repo = this;
-        if (bulk is BatchCommandIBulkWriteStrategy<T> batch)
-            (batch.Command, batch.Options) = (Command(), options);
-        else if (bulk is StoredProcedureBulkWriteStrategy<T> stored)
-            (stored.Command, stored.Options) = (Command(), options);
+        bulk.Attach(Command(), options);
     }
 
     public async Task<IReadOnlyList<T>> Create(IReadOnlyList<T> items)
