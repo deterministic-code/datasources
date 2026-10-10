@@ -13,6 +13,26 @@ import { SqliteDriver } from "@datasources/sqlite";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { contacts as seedContacts } from "../../../scripts/perf-data.mjs";
+
+type SeedStamp = {
+  id: number;
+  uuid: string;
+  created: string;
+  updated: string;
+  version: number[];
+};
+
+type SeedContact = SeedStamp & {
+  contactSourceId: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  notes: string;
+  addresses: Array<SeedStamp & { addressTypeId: number; line1: string; city: string }>;
+  phones: Array<SeedStamp & { phoneTypeId: number; number: string; label: string }>;
+  settings: Record<string, string>;
+};
 
 class Address {
   id = 0;
@@ -86,15 +106,17 @@ const splitSemi = (sql: string) =>
     .map((part) => part.trim())
     .filter(Boolean);
 
+const batched = strategyName === "batch" || (strategyName === "procedure" && provider === "sqlite");
+
 const of = <T extends object>(create: string, update: string, remove: string): IBulkWriteStrategy<T> | undefined => {
   if (strategyName === "single") return undefined;
-  if (strategyName === "batch") return new BatchCommandIBulkWriteStrategy<T>();
+  if (batched) return new BatchCommandIBulkWriteStrategy<T>();
   if (strategyName === "procedure") return new StoredProcedureBulkWriteStrategy<T>(create, update, remove);
   throw new Error(strategyName);
 };
 
 const each = async <T>(items: T[], write: (batch: T[]) => Promise<unknown>) => {
-  if (strategyName !== "batch") return write(items);
+  if (!batched) return write(items);
   for (let at = 0; at < items.length; at += chunk) await write(items.slice(at, at + chunk));
 };
 
@@ -164,24 +186,23 @@ try {
     { destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" },
     settingsRepo,
   );
-  const contacts = Array.from({ length: rows }, (_, i) => {
-    const id = i + 1;
-    return Object.assign(new Contact(), {
-      ...(strategyName === "batch" ? { id } : {}),
-      uuid: `00000000-0000-0000-0000-${id.toString(16).padStart(12, "0")}`,
-      created: now,
-      updated: now,
-      version: new Uint8Array([1]),
-      contactSourceId: 1,
-      firstName: `First${id}`,
-      lastName: `Last${id}`,
-      email: `c${id}@ex.test`,
-      notes: "",
-      addresses: [Object.assign(new Address(), { ...(strategyName === "batch" ? { id } : {}), uuid: `a${id}`, created: now, updated: now, version: new Uint8Array([1]), addressTypeId: 1, line1: "1 Main", city: "Town" })],
-      phones: [Object.assign(new Phone(), { ...(strategyName === "batch" ? { id } : {}), uuid: `p${id}`, created: now, updated: now, version: new Uint8Array([1]), phoneTypeId: 1, number: "5550000", label: "m" })],
-      settings: { theme: "light" },
-    });
+  const seed = (process.env.PERF_DATA
+    ? JSON.parse(readFileSync(process.env.PERF_DATA, "utf8"))
+    : seedContacts(rows)) as SeedContact[];
+  const stamped = (row: SeedStamp) => ({
+    ...row,
+    created: new Date(row.created),
+    updated: new Date(row.updated),
+    version: Uint8Array.from(row.version),
   });
+  const contacts = seed.map((row) =>
+    Object.assign(new Contact(), {
+      ...stamped(row),
+      addresses: row.addresses.map((address) => Object.assign(new Address(), stamped(address))),
+      phones: row.phones.map((phone) => Object.assign(new Phone(), stamped(phone))),
+      settings: { ...row.settings },
+    }),
+  );
   const createStarted = performance.now();
   await each(contacts, (batch) => contactsRepo.createBulk(batch));
   const createMs = performance.now() - createStarted;
@@ -191,13 +212,23 @@ try {
     phones: await count(connection, "phones"),
     settings: await count(connection, "contact_settings"),
   };
-  if (counts.contacts !== rows || counts.addresses !== rows || counts.phones !== rows || counts.settings !== rows)
+  const each = {
+    addresses: contacts[0]?.addresses.length ?? 0,
+    phones: contacts[0]?.phones.length ?? 0,
+    settings: Object.keys(contacts[0]?.settings ?? {}).length,
+  };
+  if (
+    counts.contacts !== contacts.length ||
+    counts.addresses !== contacts.length * each.addresses ||
+    counts.phones !== contacts.length * each.phones ||
+    counts.settings !== contacts.length * each.settings
+  )
     throw new Error(`create count ${JSON.stringify(counts)}`);
   for (const contact of contacts) {
     contact.notes = "updated";
-    contact.addresses[0]!.city = "City";
-    contact.phones[0]!.label = "w";
-    contact.settings = { theme: "dark" };
+    for (const address of contact.addresses) address.city = "City";
+    for (const phone of contact.phones) phone.label = "w";
+    for (const key of Object.keys(contact.settings)) contact.settings[key] = "dark";
   }
   const updateStarted = performance.now();
   await each(contacts, (batch) => contactsRepo.updateBulk(batch));
@@ -208,12 +239,12 @@ try {
       language: "typescript",
       provider,
       strategy: strategyName,
-      rows,
-      chunk: strategyName === "batch" ? chunk : rows,
+      rows: contacts.length,
+      chunk: batched ? Math.min(chunk, contacts.length) : contacts.length,
       createMs,
       updateMs,
-      createPerSec: rows / (createMs / 1000),
-      updatePerSec: rows / (updateMs / 1000),
+      createPerSec: contacts.length / (createMs / 1000),
+      updatePerSec: contacts.length / (updateMs / 1000),
       counts,
     })}\n`,
   );

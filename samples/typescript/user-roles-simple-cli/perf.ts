@@ -5,7 +5,17 @@ import { SqliteDriver } from "@datasources/sqlite";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { users as seedUsers } from "../../../scripts/perf-data.mjs";
 import { migrate } from "./src/migrate.ts";
+
+type SeedUser = {
+  id: number;
+  username: string;
+  password: string;
+  is_enabled: boolean;
+  created: string;
+  updated: number[];
+};
 
 class User {
   id = 0;
@@ -36,16 +46,18 @@ const split = (sql: string) =>
     .map((part) => part.trim())
     .filter(Boolean);
 
+const batched = strategyName === "batch" || (strategyName === "procedure" && provider === "sqlite");
+
 const strategy = (): IBulkWriteStrategy<User> | undefined => {
   if (strategyName === "single") return undefined;
-  if (strategyName === "batch") return new BatchCommandIBulkWriteStrategy<User>();
+  if (batched) return new BatchCommandIBulkWriteStrategy<User>();
   if (strategyName === "procedure")
     return new StoredProcedureBulkWriteStrategy<User>("bulk_create_user", "bulk_update_user", "bulk_delete_user");
   throw new Error(strategyName);
 };
 
 const each = async <T>(items: T[], write: (batch: T[]) => Promise<unknown>) => {
-  if (strategyName !== "batch") return write(items);
+  if (!batched) return write(items);
   for (let at = 0; at < items.length; at += chunk) await write(items.slice(at, at + chunk));
 };
 
@@ -65,21 +77,20 @@ try {
     for (const sql of split(readFileSync(resolve(shared, `bulk-${provider}.sql`), "utf8")))
       await command.executeNative(new Native(sql));
   const usersRepo = new BulkCRUDRepository(connection, { type: User, entity: "users" }, strategy());
-  const createdAt = new Date("2024-01-01T00:00:00.000Z");
-  const users = Array.from({ length: rows }, (_, i) =>
+  const seed = (process.env.PERF_DATA
+    ? JSON.parse(readFileSync(process.env.PERF_DATA, "utf8"))
+    : seedUsers(rows)) as SeedUser[];
+  const users = seed.map((row) =>
     Object.assign(new User(), {
-      ...(strategyName === "batch" ? { id: i + 1 } : {}),
-      username: `user${i + 1}`,
-      password: "hash",
-      is_enabled: true,
-      created: createdAt,
-      updated: new Uint8Array([1, 2, 3]),
+      ...row,
+      created: new Date(row.created),
+      updated: Uint8Array.from(row.updated),
     }),
   );
   const createStarted = performance.now();
   await each(users, (batch) => usersRepo.createBulk(batch));
   const createMs = performance.now() - createStarted;
-  if ((await count(connection, "users")) !== rows) throw new Error("create count");
+  if ((await count(connection, "users")) !== users.length) throw new Error("create count");
   for (const user of users) user.is_enabled = false;
   const updateStarted = performance.now();
   await each(users, (batch) => usersRepo.updateBulk(batch));
@@ -90,13 +101,13 @@ try {
       language: "typescript",
       provider,
       strategy: strategyName,
-      rows,
-      chunk: strategyName === "batch" ? chunk : rows,
+      rows: users.length,
+      chunk: batched ? Math.min(chunk, users.length) : users.length,
       createMs,
       updateMs,
-      createPerSec: rows / (createMs / 1000),
-      updatePerSec: rows / (updateMs / 1000),
-      counts: { users: rows },
+      createPerSec: users.length / (createMs / 1000),
+      updatePerSec: users.length / (updateMs / 1000),
+      counts: { users: users.length },
     })}\n`,
   );
 } finally {

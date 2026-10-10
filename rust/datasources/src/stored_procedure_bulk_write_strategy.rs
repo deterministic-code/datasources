@@ -119,7 +119,7 @@ impl StoredProcedureBulkWriteStrategy {
             .map(|item| self.row_of(item, generated))
             .collect::<Result<Vec<_>>>()?;
         let payload = Parameter::new("payload", json(&rows));
-        let parameters = if generated && self.wants_ids(items) {
+        let parameters = if generated && self.ids().len() == 1 {
             vec![
                 payload,
                 Parameter::with_direction("ids", Value::Null, ParameterDirection::InputOutput),
@@ -133,10 +133,6 @@ impl StoredProcedureBulkWriteStrategy {
             .execute_statement(&statement, Some(&parameters))
             .await?;
         Ok(response)
-    }
-
-    fn wants_ids(&self, items: &[Row]) -> bool {
-        self.ids().len() == 1 && items.iter().any(|item| !assigned(item.get(self.ids()[0].as_str())))
     }
 
     fn ids(&self) -> &[String] {

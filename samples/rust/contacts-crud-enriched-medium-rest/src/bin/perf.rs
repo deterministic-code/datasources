@@ -1,4 +1,4 @@
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use datasources::{
     encode_rows, BatchCommandIBulkWriteStrategy, BulkCRUDRepository, BulkWriteStrategy,
     CRUDRepositoryOptions, DictionaryMapper, Driver, Enrichment, EnrichmentPropertyType, Native,
@@ -78,9 +78,11 @@ async fn work(
             )
             .await?;
     }
+    let batched = batched(provider, strategy_name);
     let settings_repo = Arc::new(repo(
         Arc::clone(&connection),
         strategy_name,
+        batched,
         "ContactSettings",
         &[("ContactSettings", "contact_settings")],
         &[("contactId", "contact_id")],
@@ -93,6 +95,7 @@ async fn work(
     let addresses_repo = Arc::new(repo(
         Arc::clone(&connection),
         strategy_name,
+        batched,
         "Address",
         &[("Address", "addresses")],
         &[("contactId", "contact_id"), ("addressTypeId", "address_type_id")],
@@ -108,6 +111,7 @@ async fn work(
     let phones_repo = Arc::new(repo(
         Arc::clone(&connection),
         strategy_name,
+        batched,
         "Phone",
         &[("Phone", "phones")],
         &[("contactId", "contact_id"), ("phoneTypeId", "phone_type_id")],
@@ -123,6 +127,7 @@ async fn work(
     let mut contacts_repo = repo(
         Arc::clone(&connection),
         strategy_name,
+        batched,
         "Contact",
         &[("Contact", "contacts")],
         &[
@@ -168,16 +173,105 @@ async fn work(
         settings_repo,
         None,
     );
-    let mut contacts: Vec<Row> = (1..=rows as i64)
+    let mut contacts = load_contacts(rows, now)?;
+    let create_started = Instant::now();
+    create_chunks(&contacts_repo, &mut contacts, batched, chunk).await?;
+    let create_ms = create_started.elapsed().as_secs_f64() * 1000.0;
+    let counts = serde_json::json!({
+        "contacts": count(command.as_ref(), "contacts").await?,
+        "addresses": count(command.as_ref(), "addresses").await?,
+        "phones": count(command.as_ref(), "phones").await?,
+        "settings": count(command.as_ref(), "contact_settings").await?,
+    });
+    let each = related_counts(&contacts);
+    if counts["contacts"] != contacts.len() as i64
+        || counts["addresses"] != (contacts.len() * each.0) as i64
+        || counts["phones"] != (contacts.len() * each.1) as i64
+        || counts["settings"] != (contacts.len() * each.2) as i64
+    {
+        return Err(datasources::DatasourceError::message(format!(
+            "create count {counts}"
+        )));
+    }
+    for contact in &mut contacts {
+        contact.insert("notes".into(), Value::from("updated"));
+        contact.insert(
+            "addresses".into(),
+            encode_rows(&set_field(decode_rows(contact.get("addresses")), "city", "City")),
+        );
+        contact.insert(
+            "phones".into(),
+            encode_rows(&set_field(decode_rows(contact.get("phones")), "label", "w")),
+        );
+        contact.insert(
+            "settings".into(),
+            encode_rows(&set_field(decode_rows(contact.get("settings")), "value", "dark")),
+        );
+    }
+    let update_started = Instant::now();
+    update_chunks(&contacts_repo, &contacts, batched, chunk).await?;
+    let update_ms = update_started.elapsed().as_secs_f64() * 1000.0;
+    println!(
+        "{}",
+        serde_json::json!({
+            "sample": "contacts-crud-enriched-medium-rest",
+            "language": "rust",
+            "provider": provider,
+            "strategy": strategy_name,
+            "rows": contacts.len(),
+            "chunk": if batched { chunk.min(contacts.len()) } else { contacts.len() },
+            "createMs": create_ms,
+            "updateMs": update_ms,
+            "createPerSec": contacts.len() as f64 / (create_ms / 1000.0),
+            "updatePerSec": contacts.len() as f64 / (update_ms / 1000.0),
+            "counts": counts,
+        })
+    );
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn load_contacts(rows: usize, now: DateTime<Utc>) -> datasources::Result<Vec<Row>> {
+    if let Ok(path) = std::env::var("PERF_DATA") {
+        let text = std::fs::read_to_string(&path)
+            .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
+        let items: Vec<serde_json::Value> = serde_json::from_str(&text)
+            .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
+        return items.iter().map(contact_from_json).collect();
+    }
+    let each = env("PERF_RELATED", "10").parse::<i64>().unwrap_or(10);
+    Ok((1..=rows as i64)
         .map(|id| {
-            let keyed = |pairs: &[(&str, Value)]| {
-                let mut item = row(pairs);
-                if strategy_name == "batch" {
-                    item.insert("id".into(), Value::Int(id));
-                }
-                item
+            let children = |prefix: &str| {
+                (0..each)
+                    .map(|n| {
+                        let child = (id - 1) * each + n + 1;
+                        let mut pairs = vec![
+                            ("id", Value::Int(child)),
+                            ("uuid", Value::from(format!("{prefix}{child}"))),
+                            ("created", now.into()),
+                            ("updated", now.into()),
+                            ("version", Value::from(vec![1_u8])),
+                        ];
+                        if prefix == "a" {
+                            pairs.extend([
+                                ("addressTypeId", Value::Int(1)),
+                                ("line1", Value::from("1 Main")),
+                                ("city", Value::from("Town")),
+                            ]);
+                        } else {
+                            pairs.extend([
+                                ("phoneTypeId", Value::Int(1)),
+                                ("number", Value::from("5550000")),
+                                ("label", Value::from("m")),
+                            ]);
+                        }
+                        row(&pairs)
+                    })
+                    .collect::<Vec<_>>()
             };
-            keyed(&[
+            row(&[
+                ("id", Value::Int(id)),
                 (
                     "uuid",
                     Value::from(format!("00000000-0000-0000-0000-{id:012x}")),
@@ -190,132 +284,191 @@ async fn work(
                 ("lastName", Value::from(format!("Last{id}"))),
                 ("email", Value::from(format!("c{id}@ex.test"))),
                 ("notes", Value::from("")),
-                (
-                    "addresses",
-                    encode_rows(&[keyed(&[
-                        ("uuid", Value::from(format!("a{id}"))),
-                        ("created", now.into()),
-                        ("updated", now.into()),
-                        ("version", Value::from(vec![1_u8])),
-                        ("addressTypeId", Value::Int(1)),
-                        ("line1", Value::from("1 Main")),
-                        ("city", Value::from("Town")),
-                    ])]),
-                ),
-                (
-                    "phones",
-                    encode_rows(&[keyed(&[
-                        ("uuid", Value::from(format!("p{id}"))),
-                        ("created", now.into()),
-                        ("updated", now.into()),
-                        ("version", Value::from(vec![1_u8])),
-                        ("phoneTypeId", Value::Int(1)),
-                        ("number", Value::from("5550000")),
-                        ("label", Value::from("m")),
-                    ])]),
-                ),
+                ("addresses", encode_rows(&children("a"))),
+                ("phones", encode_rows(&children("p"))),
                 (
                     "settings",
-                    encode_rows(&[row(&[
-                        ("key", Value::from("theme")),
-                        ("value", Value::from("light")),
-                    ])]),
+                    encode_rows(
+                        &(0..each)
+                            .map(|n| {
+                                row(&[
+                                    ("key", Value::from(format!("k{n}"))),
+                                    ("value", Value::from("light")),
+                                ])
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
                 ),
             ])
         })
-        .collect();
-    let create_started = Instant::now();
-    create_chunks(&contacts_repo, &mut contacts, strategy_name, chunk).await?;
-    let create_ms = create_started.elapsed().as_secs_f64() * 1000.0;
-    let counts = serde_json::json!({
-        "contacts": count(command.as_ref(), "contacts").await?,
-        "addresses": count(command.as_ref(), "addresses").await?,
-        "phones": count(command.as_ref(), "phones").await?,
-        "settings": count(command.as_ref(), "contact_settings").await?,
-    });
-    if counts["contacts"] != rows as i64
-        || counts["addresses"] != rows as i64
-        || counts["phones"] != rows as i64
-        || counts["settings"] != rows as i64
-    {
-        return Err(datasources::DatasourceError::message(format!(
-            "create count {counts}"
-        )));
-    }
-    for contact in &mut contacts {
-        contact.insert("notes".into(), Value::from("updated"));
-        contact.insert(
-            "addresses".into(),
-            encode_rows(&[row(&[
-                ("id", contact.get("id").cloned().unwrap_or(Value::Null)),
-                (
-                    "uuid",
-                    Value::from(format!(
-                        "a{}",
-                        contact.get("id").map(Value::wire_text).unwrap_or_default()
-                    )),
-                ),
-                ("created", now.into()),
-                ("updated", now.into()),
-                ("version", Value::from(vec![1_u8])),
-                ("addressTypeId", Value::Int(1)),
-                ("line1", Value::from("1 Main")),
-                ("city", Value::from("City")),
-            ])]),
-        );
-        contact.insert(
-            "phones".into(),
-            encode_rows(&[row(&[
-                ("id", contact.get("id").cloned().unwrap_or(Value::Null)),
-                (
-                    "uuid",
-                    Value::from(format!(
-                        "p{}",
-                        contact.get("id").map(Value::wire_text).unwrap_or_default()
-                    )),
-                ),
-                ("created", now.into()),
-                ("updated", now.into()),
-                ("version", Value::from(vec![1_u8])),
-                ("phoneTypeId", Value::Int(1)),
-                ("number", Value::from("5550000")),
-                ("label", Value::from("w")),
-            ])]),
-        );
-        contact.insert(
-            "settings".into(),
-            encode_rows(&[row(&[
-                ("key", Value::from("theme")),
-                ("value", Value::from("dark")),
-            ])]),
-        );
-    }
-    let update_started = Instant::now();
-    update_chunks(&contacts_repo, &contacts, strategy_name, chunk).await?;
-    let update_ms = update_started.elapsed().as_secs_f64() * 1000.0;
-    println!(
-        "{}",
-        serde_json::json!({
-            "sample": "contacts-crud-enriched-medium-rest",
-            "language": "rust",
-            "provider": provider,
-            "strategy": strategy_name,
-            "rows": rows,
-            "chunk": if strategy_name == "batch" { chunk } else { rows },
-            "createMs": create_ms,
-            "updateMs": update_ms,
-            "createPerSec": rows as f64 / (create_ms / 1000.0),
-            "updatePerSec": rows as f64 / (update_ms / 1000.0),
-            "counts": counts,
-        })
-    );
-    Ok(())
+        .collect())
 }
 
-#[allow(clippy::too_many_arguments)]
+fn contact_from_json(item: &serde_json::Value) -> datasources::Result<Row> {
+    let id = json_i64(&item["id"]);
+    let stamp = json_stamp(&item["created"]);
+    let settings = item["settings"]
+        .as_object()
+        .map(|map| {
+            map.iter()
+                .map(|(key, value)| {
+                    row(&[
+                        ("key", Value::from(key.clone())),
+                        (
+                            "value",
+                            Value::from(value.as_str().unwrap_or("").to_string()),
+                        ),
+                    ])
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    Ok(row(&[
+        ("id", Value::Int(id)),
+        (
+            "uuid",
+            Value::from(item["uuid"].as_str().unwrap_or("").to_string()),
+        ),
+        ("created", stamp.into()),
+        ("updated", json_stamp(&item["updated"]).into()),
+        ("version", Value::from(json_bytes(&item["version"]))),
+        ("contactSourceId", Value::Int(json_i64(&item["contactSourceId"]))),
+        (
+            "firstName",
+            Value::from(item["firstName"].as_str().unwrap_or("").to_string()),
+        ),
+        (
+            "lastName",
+            Value::from(item["lastName"].as_str().unwrap_or("").to_string()),
+        ),
+        (
+            "email",
+            Value::from(item["email"].as_str().unwrap_or("").to_string()),
+        ),
+        (
+            "notes",
+            Value::from(item["notes"].as_str().unwrap_or("").to_string()),
+        ),
+        (
+            "addresses",
+            encode_rows(&json_children(&item["addresses"])),
+        ),
+        ("phones", encode_rows(&json_children(&item["phones"]))),
+        ("settings", encode_rows(&settings)),
+    ]))
+}
+
+fn json_children(value: &serde_json::Value) -> Vec<Row> {
+    value
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|item| {
+            let mut pairs = vec![
+                ("id", Value::Int(json_i64(&item["id"]))),
+                (
+                    "uuid",
+                    Value::from(item["uuid"].as_str().unwrap_or("").to_string()),
+                ),
+                ("created", json_stamp(&item["created"]).into()),
+                ("updated", json_stamp(&item["updated"]).into()),
+                ("version", Value::from(json_bytes(&item["version"]))),
+            ];
+            if item.get("addressTypeId").is_some() {
+                pairs.push(("addressTypeId", Value::Int(json_i64(&item["addressTypeId"]))));
+                pairs.push((
+                    "line1",
+                    Value::from(item["line1"].as_str().unwrap_or("").to_string()),
+                ));
+                pairs.push((
+                    "city",
+                    Value::from(item["city"].as_str().unwrap_or("").to_string()),
+                ));
+            }
+            if item.get("phoneTypeId").is_some() {
+                pairs.push(("phoneTypeId", Value::Int(json_i64(&item["phoneTypeId"]))));
+                pairs.push((
+                    "number",
+                    Value::from(item["number"].as_str().unwrap_or("").to_string()),
+                ));
+                pairs.push((
+                    "label",
+                    Value::from(item["label"].as_str().unwrap_or("").to_string()),
+                ));
+            }
+            row(&pairs)
+        })
+        .collect()
+}
+
+fn json_i64(value: &serde_json::Value) -> i64 {
+    value.as_i64().or_else(|| value.as_u64().map(|n| n as i64)).unwrap_or(0)
+}
+
+fn json_bytes(value: &serde_json::Value) -> Vec<u8> {
+    value
+        .as_array()
+        .map(|bytes| bytes.iter().filter_map(|byte| byte.as_u64().map(|n| n as u8)).collect())
+        .unwrap_or_else(|| vec![1_u8])
+}
+
+fn json_stamp(value: &serde_json::Value) -> DateTime<Utc> {
+    value
+        .as_str()
+        .and_then(|text| DateTime::parse_from_rfc3339(text).ok())
+        .map(|stamp| stamp.with_timezone(&Utc))
+        .unwrap_or_else(|| Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap())
+}
+
+fn related_counts(contacts: &[Row]) -> (usize, usize, usize) {
+    let first = contacts.first();
+    (
+        decode_rows(first.and_then(|contact| contact.get("addresses"))).len(),
+        decode_rows(first.and_then(|contact| contact.get("phones"))).len(),
+        decode_rows(first.and_then(|contact| contact.get("settings"))).len(),
+    )
+}
+
+fn decode_rows(value: Option<&Value>) -> Vec<Row> {
+    let Some(Value::Text(text)) = value else {
+        return vec![];
+    };
+    text.split('|')
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            part.split(',')
+                .filter_map(|cell| {
+                    let (key, raw) = cell.split_once('=')?;
+                    Some((
+                        key.to_string(),
+                        Value::from(
+                            raw.replace("%3D", "=")
+                                .replace("%2C", ",")
+                                .replace("%7C", "|")
+                                .replace("%25", "%"),
+                        ),
+                    ))
+                })
+                .collect()
+        })
+        .collect()
+}
+
+fn set_field(mut items: Vec<Row>, field: &str, value: &str) -> Vec<Row> {
+    for item in &mut items {
+        item.insert(field.into(), Value::from(value.to_string()));
+    }
+    items
+}
+
+fn batched(provider: &str, strategy_name: &str) -> bool {
+    strategy_name == "batch" || strategy_name == "procedure" && provider == "sqlite"
+}
+
 fn repo(
     connection: Arc<dyn datasources::Connection>,
     strategy_name: &str,
+    batched: bool,
     entity: &str,
     entities: &[(&str, &str)],
     properties: &[(&str, &str)],
@@ -325,11 +478,11 @@ fn repo(
     update: &str,
     delete: &str,
 ) -> datasources::Result<BulkCRUDRepository> {
-    let strategy: Arc<dyn BulkWriteStrategy> = match strategy_name {
-        "single" => Arc::new(datasources::SingleCommandIBulkWriteStrategy::new()),
-        "batch" => Arc::new(BatchCommandIBulkWriteStrategy::new()),
-        "procedure" => Arc::new(StoredProcedureBulkWriteStrategy::new(create, update, delete)),
-        name => panic!("{name}"),
+    let strategy: Arc<dyn BulkWriteStrategy> = match (strategy_name, batched) {
+        ("single", _) => Arc::new(datasources::SingleCommandIBulkWriteStrategy::new()),
+        (_, true) => Arc::new(BatchCommandIBulkWriteStrategy::new()),
+        ("procedure", _) => Arc::new(StoredProcedureBulkWriteStrategy::new(create, update, delete)),
+        (name, _) => panic!("{name}"),
     };
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
@@ -353,10 +506,10 @@ fn repo(
 async fn create_chunks(
     repo: &BulkCRUDRepository,
     items: &mut [Row],
-    strategy_name: &str,
+    batched: bool,
     chunk: usize,
 ) -> datasources::Result<()> {
-    if strategy_name != "batch" {
+    if !batched {
         repo.create_bulk(items).await?;
         return Ok(());
     }
@@ -369,10 +522,10 @@ async fn create_chunks(
 async fn update_chunks(
     repo: &BulkCRUDRepository,
     items: &[Row],
-    strategy_name: &str,
+    batched: bool,
     chunk: usize,
 ) -> datasources::Result<()> {
-    if strategy_name != "batch" {
+    if !batched {
         repo.update_bulk(items, None).await?;
         return Ok(());
     }

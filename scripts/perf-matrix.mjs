@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writePerfData } from "./perf-data.mjs";
 
 const root = dirname(fileURLToPath(new URL(".", import.meta.url)));
 const artifacts = join(root, "artifacts/perf");
@@ -13,8 +14,8 @@ const providers = ["sqlite", "mysql", "postgres"];
 const samples = ["user-roles-simple-cli", "contacts-crud-enriched-medium-rest"];
 const rows = Number(process.env.PERF_ROWS ?? 1000);
 const chunk = Number(process.env.PERF_CHUNK ?? 500);
-const strategiesOf = (provider) =>
-  provider === "sqlite" ? ["single", "batch"] : ["single", "batch", "procedure"];
+const related = Number(process.env.PERF_RELATED ?? 10);
+const strategies = ["single", "batch", "procedure"];
 
 const mysqlUrl = () => process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:23306/datasources";
 const postgresUrl = () => process.env.POSTGRES_URL || "postgres://ds:ds@127.0.0.1:25432/datasources";
@@ -68,6 +69,29 @@ const isolate = (provider) => {
   };
 };
 
+const rustCwd = (sample) => join(root, "samples/rust", sample);
+const csharpCwd = (sample) => join(root, "samples/csharp", sample, "perf");
+const tsCwd = (sample) => join(root, "samples/typescript", sample);
+
+const rustTarget = (sample) => join(rustCwd(sample), "target");
+
+const compile = () => {
+  for (const sample of samples) {
+    const rust = spawnSync("cargo", ["build", "--release", "--quiet", "--bin", "perf"], {
+      cwd: rustCwd(sample),
+      encoding: "utf8",
+      env: { ...process.env, CARGO_TARGET_DIR: rustTarget(sample) },
+    });
+    if ((rust.status ?? 1) !== 0) throw new Error(`cargo build ${sample}: ${rust.stderr || rust.stdout}`);
+    const csharp = spawnSync(
+      "dotnet",
+      ["build", "-c", "Release", "-p:CollectCoverage=false", "--nologo", "-v", "q"],
+      { cwd: csharpCwd(sample), encoding: "utf8" },
+    );
+    if ((csharp.status ?? 1) !== 0) throw new Error(`dotnet build ${sample}: ${csharp.stderr || csharp.stdout}`);
+  }
+};
+
 const run = (sample, language, provider, strategy, url) => {
   const env = {
     ...process.env,
@@ -76,19 +100,18 @@ const run = (sample, language, provider, strategy, url) => {
     PERF_STRATEGY: strategy,
     PERF_ROWS: String(rows),
     PERF_CHUNK: String(chunk),
+    PERF_RELATED: String(related),
+    PERF_DATA: data[sample],
+    ...(language === "rust" ? { CARGO_TARGET_DIR: rustTarget(sample) } : {}),
   };
   const cwd =
-    language === "typescript"
-      ? join(root, "samples/typescript", sample)
-      : language === "rust"
-        ? join(root, "samples/rust", sample)
-        : join(root, "samples/csharp", sample, "perf");
+    language === "typescript" ? tsCwd(sample) : language === "rust" ? rustCwd(sample) : csharpCwd(sample);
   const command =
     language === "typescript"
       ? [process.execPath, "--import", "tsx", "perf.ts"]
       : language === "rust"
-        ? ["cargo", "run", "--quiet", "--bin", "perf"]
-        : ["dotnet", "run", "--project", "Perf.csproj", "-p:CollectCoverage=false"];
+        ? [join(rustTarget(sample), "release", "perf")]
+        : ["dotnet", "run", "-c", "Release", "--no-build", "--project", "Perf.csproj", "-p:CollectCoverage=false"];
   const result = spawnSync(command[0], command.slice(1), { cwd, encoding: "utf8", env });
   const line = (result.stdout || "")
     .trim()
@@ -118,18 +141,22 @@ const report = (cells) => {
     );
   const sections = samples
     .map((sample) => {
-      const strategies = ["single", "batch", "procedure"];
       const rowsHtml = languages
         .flatMap((language) =>
           providers.map((provider) => {
             const tds = strategies
               .map((strategy) => {
-                if (provider === "sqlite" && strategy === "procedure")
-                  return "<td class=\"skip\">batch used</td>";
-                const found = cell(sample, language, provider, strategy);
+                const found =
+                  cell(sample, language, provider, strategy) ??
+                  (provider === "sqlite" && strategy === "procedure"
+                    ? cell(sample, language, provider, "batch")
+                    : undefined);
                 if (!found) return "<td></td>";
                 if (!found.ok) return `<td class="fail">${escape(found.error || "failed")}</td>`;
-                return `<td class="ok">${Math.round(found.createMs)} / ${Math.round(found.updateMs)}<div>${Math.round(found.createPerSec)} / ${Math.round(found.updatePerSec)} rows/s</div></td>`;
+                const used = provider === "sqlite" && strategy === "procedure" ? " · batch used" : "";
+                const elapsed = found.elapsed ?? found.createMs;
+                const perSec = found.rowsPerSec ?? found.createPerSec;
+                return `<td class="ok">${found.rows}<sub>rows</sub><br>${Math.round(elapsed)}<sub>elapsed ms.</sub><br>${Math.round(perSec)}<sub>row p/s</sub>${used ? `<div>${used}</div>` : ""}</td>`;
               })
               .join("");
             return `<tr><th>${language}</th><th>${provider}</th>${tds}</tr>`;
@@ -137,7 +164,7 @@ const report = (cells) => {
         )
         .join("");
       return `<h2 id="${sample}">${sample}</h2>
-<p>create ms / update ms, then rows/s. ${rows} rows.</p>
+<p>rows, elapsed ms, rows/s. insert only.</p>
 <table><thead><tr><th>language</th><th>provider</th><th>single</th><th>batch</th><th>stored procedure</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     })
     .join("\n");
@@ -147,11 +174,13 @@ const report = (cells) => {
 <style>
 body{font-family:system-ui,sans-serif;margin:2rem;background:#111;color:#eee}
 table{border-collapse:collapse;margin:1rem 0}
-th,td{border:1px solid #444;padding:.5rem .75rem;vertical-align:top}
-.ok{background:#143}
+th,td{border:1px solid #444;padding:.65rem 1rem;vertical-align:top;white-space:nowrap}
+th:nth-child(n+3),td.ok,td.fail{min-width:11rem}
+.ok{background:#143;font-variant-numeric:tabular-nums;line-height:1.55}
 .fail{background:#411}
 .skip{background:#333;color:#aaa}
 div{color:#aaa;font-size:.85rem}
+sub{color:#aaa;font-size:.65em}
 </style></head><body>
 <h1>BulkCRUDRepository performance</h1>
 ${sections}
@@ -195,6 +224,8 @@ if (process.argv.includes("--report-only")) {
 }
 
 mkdirSync(artifacts, { recursive: true });
+compile();
+const data = writePerfData(join(artifacts, "data"), rows, related);
 const cells = [];
 try {
   for (const provider of providers) {
@@ -204,7 +235,7 @@ try {
     }
     for (const sample of samples)
       for (const language of languages)
-        for (const strategy of strategiesOf(provider)) {
+        for (const strategy of strategies) {
           const isolated = isolate(provider);
           try {
             cells.push(run(sample, language, provider, strategy, isolated.url));

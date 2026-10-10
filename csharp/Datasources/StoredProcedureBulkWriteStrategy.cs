@@ -37,7 +37,7 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
         if (items.Count == 0)
             return new Response(Value.Null.Instance, 0);
         var payload = new Parameter("payload", Json([.. items.Select(item => RowOf(item, generated))]));
-        IReadOnlyList<Parameter> parameters = generated && WantsIds(items)
+        IReadOnlyList<Parameter> parameters = generated && Options.Ids.Count == 1
             ? [payload, new Parameter("ids", ParameterDirection.InputOutput)]
             : [payload];
         var response = await Command.Execute(new ExecuteStoredProcedureStatement(name, parameters), parameters);
@@ -61,9 +61,6 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
     }
 
     bool Identity(string column) => Options.Ids.Count == 1 && Options.Ids[0] == column;
-
-    bool WantsIds(IReadOnlyList<T> items) =>
-        Options.Ids.Count == 1 && items.Select(Reverse).Any(row => !Assigned(row, Options.Ids[0]));
 
     static bool Assigned(Row record, string col) =>
         record.TryGetValue(col, out var value) && value switch
