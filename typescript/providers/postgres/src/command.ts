@@ -10,6 +10,7 @@ import {
   StatementTextRenderer,
   Response,
   splitStatements,
+  statementUsesParameter,
   statementReader,
   type Cells,
   type ICommand,
@@ -77,9 +78,19 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
       if (!query.trim())
         return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
-      const result = await this.runSql(query, bindParameters(params), params);
+      const named = bindParameters(params);
+      let rowsAffected = 0;
+      let parameters = params;
+      for (const part of splitStatements(query)) {
+        const used = Object.fromEntries(
+          Object.entries(named).filter(([name]) => statementUsesParameter(part, name)),
+        );
+        const result = await this.runSql(part, used, params);
+        rowsAffected += result.rowsAffected;
+        parameters = result.parameters ?? params;
+      }
       return {
-        value: new Response(result.result, result.rowsAffected, result.parameters ?? params),
+        value: new Response(null, rowsAffected, parameters),
         rows: [],
       };
     });

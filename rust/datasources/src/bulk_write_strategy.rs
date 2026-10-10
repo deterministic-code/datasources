@@ -24,6 +24,10 @@ pub trait BulkWriteStrategy: Send + Sync {
         let _ = (command, options, connection);
     }
 
+    fn persist_children(&self) -> bool {
+        false
+    }
+
     async fn create(&self, items: &mut [Row]) -> Result<Response>;
     async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>;
     async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>;

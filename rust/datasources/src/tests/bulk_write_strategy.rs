@@ -286,3 +286,146 @@ async fn create_bulk_returns_composite_ids() {
     assert_eq!(ids[1].get("code"), Some(&Value::from("b")));
     assert_eq!(ids[1].get("code_extra"), Some(&Value::from("ba")));
 }
+
+fn family(
+    parents: Arc<dyn crate::BulkWriteStrategy>,
+    children: Arc<dyn crate::BulkWriteStrategy>,
+) -> (BulkCRUDRepository, Arc<MockCommand>) {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut child_options = CRUDRepositoryOptions::default();
+    child_options.entity = "children".into();
+    child_options.row_converter = Some(RowTypeConverter::new(vec![
+        "id".into(),
+        "parent_id".into(),
+        "label".into(),
+    ]));
+    let children_repo = Arc::new(
+        BulkCRUDRepository::with_strategy(connection.clone(), child_options, children).unwrap(),
+    );
+    let mut parent_options = CRUDRepositoryOptions::default();
+    parent_options.entity = "parents".into();
+    parent_options.row_converter = Some(RowTypeConverter::new(vec!["id".into(), "label".into()]));
+    let mut parents_repo =
+        BulkCRUDRepository::with_strategy(connection, parent_options, parents).unwrap();
+    parents_repo.add_enriched(
+        crate::Enrichment::new(
+            "children",
+            "id",
+            "parent_id",
+            None,
+            crate::EnrichmentPropertyType::List,
+        ),
+        children_repo,
+        None,
+    );
+    (parents_repo, command)
+}
+
+#[tokio::test]
+async fn batch_persists_children_in_one_command() {
+    let (repo, command) = family(
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    );
+    repo.create_bulk(&mut [
+        row(&[
+            ("id", Value::Int(1)),
+            ("label", Value::from("a")),
+            (
+                "children",
+                crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                    ("id", Value::Int(10)),
+                    ("label", Value::from("x")),
+                ])]),
+            ),
+        ]),
+        row(&[
+            ("id", Value::Int(2)),
+            ("label", Value::from("b")),
+            (
+                "children",
+                crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                    ("id", Value::Int(11)),
+                    ("label", Value::from("y")),
+                ])]),
+            ),
+        ]),
+    ])
+    .await
+    .unwrap();
+    let logs = command.execute_logs.lock().unwrap();
+    assert_eq!(logs.len(), 2);
+    assert!(logs[0].0.contains("INSERT INTO parents"));
+    assert!(logs[1].0.contains("INSERT INTO children"));
+    assert!(logs[1].0.contains("label__0"));
+    assert!(logs[1].0.contains("label__1"));
+}
+
+#[tokio::test]
+async fn stored_procedure_persists_children_in_one_call() {
+    let (repo, command) = family(
+        Arc::new(StoredProcedureBulkWriteStrategy::new(
+            "bulk_create_parent",
+            "bulk_update_parent",
+            "bulk_delete_parent",
+        )),
+        Arc::new(StoredProcedureBulkWriteStrategy::new(
+            "bulk_create_child",
+            "bulk_update_child",
+            "bulk_delete_child",
+        )),
+    );
+    repo.create_bulk(&mut [
+        row(&[
+            ("id", Value::Int(1)),
+            ("label", Value::from("a")),
+            (
+                "children",
+                crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                    ("id", Value::Int(10)),
+                    ("label", Value::from("x")),
+                ])]),
+            ),
+        ]),
+        row(&[
+            ("id", Value::Int(2)),
+            ("label", Value::from("b")),
+            (
+                "children",
+                crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                    ("id", Value::Int(11)),
+                    ("label", Value::from("y")),
+                ])]),
+            ),
+        ]),
+    ])
+    .await
+    .unwrap();
+    let logs = command.execute_logs.lock().unwrap();
+    assert_eq!(logs.len(), 2);
+    assert_eq!(logs[0].0, "CALL bulk_create_parent($payload)");
+    assert_eq!(logs[1].0, "CALL bulk_create_child($payload)");
+}
+
+#[tokio::test]
+async fn batch_create_requires_parent_id_when_children_are_present() {
+    let (repo, _) = family(
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+        Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    );
+    let error = repo
+        .create_bulk(&mut [row(&[
+            ("label", Value::from("a")),
+            (
+                "children",
+                crate::default_write_enrichment_strategy::encode_rows(&[row(&[(
+                    "label",
+                    Value::from("x"),
+                )])]),
+            ),
+        ])])
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("id"));
+}

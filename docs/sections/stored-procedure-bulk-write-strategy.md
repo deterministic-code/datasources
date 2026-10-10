@@ -239,7 +239,7 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<R
 
 ## Remarks
 
-The payload is a JSON array of objects, one object per row, with column names in order. An empty list does not execute. The procedure is an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md) with a single `payload` parameter.
+The payload is a JSON array of objects, one object per row, with column names in order. An empty list does not execute. The procedure is an [ExecuteStoredProcedureStatement](./execute-stored-procedure-statement.md) with a single `payload` parameter. After the parent call, list and dictionary enrichments registered with `AddEnriched` are written in one child bulk call when the related repository is a [BulkCRUDRepository](./bulk-repository.md). Parent ids must already be assigned.
 
 ## Examples
 
@@ -251,5 +251,16 @@ The payload is a JSON array of objects, one object per row, with column names in
 ```rust rust/datasources/src/tests/bulk_write_strategy.rs#stored_procedure_bulk_write_strategy_sends_one_json_call
 ```
 ```typescript typescript/datasources/src/BulkWriteStrategy.test.ts#stored-procedure-commands-sends-one-json-call
+```
+:::
+
+### Persist list children
+
+::: example
+```csharp csharp/Datasources.Tests/BulkWriteStrategyTests.cs#StoredProcedurePersistsChildrenInOneCall
+```
+```rust rust/datasources/src/tests/bulk_write_strategy.rs#stored_procedure_persists_children_in_one_call
+```
+```typescript typescript/datasources/src/BulkWriteStrategy.test.ts#stored-procedure-persists-children-in-one-call
 ```
 :::

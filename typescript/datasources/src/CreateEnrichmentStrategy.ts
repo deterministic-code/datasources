@@ -10,6 +10,14 @@ export abstract class CreateEnrichmentStrategy<T> {
 
   abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
+  collectChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): TChild[] {
+    const children = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment);
+    if (children.length === 0) return children;
+    const key = this.requiredKey(parent, enrichment);
+    for (const child of children) this.stampCell(child, enrichment.relatedKey, key);
+    return children;
+  }
+
   protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
     (item as never as Props)[name];
 

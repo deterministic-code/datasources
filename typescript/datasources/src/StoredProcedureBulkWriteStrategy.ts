@@ -10,6 +10,7 @@ import { execute } from "./ICommand.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
+import { afterBulkWrite } from "./BulkWriteEnrichment.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
 
@@ -74,13 +75,19 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
     private readonly deleteName: string,
   ) {}
 
-  create = (items: T[]): Promise<Response> => this.call(this.createName, items);
+  create = (items: T[]): Promise<Response> => this.then(this.call(this.createName, items), items, "create");
 
   update = (items: T[], _byWhere: IWhere | undefined): Promise<Response> =>
-    this.call(this.updateName, items);
+    this.then(this.call(this.updateName, items), items, "update");
 
   delete = (items: T[], _byWhere: IWhere | undefined): Promise<Response> =>
-    this.call(this.deleteName, items);
+    this.then(this.call(this.deleteName, items), items, "delete");
+
+  private then = async (write: Promise<Response>, items: T[], mode: "create" | "update" | "delete"): Promise<Response> => {
+    const response = await write;
+    await afterBulkWrite(this.repo, this.options, items, mode);
+    return response;
+  };
 
   private call = (name: string, items: T[]): Promise<Response> => {
     if (items.length === 0) return Promise.resolve(empty());

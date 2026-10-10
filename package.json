@@ -19,6 +19,7 @@
     "test:e2e:contacts": "npm run test:e2e --prefix samples/typescript/contacts-crud-enriched-medium-rest && cargo test --manifest-path samples/rust/contacts-crud-enriched-medium-rest/Cargo.toml --test e2e ${VERBOSE:+-- --nocapture} && dotnet test samples/csharp/contacts-crud-enriched-medium-rest/ContactsCrudEnrichedMediumRest.Tests.csproj --p:CollectCoverage=false ${VERBOSE:+--logger \"console;verbosity=detailed\"}",
     "test:e2e:samples": "npm run test:e2e:user-roles-simple-cli && npm run test:e2e:contacts",
     "e2e-matrix": "node scripts/e2e-matrix.mjs",
+    "test:perf": "node scripts/perf-matrix.mjs",
     "setup": "node --experimental-strip-types cli/src/main.ts setup",
     "cli": "node --experimental-strip-types cli/src/main.ts"
   },

@@ -5,7 +5,7 @@ use crate::reader::MysqlReader;
 use crate::statement_renderer::MysqlStatementRenderer;
 use async_trait::async_trait;
 use datasources::{
-    parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
+    parameters_to_map, split_statements, statement_uses_parameter, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement,
     Statement, StatementKind, StatementTextRenderer, Value,
 };
@@ -137,10 +137,21 @@ impl Command for MysqlCommand {
                     }
                     connection.ensure_open()?;
                     let mapped = parameters_to_map(params.as_deref());
-                    let result = MysqlCommand::execute_sql(&connection, &sql, &mapped).await?;
+                    let mut rows_affected = 0;
+                    let mut result = Value::Null;
+                    for part in split_statements(&sql) {
+                        let used = mapped
+                            .iter()
+                            .filter(|(name, _)| statement_uses_parameter(&part, name))
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect();
+                        let executed = MysqlCommand::execute_sql(&connection, &part, &used).await?;
+                        rows_affected += executed.rows_affected;
+                        result = executed.result;
+                    }
                     let response = Response::new(
-                        result.result,
-                        result.rows_affected,
+                        result,
+                        rows_affected,
                         params.map(|list| list.to_vec()),
                     );
                     let logged = logged_response(&response);

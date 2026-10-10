@@ -77,6 +77,19 @@ impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
         let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
         self.walk(&entries, items, mode).await
     }
+
+    async fn persist_bulk(
+        &self,
+        tree: &RepositoryTree,
+        items: &mut [Row],
+        mode: WriteMode,
+    ) -> Result<()> {
+        if mode == WriteMode::Delete {
+            return self.persist(tree, items, mode).await;
+        }
+        let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
+        self.walk_bulk(&entries, items, mode).await
+    }
 }
 
 impl DefaultWriteEnrichmentStrategy {
@@ -89,6 +102,85 @@ impl DefaultWriteEnrichmentStrategy {
         Box::pin(async move {
             for entry in entries {
                 self.persist_entry(entry, parents, mode).await?;
+            }
+            Ok(())
+        })
+    }
+
+    fn walk_bulk<'a>(
+        &'a self,
+        entries: &'a [StoredEnrichment],
+        parents: &'a mut [Row],
+        mode: WriteMode,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            for entry in entries {
+                self.persist_entry_bulk(entry, parents, mode).await?;
+            }
+            Ok(())
+        })
+    }
+
+    fn persist_entry_bulk<'a>(
+        &'a self,
+        entry: &'a StoredEnrichment,
+        parents: &'a mut [Row],
+        mode: WriteMode,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            let enrichment = &entry.enrichment;
+            if matches!(enrichment.r#type, crate::EnrichmentPropertyType::Custom) {
+                return Err(DatasourceError::message(format!(
+                    "Unsupported enrichment type \"{:?}\"",
+                    enrichment.r#type
+                )));
+            }
+            if enrichment.association.is_some() {
+                return self.persist_entry(entry, parents, mode).await;
+            }
+            if enrichment.r#type == crate::EnrichmentPropertyType::List
+                && enrichment.related_property.is_some()
+            {
+                return Ok(());
+            }
+            if enrichment.r#type != crate::EnrichmentPropertyType::List
+                && enrichment.r#type != crate::EnrichmentPropertyType::Dictionary
+            {
+                return Ok(());
+            }
+            let mut children = Vec::new();
+            for parent in parents.iter() {
+                if self.skip(parent, &enrichment.destination_property, mode) {
+                    continue;
+                }
+                children.extend(collect_children(parent, enrichment)?);
+            }
+            if children.is_empty() {
+                return Ok(());
+            }
+            if let Some(bulk) = &entry.persist_bulk {
+                return match mode {
+                    WriteMode::Create => bulk.create_bulk(&mut children).await.map(|_| ()),
+                    WriteMode::Update => bulk.update_bulk(&children, None).await.map(|_| ()),
+                    WriteMode::Delete => Ok(()),
+                };
+            }
+            let writer = entry.persist.as_ref().ok_or_else(|| {
+                DatasourceError::message(format!(
+                    "Deep write requires a CRUD repository for \"{}\"",
+                    enrichment.destination_property
+                ))
+            })?;
+            for row in &mut children {
+                match mode {
+                    WriteMode::Create => {
+                        writer.create(row).await?;
+                    }
+                    WriteMode::Update => {
+                        writer.update(row, None).await?;
+                    }
+                    WriteMode::Delete => {}
+                }
             }
             Ok(())
         })
@@ -217,6 +309,22 @@ pub(crate) fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<V
         }
     }
     Ok(ids)
+}
+
+pub(crate) fn collect_children(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Row>> {
+    let mut related = decode_rows(parent.get(&enrichment.destination_property));
+    if related.is_empty() {
+        return Ok(related);
+    }
+    let key = required(
+        parent,
+        &enrichment.source_property,
+        &enrichment.destination_property,
+    )?;
+    for row in &mut related {
+        row.insert(enrichment.related_key.clone(), key.clone());
+    }
+    Ok(related)
 }
 
 pub(crate) fn required(parent: &Row, name: &str, into: &str) -> Result<Value> {

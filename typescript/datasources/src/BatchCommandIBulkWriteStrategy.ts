@@ -15,6 +15,7 @@ import { DatasourceError } from "./DatasourceError.ts";
 import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import type { Parameter } from "./Parameter.ts";
+import { afterBulkWrite } from "./BulkWriteEnrichment.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
 
@@ -63,13 +64,20 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     this.options = options;
   };
 
-  create = (items: T[]): Promise<Response> => this.send(items.map((item) => this.insert(item)));
+  create = (items: T[]): Promise<Response> =>
+    this.then(this.send(items.map((item) => this.insert(item))), items, "create");
 
   update = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>
-    this.send(items.map((item) => this.updateCommand(item, byWhere)));
+    this.then(this.send(items.map((item) => this.updateCommand(item, byWhere))), items, "update");
 
   delete = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>
-    this.send(items.map((item) => this.deleteCommand(item, byWhere)));
+    this.then(this.send(items.map((item) => this.deleteCommand(item, byWhere))), items, "delete");
+
+  private then = async (write: Promise<Response>, items: T[], mode: "create" | "update" | "delete"): Promise<Response> => {
+    const response = await write;
+    await afterBulkWrite(this.repo, this.options, items, mode);
+    return response;
+  };
 
   private send = (commands: BulkCommand[]): Promise<Response> => {
     if (commands.length === 0) return Promise.resolve(empty());

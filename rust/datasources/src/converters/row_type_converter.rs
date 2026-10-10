@@ -91,18 +91,24 @@ impl TypeConverter<Row, Row> for RowTypeConverter {
     }
 
     fn reverse_convert(&self, to: &Row) -> Result<Row> {
-        to.iter()
-            .map(|(key, value)| {
-                Ok((
-                    key.clone(),
-                    self.fields
-                        .get(key)
-                        .map(|converter| converter.reverse_convert(value))
-                        .transpose()?
-                        .unwrap_or_else(|| value.clone()),
-                ))
-            })
-            .collect()
+        let keys = if self.columns.is_empty() {
+            to.keys().cloned().collect::<Vec<_>>()
+        } else {
+            self.columns.clone()
+        };
+        let mut row = Row::new();
+        for key in keys {
+            let Some(value) = to.get(&key) else { continue };
+            row.insert(
+                key.clone(),
+                self.fields
+                    .get(&key)
+                    .map(|converter| converter.reverse_convert(value))
+                    .transpose()?
+                    .unwrap_or_else(|| value.clone()),
+            );
+        }
+        Ok(row)
     }
 }
 

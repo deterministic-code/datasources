@@ -127,6 +127,10 @@ impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
         let _ = self.connection.set(connection);
     }
 
+    fn persist_children(&self) -> bool {
+        true
+    }
+
     async fn create(&self, items: &mut [Row]) -> Result<Response> {
         self.call(&self.create, items).await
     }

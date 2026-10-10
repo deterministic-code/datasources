@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { path = "../../../rust/datasources" }
 datasources-mysql = { path = "../../../rust/providers/mysql" }
 datasources-postgres = { path = "../../../rust/providers/postgres" }

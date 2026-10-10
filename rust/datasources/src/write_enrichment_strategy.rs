@@ -16,4 +16,13 @@ pub trait WriteEnrichmentStrategy: Send + Sync {
         items: &mut [Row],
         mode: WriteMode,
     ) -> Result<()>;
+
+    async fn persist_bulk(
+        &self,
+        tree: &RepositoryTree,
+        items: &mut [Row],
+        mode: WriteMode,
+    ) -> Result<()> {
+        self.persist(tree, items, mode).await
+    }
 }

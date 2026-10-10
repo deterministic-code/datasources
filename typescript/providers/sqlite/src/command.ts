@@ -10,6 +10,7 @@ import {
   parametersToRecord,
   Response,
   splitStatements,
+  statementUsesParameter,
   StreamingReader,
   type Cell,
   type Cells,
@@ -104,8 +105,16 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
-      const info = this.connection.require().prepare(query).run(bound(params));
-      return { value: new Response(null, info.changes, params), rows: [] };
+      const db = this.connection.require();
+      const named = bound(params);
+      let changes = 0;
+      for (const sql of splitStatements(query)) {
+        const used = Object.fromEntries(
+          Object.entries(named).filter(([name]) => statementUsesParameter(sql, name)),
+        );
+        changes += db.prepare(sql).run(used).changes;
+      }
+      return { value: new Response(null, changes, params), rows: [] };
     });
   }
 

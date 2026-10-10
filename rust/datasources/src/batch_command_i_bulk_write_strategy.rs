@@ -219,6 +219,10 @@ impl BulkWriteStrategy for BatchCommandIBulkWriteStrategy {
         let _ = self.connection.set(connection);
     }
 
+    fn persist_children(&self) -> bool {
+        true
+    }
+
     async fn create(&self, items: &mut [Row]) -> Result<Response> {
         let commands = items
             .iter()

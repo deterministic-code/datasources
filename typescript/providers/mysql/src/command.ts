@@ -11,6 +11,7 @@ import {
   StatementTextRenderer,
   Response,
   splitStatements,
+  statementUsesParameter,
   statementReader,
   StreamingReader,
   type Cells,
@@ -91,9 +92,21 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
       this.connection.ensureOpen();
-      const result = await this.runSql(query, bindParameters(params), params);
+      const named = bindParameters(params);
+      let rowsAffected = 0;
+      let parameters = params;
+      let result: MysqlExecuteResult["result"];
+      for (const part of splitStatements(query)) {
+        const used = Object.fromEntries(
+          Object.entries(named).filter(([name]) => statementUsesParameter(part, name)),
+        );
+        const executed = await this.runSql(part, used, params);
+        rowsAffected += executed.rowsAffected;
+        parameters = executed.parameters ?? params;
+        result = executed.result;
+      }
       return {
-        value: new Response(result.result, result.rowsAffected, result.parameters ?? params),
+        value: new Response(result, rowsAffected, parameters),
         rows: [],
       };
     });

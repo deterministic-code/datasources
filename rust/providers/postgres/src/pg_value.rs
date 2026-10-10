@@ -1,4 +1,4 @@
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use chrono::{DateTime, Utc};
 use datasources::Value;
 use rust_decimal::Decimal;
@@ -52,6 +52,15 @@ fn encode(
         ty if ty == &Type::TIMESTAMP => datetime_of(value)?.naive_utc().to_sql(ty, out),
         ty if ty == &Type::UUID => uuid_of(value)?.to_sql(ty, out),
         ty if ty == &Type::BYTEA => binary_of(value)?.to_sql(ty, out),
+        ty if ty == &Type::JSONB => {
+            out.put_u8(1);
+            out.extend_from_slice(value.wire_text().as_bytes());
+            Ok(IsNull::No)
+        }
+        ty if ty == &Type::JSON => {
+            out.extend_from_slice(value.wire_text().as_bytes());
+            Ok(IsNull::No)
+        }
         _ => value.wire_text().to_sql(ty, out),
     }
 }

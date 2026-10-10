@@ -167,6 +167,7 @@ impl ReadonlyRepository {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn column(&self, property: &str) -> String {
         self.statement_mappers.column(property)
     }

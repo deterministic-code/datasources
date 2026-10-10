@@ -6,7 +6,7 @@ use crate::statement_renderer::PostgresStatementRenderer;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{
-    parameters_to_map, split_statements, ArrayReader, Command, CommandMiddleware,
+    parameters_to_map, split_statements, statement_uses_parameter, ArrayReader, Command, CommandMiddleware,
     CommandMiddlewareHost, DatasourceError, FirstResultReader, Native, Parameter, ParameterDirection, Reader, Response,
     Result, ReturnStatement, Statement, StatementKind, StatementTextRenderer, Value,
 };
@@ -172,16 +172,24 @@ impl Command for PostgresCommand {
                             vec![],
                         ));
                     }
-                    let result = PostgresCommand::execute_sql(
-                        &connection,
-                        &sql,
-                        &parameters_to_map(params.as_deref()),
-                    )
-                    .await?;
+                    let map = parameters_to_map(params.as_deref());
+                    let mut rows_affected = 0;
+                    let mut result = Value::Null;
+                    for part in split_statements(&sql) {
+                        let used = map
+                            .iter()
+                            .filter(|(name, _)| statement_uses_parameter(&part, name))
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect();
+                        let executed =
+                            PostgresCommand::execute_sql(&connection, &part, &used).await?;
+                        rows_affected += executed.rows_affected;
+                        result = executed.result;
+                    }
                     Ok((
                         Response::new(
-                            result.result,
-                            result.rows_affected,
+                            result,
+                            rows_affected,
                             params.map(|list| list.to_vec()),
                         ),
                         vec![],

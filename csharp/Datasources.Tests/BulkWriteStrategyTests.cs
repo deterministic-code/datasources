@@ -118,6 +118,64 @@ public class BulkWriteStrategyTests
             command.ExecuteCalls[0].Parameters![0].Value);
     }
 
+    sealed class Child
+    {
+        public int? id { get; set; }
+        public int? parent_id { get; set; }
+        public string label { get; set; } = "";
+    }
+
+    sealed class Family
+    {
+        public int? id { get; set; }
+        public string label { get; set; } = "";
+        public List<Child> children { get; set; } = [];
+    }
+
+    [Fact]
+    public async Task BatchPersistsChildrenInOneCommand()
+    {
+        var (parentsRepo, childrenRepo, command) = FamilyRepos(new BatchCommandIBulkWriteStrategy<Family>());
+        await parentsRepo.Create(
+        [
+            new Family { id = 1, label = "a", children = [new Child { id = 10, label = "x" }] },
+            new Family { id = 2, label = "b", children = [new Child { id = 11, label = "y" }] }
+        ]);
+        Assert.Equal(2, command.ExecuteCalls.Count);
+        Assert.Contains("INSERT INTO parents", command.ExecuteCalls[0].Text);
+        Assert.Contains("INSERT INTO children", command.ExecuteCalls[1].Text);
+        Assert.Contains("label__0", command.ExecuteCalls[1].Text);
+        Assert.Contains("label__1", command.ExecuteCalls[1].Text);
+        _ = childrenRepo;
+    }
+
+    [Fact]
+    public async Task StoredProcedurePersistsChildrenInOneCall()
+    {
+        var (parentsRepo, _, command) = FamilyRepos(new StoredProcedureBulkWriteStrategy<Family>(
+            "bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+            new StoredProcedureBulkWriteStrategy<Child>("bulk_create_child", "bulk_update_child", "bulk_delete_child"));
+        await parentsRepo.Create(
+        [
+            new Family { id = 1, label = "a", children = [new Child { id = 10, label = "x" }] },
+            new Family { id = 2, label = "b", children = [new Child { id = 11, label = "y" }] }
+        ]);
+        Assert.Equal(2, command.ExecuteCalls.Count);
+        Assert.Equal("CALL bulk_create_parent($payload)", command.ExecuteCalls[0].Text);
+        Assert.Equal("CALL bulk_create_child($payload)", command.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
+    public async Task BatchCreateRequiresParentIdWhenChildrenArePresent()
+    {
+        var (parentsRepo, _, _) = FamilyRepos(new BatchCommandIBulkWriteStrategy<Family>());
+        var error = await Assert.ThrowsAsync<DatasourceException>(() => parentsRepo.Create(
+        [
+            new Family { label = "a", children = [new Child { label = "x" }] }
+        ]));
+        Assert.Contains("id", error.Message);
+    }
+
     [Fact]
     public async Task EmptyListDoesNotExecute()
     {
@@ -147,5 +205,24 @@ public class BulkWriteStrategyTests
         var command = new MockCommand(connection);
         connection.Command = command;
         return (new BulkCRUDRepository<T>(connection, new CRUDRepositoryOptions<T> { Entity = "parents" }, strategy), command);
+    }
+
+    static (BulkCRUDRepository<Family> Parents, BulkCRUDRepository<Child> Children, MockCommand Command) FamilyRepos(
+        IBulkWriteStrategy<Family> parents,
+        IBulkWriteStrategy<Child>? children = null)
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var childrenRepo = new BulkCRUDRepository<Child>(
+            connection,
+            new CRUDRepositoryOptions<Child> { Entity = "children" },
+            children ?? new BatchCommandIBulkWriteStrategy<Child>());
+        var parentsRepo = new BulkCRUDRepository<Family>(
+            connection,
+            new CRUDRepositoryOptions<Family> { Entity = "parents" },
+            parents);
+        parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
+        return (parentsRepo, childrenRepo, command);
     }
 }

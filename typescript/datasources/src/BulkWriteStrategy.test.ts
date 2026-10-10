@@ -190,6 +190,70 @@ describe("bulk write strategies", () => {
     ).rejects.toThrow(DatasourceError);
   });
 
+  class Child {
+    id: number | null = null;
+    parent_id: number | null = null;
+    label = "";
+  }
+
+  class Family {
+    id: number | null = null;
+    label = "";
+    children: Child[] = [];
+  }
+
+  const family = (
+    parents: IBulkWriteStrategy<Family>,
+    children: IBulkWriteStrategy<Child> = new BatchCommandIBulkWriteStrategy<Child>(),
+  ) => {
+    const connection = new MockConnection(undefined, "memory");
+    const command = new MockCommand(connection);
+    connection.command = command;
+    const childrenRepo = new BulkCRUDRepository<Child>(connection, { type: Child, entity: "children" }, children);
+    const parentsRepo = new BulkCRUDRepository<Family>(connection, { type: Family, entity: "parents" }, parents);
+    parentsRepo.addEnriched(
+      { destinationProperty: "children", sourceProperty: "id", relatedKey: "parent_id", type: "list" },
+      childrenRepo,
+    );
+    return { parentsRepo, command };
+  };
+
+  it("batch persists children in one command", async () => {
+    const { parentsRepo, command } = family(new BatchCommandIBulkWriteStrategy<Family>());
+    await parentsRepo.createBulk([
+      Object.assign(new Family(), { id: 1, label: "a", children: [Object.assign(new Child(), { id: 10, label: "x" })] }),
+      Object.assign(new Family(), { id: 2, label: "b", children: [Object.assign(new Child(), { id: 11, label: "y" })] }),
+    ]);
+    expect(command.executeCalls).toHaveLength(2);
+    expect(command.executeCalls[0]?.text).toContain("INSERT INTO parents");
+    expect(command.executeCalls[1]?.text).toContain("INSERT INTO children");
+    expect(command.executeCalls[1]?.text).toContain("label__0");
+    expect(command.executeCalls[1]?.text).toContain("label__1");
+  });
+
+  it("stored procedure persists children in one call", async () => {
+    const { parentsRepo, command } = family(
+      new StoredProcedureBulkWriteStrategy<Family>("bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+      new StoredProcedureBulkWriteStrategy<Child>("bulk_create_child", "bulk_update_child", "bulk_delete_child"),
+    );
+    await parentsRepo.createBulk([
+      Object.assign(new Family(), { id: 1, label: "a", children: [Object.assign(new Child(), { id: 10, label: "x" })] }),
+      Object.assign(new Family(), { id: 2, label: "b", children: [Object.assign(new Child(), { id: 11, label: "y" })] }),
+    ]);
+    expect(command.executeCalls).toHaveLength(2);
+    expect(command.executeCalls[0]?.text).toBe("CALL bulk_create_parent($payload)");
+    expect(command.executeCalls[1]?.text).toBe("CALL bulk_create_child($payload)");
+  });
+
+  it("batch create requires a parent id when children are present", async () => {
+    const { parentsRepo } = family(new BatchCommandIBulkWriteStrategy<Family>());
+    await expect(
+      parentsRepo.createBulk([
+        Object.assign(new Family(), { label: "a", children: [Object.assign(new Child(), { label: "x" })] }),
+      ]),
+    ).rejects.toThrow(/id/);
+  });
+
   it("empty list does not execute", async () => {
     for (const strategy of [
       new SingleCommandIBulkWriteStrategy<Parent>(),

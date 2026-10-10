@@ -43,6 +43,17 @@ public abstract class CreateEnrichmentStrategy<T>
             _ => []
         };
 
+    public IReadOnlyList<TChild> CollectChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
+        where TChild : new()
+    {
+        var children = Children(writer, enrichment, parent);
+        if (children.Count == 0) return children;
+        var key = Required(parent, enrichment.SourceProperty, enrichment.DestinationProperty);
+        foreach (var child in children)
+            Stamp(child, enrichment.RelatedKey, key.ToObject());
+        return children;
+    }
+
     protected static IReadOnlyList<TChild> Children<TParent, TChild>(
         ICRUDRepository<TChild> writer,
         Enrichment enrichment,
