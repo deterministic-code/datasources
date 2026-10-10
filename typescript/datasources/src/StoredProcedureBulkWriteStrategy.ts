@@ -63,6 +63,11 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
   command!: ICommand;
   options!: CRUDRepositoryOptions<T>;
 
+  attach = (command: ICommand, options: CRUDRepositoryOptions<T>): void => {
+    this.command = command;
+    this.options = options;
+  };
+
   constructor(
     private readonly createName: string,
     private readonly updateName: string,

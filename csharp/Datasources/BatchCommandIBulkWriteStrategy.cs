@@ -6,6 +6,9 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     public ICommand Command { get; set; } = null!;
     public CRUDRepositoryOptions<T> Options { get; set; } = null!;
 
+    public void Attach(ICommand command, CRUDRepositoryOptions<T> options) =>
+        (Command, Options) = (command, options);
+
     public Task<Response> Create(IReadOnlyList<T> items) =>
         Send([.. items.Select(Insert)]);
 

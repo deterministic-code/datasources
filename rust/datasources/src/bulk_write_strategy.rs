@@ -15,16 +15,13 @@ pub trait BulkWriteStrategy: Send + Sync {
         let _ = repo;
     }
 
-    fn set_command(&self, command: Arc<dyn Command>) {
-        let _ = command;
-    }
-
-    fn set_options(&self, options: CRUDRepositoryOptions) {
-        let _ = options;
-    }
-
-    fn set_connection(&self, connection: Arc<dyn Connection>) {
-        let _ = connection;
+    fn attach(
+        &self,
+        command: Arc<dyn Command>,
+        options: CRUDRepositoryOptions,
+        connection: Arc<dyn Connection>,
+    ) {
+        let _ = (command, options, connection);
     }
 
     async fn create(&self, items: &mut [Row]) -> Result<Response>;

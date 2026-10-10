@@ -116,15 +116,14 @@ impl StoredProcedureBulkWriteStrategy {
 
 #[async_trait]
 impl BulkWriteStrategy for StoredProcedureBulkWriteStrategy {
-    fn set_command(&self, command: Arc<dyn Command>) {
+    fn attach(
+        &self,
+        command: Arc<dyn Command>,
+        options: CRUDRepositoryOptions,
+        connection: Arc<dyn Connection>,
+    ) {
         let _ = self.command.set(command);
-    }
-
-    fn set_options(&self, options: CRUDRepositoryOptions) {
         let _ = self.options.set(options);
-    }
-
-    fn set_connection(&self, connection: Arc<dyn Connection>) {
         let _ = self.connection.set(connection);
     }
 

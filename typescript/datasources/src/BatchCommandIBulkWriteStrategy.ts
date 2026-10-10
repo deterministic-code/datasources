@@ -58,6 +58,11 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
   command!: ICommand;
   options!: CRUDRepositoryOptions<T>;
 
+  attach = (command: ICommand, options: CRUDRepositoryOptions<T>): void => {
+    this.command = command;
+    this.options = options;
+  };
+
   create = (items: T[]): Promise<Response> => this.send(items.map((item) => this.insert(item)));
 
   update = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>

@@ -1,7 +1,7 @@
 use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
-use crate::crud_repository::{open_for_bulk, CRUDRepository};
+use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -48,10 +48,7 @@ impl BulkCRUDRepository {
             .write
             .as_ref()
             .is_some_and(|write| write.use_transaction());
-        strategy.set_options(options.clone());
-        strategy.set_connection(Arc::clone(&connection));
-        let (repo, _) = open_for_bulk(connection, options)?;
-        let crud = Arc::new(repo);
+        let crud = Arc::new(CRUDRepository::new(Arc::clone(&connection), options.clone())?);
         let _ = crud.column(
             crud.id_names()
                 .first()
@@ -60,7 +57,7 @@ impl BulkCRUDRepository {
         );
         let _ = crud.enrichment_into("");
         strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
-        strategy.set_command(crud.command());
+        strategy.attach(crud.command(), options, connection);
         Ok(Self {
             crud,
             strategy,
