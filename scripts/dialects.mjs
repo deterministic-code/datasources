@@ -22,7 +22,7 @@ const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PROSE_BLOCK = /^::: prose\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const CODE_FENCE = /(^```[\s\S]*?^```)/m;
-const NAME_MARKER = /\{\{([^{}|]+)\|([^{}|]+)\|([^{}|]+)\}\}/g;
+const NAME_MARKER = /\{\{((?:\\[\s\S]|[^{}|])+)\|((?:\\[\s\S]|[^{}|])+)\|((?:\\[\s\S]|[^{}|])+)\}\}/g;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
 const EXAMPLE_FENCE = /^```([a-zA-Z0-9_+-]+)[ \t]+(\S+#\S+)\s*\r?\n([\s\S]*?)^```\s*$/gm;
 const OUTPUT_FENCE = /^```output(?::([a-zA-Z0-9_+-]+))?[ \t]+\[([^\]]+)\]\s*\r?\n([\s\S]*?)^```\s*$/gm;
@@ -227,10 +227,12 @@ export const toReadmeProse = (body) =>
     })
     .join("\n\n");
 
+const unescapeSlot = (slot) => slot.trim().replaceAll("\\|", "|");
+
 const applyNames = (text, style) => {
   NAME_MARKER.lastIndex = 0;
   return text.replace(NAME_MARKER, (_, csharp, typescript, rust) => {
-    const slots = [csharp, typescript, rust].map((slot) => slot.trim());
+    const slots = [csharp, typescript, rust].map(unescapeSlot);
     return style === "vitepress"
       ? `<DialectName csharp="${escapeAttr(slots[0])}" typescript="${escapeAttr(slots[1])}" rust="${escapeAttr(slots[2])}"></DialectName>`
       : slots.map((slot) => `\`${slot}\``).join(" / ");

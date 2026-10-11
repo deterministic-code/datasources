@@ -651,7 +651,7 @@ Load the provider cdylib.
 
 {{Reset|reset|reset}} clears the registry. Use it in tests.
 
-After `generate repositories`, call the generated `Register` on {{Repositories|repositories|repositories()}}. A registered plural name is that CRUD repository. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?`, `Contact | undefined`, `Option<Row>`). `Create` / `create` returns that same entity. `Update` and `Delete` return `Response`. {{CreateRepository|createRepository|create_repository_by_name}} takes the entity or plural name as a string.
+After `generate repositories`, call the generated `Register` on {{Repositories|repositories|repositories()}}. A registered plural name is that CRUD repository. {{ReadSingle|readSingle|read_single}} returns the entity ({{Contact?|Contact \| undefined|Option<Row>}}). {{Create|create|create}} returns that same entity. `Update` and `Delete` return `Response`. {{CreateRepository|createRepository|create_repository_by_name}} takes the entity or plural name as a string.
 
 See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
 
@@ -679,14 +679,14 @@ See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [
 ```
 :::
 
-### Create from a plural name
+### Create using Dynamic After Register
 
 ::: example
-```csharp csharp/Datasources.Tests/DatasourceTests.cs#CreatesFromPluralName
+```csharp csharp/Providers/Sqlite.Tests/DatasourcePluralIntegrationTests.cs#CreatesUsingDynamicAfterRegister
 ```
-```rust rust/datasources/src/tests/datasource.rs#creates_from_plural_name
+```rust rust/providers/sqlite/tests/datasource_plural.rs#creates_using_dynamic_after_register
 ```
-```typescript typescript/datasources/src/Datasource.test.ts#creates-from-plural-name
+```typescript typescript/providers/sqlite/tests/datasource.repository.integration.test.ts#creates-using-dynamic-after-register
 ```
 :::
 

@@ -2,11 +2,13 @@
 
 # Datasources
 
-Datasources is a data-access and object-relational mapper library with parity across multiple languages and datasource providers.
+Datasources is a data-access and object-relational mapper library. It aims for parity across languages and datasource providers.
 
-It is designed for AI agents. The motivation is that current AI-generated data-access code is not deterministic, and quality often degrades as a project scales.
+The feature stack starts with commands, connections, and object mapping. Higher up, the API is more opinionated. Types and repositories are generated from a Types Specification, which can be the source of truth for the datasource schema and the generated code. The specification describes unions and inherited types. A type may contain referenced lists and dictionaries, and those references are generated as enriched repositories.
 
-The feature stack starts with standard data-access modules for commands, connections, and object mapping. Higher up, the API is more opinionated and adds time-saving features for CRUD repositories, enriched repositories, and bulk repositories.
+The library works as a high-level repository builder or as a micro-ORM.
+
+The specification is declarative, so it suits generation by AI agents. Progressive skills keep that generation economical and repeatable. They use fewer tokens, and they keep generated code and mappings constant and deterministic. The library was written so TypeScript could be translated to Rust, and so data-access code written by an agent would remain coherent as an application scales.
 
 - [Quick Start](#quick-start)
 - [Features](#features)
@@ -47,6 +49,105 @@ Add a new datasource provider.
 ```sh
 npx @datasources/cli add sqlite
 ```
+
+### Generate repositories from a Types Specification
+
+A Types Specification is the `deterministic` directory. `types.yaml` lists each entity. Tag a type `datasource_type` when it is a table.
+
+```yaml
+version: 1.0.0
+types:
+  - item:
+      tags:
+        - datasource_type
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+            size: 128
+```
+
+`generate all` writes the types, the repositories, and SQL for one language. The default input directory is `./deterministic`. The default output directory is `./generated`.
+
+##### C#
+
+```csharp
+npx @datasources/cli generate all --dialect csharp
+```
+
+##### Rust
+
+```rust
+npx @datasources/cli generate all --dialect rust
+```
+
+##### TypeScript
+
+```typescript
+npx @datasources/cli generate all --dialect typescript
+```
+
+See [Generate](#generate).
+
+### Dynamic registered datasource
+
+Call the generated register, then use the plural name. `Items` / `items` / `items()` is the CRUD repository for `Item`. `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity.
+
+##### C#
+
+```csharp
+using Backend.Types.Datasource;
+
+dynamic ds = Datasource.Default;
+RepositoryRegistry.Register(ds.Repositories);
+
+Item created = await ds.Items.Create(new Item { Name = "Ada" });
+Item? loaded = await ds.Items.ReadSingle();
+created.Name = "Ada Lovelace";
+Response updated = await ds.Items.Update(created);
+Response deleted = await ds.Items.Delete(created);
+```
+
+##### Rust
+
+```rust
+#[path = "../generated/rust/repositories/mod.rs"]
+mod repositories;
+
+use datasources::{default, Response, Row, Value};
+use repositories::repository_registry::{register, Repositories};
+
+let ds = default()?;
+register(ds.repositories());
+let items = ds.as_ref().items();
+let mut created = Row::new();
+created.insert("name".into(), Value::from("Ada"));
+let mut created = items.create(&mut created).await?;
+let loaded = items.read_single(None, None, None).await?;
+created.insert("name".into(), Value::from("Ada Lovelace"));
+let updated: Response = items.update(&created, None).await?;
+let deleted: Response = items.delete(&created, None).await?;
+```
+
+##### TypeScript
+
+```typescript
+import { Datasource } from "@datasources/core";
+import { register } from "./generated/typescript/repositories/repository-registry.ts";
+
+const ds = Datasource.default as Datasource;
+register(ds.repositories);
+
+const created = await ds.items.create({ id: 0, name: "Ada" });
+const loaded = await ds.items.readSingle();
+created.name = "Ada Lovelace";
+const updated = await ds.items.update(created);
+const deleted = await ds.items.delete(created);
+```
+
+See [Datasource](#create-using-dynamic-after-register).
 
 ### Readonly command
 
@@ -620,7 +721,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Create default from .env settings](#create-default-from-env-settings)
 - [Default using environment variables](#default-using-environment-variables)
-- [Create from a plural name](#create-from-a-plural-name)
+- [Create using Dynamic After Register](#create-using-dynamic-after-register)
 - [Create from a driver](#create-from-a-driver)
 
 ### Connection
@@ -864,10 +965,12 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ### BatchCommandIBulkWriteStrategy
 
 - [Join statements](#join-statements)
+- [Persist list children](#persist-list-children)
 
 ### StoredProcedureBulkWriteStrategy
 
 - [One JSON call](#one-json-call)
+- [Persist list children](#persist-list-children)
 
 ### Driver
 
@@ -1880,7 +1983,7 @@ Creates a registered CRUD repository by entity or plural name.
 **Definition**
 
 ```csharp
-object CreateRepository(string typeName, IConnection? connection = null)
+ICRUDRepository<T> CreateRepository<T>(string typeName, IConnection? connection = null)
 ```
 
 **Parameters**
@@ -1892,7 +1995,7 @@ object CreateRepository(string typeName, IConnection? connection = null)
 
 **Returns**
 
-`object` (the generated repository)
+[ICRUDRepository](#crud-repository)`<T>`
 
 ###### CreateReadonlyRepository(typeName, connection) {#csharp-idatasource-createreadonlyrepository-typename-connection}
 
@@ -1901,7 +2004,7 @@ Creates a registered read-only repository by entity or plural name.
 **Definition**
 
 ```csharp
-object CreateReadonlyRepository(string typeName, IConnection? connection = null)
+IReadonlyRepository<T> CreateReadonlyRepository<T>(string typeName, IConnection? connection = null)
 ```
 
 **Parameters**
@@ -1913,7 +2016,7 @@ object CreateReadonlyRepository(string typeName, IConnection? connection = null)
 
 **Returns**
 
-`object` (the generated readonly repository)
+[IReadonlyRepository](#readonly-repository)`<T>`
 
 ##### RepositoryAccess {#csharp-repositoryaccess}
 
@@ -2288,7 +2391,7 @@ Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalo
 
 `Reset` / `reset` / `reset` clears the registry. Use it in tests.
 
-After `generate repositories`, call the generated `Register` on `Repositories` / `repositories` / `repositories()`. A registered plural name is that CRUD repository. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?`, `Contact | undefined`, `Option<Row>`). `Create` / `create` returns that same entity. `Update` and `Delete` return `Response`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
+After `generate repositories`, call the generated `Register` on `Repositories` / `repositories` / `repositories()`. A registered plural name is that CRUD repository. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?` / `Contact | undefined` / `Option<Row>`). `Create` / `create` / `create` returns that same entity. `Update` and `Delete` return `Response`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
 
 See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 
@@ -2296,21 +2399,21 @@ See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI]
 
 #### Create default from .env settings
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceTests.cs#L42-L49)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceTests.cs#L24-L31)
 
 ```csharp
 var ds = Datasource.Default;
 var command = await ds.CreateCommand();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L42-L50)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L13-L21)
 
 ```rust
 let ds = default().expect("default");
 let command = ds.create_command(None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L44-L59)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L42)
 
 ```typescript
 const ds = Datasource.default;
@@ -2343,43 +2446,49 @@ process.env.PROVIDER = "sqlite";
 const ds = Datasource.default;
 ```
 
-#### Create from a plural name
+#### Create using Dynamic After Register
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/DatasourceTests.cs#L24-L40)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/DatasourcePluralIntegrationTests.cs#L24-L39)
 
 ```csharp
-var ds = new Datasource("mock", new MockDriver());
-var connection = new StubConnection("mock");
-var crud = new StubRepository<object>("crud", connection);
-var read = new StubRepository<object>("read", connection);
-ds.Repositories.Register("Contact", "Contacts", _ => crud, _ => read);
-dynamic dsDynamic = ds;
+dynamic ds = Datasource.Default;
+Register(ds);
+User created = await ds.Users.Create(new User { Username = "ada", IsEnabled = true });
+User? loaded = await ds.Users.ReadSingle();
+Response updated = await ds.Users.Update(created);
+Response deleted = await ds.Users.Delete(created);
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/datasource.rs#L18-L40)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/datasource_plural.rs#L59-L86)
 
 ```rust
-let built = BuiltDatasource::new("mock", MockDriver::arc(), None);
-built.repositories().register_named(
-    "Contact",
-    "contacts",
-    |_| Arc::new(StubRepository::typed::<Item>("crud")),
-    |_| as_readonly(Arc::new(StubRepository::typed::<Item>("read"))),
-);
-let ds: &dyn Datasource = &built;
-let created = ds.create_repository_by_name("Contact", None).unwrap();
+let ds = default().unwrap();
+register(&ds);
+let users = ds.as_ref().users();
+let mut created = Row::new();
+created.insert("Username".into(), Value::from("ada"));
+created.insert("IsEnabled".into(), Value::Bool(true));
+let created = users.create(&mut created).await.unwrap();
+let loaded: Option<Row> = users.read_single(None, None, None).await.unwrap();
+let updated: Response = users.update(&created, None).await.unwrap();
+let deleted: Response = users.delete(&created, None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/Datasource.test.ts#L27-L42)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/datasource.repository.integration.test.ts#L60-L73)
 
 ```typescript
-const ds = new Datasource("mock", new MockDriver());
-const connection = new MockConnection();
-class Item {}
-const crud = new MockRepository<Item>(connection, Item);
-const read = new MockRepository<Item>(connection, Item);
-ds.repositories.register("Contact", "contacts", () => crud, () => read);
-const dsDynamic = ds as Datasource & { contacts: { create: () => unknown; createReadonly: () => unknown } };
+const ds = Datasource.default;
+register(ds);
+const created = await ds.users.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
+const loaded = await ds.users.readSingle();
+const updated = await ds.users.update(created);
+const deleted = await ds.users.delete(created);
+```
+
+Schema: [user-pascal](#user-pascal)
+
+```sql
+CREATE TABLE User (id int, is_enabled bool NOT NULL, username string NOT NULL, CONSTRAINT pk_User PRIMARY KEY (id))
 ```
 
 #### Create from a driver
@@ -7178,13 +7287,13 @@ CREATE TABLE user_role (user_id int NOT NULL, name string NOT NULL)
 
 Each parent is created with its nested children. Responses sum `rowsAffected`.
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L22-L41)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L29-L47)
 
 ```csharp
 var connection = await Setup();
 var parentsRepo = new BulkCRUDRepository<Parent>(connection);
 var childrenRepo = new BulkCRUDRepository<Child>(connection);
-var response = await Repo(parentsRepo, childrenRepo).Create(
+var ids = await Repo(parentsRepo, childrenRepo).Create(
 [
     new Parent { children = [new Child { label = "a" }] },
     new Parent { children = [new Child { label = "b" }, new Child { label = "c" }] }
@@ -7193,7 +7302,7 @@ var parents = await parentsRepo.Read().ToListAsync();
 var children = await childrenRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L900-L940)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L904-L942)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -7208,7 +7317,7 @@ parents.add_enriched(
     children.clone(),
     None,
 );
-let response = parents
+let ids = parents
     .create_bulk(&mut [
         record(&[(
             "children",
@@ -7227,13 +7336,13 @@ let response = parents
 let stored_parents = parents.read(None, None, None).await.unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L50)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L49)
 
 ```typescript
 const connection = await setup();
 const parentsRepo = new BulkCRUDRepository(Parent, connection);
 const childrenRepo = new BulkCRUDRepository(Child, connection);
-const response = await relate(parentsRepo, childrenRepo).createBulk([
+const ids = await relate(parentsRepo, childrenRepo).createBulk([
   Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
   Object.assign(new Parent(), {
     children: [Object.assign(new Child(), { label: "b" }), Object.assign(new Child(), { label: "c" })],
@@ -11837,7 +11946,7 @@ CREATE TABLE user_role (user_id int NOT NULL, name string NOT NULL)
 
 ## Bulk repository
 
-[CRUDRepository](#crud-repository) plus list writes. Each item still runs the same deep create / update / delete. Responses sum `rowsAffected`; `result` is the last item.
+[CRUDRepository](#crud-repository) plus list writes. Each item still runs the same deep create / update / delete. `Create` / `createBulk` / `create_bulk` returns the items with ids set. Update and delete responses sum `rowsAffected`.
 
 ### Classes
 
@@ -11859,7 +11968,7 @@ class BulkCRUDRepository<T extends object> extends CRUDRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [createBulk(items)](#typescript-bulkcrudrepository-createbulk-items) | Creates each item, including nested `List` children. |
+| [createBulk(items)](#typescript-bulkcrudrepository-createbulk-items) | Creates each item, including nested `List` children. Returns the items with ids set, including composite keys. |
 | [updateBulk(items, byWhere?)](#typescript-bulkcrudrepository-updatebulk-items-bywhere) | Updates each item, then replace-syncs nested `List` lists. |
 | [deleteBulk(items, byWhere?)](#typescript-bulkcrudrepository-deletebulk-items-bywhere) | Deletes nested `List` rows for each item, then the parents. |
 
@@ -11881,12 +11990,12 @@ constructor(inner: ICRUDRepository<T>)
 
 ###### createBulk(items) {#typescript-bulkcrudrepository-createbulk-items}
 
-Creates each item, including nested `List` children.
+Creates each item, including nested `List` children. Returns the items with ids set, including composite keys.
 
 **Definition**
 
 ```typescript
-createBulk(items: T[]): Promise<Response>
+createBulk(items: T[]): Promise<T[]>
 ```
 
 **Parameters**
@@ -11897,7 +12006,7 @@ createBulk(items: T[]): Promise<Response>
 
 **Returns**
 
-`Promise<Response>`
+`Promise<T[]>`
 
 ###### updateBulk(items, byWhere?) {#typescript-bulkcrudrepository-updatebulk-items-bywhere}
 
@@ -11959,12 +12068,9 @@ public class BulkCRUDRepository<T> : CRUDRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [Create(items)](#csharp-bulkcrudrepository-create-items) | Creates each item, including nested `List` children. |
+| [Create(items)](#csharp-bulkcrudrepository-create-items) | Creates each item, including nested `List` children. Returns the items with ids set, including composite keys. |
 | [Update(items, byWhere)](#csharp-bulkcrudrepository-update-items-bywhere) | Updates each item, then replace-syncs nested `List` lists. |
 | [Delete(items, byWhere)](#csharp-bulkcrudrepository-delete-items-bywhere) | Deletes nested `List` rows for each item, then the parents. |
-| [BulkCreate(items)](#csharp-bulkcrudrepository-bulkcreate-items) | Alias of [Create](#csharp-bulkcrudrepository-create-items). |
-| [BulkUpdate(items, byWhere)](#csharp-bulkcrudrepository-bulkupdate-items-bywhere) | Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere). |
-| [BulkDelete(items, byWhere)](#csharp-bulkcrudrepository-bulkdelete-items-bywhere) | Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere). |
 
 ###### BulkCRUDRepository(inner) {#csharp-bulkcrudrepository-bulkcrudrepository-inner}
 
@@ -11984,12 +12090,12 @@ public BulkCRUDRepository(ICRUDRepository<T> inner)
 
 ###### Create(items) {#csharp-bulkcrudrepository-create-items}
 
-Creates each item, including nested `List` children.
+Creates each item, including nested `List` children. Returns the items with ids set, including composite keys.
 
 **Definition**
 
 ```csharp
-public Task<Response> Create(IReadOnlyList<T> items)
+public Task<IReadOnlyList<T>> Create(IReadOnlyList<T> items)
 ```
 
 **Parameters**
@@ -12000,7 +12106,7 @@ public Task<Response> Create(IReadOnlyList<T> items)
 
 **Returns**
 
-`Task<Response>`
+`Task<IReadOnlyList<T>>`
 
 ###### Update(items, byWhere) {#csharp-bulkcrudrepository-update-items-bywhere}
 
@@ -12044,68 +12150,6 @@ public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null)
 
 `Task<Response>`
 
-###### BulkCreate(items) {#csharp-bulkcrudrepository-bulkcreate-items}
-
-Alias of [Create](#csharp-bulkcrudrepository-create-items).
-
-**Definition**
-
-```csharp
-public Task<Response> BulkCreate(IReadOnlyList<T> items)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to insert |
-
-**Returns**
-
-`Task<Response>`
-
-###### BulkUpdate(items, byWhere) {#csharp-bulkcrudrepository-bulkupdate-items-bywhere}
-
-Alias of [Update](#csharp-bulkcrudrepository-update-items-bywhere).
-
-**Definition**
-
-```csharp
-public Task<Response> BulkUpdate(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to update |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Task<Response>`
-
-###### BulkDelete(items, byWhere) {#csharp-bulkcrudrepository-bulkdelete-items-bywhere}
-
-Alias of [Delete](#csharp-bulkcrudrepository-delete-items-bywhere).
-
-**Definition**
-
-```csharp
-public Task<Response> BulkDelete(IReadOnlyList<T> items, IWhere? byWhere = null)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `items` | parents to delete |
-| `byWhere` | optional predicate applied to each item |
-
-**Returns**
-
-`Task<Response>`
-
 ##### Rust
 
 ##### BulkCRUDRepository {#rust-bulkcrudrepository}
@@ -12125,7 +12169,7 @@ pub struct BulkCRUDRepository
 | Name | Description |
 | --- | --- |
 | [add_enriched(enrichment, via, strategy)](#rust-bulkcrudrepository-add_enriched-enrichment-via-strategy) | Forwards to [CRUDRepository.add_enriched](#rust-add_enrichedenrichment-via-strategy). A CRUD `via` is kept so `List` children can be written. |
-| [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `List` children. |
+| [create_bulk(items)](#rust-bulkcrudrepository-create_bulk-items) | Creates each item, including nested `List` children. Returns the items with ids set, including composite keys. |
 | [update_bulk(items, by_where)](#rust-bulkcrudrepository-update_bulk-items-by_where) | Updates each item, then replace-syncs nested `List` lists. |
 | [delete_bulk(items, by_where)](#rust-bulkcrudrepository-delete_bulk-items-by_where) | Deletes nested `List` rows for each item, then the parents. |
 
@@ -12173,12 +12217,12 @@ pub fn add_enriched(&mut self, enrichment: Enrichment, via: impl EnrichmentVia, 
 
 ###### create_bulk(items) {#rust-bulkcrudrepository-create_bulk-items}
 
-Creates each item, including nested `List` children.
+Creates each item, including nested `List` children. Returns the items with ids set, including composite keys.
 
 **Definition**
 
 ```rust
-pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
+pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Vec<Row>>
 ```
 
 **Parameters**
@@ -12189,7 +12233,7 @@ pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Response>
 
 **Returns**
 
-`Result<Response>`
+`Result<Vec<`[Row](#repositories)`>>`
 
 ###### update_bulk(items, by_where) {#rust-bulkcrudrepository-update_bulk-items-by_where}
 
@@ -12237,15 +12281,15 @@ pub async fn delete_bulk(&self, items: &[Row], by_where: Option<&dyn IWhere>) ->
 
 > **TypeScript**
 >
-> Bulk writes use `createBulk` only.
+> Bulk writes use `createBulk`, `updateBulk`, and `deleteBulk`.
 
 > **C#**
 >
-> List overloads are `Create(IReadOnlyList<T>)`, with `Bulk*` aliases.
+> List writes are `Create(IReadOnlyList<T>)`, `Update`, and `Delete`.
 
 > **Rust**
 >
-> Bulk writes use `create_bulk` only.
+> Bulk writes use `create_bulk`, `update_bulk`, and `delete_bulk`.
 
 Each item still runs the same deep persist as [CRUDRepository](#crud-repository). The list write goes through [IBulkWriteStrategy](#ibulkwritestrategy). The default is [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy). When the write strategy's `useTransaction` is on, a list create, update, or delete is one transaction.
 
@@ -12253,18 +12297,18 @@ Each item still runs the same deep persist as [CRUDRepository](#crud-repository)
 
 #### Create parents and children
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L23-L30)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L30-L37)
 
 ```csharp
 var connection = await Setup();
 var parentsRepo = new BulkCRUDRepository<Parent>(connection);
 var childrenRepo = new BulkCRUDRepository<Child>(connection);
-var response = await Repo(parentsRepo, childrenRepo).Create(
+var ids = await Repo(parentsRepo, childrenRepo).Create(
 [
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L900-L940)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L904-L942)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -12279,7 +12323,7 @@ parents.add_enriched(
     children.clone(),
     None,
 );
-let response = parents
+let ids = parents
     .create_bulk(&mut [
         record(&[(
             "children",
@@ -12304,7 +12348,7 @@ let stored_parents = parents.read(None, None, None).await.unwrap();
 const connection = await setup();
 const parentsRepo = new BulkCRUDRepository(Parent, connection);
 const childrenRepo = new BulkCRUDRepository(Child, connection);
-const response = await relate(parentsRepo, childrenRepo).createBulk([
+const ids = await relate(parentsRepo, childrenRepo).createBulk([
   Object.assign(new Parent(), { children: [Object.assign(new Child(), { label: "a" })] }),
   Object.assign(new Parent(), {
 ```
@@ -12757,7 +12801,7 @@ Creates a registered CRUD repository by entity or plural name.
 **Definition**
 
 ```csharp
-public object Create(string name, IConnection connection)
+public TRepository Create<TRepository>(string name, IConnection connection) where TRepository : class
 ```
 
 **Parameters**
@@ -12769,7 +12813,7 @@ public object Create(string name, IConnection connection)
 
 **Returns**
 
-`object`
+`TRepository`
 
 ###### CreateReadonly(name, connection) {#csharp-repositoryfactory-createreadonly-name-connection}
 
@@ -12778,7 +12822,7 @@ Creates a registered read-only repository by entity or plural name.
 **Definition**
 
 ```csharp
-public object CreateReadonly(string name, IConnection connection)
+public TRepository CreateReadonly<TRepository>(string name, IConnection connection) where TRepository : class
 ```
 
 **Parameters**
@@ -12790,7 +12834,7 @@ public object CreateReadonly(string name, IConnection connection)
 
 **Returns**
 
-`object`
+`TRepository`
 
 ###### Access(name, connection) {#csharp-repositoryfactory-access-name-connection}
 
@@ -17428,7 +17472,7 @@ var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dict
 var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L139-L157)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L151-L169)
 
 ```rust
 let converter =
@@ -26979,7 +27023,7 @@ Set this as the repository `write` option. [DefaultWriteEnrichmentStrategy](#def
 
 #### Roll back a bulk update
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L100-L119)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L125-L144)
 
 ```csharp
 var connection = await Setup();
@@ -26990,7 +27034,7 @@ var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryO
 var first = await parentsRepo.Create(new Parent { label = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L770-L817)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L772-L821)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -27007,9 +27051,14 @@ let created = parents
     ])
     .await
     .unwrap();
+let stored = parents.read(None, None, None).await.unwrap();
+let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
+let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
+created_ids.sort();
+stored_ids.sort();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L86-L109)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L104-L127)
 
 ```typescript
 const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
@@ -27279,7 +27328,7 @@ Set it on the repository `write` option. Create, update, and delete each delegat
 
 #### Roll back a bulk update
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L100-L119)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkCRUDRepositoryTests.cs#L125-L144)
 
 ```csharp
 var connection = await Setup();
@@ -27290,7 +27339,7 @@ var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryO
 var first = await parentsRepo.Create(new Parent { label = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L770-L817)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L772-L821)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -27307,9 +27356,14 @@ let created = parents
     ])
     .await
     .unwrap();
+let stored = parents.read(None, None, None).await.unwrap();
+let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
+let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
+created_ids.sort();
+stored_ids.sort();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L86-L109)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L104-L127)
 
 ```typescript
 const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
@@ -29443,7 +29497,7 @@ var notesRepo = Open<Note>(connection);
 var parent = await parentsRepo.Create(new Parent());
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L819-L879)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L823-L883)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -29511,7 +29565,7 @@ const parent = await parentsRepo.create(new Parent());
 
 ## IBulkWriteStrategy
 
-Writes a list of rows for a [BulkCRUDRepository](#bulk-repository). Create, update, and delete each receive the items and the repository. The default is [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy).
+Writes a list of rows for a [BulkCRUDRepository](#bulk-repository). Create, update, and delete each receive the items. The repository sets `Repo` after construction. The default is [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy).
 
 ### Classes
 
@@ -29523,22 +29577,46 @@ Writes a list of rows for a [BulkCRUDRepository](#bulk-repository). Create, upda
 interface IBulkWriteStrategy<T extends object>
 ```
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| repo | [CRUDRepository](#crud-repository) the orchestrator assigns after `base(...)`. |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#typescript-ibulkwritestrategy-create-items-repo) | Inserts `items`. |
-| [update(items, byWhere, repo)](#typescript-ibulkwritestrategy-update-items-bywhere-repo) | Updates `items`. |
-| [delete(items, byWhere, repo)](#typescript-ibulkwritestrategy-delete-items-bywhere-repo) | Deletes `items`. |
+| [attach(command, options)](#typescript-ibulkwritestrategy-attach-command-options) | Receives the repository command and options. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) ignores them. |
+| [create(items)](#typescript-ibulkwritestrategy-create-items) | Inserts `items`. |
+| [update(items, byWhere)](#typescript-ibulkwritestrategy-update-items-bywhere) | Updates `items`. |
+| [delete(items, byWhere)](#typescript-ibulkwritestrategy-delete-items-bywhere) | Deletes `items`. |
 
-###### create(items, repo) {#typescript-ibulkwritestrategy-create-items-repo}
+###### attach(command, options) {#typescript-ibulkwritestrategy-attach-command-options}
+
+Receives the repository command and options. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) ignores them.
+
+**Definition**
+
+```typescript
+attach(command: ICommand, options: CRUDRepositoryOptions<T>): void
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `command` | middleware-wrapped [ICommand](#command) |
+| `options` | [CRUDRepositoryOptions](#crud-repository) |
+
+###### create(items) {#typescript-ibulkwritestrategy-create-items}
 
 Inserts `items`.
 
 **Definition**
 
 ```typescript
-create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+create(items: T[]): Promise<Response>
 ```
 
 **Parameters**
@@ -29546,20 +29624,19 @@ create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### update(items, byWhere, repo) {#typescript-ibulkwritestrategy-update-items-bywhere-repo}
+###### update(items, byWhere) {#typescript-ibulkwritestrategy-update-items-bywhere}
 
 Updates `items`.
 
 **Definition**
 
 ```typescript
-update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+update(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -29568,20 +29645,19 @@ update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### delete(items, byWhere, repo) {#typescript-ibulkwritestrategy-delete-items-bywhere-repo}
+###### delete(items, byWhere) {#typescript-ibulkwritestrategy-delete-items-bywhere}
 
 Deletes `items`.
 
 **Definition**
 
 ```typescript
-delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+delete(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -29590,7 +29666,6 @@ delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -29604,22 +29679,46 @@ delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 public interface IBulkWriteStrategy<T> where T : new()
 ```
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Repo | [CRUDRepository](#crud-repository) the orchestrator assigns after `base(...)`. |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Create(items, repo)](#csharp-ibulkwritestrategy-create-items-repo) | Inserts `items`. |
-| [Update(items, byWhere, repo)](#csharp-ibulkwritestrategy-update-items-bywhere-repo) | Updates `items`. |
-| [Delete(items, byWhere, repo)](#csharp-ibulkwritestrategy-delete-items-bywhere-repo) | Deletes `items`. |
+| [Attach(command, options)](#csharp-ibulkwritestrategy-attach-command-options) | Receives the repository command and options. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) ignores them. |
+| [Create(items)](#csharp-ibulkwritestrategy-create-items) | Inserts `items`. |
+| [Update(items, byWhere)](#csharp-ibulkwritestrategy-update-items-bywhere) | Updates `items`. |
+| [Delete(items, byWhere)](#csharp-ibulkwritestrategy-delete-items-bywhere) | Deletes `items`. |
 
-###### Create(items, repo) {#csharp-ibulkwritestrategy-create-items-repo}
+###### Attach(command, options) {#csharp-ibulkwritestrategy-attach-command-options}
+
+Receives the repository command and options. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) ignores them.
+
+**Definition**
+
+```csharp
+void Attach(ICommand command, CRUDRepositoryOptions<T> options)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `command` | middleware-wrapped [ICommand](#command) |
+| `options` | [CRUDRepositoryOptions](#crud-repository) |
+
+###### Create(items) {#csharp-ibulkwritestrategy-create-items}
 
 Inserts `items`.
 
 **Definition**
 
 ```csharp
-Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+Task<Response> Create(IReadOnlyList<T> items)
 ```
 
 **Parameters**
@@ -29627,20 +29726,19 @@ Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Update(items, byWhere, repo) {#csharp-ibulkwritestrategy-update-items-bywhere-repo}
+###### Update(items, byWhere) {#csharp-ibulkwritestrategy-update-items-bywhere}
 
 Updates `items`.
 
 **Definition**
 
 ```csharp
-Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -29649,20 +29747,19 @@ Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepositor
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Delete(items, byWhere, repo) {#csharp-ibulkwritestrategy-delete-items-bywhere-repo}
+###### Delete(items, byWhere) {#csharp-ibulkwritestrategy-delete-items-bywhere}
 
 Deletes `items`.
 
 **Definition**
 
 ```csharp
-Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -29671,7 +29768,6 @@ Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepositor
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -29689,18 +29785,54 @@ pub trait BulkWriteStrategy: Send + Sync
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#rust-bulkwritestrategy-create-items-repo) | Inserts `items`. |
-| [update(items, by_where, repo)](#rust-bulkwritestrategy-update-items-by_where-repo) | Updates `items`. |
-| [delete(items, by_where, repo)](#rust-bulkwritestrategy-delete-items-by_where-repo) | Deletes `items`. |
+| [set_repo(repo)](#rust-bulkwritestrategy-set_repo-repo) | Stores the [CRUDRepository](#crud-repository). [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) uses it for one-row writes. |
+| [attach(command, options, connection)](#rust-bulkwritestrategy-attach-command-options-connection) | Receives the repository command, options, and connection. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) ignores them. |
+| [create(items)](#rust-bulkwritestrategy-create-items) | Inserts `items`. |
+| [update(items, by_where)](#rust-bulkwritestrategy-update-items-by_where) | Updates `items`. |
+| [delete(items, by_where)](#rust-bulkwritestrategy-delete-items-by_where) | Deletes `items`. |
 
-###### create(items, repo) {#rust-bulkwritestrategy-create-items-repo}
+###### set_repo(repo) {#rust-bulkwritestrategy-set_repo-repo}
+
+Stores the [CRUDRepository](#crud-repository). [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) uses it for one-row writes.
+
+**Definition**
+
+```rust
+fn set_repo(&self, repo: Arc<dyn ICRUDRepository>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `repo` | [CRUDRepository](#crud-repository) |
+
+###### attach(command, options, connection) {#rust-bulkwritestrategy-attach-command-options-connection}
+
+Receives the repository command, options, and connection. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) ignores them.
+
+**Definition**
+
+```rust
+fn attach(&self, command: Arc<dyn Command>, options: CRUDRepositoryOptions, connection: Arc<dyn Connection>)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `command` | middleware-wrapped command |
+| `options` | [CRUDRepositoryOptions](#crud-repository) |
+| `connection` | used to build statements (Rust `Command` has no connection) |
+
+###### create(items) {#rust-bulkwritestrategy-create-items}
 
 Inserts `items`.
 
 **Definition**
 
 ```rust
-async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+async fn create(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 **Parameters**
@@ -29708,20 +29840,19 @@ async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<R
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### update(items, by_where, repo) {#rust-bulkwritestrategy-update-items-by_where-repo}
+###### update(items, by_where) {#rust-bulkwritestrategy-update-items-by_where}
 
 Updates `items`.
 
 **Definition**
 
 ```rust
-async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -29730,20 +29861,19 @@ async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to update |
 | `by_where` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### delete(items, by_where, repo) {#rust-bulkwritestrategy-delete-items-by_where-repo}
+###### delete(items, by_where) {#rust-bulkwritestrategy-delete-items-by_where}
 
 Deletes `items`.
 
 **Definition**
 
 ```rust
-async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -29752,7 +29882,6 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to delete |
 | `by_where` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -29760,7 +29889,7 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 
 ### Remarks
 
-Pass the strategy to the bulk repository constructor. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) runs one statement per row. [BatchCommandIBulkWriteStrategy](#batchcommandibulkwritestrategy) joins those statements. [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
+Pass the strategy to the bulk repository constructor. The orchestrator assigns `Repo` and calls `Attach` on the strategy interface. [BatchCommandIBulkWriteStrategy](#batchcommandibulkwritestrategy) and [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy) keep `Command` and `Options` from that call. [SingleCommandIBulkWriteStrategy](#singlecommandibulkwritestrategy) runs one statement per row. [BatchCommandIBulkWriteStrategy](#batchcommandibulkwritestrategy) joins those statements. [StoredProcedureBulkWriteStrategy](#storedprocedurebulkwritestrategy) sends one JSON payload. An empty list does not execute. Nested persist still follows the repository write strategy.
 
 ### Examples
 
@@ -29779,7 +29908,7 @@ await repo.Delete([new Parent { id = 1, label = "a" }, new Parent { id = 2, labe
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L28-L69)
 
 ```rust
-let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy::new()));
 *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
 let mut created = [
     row(&[("label", Value::from("a"))]),
@@ -29829,7 +29958,7 @@ expect(command.executeCalls).toHaveLength(6);
 
 ## SingleCommandIBulkWriteStrategy
 
-Bulk write that runs one insert, update, or delete per row. This is the bulk repository default.
+Bulk write that runs one insert, update, or delete per row. This is the bulk repository default. It uses `Repo` only.
 
 ### Classes
 
@@ -29847,13 +29976,19 @@ class SingleCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStr
 | --- | --- |
 | [new SingleCommandIBulkWriteStrategy()](#typescript-singlecommandibulkwritestrategy-new-singlecommandibulkwritestrategy) | Builds the per-row bulk strategy. |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| repo | [CRUDRepository](#crud-repository) assigned by [BulkCRUDRepository](#bulk-repository). |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#typescript-singlecommandibulkwritestrategy-create-items-repo) | Inserts each item with its own statement. The result is the last insert. |
-| [update(items, byWhere, repo)](#typescript-singlecommandibulkwritestrategy-update-items-bywhere-repo) | Updates each item with its own statement. Rows affected are summed. |
-| [delete(items, byWhere, repo)](#typescript-singlecommandibulkwritestrategy-delete-items-bywhere-repo) | Deletes each item with its own statement. Rows affected are summed. |
+| [create(items)](#typescript-singlecommandibulkwritestrategy-create-items) | Inserts each item with its own statement. The result is the last insert. |
+| [update(items, byWhere)](#typescript-singlecommandibulkwritestrategy-update-items-bywhere) | Updates each item with its own statement. Rows affected are summed. |
+| [delete(items, byWhere)](#typescript-singlecommandibulkwritestrategy-delete-items-bywhere) | Deletes each item with its own statement. Rows affected are summed. |
 
 ###### new SingleCommandIBulkWriteStrategy() {#typescript-singlecommandibulkwritestrategy-new-singlecommandibulkwritestrategy}
 
@@ -29869,14 +30004,14 @@ constructor()
 
 [SingleCommandIBulkWriteStrategy](#typescript-singlecommandibulkwritestrategy)
 
-###### create(items, repo) {#typescript-singlecommandibulkwritestrategy-create-items-repo}
+###### create(items) {#typescript-singlecommandibulkwritestrategy-create-items}
 
 Inserts each item with its own statement. The result is the last insert.
 
 **Definition**
 
 ```typescript
-create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+create(items: T[]): Promise<Response>
 ```
 
 **Parameters**
@@ -29884,20 +30019,19 @@ create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### update(items, byWhere, repo) {#typescript-singlecommandibulkwritestrategy-update-items-bywhere-repo}
+###### update(items, byWhere) {#typescript-singlecommandibulkwritestrategy-update-items-bywhere}
 
 Updates each item with its own statement. Rows affected are summed.
 
 **Definition**
 
 ```typescript
-update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+update(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -29906,20 +30040,19 @@ update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### delete(items, byWhere, repo) {#typescript-singlecommandibulkwritestrategy-delete-items-bywhere-repo}
+###### delete(items, byWhere) {#typescript-singlecommandibulkwritestrategy-delete-items-bywhere}
 
 Deletes each item with its own statement. Rows affected are summed.
 
 **Definition**
 
 ```typescript
-delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+delete(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -29928,7 +30061,6 @@ delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -29948,13 +30080,19 @@ public sealed class SingleCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> w
 | --- | --- |
 | [SingleCommandIBulkWriteStrategy()](#csharp-singlecommandibulkwritestrategy-singlecommandibulkwritestrategy) | Builds the per-row bulk strategy. |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Repo | [CRUDRepository](#crud-repository) assigned by [BulkCRUDRepository](#bulk-repository). |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Create(items, repo)](#csharp-singlecommandibulkwritestrategy-create-items-repo) | Inserts each item with its own statement. The result is the last insert. |
-| [Update(items, byWhere, repo)](#csharp-singlecommandibulkwritestrategy-update-items-bywhere-repo) | Updates each item with its own statement. Rows affected are summed. |
-| [Delete(items, byWhere, repo)](#csharp-singlecommandibulkwritestrategy-delete-items-bywhere-repo) | Deletes each item with its own statement. Rows affected are summed. |
+| [Create(items)](#csharp-singlecommandibulkwritestrategy-create-items) | Inserts each item with its own statement. The result is the last insert. |
+| [Update(items, byWhere)](#csharp-singlecommandibulkwritestrategy-update-items-bywhere) | Updates each item with its own statement. Rows affected are summed. |
+| [Delete(items, byWhere)](#csharp-singlecommandibulkwritestrategy-delete-items-bywhere) | Deletes each item with its own statement. Rows affected are summed. |
 
 ###### SingleCommandIBulkWriteStrategy() {#csharp-singlecommandibulkwritestrategy-singlecommandibulkwritestrategy}
 
@@ -29970,14 +30108,14 @@ public SingleCommandIBulkWriteStrategy()
 
 [SingleCommandIBulkWriteStrategy](#csharp-singlecommandibulkwritestrategy)`<T>`
 
-###### Create(items, repo) {#csharp-singlecommandibulkwritestrategy-create-items-repo}
+###### Create(items) {#csharp-singlecommandibulkwritestrategy-create-items}
 
 Inserts each item with its own statement. The result is the last insert.
 
 **Definition**
 
 ```csharp
-public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+public Task<Response> Create(IReadOnlyList<T> items)
 ```
 
 **Parameters**
@@ -29985,20 +30123,19 @@ public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Update(items, byWhere, repo) {#csharp-singlecommandibulkwritestrategy-update-items-bywhere-repo}
+###### Update(items, byWhere) {#csharp-singlecommandibulkwritestrategy-update-items-bywhere}
 
 Updates each item with its own statement. Rows affected are summed.
 
 **Definition**
 
 ```csharp
-public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -30007,20 +30144,19 @@ public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRe
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Delete(items, byWhere, repo) {#csharp-singlecommandibulkwritestrategy-delete-items-bywhere-repo}
+###### Delete(items, byWhere) {#csharp-singlecommandibulkwritestrategy-delete-items-bywhere}
 
 Deletes each item with its own statement. Rows affected are summed.
 
 **Definition**
 
 ```csharp
-public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -30029,7 +30165,6 @@ public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRe
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30047,18 +30182,18 @@ pub struct SingleCommandIBulkWriteStrategy
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#rust-singlecommandibulkwritestrategy-create-items-repo) | Inserts each item with its own statement. The result is the last insert. |
-| [update(items, by_where, repo)](#rust-singlecommandibulkwritestrategy-update-items-by_where-repo) | Updates each item with its own statement. Rows affected are summed. |
-| [delete(items, by_where, repo)](#rust-singlecommandibulkwritestrategy-delete-items-by_where-repo) | Deletes each item with its own statement. Rows affected are summed. |
+| [create(items)](#rust-singlecommandibulkwritestrategy-create-items) | Inserts each item with its own statement. The result is the last insert. |
+| [update(items, by_where)](#rust-singlecommandibulkwritestrategy-update-items-by_where) | Updates each item with its own statement. Rows affected are summed. |
+| [delete(items, by_where)](#rust-singlecommandibulkwritestrategy-delete-items-by_where) | Deletes each item with its own statement. Rows affected are summed. |
 
-###### create(items, repo) {#rust-singlecommandibulkwritestrategy-create-items-repo}
+###### create(items) {#rust-singlecommandibulkwritestrategy-create-items}
 
 Inserts each item with its own statement. The result is the last insert.
 
 **Definition**
 
 ```rust
-async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+async fn create(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 **Parameters**
@@ -30066,20 +30201,19 @@ async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<R
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### update(items, by_where, repo) {#rust-singlecommandibulkwritestrategy-update-items-by_where-repo}
+###### update(items, by_where) {#rust-singlecommandibulkwritestrategy-update-items-by_where}
 
 Updates each item with its own statement. Rows affected are summed.
 
 **Definition**
 
 ```rust
-async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -30088,20 +30222,19 @@ async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to update |
 | `by_where` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### delete(items, by_where, repo) {#rust-singlecommandibulkwritestrategy-delete-items-by_where-repo}
+###### delete(items, by_where) {#rust-singlecommandibulkwritestrategy-delete-items-by_where}
 
 Deletes each item with its own statement. Rows affected are summed.
 
 **Definition**
 
 ```rust
-async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -30110,7 +30243,6 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to delete |
 | `by_where` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30137,7 +30269,7 @@ await repo.Delete([new Parent { id = 1, label = "a" }, new Parent { id = 2, labe
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L28-L69)
 
 ```rust
-let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy));
+let (repo, command) = parents(Arc::new(SingleCommandIBulkWriteStrategy::new()));
 *command.response.lock().unwrap() = crate::Response::new(Value::Int(9), 1, None);
 let mut created = [
     row(&[("label", Value::from("a"))]),
@@ -30187,7 +30319,7 @@ expect(command.executeCalls).toHaveLength(6);
 
 ## BatchCommandIBulkWriteStrategy
 
-Bulk write that joins one statement per row into a single batch, separated by `;`. Parameters are renamed so names do not collide.
+Bulk write that joins one statement per row into a single batch, separated by `;`. Parameters are renamed so names do not collide. The orchestrator assigns `Repo`, `Command`, and `Options`.
 
 ### Classes
 
@@ -30205,13 +30337,21 @@ class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStra
 | --- | --- |
 | [new BatchCommandIBulkWriteStrategy()](#typescript-batchcommandibulkwritestrategy-new-batchcommandibulkwritestrategy) | Builds the batched statement strategy. |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| repo |  |
+| command | Middleware-wrapped command used to `execute` the joined script. |
+| options | Table name, ids, and converters used to build INSERT, UPDATE, and DELETE. |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#typescript-batchcommandibulkwritestrategy-create-items-repo) | Sends every insert as one batched command. |
-| [update(items, byWhere, repo)](#typescript-batchcommandibulkwritestrategy-update-items-bywhere-repo) | Sends every update as one batched command. |
-| [delete(items, byWhere, repo)](#typescript-batchcommandibulkwritestrategy-delete-items-bywhere-repo) | Sends every delete as one batched command. |
+| [create(items)](#typescript-batchcommandibulkwritestrategy-create-items) | Sends every insert as one batched command. |
+| [update(items, byWhere)](#typescript-batchcommandibulkwritestrategy-update-items-bywhere) | Sends every update as one batched command. |
+| [delete(items, byWhere)](#typescript-batchcommandibulkwritestrategy-delete-items-bywhere) | Sends every delete as one batched command. |
 
 ###### new BatchCommandIBulkWriteStrategy() {#typescript-batchcommandibulkwritestrategy-new-batchcommandibulkwritestrategy}
 
@@ -30227,14 +30367,14 @@ constructor()
 
 [BatchCommandIBulkWriteStrategy](#typescript-batchcommandibulkwritestrategy)
 
-###### create(items, repo) {#typescript-batchcommandibulkwritestrategy-create-items-repo}
+###### create(items) {#typescript-batchcommandibulkwritestrategy-create-items}
 
 Sends every insert as one batched command.
 
 **Definition**
 
 ```typescript
-create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+create(items: T[]): Promise<Response>
 ```
 
 **Parameters**
@@ -30242,20 +30382,19 @@ create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### update(items, byWhere, repo) {#typescript-batchcommandibulkwritestrategy-update-items-bywhere-repo}
+###### update(items, byWhere) {#typescript-batchcommandibulkwritestrategy-update-items-bywhere}
 
 Sends every update as one batched command.
 
 **Definition**
 
 ```typescript
-update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+update(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -30264,20 +30403,19 @@ update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### delete(items, byWhere, repo) {#typescript-batchcommandibulkwritestrategy-delete-items-bywhere-repo}
+###### delete(items, byWhere) {#typescript-batchcommandibulkwritestrategy-delete-items-bywhere}
 
 Sends every delete as one batched command.
 
 **Definition**
 
 ```typescript
-delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+delete(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -30286,7 +30424,6 @@ delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30306,13 +30443,21 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
 | --- | --- |
 | [BatchCommandIBulkWriteStrategy()](#csharp-batchcommandibulkwritestrategy-batchcommandibulkwritestrategy) | Builds the batched statement strategy. |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Repo |  |
+| Command |  |
+| Options |  |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Create(items, repo)](#csharp-batchcommandibulkwritestrategy-create-items-repo) | Sends every insert as one batched command. |
-| [Update(items, byWhere, repo)](#csharp-batchcommandibulkwritestrategy-update-items-bywhere-repo) | Sends every update as one batched command. |
-| [Delete(items, byWhere, repo)](#csharp-batchcommandibulkwritestrategy-delete-items-bywhere-repo) | Sends every delete as one batched command. |
+| [Create(items)](#csharp-batchcommandibulkwritestrategy-create-items) | Sends every insert as one batched command. |
+| [Update(items, byWhere)](#csharp-batchcommandibulkwritestrategy-update-items-bywhere) | Sends every update as one batched command. |
+| [Delete(items, byWhere)](#csharp-batchcommandibulkwritestrategy-delete-items-bywhere) | Sends every delete as one batched command. |
 
 ###### BatchCommandIBulkWriteStrategy() {#csharp-batchcommandibulkwritestrategy-batchcommandibulkwritestrategy}
 
@@ -30328,14 +30473,14 @@ public BatchCommandIBulkWriteStrategy()
 
 [BatchCommandIBulkWriteStrategy](#csharp-batchcommandibulkwritestrategy)`<T>`
 
-###### Create(items, repo) {#csharp-batchcommandibulkwritestrategy-create-items-repo}
+###### Create(items) {#csharp-batchcommandibulkwritestrategy-create-items}
 
 Sends every insert as one batched command.
 
 **Definition**
 
 ```csharp
-public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+public Task<Response> Create(IReadOnlyList<T> items)
 ```
 
 **Parameters**
@@ -30343,20 +30488,19 @@ public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Update(items, byWhere, repo) {#csharp-batchcommandibulkwritestrategy-update-items-bywhere-repo}
+###### Update(items, byWhere) {#csharp-batchcommandibulkwritestrategy-update-items-bywhere}
 
 Sends every update as one batched command.
 
 **Definition**
 
 ```csharp
-public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -30365,20 +30509,19 @@ public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRe
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Delete(items, byWhere, repo) {#csharp-batchcommandibulkwritestrategy-delete-items-bywhere-repo}
+###### Delete(items, byWhere) {#csharp-batchcommandibulkwritestrategy-delete-items-bywhere}
 
 Sends every delete as one batched command.
 
 **Definition**
 
 ```csharp
-public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -30387,7 +30530,6 @@ public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRe
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30405,18 +30547,18 @@ pub struct BatchCommandIBulkWriteStrategy
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#rust-batchcommandibulkwritestrategy-create-items-repo) | Sends every insert as one batched command. |
-| [update(items, by_where, repo)](#rust-batchcommandibulkwritestrategy-update-items-by_where-repo) | Sends every update as one batched command. |
-| [delete(items, by_where, repo)](#rust-batchcommandibulkwritestrategy-delete-items-by_where-repo) | Sends every delete as one batched command. |
+| [create(items)](#rust-batchcommandibulkwritestrategy-create-items) | Sends every insert as one batched command. |
+| [update(items, by_where)](#rust-batchcommandibulkwritestrategy-update-items-by_where) | Sends every update as one batched command. |
+| [delete(items, by_where)](#rust-batchcommandibulkwritestrategy-delete-items-by_where) | Sends every delete as one batched command. |
 
-###### create(items, repo) {#rust-batchcommandibulkwritestrategy-create-items-repo}
+###### create(items) {#rust-batchcommandibulkwritestrategy-create-items}
 
 Sends every insert as one batched command.
 
 **Definition**
 
 ```rust
-async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+async fn create(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 **Parameters**
@@ -30424,20 +30566,19 @@ async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<R
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### update(items, by_where, repo) {#rust-batchcommandibulkwritestrategy-update-items-by_where-repo}
+###### update(items, by_where) {#rust-batchcommandibulkwritestrategy-update-items-by_where}
 
 Sends every update as one batched command.
 
 **Definition**
 
 ```rust
-async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -30446,20 +30587,19 @@ async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to update |
 | `by_where` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### delete(items, by_where, repo) {#rust-batchcommandibulkwritestrategy-delete-items-by_where-repo}
+###### delete(items, by_where) {#rust-batchcommandibulkwritestrategy-delete-items-by_where}
 
 Sends every delete as one batched command.
 
 **Definition**
 
 ```rust
-async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -30468,7 +30608,6 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to delete |
 | `by_where` | optional [IWhere](#where) applied with each item |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30476,7 +30615,7 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 
 ### Remarks
 
-An empty list does not execute. The provider must accept several statements in one command. Nested persist still runs through the repository write strategy, separate from this batch.
+An empty list does not execute. The provider must accept several statements in one command. After the parent batch, list and dictionary enrichments registered with `AddEnriched` are written in one child bulk call when the related repository is a [BulkCRUDRepository](#bulk-repository). Parent ids must already be assigned. Object fills stay read-time lookups.
 
 ### Examples
 
@@ -30493,7 +30632,7 @@ Assert.Single(command.ExecuteCalls);
 ##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L71-L131)
 
 ```rust
-let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy));
+let (repo, command) = parents(Arc::new(BatchCommandIBulkWriteStrategy::new()));
 let mut created = [
     row(&[("label", Value::from("a"))]),
     row(&[("label", Value::from("b"))]),
@@ -30514,9 +30653,73 @@ await repo.createBulk([
 expect(command.executeCalls).toHaveLength(1);
 ```
 
+#### Persist list children
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L136-L151)
+
+```csharp
+var (parentsRepo, childrenRepo, command) = FamilyRepos(new BatchCommandIBulkWriteStrategy<Family>());
+await parentsRepo.Create(
+[
+    new Family { id = 1, label = "a", children = [new Child { id = 10, label = "x" }] },
+    new Family { id = 2, label = "b", children = [new Child { id = 11, label = "y" }] }
+]);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L353-L391)
+
+```rust
+let (repo, command) = family(
+    Arc::new(BatchCommandIBulkWriteStrategy::new()),
+    Arc::new(BatchCommandIBulkWriteStrategy::new()),
+);
+repo.create_bulk(&mut [
+    row(&[
+        ("id", Value::Int(1)),
+        ("label", Value::from("a")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                ("id", Value::Int(10)),
+                ("label", Value::from("x")),
+            ])]),
+        ),
+    ]),
+    row(&[
+        ("id", Value::Int(2)),
+        ("label", Value::from("b")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                ("id", Value::Int(11)),
+                ("label", Value::from("y")),
+            ])]),
+        ),
+    ]),
+])
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L222-L233)
+
+```typescript
+const { parentsRepo, command } = family(new BatchCommandIBulkWriteStrategy<Family>());
+await parentsRepo.createBulk([
+  Object.assign(new Family(), { id: 1, label: "a", children: [Object.assign(new Child(), { id: 10, label: "x" })] }),
+  Object.assign(new Family(), { id: 2, label: "b", children: [Object.assign(new Child(), { id: 11, label: "y" })] }),
+]);
+expect(command.executeCalls).toHaveLength(2);
+expect(command.executeCalls[0]?.text).toContain("INSERT INTO parents");
+expect(command.executeCalls[1]?.text).toContain("INSERT INTO children");
+expect(command.executeCalls[1]?.text).toContain("label__0");
+expect(command.executeCalls[1]?.text).toContain("label__1");
+```
+
 ## StoredProcedureBulkWriteStrategy
 
-Bulk write that sends the rows as one JSON `payload` argument to a stored procedure. Create, update, and delete each name their own procedure.
+Bulk write that sends the rows as one JSON `payload` argument to a stored procedure. Create, update, and delete each name their own procedure. The orchestrator assigns `Repo`, `Command`, and `Options`.
 
 ### Classes
 
@@ -30534,13 +30737,21 @@ class StoredProcedureBulkWriteStrategy<T extends object> implements IBulkWriteSt
 | --- | --- |
 | [new StoredProcedureBulkWriteStrategy(createName, updateName, deleteName)](#typescript-storedprocedurebulkwritestrategy-new-storedprocedurebulkwritestrategy-createname-updatename-deletename) | Builds the procedure strategy. |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| repo |  |
+| command |  |
+| options | Converters and column mappings used to project JSON rows. |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#typescript-storedprocedurebulkwritestrategy-create-items-repo) | Calls the create procedure with a JSON `payload` of the rows. |
-| [update(items, byWhere, repo)](#typescript-storedprocedurebulkwritestrategy-update-items-bywhere-repo) | Calls the update procedure with a JSON `payload` of the rows. |
-| [delete(items, byWhere, repo)](#typescript-storedprocedurebulkwritestrategy-delete-items-bywhere-repo) | Calls the delete procedure with a JSON `payload` of the rows. |
+| [create(items)](#typescript-storedprocedurebulkwritestrategy-create-items) | Calls the create procedure with a JSON `payload` of the rows. |
+| [update(items, byWhere)](#typescript-storedprocedurebulkwritestrategy-update-items-bywhere) | Calls the update procedure with a JSON `payload` of the rows. |
+| [delete(items, byWhere)](#typescript-storedprocedurebulkwritestrategy-delete-items-bywhere) | Calls the delete procedure with a JSON `payload` of the rows. |
 
 ###### new StoredProcedureBulkWriteStrategy(createName, updateName, deleteName) {#typescript-storedprocedurebulkwritestrategy-new-storedprocedurebulkwritestrategy-createname-updatename-deletename}
 
@@ -30564,14 +30775,14 @@ constructor(createName: string, updateName: string, deleteName: string)
 
 [StoredProcedureBulkWriteStrategy](#typescript-storedprocedurebulkwritestrategy)
 
-###### create(items, repo) {#typescript-storedprocedurebulkwritestrategy-create-items-repo}
+###### create(items) {#typescript-storedprocedurebulkwritestrategy-create-items}
 
 Calls the create procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```typescript
-create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
+create(items: T[]): Promise<Response>
 ```
 
 **Parameters**
@@ -30579,20 +30790,19 @@ create(items: T[], repo: BulkCRUDRepository<T>): Promise<Response>
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### update(items, byWhere, repo) {#typescript-storedprocedurebulkwritestrategy-update-items-bywhere-repo}
+###### update(items, byWhere) {#typescript-storedprocedurebulkwritestrategy-update-items-bywhere}
 
 Calls the update procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```typescript
-update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+update(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -30601,20 +30811,19 @@ update(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | unused |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#typescript-response)
 
-###### delete(items, byWhere, repo) {#typescript-storedprocedurebulkwritestrategy-delete-items-bywhere-repo}
+###### delete(items, byWhere) {#typescript-storedprocedurebulkwritestrategy-delete-items-bywhere}
 
 Calls the delete procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```typescript
-delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Promise<Response>
+delete(items: T[], byWhere: IWhere | undefined): Promise<Response>
 ```
 
 **Parameters**
@@ -30623,7 +30832,6 @@ delete(items: T[], byWhere: IWhere | undefined, repo: BulkCRUDRepository<T>): Pr
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | unused |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30643,13 +30851,21 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
 | --- | --- |
 | [StoredProcedureBulkWriteStrategy(create, update, delete)](#csharp-storedprocedurebulkwritestrategy-storedprocedurebulkwritestrategy-create-update-delete) | Builds the procedure strategy. |
 
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Repo |  |
+| Command |  |
+| Options |  |
+
 **Methods**
 
 | Name | Description |
 | --- | --- |
-| [Create(items, repo)](#csharp-storedprocedurebulkwritestrategy-create-items-repo) | Calls the create procedure with a JSON `payload` of the rows. |
-| [Update(items, byWhere, repo)](#csharp-storedprocedurebulkwritestrategy-update-items-bywhere-repo) | Calls the update procedure with a JSON `payload` of the rows. |
-| [Delete(items, byWhere, repo)](#csharp-storedprocedurebulkwritestrategy-delete-items-bywhere-repo) | Calls the delete procedure with a JSON `payload` of the rows. |
+| [Create(items)](#csharp-storedprocedurebulkwritestrategy-create-items) | Calls the create procedure with a JSON `payload` of the rows. |
+| [Update(items, byWhere)](#csharp-storedprocedurebulkwritestrategy-update-items-bywhere) | Calls the update procedure with a JSON `payload` of the rows. |
+| [Delete(items, byWhere)](#csharp-storedprocedurebulkwritestrategy-delete-items-bywhere) | Calls the delete procedure with a JSON `payload` of the rows. |
 
 ###### StoredProcedureBulkWriteStrategy(create, update, delete) {#csharp-storedprocedurebulkwritestrategy-storedprocedurebulkwritestrategy-create-update-delete}
 
@@ -30673,14 +30889,14 @@ public StoredProcedureBulkWriteStrategy(string create, string update, string del
 
 [StoredProcedureBulkWriteStrategy](#csharp-storedprocedurebulkwritestrategy)`<T>`
 
-###### Create(items, repo) {#csharp-storedprocedurebulkwritestrategy-create-items-repo}
+###### Create(items) {#csharp-storedprocedurebulkwritestrategy-create-items}
 
 Calls the create procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```csharp
-public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
+public Task<Response> Create(IReadOnlyList<T> items)
 ```
 
 **Parameters**
@@ -30688,20 +30904,19 @@ public Task<Response> Create(IReadOnlyList<T> items, BulkCRUDRepository<T> repo)
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Update(items, byWhere, repo) {#csharp-storedprocedurebulkwritestrategy-update-items-bywhere-repo}
+###### Update(items, byWhere) {#csharp-storedprocedurebulkwritestrategy-update-items-bywhere}
 
 Calls the update procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```csharp
-public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -30710,20 +30925,19 @@ public Task<Response> Update(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRe
 | --- | --- |
 | `items` | rows to update |
 | `byWhere` | unused |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 [Response](#csharp-response)
 
-###### Delete(items, byWhere, repo) {#csharp-storedprocedurebulkwritestrategy-delete-items-bywhere-repo}
+###### Delete(items, byWhere) {#csharp-storedprocedurebulkwritestrategy-delete-items-bywhere}
 
 Calls the delete procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```csharp
-public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRepository<T> repo)
+public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere)
 ```
 
 **Parameters**
@@ -30732,7 +30946,6 @@ public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere, BulkCRUDRe
 | --- | --- |
 | `items` | rows to delete |
 | `byWhere` | unused |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30756,9 +30969,9 @@ pub struct StoredProcedureBulkWriteStrategy
 
 | Name | Description |
 | --- | --- |
-| [create(items, repo)](#rust-storedprocedurebulkwritestrategy-create-items-repo) | Calls the create procedure with a JSON `payload` of the rows. |
-| [update(items, by_where, repo)](#rust-storedprocedurebulkwritestrategy-update-items-by_where-repo) | Calls the update procedure with a JSON `payload` of the rows. |
-| [delete(items, by_where, repo)](#rust-storedprocedurebulkwritestrategy-delete-items-by_where-repo) | Calls the delete procedure with a JSON `payload` of the rows. |
+| [create(items)](#rust-storedprocedurebulkwritestrategy-create-items) | Calls the create procedure with a JSON `payload` of the rows. |
+| [update(items, by_where)](#rust-storedprocedurebulkwritestrategy-update-items-by_where) | Calls the update procedure with a JSON `payload` of the rows. |
+| [delete(items, by_where)](#rust-storedprocedurebulkwritestrategy-delete-items-by_where) | Calls the delete procedure with a JSON `payload` of the rows. |
 
 ###### new(create, update, delete) {#rust-storedprocedurebulkwritestrategy-new-create-update-delete}
 
@@ -30782,14 +30995,14 @@ pub fn new(create: impl Into<String>, update: impl Into<String>, delete: impl In
 
 [StoredProcedureBulkWriteStrategy](#rust-storedprocedurebulkwritestrategy)
 
-###### create(items, repo) {#rust-storedprocedurebulkwritestrategy-create-items-repo}
+###### create(items) {#rust-storedprocedurebulkwritestrategy-create-items}
 
 Calls the create procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```rust
-async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<Response>
+async fn create(&self, items: &mut [Row]) -> Result<Response>
 ```
 
 **Parameters**
@@ -30797,20 +31010,19 @@ async fn create(&self, items: &mut [Row], repo: &BulkCRUDRepository) -> Result<R
 | Name | Description |
 | --- | --- |
 | `items` | rows to insert |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### update(items, by_where, repo) {#rust-storedprocedurebulkwritestrategy-update-items-by_where-repo}
+###### update(items, by_where) {#rust-storedprocedurebulkwritestrategy-update-items-by_where}
 
 Calls the update procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```rust
-async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -30819,20 +31031,19 @@ async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to update |
 | `by_where` | unused |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
 `Result<Response>`
 
-###### delete(items, by_where, repo) {#rust-storedprocedurebulkwritestrategy-delete-items-by_where-repo}
+###### delete(items, by_where) {#rust-storedprocedurebulkwritestrategy-delete-items-by_where}
 
 Calls the delete procedure with a JSON `payload` of the rows.
 
 **Definition**
 
 ```rust
-async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &BulkCRUDRepository) -> Result<Response>
+async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response>
 ```
 
 **Parameters**
@@ -30841,7 +31052,6 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 | --- | --- |
 | `items` | rows to delete |
 | `by_where` | unused |
-| `repo` | [BulkCRUDRepository](#bulk-repository) |
 
 **Returns**
 
@@ -30849,13 +31059,13 @@ async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>, repo: &Bulk
 
 ### Remarks
 
-The payload is a JSON array of objects, one object per row, with column names in order. An empty list does not execute. The procedure is an [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement) with a single `payload` parameter.
+The payload is a JSON array of objects, one object per row, with column names in order. Create omits an unassigned identity column. An empty list does not execute. Bulk create runs in a transaction so generated keys from one insert stay consecutive and child writes see them. The create procedure is an [ExecuteStoredProcedureStatement](#execute-stored-procedure-statement) with `payload` and an `ids` input/output JSON array of generated keys in payload order; the strategy writes those values onto the items before child bulk writes. Update and delete send only `payload`. After the parent call, list and dictionary enrichments registered with `AddEnriched` are written in one child bulk call when the related repository is a [BulkCRUDRepository](#bulk-repository).
 
 ### Examples
 
 #### One JSON call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L71-L95)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L71-L96)
 
 ```csharp
 var (repo, command) = Repo(new StoredProcedureBulkWriteStrategy<Parent>(
@@ -30898,7 +31108,7 @@ repo.delete_bulk(
 let logs = command.execute_logs.lock().unwrap();
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L109-L142)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L109-L143)
 
 ```typescript
 const { repo, command } = open(
@@ -30910,6 +31120,79 @@ await repo.createBulk([
   Object.assign(new Parent(), { label: "b" }),
 ]);
 expect(command.executeCalls).toHaveLength(1);
+```
+
+#### Persist list children
+
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/BulkWriteStrategyTests.cs#L153-L167)
+
+```csharp
+var (parentsRepo, _, command) = FamilyRepos(new StoredProcedureBulkWriteStrategy<Family>(
+    "bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+    new StoredProcedureBulkWriteStrategy<Child>("bulk_create_child", "bulk_update_child", "bulk_delete_child"));
+await parentsRepo.Create(
+[
+    new Family { id = 1, label = "a", children = [new Child { id = 10, label = "x" }] },
+    new Family { id = 2, label = "b", children = [new Child { id = 11, label = "y" }] }
+]);
+```
+
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/bulk_write_strategy.rs#L393-L437)
+
+```rust
+let (repo, command) = family(
+    Arc::new(StoredProcedureBulkWriteStrategy::new(
+        "bulk_create_parent",
+        "bulk_update_parent",
+        "bulk_delete_parent",
+    )),
+    Arc::new(StoredProcedureBulkWriteStrategy::new(
+        "bulk_create_child",
+        "bulk_update_child",
+        "bulk_delete_child",
+    )),
+);
+repo.create_bulk(&mut [
+    row(&[
+        ("id", Value::Int(1)),
+        ("label", Value::from("a")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                ("id", Value::Int(10)),
+                ("label", Value::from("x")),
+            ])]),
+        ),
+    ]),
+    row(&[
+        ("id", Value::Int(2)),
+        ("label", Value::from("b")),
+        (
+            "children",
+            crate::default_write_enrichment_strategy::encode_rows(&[row(&[
+                ("id", Value::Int(11)),
+                ("label", Value::from("y")),
+            ])]),
+        ),
+    ]),
+])
+.await
+.unwrap();
+let logs = command.execute_logs.lock().unwrap();
+```
+
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkWriteStrategy.test.ts#L235-L247)
+
+```typescript
+const { parentsRepo, command } = family(
+  new StoredProcedureBulkWriteStrategy<Family>("bulk_create_parent", "bulk_update_parent", "bulk_delete_parent"),
+  new StoredProcedureBulkWriteStrategy<Child>("bulk_create_child", "bulk_update_child", "bulk_delete_child"),
+);
+await parentsRepo.createBulk([
+  Object.assign(new Family(), { id: 1, label: "a", children: [Object.assign(new Child(), { id: 10, label: "x" })] }),
+  Object.assign(new Family(), { id: 2, label: "b", children: [Object.assign(new Child(), { id: 11, label: "y" })] }),
+]);
+expect(command.executeCalls).toHaveLength(2);
 ```
 
 ## Command Line (CLI)
@@ -30984,6 +31267,8 @@ npx @datasources/cli generate repositories --dialect csharp
 | `--provider <name>` | Spec provider (default: `deterministic`) |
 | `--input <dir>` | Deterministic project (default: `./deterministic`) |
 | `--output <dir>` | Generated files (default: `./generated`) |
+
+When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns. An explicit `datasource.yaml` still wins.
 
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 

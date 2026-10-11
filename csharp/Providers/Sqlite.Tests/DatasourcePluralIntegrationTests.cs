@@ -22,6 +22,23 @@ public class DatasourcePluralIntegrationTests
     }
 
     [Fact]
+    public async Task CreatesUsingDynamicAfterRegister()
+    {
+        dynamic ds = Datasource.Default;
+        var connection = await Open(ds);
+        await SchemaSpec.Apply(connection, "user-pascal");
+        Register(ds);
+        User created = await ds.Users.Create(new User { Username = "ada", IsEnabled = true });
+        User? loaded = await ds.Users.ReadSingle();
+        Response updated = await ds.Users.Update(created);
+        Response deleted = await ds.Users.Delete(created);
+        Assert.True(created.Id > 0);
+        Assert.Equal("ada", loaded!.Username);
+        Assert.Equal(1, updated.RowsAffected);
+        Assert.Equal(1, deleted.RowsAffected);
+    }
+
+    [Fact]
     public async Task WritesUserThroughPluralName()
     {
         var ds = (Datasource)Datasource.Default;
@@ -69,7 +86,7 @@ public class DatasourcePluralIntegrationTests
         Assert.Equal(created.Id, loaded.Id);
     }
 
-    static void Register(Datasource ds)
+    static void Register(IDatasource ds)
     {
         var options = new CRUDRepositoryOptions<User>
         {

@@ -1,6 +1,7 @@
 use datasources::{
     create_crud_repository_options, create_readonly_repository_mapping_options, default, eq,
-    Casing, ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository, Value, Where,
+    Casing, ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository, Response, Row, Value,
+    Where,
 };
 use datasources_sql_specs::apply_schema;
 use std::sync::Arc;
@@ -53,6 +54,35 @@ fn register(ds: &Arc<dyn Datasource>) {
             read.create_readonly_repository::<User>(Some(connection), Some(options))
         },
     );
+}
+
+#[tokio::test]
+async fn creates_using_dynamic_after_register() {
+    let _guard = super::env_lock();
+    let ds = default().unwrap();
+    let connection = open(ds.as_ref()).await;
+    apply_schema(connection.as_ref(), "user-pascal")
+        .await
+        .unwrap();
+    register(&ds);
+    let users = ds.as_ref().users();
+    let mut created = Row::new();
+    created.insert("Username".into(), Value::from("ada"));
+    created.insert("IsEnabled".into(), Value::Bool(true));
+    let created = users.create(&mut created).await.unwrap();
+    let loaded: Option<Row> = users.read_single(None, None, None).await.unwrap();
+    let updated: Response = users.update(&created, None).await.unwrap();
+    let deleted: Response = users.delete(&created, None).await.unwrap();
+    assert_eq!(
+        matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0),
+        true
+    );
+    assert_eq!(
+        loaded.as_ref().and_then(|row| row.get("Username")),
+        Some(&Value::from("ada"))
+    );
+    assert_eq!(updated.rows_affected, 1);
+    assert_eq!(deleted.rows_affected, 1);
 }
 
 #[tokio::test]

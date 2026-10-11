@@ -28,6 +28,93 @@ Add a new datasource provider.
 npx @datasources/cli add sqlite
 ```
 
+## Generate repositories from a Types Specification
+
+A Types Specification is the `deterministic` directory. `types.yaml` lists each entity. Tag a type `datasource_type` when it is a table.
+
+```yaml
+version: 1.0.0
+types:
+  - item:
+      tags:
+        - datasource_type
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+            size: 128
+```
+
+`generate all` writes the types, the repositories, and SQL for one language. The default input directory is `./deterministic`. The default output directory is `./generated`.
+
+::: dialects
+```csharp
+npx @datasources/cli generate all --dialect csharp
+```
+```rust
+npx @datasources/cli generate all --dialect rust
+```
+```typescript
+npx @datasources/cli generate all --dialect typescript
+```
+:::
+
+See [Generate](./cli.md#generate).
+
+## Dynamic registered datasource
+
+Call the generated register, then use the plural name. {{Items|items|items()}} is the CRUD repository for `Item`. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
+
+::: dialects
+```csharp
+using Backend.Types.Datasource;
+
+dynamic ds = Datasource.Default;
+RepositoryRegistry.Register(ds.Repositories);
+
+Item created = await ds.Items.Create(new Item { Name = "Ada" });
+Item? loaded = await ds.Items.ReadSingle();
+created.Name = "Ada Lovelace";
+Response updated = await ds.Items.Update(created);
+Response deleted = await ds.Items.Delete(created);
+```
+```rust
+#[path = "../generated/rust/repositories/mod.rs"]
+mod repositories;
+
+use datasources::{default, Response, Row, Value};
+use repositories::repository_registry::{register, Repositories};
+
+let ds = default()?;
+register(ds.repositories());
+let items = ds.as_ref().items();
+let mut created = Row::new();
+created.insert("name".into(), Value::from("Ada"));
+let mut created = items.create(&mut created).await?;
+let loaded = items.read_single(None, None, None).await?;
+created.insert("name".into(), Value::from("Ada Lovelace"));
+let updated: Response = items.update(&created, None).await?;
+let deleted: Response = items.delete(&created, None).await?;
+```
+```typescript
+import { Datasource } from "@datasources/core";
+import { register } from "./generated/typescript/repositories/repository-registry.ts";
+
+const ds = Datasource.default as Datasource;
+register(ds.repositories);
+
+const created = await ds.items.create({ id: 0, name: "Ada" });
+const loaded = await ds.items.readSingle();
+created.name = "Ada Lovelace";
+const updated = await ds.items.update(created);
+const deleted = await ds.items.delete(created);
+```
+:::
+
+See [Datasource](./sections/datasource.md#create-using-dynamic-after-register).
+
 ## Readonly command
 
 Start with `createCommand` and `executeReader`. The connection must be open.

@@ -1,0 +1,6 @@
+dynamic ds = Datasource.Default;
+Register(ds);
+User created = await ds.Users.Create(new User { Username = "ada", IsEnabled = true });
+User? loaded = await ds.Users.ReadSingle();
+Response updated = await ds.Users.Update(created);
+Response deleted = await ds.Users.Delete(created);

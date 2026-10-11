@@ -71,6 +71,8 @@ npx @datasources/cli generate repositories --dialect csharp
 | `--input <dir>` | Deterministic project (default: `./deterministic`) |
 | `--output <dir>` | Generated files (default: `./generated`) |
 
+When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns. An explicit `datasource.yaml` still wins.
+
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
 ## .env

@@ -4,6 +4,13 @@ import { settingsFrom } from "./settingsFlat.ts";
 
 const specFiles = ["types.yaml", "datasource.yaml", "datasource_seeds.yaml", "services.yaml", "routes.yaml"] as const;
 
+const defaultDatasourceYaml = `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type" || tag == "view_type"
+types: []
+`;
+
 const readOptional = async (fs: Fs, path: string): Promise<string | undefined> => {
   try {
     return await fs.readFile(path);
@@ -22,5 +29,6 @@ export const loadSpec = async (
     if (text !== undefined) files[name] = text;
   }
   if (files["types.yaml"] === undefined) throw new Error(`missing types.yaml in ${dir}`);
+  files["datasource.yaml"] ??= defaultDatasourceYaml;
   return { files, settings: settingsFrom(await readOptional(fs, join(dir, "settings.yaml"))) };
 };

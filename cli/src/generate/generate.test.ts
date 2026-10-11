@@ -386,4 +386,66 @@ types: []
     expect(await run(["generate", "types", "--dialect", "csharp", "--cwd", cwd], deps(missing.fs), cwd)).toBe(1);
     expect(await run(["generate", "types", "--dialect", "typescript", "--provider", "missing", "--cwd", cwd], deps(mem(seeded).fs), cwd)).toBe(1);
   });
+
+  it("defaults missing datasource.yaml to tagged types and one view repository", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - title:
+            type: string
+  - note_card:
+      tags: [view_type]
+      inherits: note
+      fields: []
+`,
+    });
+    const io = deps(store.fs);
+    expect(await run(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+    const registry = store.files[join(cwd, "generated/typescript/repositories/repository-registry.ts")];
+    expect(registry).toContain('"NoteCard", "noteCards"');
+    expect(registry).not.toContain('"Note"');
+    expect(store.files[join(cwd, "generated/typescript/repositories/note-card-repository.ts")]).toContain('["NoteCard", "notes"]');
+    expect(store.files[join(cwd, "generated/typescript/repositories/note-repository.ts")]).toBeUndefined();
+  });
+
+  it("keeps an explicit datasource.yaml filter", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - kept:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - dropped:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+`,
+      [join(input, "datasource.yaml")]: `version: 1.0.0
+includes:
+  - types:
+      filter: type == "kept"
+types: []
+`,
+    });
+    const io = deps(store.fs);
+    expect(await run(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+    const registry = store.files[join(cwd, "generated/typescript/repositories/repository-registry.ts")];
+    expect(registry).toContain('"Kept", "kepts"');
+    expect(registry).not.toContain('"Dropped"');
+  });
 });

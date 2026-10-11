@@ -10,7 +10,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 - [Create default from .env settings](./sections/datasource.md#create-default-from-env-settings)
 - [Default using environment variables](./sections/datasource.md#default-using-environment-variables)
-- [Create from a plural name](./sections/datasource.md#create-from-a-plural-name)
+- [Create using Dynamic After Register](./sections/datasource.md#create-using-dynamic-after-register)
 - [Create from a driver](./sections/datasource.md#create-from-a-driver)
 
 ## Connection
