@@ -56,9 +56,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         IReadonlyEnrichmentStrategy<T>? strategy = null)
     {
         var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
-        enrichments.Add(new StoredEnrichment<T>(
-            enrichment,
-            (parents, sources) => chosen.Apply(via, enrichment, parents, sources)));
+        enrichments.Add(new StoredEnrichment<T>(enrichment, new ReadEnrichment<T, TRelated>(via, chosen)));
         return this;
     }
 
@@ -192,7 +190,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     private async Task Enrich(IList<T> parents, IReadOnlyList<Row?>? sources)
     {
         foreach (var entry in enrichments)
-            await entry.Apply(parents, sources);
+            await entry.Read.Apply(entry.Enrichment, parents, sources);
     }
 
     private static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)
