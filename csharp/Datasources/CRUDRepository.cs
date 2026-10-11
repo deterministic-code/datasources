@@ -54,7 +54,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         base.AddEnriched(enrichment, via, strategy);
         if (via is ICRUDRepository<TRelated> crud)
-            ((StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1]).AttachPersist(crud);
+            Last().Persist = new PersistEnrichment<T, TRelated>(crud);
         return this;
     }
 
@@ -67,11 +67,13 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T>();
         base.AddEnriched(enrichment, via, strategy);
-        ((StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1]).AttachLink(
-            (parents, sources) => chosen.ApplyLinked(via, link, enrichment, parents, sources),
-            link);
+        var stored = Last();
+        stored.Read = new LinkedReadEnrichment<T, TRelated, TLink>(via, link, chosen);
+        stored.Link = new LinkEnrichment<T, TLink>(link);
         return this;
     }
+
+    StoredEnrichment<T> Last() => (StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1];
 
     public Task<T> Create(T item) => InTransaction(() => CreateCore(item));
 

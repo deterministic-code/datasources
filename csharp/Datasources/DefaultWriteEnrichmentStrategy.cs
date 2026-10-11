@@ -49,10 +49,11 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         var stored = (StoredEnrichment<T>)entry;
         if (entry.Enrichment is { Association: { } } enrichment)
         {
+            var link = Required(stored.Link, enrichment.DestinationProperty);
             foreach (var parent in parents)
             {
                 if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
-                await stored.WriteLinked(create, update, delete, mode, parent);
+                await link.Write(enrichment, create, update, delete, mode, parent);
             }
             return;
         }
@@ -62,7 +63,8 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
             return;
         var ready = parents.Where(parent => !Skip(parent, entry.Enrichment.DestinationProperty, mode)).ToList();
         if (ready.Count == 0) return;
-        await stored.WriteChildrenBulk(create, update, mode, ready);
+        await Required(stored.Persist, entry.Enrichment.DestinationProperty)
+            .WriteBulk(entry.Enrichment, create, mode, ready);
     }
 
     async Task PersistEntry(StoredEnrichment entry, IList<T> parents, WriteMode mode)
@@ -72,10 +74,11 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         var stored = (StoredEnrichment<T>)entry;
         if (entry.Enrichment is { Association: { } } enrichment)
         {
+            var link = Required(stored.Link, enrichment.DestinationProperty);
             foreach (var parent in parents)
             {
                 if (Skip(parent, enrichment.DestinationProperty, mode)) continue;
-                await stored.WriteLinked(create, update, delete, mode, parent);
+                await link.Write(enrichment, create, update, delete, mode, parent);
             }
             return;
         }
@@ -84,12 +87,16 @@ public class DefaultWriteEnrichmentStrategy<T> : IWriteEnrichmentStrategy<T>
         if (entry.Enrichment.Type is not (EnrichmentPropertyType.List or EnrichmentPropertyType.Dictionary))
             return;
         var children = entry.Enrichment;
+        var persist = Required(stored.Persist, children.DestinationProperty);
         foreach (var parent in parents)
         {
             if (Skip(parent, children.DestinationProperty, mode)) continue;
-            await stored.WriteChildren(create, update, delete, mode, parent);
+            await persist.Write(children, create, update, delete, mode, parent);
         }
     }
+
+    static TWriter Required<TWriter>(TWriter? writer, string into) where TWriter : class =>
+        writer ?? throw new DatasourceException($"Deep write requires a CRUD repository for \"{into}\"");
 
     bool Skip(T parent, string into, WriteMode mode) =>
         SkipUnloaded && mode is not WriteMode.Delete && parent!.GetType().GetProperty(into)?.GetValue(parent) is null;
