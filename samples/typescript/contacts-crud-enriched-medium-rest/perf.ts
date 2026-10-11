@@ -212,16 +212,16 @@ try {
     phones: await count(connection, "phones"),
     settings: await count(connection, "contact_settings"),
   };
-  const each = {
+  const related = {
     addresses: contacts[0]?.addresses.length ?? 0,
     phones: contacts[0]?.phones.length ?? 0,
     settings: Object.keys(contacts[0]?.settings ?? {}).length,
   };
   if (
     counts.contacts !== contacts.length ||
-    counts.addresses !== contacts.length * each.addresses ||
-    counts.phones !== contacts.length * each.phones ||
-    counts.settings !== contacts.length * each.settings
+    counts.addresses !== contacts.length * related.addresses ||
+    counts.phones !== contacts.length * related.phones ||
+    counts.settings !== contacts.length * related.settings
   )
     throw new Error(`create count ${JSON.stringify(counts)}`);
   for (const contact of contacts) {

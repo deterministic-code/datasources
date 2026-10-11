@@ -65,7 +65,7 @@ describe("bulk write strategies", () => {
     ]);
     expect(command.executeCalls).toHaveLength(1);
     expect(command.executeCalls[0]?.text).toBe(
-      "INSERT INTO parents (label) VALUES ($label__0); INSERT INTO parents (label) VALUES ($label__1)",
+      "INSERT INTO parents (label) VALUES ($label__0), ($label__1)",
     );
     expect(command.executeCalls[0]?.parameters?.[0]).toMatchObject({ name: "label__0", value: "a" });
     expect(command.executeCalls[0]?.parameters?.[1]).toMatchObject({ name: "label__1", value: "b" });
@@ -75,7 +75,7 @@ describe("bulk write strategies", () => {
       Object.assign(new Parent(), { id: 2, label: "b" }),
     ]);
     expect(command.executeCalls[1]?.text).toBe(
-      "UPDATE parents SET label = $label__0 WHERE id = $id__0; UPDATE parents SET label = $label__1 WHERE id = $id__1",
+      "UPDATE parents SET label = data.label FROM (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data WHERE parents.id = data.id",
     );
     expect(command.executeCalls[1]?.parameters?.map((parameter) => parameter.name)).toEqual([
       "label__0",
@@ -89,7 +89,7 @@ describe("bulk write strategies", () => {
       Object.assign(new Parent(), { id: 2 }),
     ]);
     expect(command.executeCalls[2]?.text).toBe(
-      "DELETE FROM parents WHERE id = $id__0; DELETE FROM parents WHERE id = $id__1",
+      "DELETE FROM parents WHERE id IN ($id__0, $id__1)",
     );
     expect(command.executeCalls[2]?.parameters?.map((parameter) => parameter.name)).toEqual(["id__0", "id__1"]);
   });

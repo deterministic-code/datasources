@@ -94,9 +94,10 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
         IReadOnlyList<Parameter>? applied = parameters;
         foreach (var part in SplitStatements.Split(sql))
         {
+            var names = SplitStatements.Parameters(part).ToHashSet();
             var used = parameters is null
                 ? null
-                : parameters.Where(parameter => SplitStatements.UsesParameter(part, parameter.Name)).ToArray();
+                : parameters.Where(parameter => names.Contains(parameter.Name.TrimStart('$', '@', ':'))).ToArray();
             var rewritten = PostgresBind.ToPostgres(part, used);
             using var command = Typed.Require().CreateCommand();
             command.CommandText = rewritten.Sql;

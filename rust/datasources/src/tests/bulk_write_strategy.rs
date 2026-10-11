@@ -81,7 +81,7 @@ async fn batch_command_i_bulk_write_strategy_joins_statements() {
         assert_eq!(logs.len(), 1);
         assert_eq!(
             logs[0].0,
-            "INSERT INTO parents (label) VALUES ($label__0); INSERT INTO parents (label) VALUES ($label__1)"
+            "INSERT INTO parents (label) VALUES ($label__0), ($label__1)"
         );
         assert_eq!(logs[0].1[0].name, "label__0");
         assert_eq!(logs[0].1[0].value, Value::from("a"));
@@ -106,7 +106,7 @@ async fn batch_command_i_bulk_write_strategy_joins_statements() {
     let logs = command.execute_logs.lock().unwrap();
     assert_eq!(
         logs[1].0,
-        "UPDATE parents SET label = $label__0 WHERE id = $id__0; UPDATE parents SET label = $label__1 WHERE id = $id__1"
+        "UPDATE parents SET label = data.label FROM (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data WHERE parents.id = data.id"
     );
     assert_eq!(
         logs[1]
@@ -118,7 +118,7 @@ async fn batch_command_i_bulk_write_strategy_joins_statements() {
     );
     assert_eq!(
         logs[2].0,
-        "DELETE FROM parents WHERE id = $id__0; DELETE FROM parents WHERE id = $id__1"
+        "DELETE FROM parents WHERE id IN ($id__0, $id__1)"
     );
     assert_eq!(
         logs[2]

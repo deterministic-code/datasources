@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitStatements, statementUsesParameter, statementReader, StreamingReader } from "./index.ts";
+import { splitStatements, statementParameters, statementUsesParameter, statementReader, StreamingReader } from "./index.ts";
 
 describe("splitStatements", () => {
   it("splits on semicolons outside quotes and comments", () => {
@@ -37,6 +37,12 @@ describe("splitStatements", () => {
     expect(statementUsesParameter("INSERT INTO t (is_enabled) VALUES ($is_enabled__10)", "is_enabled__10")).toBe(true);
     expect(statementUsesParameter("INSERT INTO t (is_enabled) VALUES ($is_enabled__10)", "is_enabled__1")).toBe(false);
     expect(statementUsesParameter("$is_enabled__1", "is_enabled__1")).toBe(true);
+    expect(statementParameters("INSERT INTO t (a, b) VALUES ($a__0, $b__0), ($a__1, $b__1)")).toEqual([
+      "a__0",
+      "b__0",
+      "a__1",
+      "b__1",
+    ]);
   });
 });
 

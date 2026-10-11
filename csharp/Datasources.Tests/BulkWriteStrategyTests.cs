@@ -46,7 +46,7 @@ public class BulkWriteStrategyTests
         await repo.Create([new Parent { label = "a" }, new Parent { label = "b" }]);
         Assert.Single(command.ExecuteCalls);
         Assert.Equal(
-            "INSERT INTO parents (label) VALUES ($label__0); INSERT INTO parents (label) VALUES ($label__1)",
+            "INSERT INTO parents (label) VALUES ($label__0), ($label__1)",
             command.ExecuteCalls[0].Text);
         Assert.Equal("label__0", command.ExecuteCalls[0].Parameters![0].Name);
         Assert.Equal(new Value.Text("a"), command.ExecuteCalls[0].Parameters![0].Value);
@@ -55,7 +55,7 @@ public class BulkWriteStrategyTests
 
         await repo.Update([new Parent { id = 1, label = "a" }, new Parent { id = 2, label = "b" }]);
         Assert.Equal(
-            "UPDATE parents SET label = $label__0 WHERE id = $id__0; UPDATE parents SET label = $label__1 WHERE id = $id__1",
+            "UPDATE parents SET label = data.label FROM (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data WHERE parents.id = data.id",
             command.ExecuteCalls[1].Text);
         Assert.Equal(
             ["label__0", "id__0", "label__1", "id__1"],
@@ -63,7 +63,7 @@ public class BulkWriteStrategyTests
 
         await repo.Delete([new Parent { id = 1 }, new Parent { id = 2 }]);
         Assert.Equal(
-            "DELETE FROM parents WHERE id = $id__0; DELETE FROM parents WHERE id = $id__1",
+            "DELETE FROM parents WHERE id IN ($id__0, $id__1)",
             command.ExecuteCalls[2].Text);
         Assert.Equal(["id__0", "id__1"], command.ExecuteCalls[2].Parameters!.Select(parameter => parameter.Name));
     }

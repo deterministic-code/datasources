@@ -10,7 +10,7 @@ import {
   parametersToRecord,
   Response,
   splitStatements,
-  statementUsesParameter,
+  statementParameters,
   StreamingReader,
   type Cell,
   type Cells,
@@ -30,6 +30,15 @@ const bound = (parameters?: Parameter[]): Record<string, Scalar> => {
   return Object.fromEntries(
     Object.entries(record).map(([name, value]) => [name, reverse(value)]),
   ) as Record<string, Scalar>;
+};
+
+const toSqlite = (sql: string, params: Record<string, Scalar>): { text: string; values: Scalar[] } => {
+  const values: Scalar[] = [];
+  const text = sql.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (_match, name: string) => {
+    values.push(params[name] ?? null);
+    return "?";
+  });
+  return { text, values };
 };
 
 export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
@@ -109,10 +118,12 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
       const named = bound(params);
       let changes = 0;
       for (const sql of splitStatements(query)) {
+        const names = new Set(statementParameters(sql));
         const used = Object.fromEntries(
-          Object.entries(named).filter(([name]) => statementUsesParameter(sql, name)),
+          Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
         );
-        changes += db.prepare(sql).run(used).changes;
+        const { text, values } = toSqlite(sql, used);
+        changes += db.prepare(text).run(...values).changes;
       }
       return { value: new Response(null, changes, params), rows: [] };
     });

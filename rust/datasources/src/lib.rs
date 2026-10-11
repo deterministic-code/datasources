@@ -194,7 +194,7 @@ pub use result::Result;
 pub use row::Row;
 pub use select_statement::SelectStatement;
 pub use single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy;
-pub use split_statements::{split_statements, statement_uses_parameter};
+pub use split_statements::{split_statements, statement_parameters, statement_uses_parameter};
 pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
