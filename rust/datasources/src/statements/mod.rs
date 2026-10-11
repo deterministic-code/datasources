@@ -1,4 +1,10 @@
 mod aggregate;
+mod bulk_delete_statement;
+mod bulk_delete_statement_text_renderer;
+mod bulk_insert_statement;
+mod bulk_insert_statement_text_renderer;
+mod bulk_update_statement;
+mod bulk_update_statement_text_renderer;
 mod array_expression;
 mod check_constraint;
 mod cmp;
@@ -45,6 +51,12 @@ mod update_statement_text_renderer;
 mod r#where;
 
 pub use aggregate::Aggregate;
+pub use bulk_delete_statement::BulkDeleteStatement;
+pub use bulk_delete_statement_text_renderer::BulkDeleteStatementTextRenderer;
+pub use bulk_insert_statement::BulkInsertStatement;
+pub use bulk_insert_statement_text_renderer::BulkInsertStatementTextRenderer;
+pub use bulk_update_statement::{BulkUpdateRow, BulkUpdateStatement};
+pub use bulk_update_statement_text_renderer::BulkUpdateStatementTextRenderer;
 pub use array_expression::ArrayExpression;
 pub use check_constraint::CheckConstraint;
 pub use cmp::{eq, ge, gt, le, lt, ne};

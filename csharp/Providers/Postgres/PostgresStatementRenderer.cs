@@ -9,4 +9,7 @@ internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : St
 
     public override string Visit(CreateTableStatement create) =>
         new PostgresCreateTableStatementRenderer().Render(create);
+
+    public override string Visit(BulkUpdateStatement update) =>
+        new PostgresBulkUpdateStatementTextRenderer().Render(update);
 }

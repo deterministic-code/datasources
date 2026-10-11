@@ -49,4 +49,20 @@ public class PostgresStatementRendererTests
             "CREATE TABLE users (id int, is_enabled bool DEFAULT 1, is_disabled bool CONSTRAINT df_off DEFAULT 0, amount decimal DEFAULT 1, flag bool DEFAULT true)",
             DefaultStatementTextRenderer.Instance.Render(create));
     }
+
+    [Fact]
+    public void RendersBulkUpdateWithColumnTypes()
+    {
+        var update = new BulkUpdateStatement(
+            "parents",
+            ["label"],
+            ["id"],
+            [
+                ([new Parameter("label", new Value.Text("a"))], [new Parameter("id", new Value.Int(1))]),
+                ([new Parameter("label", new Value.Text("b"))], [new Parameter("id", new Value.Int(2))])
+            ]);
+        Assert.Equal(
+            "UPDATE parents SET label = data.label FROM (SELECT $label__0::TEXT AS label, $id__0::INTEGER AS id UNION ALL SELECT $label__1::TEXT AS label, $id__1::INTEGER AS id) AS data WHERE parents.id = data.id",
+            Renderer.Render(update));
+    }
 }

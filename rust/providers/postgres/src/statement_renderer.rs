@@ -1,8 +1,9 @@
 use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::PostgresSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    CreateTableStatement, CreateTableStatementTextRenderer, SelectInsertedIdStatement,
-    StatementTextRenderer, StatementVisitor,
+    BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateTableStatement,
+    CreateTableStatementTextRenderer, SelectInsertedIdStatement, StatementTextRenderer,
+    StatementVisitor, Value,
 };
 
 pub struct PostgresStatementRenderer;
@@ -23,6 +24,35 @@ impl StatementVisitor for PostgresStatementRenderer {
     ) -> String {
         PostgresSelectInsertedIdStatementTextRenderer.render(statement)
     }
+
+    fn visit_bulk_update(
+        &self,
+        statement: &BulkUpdateStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        BulkUpdateStatementTextRenderer.render_cells(statement, pg_cell)
+    }
+}
+
+fn pg_cell(column: &str, index: usize, value: &Value) -> String {
+    match crate::driver::column_sql(logical(value).unwrap_or_default()) {
+        Some(sql) => format!("${column}__{index}::{sql} AS {column}"),
+        None => format!("${column}__{index} AS {column}"),
+    }
+}
+
+fn logical(value: &Value) -> Option<&'static str> {
+    match value {
+        Value::Null => None,
+        Value::Bool(_) => Some("bool"),
+        Value::Int(_) => Some("int"),
+        Value::Float(_) => Some("float"),
+        Value::Text(_) => Some("string"),
+        Value::DateTime(_) => Some("datetime"),
+        Value::Uuid(_) => Some("uuid"),
+        Value::Decimal(_) => Some("decimal"),
+        Value::Binary(_) => Some("binary"),
+    }
 }
 
 #[cfg(test)]
@@ -30,8 +60,9 @@ mod tests {
     use super::PostgresStatementRenderer;
     use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
     use datasources::{
-        Column, ColumnDefault, CreateTableStatement, CreateTableStatementTextRenderer,
-        DefaultStatementTextRenderer, NotNull, SelectInsertedIdStatement, StatementTextRenderer,
+        BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault, CreateTableStatement,
+        CreateTableStatementTextRenderer, DefaultStatementTextRenderer, NotNull, Parameter,
+        SelectInsertedIdStatement, StatementTextRenderer,
     };
 
     fn renderer() -> StatementTextRenderer {
@@ -81,6 +112,29 @@ mod tests {
         assert_eq!(
             DefaultStatementTextRenderer::instance().render(&create),
             "CREATE TABLE users (id int, is_enabled bool DEFAULT 1, is_disabled bool CONSTRAINT df_off DEFAULT 0, amount decimal DEFAULT 1, flag bool DEFAULT true)"
+        );
+    }
+
+    #[test]
+    fn renders_bulk_update_with_column_types() {
+        let update = BulkUpdateStatement::new(
+            "parents",
+            &["label".into()],
+            &["id".into()],
+            vec![
+                BulkUpdateRow {
+                    fields: vec![Parameter::new("label", "a")],
+                    ids: vec![Parameter::new("id", 1_i64)],
+                },
+                BulkUpdateRow {
+                    fields: vec![Parameter::new("label", "b")],
+                    ids: vec![Parameter::new("id", 2_i64)],
+                },
+            ],
+        );
+        assert_eq!(
+            renderer().render(&update),
+            "UPDATE parents SET label = data.label FROM (SELECT $label__0::TEXT AS label, $id__0::INTEGER AS id UNION ALL SELECT $label__1::TEXT AS label, $id__1::INTEGER AS id) AS data WHERE parents.id = data.id"
         );
     }
 }

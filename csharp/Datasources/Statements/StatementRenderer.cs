@@ -30,4 +30,13 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
 
     public virtual string Visit(SelectInsertedIdStatement statement) =>
         new SelectInsertedIdStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(BulkInsertStatement statement) =>
+        new BulkInsertStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(BulkUpdateStatement statement) =>
+        new BulkUpdateStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(BulkDeleteStatement statement) =>
+        new BulkDeleteStatementTextRenderer().Render(statement);
 }

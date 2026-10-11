@@ -26,6 +26,9 @@ public class StatementTextRenderer
         ExecuteStoredProcedureStatement s => s.Accept(Statements),
         ReturnStatement s => s.Accept(Statements),
         SelectInsertedIdStatement s => s.Accept(Statements),
+        BulkInsertStatement s => s.Accept(Statements),
+        BulkUpdateStatement s => s.Accept(Statements),
+        BulkDeleteStatement s => s.Accept(Statements),
         _ => statement.Accept(Statements)
     };
 

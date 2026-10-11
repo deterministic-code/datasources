@@ -42,7 +42,10 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         var rows = items.Select(MappedInsert).ToList();
         var columns = Columns(rows.Select(row => row.Fields));
         return await Chunked(rows, columns.Count, chunk =>
-            Execute(InsertSql(rows[0].Table, columns, chunk)));
+        {
+            var statement = new BulkInsertStatement(rows[0].Table, columns, [.. chunk.Select(row => row.Fields)]);
+            return Command.Execute(statement, statement.Parameters);
+        });
     }
 
     async Task<Response> WriteUpdates(IReadOnlyList<T> items)
@@ -53,7 +56,10 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         var set = Columns(rows.Select(row => row.Fields));
         var ids = Columns(rows.Select(row => row.Ids));
         return await Chunked(rows, set.Count + ids.Count, chunk =>
-            Execute(UpdateSql(rows[0].Table, set, ids, chunk)));
+        {
+            var statement = new BulkUpdateStatement(rows[0].Table, set, ids, [.. chunk.Select(row => (row.Fields, row.Ids))]);
+            return Command.Execute(statement, statement.Parameters);
+        });
     }
 
     async Task<Response> WriteDeletes(IReadOnlyList<T> items)
@@ -63,7 +69,10 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         var rows = items.Select(MappedDelete).ToList();
         var ids = Columns(rows.Select(row => row.Ids));
         return await Chunked(rows, ids.Count, chunk =>
-            Execute(DeleteSql(rows[0].Table, ids, chunk)));
+        {
+            var statement = new BulkDeleteStatement(rows[0].Table, ids, [.. chunk.Select(row => row.Ids)]);
+            return Command.Execute(statement, statement.Parameters);
+        });
     }
 
     async Task<Response> Chunked<TRow>(IReadOnlyList<TRow> rows, int width, Func<IReadOnlyList<TRow>, Task<Response>> write)
@@ -82,9 +91,6 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
             affected += (await Command.Execute(new Native(command.Text), command.Parameters)).RowsAffected;
         return new Response(Value.Null.Instance, affected);
     }
-
-    Task<Response> Execute((string Sql, IReadOnlyList<Parameter> Parameters) command) =>
-        Command.Execute(new Native(command.Sql), command.Parameters);
 
     (string Table, IReadOnlyList<Parameter> Fields) MappedInsert(T item)
     {
@@ -108,80 +114,6 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         var record = Reverse(item);
         var statement = Statements().Delete(IdWhere(record), (name, value) => Cell(name, value, true));
         return (statement.Table, statement.Where?.Parameters ?? []);
-    }
-
-    (string Sql, IReadOnlyList<Parameter> Parameters) InsertSql(
-        string table,
-        IReadOnlyList<string> columns,
-        IReadOnlyList<(string Table, IReadOnlyList<Parameter> Fields)> rows)
-    {
-        var parameters = new List<Parameter>();
-        var values = rows.Select((row, index) =>
-        {
-            var byName = Lookup(row.Fields);
-            return "(" + string.Join(", ", columns.Select(column =>
-            {
-                parameters.Add(new Parameter($"{column}__{index}", ValueOf(byName, column)));
-                return $"${column}__{index}";
-            })) + ")";
-        });
-        return ($"INSERT INTO {table} ({string.Join(", ", columns)}) VALUES {string.Join(", ", values)}", parameters);
-    }
-
-    (string Sql, IReadOnlyList<Parameter> Parameters) UpdateSql(
-        string table,
-        IReadOnlyList<string> set,
-        IReadOnlyList<string> ids,
-        IReadOnlyList<(string Table, IReadOnlyList<Parameter> Fields, IReadOnlyList<Parameter> Ids)> rows)
-    {
-        var parameters = new List<Parameter>();
-        var columns = set.Concat(ids).ToList();
-        var source = "(" + string.Join(" UNION ALL ", rows.Select((row, index) =>
-        {
-            var byName = Lookup(row.Fields.Concat(row.Ids));
-            return "SELECT " + string.Join(", ", columns.Select(column =>
-            {
-                parameters.Add(new Parameter($"{column}__{index}", ValueOf(byName, column)));
-                return $"${column}__{index} AS {column}";
-            }));
-        })) + ") AS data";
-        var assigns = string.Join(", ", set.Select(column => Mysql
-            ? $"{table}.{column} = data.{column}"
-            : $"{column} = data.{column}"));
-        var on = string.Join(" AND ", ids.Select(column => $"{table}.{column} = data.{column}"));
-        return (Mysql
-            ? $"UPDATE {table} JOIN {source} ON {on} SET {assigns}"
-            : $"UPDATE {table} SET {assigns} FROM {source} WHERE {on}", parameters);
-    }
-
-    (string Sql, IReadOnlyList<Parameter> Parameters) DeleteSql(
-        string table,
-        IReadOnlyList<string> ids,
-        IReadOnlyList<(string Table, IReadOnlyList<Parameter> Ids)> rows)
-    {
-        if (ids.Count == 0)
-            return ($"DELETE FROM {table} WHERE 1 = 1", []);
-        var parameters = new List<Parameter>();
-        if (ids.Count == 1)
-        {
-            var column = ids[0];
-            var names = rows.Select((row, index) =>
-            {
-                parameters.Add(new Parameter($"{column}__{index}", ValueOf(Lookup(row.Ids), column)));
-                return $"${column}__{index}";
-            });
-            return ($"DELETE FROM {table} WHERE {column} IN ({string.Join(", ", names)})", parameters);
-        }
-        var tuples = rows.Select((row, index) =>
-        {
-            var byName = Lookup(row.Ids);
-            return "(" + string.Join(", ", ids.Select(column =>
-            {
-                parameters.Add(new Parameter($"{column}__{index}", ValueOf(byName, column)));
-                return $"${column}__{index}";
-            })) + ")";
-        });
-        return ($"DELETE FROM {table} WHERE ({string.Join(", ", ids)}) IN ({string.Join(", ", tuples)})", parameters);
     }
 
     BulkCommand UpdateCommand(T item, IWhere? byWhere)
@@ -214,7 +146,6 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     }
 
     IReadOnlyList<string> Ids => Options.Ids;
-    bool Mysql => Command.Connection.Provider == "mysql";
 
     Row Reverse(T item)
     {
@@ -261,12 +192,6 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
                 columns.Add(field.Name);
         return columns;
     }
-
-    static Dictionary<string, Parameter> Lookup(IEnumerable<Parameter> fields) =>
-        fields.GroupBy(field => field.Name).ToDictionary(group => group.Key, group => group.Last());
-
-    static Value ValueOf(IReadOnlyDictionary<string, Parameter> fields, string column) =>
-        fields.TryGetValue(column, out var field) ? field.Value : Value.Null.Instance;
 
     static Response Empty() => new(Value.Null.Instance, 0);
 }

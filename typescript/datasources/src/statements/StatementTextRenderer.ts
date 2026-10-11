@@ -3,6 +3,9 @@ import type { IConditionVisitor } from "./IConditionVisitor.ts";
 import type { IStatement } from "./IStatement.ts";
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
 import { ConditionRenderer } from "./ConditionRenderer.ts";
+import { BulkDeleteStatement } from "./BulkDeleteStatement.ts";
+import { BulkInsertStatement } from "./BulkInsertStatement.ts";
+import { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
 import { CreateIndexStatement } from "./CreateIndexStatement.ts";
 import { CreateTableStatement } from "./CreateTableStatement.ts";
 import { DeleteStatement } from "./DeleteStatement.ts";
@@ -44,7 +47,10 @@ export class StatementTextRenderer {
       target instanceof CreateIndexStatement ||
       target instanceof ExecuteStoredProcedureStatement ||
       target instanceof ReturnStatement ||
-      target instanceof SelectInsertedIdStatement
+      target instanceof SelectInsertedIdStatement ||
+      target instanceof BulkInsertStatement ||
+      target instanceof BulkUpdateStatement ||
+      target instanceof BulkDeleteStatement
     )
       return target.accept(this.statements);
     return "where" in target || "fields" in target || "joins" in target || "column" in target
