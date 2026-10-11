@@ -24,6 +24,8 @@ public class PostgresTests
         var stamp = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
         var (_, dates) = PostgresBind.ToPostgres("SELECT $at", new Row { ["at"] = stamp });
         Assert.Equal(new object?[] { "2020-01-02T03:04:05.000Z" }, dates);
+        var (_, blob) = PostgresBind.ToPostgres("SELECT $v", new Row { ["v"] = "AQIDBA==" });
+        Assert.Equal(new object?[] { new byte[] { 1, 2, 3, 4 } }, blob);
         Assert.Contains("Host=127.0.0.1", PostgresConnectionString.ToConnectionString("postgres://ds:ds@127.0.0.1:5432/datasources"));
         Assert.Contains("Username=ds", PostgresConnectionString.ToConnectionString("postgres://ds@127.0.0.1/datasources"));
         Assert.Equal("Host=db;Port=1", PostgresConnectionString.ToConnectionString("Host=db;Port=1"));

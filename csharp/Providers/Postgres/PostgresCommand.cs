@@ -199,6 +199,7 @@ internal sealed class PostgresCommand : CommandMiddlewareHost, ICommand
     {
         null => new() { Value = DBNull.Value },
         bool or byte[] => new() { Value = value },
+        string text when BinaryConverter.IsBase64(text) => new() { Value = System.Convert.FromBase64String(text.Trim()) },
         string text => new() { Value = text, NpgsqlDbType = NpgsqlDbType.Unknown },
         _ => new()
         {

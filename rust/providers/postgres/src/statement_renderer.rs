@@ -1,9 +1,9 @@
 use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::PostgresSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateTableStatement,
-    CreateTableStatementTextRenderer, SelectInsertedIdStatement, StatementTextRenderer,
-    StatementVisitor, Value,
+    BulkInsertStatement, BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateTableStatement,
+    CreateTableStatementTextRenderer, InsertStatement, SelectInsertedIdStatement,
+    StatementTextRenderer, StatementVisitor, Value,
 };
 
 pub struct PostgresStatementRenderer;
@@ -25,6 +25,60 @@ impl StatementVisitor for PostgresStatementRenderer {
         PostgresSelectInsertedIdStatementTextRenderer.render(statement)
     }
 
+    fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {
+        format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            statement.table(),
+            statement
+                .fields()
+                .iter()
+                .map(|field| field.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", "),
+            statement
+                .fields()
+                .iter()
+                .map(|field| pg_named(&field.name, &field.value))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    fn visit_bulk_insert(
+        &self,
+        statement: &BulkInsertStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        let values = statement
+            .rows()
+            .iter()
+            .enumerate()
+            .map(|(index, row)| {
+                let by_name: std::collections::HashMap<_, _> =
+                    row.iter().map(|field| (field.name.as_str(), &field.value)).collect();
+                format!(
+                    "({})",
+                    statement
+                        .columns()
+                        .iter()
+                        .map(|column| pg_param(
+                            column,
+                            index,
+                            by_name.get(column.as_str()).copied().unwrap_or(&Value::Null)
+                        ))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "INSERT INTO {} ({}) VALUES {values}",
+            statement.table(),
+            statement.columns().join(", ")
+        )
+    }
+
     fn visit_bulk_update(
         &self,
         statement: &BulkUpdateStatement,
@@ -34,11 +88,22 @@ impl StatementVisitor for PostgresStatementRenderer {
     }
 }
 
-fn pg_cell(column: &str, index: usize, value: &Value) -> String {
+fn pg_named(column: &str, value: &Value) -> String {
     match crate::driver::column_sql(logical(value).unwrap_or_default()) {
-        Some(sql) => format!("${column}__{index}::{sql} AS {column}"),
-        None => format!("${column}__{index} AS {column}"),
+        Some(sql) => format!("${column}::{sql}"),
+        None => format!("${column}"),
     }
+}
+
+fn pg_param(column: &str, index: usize, value: &Value) -> String {
+    match crate::driver::column_sql(logical(value).unwrap_or_default()) {
+        Some(sql) => format!("${column}__{index}::{sql}"),
+        None => format!("${column}__{index}"),
+    }
+}
+
+fn pg_cell(column: &str, index: usize, value: &Value) -> String {
+    format!("{} AS {column}", pg_param(column, index, value))
 }
 
 fn logical(value: &Value) -> Option<&'static str> {
@@ -47,6 +112,8 @@ fn logical(value: &Value) -> Option<&'static str> {
         Value::Bool(_) => Some("bool"),
         Value::Int(_) => Some("int"),
         Value::Float(_) => Some("float"),
+        Value::Text(text) if crate::bind::is_rfc3339(text) => Some("datetime"),
+        Value::Text(text) if crate::bind::is_base64(text) => Some("binary"),
         Value::Text(_) => Some("string"),
         Value::DateTime(_) => Some("datetime"),
         Value::Uuid(_) => Some("uuid"),
@@ -60,9 +127,10 @@ mod tests {
     use super::PostgresStatementRenderer;
     use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
     use datasources::{
-        BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault, CreateTableStatement,
-        CreateTableStatementTextRenderer, DefaultStatementTextRenderer, NotNull, Parameter,
-        SelectInsertedIdStatement, StatementTextRenderer,
+        BulkInsertStatement, BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault,
+        CreateTableStatement, CreateTableStatementTextRenderer, DefaultStatementTextRenderer,
+        InsertStatement, NotNull, Parameter, SelectInsertedIdStatement, StatementTextRenderer,
+        Value,
     };
 
     fn renderer() -> StatementTextRenderer {
@@ -135,6 +203,71 @@ mod tests {
         assert_eq!(
             renderer().render(&update),
             "UPDATE parents SET label = data.label FROM (SELECT $label__0::TEXT AS label, $id__0::INTEGER AS id UNION ALL SELECT $label__1::TEXT AS label, $id__1::INTEGER AS id) AS data WHERE parents.id = data.id"
+        );
+    }
+
+    #[test]
+    fn renders_bulk_update_iso_created_as_timestamptz() {
+        let update = BulkUpdateStatement::new(
+            "contacts",
+            &["created".into()],
+            &["id".into()],
+            vec![BulkUpdateRow {
+                fields: vec![Parameter::new("created", "2020-01-02T03:04:05.000Z")],
+                ids: vec![Parameter::new("id", 1_i64)],
+            }],
+        );
+        assert_eq!(
+            renderer().render(&update),
+            "UPDATE contacts SET created = data.created FROM (SELECT $created__0::TIMESTAMPTZ AS created, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id"
+        );
+    }
+
+    #[test]
+    fn renders_insert_binary_version_as_bytea() {
+        let insert = InsertStatement::new(
+            "contacts",
+            &[
+                Parameter::new("version", Value::Binary(vec![1])),
+                Parameter::new("id", 1_i64),
+            ],
+        );
+        assert_eq!(
+            renderer().render(&insert),
+            "INSERT INTO contacts (version, id) VALUES ($version::BYTEA, $id::INTEGER)"
+        );
+    }
+
+    #[test]
+    fn renders_bulk_insert_binary_version_as_bytea() {
+        let insert = BulkInsertStatement::new(
+            "contacts",
+            &["version".into(), "id".into()],
+            vec![vec![
+                Parameter::new("version", Value::Binary(vec![1])),
+                Parameter::new("id", 1_i64),
+            ]],
+        );
+        assert_eq!(
+            renderer().render(&insert),
+            "INSERT INTO contacts (version, id) VALUES ($version__0::BYTEA, $id__0::INTEGER)"
+        );
+    }
+
+    #[test]
+    fn renders_bulk_update_base64_version_as_bytea() {
+        let update = BulkUpdateStatement::new(
+            "contacts",
+            &["version".into()],
+            &["id".into()],
+            vec![BulkUpdateRow {
+                fields: vec![Parameter::new("version", "AA==")],
+                ids: vec![Parameter::new("id", 1_i64)],
+            }],
+        );
+        assert_eq!(
+            renderer().render(&update),
+            "UPDATE contacts SET version = data.version FROM (SELECT $version__0::BYTEA AS version, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id"
         );
     }
 }

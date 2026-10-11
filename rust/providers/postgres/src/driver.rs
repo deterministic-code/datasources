@@ -140,6 +140,9 @@ mod tests {
         assert!(matches!(stored.get("Key"), Some(Value::Uuid(_))));
         assert_eq!(stored.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(stored.get("Login"), Some(&Value::from("ada")));
-        assert!(matches!(stored.get("Created"), Some(Value::DateTime(_))));
+        assert_eq!(
+            stored.get("Created"),
+            Some(&Value::from("2020-01-02T03:04:05.000Z"))
+        );
     }
 }

@@ -65,4 +65,34 @@ public class PostgresStatementRendererTests
             "UPDATE parents SET label = data.label FROM (SELECT $label__0::TEXT AS label, $id__0::INTEGER AS id UNION ALL SELECT $label__1::TEXT AS label, $id__1::INTEGER AS id) AS data WHERE parents.id = data.id",
             Renderer.Render(update));
     }
+
+    [Fact]
+    public void RendersBulkUpdateIsoCreatedAsTimestamptz()
+    {
+        var update = new BulkUpdateStatement(
+            "contacts",
+            ["created"],
+            ["id"],
+            [
+                ([new Parameter("created", new Value.Text("2020-01-02T03:04:05.000Z"))], [new Parameter("id", new Value.Int(1))])
+            ]);
+        Assert.Equal(
+            "UPDATE contacts SET created = data.created FROM (SELECT $created__0::TIMESTAMPTZ AS created, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id",
+            Renderer.Render(update));
+    }
+
+    [Fact]
+    public void RendersBulkUpdateBase64VersionAsBytea()
+    {
+        var update = new BulkUpdateStatement(
+            "contacts",
+            ["version"],
+            ["id"],
+            [
+                ([new Parameter("version", new Value.Text("AA=="))], [new Parameter("id", new Value.Int(1))])
+            ]);
+        Assert.Equal(
+            "UPDATE contacts SET version = data.version FROM (SELECT $version__0::BYTEA AS version, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id",
+            Renderer.Render(update));
+    }
 }

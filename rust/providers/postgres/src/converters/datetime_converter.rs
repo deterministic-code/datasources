@@ -14,7 +14,10 @@ impl TypeConverter<Value, Value> for DateTimeConverter {
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        self.convert(to)
+        Ok(match to {
+            Value::DateTime(date) => Value::Text(Value::iso_datetime(*date)),
+            other => other.clone(),
+        })
     }
 }
 
@@ -30,7 +33,10 @@ mod tests {
             .convert(&Value::from("2020-01-02T03:04:05.000Z"))
             .unwrap();
         assert!(matches!(native, Value::DateTime(_)));
-        assert_eq!(converter.reverse_convert(&native).unwrap(), native);
+        assert_eq!(
+            converter.reverse_convert(&native).unwrap(),
+            Value::from("2020-01-02T03:04:05.000Z")
+        );
         assert_eq!(
             converter.convert(&Value::from("nope")).unwrap(),
             Value::from("nope")

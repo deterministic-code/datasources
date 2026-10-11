@@ -1,3 +1,4 @@
+using System.Globalization;
 using Datasources;
 
 namespace Datasources.Postgres;
@@ -14,6 +15,8 @@ internal sealed class PostgresBulkUpdateStatementTextRenderer : BulkUpdateStatem
         Value.Bool => "bool",
         Value.Int => "int",
         Value.Float => "float",
+        Value.Text(var text) when IsoDate(text) => "datetime",
+        Value.Text(var text) when BinaryConverter.IsBase64(text) => "binary",
         Value.Text => "string",
         Value.DateTime => "datetime",
         Value.Guid => "uuid",
@@ -21,4 +24,9 @@ internal sealed class PostgresBulkUpdateStatementTextRenderer : BulkUpdateStatem
         Value.Binary => "binary",
         _ => null
     };
+
+    static bool IsoDate(string text) =>
+        text.Contains('T', StringComparison.Ordinal) && DateTime.TryParse(
+            text, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out _);
 }

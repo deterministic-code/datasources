@@ -1,5 +1,7 @@
+use chrono::DateTime;
 use datasources::{IsolationLevel, Value};
 use std::collections::HashMap;
+use tokio_postgres::types::Type;
 
 fn quote_mixed_case(sql: &str) -> String {
     let chars: Vec<char> = sql.chars().collect();
@@ -89,6 +91,40 @@ pub fn to_postgres(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<V
         .map(|name| params.get(name).cloned().unwrap_or(Value::Null))
         .collect();
     (out, values)
+}
+
+pub fn is_rfc3339(text: &str) -> bool {
+    DateTime::parse_from_rfc3339(text).is_ok()
+}
+
+pub fn is_base64(text: &str) -> bool {
+    let text = text.trim();
+    text.len() >= 4
+        && text.len() % 4 == 0
+        && text.contains('=')
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'+' || b == b'/' || b == b'=')
+        && base64::Engine::decode(&base64::engine::general_purpose::STANDARD, text).is_ok()
+}
+
+pub fn param_type(value: &Value) -> Type {
+    match value {
+        Value::Bool(_) => Type::BOOL,
+        Value::Int(_) => Type::INT8,
+        Value::Float(_) => Type::FLOAT8,
+        Value::DateTime(_) => Type::TIMESTAMPTZ,
+        Value::Uuid(_) => Type::UUID,
+        Value::Decimal(_) => Type::NUMERIC,
+        Value::Binary(_) => Type::BYTEA,
+        Value::Text(text) if is_rfc3339(text) => Type::TIMESTAMPTZ,
+        Value::Text(text) if is_base64(text) => Type::BYTEA,
+        _ => Type::UNKNOWN,
+    }
+}
+
+pub fn param_types(values: &[Value]) -> Vec<Type> {
+    values.iter().map(param_type).collect()
 }
 
 pub fn isolation_sql(isolation: IsolationLevel) -> &'static str {

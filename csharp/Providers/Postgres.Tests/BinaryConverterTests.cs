@@ -15,5 +15,8 @@ public class BinaryConverterTests
         Assert.Equal(
             new byte[] { 1, 2, 3, 4 },
             ((Value.Binary)converter.ReverseConvert("AQIDBA==")).Item);
+        Assert.True(BinaryConverter.IsBase64("AA=="));
+        Assert.False(BinaryConverter.IsBase64("ada"));
+        Assert.False(BinaryConverter.IsBase64("===="));
     }
 }

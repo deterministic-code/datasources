@@ -1,5 +1,6 @@
 import {
   BulkUpdateStatement,
+  type Cell,
   ColumnDefault,
   CreateTableStatement,
   DefaultStatementTextRenderer,
@@ -63,6 +64,42 @@ describe("PostgresStatementRenderer", () => {
     ]);
     expect(renderer.render(update)).toBe(
       "UPDATE parents SET label = data.label FROM (SELECT $label__0::TEXT AS label, $id__0::INTEGER AS id UNION ALL SELECT $label__1::TEXT AS label, $id__1::INTEGER AS id) AS data WHERE parents.id = data.id",
+    );
+  });
+
+  it("renders bulk update cell types", () => {
+    const update = new BulkUpdateStatement("t", ["flag", "n", "at", "blob", "x"], ["id"], [
+      {
+        fields: [
+          { name: "flag", value: true },
+          { name: "n", value: 1.5 },
+          { name: "at", value: new Date("2020-01-02T03:04:05.000Z") },
+          { name: "blob", value: new Uint8Array([1]) },
+          { name: "x", value: null },
+        ] as { name: string; value: Cell }[],
+        ids: [{ name: "id", value: 1n }],
+      },
+    ]);
+    expect(renderer.render(update)).toBe(
+      "UPDATE t SET flag = data.flag, n = data.n, at = data.at, blob = data.blob, x = data.x FROM (SELECT $flag__0::BOOLEAN AS flag, $n__0::DOUBLE PRECISION AS n, $at__0::TIMESTAMPTZ AS at, $blob__0::BYTEA AS blob, $x__0 AS x, $id__0::INTEGER AS id) AS data WHERE t.id = data.id",
+    );
+  });
+
+  it("renders bulk update iso created as timestamptz", () => {
+    const update = new BulkUpdateStatement("contacts", ["created"], ["id"], [
+      { fields: [{ name: "created", value: "2020-01-02T03:04:05.000Z" }], ids: [{ name: "id", value: 1 }] },
+    ]);
+    expect(renderer.render(update)).toBe(
+      "UPDATE contacts SET created = data.created FROM (SELECT $created__0::TIMESTAMPTZ AS created, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id",
+    );
+  });
+
+  it("renders bulk update base64 version as bytea", () => {
+    const update = new BulkUpdateStatement("contacts", ["version"], ["id"], [
+      { fields: [{ name: "version", value: "AA==" }], ids: [{ name: "id", value: 1 }] },
+    ]);
+    expect(renderer.render(update)).toBe(
+      "UPDATE contacts SET version = data.version FROM (SELECT $version__0::BYTEA AS version, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id",
     );
   });
 });

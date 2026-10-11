@@ -1,6 +1,8 @@
 import { parametersToRecord, type Cell, type Parameter } from "@datasources/core";
+import { isBase64 } from "./converters/BinaryConverter.ts";
+import { isIsoDate } from "./converters/DateTimeConverter.ts";
 import { reverse } from "./converters/PostgresRowTypeConverters.ts";
-import type { Scalar } from "./scalar.ts";
+import type { Scalar, Wire } from "./scalar.ts";
 
 const NAME = /\$([A-Za-z_][A-Za-z0-9_]*)/g;
 
@@ -12,10 +14,19 @@ const quoteMixedCase = (sql: string): string =>
       : `"${token}"`,
   );
 
+const wire = (value: Scalar): Wire =>
+  typeof value !== "string"
+    ? value
+    : isIsoDate(value)
+      ? new Date(value)
+      : isBase64(value)
+        ? Uint8Array.from(Buffer.from(value, "base64"))
+        : value;
+
 export const toPostgres = (
   sql: string,
   params?: Record<string, Scalar>,
-): { text: string; values: Scalar[] } => {
+): { text: string; values: Wire[] } => {
   const names: string[] = [];
   const text = quoteMixedCase(sql).replace(NAME, (_match, name: string) => {
     let index = names.indexOf(name);
@@ -25,7 +36,7 @@ export const toPostgres = (
     }
     return `$${index + 1}`;
   });
-  return { text, values: names.map((name) => params?.[name] ?? null) };
+  return { text, values: names.map((name) => wire(params?.[name] ?? null)) };
 };
 
 export const bindParameters = (
