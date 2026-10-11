@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,12 +31,23 @@ const leftover = () => {
   const listed = spawnSync("docker", ["ps", "-aq", "--filter", `name=${project}`], { encoding: "utf8" });
   const ids = (listed.stdout || "").trim().split(/\s+/).filter(Boolean);
   if (ids.length) spawnSync("docker", ["rm", "-f", ...ids], { encoding: "utf8" });
+  const volumes = spawnSync("docker", ["volume", "ls", "-q", "--filter", `name=${project}`], { encoding: "utf8" });
+  const names = (volumes.stdout || "").trim().split(/\s+/).filter(Boolean);
+  if (names.length) spawnSync("docker", ["volume", "rm", "-f", ...names], { encoding: "utf8" });
 };
 
 const down = () => {
   compose("down", "-v", "--remove-orphans");
   leftover();
 };
+
+const stop = (code = 0) => {
+  down();
+  process.exit(code);
+};
+
+process.on("SIGINT", () => stop(130));
+process.on("SIGTERM", () => stop(143));
 
 const up = (service) => {
   const result = compose("up", "-d", "--wait", service);
@@ -131,9 +142,16 @@ const run = (sample, language, provider, strategy, url) => {
   return { ...JSON.parse(line), ok: true };
 };
 
+const writeAtomic = (name, text) => {
+  const dest = join(artifacts, name);
+  const temp = `${dest}.tmp`;
+  writeFileSync(temp, text);
+  renameSync(temp, dest);
+};
+
 const report = (cells) => {
   mkdirSync(artifacts, { recursive: true });
-  writeFileSync(join(artifacts, "results.json"), `${JSON.stringify(cells, null, 2)}\n`);
+  writeAtomic("results.json", `${JSON.stringify(cells, null, 2)}\n`);
   const cell = (sample, language, provider, strategy) =>
     cells.find(
       (item) =>
@@ -168,8 +186,8 @@ const report = (cells) => {
 <table><thead><tr><th>language</th><th>provider</th><th>single</th><th>batch</th><th>stored procedure</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     })
     .join("\n");
-  writeFileSync(
-    join(artifacts, "index.html"),
+  writeAtomic(
+    "index.html",
     `<!DOCTYPE html><html><head><meta charset="utf-8"><title>bulk performance</title>
 <style>
 body{font-family:system-ui,sans-serif;margin:2rem;background:#111;color:#eee}
@@ -252,6 +270,7 @@ try {
           } finally {
             isolated.drop();
           }
+          report(cells);
         }
     if (provider !== "sqlite") down();
   }
