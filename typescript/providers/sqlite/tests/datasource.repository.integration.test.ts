@@ -32,7 +32,7 @@ const options = () => ({
   ids: ["Id"],
 });
 
-const register = (ds: Datasource) => {
+const register = (ds: IDatasource) => {
   const mapping = options();
   ds.repositories.register(
     "User",
@@ -42,6 +42,12 @@ const register = (ds: Datasource) => {
   );
 };
 
+declare module "@datasources/core" {
+  interface IDatasource {
+    readonly users: ICRUDRepository<User>;
+  }
+}
+
 describe("datasource plural", () => {
   beforeEach(() => {
     DatasourceFactory.reset();
@@ -49,6 +55,21 @@ describe("datasource plural", () => {
     delete process.env.INSTALLED_PROVIDERS;
     delete process.env.DATASOURCE_URL;
     process.env.PROVIDER = "sqlite";
+  });
+
+  it("creates using dynamic after register", async () => {
+    const ds = Datasource.default;
+    const connection = await open(ds);
+    await applySchema(connection, "user-pascal");
+    register(ds);
+    const created = await ds.users.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
+    const loaded = await ds.users.readSingle();
+    const updated = await ds.users.update(created);
+    const deleted = await ds.users.delete(created);
+    expect(created.Id).toBeGreaterThan(0);
+    expect(loaded?.Username).toBe("ada");
+    expect(updated.rowsAffected).toBe(1);
+    expect(deleted.rowsAffected).toBe(1);
   });
 
   it("writes a user through the plural name", async () => {

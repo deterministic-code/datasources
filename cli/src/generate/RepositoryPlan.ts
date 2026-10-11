@@ -54,8 +54,12 @@ export const planRepositories = (
   const repoName = (tableName: string): string => viewByTable.get(tableName)?.name ?? tableName;
   const property = (name: string): string => casing.convertFields(name);
   const identity = (name: string): string => property(identityColumns(expanded.get(name), spec.datasource.find((table) => table.name === name))[0] ?? "id");
+  const included = new Set(spec.datasource.map((table) => table.name));
   const models = spec.datasource.flatMap((table): RepositoryModel[] => {
     if (abstractParent(table)) return [];
+    const view = types.get(table.name);
+    if (view?.tags.includes("view_type") === true && view.inherits !== undefined && included.has(view.inherits))
+      return [];
     const authored = viewByTable.get(table.name) ?? (types.get(table.name) as Type);
     const full = expanded.get(authored.name) as Type;
     const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;

@@ -147,6 +147,24 @@ There is no \`using\`.
   assert.match(page, /<DialectPanel name="rust">/);
 });
 
+test("a marker slot may contain an escaped pipe", () => {
+  const source = "# Datasource\n\n{{ReadSingle|readSingle|read_single}} returns ({{Contact?|Contact \\| undefined|Option<Row>}}). {{Create|create|create}} returns that entity.\n";
+  const page = transformDialects(source, "vitepress");
+  assert.match(
+    page,
+    /<DialectName csharp="ReadSingle" typescript="readSingle" rust="read_single"><\/DialectName>/,
+  );
+  assert.match(
+    page,
+    /<DialectName csharp="Contact\?" typescript="Contact \| undefined" rust="Option&lt;Row&gt;"><\/DialectName>/,
+  );
+  assert.match(page, /<DialectName csharp="Create" typescript="create" rust="create"><\/DialectName>/);
+  const readme = transformDialects(source, "readme");
+  assert.match(readme, /`ReadSingle` \/ `readSingle` \/ `read_single`/);
+  assert.match(readme, /`Contact\?` \/ `Contact \| undefined` \/ `Option<Row>`/);
+  assert.match(readme, /`Create` \/ `create` \/ `create`/);
+});
+
 test("leaves a short marker and fenced text unchanged", () => {
   const source = `# Notes
 

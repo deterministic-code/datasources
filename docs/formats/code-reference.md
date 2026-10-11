@@ -68,7 +68,7 @@ VitePress uses one page-level dialect selector for classes and examples. README 
 
 ## Dialect names
 
-A summary or remark names an API once per sentence. The marker has three slots, in order C#, TypeScript, Rust. Repeat a slot when two dialects share a spelling. The site shows the slot for the selected language. README keeps all three in the sentence.
+A summary or remark names an API once per sentence. The marker has three slots, in order C#, TypeScript, Rust. Repeat a slot when two dialects share a spelling. Write a `|` inside a slot as `\|`. The site shows the slot for the selected language. README keeps all three in the sentence.
 
 A `::: prose` block is for a sentence that is not the same fact under another name. Use `### typescript`, `### csharp`, and `### rust`. Omit a heading when that dialect has nothing to say. Shared sentences stay outside the block. README quotes that sentence under the dialect name so the following remarks stay shared.
 

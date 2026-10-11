@@ -1,0 +1,6 @@
+const ds = Datasource.default;
+register(ds);
+const created = await ds.users.create(Object.assign(new User(), { Username: "ada", IsEnabled: true }));
+const loaded = await ds.users.readSingle();
+const updated = await ds.users.update(created);
+const deleted = await ds.users.delete(created);
