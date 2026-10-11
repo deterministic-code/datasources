@@ -18,60 +18,62 @@ import type { Parameter } from "./Parameter.ts";
 import { afterBulkWrite } from "./BulkWriteEnrichment.ts";
 
 const empty = (): Response => ({ result: null, rowsAffected: 0 });
+const budget = 8000;
+const maxRows = 250;
 
 const assigned = (value: Cell): boolean =>
   value !== null && value !== "" && value !== 0 && value !== 0n;
 
-const rename = (command: BulkCommand, index: number): BulkCommand => {
-  let text = command.text;
-  const parameters = command.parameters.map((parameter) => ({ ...parameter }));
-  const names = [...new Set(parameters.map((parameter) => parameter.name))].sort(
-    (left, right) => right.length - left.length,
-  );
-  for (const name of names) {
-    const alias = `${name}__${index}`;
-    text = renameToken(text, name, alias);
-    for (let at = 0; at < parameters.length; at++) {
-      if (parameters[at]?.name === name) parameters[at] = { ...parameters[at], name: alias };
-    }
-  }
-  return { text, parameters };
+const columnsOf = (rows: readonly { name: string }[][]): string[] => {
+  const seen = new Set<string>();
+  const columns: string[] = [];
+  for (const row of rows)
+    for (const field of row)
+      if (!seen.has(field.name)) {
+        seen.add(field.name);
+        columns.push(field.name);
+      }
+  return columns;
 };
 
-const renameToken = (text: string, name: string, alias: string): string => {
-  const token = `$${name}`;
-  const next = `$${alias}`;
-  let index = 0;
-  let result = "";
-  while (text.indexOf(token, index) >= 0) {
-    const at = text.indexOf(token, index);
-    const end = at + token.length;
-    const nextChar = text[end];
-    const boundary = nextChar === undefined || !/[0-9A-Za-z_]/.test(nextChar);
-    result += text.slice(index, at) + (boundary ? next : token);
-    index = end;
-  }
-  return result + text.slice(index);
+const lookup = (fields: readonly { name: string; value?: Cell }[]): Map<string, Cell> => {
+  const map = new Map<string, Cell>();
+  for (const field of fields) map.set(field.name, (field.value ?? null) as Cell);
+  return map;
 };
+
+const valueOf = (fields: Map<string, Cell>, column: string): Cell => fields.get(column) ?? null;
+
+type Inserted = { table: string; fields: Parameter[] };
+type Updated = { table: string; fields: Parameter[]; ids: Parameter[] };
+type Deleted = { table: string; ids: Parameter[] };
 
 export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWriteStrategy<T> {
   repo!: CRUDRepository<T>;
   command!: ICommand;
   options!: CRUDRepositoryOptions<T>;
+  private cached?: ReturnType<typeof repositoryParts>["statements"];
 
   attach = (command: ICommand, options: CRUDRepositoryOptions<T>): void => {
     this.command = command;
     this.options = options;
   };
 
-  create = (items: T[]): Promise<Response> =>
-    this.then(this.send(items.map((item) => this.insert(item))), items, "create");
+  create = (items: T[]): Promise<Response> => this.then(this.writeCreates(items), items, "create");
 
   update = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>
-    this.then(this.send(items.map((item) => this.updateCommand(item, byWhere))), items, "update");
+    this.then(
+      byWhere ? this.sendEach(items.map((item) => this.updateCommand(item, byWhere))) : this.writeUpdates(items),
+      items,
+      "update",
+    );
 
   delete = (items: T[], byWhere: IWhere | undefined): Promise<Response> =>
-    this.then(this.send(items.map((item) => this.deleteCommand(item, byWhere))), items, "delete");
+    this.then(
+      byWhere ? this.sendEach(items.map((item) => this.deleteCommand(item, byWhere))) : this.writeDeletes(items),
+      items,
+      "delete",
+    );
 
   private then = async (write: Promise<Response>, items: T[], mode: "create" | "update" | "delete"): Promise<Response> => {
     const response = await write;
@@ -79,40 +81,153 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     return response;
   };
 
-  private send = (commands: BulkCommand[]): Promise<Response> => {
-    if (commands.length === 0) return Promise.resolve(empty());
-    const renamed = commands.map(rename);
-    return this.command.executeNative(
-      new Native(renamed.map((command) => command.text).join("; ")),
-      renamed.flatMap((command) => command.parameters),
+  private writeCreates = async (items: T[]): Promise<Response> => {
+    if (items.length === 0) return empty();
+    const rows = items.map(this.mappedInsert);
+    const columns = columnsOf(rows.map((row) => row.fields));
+    return this.chunked(rows, columns.length, (chunk) => this.execute(this.insertSql(rows[0]!.table, columns, chunk)));
+  };
+
+  private writeUpdates = async (items: T[]): Promise<Response> => {
+    if (items.length === 0) return empty();
+    const rows = items.map(this.mappedUpdate);
+    const set = columnsOf(rows.map((row) => row.fields));
+    const ids = columnsOf(rows.map((row) => row.ids));
+    return this.chunked(rows, set.length + ids.length, (chunk) =>
+      this.execute(this.updateSql(rows[0]!.table, set, ids, chunk)),
     );
   };
 
-  private insert = (item: T): BulkCommand => {
+  private writeDeletes = async (items: T[]): Promise<Response> => {
+    if (items.length === 0) return empty();
+    const rows = items.map(this.mappedDelete);
+    const ids = columnsOf(rows.map((row) => row.ids));
+    return this.chunked(rows, ids.length, (chunk) => this.execute(this.deleteSql(rows[0]!.table, ids, chunk)));
+  };
+
+  private chunked = async <TRow>(
+    rows: TRow[],
+    width: number,
+    write: (chunk: TRow[]) => Promise<Response>,
+  ): Promise<Response> => {
+    const size = Math.min(maxRows, Math.max(1, Math.floor(budget / Math.max(1, width))));
+    let rowsAffected = 0;
+    for (let at = 0; at < rows.length; at += size) rowsAffected += (await write(rows.slice(at, at + size))).rowsAffected;
+    return { result: null, rowsAffected };
+  };
+
+  private sendEach = async (commands: BulkCommand[]): Promise<Response> => {
+    let rowsAffected = 0;
+    for (const command of commands)
+      rowsAffected += (await this.command.executeNative(new Native(command.text), command.parameters)).rowsAffected;
+    return { result: null, rowsAffected };
+  };
+
+  private execute = ({ text, parameters }: BulkCommand): Promise<Response> =>
+    this.command.executeNative(new Native(text), parameters);
+
+  private mappedInsert = (item: T): Inserted => {
     const record = this.reverse(item);
     const statement = this.statements().insert(
       this.fields(record, (col) => !this.ids.includes(col) || assigned(record[col] ?? null)),
     );
-    return { text: DefaultStatementTextRenderer.instance.render(statement), parameters: statement.fields };
+    return { table: statement.table, fields: statement.fields };
+  };
+
+  private mappedUpdate = (item: T): Updated => {
+    const record = this.reverse(item);
+    const fields = this.fields(record, (col) => !this.ids.includes(col));
+    if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
+    const statement = this.statements().update(fields, this.idsWhere(record), (name, value) =>
+      this.cell(name, value, true),
+    );
+    return { table: statement.table, fields: statement.fields, ids: statement.where?.parameters ?? [] };
+  };
+
+  private mappedDelete = (item: T): Deleted => {
+    const record = this.reverse(item);
+    const statement = this.statements().delete(this.idsWhere(record), (name, value) => this.cell(name, value, true));
+    return { table: statement.table, ids: statement.where?.parameters ?? [] };
+  };
+
+  private insertSql = (table: string, columns: string[], rows: Inserted[]): BulkCommand => {
+    const parameters: Parameter[] = [];
+    const values = rows.map((row, index) => {
+      const byName = lookup(row.fields);
+      return `(${columns.map((column) => {
+        parameters.push({ name: `${column}__${index}`, value: valueOf(byName, column) as Scalar });
+        return `$${column}__${index}`;
+      }).join(", ")})`;
+    });
+    return {
+      text: `INSERT INTO ${table} (${columns.join(", ")}) VALUES ${values.join(", ")}`,
+      parameters,
+    };
+  };
+
+  private updateSql = (table: string, set: string[], ids: string[], rows: Updated[]): BulkCommand => {
+    const parameters: Parameter[] = [];
+    const columns = [...set, ...ids];
+    const source = `(${rows
+      .map((row, index) => {
+        const byName = lookup([...row.fields, ...row.ids]);
+        return `SELECT ${columns
+          .map((column) => {
+            parameters.push({ name: `${column}__${index}`, value: valueOf(byName, column) as Scalar });
+            return `$${column}__${index} AS ${column}`;
+          })
+          .join(", ")}`;
+      })
+      .join(" UNION ALL ")}) AS data`;
+    const assigns = set
+      .map((column) => (this.mysql ? `${table}.${column} = data.${column}` : `${column} = data.${column}`))
+      .join(", ");
+    const on = ids.map((column) => `${table}.${column} = data.${column}`).join(" AND ");
+    return {
+      text: this.mysql
+        ? `UPDATE ${table} JOIN ${source} ON ${on} SET ${assigns}`
+        : `UPDATE ${table} SET ${assigns} FROM ${source} WHERE ${on}`,
+      parameters,
+    };
+  };
+
+  private deleteSql = (table: string, ids: string[], rows: Deleted[]): BulkCommand => {
+    if (ids.length === 0) return { text: `DELETE FROM ${table} WHERE 1 = 1`, parameters: [] };
+    const parameters: Parameter[] = [];
+    if (ids.length === 1) {
+      const column = ids[0]!;
+      const names = rows.map((row, index) => {
+        parameters.push({ name: `${column}__${index}`, value: valueOf(lookup(row.ids), column) as Scalar });
+        return `$${column}__${index}`;
+      });
+      return { text: `DELETE FROM ${table} WHERE ${column} IN (${names.join(", ")})`, parameters };
+    }
+    const tuples = rows.map((row, index) => {
+      const byName = lookup(row.ids);
+      return `(${ids
+        .map((column) => {
+          parameters.push({ name: `${column}__${index}`, value: valueOf(byName, column) as Scalar });
+          return `$${column}__${index}`;
+        })
+        .join(", ")})`;
+    });
+    return { text: `DELETE FROM ${table} WHERE (${ids.join(", ")}) IN (${tuples.join(", ")})`, parameters };
   };
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
     const fields = this.fields(record, (col) => !this.ids.includes(col));
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
-    const statement = this.statements().update(
-      fields,
-      byWhere ?? this.idsWhere(record),
-      (name, value) => this.cell(name, value, byWhere === undefined),
+    const statement = this.statements().update(fields, byWhere ?? this.idsWhere(record), (name, value) =>
+      this.cell(name, value, byWhere === undefined),
     );
     return { text: DefaultStatementTextRenderer.instance.render(statement), parameters: statement.parameters };
   };
 
   private deleteCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const statement = this.statements().delete(
-      byWhere ?? this.idsWhere(record),
-      (name, value) => this.cell(name, value, byWhere === undefined),
+    const statement = this.statements().delete(byWhere ?? this.idsWhere(record), (name, value) =>
+      this.cell(name, value, byWhere === undefined),
     );
     const listed = statement.where?.parameters ?? [];
     const parameters: Parameter[] = listed.length
@@ -123,10 +238,15 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     return { text: DefaultStatementTextRenderer.instance.render(statement), parameters };
   };
 
-  private statements = () => repositoryParts(this.command.connection, this.options).statements;
+  private statements = () =>
+    (this.cached ??= repositoryParts(this.command.connection, this.options).statements);
 
   private get ids(): readonly string[] {
     return this.options.ids ?? this.repo.ids;
+  }
+
+  private get mysql(): boolean {
+    return this.command.connection.provider === "mysql";
   }
 
   private reverse = (item: T): Cells => {

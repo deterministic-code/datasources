@@ -25,5 +25,8 @@ public class SplitStatementsTests
         Assert.True(SplitStatements.UsesParameter("INSERT INTO t (is_enabled) VALUES ($is_enabled__10)", "is_enabled__10"));
         Assert.False(SplitStatements.UsesParameter("INSERT INTO t (is_enabled) VALUES ($is_enabled__10)", "is_enabled__1"));
         Assert.True(SplitStatements.UsesParameter("$is_enabled__1", "is_enabled__1"));
+        Assert.Equal(
+            ["a__0", "b__0", "a__1", "b__1"],
+            SplitStatements.Parameters("INSERT INTO t (a, b) VALUES ($a__0, $b__0), ($a__1, $b__1)"));
     }
 }

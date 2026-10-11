@@ -51,9 +51,9 @@ public static class SplitStatements
                 continue;
             }
             if (sql[i] is '\'' or '"' or '`') { quote = sql[i]; continue; }
-            if (Routine(sql, start, i) && Word(sql, i, "BEGIN")) { depth++; i += 4; continue; }
+            if (Word(sql, i, "BEGIN") && Routine(sql, start, i)) { depth++; i += 4; continue; }
             if (sql[i] != ';') continue;
-            if (Routine(sql, start, i) && depth > 0)
+            if (depth > 0 && Routine(sql, start, i))
             {
                 if (EndsWithWord(sql[start..i], "END")) depth--;
                 if (depth > 0) continue;
@@ -68,21 +68,31 @@ public static class SplitStatements
         return parts;
     }
 
-    public static bool UsesParameter(string sql, string name)
+    public static IReadOnlyList<string> Parameters(string sql)
     {
-        var bare = name.TrimStart('$', '@', ':');
-        foreach (var prefix in new[] { "$", ":", "@" })
+        var names = new List<string>();
+        var seen = new HashSet<string>();
+        for (var i = 0; i < sql.Length; i++)
         {
-            var token = prefix + bare;
-            for (var at = 0; (at = sql.IndexOf(token, at, StringComparison.Ordinal)) >= 0; at += token.Length)
+            var prefix = sql[i];
+            if (prefix is not ('$' or ':' or '@')) continue;
+            var end = i + 1;
+            while (end < sql.Length && Id(sql[end])) end++;
+            if (end == i + 1) continue;
+            if (prefix == '$' && end < sql.Length && sql[end] == '$')
             {
-                var end = at + token.Length;
-                if (end == sql.Length || !(char.IsLetterOrDigit(sql[end]) || sql[end] == '_'))
-                    return true;
+                i = end;
+                continue;
             }
+            var name = sql[(i + 1)..end];
+            if (seen.Add(name)) names.Add(name);
+            i = end - 1;
         }
-        return false;
+        return names;
     }
+
+    public static bool UsesParameter(string sql, string name) =>
+        Parameters(sql).Contains(name.TrimStart('$', '@', ':'));
 
     static string? DollarTag(string sql, int i)
     {

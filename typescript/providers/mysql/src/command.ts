@@ -11,7 +11,7 @@ import {
   StatementTextRenderer,
   Response,
   splitStatements,
-  statementUsesParameter,
+  statementParameters,
   statementReader,
   StreamingReader,
   type Cells,
@@ -97,8 +97,9 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       let parameters = params;
       let result: MysqlExecuteResult["result"];
       for (const part of splitStatements(query)) {
+        const names = new Set(statementParameters(part));
         const used = Object.fromEntries(
-          Object.entries(named).filter(([name]) => statementUsesParameter(part, name)),
+          Object.entries(named).filter(([name]) => names.has(name.replace(/^[$:@]/, ""))),
         );
         const executed = await this.runSql(part, used, params);
         rowsAffected += executed.rowsAffected;

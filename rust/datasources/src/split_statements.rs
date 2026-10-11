@@ -67,14 +67,14 @@ pub fn split_statements(sql: &str) -> Vec<String> {
             i += 1;
             continue;
         }
-        if routine(sql, start, byte_index(sql, i)) && word(&chars, i, "BEGIN") {
+        if word(&chars, i, "BEGIN") && routine(sql, start, byte_index(sql, i)) {
             depth += 1;
             i += 5;
             continue;
         }
         if char == ';' {
             let at = byte_index(sql, i);
-            if routine(sql, start, at) && depth > 0 {
+            if depth > 0 && routine(sql, start, at) {
                 if ends_with_word(&sql[start..at], "END") {
                     depth -= 1;
                 }
@@ -99,17 +99,41 @@ pub fn split_statements(sql: &str) -> Vec<String> {
     parts
 }
 
+pub fn statement_parameters(sql: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let chars: Vec<char> = sql.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let prefix = chars[i];
+        if prefix != '$' && prefix != ':' && prefix != '@' {
+            i += 1;
+            continue;
+        }
+        let mut end = i + 1;
+        while end < chars.len() && (chars[end].is_ascii_alphanumeric() || chars[end] == '_') {
+            end += 1;
+        }
+        if end == i + 1 {
+            i += 1;
+            continue;
+        }
+        if prefix == '$' && chars.get(end) == Some(&'$') {
+            i = end + 1;
+            continue;
+        }
+        let name: String = chars[i + 1..end].iter().collect();
+        if seen.insert(name.clone()) {
+            names.push(name);
+        }
+        i = end;
+    }
+    names
+}
+
 pub fn statement_uses_parameter(sql: &str, name: &str) -> bool {
     let bare = name.trim_start_matches(['$', '@', ':']);
-    ["$", ":", "@"].iter().any(|prefix| {
-        let token = format!("{prefix}{bare}");
-        sql.match_indices(&token).any(|(at, _)| {
-            !sql[at + token.len()..]
-                .chars()
-                .next()
-                .is_some_and(|next| next.is_ascii_alphanumeric() || next == '_')
-        })
-    })
+    statement_parameters(sql).iter().any(|found| found == bare)
 }
 
 fn dollar_tag(chars: &[char], i: usize) -> Option<String> {
@@ -165,7 +189,7 @@ fn byte_index(sql: &str, char_index: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{split_statements, statement_uses_parameter};
+    use super::{split_statements, statement_parameters, statement_uses_parameter};
 
     #[test]
     fn splits_on_semicolons_outside_quotes() {
@@ -199,5 +223,9 @@ mod tests {
             "is_enabled__1"
         ));
         assert!(statement_uses_parameter("$is_enabled__1", "is_enabled__1"));
+        assert_eq!(
+            statement_parameters("INSERT INTO t (a, b) VALUES ($a__0, $b__0), ($a__1, $b__1)"),
+            vec!["a__0", "b__0", "a__1", "b__1"]
+        );
     }
 }

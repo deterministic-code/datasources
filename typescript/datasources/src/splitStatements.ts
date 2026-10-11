@@ -77,13 +77,13 @@ export const splitStatements = (sql: string): string[] => {
       quote = opened;
       continue;
     }
-    if (routine(sql, start, i) && word(sql, i, "BEGIN")) {
+    if (word(sql, i, "BEGIN") && routine(sql, start, i)) {
       depth += 1;
       i += 4;
       continue;
     }
     if (char === ";") {
-      if (routine(sql, start, i) && depth > 0) {
+      if (depth > 0 && routine(sql, start, i)) {
         if (/\bEND$/i.test(sql.slice(start, i).trimEnd())) depth -= 1;
         if (depth > 0) continue;
       }

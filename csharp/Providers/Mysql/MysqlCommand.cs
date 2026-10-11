@@ -81,9 +81,10 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
         IReadOnlyList<Parameter>? applied = parameters;
         foreach (var part in SplitStatements.Split(sql))
         {
+            var names = SplitStatements.Parameters(part).ToHashSet();
             var used = parameters is null
                 ? null
-                : parameters.Where(parameter => SplitStatements.UsesParameter(part, parameter.Name)).ToArray();
+                : parameters.Where(parameter => names.Contains(parameter.Name.TrimStart('$', '@', ':'))).ToArray();
             using var command = Bind(part, used);
             rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
             applied = Applied(command, parameters);

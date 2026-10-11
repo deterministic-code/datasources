@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use datasources::{
     parameters_to_map, ArrayReader, Command, CommandMiddleware, CommandMiddlewareHost,
     DatasourceError, FirstResultReader, Native, Parameter, Reader, Response, Result, ReturnStatement, split_statements,
-    statement_uses_parameter, Statement,
+    statement_parameters, Statement,
     StatementKind, StatementTextRenderer, Value,
 };
 use rusqlite::types::{ToSql, ValueRef};
@@ -48,15 +48,18 @@ impl SqliteCommand {
         let conn = db
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let pairs = bind_pairs(params);
-        let bound = as_params(&pairs);
-        let mut statement = conn.prepare(sql).map_err(map_err)?;
+        let (sql, values) = to_sqlite(sql, params);
+        let mut statement = conn.prepare(&sql).map_err(map_err)?;
         let rows_affected = if statement.column_count() > 0 {
-            let mut rows = statement.query(bound.as_slice()).map_err(map_err)?;
+            let mut rows = statement
+                .query(rusqlite::params_from_iter(values.iter()))
+                .map_err(map_err)?;
             while rows.next().map_err(map_err)?.is_some() {}
             conn.changes() as i64
         } else {
-            statement.execute(bound.as_slice()).map_err(map_err)? as i64
+            statement
+                .execute(rusqlite::params_from_iter(values.iter()))
+                .map_err(map_err)? as i64
         };
         Ok(SqliteExecuteResult {
             rows_affected,
@@ -120,9 +123,14 @@ impl Command for SqliteCommand {
                     let mut rows_affected = 0;
                     let mut result = Value::Null;
                     for part in split_statements(&sql) {
+                        let names = statement_parameters(&part);
                         let used = map
                             .iter()
-                            .filter(|(name, _)| statement_uses_parameter(&part, name))
+                            .filter(|(name, _)| {
+                                names.iter().any(|found| {
+                                    found == name.trim_start_matches(['$', '@', ':'])
+                                })
+                            })
                             .map(|(name, value)| (name.clone(), value.clone()))
                             .collect();
                         let executed = SqliteCommand::execute_sql(&connection, &part, &used)?;
@@ -185,6 +193,37 @@ impl SqliteCommand {
         let cell = row.into_values().next().unwrap_or(Value::Null);
         Ok(Response::new(cell, 1, parameters.map(|list| list.to_vec())))
     }
+}
+
+fn to_sqlite(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<rusqlite::types::Value>) {
+    let mut values = Vec::new();
+    let mut out = String::with_capacity(sql.len());
+    let chars: Vec<char> = sql.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '$'
+            && i + 1 < chars.len()
+            && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_')
+        {
+            i += 1;
+            let start = i;
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                i += 1;
+            }
+            let name: String = chars[start..i].iter().collect();
+            values.push(to_sql(
+                params
+                    .get(&name)
+                    .or_else(|| params.get(&format!("${name}")))
+                    .unwrap_or(&Value::Null),
+            ));
+            out.push('?');
+            continue;
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    (out, values)
 }
 
 fn named_key(name: &str) -> String {

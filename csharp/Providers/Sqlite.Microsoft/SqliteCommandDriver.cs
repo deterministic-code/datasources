@@ -63,11 +63,12 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
         var rows = 0;
         foreach (var part in SplitStatements.Split(sql))
         {
+            var names = SplitStatements.Parameters(part).ToHashSet();
             var used = new Row();
             foreach (var (name, value) in Helpers.ParametersToRecord(parameters))
-                if (SplitStatements.UsesParameter(part, name))
+                if (names.Contains(name.TrimStart('$', '@', ':')))
                     used[name] = value;
-            using var command = Bind(part, used);
+            using var command = BindPositional(part, used);
             rows += Math.Max(await command.ExecuteNonQueryAsync(), 0);
         }
         return new SqliteExecuteResult(rows, Value.Null.Instance, parameters);
@@ -105,6 +106,25 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
             var key = name[0] is '$' or '@' or ':' ? name : $"${name}";
             command.Parameters.AddWithValue(key, SqliteRowTypeConverters.Reverse(value).ToObject() ?? DBNull.Value);
         }
+        return command;
+    }
+
+    SqliteCmd BindPositional(string sql, Row parameters)
+    {
+        var values = new List<object?>();
+        var text = System.Text.RegularExpressions.Regex.Replace(sql, @"\$([A-Za-z_][A-Za-z0-9_]*)", match =>
+        {
+            var name = match.Groups[1].Value;
+            var index = values.Count;
+            values.Add(parameters.TryGetValue(name, out var value)
+                ? SqliteRowTypeConverters.Reverse(value).ToObject() ?? DBNull.Value
+                : DBNull.Value);
+            return $"$p{index}";
+        });
+        var command = connection.Require().CreateCommand();
+        command.CommandText = text;
+        for (var index = 0; index < values.Count; index++)
+            command.Parameters.AddWithValue($"$p{index}", values[index]);
         return command;
     }
 }
