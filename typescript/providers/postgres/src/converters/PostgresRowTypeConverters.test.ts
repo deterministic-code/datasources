@@ -11,7 +11,7 @@ describe("PostgresRowTypeConverters", () => {
     const when = new Date("2024-01-02T00:00:00.000Z");
     expect(reverse(true)).toBe(true);
     expect(reverse(false)).toBe(false);
-    expect(reverse(when)).toBe(when);
+    expect(reverse(when)).toBe("2024-01-02T00:00:00.000Z");
     expect(reverse(new Uint8Array([1, 2]))).toEqual(new Uint8Array([1, 2]));
     expect(reverse("a")).toBe("a");
   });

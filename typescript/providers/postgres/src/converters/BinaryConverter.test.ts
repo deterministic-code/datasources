@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BinaryConverter } from "./BinaryConverter.ts";
+import { BinaryConverter, isBase64 } from "./BinaryConverter.ts";
 
 describe("BinaryConverter", () => {
   it("maps binary", () => {
@@ -8,5 +8,7 @@ describe("BinaryConverter", () => {
     expect(converter.convert(raw)).toBe(raw);
     expect(converter.reverseConvert(raw)).toBe(raw);
     expect(converter.reverseConvert("AQIDBA==")).toEqual(raw);
+    expect(isBase64("AA==")).toBe(true);
+    expect(isBase64("ada")).toBe(false);
   });
 });

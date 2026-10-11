@@ -67,6 +67,17 @@ describe("bind", () => {
     expect(toPostgres(`INSERT INTO "contact_sources" ("name") VALUES ('Manual')`).text)
       .toBe(`INSERT INTO "contact_sources" ("name") VALUES ('Manual')`);
     expect(toPostgres("SELECT * FROM OldContactsTbl").text).toBe(`SELECT * FROM "OldContactsTbl"`);
+    expect(bindParameters([{ name: "at", value: new Date("2020-01-02T03:04:05.000Z") }]))
+      .toEqual({ at: "2020-01-02T03:04:05.000Z" });
+    expect(toPostgres("SELECT $at", { at: "2020-01-02T03:04:05.000Z" })).toEqual({
+      text: "SELECT $1",
+      values: [new Date("2020-01-02T03:04:05.000Z")],
+    });
+    expect(toPostgres("SELECT $v", { v: "AA==" })).toEqual({
+      text: "SELECT $1",
+      values: [Uint8Array.from([0])],
+    });
+    expect(toPostgres("SELECT $n", { n: "ada" }).values).toEqual(["ada"]);
   });
 });
 
@@ -115,6 +126,7 @@ describe("PostgresConnection", () => {
       "INSERT INTO items (id) VALUES ($1)",
       "INSERT INTO items (id) VALUES (1)",
       "UPDATE items SET n = 1",
+      "SELECT * FROM items",
       "SELECT * FROM items",
       "CREATE TABLE users (id INTEGER)",
       "SELECT 1",
@@ -225,6 +237,10 @@ describe("PostgresCommand", () => {
     expect(await command.executeNative(new Native("SELECT when($d)"), [{ name: "d", value: new Date("2026-09-22T00:00:00.000Z") }])).toMatchObject({ result: null });
     expect(await command.executeNative(new Native("SELECT blob($b)"), [{ name: "b", value: new Uint8Array([1, 2, 3]) }])).toMatchObject({ result: null });
     const inout = { name: "result", value: 4, direction: ParameterDirection.InputOutput };
+    client.result = { rowCount: 1, rows: [{ result: { n: 1 } }] };
+    expect(await command.executeNative(new Native("CALL bump($result)"), [inout])).toMatchObject({
+      parameters: [{ name: "result", value: "{\"n\":1}", direction: ParameterDirection.InputOutput }],
+    });
     client.result = { rowCount: 1, rows: [{ result: 5 }] };
     expect(await command.executeStatement(new ExecuteStoredProcedureStatement("bump", [inout]), [inout])).toMatchObject({
       result: null,
@@ -323,7 +339,7 @@ describe("Postgres datasource", () => {
       Key: "11111111-1111-1111-1111-111111111111",
       Active: true,
       Login: "ada",
-      Created: new Date(created),
+      Created: created,
     });
   });
 });

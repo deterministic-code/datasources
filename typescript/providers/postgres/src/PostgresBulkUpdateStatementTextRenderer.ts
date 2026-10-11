@@ -1,5 +1,7 @@
 import { BulkUpdateStatementTextRenderer, type Cell } from "@datasources/core";
 import { columnTypes } from "./columnTypes.ts";
+import { isBase64 } from "./converters/BinaryConverter.ts";
+import { isIsoDate } from "./converters/DateTimeConverter.ts";
 
 const logical = (value: Cell): string | undefined =>
   value === null
@@ -10,9 +12,9 @@ const logical = (value: Cell): string | undefined =>
         ? "int"
         : typeof value === "number"
           ? "float"
-          : value instanceof Date
+          : value instanceof Date || (typeof value === "string" && isIsoDate(value))
             ? "datetime"
-            : value instanceof Uint8Array
+            : value instanceof Uint8Array || (typeof value === "string" && isBase64(value))
               ? "binary"
               : "string";
 

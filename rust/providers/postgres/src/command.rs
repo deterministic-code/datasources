@@ -1,4 +1,4 @@
-use crate::bind::to_postgres;
+use crate::bind::{param_types, to_postgres};
 use crate::connection::{map_err, PostgresConnection};
 use crate::pg_value::PgValue;
 use crate::reader::PostgresReader;
@@ -49,7 +49,11 @@ impl PostgresCommand {
         let client = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let rows = client.execute(&text, &refs).await.map_err(map_err)?;
+        let statement = client
+            .prepare_typed(&text, &param_types(&values))
+            .await
+            .map_err(map_err)?;
+        let rows = client.execute(&statement, &refs).await.map_err(map_err)?;
         Ok(PostgresExecuteResult {
             rows_affected: rows as i64,
             result: Value::Null,
@@ -68,7 +72,11 @@ impl PostgresCommand {
         let client = slot
             .as_ref()
             .ok_or_else(|| DatasourceError::message("Connection is not open"))?;
-        let rows = client.query(&text, &refs).await.map_err(map_err)?;
+        let statement = client
+            .prepare_typed(&text, &param_types(&values))
+            .await
+            .map_err(map_err)?;
+        let rows = client.query(&statement, &refs).await.map_err(map_err)?;
         Ok(rows.into_iter().next())
     }
 }
@@ -291,6 +299,9 @@ fn from_cell(row: &Row, index: usize) -> Value {
     if let Ok(value) = row.try_get::<_, Option<Decimal>>(index) {
         return value.map(Value::Decimal).unwrap_or(Value::Null);
     }
+    if let Ok(value) = row.try_get::<_, Vec<u8>>(index) {
+        return Value::Binary(value);
+    }
     if let Ok(value) = row.try_get::<_, serde_json::Value>(index) {
         return Value::Text(value.to_string());
     }
@@ -299,9 +310,6 @@ fn from_cell(row: &Row, index: usize) -> Value {
     }
     if let Ok(value) = row.try_get::<_, Option<String>>(index) {
         return value.map(Value::Text).unwrap_or(Value::Null);
-    }
-    if let Ok(value) = row.try_get::<_, Vec<u8>>(index) {
-        return Value::Binary(value);
     }
     Value::Null
 }

@@ -50,6 +50,7 @@ fn encode(
         ty if ty == &Type::NUMERIC => decimal_of(value)?.to_sql(ty, out),
         ty if ty == &Type::TIMESTAMPTZ => datetime_of(value)?.to_sql(ty, out),
         ty if ty == &Type::TIMESTAMP => datetime_of(value)?.naive_utc().to_sql(ty, out),
+        ty if ty == &Type::UNKNOWN => value.wire_text().to_sql(&Type::TEXT, out),
         ty if ty == &Type::UUID => uuid_of(value)?.to_sql(ty, out),
         ty if ty == &Type::BYTEA => binary_of(value)?.to_sql(ty, out),
         ty if ty == &Type::JSONB => {

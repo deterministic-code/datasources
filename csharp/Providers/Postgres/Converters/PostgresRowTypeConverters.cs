@@ -19,6 +19,7 @@ internal static class PostgresRowTypeConverters
         Value.Guid => All["uuid"].ReverseConvert(value),
         Value.Decimal => All["decimal"].ReverseConvert(value),
         Value.Binary => All["binary"].ReverseConvert(value),
+        Value.Text(var text) when BinaryConverter.IsBase64(text) => All["binary"].ReverseConvert(value),
         _ => value
     };
 }

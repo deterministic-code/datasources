@@ -1,6 +1,6 @@
 import type { Parameter } from "@datasources/core";
 import QueryStream from "pg-query-stream";
-import type { Cells, Scalar } from "./scalar.ts";
+import type { Cells, Scalar, Wire } from "./scalar.ts";
 
 export interface PostgresExecuteResult {
   rowsAffected: number;
@@ -15,14 +15,14 @@ export interface PgQueryResult {
 
 export interface IPgClient {
   connect(): Promise<void>;
-  query(text: string, values?: Scalar[]): Promise<PgQueryResult>;
-  rows(text: string, values?: Scalar[]): AsyncIterable<Cells>;
+  query(text: string, values?: Wire[]): Promise<PgQueryResult>;
+  rows(text: string, values?: Wire[]): AsyncIterable<Cells>;
   end(): Promise<void>;
 }
 
 interface PgNativeClient {
   connect(): Promise<void>;
-  query(text: string, values?: Scalar[]): Promise<PgQueryResult>;
+  query(text: string, values?: Wire[]): Promise<PgQueryResult>;
   query(query: QueryStream): AsyncIterable<Cells>;
   end(): Promise<void>;
 }
@@ -48,10 +48,10 @@ export const pgClient = (imported: PgModule): PgClientCtor => {
     connect(): Promise<void> {
       return this.inner.connect();
     }
-    query(text: string, values?: Scalar[]): Promise<PgQueryResult> {
+    query(text: string, values?: Wire[]): Promise<PgQueryResult> {
       return this.inner.query(text, values);
     }
-    rows(text: string, values?: Scalar[]): AsyncIterable<Cells> {
+    rows(text: string, values?: Wire[]): AsyncIterable<Cells> {
       return this.inner.query(new QueryStream(text, values ?? []));
     }
     end(): Promise<void> {

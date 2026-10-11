@@ -1,4 +1,4 @@
-use crate::bind::to_postgres;
+use crate::bind::{param_types, to_postgres};
 use crate::command::row_record;
 use crate::connection::{map_err, PostgresConnection};
 use crate::pg_value::PgValue;
@@ -150,9 +150,11 @@ async fn drive(
     let mut index = 0;
     loop {
         let (text, values) = to_postgres(&statements[index], params);
+        let types = param_types(&values);
         let bound: Vec<PgValue> = values.into_iter().map(PgValue).collect();
+        let statement = client.prepare_typed(&text, &types).await.map_err(map_err)?;
         let stream = client
-            .query_raw(&text, bound.iter())
+            .query_raw(&statement, bound.iter())
             .await
             .map_err(map_err)?;
         let mut stream = std::pin::pin!(stream);
