@@ -1,4 +1,5 @@
 import {
+  BulkUpdateStatement,
   ColumnDefault,
   CreateTableStatement,
   DefaultStatementTextRenderer,
@@ -52,6 +53,16 @@ describe("PostgresStatementRenderer", () => {
     );
     expect(DefaultStatementTextRenderer.instance.render(create)).toBe(
       "CREATE TABLE users (id int, is_enabled bool DEFAULT 1, is_disabled bool CONSTRAINT df_off DEFAULT 0, amount decimal DEFAULT 1, flag bool DEFAULT true)",
+    );
+  });
+
+  it("renders bulk update with column types", () => {
+    const update = new BulkUpdateStatement("parents", ["label"], ["id"], [
+      { fields: [{ name: "label", value: "a" }], ids: [{ name: "id", value: 1 }] },
+      { fields: [{ name: "label", value: "b" }], ids: [{ name: "id", value: 2 }] },
+    ]);
+    expect(renderer.render(update)).toBe(
+      "UPDATE parents SET label = data.label FROM (SELECT $label__0::TEXT AS label, $id__0::INTEGER AS id UNION ALL SELECT $label__1::TEXT AS label, $id__1::INTEGER AS id) AS data WHERE parents.id = data.id",
     );
   });
 });

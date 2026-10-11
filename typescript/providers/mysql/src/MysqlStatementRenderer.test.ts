@@ -1,4 +1,5 @@
 import {
+  BulkUpdateStatement,
   ColumnDefault,
   CreateTableStatement,
   DefaultStatementTextRenderer,
@@ -48,6 +49,16 @@ describe("MysqlStatementRenderer", () => {
     );
     expect(DefaultStatementTextRenderer.instance.render(create)).toBe(
       "CREATE TABLE users (id int DEFAULT 0 NOT NULL)",
+    );
+  });
+
+  it("renders bulk update as join", () => {
+    const update = new BulkUpdateStatement("parents", ["label"], ["id"], [
+      { fields: [{ name: "label", value: "a" }], ids: [{ name: "id", value: 1 }] },
+      { fields: [{ name: "label", value: "b" }], ids: [{ name: "id", value: 2 }] },
+    ]);
+    expect(renderer.render(update)).toBe(
+      "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label",
     );
   });
 });

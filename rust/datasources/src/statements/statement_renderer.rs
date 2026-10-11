@@ -1,4 +1,10 @@
 use crate::select_statement::SelectStatement;
+use super::bulk_delete_statement::BulkDeleteStatement;
+use super::bulk_delete_statement_text_renderer::BulkDeleteStatementTextRenderer;
+use super::bulk_insert_statement::BulkInsertStatement;
+use super::bulk_insert_statement_text_renderer::BulkInsertStatementTextRenderer;
+use super::bulk_update_statement::BulkUpdateStatement;
+use super::bulk_update_statement_text_renderer::BulkUpdateStatementTextRenderer;
 use super::create_index_statement::CreateIndexStatement;
 use super::create_index_statement_text_renderer::CreateIndexStatementTextRenderer;
 use super::create_table_statement::CreateTableStatement;
@@ -69,6 +75,30 @@ pub trait StatementVisitor: Send + Sync {
         _text: &StatementTextRenderer,
     ) -> String {
         SelectInsertedIdStatementTextRenderer.render(statement)
+    }
+
+    fn visit_bulk_insert(
+        &self,
+        statement: &BulkInsertStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        BulkInsertStatementTextRenderer.render(statement)
+    }
+
+    fn visit_bulk_update(
+        &self,
+        statement: &BulkUpdateStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        BulkUpdateStatementTextRenderer.render(statement)
+    }
+
+    fn visit_bulk_delete(
+        &self,
+        statement: &BulkDeleteStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        BulkDeleteStatementTextRenderer.render(statement)
     }
 }
 

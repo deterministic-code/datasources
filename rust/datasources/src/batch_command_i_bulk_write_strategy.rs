@@ -13,9 +13,12 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
-use crate::{DefaultStatementTextRenderer, Expression, Literal, Operator, Where};
+use crate::{
+    BulkDeleteStatement, BulkInsertStatement, BulkUpdateRow, BulkUpdateStatement,
+    DefaultStatementTextRenderer, Expression, Literal, Operator, Statement, Where,
+};
 use async_trait::async_trait;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::{Arc, OnceLock};
 
 const PARAMETER_BUDGET: usize = 8000;
@@ -83,10 +86,6 @@ impl BatchCommandIBulkWriteStrategy {
 
     fn ids(&self) -> Result<&[String]> {
         Ok(&self.options()?.ids)
-    }
-
-    fn mysql(&self) -> Result<bool> {
-        Ok(self.connection()?.provider() == "mysql")
     }
 
     fn reverse(&self, item: &Row) -> Result<Row> {
@@ -251,9 +250,9 @@ impl BatchCommandIBulkWriteStrategy {
         })
     }
 
-    async fn execute(&self, text: String, parameters: Vec<Parameter>) -> Result<Response> {
+    async fn execute(&self, statement: &dyn Statement, parameters: Vec<Parameter>) -> Result<Response> {
         self.command()?
-            .execute_native(&Native::new(text), Some(&parameters))
+            .execute_statement(statement, Some(&parameters))
             .await
     }
 
@@ -274,7 +273,8 @@ impl BatchCommandIBulkWriteStrategy {
         let mut rows_affected = 0;
         for command in commands {
             rows_affected += self
-                .execute(command.text, command.parameters)
+                .command()?
+                .execute_native(&Native::new(command.text), Some(&command.parameters))
                 .await?
                 .rows_affected;
         }
@@ -292,8 +292,14 @@ impl BatchCommandIBulkWriteStrategy {
         let columns = columns(rows.iter().map(|row| row.fields.iter()));
         let table = rows[0].table.clone();
         self.chunked(&rows, columns.len(), |chunk| {
-            let (text, parameters) = insert_sql(&table, &columns, chunk);
-            self.execute(text, parameters)
+            let table = table.clone();
+            let columns = columns.clone();
+            let fields = chunk.iter().map(|row| row.fields.clone()).collect::<Vec<_>>();
+            async move {
+                let statement = BulkInsertStatement::new(&table, &columns, fields);
+                let parameters = statement.parameters();
+                self.execute(&statement, parameters).await
+            }
         })
         .await
     }
@@ -309,10 +315,22 @@ impl BatchCommandIBulkWriteStrategy {
         let set = columns(rows.iter().map(|row| row.fields.iter()));
         let ids = columns(rows.iter().map(|row| row.ids.iter()));
         let table = rows[0].table.clone();
-        let mysql = self.mysql()?;
         self.chunked(&rows, set.len() + ids.len(), |chunk| {
-            let (text, parameters) = update_sql(&table, &set, &ids, chunk, mysql);
-            self.execute(text, parameters)
+            let table = table.clone();
+            let set = set.clone();
+            let ids = ids.clone();
+            let updated = chunk
+                .iter()
+                .map(|row| BulkUpdateRow {
+                    fields: row.fields.clone(),
+                    ids: row.ids.clone(),
+                })
+                .collect::<Vec<_>>();
+            async move {
+                let statement = BulkUpdateStatement::new(&table, &set, &ids, updated);
+                let parameters = statement.parameters();
+                self.execute(&statement, parameters).await
+            }
         })
         .await
     }
@@ -328,8 +346,14 @@ impl BatchCommandIBulkWriteStrategy {
         let ids = columns(rows.iter().map(|row| row.ids.iter()));
         let table = rows[0].table.clone();
         self.chunked(&rows, ids.len(), |chunk| {
-            let (text, parameters) = delete_sql(&table, &ids, chunk);
-            self.execute(text, parameters)
+            let table = table.clone();
+            let ids = ids.clone();
+            let deleted = chunk.iter().map(|row| row.ids.clone()).collect::<Vec<_>>();
+            async move {
+                let statement = BulkDeleteStatement::new(&table, &ids, deleted);
+                let parameters = statement.parameters();
+                self.execute(&statement, parameters).await
+            }
         })
         .await
     }
@@ -416,155 +440,3 @@ fn columns<'a>(rows: impl IntoIterator<Item = impl IntoIterator<Item = &'a Param
     columns
 }
 
-fn lookup<'a>(fields: impl IntoIterator<Item = &'a Parameter>) -> HashMap<String, Value> {
-    fields
-        .into_iter()
-        .map(|field| (field.name.clone(), field.value.clone()))
-        .collect()
-}
-
-fn value_of(fields: &HashMap<String, Value>, column: &str) -> Value {
-    fields.get(column).cloned().unwrap_or(Value::Null)
-}
-
-fn insert_sql(table: &str, columns: &[String], rows: &[Inserted]) -> (String, Vec<Parameter>) {
-    let mut parameters = Vec::new();
-    let values = rows
-        .iter()
-        .enumerate()
-        .map(|(index, row)| {
-            let by_name = lookup(&row.fields);
-            let cells = columns
-                .iter()
-                .map(|column| {
-                    parameters.push(Parameter::new(
-                        format!("{column}__{index}"),
-                        value_of(&by_name, column),
-                    ));
-                    format!("${column}__{index}")
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("({cells})")
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    (
-        format!(
-            "INSERT INTO {table} ({}) VALUES {values}",
-            columns.join(", ")
-        ),
-        parameters,
-    )
-}
-
-fn update_sql(
-    table: &str,
-    set: &[String],
-    ids: &[String],
-    rows: &[Updated],
-    mysql: bool,
-) -> (String, Vec<Parameter>) {
-    let mut parameters = Vec::new();
-    let columns: Vec<String> = set.iter().chain(ids).cloned().collect();
-    let source = format!(
-        "({}) AS data",
-        rows.iter()
-            .enumerate()
-            .map(|(index, row)| {
-                let by_name = lookup(row.fields.iter().chain(row.ids.iter()));
-                format!(
-                    "SELECT {}",
-                    columns
-                        .iter()
-                        .map(|column| {
-                            parameters.push(Parameter::new(
-                                format!("{column}__{index}"),
-                                value_of(&by_name, column),
-                            ));
-                            format!("${column}__{index} AS {column}")
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(" UNION ALL ")
-    );
-    let assigns = set
-        .iter()
-        .map(|column| {
-            if mysql {
-                format!("{table}.{column} = data.{column}")
-            } else {
-                format!("{column} = data.{column}")
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    let on = ids
-        .iter()
-        .map(|column| format!("{table}.{column} = data.{column}"))
-        .collect::<Vec<_>>()
-        .join(" AND ");
-    let text = if mysql {
-        format!("UPDATE {table} JOIN {source} ON {on} SET {assigns}")
-    } else {
-        format!("UPDATE {table} SET {assigns} FROM {source} WHERE {on}")
-    };
-    (text, parameters)
-}
-
-fn delete_sql(table: &str, ids: &[String], rows: &[Deleted]) -> (String, Vec<Parameter>) {
-    if ids.is_empty() {
-        return (format!("DELETE FROM {table} WHERE 1 = 1"), Vec::new());
-    }
-    let mut parameters = Vec::new();
-    if ids.len() == 1 {
-        let column = &ids[0];
-        let names = rows
-            .iter()
-            .enumerate()
-            .map(|(index, row)| {
-                parameters.push(Parameter::new(
-                    format!("{column}__{index}"),
-                    value_of(&lookup(&row.ids), column),
-                ));
-                format!("${column}__{index}")
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
-        return (
-            format!("DELETE FROM {table} WHERE {column} IN ({names})"),
-            parameters,
-        );
-    }
-    let tuples = rows
-        .iter()
-        .enumerate()
-        .map(|(index, row)| {
-            let by_name = lookup(&row.ids);
-            format!(
-                "({})",
-                ids.iter()
-                    .map(|column| {
-                        parameters.push(Parameter::new(
-                            format!("{column}__{index}"),
-                            value_of(&by_name, column),
-                        ));
-                        format!("${column}__{index}")
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    (
-        format!(
-            "DELETE FROM {table} WHERE ({}) IN ({tuples})",
-            ids.join(", ")
-        ),
-        parameters,
-    )
-}

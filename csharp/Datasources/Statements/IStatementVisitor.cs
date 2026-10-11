@@ -11,4 +11,7 @@ public interface IStatementVisitor
     string Visit(ExecuteStoredProcedureStatement statement);
     string Visit(ReturnStatement statement);
     string Visit(SelectInsertedIdStatement statement);
+    string Visit(BulkInsertStatement statement);
+    string Visit(BulkUpdateStatement statement);
+    string Visit(BulkDeleteStatement statement);
 }

@@ -1,3 +1,6 @@
+import type { BulkDeleteStatement } from "./BulkDeleteStatement.ts";
+import type { BulkInsertStatement } from "./BulkInsertStatement.ts";
+import type { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
 import type { CreateIndexStatement } from "./CreateIndexStatement.ts";
 import type { CreateTableStatement } from "./CreateTableStatement.ts";
 import type { DeleteStatement } from "./DeleteStatement.ts";
@@ -18,4 +21,7 @@ export interface IStatementVisitor {
   visit(statement: ExecuteStoredProcedureStatement): string;
   visit(statement: ReturnStatement): string;
   visit(statement: SelectInsertedIdStatement): string;
+  visit(statement: BulkInsertStatement): string;
+  visit(statement: BulkUpdateStatement): string;
+  visit(statement: BulkDeleteStatement): string;
 }

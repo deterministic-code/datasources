@@ -1,8 +1,9 @@
 use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    CreateTableStatement, CreateTableStatementTextRenderer, SelectInsertedIdStatement,
-    StatementTextRenderer, StatementVisitor,
+    BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateTableStatement,
+    CreateTableStatementTextRenderer, SelectInsertedIdStatement, StatementTextRenderer,
+    StatementVisitor,
 };
 
 pub struct MysqlStatementRenderer;
@@ -23,6 +24,14 @@ impl StatementVisitor for MysqlStatementRenderer {
     ) -> String {
         MysqlSelectInsertedIdStatementTextRenderer.render(statement)
     }
+
+    fn visit_bulk_update(
+        &self,
+        statement: &BulkUpdateStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        BulkUpdateStatementTextRenderer.render_join(statement)
+    }
 }
 
 #[cfg(test)]
@@ -30,8 +39,9 @@ mod tests {
     use super::MysqlStatementRenderer;
     use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
     use datasources::{
-        Column, ColumnDefault, CreateTableStatement, CreateTableStatementTextRenderer,
-        DefaultStatementTextRenderer, NotNull, SelectInsertedIdStatement, StatementTextRenderer,
+        BulkUpdateRow, BulkUpdateStatement, Column, ColumnDefault, CreateTableStatement,
+        CreateTableStatementTextRenderer, DefaultStatementTextRenderer, NotNull, Parameter,
+        SelectInsertedIdStatement, StatementTextRenderer,
     };
 
     fn renderer() -> StatementTextRenderer {
@@ -77,6 +87,29 @@ mod tests {
         assert_eq!(
             DefaultStatementTextRenderer::instance().render(&create),
             "CREATE TABLE users (id int DEFAULT 0 NOT NULL)"
+        );
+    }
+
+    #[test]
+    fn renders_bulk_update_as_join() {
+        let update = BulkUpdateStatement::new(
+            "parents",
+            &["label".into()],
+            &["id".into()],
+            vec![
+                BulkUpdateRow {
+                    fields: vec![Parameter::new("label", "a")],
+                    ids: vec![Parameter::new("id", 1_i64)],
+                },
+                BulkUpdateRow {
+                    fields: vec![Parameter::new("label", "b")],
+                    ids: vec![Parameter::new("id", 2_i64)],
+                },
+            ],
+        );
+        assert_eq!(
+            renderer().render(&update),
+            "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label"
         );
     }
 }

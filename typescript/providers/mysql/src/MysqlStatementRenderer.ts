@@ -1,10 +1,12 @@
 import {
+  BulkUpdateStatement,
   CreateTableStatement,
   SelectInsertedIdStatement,
   SelectInsertedIdStatementTextRenderer,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@datasources/core";
+import { MysqlBulkUpdateStatementTextRenderer } from "./MysqlBulkUpdateStatementTextRenderer.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
 
 class MysqlSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
@@ -24,5 +26,9 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   protected override visitCreateTable(create: CreateTableStatement): string {
     return new MysqlCreateTableStatementRenderer().render(create);
+  }
+
+  protected override visitBulkUpdate(update: BulkUpdateStatement): string {
+    return new MysqlBulkUpdateStatementTextRenderer().render(update);
   }
 }

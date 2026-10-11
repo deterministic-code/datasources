@@ -5,12 +5,20 @@ import type { IWhere } from "./statements/IWhere.ts";
 import type { BulkCommand } from "./BulkCommand.ts";
 import { Native } from "./statements/Native.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
-import type { ICommand } from "./ICommand.ts";
+import { execute, type ICommand } from "./ICommand.ts";
 import type { Cell, Cells } from "./converters/Cell.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
-import { DefaultStatementTextRenderer, Literal, Operator, Where } from "./statements/index.ts";
+import {
+  BulkDeleteStatement,
+  BulkInsertStatement,
+  BulkUpdateStatement,
+  DefaultStatementTextRenderer,
+  Literal,
+  Operator,
+  Where,
+} from "./statements/index.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
@@ -35,14 +43,6 @@ const columnsOf = (rows: readonly { name: string }[][]): string[] => {
       }
   return columns;
 };
-
-const lookup = (fields: readonly { name: string; value?: Cell }[]): Map<string, Cell> => {
-  const map = new Map<string, Cell>();
-  for (const field of fields) map.set(field.name, (field.value ?? null) as Cell);
-  return map;
-};
-
-const valueOf = (fields: Map<string, Cell>, column: string): Cell => fields.get(column) ?? null;
 
 type Inserted = { table: string; fields: Parameter[] };
 type Updated = { table: string; fields: Parameter[]; ids: Parameter[] };
@@ -85,7 +85,14 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     if (items.length === 0) return empty();
     const rows = items.map(this.mappedInsert);
     const columns = columnsOf(rows.map((row) => row.fields));
-    return this.chunked(rows, columns.length, (chunk) => this.execute(this.insertSql(rows[0]!.table, columns, chunk)));
+    return this.chunked(rows, columns.length, (chunk) => {
+      const statement = new BulkInsertStatement(
+        rows[0]!.table,
+        columns,
+        chunk.map((row) => row.fields),
+      );
+      return execute(this.command, statement, statement.parameters);
+    });
   };
 
   private writeUpdates = async (items: T[]): Promise<Response> => {
@@ -93,16 +100,24 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     const rows = items.map(this.mappedUpdate);
     const set = columnsOf(rows.map((row) => row.fields));
     const ids = columnsOf(rows.map((row) => row.ids));
-    return this.chunked(rows, set.length + ids.length, (chunk) =>
-      this.execute(this.updateSql(rows[0]!.table, set, ids, chunk)),
-    );
+    return this.chunked(rows, set.length + ids.length, (chunk) => {
+      const statement = new BulkUpdateStatement(rows[0]!.table, set, ids, chunk);
+      return execute(this.command, statement, statement.parameters);
+    });
   };
 
   private writeDeletes = async (items: T[]): Promise<Response> => {
     if (items.length === 0) return empty();
     const rows = items.map(this.mappedDelete);
     const ids = columnsOf(rows.map((row) => row.ids));
-    return this.chunked(rows, ids.length, (chunk) => this.execute(this.deleteSql(rows[0]!.table, ids, chunk)));
+    return this.chunked(rows, ids.length, (chunk) => {
+      const statement = new BulkDeleteStatement(
+        rows[0]!.table,
+        ids,
+        chunk.map((row) => row.ids),
+      );
+      return execute(this.command, statement, statement.parameters);
+    });
   };
 
   private chunked = async <TRow>(
@@ -122,9 +137,6 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
       rowsAffected += (await this.command.executeNative(new Native(command.text), command.parameters)).rowsAffected;
     return { result: null, rowsAffected };
   };
-
-  private execute = ({ text, parameters }: BulkCommand): Promise<Response> =>
-    this.command.executeNative(new Native(text), parameters);
 
   private mappedInsert = (item: T): Inserted => {
     const record = this.reverse(item);
@@ -148,70 +160,6 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     const record = this.reverse(item);
     const statement = this.statements().delete(this.idsWhere(record), (name, value) => this.cell(name, value, true));
     return { table: statement.table, ids: statement.where?.parameters ?? [] };
-  };
-
-  private insertSql = (table: string, columns: string[], rows: Inserted[]): BulkCommand => {
-    const parameters: Parameter[] = [];
-    const values = rows.map((row, index) => {
-      const byName = lookup(row.fields);
-      return `(${columns.map((column) => {
-        parameters.push({ name: `${column}__${index}`, value: valueOf(byName, column) as Scalar });
-        return `$${column}__${index}`;
-      }).join(", ")})`;
-    });
-    return {
-      text: `INSERT INTO ${table} (${columns.join(", ")}) VALUES ${values.join(", ")}`,
-      parameters,
-    };
-  };
-
-  private updateSql = (table: string, set: string[], ids: string[], rows: Updated[]): BulkCommand => {
-    const parameters: Parameter[] = [];
-    const columns = [...set, ...ids];
-    const source = `(${rows
-      .map((row, index) => {
-        const byName = lookup([...row.fields, ...row.ids]);
-        return `SELECT ${columns
-          .map((column) => {
-            parameters.push({ name: `${column}__${index}`, value: valueOf(byName, column) as Scalar });
-            return `$${column}__${index} AS ${column}`;
-          })
-          .join(", ")}`;
-      })
-      .join(" UNION ALL ")}) AS data`;
-    const assigns = set
-      .map((column) => (this.mysql ? `${table}.${column} = data.${column}` : `${column} = data.${column}`))
-      .join(", ");
-    const on = ids.map((column) => `${table}.${column} = data.${column}`).join(" AND ");
-    return {
-      text: this.mysql
-        ? `UPDATE ${table} JOIN ${source} ON ${on} SET ${assigns}`
-        : `UPDATE ${table} SET ${assigns} FROM ${source} WHERE ${on}`,
-      parameters,
-    };
-  };
-
-  private deleteSql = (table: string, ids: string[], rows: Deleted[]): BulkCommand => {
-    if (ids.length === 0) return { text: `DELETE FROM ${table} WHERE 1 = 1`, parameters: [] };
-    const parameters: Parameter[] = [];
-    if (ids.length === 1) {
-      const column = ids[0]!;
-      const names = rows.map((row, index) => {
-        parameters.push({ name: `${column}__${index}`, value: valueOf(lookup(row.ids), column) as Scalar });
-        return `$${column}__${index}`;
-      });
-      return { text: `DELETE FROM ${table} WHERE ${column} IN (${names.join(", ")})`, parameters };
-    }
-    const tuples = rows.map((row, index) => {
-      const byName = lookup(row.ids);
-      return `(${ids
-        .map((column) => {
-          parameters.push({ name: `${column}__${index}`, value: valueOf(byName, column) as Scalar });
-          return `$${column}__${index}`;
-        })
-        .join(", ")})`;
-    });
-    return { text: `DELETE FROM ${table} WHERE (${ids.join(", ")}) IN (${tuples.join(", ")})`, parameters };
   };
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
@@ -243,10 +191,6 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
 
   private get ids(): readonly string[] {
     return this.options.ids ?? this.repo.ids;
-  }
-
-  private get mysql(): boolean {
-    return this.command.connection.provider === "mysql";
   }
 
   private reverse = (item: T): Cells => {

@@ -40,4 +40,20 @@ public class MysqlStatementRendererTests
             "CREATE TABLE users (id int DEFAULT 0 NOT NULL)",
             DefaultStatementTextRenderer.Instance.Render(create));
     }
+
+    [Fact]
+    public void RendersBulkUpdateAsJoin()
+    {
+        var update = new BulkUpdateStatement(
+            "parents",
+            ["label"],
+            ["id"],
+            [
+                ([new Parameter("label", new Value.Text("a"))], [new Parameter("id", new Value.Int(1))]),
+                ([new Parameter("label", new Value.Text("b"))], [new Parameter("id", new Value.Int(2))])
+            ]);
+        Assert.Equal(
+            "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label",
+            Renderer.Render(update));
+    }
 }

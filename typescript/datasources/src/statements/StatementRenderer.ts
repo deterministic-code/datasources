@@ -1,4 +1,10 @@
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
+import { BulkDeleteStatement } from "./BulkDeleteStatement.ts";
+import { BulkDeleteStatementTextRenderer } from "./BulkDeleteStatementTextRenderer.ts";
+import { BulkInsertStatement } from "./BulkInsertStatement.ts";
+import { BulkInsertStatementTextRenderer } from "./BulkInsertStatementTextRenderer.ts";
+import { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
+import { BulkUpdateStatementTextRenderer } from "./BulkUpdateStatementTextRenderer.ts";
 import { CreateIndexStatement } from "./CreateIndexStatement.ts";
 import { CreateIndexStatementTextRenderer } from "./CreateIndexStatementTextRenderer.ts";
 import { CreateTableStatement } from "./CreateTableStatement.ts";
@@ -28,7 +34,10 @@ type AnyStatement =
   | CreateIndexStatement
   | ExecuteStoredProcedureStatement
   | ReturnStatement
-  | SelectInsertedIdStatement;
+  | SelectInsertedIdStatement
+  | BulkInsertStatement
+  | BulkUpdateStatement
+  | BulkDeleteStatement;
 
 export class StatementRenderer implements IStatementVisitor {
   constructor(protected readonly text: StatementTextRenderer) {}
@@ -42,6 +51,9 @@ export class StatementRenderer implements IStatementVisitor {
   visit(statement: ExecuteStoredProcedureStatement): string;
   visit(statement: ReturnStatement): string;
   visit(statement: SelectInsertedIdStatement): string;
+  visit(statement: BulkInsertStatement): string;
+  visit(statement: BulkUpdateStatement): string;
+  visit(statement: BulkDeleteStatement): string;
   visit(statement: AnyStatement): string {
     if (statement instanceof SelectStatement) return this.visitSelect(statement);
     if (statement instanceof InsertStatement) return this.visitInsert(statement);
@@ -52,6 +64,9 @@ export class StatementRenderer implements IStatementVisitor {
     if (statement instanceof ExecuteStoredProcedureStatement)
       return this.visitExecuteStoredProcedure(statement);
     if (statement instanceof ReturnStatement) return this.visitReturn(statement);
+    if (statement instanceof BulkInsertStatement) return this.visitBulkInsert(statement);
+    if (statement instanceof BulkUpdateStatement) return this.visitBulkUpdate(statement);
+    if (statement instanceof BulkDeleteStatement) return this.visitBulkDelete(statement);
     return this.visitSelectInsertedId(statement as SelectInsertedIdStatement);
   }
 
@@ -89,5 +104,17 @@ export class StatementRenderer implements IStatementVisitor {
 
   protected visitSelectInsertedId(statement: SelectInsertedIdStatement): string {
     return new SelectInsertedIdStatementTextRenderer().render(statement);
+  }
+
+  protected visitBulkInsert(statement: BulkInsertStatement): string {
+    return new BulkInsertStatementTextRenderer().render(statement);
+  }
+
+  protected visitBulkUpdate(statement: BulkUpdateStatement): string {
+    return new BulkUpdateStatementTextRenderer().render(statement);
+  }
+
+  protected visitBulkDelete(statement: BulkDeleteStatement): string {
+    return new BulkDeleteStatementTextRenderer().render(statement);
   }
 }
