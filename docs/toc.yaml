@@ -4,6 +4,9 @@ pages:
     title: Introduction
   - path: skill.md
     title: Skill
+  - path: skill-queries.md
+    title: Example queries
+    parent: Skill
   - path: quickstart.md
     title: Quick Start
   - path: features.md

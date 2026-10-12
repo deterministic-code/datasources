@@ -26,3 +26,4 @@ coverage.info
 .deterministic-cache/
 file:*
 artifacts/e2e-matrix/
+evals/workspace/
