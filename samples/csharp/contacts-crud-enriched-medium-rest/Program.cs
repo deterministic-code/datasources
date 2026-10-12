@@ -7,9 +7,9 @@ var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, str
     ["DATASOURCE_URL"] = "sqlite:///:memory:",
 });
 var command = await ds.CreateCommand();
-await command.Execute(new Native("PRAGMA foreign_keys = ON"));
+await command.Execute(Native.N("PRAGMA foreign_keys = ON"));
 foreach (var sql in Statements.Of(await File.ReadAllTextAsync(args[0])))
-    await command.Execute(new Native(sql));
+    await command.Execute(Native.N(sql));
 var contacts = ds.CreateRepository<Contact>("Contacts");
 var created = await contacts.Create(new Contact
 {

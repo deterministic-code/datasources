@@ -169,7 +169,7 @@ export { DatasourceUrl } from "./DatasourceUrl.ts";
 export { DatasourceUrlParser } from "./DatasourceUrlParser.ts";
 import { Datasource } from "./Datasource.ts";
 import { DatasourceFactory } from "./DatasourceFactory.ts";
-Datasource.create = DatasourceFactory.create;
+Datasource.create = (options) => DatasourceFactory.create(options) as Datasource;
 export { DatasourceError } from "./DatasourceError.ts";
 export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";

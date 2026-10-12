@@ -48,13 +48,15 @@ impl Default for RepositoryFactory {
 
 impl RepositoryFactory {
     pub fn new() -> Self {
-        Self {
+        let factory = Self {
             maps: Arc::new(Mutex::new(Maps {
                 readonly: HashMap::new(),
                 crud: HashMap::new(),
                 named: HashMap::new(),
             })),
-        }
+        };
+        factory.apply_bound();
+        factory
     }
 
     pub fn bind(register: impl Fn(&RepositoryFactory) + Send + Sync + 'static) {
@@ -264,6 +266,34 @@ mod tests {
             .create_readonly_named("Contact", connection)
             .unwrap();
         assert_eq!(readonly.entity_type(), TypeId::of::<Item>());
+    }
+
+    #[test]
+    fn bind_registers_on_construct() {
+        RepositoryFactory::reset_binders();
+        let crud = Arc::new(StubRepository::typed::<Item>("crud"));
+        let read = as_readonly(Arc::new(StubRepository::typed::<Item>("read")));
+        RepositoryFactory::bind(move |factory| {
+            factory.register_named(
+                "Contact",
+                "contacts",
+                {
+                    let crud = Arc::clone(&crud);
+                    move |_| Arc::clone(&crud) as Arc<dyn ICRUDRepository>
+                },
+                {
+                    let read = Arc::clone(&read);
+                    move |_| Arc::clone(&read)
+                },
+            );
+        });
+        let factory = RepositoryFactory::new();
+        let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
+        let created = factory
+            .create_named("contacts", Arc::clone(&connection))
+            .unwrap();
+        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        RepositoryFactory::reset_binders();
     }
 
     #[test]

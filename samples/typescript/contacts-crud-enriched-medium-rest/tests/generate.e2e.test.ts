@@ -1,4 +1,4 @@
-import { Datasource, Native, Operator, Where } from "@datasources/core";
+import { Datasource, n, Operator, Where } from "@datasources/core";
 import { SqliteDriver } from "@datasources/sqlite";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -43,9 +43,9 @@ describe("generate-and-register", () => {
         DATASOURCE_URL: "sqlite:///:memory:",
       }) as Datasource & { contacts: ContactRepo };
       const command = await ds.createCommand();
-      await command.executeNative(new Native("PRAGMA foreign_keys = ON"));
+      await command.executeNative(n("PRAGMA foreign_keys = ON"));
       for (const sql of statements(readFileSync(join(out, "sql/sqlite/migrations/0001_initial_up.sql"), "utf8")))
-        await command.executeNative(new Native(sql));
+        await command.executeNative(n(sql));
       const created: Contact = await ds.contacts.create({
         firstName: "Ada",
         lastName: "Lovelace",
