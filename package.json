@@ -12,6 +12,7 @@
     "docs:examples": "node scripts/sync-examples.mjs",
     "docs:drivers": "node scripts/generate-drivers.mjs",
     "docs:build": "node scripts/sync-examples.mjs --check && node scripts/generate-drivers.mjs --check && node --experimental-strip-types scripts/generate-skill.mjs --check && vitepress build docs",
+    "docs:publish": "node scripts/publish-docs.mjs",
     "docs:readme": "node scripts/generate-readme.mjs",
     "docs:skill": "node --experimental-strip-types scripts/generate-skill.mjs",
     "test:samples": "npm test --prefix samples/typescript/user-roles-simple-cli && cargo test --manifest-path samples/rust/user-roles-simple-cli/Cargo.toml --lib && dotnet test samples/csharp/user-roles-simple-cli/UserRolesSimpleCli.Tests.csproj --filter Category!=e2e && npm test --prefix samples/typescript/contacts-crud-enriched-medium-rest && cargo test --manifest-path samples/rust/contacts-crud-enriched-medium-rest/Cargo.toml --lib",
