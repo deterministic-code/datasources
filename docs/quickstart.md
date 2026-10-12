@@ -61,7 +61,7 @@ npx @datasources/cli generate all --dialect typescript
 ```
 :::
 
-See [Generate](./cli.md#generate).
+See [Generate](./cli.md#generate). Walkthroughs for a User, an enriched users-and-roles spec, and a legacy table mapping are on [Repository Generation](./repository-generation.md).
 
 ## Dynamic registered datasource
 
