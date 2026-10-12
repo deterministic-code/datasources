@@ -1,16 +1,22 @@
-# Skill
+# Using the skill
 
-Install with the skills CLI from this repository. `SKILL.md` is at the repository root.
+# Example prompts
+
+## 1. Run setup and add providers
+
+<SkillPrompt text="Run setup and add sqlite and postgres for csharp and rust" />
+
+**Expected**
 
 ```sh
-npx skills add deterministic-code/datasources
+npx @datasources/cli setup --yes --ecosystem csharp
+npx @datasources/cli add sqlite postgres --ecosystem csharp
+npx @datasources/cli add sqlite postgres --ecosystem rust
 ```
 
-C# is the reference. Rust and TypeScript keep the same call shape (`Read` / `read` / `read`). How to run these prompts is on [Testing Skills](./skill-queries.md). They are not generated into `SKILL.md`.
+## 2. Generate a user repository
 
-## Generate a user repository
-
-**Prompt:** `types.yaml` has one `user` datasource type (`id`, `username`, `is_enabled`). Generate the TypeScript repository and create, read, update, and delete a user through it.
+<SkillPrompt text="Generate a user with field id: username, is_enabled in types.yaml and generate repositories for csharp" />
 
 **Expected**
 
@@ -32,7 +38,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @datasources/cli generate all --dialect csharp
 ```
 
 ```csharp
@@ -47,7 +53,7 @@ Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
 
-## Generate users and roles
+## 3. Generate users and roles
 
 **Prompt:** The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role.
 

@@ -1,6 +1,12 @@
 # Quick Start
 
-## Installation
+## Installing the skill
+
+```sh
+npx skills add deterministic-code/datasources
+```
+
+## Installation from source
 
 ::: dialects
 ```typescript
@@ -16,19 +22,23 @@ cargo add datasources
 
 ## Setup
 
-Run interactive setup.
+<SkillPrompt text="Run setup and add sqlite and postgres for csharp and rust" />
+
+The skill runs the CLI. `setup` writes `.env`. `add` installs provider packages. `--ecosystem` is one language per call.
+
+```sh
+npx @datasources/cli setup --yes --ecosystem csharp
+npx @datasources/cli add sqlite postgres --ecosystem csharp
+npx @datasources/cli add sqlite postgres --ecosystem rust
+```
+
+Run interactive setup when you want prompts instead of `--yes`.
 
 ```sh
 npx @datasources/cli setup
 ```
 
-Add a new datasource provider.
-
-```sh
-npx @datasources/cli add sqlite
-```
-
-## Generate repositories from a Types Specification
+## Generating code from specification
 
 A Types Specification is the `deterministic` directory. `types.yaml` lists each entity. Tag a type `datasource_type` when it is a table.
 
@@ -63,7 +73,7 @@ npx @datasources/cli generate all --dialect typescript
 
 See [Generate](./cli.md#generate). Walkthroughs for a User, an enriched users-and-roles spec, and a legacy table mapping are on [Repository Generation](./repository-generation.md).
 
-## Dynamic registered datasource
+## Using the generated code
 
 Import the generated registry so {{Datasource.Default|Datasource.default|default()}} binds {{Items|items|items()}}. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
 
@@ -112,7 +122,7 @@ const deleted = await ds.items.delete(created);
 
 See [Datasource](./sections/datasource.md#create-using-dynamic-after-register).
 
-## Readonly command
+## Running a simple read command
 
 Start with `createCommand` and `executeReader`. The connection must be open.
 
@@ -161,7 +171,7 @@ while (await reader.next()) console.log(reader.current);
 
 See [Command](./sections/command.md) for middleware and `execute`.
 
-## Enriched CRUD repository
+## Create and using an Enriched Repository
 
 A `CRUDRepository` fills related fields after `read` once enrichments are registered. When the related repository is also a CRUD repository, nested `List` children are written on create / update / delete. A readonly repository only fills.
 

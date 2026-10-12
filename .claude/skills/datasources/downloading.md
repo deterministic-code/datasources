@@ -2,7 +2,7 @@
 
 # Downloading
 
-## Installation
+## Installation from source
 
 #### TypeScript
 
