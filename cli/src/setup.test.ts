@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { envFromAnswers, promptSetup, type Prompter } from "./setup.ts";
 
-const script = (answers: (string | string[])[]): Prompter => {
+const script = (answers: (string | string[] | boolean)[]): Prompter => {
   const values = [...answers];
   const next = () => values.shift()!;
   return {
@@ -14,23 +14,34 @@ const script = (answers: (string | string[])[]): Prompter => {
       const value = next();
       return value === undefined ? def : String(value);
     },
+    confirm: async ({ default: def }) => {
+      const value = next();
+      return value === undefined ? def : Boolean(value);
+    },
   };
+};
+
+const silent: Prompter = {
+  select: async ({ default: def }) => def,
+  checkbox: async ({ choices }) => choices.filter((c) => c.checked).map((c) => c.value),
+  input: async ({ default: def }) => def,
+  confirm: async ({ default: def }) => def,
 };
 
 describe("setup", () => {
   it("asks each question and keeps sqlite checked from the url", async () => {
-    const answers = await promptSetup(
-      {
-        select: async ({ default: def }) => def,
-        checkbox: async ({ choices }) => choices.filter((c) => c.checked).map((c) => c.value),
-        input: async ({ default: def }) => def,
-      },
-      { DATASOURCE_URL: "sqlite:///:memory:" },
-      ["ts"],
-    );
+    const answers = await promptSetup(silent, { DATASOURCE_URL: "sqlite:///:memory:" }, ["ts"]);
     expect(answers.providers).toContain("sqlite");
     expect(answers.url).toBe("sqlite:///:memory:");
     expect(answers.ecosystem).toBe("ts");
+    expect(answers.scaffold).toBe(false);
+  });
+
+  it("asks to create the deterministic directory when the spec is missing", async () => {
+    expect((await promptSetup(silent, {}, ["ts"], undefined, true)).scaffold).toBe(true);
+    expect((await promptSetup(script([["json"], "", "", false]), {}, ["ts"], undefined, true)).scaffold).toBe(
+      false,
+    );
   });
 
   it("prompts for ecosystem when more than one project type exists", async () => {
@@ -66,24 +77,32 @@ describe("setup", () => {
         providers: ["json"],
         url: "sqlite:///:memory:",
         schema: "",
+        scaffold: false,
       }),
     ).toEqual({
       INSTALLED_PROVIDERS: "json,sqlite",
       PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///:memory:",
     });
-    expect(envFromAnswers({ providers: ["json"], url: "", schema: "" })).toEqual({
+    expect(envFromAnswers({ providers: ["json"], url: "", schema: "", scaffold: false })).toEqual({
       INSTALLED_PROVIDERS: "json",
       PROVIDER: "json",
       DATASOURCE_URL: "",
     });
     expect(
-      envFromAnswers({ providers: ["postgres"], url: "postgres://localhost/db", schema: "public" }),
+      envFromAnswers({
+        providers: ["postgres"],
+        url: "postgres://localhost/db",
+        schema: "public",
+        scaffold: false,
+      }),
     ).toEqual({
       INSTALLED_PROVIDERS: "postgres",
       PROVIDER: "postgres",
       DATASOURCE_URL: "postgres://localhost/db?schema=public",
     });
-    expect(envFromAnswers({ providers: [], url: "", schema: "" }).INSTALLED_PROVIDERS).toBe("sqlite");
+    expect(envFromAnswers({ providers: [], url: "", schema: "", scaffold: false }).INSTALLED_PROVIDERS).toBe(
+      "sqlite",
+    );
   });
 });

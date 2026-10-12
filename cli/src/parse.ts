@@ -31,7 +31,7 @@ export type Command =
 
 export const help = `Usage: datasources <command> [options]
 
-setup                 Interactive .env and provider install
+setup                 Interactive .env, provider install, and optional deterministic/
   --cwd <dir>                 Consumer project directory (default: .)
   --ecosystem ts|rust|csharp  Required when more than one project type exists
   --dry-run                   Print package-manager commands without running them

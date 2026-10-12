@@ -7,6 +7,7 @@ export type SetupAnswers = {
   providers: string[];
   url: string;
   schema: string;
+  scaffold: boolean;
 };
 
 export type Prompter = {
@@ -20,13 +21,29 @@ export type Prompter = {
     choices: { name: string; value: string; checked: boolean }[];
   }) => Promise<string[]>;
   input: (opts: { message: string; default: string }) => Promise<string>;
+  confirm: (opts: { message: string; default: boolean }) => Promise<boolean>;
 };
+
+export const starterTypesYaml = `version: 1.0.0
+types:
+  - item:
+      tags:
+        - datasource_type
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+            size: 128
+`;
 
 export const promptSetup = async (
   prompt: Prompter,
   env: EnvMap,
   found: Ecosystem[],
   explicit?: Ecosystem,
+  askScaffold = false,
 ): Promise<SetupAnswers> => {
   const defaults = answersFromEnv(env);
   const ecosystem =
@@ -55,7 +72,10 @@ export const promptSetup = async (
       defaults.url || (selected.includes("sqlite") ? "sqlite:///:memory:" : ""),
   });
   const schema = await prompt.input({ message: "schema", default: defaults.schema });
-  return { ecosystem, providers: selected, url, schema };
+  const scaffold = askScaffold
+    ? await prompt.confirm({ message: "Create deterministic directory", default: true })
+    : false;
+  return { ecosystem, providers: selected, url, schema, scaffold };
 };
 
 const ecosystemOr = (value: string): Ecosystem | undefined =>
