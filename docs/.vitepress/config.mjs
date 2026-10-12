@@ -10,6 +10,7 @@ import { fontSizeBoot } from "./theme/fontSize.js";
 
 const configPath = fileURLToPath(import.meta.url);
 const docsDir = join(dirname(configPath), "..");
+const docsBase = process.env.DOCS_BASE;
 const tocPath = join(docsDir, "toc.yaml");
 const { pages } = parseToc(readFileSync(tocPath, "utf8"));
 
@@ -69,7 +70,8 @@ const watchToc = () => ({
 export default withMermaid(defineConfig({
   title: "Datasources",
   description: "Data-access and object-relational mapper with parity across languages and providers.",
-  cleanUrls: true,
+  base: docsBase ?? "/",
+  cleanUrls: !docsBase,
   head: [["script", {}, fontSizeBoot]],
   rewrites: {
     "introduction.md": "index.md",
