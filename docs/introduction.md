@@ -12,4 +12,8 @@ The specification is declarative, so it suits generation by AI agents. Progressi
 
 [Quick Start](./quickstart.md)
 
+[Install skill](./skill.md)
+
+[Download skill](/datasources-skill.zip)
+
 </div>

@@ -2,6 +2,8 @@ title: Datasources
 pages:
   - path: introduction.md
     title: Introduction
+  - path: skill.md
+    title: Skill
   - path: quickstart.md
     title: Quick Start
   - path: features.md
