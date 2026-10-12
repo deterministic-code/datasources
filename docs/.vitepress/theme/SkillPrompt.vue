@@ -1,17 +1,25 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
-defineProps({
+const props = defineProps({
   text: { type: String, required: true },
 });
 
 const input = ref(null);
 const copied = ref(false);
+const rows = computed(() => {
+  const lines = props.text.split("\n");
+  const wrapped = lines.reduce((count, line) => count + Math.max(1, Math.ceil(line.length / 64)), 0);
+  return Math.min(12, Math.max(3, wrapped));
+});
 
-const selectAll = () => input.value?.select();
+const selectAll = () => {
+  input.value?.focus();
+  input.value?.select();
+};
 
-const copy = async (text) => {
-  await navigator.clipboard.writeText(text);
+const copy = async () => {
+  await navigator.clipboard.writeText(props.text);
   copied.value = true;
   window.setTimeout(() => {
     copied.value = false;
@@ -21,19 +29,19 @@ const copy = async (text) => {
 
 <template>
   <div class="skill-prompt">
-    <label class="skill-prompt-label" for="skill-prompt-input">Prompt</label>
-    <div class="skill-prompt-row">
-      <input
-        id="skill-prompt-input"
+    <label class="skill-prompt-label">Prompt</label>
+    <div class="skill-prompt-box">
+      <textarea
         ref="input"
         class="skill-prompt-input"
-        type="text"
         :value="text"
+        :rows="rows"
         readonly
+        spellcheck="false"
         @focus="selectAll"
         @click="selectAll"
       />
-      <button type="button" class="skill-prompt-copy" @click="copy(text)">
+      <button type="button" class="skill-prompt-copy" @click="copy">
         {{ copied ? "Copied" : "Copy" }}
       </button>
     </div>
@@ -51,26 +59,34 @@ const copy = async (text) => {
   font-weight: 600;
 }
 
-.skill-prompt-row {
-  display: flex;
-  gap: 0.5rem;
+.skill-prompt-box {
+  position: relative;
+  min-width: 0;
 }
 
 .skill-prompt-input {
-  flex: 1;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
   min-width: 0;
-  height: 36px;
-  padding: 0 10px;
+  resize: vertical;
+  padding: 8px 72px 8px 10px;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   background: var(--vp-c-bg-alt);
   color: var(--vp-c-text-1);
   font: inherit;
+  line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .skill-prompt-copy {
-  height: 36px;
-  padding: 0 12px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  height: 28px;
+  padding: 0 10px;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   background: var(--vp-c-bg-soft);

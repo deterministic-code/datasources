@@ -88,6 +88,10 @@ pages:
   - path: sections/statements.md
     title: Statements
     group: Code Reference
+  - path: sections/native.md
+    title: Native
+    group: Code Reference
+    parent: Statements
   - path: sections/select-statement.md
     title: Select Statement
     group: Code Reference

@@ -2,7 +2,7 @@
 
 # Statements
 
-Command text. A string passed to [Command](command.md) `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader` is parsed with `StatementParser.Parse` / `StatementParser.parse` / `StatementParser::parse`. `Native` / `Native` / `Native` and `N` / `n` / `n` send that text to the provider engine. A statement overload renders with `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` — by default `DefaultStatementTextRenderer.Instance` / `DefaultStatementTextRenderer.instance` / `DefaultStatementTextRenderer::instance()` — after the provider transforms it, then runs `Native` / `Native` / `Native`.
+Command text. A string passed to [Command](command.md) `Execute` / `execute` / `execute` or `ExecuteReader` / `executeReader` / `execute_reader` is parsed with `StatementParser.Parse` / `StatementParser.parse` / `StatementParser::parse`. [Native](command.md) and `N` / `n` / `n` send that text to the provider engine. A statement overload renders with `StatementTextRenderer.Render` / `StatementTextRenderer.render` / `StatementTextRenderer::render` — by default `DefaultStatementTextRenderer.Instance` / `DefaultStatementTextRenderer.instance` / `DefaultStatementTextRenderer::instance()` — after the provider transforms it, then runs `Native` / `Native` / `Native`.
 
 ## Classes
 

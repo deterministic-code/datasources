@@ -21,6 +21,7 @@ const EXAMPLE_BLOCK = /^::: example\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PACKAGES_BLOCK = /^::: packages\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const REFERENCE_BLOCK = /^::: reference\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const PROSE_BLOCK = /^::: prose\r?\n([\s\S]*?)^:::[ \t]*$/gm;
+const SKILL_PROMPT_BLOCK = /^::: skill-prompt\r?\n([\s\S]*?)^:::[ \t]*$/gm;
 const CODE_FENCE = /(^```[\s\S]*?^```)/m;
 const NAME_MARKER = /\{\{((?:\\[\s\S]|[^{}|])+)\|((?:\\[\s\S]|[^{}|])+)\|((?:\\[\s\S]|[^{}|])+)\}\}/g;
 const FENCE = /^```([a-zA-Z0-9_+-]+)(?:[ \t]+\[([^\]]+)\])?[^\n]*\r?\n([\s\S]*?)^```\s*$/gm;
@@ -69,7 +70,16 @@ const labeledOutputs = (outputs) =>
   );
 
 const escapeAttr = (value) =>
-  String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+  String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+const toVitePressSkillPrompt = (body) =>
+  `<SkillPrompt text="${escapeAttr(body.trim())}"></SkillPrompt>`;
+
+const toReadmeSkillPrompt = (body) => `**Prompt**\n\n\`\`\`\n${body.trim()}\n\`\`\``;
 
 const renderOutputs = (outputs) =>
   outputs.length
@@ -332,7 +342,10 @@ export const transformDialects = (markdown, style, files) => {
         )
         .replace(DIALECT_BLOCK, (_, body) => dialects(body))
         .replace(PACKAGES_BLOCK, (_, body) => packages(body))
-        .replace(REFERENCE_BLOCK, (_, body) => reference(body)),
+        .replace(REFERENCE_BLOCK, (_, body) => reference(body))
+        .replace(SKILL_PROMPT_BLOCK, (_, body) =>
+          style === "vitepress" ? toVitePressSkillPrompt(body) : toReadmeSkillPrompt(body),
+        ),
       (text) => applyNames(text, style),
     ),
   );

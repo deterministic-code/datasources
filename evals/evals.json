@@ -39,12 +39,12 @@
     {
       "id": "run-native-sql",
       "prompt": "Insert an item and read it back with a command and SQL text. Do not use a repository.",
-      "expected_output": "CreateCommand, Execute INSERT INTO items with Parameters, ExecuteReader SELECT id, name FROM items WHERE id = $id, MetaDataRowTypeConverter Convert. Includes Item. No repository.",
+      "expected_output": "CreateCommand, Execute(Native.N INSERT INTO items) with Parameters, ExecuteReader(Native.N SELECT id, name FROM items WHERE id = $id), MetaDataRowTypeConverter Convert. Includes Item. No repository.",
       "files": [],
       "assertions": [
         { "id": "create-command", "text": "Creates a command from a connection" },
-        { "id": "insert-sql", "text": "Executes INSERT INTO items with bound parameters" },
-        { "id": "select-sql", "text": "ExecuteReader selects id and name from items by id" },
+        { "id": "insert-sql", "text": "Executes Native.N INSERT INTO items with bound parameters" },
+        { "id": "select-sql", "text": "ExecuteReader Native.N selects id and name from items by id" },
         { "id": "convert-item", "text": "Converts the reader row with MetaDataRowTypeConverter and includes the Item type" },
         { "id": "no-repository", "text": "Does not construct a repository" }
       ]

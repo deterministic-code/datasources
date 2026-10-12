@@ -108,7 +108,7 @@ executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cel
 
 | Name | Description |
 | --- | --- |
-| `text` | [Native](#typescript-native) engine text |
+| `text` | [Native](#) engine text |
 | `parameters` | optional [Parameter](#typescript-parameter) list |
 
 **Returns**
@@ -129,7 +129,7 @@ executeNative(text: Native, parameters?: Parameter[]): Promise<Response>
 
 | Name | Description |
 | --- | --- |
-| `text` | [Native](#typescript-native) engine text |
+| `text` | [Native](#) engine text |
 | `parameters` | optional [Parameter](#typescript-parameter) list |
 
 **Returns**
@@ -179,44 +179,6 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 **Returns**
 
 `Promise<[IReader](reader.md)<Cells>>`
-
-#### Native {#typescript-native}
-
-```typescript
-class Native
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [Native(text)](#typescript-native-native-text) | Engine text. `n(text)` builds the same value. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| text | Provider command text. |
-
-##### Native(text) {#typescript-native-native-text}
-
-Engine text. `n(text)` builds the same value.
-
-**Definition**
-
-```typescript
-constructor(text: string)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `text` | provider command text |
-
-**Returns**
-
-[Native](#typescript-native)
 
 #### ICommandMiddleware {#typescript-icommandmiddleware}
 
@@ -353,8 +315,8 @@ public interface ICommand
 | [Execute(text, parameters)](#csharp-icommand-execute-text-parameters) | Parses `text` with [StatementParser.Parse](statements.md) and runs [Execute(statement)](#csharp-icommand-execute-statement-parameters). Blank text runs [Execute(Native)](#csharp-icommand-execute-native-parameters). |
 | [ExecuteReader(native, parameters)](#csharp-icommand-executereader-native-parameters) | Runs provider text without parsing it. |
 | [Execute(native, parameters)](#csharp-icommand-execute-native-parameters) | Runs provider text without parsing it. |
-| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`. |
-| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`. |
+| [ExecuteReader(statement, parameters)](#csharp-icommand-executereader-statement-parameters) | Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer.Instance.Render(statement)`. |
+| [Execute(statement, parameters)](#csharp-icommand-execute-statement-parameters) | Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer.Instance.Render(statement)`. |
 
 ##### AddMiddleware(middleware) {#csharp-icommand-addmiddleware-middleware}
 
@@ -432,7 +394,7 @@ Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? paramete
 
 | Name | Description |
 | --- | --- |
-| `text` | [Native](#csharp-native) engine text |
+| `text` | [Native](#) engine text |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
@@ -453,7 +415,7 @@ Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null)
 
 | Name | Description |
 | --- | --- |
-| `text` | [Native](#csharp-native) engine text |
+| `text` | [Native](#) engine text |
 | `parameters` | optional [Parameter](#csharp-parameter) list |
 
 **Returns**
@@ -462,7 +424,7 @@ Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null)
 
 ##### ExecuteReader(statement, parameters) {#csharp-icommand-executereader-statement-parameters}
 
-Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
+Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 **Definition**
 
@@ -483,7 +445,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 ##### Execute(statement, parameters) {#csharp-icommand-execute-statement-parameters}
 
-Runs the statement. The default renders [Native](#csharp-native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
+Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 **Definition**
 
@@ -501,70 +463,6 @@ Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameter
 **Returns**
 
 `Task<[Response](#csharp-response)>`
-
-#### Native {#csharp-native}
-
-```csharp
-public readonly record struct Native(string Text)
-```
-
-**Constructor**
-
-| Name | Description |
-| --- | --- |
-| [Native(Text)](#csharp-native-native-text) | Engine text. [N](#csharp-native-n-text) builds the same value. |
-
-**Properties**
-
-| Name | Description |
-| --- | --- |
-| Text | Provider command text. |
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [N(text)](#csharp-native-n-text) | Builds a [Native](#csharp-native). |
-
-##### Native(Text) {#csharp-native-native-text}
-
-Engine text. [N](#csharp-native-n-text) builds the same value.
-
-**Definition**
-
-```csharp
-Native(string Text)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `Text` | provider command text |
-
-**Returns**
-
-[Native](#csharp-native)
-
-##### N(text) {#csharp-native-n-text}
-
-Builds a [Native](#csharp-native).
-
-**Definition**
-
-```csharp
-static Native N(string text)
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `text` | provider command text |
-
-**Returns**
-
-[Native](#csharp-native)
 
 #### ICommandMiddleware {#csharp-icommandmiddleware}
 
@@ -722,8 +620,8 @@ pub trait Command: Send + Sync
 | [execute(text, parameters)](#rust-command-execute-text-parameters) | Parses `text` with [StatementParser::parse](statements.md) and runs [execute_statement](#rust-command-execute_statement-statement-parameters). Blank text runs [execute_native](#rust-command-execute_native-text-parameters). |
 | [execute_reader_native(text, parameters)](#rust-command-execute_reader_native-text-parameters) | Runs provider text without parsing it. |
 | [execute_native(text, parameters)](#rust-command-execute_native-text-parameters) | Runs provider text without parsing it. |
-| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`. |
-| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`. |
+| [execute_reader_statement(statement, parameters)](#rust-command-execute_reader_statement-statement-parameters) | Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer::instance().render(statement)`. |
+| [execute_statement(statement, parameters)](#rust-command-execute_statement-statement-parameters) | Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer::instance().render(statement)`. |
 
 ##### add_middleware(middleware) {#rust-command-add_middleware-middleware}
 
@@ -797,7 +695,7 @@ async fn execute_reader_native(&self, text: &Native, parameters: Option<&[Parame
 
 | Name | Description |
 | --- | --- |
-| `text` | [Native](#rust-native) engine text |
+| `text` | [Native](#) engine text |
 | `parameters` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
@@ -818,7 +716,7 @@ async fn execute_native(&self, text: &Native, parameters: Option<&[Parameter]>) 
 
 | Name | Description |
 | --- | --- |
-| `text` | [Native](#rust-native) engine text |
+| `text` | [Native](#) engine text |
 | `parameters` | optional [Parameter](#rust-parameter) slice |
 
 **Returns**
@@ -827,7 +725,7 @@ async fn execute_native(&self, text: &Native, parameters: Option<&[Parameter]>) 
 
 ##### execute_reader_statement(statement, parameters) {#rust-command-execute_reader_statement-statement-parameters}
 
-Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`.
+Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 **Definition**
 
@@ -848,7 +746,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 ##### execute_statement(statement, parameters) {#rust-command-execute_statement-statement-parameters}
 
-Runs the statement. The default renders [Native](#rust-native) from `DefaultStatementTextRenderer::instance().render(statement)`.
+Runs the statement. The default renders [Native](#) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 **Definition**
 
@@ -866,74 +764,6 @@ async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<
 **Returns**
 
 `Result<[Response](#rust-response)>`
-
-#### Native {#rust-native}
-
-```rust
-pub struct Native(String)
-```
-
-**Methods**
-
-| Name | Description |
-| --- | --- |
-| [new(text)](#rust-native-new-text) | Engine text. [n](#rust-n-text) builds the same value. |
-| [text()](#rust-native-text) | Provider command text. |
-| [n(text)](#rust-native-n-text) | Builds a [Native](#rust-native). |
-
-##### new(text) {#rust-native-new-text}
-
-Engine text. [n](#rust-n-text) builds the same value.
-
-**Definition**
-
-```rust
-pub fn new(text: impl Into<String>) -> Self
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `text` | provider command text |
-
-**Returns**
-
-[Native](#rust-native)
-
-##### text() {#rust-native-text}
-
-Provider command text.
-
-**Definition**
-
-```rust
-pub fn text(&self) -> &str
-```
-
-**Returns**
-
-`&str`
-
-##### n(text) {#rust-native-n-text}
-
-Builds a [Native](#rust-native).
-
-**Definition**
-
-```rust
-pub fn n(text: impl Into<String>) -> Native
-```
-
-**Parameters**
-
-| Name | Description |
-| --- | --- |
-| `text` | provider command text |
-
-**Returns**
-
-[Native](#rust-native)
 
 #### CommandMiddleware {#rust-commandmiddleware}
 
@@ -1997,3 +1827,189 @@ async function readReturnValue(command: PostgresCommand) {
 ```
 5
 ```
+
+## Native
+
+Provider engine text. `Execute` / `executeNative` / `execute_native` and `ExecuteReader` / `executeReaderNative` / `execute_reader_native` send it without parsing. `N` / `n` / `n` builds the same value.
+
+### Classes
+
+##### TypeScript
+
+##### Native {#typescript-native}
+
+```typescript
+class Native
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Native(text)](#typescript-native-native-text) | Engine text. `n(text)` builds the same value. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| text | Provider command text. |
+
+###### Native(text) {#typescript-native-native-text}
+
+Engine text. `n(text)` builds the same value.
+
+**Definition**
+
+```typescript
+constructor(text: string)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#typescript-native)
+
+##### C#
+
+##### Native {#csharp-native}
+
+```csharp
+public readonly record struct Native(string Text)
+```
+
+**Constructor**
+
+| Name | Description |
+| --- | --- |
+| [Native(Text)](#csharp-native-native-text) | Engine text. [N](#csharp-native-n-text) builds the same value. |
+
+**Properties**
+
+| Name | Description |
+| --- | --- |
+| Text | Provider command text. |
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [N(text)](#csharp-native-n-text) | Builds a [Native](#csharp-native). |
+
+###### Native(Text) {#csharp-native-native-text}
+
+Engine text. [N](#csharp-native-n-text) builds the same value.
+
+**Definition**
+
+```csharp
+Native(string Text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `Text` | provider command text |
+
+**Returns**
+
+[Native](#csharp-native)
+
+###### N(text) {#csharp-native-n-text}
+
+Builds a [Native](#csharp-native).
+
+**Definition**
+
+```csharp
+static Native N(string text)
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#csharp-native)
+
+##### Rust
+
+##### Native {#rust-native}
+
+```rust
+pub struct Native(String)
+```
+
+**Methods**
+
+| Name | Description |
+| --- | --- |
+| [new(text)](#rust-native-new-text) | Engine text. [n](#rust-n-text) builds the same value. |
+| [text()](#rust-native-text) | Provider command text. |
+| [n(text)](#rust-native-n-text) | Builds a [Native](#rust-native). |
+
+###### new(text) {#rust-native-new-text}
+
+Engine text. [n](#rust-n-text) builds the same value.
+
+**Definition**
+
+```rust
+pub fn new(text: impl Into<String>) -> Self
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#rust-native)
+
+###### text() {#rust-native-text}
+
+Provider command text.
+
+**Definition**
+
+```rust
+pub fn text(&self) -> &str
+```
+
+**Returns**
+
+`&str`
+
+###### n(text) {#rust-native-n-text}
+
+Builds a [Native](#rust-native).
+
+**Definition**
+
+```rust
+pub fn n(text: impl Into<String>) -> Native
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `text` | provider command text |
+
+**Returns**
+
+[Native](#rust-native)
+
+### Remarks
+
+A string passed to [Command](#) `Execute` / `execute` / `execute` is parsed as a statement. Wrap the same text in `Native.N` / `n` / `n` when the provider should run it as written.
