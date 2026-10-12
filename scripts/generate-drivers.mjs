@@ -80,7 +80,7 @@ const languageSection = (language, drivers) => {
 
   return `## ${language.title} {#${language.id}}
 
-<a href="#languages" class="driver-back">← Languages</a>
+<a href="#languages" class="driver-back">← Languages and Datasource Providers</a>
 
 Drivers for ${language.title}. Click a tile for ${api.information}, Overrides, and ${api.converters} from that ${api.driver}.
 
@@ -104,7 +104,7 @@ const generate = () => {
     .map((language) => tile(`#${language.id}`, language.logo, language.title))
     .join("\n");
 
-  const body = `# Languages {#languages}
+  const body = `# Languages and Datasource Providers {#languages}
 
 Pick a language, then a driver. Each driver section lists {{Information|information|information}}, Overrides, and {{RowTypeConverters|rowTypeConverters|row_type_converters}} from that language's {{IDriver|IDriver|Driver}}.
 

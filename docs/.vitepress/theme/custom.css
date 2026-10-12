@@ -216,3 +216,35 @@ div[class*="language-"] > .example-source-link ~ .example-source-link ~ .example
 .driver-back:hover {
   color: var(--vp-c-brand-1);
 }
+
+.quick-start {
+  margin: 2rem 0 0;
+  text-align: center;
+}
+
+.vp-doc .quick-start p {
+  margin: 0;
+}
+
+.vp-doc .quick-start a {
+  display: inline-block;
+  border: 1px solid var(--vp-button-brand-border);
+  border-radius: 20px;
+  padding: 0 20px;
+  line-height: 38px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--vp-button-brand-text);
+  background-color: var(--vp-button-brand-bg);
+  transition: color 0.25s, border-color 0.25s, background-color 0.25s;
+}
+
+.vp-doc .quick-start a:hover {
+  text-decoration: none;
+  border-color: var(--vp-button-brand-hover-border);
+  color: var(--vp-button-brand-hover-text);
+  background-color: var(--vp-button-brand-hover-bg);
+}

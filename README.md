@@ -2,17 +2,19 @@
 
 # Datasources
 
-Datasources is a data-access and object-relational mapper library. It aims for parity across languages and datasource providers.
+Datasources is a data-access and object-relational mapper library. It aims for parity across [Languages and Datasource Providers](#languages-and-datasource-providers).
 
-The feature stack starts with commands, connections, and object mapping. Higher up, the API is more opinionated. Types and repositories are generated from a Types Specification, which can be the source of truth for the datasource schema and the generated code. The specification describes unions and inherited types. A type may contain referenced lists and dictionaries, and those references are generated as enriched repositories.
+The [Feature Stack:](#feature-stack) starts with commands, connections, and object mapping. Higher up, the API is more opinionated. Types and repositories are generated from a Types Specification, which can be the source of truth for the datasource schema and the generated code. The specification describes unions and inherited types. A type may contain referenced lists and dictionaries, and those references are generated as enriched repositories.
 
-The library works as a high-level repository builder or as a micro-ORM.
+Thus, due to the well-defined [Feature stack](#feature-stack), the library can be used as a high-level repository builder or as a micro-ORM, alike.
 
 The specification is declarative, so it suits generation by AI agents. Progressive skills keep that generation economical and repeatable. They use fewer tokens, and they keep generated code and mappings constant and deterministic. The library was written so TypeScript could be translated to Rust, and so data-access code written by an agent would remain coherent as an application scales.
 
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Languages](#languages)
+<div class="quick-start">
+
+[Quick Start](#quick-start)
+
+</div>
 
 ## Quick Start
 
@@ -347,6 +349,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
+| [Type and Repository Generators](#generate) | ✅ | ✅ | ✅ |
 | [Datasource Factory](#datasource-factory) | ✅ | ✅ | ✅ |
 | [Datasource](#datasource) | ✅ | ✅ | ✅ |
 | [Mappers](#mappers) | ✅ | ✅ | ✅ |
@@ -362,29 +365,9 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 | [Bulk Repository](#bulk-repository) | ✅ | ✅ | ✅ |
 | [Repository Factories](#repository-factories) | ✅ | ✅ | ✅ |
 
-### Providers
-
-Implemented drivers (SQLite, MySQL, PostgreSQL) are listed per language on [Languages](#languages).
-
-| Provider | C# | Rust | TypeScript |
-| --- | :---: | :---: | :---: |
-| json | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| memory | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| [sqlite](#csharp-sqlite) | ✅ | ✅ | ✅ |
-| xml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| yaml | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| [mysql](#csharp-mysql) | ✅ | ✅ | ✅ |
-| sqlserver | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| [postgres](#csharp-postgres) | ✅ | ✅ | ✅ |
-| oracle | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| mongodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-| dynamodb | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> | <span style="color:#9ca3af">✕</span> |
-
-Package names per language are on [Quick Start](#installation).
-
 <!-- Generated from docs/DriverSummary.yaml. Edit that file and run npm run docs:drivers. -->
 
-## Languages {#languages}
+## Languages and Datasource Providers {#languages}
 
 Pick a language, then a driver. Each driver section lists `Information` / `information` / `information`, Overrides, and `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` from that language's `IDriver` / `IDriver` / `Driver`.
 
@@ -405,7 +388,7 @@ Pick a language, then a driver. Each driver section lists `Information` / `infor
 
 ### C# {#csharp}
 
-<a href="#languages" class="driver-back">← Languages</a>
+<a href="#languages" class="driver-back">← Languages and Datasource Providers</a>
 
 Drivers for C#. Click a tile for Information, Overrides, and RowTypeConverters from that `IDriver`.
 
@@ -507,7 +490,7 @@ _None._
 
 ### Rust {#rust}
 
-<a href="#languages" class="driver-back">← Languages</a>
+<a href="#languages" class="driver-back">← Languages and Datasource Providers</a>
 
 Drivers for Rust. Click a tile for information, Overrides, and row_type_converters from that `Driver`.
 
@@ -609,7 +592,7 @@ _None._
 
 ### TypeScript {#typescript}
 
-<a href="#languages" class="driver-back">← Languages</a>
+<a href="#languages" class="driver-back">← Languages and Datasource Providers</a>
 
 Drivers for TypeScript. Click a tile for information, Overrides, and rowTypeConverters from that `IDriver`.
 
@@ -31713,7 +31696,7 @@ fn information(&self) -> Option<&Information>
 
 `Information` / `information` / `information` is optional metadata a driver may publish. Each list is free-form text: `Descriptions` / `descriptions` / `descriptions` for capability notes, `Overrides` / `overrides` / `overrides` for dialect-specific behavior, and `ChangeLogs` / `changeLogs` / `change_logs` for provider history. The default is unset.
 
-Published drivers list that metadata (and `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` keys) per language on [Languages](#languages). Edit `docs/DriverSummary.yaml`, keep each driver's `Information` / `information` / `information` in sync, then run `npm run docs:drivers`.
+Published drivers list that metadata (and `RowTypeConverters` / `rowTypeConverters` / `row_type_converters` keys) per language on [Languages and Datasource Providers](#languages-and-datasource-providers). Edit `docs/DriverSummary.yaml`, keep each driver's `Information` / `information` / `information` in sync, then run `npm run docs:drivers`.
 
 The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. `SelectInsertedIdStatementTextRenderer.Render` / `SelectInsertedIdStatementTextRenderer.render` / `SelectInsertedIdStatementTextRenderer::render` throws until a provider overrides it.
 
