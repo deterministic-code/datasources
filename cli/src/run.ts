@@ -10,7 +10,7 @@ import {
   updateEnvProviders,
   type EnvMap,
 } from "./env.ts";
-import { envFromAnswers } from "./setup.ts";
+import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Fs, Runner } from "./io.ts";
 import {
   cargoProviders,
@@ -20,7 +20,7 @@ import {
 } from "./installed.ts";
 import { applyGenerate } from "./generate/applyGenerate.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
-import { promptSetup, type Prompter, type SetupAnswers } from "./setup.ts";
+import { envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
 
 export type Deps = {
   fs: Fs;
@@ -60,9 +60,13 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
   const entries = await deps.fs.readdir(flags.cwd);
   const found = detect(entries);
   const existing = await readEnv(deps.fs, flags.cwd);
+  const specDir = join(flags.cwd, "deterministic");
+  const typesPath = join(specDir, "types.yaml");
+  const datasourcePath = join(specDir, "datasource.yaml");
+  const missingSpec = (await optional(deps.fs, typesPath)) === undefined;
   const answers: SetupAnswers = flags.yes
-    ? { ...answersFromEnv(existing), ecosystem: flags.ecosystem }
-    : await promptSetup(deps.prompt, existing, found, flags.ecosystem);
+    ? { ...answersFromEnv(existing), ecosystem: flags.ecosystem, scaffold: false }
+    : await promptSetup(deps.prompt, existing, found, flags.ecosystem, missingSpec);
   const ecosystem = resolveEcosystem(found, answers.ecosystem ?? flags.ecosystem);
   const selected = requireProviders(answers.providers);
   const installed = await readInstalled(deps.fs, flags.cwd, ecosystem, entries);
@@ -76,6 +80,15 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
     installed.filter((name) => !selected.includes(name)),
     selected,
   );
+  if (!answers.scaffold) return;
+  if (flags.dryRun) {
+    deps.log(typesPath);
+    deps.log(datasourcePath);
+    return;
+  }
+  await deps.fs.writeFile(typesPath, starterTypesYaml);
+  if ((await optional(deps.fs, datasourcePath)) === undefined)
+    await deps.fs.writeFile(datasourcePath, defaultDatasourceYaml);
 };
 
 const applyAddRemove = async (

@@ -3,8 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
+import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import { run, type Deps } from "./run.ts";
-import type { Prompter } from "./setup.ts";
+import { starterTypesYaml, type Prompter } from "./setup.ts";
 
 const cwd = "app";
 
@@ -33,6 +34,7 @@ const silentPrompt: Prompter = {
   select: async ({ default: def }) => def,
   checkbox: async ({ choices }) => choices.filter((c) => c.checked).map((c) => c.value),
   input: async ({ default: def }) => def,
+  confirm: async ({ default: def }) => def,
 };
 
 const deps = (
@@ -76,6 +78,7 @@ describe("run", () => {
     expect(io.ran[0]).toMatch(/npm install/);
     expect(io.ran[0]).toMatch(/@datasources\/sqlite/);
     expect(io.ran[0]).not.toMatch(/better-sqlite3/);
+    expect(files[join(cwd, "deterministic", "types.yaml")]).toBeUndefined();
   });
 
   it("runs interactive setup and diffs add/remove", async () => {
@@ -90,6 +93,7 @@ describe("run", () => {
         select: async () => "memory",
         checkbox: async () => ["memory"],
         input: async ({ default: def }) => def,
+        confirm: async ({ default: def }) => def,
       },
     });
     expect(await run(["setup", "--cwd", cwd], io)).toBe(0);
@@ -140,6 +144,67 @@ describe("run", () => {
     const rust = mem(["Cargo.toml"]);
     expect(await run(["add", "json", "--cwd", cwd, "--dry-run"], deps(rust.fs))).toBe(0);
     expect(rust.files[join(cwd, "Cargo.toml")]).toBeUndefined();
+  });
+
+  it("scaffolds a deterministic directory when setup confirms", async () => {
+    const { files, fs } = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({
+        dependencies: { "@datasources/sqlite": "*" },
+      }),
+    });
+    const io = deps(fs);
+    expect(await run(["setup", "--cwd", cwd], io)).toBe(0);
+    expect(files[join(cwd, "deterministic", "types.yaml")]).toBe(starterTypesYaml);
+    expect(files[join(cwd, "deterministic", "datasource.yaml")]).toBe(defaultDatasourceYaml);
+  });
+
+  it("writes types.yaml without replacing an existing datasource.yaml", async () => {
+    const kept = "version: 1.0.0\ntypes: []\n";
+    const { files, fs } = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({
+        dependencies: { "@datasources/sqlite": "*" },
+      }),
+      [join(cwd, "deterministic", "datasource.yaml")]: kept,
+    });
+    const io = deps(fs);
+    expect(await run(["setup", "--cwd", cwd], io)).toBe(0);
+    expect(files[join(cwd, "deterministic", "types.yaml")]).toBe(starterTypesYaml);
+    expect(files[join(cwd, "deterministic", "datasource.yaml")]).toBe(kept);
+  });
+
+  it("leaves an existing types.yaml alone", async () => {
+    const kept = "version: 1.0.0\ntypes: []\n";
+    const { files, fs } = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({
+        dependencies: { "@datasources/sqlite": "*" },
+      }),
+      [join(cwd, "deterministic", "types.yaml")]: kept,
+    });
+    const io = deps(fs, {
+      prompt: {
+        ...silentPrompt,
+        confirm: async () => {
+          throw new Error("should not ask to scaffold");
+        },
+      },
+    });
+    expect(await run(["setup", "--cwd", cwd], io)).toBe(0);
+    expect(files[join(cwd, "deterministic", "types.yaml")]).toBe(kept);
+    expect(files[join(cwd, "deterministic", "datasource.yaml")]).toBeUndefined();
+  });
+
+  it("logs scaffold paths on dry-run without writing them", async () => {
+    const { files, fs } = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({
+        dependencies: { "@datasources/sqlite": "*" },
+      }),
+    });
+    const io = deps(fs);
+    expect(await run(["setup", "--cwd", cwd, "--dry-run"], io)).toBe(0);
+    expect(io.logs).toContain(join(cwd, "deterministic", "types.yaml"));
+    expect(io.logs).toContain(join(cwd, "deterministic", "datasource.yaml"));
+    expect(files[join(cwd, "deterministic", "types.yaml")]).toBeUndefined();
+    expect(files[join(cwd, "deterministic", "datasource.yaml")]).toBeUndefined();
   });
 
   it("skips package commands when the selection is already installed", async () => {

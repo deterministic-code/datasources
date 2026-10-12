@@ -4,7 +4,7 @@ import { settingsFrom } from "./settingsFlat.ts";
 
 const specFiles = ["types.yaml", "datasource.yaml", "datasource_seeds.yaml", "services.yaml", "routes.yaml"] as const;
 
-const defaultDatasourceYaml = `version: 1.0.0
+export const defaultDatasourceYaml = `version: 1.0.0
 includes:
   - types:
       filter: tag == "datasource_type" || tag == "view_type"
