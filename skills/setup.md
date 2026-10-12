@@ -15,7 +15,7 @@ Pass `--ecosystem ts|rust|csharp` when the directory has more than one project t
 
 ## Setup
 
-Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec.
+Interactive `.env` and provider install. `--yes` skips prompts and uses defaults / existing `.env`.
 
 ```sh
 npx @datasources/cli setup

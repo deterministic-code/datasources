@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderSkill, SKILL_ROOTS, zipSkill } from "./generate-skill.mjs";
+import { renderSkill, skillRouter, SKILL_REPO } from "./generate-skill.mjs";
 
 const files = renderSkill();
 
@@ -30,12 +30,8 @@ test("downloading lists sqlite packages", () => {
   assert.match(files["downloading.md"], /Datasources\.Sqlite/);
 });
 
-test("skill is generated under skills/datasources", () => {
-  assert.equal(SKILL_ROOTS[0], "skills/datasources");
-});
-
-test("zip contains datasources/SKILL.md", () => {
-  const zip = zipSkill(files);
-  assert.equal(zip.subarray(0, 2).toString(), "PK");
-  assert.match(zip.toString("binary"), /datasources\/SKILL\.md/);
+test("repo-root SKILL.md links into skills/", () => {
+  const root = skillRouter("skills/");
+  assert.match(root, /\]\(skills\/setup\.md\)/);
+  assert.equal(SKILL_REPO, "deterministic-code/datasources");
 });

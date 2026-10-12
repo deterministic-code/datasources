@@ -1,15 +1,14 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { crc32, deflateRawSync } from "node:zlib";
 import { catalog, providers } from "../cli/src/catalog.ts";
 import { transformDialects } from "./dialects.mjs";
 import { parsePointer, slug, snippetFile } from "./sync-examples.mjs";
 import { parseToc, uniquePages } from "./toc.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-export const SKILL_ROOTS = ["skills/datasources", ".cursor/skills/datasources", ".claude/skills/datasources"];
-export const SKILL_ZIPS = ["docs/public/datasources-skill.zip"];
+export const SKILL_ROOTS = ["skills", ".cursor/skills/datasources", ".claude/skills/datasources"];
+export const SKILL_REPO = "deterministic-code/datasources";
 const BANNER = "<!-- Generated from docs/. Edit the markdown in docs/ and run npm run docs:skill. -->\n\n";
 const SKIP_DOCS = new Set(["docs/examples.md", "docs/sections/where-statement.md"]);
 const DOC_FENCE = /(^~~~~[\s\S]*?^~~~~)/m;
@@ -90,7 +89,34 @@ const HASH_ROUTES = [
   { path: "quickstart.md", hash: "installation", file: "downloading.md" },
 ];
 
-const SKILL_MD = `---
+const TOPICS_LINKS = [
+  ["Install packages", "downloading.md"],
+  ["setup / add / remove / .env", "setup.md"],
+  ["Generate from types.yaml and datasource.yaml", "generation.md"],
+  ["Mappers and the read pipeline", "mappings.md"],
+  ["Type converters", "type-converters.md"],
+  ["Command", "command.md"],
+  ["Reader", "reader.md"],
+  ["Repositories overview", "repositories.md"],
+  ["ReadonlyRepository", "readonly-repository.md"],
+  ["CRUDRepository", "crud-repository.md"],
+  ["BulkRepository", "bulk-repository.md"],
+  ["Repository factories", "repository-factories.md"],
+  ["AddEnriched / AddLinked", "enrichment.md"],
+  ["Statements", "statements.md"],
+  ["Where", "where.md"],
+  ["Expressions", "expressions.md"],
+  ["SelectStatement", "select-statement.md"],
+  ["InsertStatement", "insert-statement.md"],
+  ["UpdateStatement", "update-statement.md"],
+  ["DeleteStatement", "delete-statement.md"],
+  ["Other statements", "other-statements.md"],
+  ["Example index", "examples.md"],
+];
+
+export const skillRouter = (dir = "") => {
+  const href = (file) => `${dir}${file}`;
+  return `---
 name: datasources
 description: >-
   Uses Datasources across C#, Rust, and TypeScript: install packages, run setup
@@ -113,36 +139,16 @@ Read one file below. Do not load the rest.
 
 - A select names PascalCase entity types and properties (\`Contact.FirstName\`), not table or column names.
 - Read is convert, then map. Do not fold mapping into the converter.
-- When writing code, find the closest row in [examples.md](examples.md), open that language's snippet, and use the same objects the sample uses (connection, repository, enrichment). Include every type the sample defines.
-- \`AddEnriched\` is a read fill. A \`List\` on a CRUD repository is also written with the parent. \`AddLinked\` reads the related repository and writes the association through the link repository. Register a child repository's own fills on that child, then register the child on the parent. Read [enrichment.md](enrichment.md) before either call.
+- When writing code, find the closest row in [examples.md](${href("examples.md")}), open that language's snippet, and use the same objects the sample uses (connection, repository, enrichment). Include every type the sample defines.
+- \`AddEnriched\` is a read fill. A \`List\` on a CRUD repository is also written with the parent. \`AddLinked\` reads the related repository and writes the association through the link repository. Register a child repository's own fills on that child, then register the child on the parent. Read [enrichment.md](${href("enrichment.md")}) before either call.
 
 ## Open one file
 
 | Task | File |
 | --- | --- |
-| Install packages | [downloading.md](downloading.md) |
-| setup / add / remove / .env | [setup.md](setup.md) |
-| Generate from types.yaml and datasource.yaml | [generation.md](generation.md) |
-| Mappers and the read pipeline | [mappings.md](mappings.md) |
-| Type converters | [type-converters.md](type-converters.md) |
-| Command | [command.md](command.md) |
-| Reader | [reader.md](reader.md) |
-| Repositories overview | [repositories.md](repositories.md) |
-| ReadonlyRepository | [readonly-repository.md](readonly-repository.md) |
-| CRUDRepository | [crud-repository.md](crud-repository.md) |
-| BulkRepository | [bulk-repository.md](bulk-repository.md) |
-| Repository factories | [repository-factories.md](repository-factories.md) |
-| AddEnriched / AddLinked | [enrichment.md](enrichment.md) |
-| Statements | [statements.md](statements.md) |
-| Where | [where.md](where.md) |
-| Expressions | [expressions.md](expressions.md) |
-| SelectStatement | [select-statement.md](select-statement.md) |
-| InsertStatement | [insert-statement.md](insert-statement.md) |
-| UpdateStatement | [update-statement.md](update-statement.md) |
-| DeleteStatement | [delete-statement.md](delete-statement.md) |
-| Other statements | [other-statements.md](other-statements.md) |
-| Example index | [examples.md](examples.md) |
+${TOPICS_LINKS.map(([task, file]) => `| ${task} | [${file}](${href(file)}) |`).join("\n")}
 `;
+};
 
 const outsideFences = (markdown, fn) =>
   markdown
@@ -340,7 +346,7 @@ const renderExamples = (base, pages) => {
 export const renderSkill = (base = root) => {
   const { pages } = parseToc(readFileSync(join(base, "docs/toc.yaml"), "utf8"));
   const routes = routesFor(TOPICS);
-  const files = { "SKILL.md": SKILL_MD };
+  const files = { "SKILL.md": skillRouter() };
   for (const topic of TOPICS) files[topic.file] = renderTopic(topic, base, routes, pages);
   files["examples.md"] = renderExamples(base, pages);
   return files;
@@ -354,82 +360,14 @@ const listFiles = (dir) =>
       })
     : [];
 
-const u16 = (n) => {
-  const buf = Buffer.alloc(2);
-  buf.writeUInt16LE(n);
-  return buf;
-};
-
-const u32 = (n) => {
-  const buf = Buffer.alloc(4);
-  buf.writeUInt32LE(n);
-  return buf;
-};
-
-export const zipSkill = (files) => {
-  const entries = Object.keys(files)
-    .sort()
-    .map((name) => ({ name: `datasources/${name}`, data: Buffer.from(files[name]) }));
-  const locals = [];
-  const centrals = [];
-  let offset = 0;
-  for (const { name, data } of entries) {
-    const compressed = deflateRawSync(data);
-    const crc = crc32(data);
-    const nameBuf = Buffer.from(name);
-    const local = Buffer.concat([
-      Buffer.from("PK\x03\x04"),
-      u16(20),
-      u16(0),
-      u16(8),
-      u16(0),
-      u16(0),
-      u32(crc),
-      u32(compressed.length),
-      u32(data.length),
-      u16(nameBuf.length),
-      u16(0),
-      nameBuf,
-      compressed,
-    ]);
-    locals.push(local);
-    centrals.push(
-      Buffer.concat([
-        Buffer.from("PK\x01\x02"),
-        u16(20),
-        u16(20),
-        u16(0),
-        u16(8),
-        u16(0),
-        u16(0),
-        u32(crc),
-        u32(compressed.length),
-        u32(data.length),
-        u16(nameBuf.length),
-        u16(0),
-        u16(0),
-        u16(0),
-        u16(0),
-        u32(0),
-        u32(offset),
-        nameBuf,
-      ]),
-    );
-    offset += local.length;
+const pruneEmpty = (dir) => {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (!entry.isDirectory()) continue;
+    pruneEmpty(path);
+    if (!readdirSync(path).length) rmSync(path, { recursive: true });
   }
-  const center = Buffer.concat(centrals);
-  return Buffer.concat([
-    ...locals,
-    center,
-    Buffer.from("PK\x05\x06"),
-    u16(0),
-    u16(0),
-    u16(entries.length),
-    u16(entries.length),
-    u32(center.length),
-    u32(offset),
-    u16(0),
-  ]);
 };
 
 const writeTree = (dir, files) => {
@@ -439,6 +377,7 @@ const writeTree = (dir, files) => {
     const name = relative(dir, path).split("\\").join("/");
     if (!(name in files)) rmSync(path);
   }
+  pruneEmpty(dir);
 };
 
 const checkTree = (dir, files) => {
@@ -456,30 +395,31 @@ const checkTree = (dir, files) => {
   return errors;
 };
 
-const checkZip = (path, zip) => {
-  if (!existsSync(path)) return [`${path} is missing. Run npm run docs:skill.`];
-  return Buffer.compare(readFileSync(path), zip) === 0 ? [] : [`${path} is stale. Run npm run docs:skill.`];
-};
-
 export const applySkill = ({ check = false, base = root } = {}) => {
   const files = renderSkill(base);
-  const dirs = SKILL_ROOTS.map((rel) => join(base, rel));
-  const zip = zipSkill(files);
-  const zips = SKILL_ZIPS.map((rel) => join(base, rel));
+  const topics = Object.fromEntries(Object.entries(files).filter(([name]) => name !== "SKILL.md"));
+  const rootSkill = skillRouter("skills/");
+  const rootPath = join(base, "SKILL.md");
+  const copies = SKILL_ROOTS.filter((rel) => rel !== "skills").map((rel) => join(base, rel));
+  const topicsDir = join(base, "skills");
   if (check) {
-    const errors = [...dirs.flatMap((dir) => checkTree(dir, files)), ...zips.flatMap((path) => checkZip(path, zip))];
+    const errors = [
+      ...checkTree(topicsDir, topics),
+      ...copies.flatMap((dir) => checkTree(dir, files)),
+      ...(existsSync(rootPath) && readFileSync(rootPath, "utf8") === rootSkill
+        ? []
+        : [`${rootPath} is stale. Run npm run docs:skill.`]),
+    ];
     if (errors.length) {
       for (const error of errors) console.error(error);
       process.exit(1);
     }
     return files;
   }
-  for (const dir of dirs) writeTree(dir, files);
-  for (const path of zips) {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, zip);
-  }
-  console.log(`Wrote ${[...dirs, ...zips].map((path) => relative(base, path)).join(" and ")}`);
+  writeFileSync(rootPath, rootSkill);
+  writeTree(topicsDir, topics);
+  for (const dir of copies) writeTree(dir, files);
+  console.log(`Wrote SKILL.md and ${["skills", ...SKILL_ROOTS.filter((rel) => rel !== "skills")].join(" and ")}`);
   return files;
 };
 
