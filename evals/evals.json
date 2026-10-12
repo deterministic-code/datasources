@@ -1,0 +1,81 @@
+{
+  "skill_name": "datasources",
+  "evals": [
+    {
+      "id": "generate-a-user-repository",
+      "prompt": "types.yaml has one user datasource type (id, username, is_enabled). Generate the TypeScript repository and create, read, update, and delete a user through it.",
+      "expected_output": "types.yaml with user tagged datasource_type; npx @datasources/cli generate all --dialect typescript; then ds.users.create, readSingle, update, and delete. No hand-written repository class.",
+      "files": [],
+      "assertions": [
+        { "id": "generate-command", "text": "Runs npx @datasources/cli generate all --dialect typescript" },
+        { "id": "types-yaml-user", "text": "Writes types.yaml with a user datasource_type and id, username, is_enabled" },
+        { "id": "generated-users", "text": "Calls create, readSingle, update, and delete on the generated users repository" },
+        { "id": "no-handwritten-repo", "text": "Does not define a hand-written repository class" }
+      ]
+    },
+    {
+      "id": "generate-users-and-roles",
+      "prompt": "The same user table, plus role and a user_role junction tagged many_to_many, with a roles list on user. Generate TypeScript and create a user that has a role.",
+      "expected_output": "types.yaml with user, role, and user_role; generate all --dialect typescript; ds.roles.create then ds.users.create with roles: [admin]. ReadSingle fills roles. No hand-written AddLinked.",
+      "files": [],
+      "assertions": [
+        { "id": "generate-command", "text": "Runs npx @datasources/cli generate all --dialect typescript" },
+        { "id": "types-yaml-roles", "text": "Writes user, role, and user_role with many_to_many and a roles list that references user_role.user_id" },
+        { "id": "create-role-then-user", "text": "Creates a role, then a user whose roles list includes that role" },
+        { "id": "no-handwritten-addlinked", "text": "Does not call AddLinked or addLinked by hand" }
+      ]
+    },
+    {
+      "id": "run-native-sql",
+      "prompt": "Insert an item and read it back with a command and SQL text. Do not use a repository.",
+      "expected_output": "CreateCommand, Execute INSERT INTO items with Parameters, ExecuteReader SELECT id, name FROM items WHERE id = $id, MetaDataRowTypeConverter Convert. Includes Item. No repository.",
+      "files": [],
+      "assertions": [
+        { "id": "create-command", "text": "Creates a command from a connection" },
+        { "id": "insert-sql", "text": "Executes INSERT INTO items with bound parameters" },
+        { "id": "select-sql", "text": "ExecuteReader selects id and name from items by id" },
+        { "id": "convert-item", "text": "Converts the reader row with MetaDataRowTypeConverter and includes the Item type" },
+        { "id": "no-repository", "text": "Does not construct a repository" }
+      ]
+    },
+    {
+      "id": "map-a-flat-row-into-nested-contacts",
+      "prompt": "Read users with a command, convert each row, then build a contacts list from contact_name1 and contact_name2.",
+      "expected_output": "ExecuteReader of those columns, MetaDataRowTypeConverter User, TransformMapper that fills contacts and reverses it. Read is mapper.Map(converter.Convert(row)). Includes User and User.Contact. Converter does not build the list.",
+      "files": [],
+      "assertions": [
+        { "id": "execute-reader", "text": "Reads users with ExecuteReader and the contact_name columns" },
+        { "id": "convert-then-map", "text": "Maps after convert: mapper.Map(converter.Convert(row))" },
+        { "id": "transform-mapper", "text": "Uses TransformMapper to fill contacts from contact_name1 and contact_name2 and reverse them" },
+        { "id": "user-and-contact", "text": "Defines User and a nested Contact type" },
+        { "id": "converter-does-not-nest", "text": "The converter does not build the contacts list" }
+      ]
+    },
+    {
+      "id": "select-a-contact-and-its-type",
+      "prompt": "Write a SelectStatement for Contact.FirstName and ContactType.Name, inner-joining Contact to ContactType on Contact.ContactTypeId = ContactType.Id.",
+      "expected_output": "SelectStatement Table Contact, Fields Contact.FirstName AS FirstName and ContactType.Name AS ContactTypeName, Join.Inner ContactType on Contact.ContactTypeId and ContactType.Id. No table or column names.",
+      "files": [],
+      "assertions": [
+        { "id": "entity-table", "text": "SelectStatement table is Contact" },
+        { "id": "entity-fields", "text": "Fields are Contact.FirstName and ContactType.Name with PascalCase aliases" },
+        { "id": "entity-join", "text": "Inner join ContactType on Contact.ContactTypeId and ContactType.Id" },
+        { "id": "no-datasource-names", "text": "Does not put table or column names in the statement" }
+      ]
+    },
+    {
+      "id": "map-a-legacy-table-and-a-unique-key",
+      "prompt": "The type stays user, but the stored table is OldUsersTbl. username is unique and stored as LoginNm, id as UsrID, and is_enabled as ActvFlg. Add datasource.yaml mappings and generate.",
+      "expected_output": "types.yaml unchanged; datasource.yaml mapping OldUsersTbl, UsrID, LoginNm with is_unique, ActvFlg; generate all --dialect typescript; CRUD still uses username.",
+      "files": [],
+      "assertions": [
+        { "id": "types-yaml-unchanged", "text": "Keeps types.yaml as user with id, username, and is_enabled" },
+        { "id": "table-mapping", "text": "datasource.yaml maps user to OldUsersTbl" },
+        { "id": "column-mappings", "text": "Maps id to UsrID, username to LoginNm, is_enabled to ActvFlg" },
+        { "id": "unique-username", "text": "Sets is_unique on username" },
+        { "id": "generate-command", "text": "Runs npx @datasources/cli generate all --dialect typescript" },
+        { "id": "crud-uses-username", "text": "Create, read, update, and delete still use Username / username" }
+      ]
+    }
+  ]
+}
