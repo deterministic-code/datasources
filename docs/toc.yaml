@@ -4,9 +4,6 @@ pages:
     title: Introduction
   - path: skill.md
     title: Skill
-  - path: skill-queries.md
-    title: Example queries
-    parent: Skill
   - path: quickstart.md
     title: Quick Start
   - path: features.md
@@ -265,4 +262,7 @@ pages:
   - path: writing-providers.md
     title: Driver
     group: Writing Providers
+  - path: skill-queries.md
+    title: Testing Skills
+    group: Advanced
 
