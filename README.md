@@ -357,8 +357,6 @@ See [Type Converters](docs/sections/type-converters.md).
 
 ## Using the skill
 
-## Example prompts
-
 ### Run setup and add providers
 
 **Prompt**
@@ -374,6 +372,8 @@ npx @datasources/cli setup --yes --ecosystem csharp
 npx @datasources/cli add sqlite postgres --ecosystem csharp
 npx @datasources/cli add sqlite postgres --ecosystem rust
 ```
+
+## Example prompts
 
 ### Generate a user repository
 
