@@ -18,7 +18,7 @@ const TOPICS = [
   {
     file: "downloading.md",
     title: "Downloading",
-    sources: [{ path: "quickstart.md", sections: ["Installation"] }],
+    sources: [{ path: "quickstart.md", sections: ["Installation from source"] }],
     extra: "packages",
   },
   {
@@ -86,7 +86,7 @@ const TOPICS = [
 
 const HASH_ROUTES = [
   { path: "cli.md", hash: "generate", file: "generation.md" },
-  { path: "quickstart.md", hash: "installation", file: "downloading.md" },
+  { path: "quickstart.md", hash: "installation-from-source", file: "downloading.md" },
 ];
 
 const TOPICS_LINKS = [

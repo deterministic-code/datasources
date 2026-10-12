@@ -8,6 +8,7 @@ import ExampleOutputs from "./ExampleOutputs.vue";
 import ExampleSchema from "./ExampleSchema.vue";
 import ExampleSource from "./ExampleSource.vue";
 import FontSize from "./FontSize.vue";
+import SkillPrompt from "./SkillPrompt.vue";
 import { loadFontSize } from "./fontSizeState.js";
 import "./custom.css";
 
@@ -27,5 +28,6 @@ export default {
     app.component("ExampleOutputs", ExampleOutputs);
     app.component("ExampleSchema", ExampleSchema);
     app.component("ExampleSource", ExampleSource);
+    app.component("SkillPrompt", SkillPrompt);
   },
 };

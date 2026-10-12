@@ -2,10 +2,10 @@ title: Datasources
 pages:
   - path: introduction.md
     title: Introduction
-  - path: skill.md
-    title: Skill
   - path: quickstart.md
     title: Quick Start
+  - path: skill.md
+    title: Using the skill
   - path: features.md
     title: Features
   - path: repository-generation.md

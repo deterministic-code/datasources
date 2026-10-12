@@ -44,7 +44,9 @@ test("repo-root SKILL.md links into skills/", () => {
 
 test("skill query headings match evals.json", () => {
   const page = readFileSync(join(root, "docs/skill.md"), "utf8");
-  const headings = [...page.matchAll(/^## (.+)$/gm)].map((match) => slug(match[1]));
+  const headings = [...page.matchAll(/^## (.+)$/gm)].map((match) =>
+    slug(match[1].replace(/^\d+\.\s+/, "")),
+  );
   const evals = JSON.parse(readFileSync(join(root, "evals/evals.json"), "utf8")).evals;
   const ids = evals.map((item) => item.id);
   for (const heading of headings) assert.ok(ids.includes(heading), `missing eval ${heading}`);
