@@ -6,7 +6,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 | Feature | C# | Rust | TypeScript |
 | --- | :---: | :---: | :---: |
-| [Type and Repository Generators](./cli.md#generate) | ✅ | ✅ | ✅ |
+| [Repository Generation](./repository-generation.md) | ✅ | ✅ | ✅ |
 | [Datasource Factory](./sections/datasource-factory.md) | ✅ | ✅ | ✅ |
 | [Datasource](./sections/datasource.md) | ✅ | ✅ | ✅ |
 | [Mappers](./sections/mappers.md) | ✅ | ✅ | ✅ |

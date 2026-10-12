@@ -1,4 +1,4 @@
-import { Datasource, Native, Operator, Where, type RepositoryFactory } from "@datasources/core";
+import { Datasource, Native, Operator, Where } from "@datasources/core";
 import { SqliteDriver } from "@datasources/sqlite";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -38,13 +38,10 @@ describe("generate-and-register", () => {
         ],
         { encoding: "utf8", cwd: join(repo, "cli") },
       );
-      const { register } = (await import(
-        pathToFileURL(join(out, "typescript/repositories/repository-registry.ts")).href
-      )) as { register: (factory: RepositoryFactory) => void };
+      await import(pathToFileURL(join(out, "typescript/repositories/repository-registry.ts")).href);
       const ds = new Datasource("sqlite", new SqliteDriver(), {
         DATASOURCE_URL: "sqlite:///:memory:",
       }) as Datasource & { contacts: ContactRepo };
-      register(ds.repositories);
       const command = await ds.createCommand();
       await command.executeNative(new Native("PRAGMA foreign_keys = ON"));
       for (const sql of statements(readFileSync(join(out, "sql/sqlite/migrations/0001_initial_up.sql"), "utf8")))

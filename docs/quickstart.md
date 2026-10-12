@@ -61,18 +61,17 @@ npx @datasources/cli generate all --dialect typescript
 ```
 :::
 
-See [Generate](./cli.md#generate).
+See [Generate](./cli.md#generate). Walkthroughs for a User, an enriched users-and-roles spec, and a legacy table mapping are on [Repository Generation](./repository-generation.md).
 
 ## Dynamic registered datasource
 
-Call the generated register, then use the plural name. {{Items|items|items()}} is the CRUD repository for `Item`. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
+Import the generated registry so {{Datasource.Default|Datasource.default|default()}} binds {{Items|items|items()}}. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
 
 ::: dialects
 ```csharp
 using Backend.Types.Datasource;
 
 dynamic ds = Datasource.Default;
-RepositoryRegistry.Register(ds.Repositories);
 
 Item created = await ds.Items.Create(new Item { Name = "Ada" });
 Item? loaded = await ds.Items.ReadSingle();
@@ -85,10 +84,9 @@ Response deleted = await ds.Items.Delete(created);
 mod repositories;
 
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::{register, Repositories};
+use repositories::repository_registry::Repositories;
 
 let ds = default()?;
-register(ds.repositories());
 let items = ds.as_ref().items();
 let mut created = Row::new();
 created.insert("name".into(), Value::from("Ada"));
@@ -100,10 +98,9 @@ let deleted: Response = items.delete(&created, None).await?;
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
-import { register } from "./generated/typescript/repositories/repository-registry.ts";
+import "./generated/typescript/repositories/repository-registry.ts";
 
 const ds = Datasource.default as Datasource;
-register(ds.repositories);
 
 const created = await ds.items.create({ id: 0, name: "Ada" });
 const loaded = await ds.items.readSingle();

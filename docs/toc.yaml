@@ -6,6 +6,8 @@ pages:
     title: Quick Start
   - path: features.md
     title: Features
+  - path: repository-generation.md
+    title: Repository Generation
   - path: drivers.md
     title: Languages and Datasource Providers
   - path: examples.md

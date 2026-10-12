@@ -1,4 +1,4 @@
-import type { RepositoryFactory } from "@datasources/core";
+import { RepositoryFactory } from "@datasources/core";
 import { AddressRepository } from "./address-repository.ts";
 import { AddressTypeRepository } from "./address-type-repository.ts";
 import { ContactRepository } from "./contact-repository.ts";
@@ -26,6 +26,7 @@ export const register = (factory: RepositoryFactory): void => {
   factory.register("Phone", "phones", (connection) => new PhoneRepository(connection), (connection) => PhoneRepository.createReadonly(connection));
   factory.register("PhoneType", "phoneTypes", (connection) => new PhoneTypeRepository(connection), (connection) => PhoneTypeRepository.createReadonly(connection));
 };
+RepositoryFactory.bind(register);
 
 declare module "@datasources/core" {
   interface Datasource {
