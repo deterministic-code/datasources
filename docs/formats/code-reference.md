@@ -1,6 +1,6 @@
 # Code reference format
 
-Authoring contract for Code Reference pages. Pages live under `docs/sections/` and generate both the VitePress site and `README.md`. Examples are copied from named tests into `docs/examples/`; keep this structure parseable.
+Authoring contract for Code Reference pages. Pages live under `docs/sections/` and generate the VitePress site. The GitHub README inlines the intro pages and links here. Examples are copied from named tests into `docs/examples/`; keep this structure parseable.
 
 Not published in the sidebar (`toc.yaml`).
 
