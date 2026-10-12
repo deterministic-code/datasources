@@ -199,12 +199,16 @@ describe("generate", () => {
     expect(textOf(rust, "contact_group_repository.rs")).toContain("add_linked");
     expect(textOf(rust, "contact_group_repository.rs")).toContain("pub struct ContactGroupRepository");
     expect(textOf(rust, "mod.rs")).toContain("pub mod contact_repository;");
+    expect(textOf(csharp, "RepositoryRegistry.cs")).toContain("ModuleInitializer");
+    expect(textOf(csharp, "RepositoryRegistry.cs")).toContain("RepositoryFactory.Bind(Register)");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
+    expect(textOf(typescript, "repository-registry.ts")).toContain("RepositoryFactory.bind(register)");
     expect(textOf(typescript, "repository-registry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repository-registry.ts")).toContain('"ContactGroup", "contactGroups"');
     expect(textOf(typescript, "contact-repository.ts")).toContain("createReadonly");
+    expect(textOf(rust, "repository_registry.rs")).toContain("RepositoryFactory::bind(register)");
     expect(textOf(rust, "repository_registry.rs")).toContain('"Contact"');
     expect(textOf(rust, "repository_registry.rs")).toContain('"contacts"');
     expect(textOf(rust, "repository_registry.rs")).toContain('"contact_groups"');

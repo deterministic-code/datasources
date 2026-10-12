@@ -2,9 +2,21 @@ namespace Datasources;
 
 public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFactory
 {
+    static readonly List<Action<RepositoryFactory>> binders = [];
+    static readonly object gate = new();
     readonly Dictionary<Type, IRepository> readonlyByType = new();
     readonly Dictionary<Type, IRepository> crudByType = new();
     readonly Dictionary<string, Named> byName = new(StringComparer.Ordinal);
+
+    public static void Bind(Action<RepositoryFactory> register)
+    {
+        lock (gate) binders.Add(register);
+    }
+
+    public static void ResetBinders()
+    {
+        lock (gate) binders.Clear();
+    }
 
     public void Register(IRepository repository) => Put(repository, crud: true);
 
@@ -26,18 +38,33 @@ public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFacto
     IReadonlyRepository<T> IRepositoryFactory.Create<T>() =>
         Get<IReadonlyRepository<T>>(readonlyByType, typeof(T));
 
-    public TRepository Create<TRepository>(string name, IConnection connection) where TRepository : class =>
-        Lookup(name).Create(connection) as TRepository
-        ?? throw new InvalidCastException($"Repository \"{name}\" is not {typeof(TRepository).Name}");
+    public TRepository Create<TRepository>(string name, IConnection connection) where TRepository : class
+    {
+        ApplyBound();
+        return Lookup(name).Create(connection) as TRepository
+            ?? throw new InvalidCastException($"Repository \"{name}\" is not {typeof(TRepository).Name}");
+    }
 
-    public TRepository CreateReadonly<TRepository>(string name, IConnection connection) where TRepository : class =>
-        Lookup(name).CreateReadonly(connection) as TRepository
-        ?? throw new InvalidCastException($"Repository \"{name}\" is not {typeof(TRepository).Name}");
+    public TRepository CreateReadonly<TRepository>(string name, IConnection connection) where TRepository : class
+    {
+        ApplyBound();
+        return Lookup(name).CreateReadonly(connection) as TRepository
+            ?? throw new InvalidCastException($"Repository \"{name}\" is not {typeof(TRepository).Name}");
+    }
 
     public RepositoryAccess Access(string name, IConnection connection)
     {
+        ApplyBound();
         var named = Lookup(name);
         return new RepositoryAccess(named.Create, named.CreateReadonly, connection);
+    }
+
+    void ApplyBound()
+    {
+        Action<RepositoryFactory>[] snapshot;
+        lock (gate) snapshot = [.. binders];
+        foreach (var register in snapshot)
+            register(this);
     }
 
     void Put(IRepository repository, bool crud)

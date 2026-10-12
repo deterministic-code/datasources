@@ -13,10 +13,24 @@ type Named = {
   createReadonly: (connection: IConnection) => IReadonlyRepository;
 };
 
+const binders: Array<(factory: RepositoryFactory) => void> = [];
+
 export class RepositoryFactory implements ICRUDRepositoryFactory {
   readonly #readonlyByType = new Map<Constructable<unknown>, IRepository>();
   readonly #crudByType = new Map<Constructable<unknown>, IRepository>();
   readonly #byName = new Map<string, Named>();
+
+  static bind = (register: (factory: RepositoryFactory) => void): void => {
+    binders.push(register);
+  };
+
+  static resetBinders = (): void => {
+    binders.length = 0;
+  };
+
+  #applyBound = (): void => {
+    for (const register of binders) register(this);
+  };
 
   register(repository: IRepository): void;
   register(
@@ -48,18 +62,25 @@ export class RepositoryFactory implements ICRUDRepositoryFactory {
   ): ICRUDRepository {
     if (typeof typeOrName !== "string")
       return this.#get(this.#crudByType, typeOrName) as ICRUDRepository;
+    this.#applyBound();
     return this.#lookup(typeOrName).create(connection as IConnection);
   }
 
-  createReadonly = (name: string, connection: IConnection): IReadonlyRepository =>
-    this.#lookup(name).createReadonly(connection);
+  createReadonly = (name: string, connection: IConnection): IReadonlyRepository => {
+    this.#applyBound();
+    return this.#lookup(name).createReadonly(connection);
+  };
 
   access = (name: string, connection: IConnection): RepositoryAccess => {
+    this.#applyBound();
     const named = this.#lookup(name);
     return new RepositoryAccess(named.create, named.createReadonly, connection);
   };
 
-  has = (name: string): boolean => this.#byName.has(name);
+  has = (name: string): boolean => {
+    this.#applyBound();
+    return this.#byName.has(name);
+  };
 
   readonly asReadonly: IRepositoryFactory = {
     register: (repository) => this.#put(repository, false),

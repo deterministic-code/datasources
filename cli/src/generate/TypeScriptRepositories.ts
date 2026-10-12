@@ -53,7 +53,7 @@ export const typescriptRepositories = (models: RepositoryModel[]): GenerateEntry
     ...files,
     content(
       "repository-registry.ts",
-      `import type { RepositoryFactory } from "@datasources/core";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\n\ndeclare module "@datasources/core" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
+      `import { RepositoryFactory } from "@datasources/core";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\nRepositoryFactory.bind(register);\n\ndeclare module "@datasources/core" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
     ),
   ];
 };

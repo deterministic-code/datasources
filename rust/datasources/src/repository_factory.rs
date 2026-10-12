@@ -7,6 +7,13 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+type Binder = Arc<dyn Fn(&RepositoryFactory) + Send + Sync>;
+
+fn binders() -> &'static Mutex<Vec<Binder>> {
+    static BINDERS: Mutex<Vec<Binder>> = Mutex::new(Vec::new());
+    &BINDERS
+}
+
 struct Named {
     create: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn ICRUDRepository> + Send + Sync>,
     create_readonly: Arc<dyn Fn(Arc<dyn Connection>) -> Arc<dyn IReadonlyRepository> + Send + Sync>,
@@ -47,6 +54,24 @@ impl RepositoryFactory {
                 crud: HashMap::new(),
                 named: HashMap::new(),
             })),
+        }
+    }
+
+    pub fn bind(register: impl Fn(&RepositoryFactory) + Send + Sync + 'static) {
+        binders()
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(Arc::new(register));
+    }
+
+    pub fn reset_binders() {
+        binders().lock().unwrap_or_else(|e| e.into_inner()).clear();
+    }
+
+    fn apply_bound(&self) {
+        let snapshot = binders().lock().unwrap_or_else(|e| e.into_inner()).clone();
+        for register in snapshot {
+            register(self);
         }
     }
 
@@ -91,6 +116,7 @@ impl RepositoryFactory {
         name: &str,
         connection: Arc<dyn Connection>,
     ) -> Result<Arc<dyn ICRUDRepository>> {
+        self.apply_bound();
         let create = {
             let maps = self.lock();
             maps.named.get(name).map(|named| Arc::clone(&named.create))
@@ -103,6 +129,7 @@ impl RepositoryFactory {
         name: &str,
         connection: Arc<dyn Connection>,
     ) -> Result<Arc<dyn IReadonlyRepository>> {
+        self.apply_bound();
         let create = {
             let maps = self.lock();
             maps.named
@@ -113,6 +140,7 @@ impl RepositoryFactory {
     }
 
     pub fn access(&self, name: &str, connection: Arc<dyn Connection>) -> RepositoryAccess {
+        self.apply_bound();
         RepositoryAccess::new(self.clone(), name, connection)
     }
 
@@ -236,6 +264,35 @@ mod tests {
             .create_readonly_named("Contact", connection)
             .unwrap();
         assert_eq!(readonly.entity_type(), TypeId::of::<Item>());
+    }
+
+    #[test]
+    fn bind_registers_on_access() {
+        RepositoryFactory::reset_binders();
+        let crud = Arc::new(StubRepository::typed::<Item>("crud"));
+        let read = as_readonly(Arc::new(StubRepository::typed::<Item>("read")));
+        RepositoryFactory::bind(move |factory| {
+            factory.register_named(
+                "Contact",
+                "contacts",
+                {
+                    let crud = Arc::clone(&crud);
+                    move |_| Arc::clone(&crud) as Arc<dyn ICRUDRepository>
+                },
+                {
+                    let read = Arc::clone(&read);
+                    move |_| Arc::clone(&read)
+                },
+            );
+        });
+        let factory = RepositoryFactory::new();
+        let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
+        let created = factory
+            .access("contacts", Arc::clone(&connection))
+            .create()
+            .unwrap();
+        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        RepositoryFactory::reset_binders();
     }
 
     #[test]

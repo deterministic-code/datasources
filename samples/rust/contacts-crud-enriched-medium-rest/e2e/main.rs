@@ -9,7 +9,7 @@ use datasources::{
     BuiltDatasource, Datasource, ICRUDRepository, IReadonlyRepository, Native, Operator, Row,
     Value, Where,
 };
-use repositories::repository_registry::{register, Repositories};
+use repositories::repository_registry::Repositories;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -22,7 +22,6 @@ async fn main() {
         Arc::new(datasources_sqlite::SqliteDriver),
         Some(options),
     );
-    register(ds.repositories());
     let command = ds.create_command(None).await.expect("command");
     command
         .execute_native(&Native::new("PRAGMA foreign_keys = ON"), None)

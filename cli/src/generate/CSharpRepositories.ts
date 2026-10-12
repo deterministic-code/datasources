@@ -62,7 +62,7 @@ export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] =
     ...files,
     content(
       "RepositoryRegistry.cs",
-      `using Datasources;\n\npublic static class RepositoryRegistry\n{\n    public static void Register(RepositoryFactory factory)\n    {\n${register.join("\n")}\n    }\n}\n`,
+      `using System.Runtime.CompilerServices;\nusing Datasources;\n\npublic static class RepositoryRegistry\n{\n    [ModuleInitializer]\n    internal static void Bind() => RepositoryFactory.Bind(Register);\n\n    public static void Register(RepositoryFactory factory)\n    {\n${register.join("\n")}\n    }\n}\n`,
     ),
   ];
 };

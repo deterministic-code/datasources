@@ -95,7 +95,7 @@ See [Generate](#generate). Walkthroughs for a User, an enriched users-and-roles 
 
 ### Dynamic registered datasource
 
-Call the generated register, then use the plural name. `Items` / `items` / `items()` is the CRUD repository for `Item`. `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity.
+Import the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds `Items` / `items` / `items()`. `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity.
 
 ##### C#
 
@@ -103,7 +103,6 @@ Call the generated register, then use the plural name. `Items` / `items` / `item
 using Backend.Types.Datasource;
 
 dynamic ds = Datasource.Default;
-RepositoryRegistry.Register(ds.Repositories);
 
 Item created = await ds.Items.Create(new Item { Name = "Ada" });
 Item? loaded = await ds.Items.ReadSingle();
@@ -119,10 +118,9 @@ Response deleted = await ds.Items.Delete(created);
 mod repositories;
 
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::{register, Repositories};
+use repositories::repository_registry::Repositories;
 
 let ds = default()?;
-register(ds.repositories());
 let items = ds.as_ref().items();
 let mut created = Row::new();
 created.insert("name".into(), Value::from("Ada"));
@@ -137,10 +135,9 @@ let deleted: Response = items.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import { register } from "./generated/typescript/repositories/repository-registry.ts";
+import "./generated/typescript/repositories/repository-registry.ts";
 
 const ds = Datasource.default as Datasource;
-register(ds.repositories);
 
 const created = await ds.items.create({ id: 0, name: "Ada" });
 const loaded = await ds.items.readSingle();
@@ -367,7 +364,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 ## Repository Generation
 
-`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. Call the generated `Register` / `register` / `register` on `Repositories` / `repositories` / `repositories()`. A registered plural name is that CRUD repository.
+`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. Import the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds each plural name.
 
 See [Generate](#generate) for flags and output paths.
 
@@ -420,7 +417,6 @@ npx @datasources/cli generate all --dialect typescript
 using Backend.Types.Datasource;
 
 dynamic ds = Datasource.Default;
-RepositoryRegistry.Register(ds.Repositories);
 
 User created = await ds.Users.Create(new User { Username = "ada", IsEnabled = true });
 User? loaded = await ds.Users.ReadSingle();
@@ -436,10 +432,9 @@ Response deleted = await ds.Users.Delete(created);
 mod repositories;
 
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::{register, Repositories};
+use repositories::repository_registry::Repositories;
 
 let ds = default()?;
-register(ds.repositories());
 let users = ds.as_ref().users();
 let mut created = Row::new();
 created.insert("username".into(), Value::from("ada"));
@@ -455,10 +450,9 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import { register } from "./generated/typescript/repositories/repository-registry.ts";
+import "./generated/typescript/repositories/repository-registry.ts";
 
 const ds = Datasource.default as Datasource;
-register(ds.repositories);
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();
@@ -536,7 +530,6 @@ Create a role, then a user that lists that role. `Create` / `create` / `create` 
 using Backend.Types.Datasource;
 
 dynamic ds = Datasource.Default;
-RepositoryRegistry.Register(ds.Repositories);
 
 Role admin = await ds.Roles.Create(new Role { Name = "admin" });
 User created = await ds.Users.Create(new User
@@ -556,10 +549,9 @@ Response deleted = await ds.Users.Delete(created);
 mod repositories;
 
 use datasources::{default, encode_rows, Response, Row, Value};
-use repositories::repository_registry::{register, Repositories};
+use repositories::repository_registry::Repositories;
 
 let ds = default()?;
-register(ds.repositories());
 let roles = ds.as_ref().roles();
 let mut admin = Row::new();
 admin.insert("name".into(), Value::from("admin"));
@@ -578,10 +570,9 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import { register } from "./generated/typescript/repositories/repository-registry.ts";
+import "./generated/typescript/repositories/repository-registry.ts";
 
 const ds = Datasource.default as Datasource;
-register(ds.repositories);
 
 const admin = await ds.roles.create({ id: 0, name: "admin" });
 const created = await ds.users.create({
@@ -661,7 +652,6 @@ The generated repository maps those stored names. The CRUD call still uses `User
 using Backend.Types.Datasource;
 
 dynamic ds = Datasource.Default;
-RepositoryRegistry.Register(ds.Repositories);
 
 User created = await ds.Users.Create(new User { Username = "ada", IsEnabled = true });
 User? loaded = await ds.Users.ReadSingle();
@@ -677,10 +667,9 @@ Response deleted = await ds.Users.Delete(created);
 mod repositories;
 
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::{register, Repositories};
+use repositories::repository_registry::Repositories;
 
 let ds = default()?;
-register(ds.repositories());
 let users = ds.as_ref().users();
 let mut created = Row::new();
 created.insert("username".into(), Value::from("ada"));
@@ -696,10 +685,9 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import { register } from "./generated/typescript/repositories/repository-registry.ts";
+import "./generated/typescript/repositories/repository-registry.ts";
 
 const ds = Datasource.default as Datasource;
-register(ds.repositories);
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();
@@ -2717,7 +2705,7 @@ Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalo
 
 `Reset` / `reset` / `reset` clears the registry. Use it in tests.
 
-After `generate repositories`, call the generated `Register` on `Repositories` / `repositories` / `repositories()`. A registered plural name is that CRUD repository. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?` / `Contact | undefined` / `Option<Row>`). `Create` / `create` / `create` returns that same entity. `Update` and `Delete` return `Response`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
+After `generate repositories`, import the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds each plural name. `ReadSingle` / `readSingle` / `read_single` returns the entity (`Contact?` / `Contact | undefined` / `Option<Row>`). `Create` / `create` / `create` returns that same entity. `Update` and `Delete` return `Response`. `CreateRepository` / `createRepository` / `create_repository_by_name` takes the entity or plural name as a string.
 
 See [DatasourceFactory](#datasource-factory) for the factory contract, and [CLI](#command-line-cli) for `setup` and adding providers.
 
@@ -13484,7 +13472,7 @@ See [Datasource](#datasource) for `CreateRepository` / `createRepository` / `cre
     var created = factory.Create<Item>();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L184-L188)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L212-L216)
 
 ```rust
 let factory = RepositoryFactory::new();

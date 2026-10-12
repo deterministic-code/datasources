@@ -50,6 +50,25 @@ public class RepositoryFactoryTests
     }
 
     [Fact]
+    public void BindRegistersOnAccess()
+    {
+        RepositoryFactory.ResetBinders();
+        var connection = new StubConnection("memory");
+        var crud = new StubRepository<Item>("crud", connection);
+        var read = new StubRepository<Item>("read", connection);
+        RepositoryFactory.Bind(factory => factory.Register("Contact", "Contacts", _ => crud, _ => read));
+        try
+        {
+            var factory = new RepositoryFactory();
+            Assert.Same(crud, factory.Access("Contacts", connection).Create());
+        }
+        finally
+        {
+            RepositoryFactory.ResetBinders();
+        }
+    }
+
+    [Fact]
     public void MissingThrows()
     {
         var factory = new RepositoryFactory();

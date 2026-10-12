@@ -1,5 +1,5 @@
 use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
@@ -76,6 +76,11 @@ pub fn register(factory: &RepositoryFactory) {
     );
 }
 
+fn bind() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| RepositoryFactory::bind(register));
+}
+
 pub trait Repositories {
     fn addresses(&self) -> Arc<dyn ICRUDRepository>;
     fn address_types(&self) -> Arc<dyn ICRUDRepository>;
@@ -93,39 +98,51 @@ pub trait Repositories {
 
 impl Repositories for dyn Datasource {
     fn addresses(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("addresses", None).expect("addresses")
     }
     fn address_types(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("address_types", None).expect("address_types")
     }
     fn contacts(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contacts", None).expect("contacts")
     }
     fn contact_change_logs(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contact_change_logs", None).expect("contact_change_logs")
     }
     fn contact_groups(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contact_groups", None).expect("contact_groups")
     }
     fn contact_group_members(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contact_group_members", None).expect("contact_group_members")
     }
     fn contact_preferences(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contact_preferences", None).expect("contact_preferences")
     }
     fn contact_settings(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contact_settings", None).expect("contact_settings")
     }
     fn contact_sources(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("contact_sources", None).expect("contact_sources")
     }
     fn legacy_contacts(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("legacy_contacts", None).expect("legacy_contacts")
     }
     fn phones(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("phones", None).expect("phones")
     }
     fn phone_types(&self) -> Arc<dyn ICRUDRepository> {
+        bind();
         self.create_repository_by_name("phone_types", None).expect("phone_types")
     }
 }
