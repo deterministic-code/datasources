@@ -47,7 +47,7 @@ const TOPICS = [
     file: "type-converters.md",
     sources: [{ path: "sections/type-converters.md" }, { path: "sections/metadata-row-type-converter.md" }],
   },
-  { file: "command.md", sources: [{ path: "sections/command.md" }] },
+  { file: "command.md", sources: [{ path: "sections/command.md" }, { path: "sections/native.md" }] },
   { file: "reader.md", sources: [{ path: "sections/reader.md" }] },
   { file: "repositories.md", sources: [{ path: "sections/repository.md" }] },
   { file: "readonly-repository.md", sources: [{ path: "sections/readonly-repository.md" }] },
@@ -165,6 +165,8 @@ const dropHtml = (markdown) =>
   outsideFences(markdown, (text) =>
     text
       .replace(/<DialectSelector\s*\/>\n*/g, "")
+      .replace(/<SkillPrompt\b[^>]*\/>\n*/g, "")
+      .replace(/<SkillPrompt\b[^>]*>[\s\S]*?<\/SkillPrompt>\n*/g, "")
       .replace(/<\/?(?:div|a|img|span)[^>]*>\n*/g, ""),
   );
 

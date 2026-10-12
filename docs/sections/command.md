@@ -70,7 +70,7 @@ Runs provider text without parsing it.
 executeReaderNative(text: Native, parameters?: Parameter[]): Promise<IReader<Cells>>
 ```
 
-- `text` — [Native](#native) engine text
+- `text` — [Native](./native.md) engine text
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Promise<[IReader](./reader.md)<Cells>>`
@@ -83,7 +83,7 @@ Runs provider text without parsing it.
 executeNative(text: Native, parameters?: Parameter[]): Promise<Response>
 ```
 
-- `text` — [Native](#native) engine text
+- `text` — [Native](./native.md) engine text
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Promise<[Response](#response)>`
@@ -115,36 +115,6 @@ function executeReader(command: ICommand, statement: IStatement, parameters?: Pa
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Promise<[IReader](./reader.md)<Cells>>`
-
-#### Native
-
-```typescript
-class Native
-```
-
-**Constructor**
-
-##### Native(text)
-
-Engine text. `n(text)` builds the same value.
-
-```typescript
-constructor(text: string)
-```
-
-- `text` — provider command text
-
-**Returns** [Native](#native)
-
-**Properties**
-
-##### text
-
-Provider command text.
-
-```typescript
-readonly text: string
-```
 
 #### ICommandMiddleware
 
@@ -339,7 +309,7 @@ Runs provider text without parsing it.
 Task<IReader<Row>> ExecuteReader(Native text, IReadOnlyList<Parameter>? parameters = null)
 ```
 
-- `text` — [Native](#native) engine text
+- `text` — [Native](./native.md) engine text
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Task<[IReader](./reader.md)<Row>>`
@@ -352,14 +322,14 @@ Runs provider text without parsing it.
 Task<Response> Execute(Native text, IReadOnlyList<Parameter>? parameters = null)
 ```
 
-- `text` — [Native](#native) engine text
+- `text` — [Native](./native.md) engine text
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Task<[Response](#response)>`
 
 ##### ExecuteReader(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
+Runs the statement. The default renders [Native](./native.md) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 ```csharp
 Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
@@ -372,7 +342,7 @@ Task<IReader<Row>> ExecuteReader(IStatement statement, IReadOnlyList<Parameter>?
 
 ##### Execute(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
+Runs the statement. The default renders [Native](./native.md) from `DefaultStatementTextRenderer.Instance.Render(statement)`.
 
 ```csharp
 Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameters = null)
@@ -382,50 +352,6 @@ Task<Response> Execute(IStatement statement, IReadOnlyList<Parameter>? parameter
 - `parameters` — optional [Parameter](#parameter) list
 
 **Returns** `Task<[Response](#response)>`
-
-#### Native
-
-```csharp
-public readonly record struct Native(string Text)
-```
-
-**Constructor**
-
-##### Native(Text)
-
-Engine text. [N](#native-n-text) builds the same value.
-
-```csharp
-Native(string Text)
-```
-
-- `Text` — provider command text
-
-**Returns** [Native](#native)
-
-**Properties**
-
-##### Text
-
-Provider command text.
-
-```csharp
-string Text { get; }
-```
-
-**Methods**
-
-##### N(text)
-
-Builds a [Native](#native).
-
-```csharp
-static Native N(string text)
-```
-
-- `text` — provider command text
-
-**Returns** [Native](#native)
 
 #### ICommandMiddleware
 
@@ -623,7 +549,7 @@ Runs provider text without parsing it.
 async fn execute_reader_native(&self, text: &Native, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
 ```
 
-- `text` — [Native](#native) engine text
+- `text` — [Native](./native.md) engine text
 - `parameters` — optional [Parameter](#parameter) slice
 
 **Returns** `Result<Box<dyn `[Reader](./reader.md)`>>`
@@ -636,14 +562,14 @@ Runs provider text without parsing it.
 async fn execute_native(&self, text: &Native, parameters: Option<&[Parameter]>) -> Result<Response>
 ```
 
-- `text` — [Native](#native) engine text
+- `text` — [Native](./native.md) engine text
 - `parameters` — optional [Parameter](#parameter) slice
 
 **Returns** `Result<[Response](#response)>`
 
 ##### execute_reader_statement(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer::instance().render(statement)`.
+Runs the statement. The default renders [Native](./native.md) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 ```rust
 async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Box<dyn Reader>>
@@ -656,7 +582,7 @@ async fn execute_reader_statement(&self, statement: &dyn Statement, parameters: 
 
 ##### execute_statement(statement, parameters)
 
-Runs the statement. The default renders [Native](#native) from `DefaultStatementTextRenderer::instance().render(statement)`.
+Runs the statement. The default renders [Native](./native.md) from `DefaultStatementTextRenderer::instance().render(statement)`.
 
 ```rust
 async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<&[Parameter]>) -> Result<Response>
@@ -666,48 +592,6 @@ async fn execute_statement(&self, statement: &dyn Statement, parameters: Option<
 - `parameters` — optional [Parameter](#parameter) slice
 
 **Returns** `Result<[Response](#response)>`
-
-#### Native
-
-```rust
-pub struct Native(String)
-```
-
-**Methods**
-
-##### new(text)
-
-Engine text. [n](#n-text) builds the same value.
-
-```rust
-pub fn new(text: impl Into<String>) -> Self
-```
-
-- `text` — provider command text
-
-**Returns** [Native](#native)
-
-##### text()
-
-Provider command text.
-
-```rust
-pub fn text(&self) -> &str
-```
-
-**Returns** `&str`
-
-##### n(text)
-
-Builds a [Native](#native).
-
-```rust
-pub fn n(text: impl Into<String>) -> Native
-```
-
-- `text` — provider command text
-
-**Returns** [Native](#native)
 
 #### CommandMiddleware
 

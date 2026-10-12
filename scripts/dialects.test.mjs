@@ -165,6 +165,19 @@ test("a marker slot may contain an escaped pipe", () => {
   assert.match(readme, /`Create` \/ `create` \/ `create`/);
 });
 
+test("a skill prompt becomes a textarea value and keeps backticks", () => {
+  const source = `# Using the skill
+
+::: skill-prompt
+The same \`user\` table, plus \`role\`.
+:::
+`;
+  const page = transformDialects(source, "vitepress");
+  assert.match(page, /<SkillPrompt text="The same `user` table, plus `role`\."><\/SkillPrompt>/);
+  const readme = transformDialects(source, "readme");
+  assert.match(readme, /\*\*Prompt\*\*\n\n```\nThe same `user` table, plus `role`\.\n```/);
+});
+
 test("leaves a short marker and fenced text unchanged", () => {
   const source = `# Notes
 

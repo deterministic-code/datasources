@@ -4,7 +4,9 @@
 
 ## Run setup and add providers
 
-<SkillPrompt text="Run setup and add sqlite and postgres for csharp and rust" />
+::: skill-prompt
+Run setup and add sqlite and postgres for csharp and rust
+:::
 
 **Expected**
 
@@ -16,7 +18,9 @@ npx @datasources/cli add sqlite postgres --ecosystem rust
 
 ## Generate a user repository
 
-<SkillPrompt text="Generate a user with field id: username, is_enabled in types.yaml and generate repositories for csharp" />
+::: skill-prompt
+Generate a user with field id: username, is_enabled in types.yaml and generate repositories for csharp
+:::
 
 **Expected**
 
@@ -55,7 +59,9 @@ Response deleted = await ds.Users.Delete(created);
 
 ## Generate users and roles
 
-<SkillPrompt text="The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role." />
+::: skill-prompt
+The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role.
+:::
 
 **Expected**
 
@@ -120,7 +126,9 @@ Response deleted = await ds.Users.Delete(created);
 
 ## Run native SQL
 
-<SkillPrompt text="Insert an item and read it back with a command and SQL text. Do not use a repository." />
+::: skill-prompt
+Insert an item and read it back with a command and SQL text. Do not use a repository.
+:::
 
 **Expected**
 
@@ -136,18 +144,20 @@ await using var connection = await ds.CreateConnection();
 await connection.Open();
 var command = connection.CreateCommand();
 await command.Execute(
-    "INSERT INTO items (id, name) VALUES ($id, $name)",
+    Native.N("INSERT INTO items (id, name) VALUES ($id, $name)"),
     [new Parameter("id", 1), new Parameter("name", "a")]);
 var converter = new MetaDataRowTypeConverter<Item>();
 await using var createdReader = await command.ExecuteReader(
-    "SELECT id, name FROM items WHERE id = $id",
+    Native.N("SELECT id, name FROM items WHERE id = $id"),
     [new Parameter("id", 1)]);
 var created = await createdReader.Read().Select(row => converter.Convert(row)).ToListAsync();
 ```
 
 ## Map a flat row into nested contacts
 
-<SkillPrompt text="Read users with a command, convert each row, then build a `contacts` list from `contact_name1` and `contact_name2`." />
+::: skill-prompt
+Read users with a command, convert each row, then build a `contacts` list from `contact_name1` and `contact_name2`.
+:::
 
 **Expected**
 
@@ -195,7 +205,9 @@ var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))
 
 ## Select a contact and its type
 
-<SkillPrompt text="Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-joining `Contact` to `ContactType` on `Contact.ContactTypeId` = `ContactType.Id`." />
+::: skill-prompt
+Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-joining `Contact` to `ContactType` on `Contact.ContactTypeId` = `ContactType.Id`.
+:::
 
 **Expected**
 
@@ -210,7 +222,9 @@ new SelectStatement(new()
 
 ## Map a legacy table and a unique key
 
-<SkillPrompt text="The type stays `user`, but the stored table is `OldUsersTbl`. `username` is unique and stored as `LoginNm`, `id` as `UsrID`, and `is_enabled` as `ActvFlg`. Add `datasource.yaml` mappings and generate." />
+::: skill-prompt
+The type stays `user`, but the stored table is `OldUsersTbl`. `username` is unique and stored as `LoginNm`, `id` as `UsrID`, and `is_enabled` as `ActvFlg`. Add `datasource.yaml` mappings and generate.
+:::
 
 **Expected**
 

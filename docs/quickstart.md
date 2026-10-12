@@ -22,7 +22,9 @@ cargo add datasources
 
 ## Setup
 
-<SkillPrompt text="Run setup and add sqlite and postgres for csharp and rust" />
+::: skill-prompt
+Run setup and add sqlite and postgres for csharp and rust
+:::
 
 The skill runs the CLI. `setup` writes `.env`. `add` installs provider packages. `--ecosystem` is one language per call.
 
@@ -40,7 +42,9 @@ npx @datasources/cli setup
 
 ## Generating code from specification
 
-<SkillPrompt text="Generate all types, repositories, and SQL for csharp, rust, and typescript" />
+::: skill-prompt
+Generate all types, repositories, and SQL for csharp, rust, and typescript
+:::
 
 A Types Specification is the `deterministic` directory. `types.yaml` lists each entity. Tag a type `datasource_type` when it is a table.
 
