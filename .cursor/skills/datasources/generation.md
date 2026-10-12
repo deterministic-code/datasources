@@ -22,9 +22,11 @@ When `datasource.yaml` is omitted, generate includes every `datasource_type` and
 
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
+`setup` and `generate` (for `all` or `repositories`) write a project hook so `Datasource.Default` / `Datasource.default` / `default()` applies the generated registry: `src/datasources-register.ts` or `src/datasources_register.rs`, plus one attach line on the detected entry (`src/index.ts` / `src/lib.rs` / `src/main.rs`). Rust also adds `ctor = "0.4"` to `Cargo.toml` so `#[ctor::ctor]` can queue `RepositoryFactory::bind` at load. C# compiles `RepositoryRegistry` when it sits in the project; generate adds a csproj `Compile` include only when `--output` is outside the project.
+
 ## Repository Generation
 
-`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. Import the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds each plural name.
+`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. `setup` and `generate` wire the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds each plural name.
 
 See [Generate](#generate) for flags and output paths.
 
@@ -88,11 +90,7 @@ Response deleted = await ds.Users.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let users = ds.as_ref().users();
@@ -110,9 +108,8 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();
@@ -205,11 +202,7 @@ Response deleted = await ds.Users.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, encode_rows, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let roles = ds.as_ref().roles();
@@ -230,9 +223,8 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const admin = await ds.roles.create({ id: 0, name: "admin" });
 const created = await ds.users.create({
@@ -323,11 +315,7 @@ Response deleted = await ds.Users.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let users = ds.as_ref().users();
@@ -345,9 +333,8 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();

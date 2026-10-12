@@ -8,6 +8,8 @@ public sealed class RepositoryFactory : IRepositoryFactory, ICRUDRepositoryFacto
     readonly Dictionary<Type, IRepository> crudByType = new();
     readonly Dictionary<string, Named> byName = new(StringComparer.Ordinal);
 
+    public RepositoryFactory() => ApplyBound();
+
     public static void Bind(Action<RepositoryFactory> register)
     {
         lock (gate) binders.Add(register);

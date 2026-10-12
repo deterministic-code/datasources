@@ -40,6 +40,8 @@ npx @datasources/cli setup
 
 ## Generating code from specification
 
+<SkillPrompt text="Generate all types, repositories, and SQL for csharp, rust, and typescript" />
+
 A Types Specification is the `deterministic` directory. `types.yaml` lists each entity. Tag a type `datasource_type` when it is a table.
 
 ```yaml
@@ -75,7 +77,7 @@ See [Generate](./cli.md#generate). Walkthroughs for a User, an enriched users-an
 
 ## Using the generated code
 
-Import the generated registry so {{Datasource.Default|Datasource.default|default()}} binds {{Items|items|items()}}. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
+`setup` and `generate` wire the generated registry so {{Datasource.Default|Datasource.default|default()}} binds {{Items|items|items()}}. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
 
 ::: dialects
 ```csharp
@@ -90,11 +92,7 @@ Response updated = await ds.Items.Update(created);
 Response deleted = await ds.Items.Delete(created);
 ```
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let items = ds.as_ref().items();
@@ -108,9 +106,8 @@ let deleted: Response = items.delete(&created, None).await?;
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.items.create({ id: 0, name: "Ada" });
 const loaded = await ds.items.readSingle();

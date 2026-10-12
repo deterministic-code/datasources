@@ -13,7 +13,7 @@ Pass `--ecosystem ts|rust|csharp` when the directory has more than one project t
 
 ## Setup
 
-Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec.
+Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate).
 
 ```sh
 npx @datasources/cli setup
@@ -74,6 +74,8 @@ npx @datasources/cli generate repositories --dialect csharp
 When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns. An explicit `datasource.yaml` still wins.
 
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
+
+`setup` and `generate` (for `all` or `repositories`) write a project hook so {{Datasource.Default|Datasource.default|default()}} applies the generated registry: `src/datasources-register.ts` or `src/datasources_register.rs`, plus one attach line on the detected entry (`src/index.ts` / `src/lib.rs` / `src/main.rs`). Rust also adds `ctor = "0.4"` to `Cargo.toml` so `#[ctor::ctor]` can queue `RepositoryFactory::bind` at load. C# compiles `RepositoryRegistry` when it sits in the project; generate adds a csproj `Compile` include only when `--output` is outside the project.
 
 ## .env
 

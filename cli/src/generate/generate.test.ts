@@ -209,6 +209,9 @@ describe("generate", () => {
     expect(textOf(typescript, "repository-registry.ts")).toContain('"ContactGroup", "contactGroups"');
     expect(textOf(typescript, "contact-repository.ts")).toContain("createReadonly");
     expect(textOf(rust, "repository_registry.rs")).toContain("RepositoryFactory::bind(register)");
+    expect(textOf(rust, "repository_registry.rs")).toContain("#[ctor::ctor]");
+    expect(textOf(rust, "repository_registry.rs")).not.toContain("Once");
+    expect(textOf(rust, "repository_registry.rs")).not.toContain("bind();\n");
     expect(textOf(rust, "repository_registry.rs")).toContain('"Contact"');
     expect(textOf(rust, "repository_registry.rs")).toContain('"contacts"');
     expect(textOf(rust, "repository_registry.rs")).toContain('"contact_groups"');
@@ -379,6 +382,10 @@ types: []
       expect(await run(["generate", target, "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(io.logs.length).toBeGreaterThan(0);
     }
+    const rustTypes = mem(seeded);
+    const rustIo = deps(rustTypes.fs);
+    expect(await run(["generate", "types", "--dialect", "rust", "--cwd", cwd], rustIo, cwd)).toBe(0);
+    expect(rustIo.logs.length).toBeGreaterThan(0);
     const absolute = mem({
       [join("/tmp/spec", "types.yaml")]: typesYaml,
       [join("/tmp/spec", "datasource.yaml")]: datasourceYaml,

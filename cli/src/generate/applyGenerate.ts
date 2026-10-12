@@ -5,6 +5,7 @@ import type { Deps } from "../run.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
 import { writeEntries } from "./writeEntries.ts";
+import { wireRegister } from "../wireRegister.ts";
 
 const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
 
@@ -23,4 +24,6 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
     datasource: () => provider.generateDatasource(request),
   }[command.target]();
   for (const path of await writeEntries(deps.fs, at(flags.cwd, command.output), entries)) deps.log(path);
+  if (command.target === "all" || command.target === "repositories")
+    await wireRegister(flags.cwd, command.output, command.dialect, flags.dryRun, deps);
 };

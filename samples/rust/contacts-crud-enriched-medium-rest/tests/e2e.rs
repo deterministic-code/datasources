@@ -10,7 +10,7 @@ fn repo() -> PathBuf {
     sample().join("../../..").canonicalize().expect("repo")
 }
 
-fn generate(out: &Path) {
+fn generate(cwd: &Path) {
     let status = Command::new("node")
         .args([
             "--experimental-strip-types",
@@ -28,7 +28,9 @@ fn generate(out: &Path) {
                 .to_str()
                 .expect("spec"),
             "--output",
-            out.to_str().expect("out"),
+            "generated",
+            "--cwd",
+            cwd.to_str().expect("cwd"),
         ])
         .current_dir(repo().join("cli"))
         .status()
@@ -44,7 +46,7 @@ fn generates_and_registers_contacts() {
         .as_nanos();
     let tmp = std::env::temp_dir().join(format!("contacts-gen-rs-{stamp}"));
     fs::create_dir_all(tmp.join("src")).expect("tmp");
-    generate(&tmp.join("generated"));
+    generate(&tmp);
     fs::copy(sample().join("src/schema.rs"), tmp.join("src/schema.rs")).expect("schema");
     fs::copy(sample().join("e2e/main.rs"), tmp.join("src/main.rs")).expect("main");
     let datasources = repo().join("rust/datasources");
@@ -58,6 +60,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ctor = "0.4"
 datasources = {{ path = "{}" }}
 datasources-sqlite = {{ path = "{}" }}
 tokio = {{ version = "1", features = ["macros", "rt-multi-thread"] }}

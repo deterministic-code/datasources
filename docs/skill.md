@@ -2,7 +2,7 @@
 
 # Example prompts
 
-## 1. Run setup and add providers
+## Run setup and add providers
 
 <SkillPrompt text="Run setup and add sqlite and postgres for csharp and rust" />
 
@@ -14,7 +14,7 @@ npx @datasources/cli add sqlite postgres --ecosystem csharp
 npx @datasources/cli add sqlite postgres --ecosystem rust
 ```
 
-## 2. Generate a user repository
+## Generate a user repository
 
 <SkillPrompt text="Generate a user with field id: username, is_enabled in types.yaml and generate repositories for csharp" />
 
@@ -53,9 +53,9 @@ Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
 
-## 3. Generate users and roles
+## Generate users and roles
 
-**Prompt:** The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role.
+<SkillPrompt text="The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role." />
 
 **Expected**
 
@@ -120,7 +120,7 @@ Response deleted = await ds.Users.Delete(created);
 
 ## Run native SQL
 
-**Prompt:** Insert an item and read it back with a command and SQL text. Do not use a repository.
+<SkillPrompt text="Insert an item and read it back with a command and SQL text. Do not use a repository." />
 
 **Expected**
 
@@ -147,7 +147,7 @@ var created = await createdReader.Read().Select(row => converter.Convert(row)).T
 
 ## Map a flat row into nested contacts
 
-**Prompt:** Read users with a command, convert each row, then build a `contacts` list from `contact_name1` and `contact_name2`.
+<SkillPrompt text="Read users with a command, convert each row, then build a `contacts` list from `contact_name1` and `contact_name2`." />
 
 **Expected**
 
@@ -195,7 +195,7 @@ var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))
 
 ## Select a contact and its type
 
-**Prompt:** Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-joining `Contact` to `ContactType` on `Contact.ContactTypeId` = `ContactType.Id`.
+<SkillPrompt text="Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-joining `Contact` to `ContactType` on `Contact.ContactTypeId` = `ContactType.Id`." />
 
 **Expected**
 
@@ -210,7 +210,7 @@ new SelectStatement(new()
 
 ## Map a legacy table and a unique key
 
-**Prompt:** The type stays `user`, but the stored table is `OldUsersTbl`. `username` is unique and stored as `LoginNm`, `id` as `UsrID`, and `is_enabled` as `ActvFlg`. Add `datasource.yaml` mappings and generate.
+<SkillPrompt text="The type stays `user`, but the stored table is `OldUsersTbl`. `username` is unique and stored as `LoginNm`, `id` as `UsrID`, and `is_enabled` as `ActvFlg`. Add `datasource.yaml` mappings and generate." />
 
 **Expected**
 

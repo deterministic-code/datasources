@@ -124,9 +124,9 @@ export class Datasource implements IDatasource {
     );
   }
 
-  static create: (options?: DatasourceOptions) => IDatasource;
+  static create: (options?: DatasourceOptions) => Datasource;
 
-  static get default(): IDatasource {
+  static get default(): Datasource {
     return Datasource.create();
   }
 }

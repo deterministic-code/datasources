@@ -21,6 +21,8 @@ import {
 import { applyGenerate } from "./generate/applyGenerate.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
+import { wireRegister } from "./wireRegister.ts";
+import type { Dialect } from "./generate/GenerateRequest.ts";
 
 export type Deps = {
   fs: Fs;
@@ -80,6 +82,8 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
     installed.filter((name) => !selected.includes(name)),
     selected,
   );
+  const dialect: Dialect = ecosystem === "ts" ? "typescript" : ecosystem;
+  await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
   if (!answers.scaffold) return;
   if (flags.dryRun) {
     deps.log(typesPath);

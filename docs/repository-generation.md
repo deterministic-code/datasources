@@ -1,6 +1,6 @@
 # Repository Generation
 
-`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. Import the generated registry so {{Datasource.Default|Datasource.default|default()}} binds each plural name.
+`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. `setup` and `generate` wire the generated registry so {{Datasource.Default|Datasource.default|default()}} binds each plural name.
 
 See [Generate](./cli.md#generate) for flags and output paths.
 
@@ -54,11 +54,7 @@ Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let users = ds.as_ref().users();
@@ -73,9 +69,8 @@ let deleted: Response = users.delete(&created, None).await?;
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();
@@ -159,11 +154,7 @@ User? loaded = await ds.Users.ReadSingle();
 Response deleted = await ds.Users.Delete(created);
 ```
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, encode_rows, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let roles = ds.as_ref().roles();
@@ -181,9 +172,8 @@ let deleted: Response = users.delete(&created, None).await?;
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const admin = await ds.roles.create({ id: 0, name: "admin" });
 const created = await ds.users.create({
@@ -265,11 +255,7 @@ Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let users = ds.as_ref().users();
@@ -284,9 +270,8 @@ let deleted: Response = users.delete(&created, None).await?;
 ```
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();

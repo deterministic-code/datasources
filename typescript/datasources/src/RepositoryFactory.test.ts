@@ -53,6 +53,22 @@ describe("RepositoryFactory", () => {
     expect(factory.access("Contact", connection).createReadonly()).toBe(read);
   });
 
+  it("binds register on construct", () => {
+    RepositoryFactory.resetBinders();
+    const connection = new MockConnection();
+    const crud = new MockRepository<Item>(connection, Item);
+    const read = emptyReadonly();
+    RepositoryFactory.bind((factory) =>
+      factory.register("Contact", "contacts", () => crud, () => read),
+    );
+    try {
+      const factory = new RepositoryFactory();
+      expect(factory.create("contacts", connection)).toBe(crud);
+    } finally {
+      RepositoryFactory.resetBinders();
+    }
+  });
+
   it("binds register on access", () => {
     RepositoryFactory.resetBinders();
     const connection = new MockConnection();

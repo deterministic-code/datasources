@@ -107,7 +107,7 @@ See [Generate](docs/cli.md#generate). Walkthroughs for a User, an enriched users
 
 ### Using the generated code
 
-Import the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds `Items` / `items` / `items()`. `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity.
+`setup` and `generate` wire the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds `Items` / `items` / `items()`. `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity.
 
 ##### C#
 
@@ -126,11 +126,7 @@ Response deleted = await ds.Items.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let items = ds.as_ref().items();
@@ -147,9 +143,8 @@ let deleted: Response = items.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.items.create({ id: 0, name: "Ada" });
 const loaded = await ds.items.readSingle();
@@ -354,7 +349,7 @@ See [Type Converters](docs/sections/type-converters.md).
 
 ## Example prompts
 
-### 1. Run setup and add providers
+### Run setup and add providers
 
 <SkillPrompt text="Run setup and add sqlite and postgres for csharp and rust" />
 
@@ -366,7 +361,7 @@ npx @datasources/cli add sqlite postgres --ecosystem csharp
 npx @datasources/cli add sqlite postgres --ecosystem rust
 ```
 
-### 2. Generate a user repository
+### Generate a user repository
 
 <SkillPrompt text="Generate a user with field id: username, is_enabled in types.yaml and generate repositories for csharp" />
 
@@ -405,9 +400,9 @@ Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
 
-### 3. Generate users and roles
+### Generate users and roles
 
-**Prompt:** The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role.
+<SkillPrompt text="The same `user` table, plus `role` and a `user_role` junction tagged `many_to_many`, with a `roles` list on `user`. Generate TypeScript and create a user that has a role." />
 
 **Expected**
 
@@ -472,7 +467,7 @@ Response deleted = await ds.Users.Delete(created);
 
 ### Run native SQL
 
-**Prompt:** Insert an item and read it back with a command and SQL text. Do not use a repository.
+<SkillPrompt text="Insert an item and read it back with a command and SQL text. Do not use a repository." />
 
 **Expected**
 
@@ -499,7 +494,7 @@ var created = await createdReader.Read().Select(row => converter.Convert(row)).T
 
 ### Map a flat row into nested contacts
 
-**Prompt:** Read users with a command, convert each row, then build a `contacts` list from `contact_name1` and `contact_name2`.
+<SkillPrompt text="Read users with a command, convert each row, then build a `contacts` list from `contact_name1` and `contact_name2`." />
 
 **Expected**
 
@@ -547,7 +542,7 @@ var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))
 
 ### Select a contact and its type
 
-**Prompt:** Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-joining `Contact` to `ContactType` on `Contact.ContactTypeId` = `ContactType.Id`.
+<SkillPrompt text="Write a `SelectStatement` for `Contact.FirstName` and `ContactType.Name`, inner-joining `Contact` to `ContactType` on `Contact.ContactTypeId` = `ContactType.Id`." />
 
 **Expected**
 
@@ -562,7 +557,7 @@ new SelectStatement(new()
 
 ### Map a legacy table and a unique key
 
-**Prompt:** The type stays `user`, but the stored table is `OldUsersTbl`. `username` is unique and stored as `LoginNm`, `id` as `UsrID`, and `is_enabled` as `ActvFlg`. Add `datasource.yaml` mappings and generate.
+<SkillPrompt text="The type stays `user`, but the stored table is `OldUsersTbl`. `username` is unique and stored as `LoginNm`, `id` as `UsrID`, and `is_enabled` as `ActvFlg`. Add `datasource.yaml` mappings and generate." />
 
 **Expected**
 
@@ -643,7 +638,7 @@ Parity across C#, Rust, and TypeScript. Standard modules first; opinionated repo
 
 ## Repository Generation
 
-`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. Import the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds each plural name.
+`generate all` reads a Types Specification and writes the types, the repositories, and SQL for one language. `setup` and `generate` wire the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds each plural name.
 
 See [Generate](docs/cli.md#generate) for flags and output paths.
 
@@ -707,11 +702,7 @@ Response deleted = await ds.Users.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let users = ds.as_ref().users();
@@ -729,9 +720,8 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();
@@ -824,11 +814,7 @@ Response deleted = await ds.Users.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, encode_rows, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let roles = ds.as_ref().roles();
@@ -849,9 +835,8 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const admin = await ds.roles.create({ id: 0, name: "admin" });
 const created = await ds.users.create({
@@ -942,11 +927,7 @@ Response deleted = await ds.Users.Delete(created);
 ##### Rust
 
 ```rust
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
-
 use datasources::{default, Response, Row, Value};
-use repositories::repository_registry::Repositories;
 
 let ds = default()?;
 let users = ds.as_ref().users();
@@ -964,9 +945,8 @@ let deleted: Response = users.delete(&created, None).await?;
 
 ```typescript
 import { Datasource } from "@datasources/core";
-import "./generated/typescript/repositories/repository-registry.ts";
 
-const ds = Datasource.default as Datasource;
+const ds = Datasource.default;
 
 const created = await ds.users.create({ id: 0, username: "ada", isEnabled: true });
 const loaded = await ds.users.readSingle();

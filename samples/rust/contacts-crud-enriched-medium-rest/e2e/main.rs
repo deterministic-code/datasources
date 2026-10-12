@@ -2,14 +2,13 @@
 
 #[allow(dead_code)]
 mod schema;
-#[path = "../generated/rust/repositories/mod.rs"]
-mod repositories;
+mod datasources_register;
+use datasources_register::Repositories;
 
 use datasources::{
-    BuiltDatasource, Datasource, ICRUDRepository, IReadonlyRepository, Native, Operator, Row,
-    Value, Where,
+    n, BuiltDatasource, Datasource, ICRUDRepository, IReadonlyRepository, Operator, Row, Value,
+    Where,
 };
-use repositories::repository_registry::Repositories;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -24,12 +23,12 @@ async fn main() {
     );
     let command = ds.create_command(None).await.expect("command");
     command
-        .execute_native(&Native::new("PRAGMA foreign_keys = ON"), None)
+        .execute_native(&n("PRAGMA foreign_keys = ON"), None)
         .await
         .expect("pragma");
     for sql in schema::load_statements() {
         command
-            .execute_native(&Native::new(sql), None)
+            .execute_native(&n(sql), None)
             .await
             .expect("migrate");
     }
