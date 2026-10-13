@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dialectTranscript } from "./e2e-matrix-normalize.mjs";
@@ -74,44 +74,9 @@ const isolate = (provider) => {
   };
 };
 
-const generateSql = (provider) => {
-  const spec = join(artifacts, "spec", provider);
-  mkdirSync(dirname(spec), { recursive: true });
-  if (existsSync(spec)) rmSync(spec, { recursive: true, force: true });
-  cpSync(join(root, "samples/contacts-crud-enriched-medium-rest-shared/deterministic"), spec, { recursive: true });
-  writeFileSync(
-    join(spec, "settings.yaml"),
-    `settings:\n  backend:\n    datasources: ${provider}\n  languages:\n    typescript:\n      casing:\n        fields: camel\n`,
-  );
-  const out = join(artifacts, "generated", provider);
-  mkdirSync(out, { recursive: true });
-  requireOk(
-    spawnSync(
-      process.execPath,
-      [
-        "--experimental-strip-types",
-        join(root, "cli/src/main.ts"),
-        "generate",
-        "datasource",
-        "--dialect",
-        "typescript",
-        "--input",
-        spec,
-        "--output",
-        out,
-      ],
-      { cwd: join(root, "cli"), encoding: "utf8" },
-    ),
-    `generate ${provider}`,
-  );
-  const sql = join(out, "sql", provider, "migrations/0001_initial_up.sql");
-  if (!existsSync(sql)) throw new Error(`missing generated sql ${sql}`);
-  return sql;
-};
+const spec = join(root, "samples/contacts-crud-enriched-medium-rest-shared/deterministic");
 
-const generateCsharp = (provider) => {
-  const spec = join(artifacts, "spec", provider);
-  const out = join(artifacts, "generated-csharp", provider);
+const generate = (kind, dialect, out) => {
   mkdirSync(out, { recursive: true });
   requireOk(
     spawnSync(
@@ -120,9 +85,9 @@ const generateCsharp = (provider) => {
         "--experimental-strip-types",
         join(root, "cli/src/main.ts"),
         "generate",
-        "all",
+        kind,
         "--dialect",
-        "csharp",
+        dialect,
         "--input",
         spec,
         "--output",
@@ -130,10 +95,21 @@ const generateCsharp = (provider) => {
       ],
       { cwd: join(root, "cli"), encoding: "utf8" },
     ),
-    `generate csharp ${provider}`,
+    `generate ${kind} ${dialect}`,
   );
   return out;
 };
+
+const generateSql = () => {
+  const out = generate("datasource", "typescript", join(artifacts, "generated"));
+  for (const provider of providers) {
+    const sql = join(out, "sql", provider, "migrations/0001_initial_up.sql");
+    if (!existsSync(sql)) throw new Error(`missing generated sql ${sql}`);
+  }
+  return (provider) => join(out, "sql", provider, "migrations/0001_initial_up.sql");
+};
+
+const generateCsharp = () => generate("all", "csharp", join(artifacts, "generated-csharp"));
 
 const harness = (sample, dialect) => {
   if (dialect === "typescript")
@@ -394,16 +370,14 @@ try {
     down();
     up();
   }
-  const sqlByProvider = {};
-  const csharpByProvider = {};
+  const sqlFor = samples.some((sample) => sample.sql) ? generateSql() : undefined;
+  const csharpOut = samples.some((sample) => sample.sql) ? generateCsharp() : undefined;
   for (const sample of samples) {
     for (const dialect of dialects) {
       for (const provider of providers) {
         process.stderr.write(`${sample.name} ${dialect} ${provider}\n`);
         try {
-          if (sample.sql && !sqlByProvider[provider]) sqlByProvider[provider] = generateSql(provider);
-          if (sample.sql && dialect === "csharp" && !csharpByProvider[provider]) csharpByProvider[provider] = generateCsharp(provider);
-          cells.push(runCell(sample, dialect, provider, sqlByProvider[provider], csharpByProvider[provider]));
+          cells.push(runCell(sample, dialect, provider, sample.sql ? sqlFor(provider) : undefined, sample.sql && dialect === "csharp" ? csharpOut : undefined));
         } catch (error) {
           const log = join(artifacts, "logs", sample.name, dialect, `${provider}.log`);
           mkdirSync(dirname(log), { recursive: true });

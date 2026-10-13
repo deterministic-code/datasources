@@ -1,6 +1,6 @@
 settings:
   backend:
-    datasources: sqlite
+    datasources: sqlite,mysql,postgres
   languages:
     typescript:
       casing:
