@@ -63,6 +63,22 @@ export const requireDialect = (language: string): SqlDialect => {
   return language;
 };
 
+/** Dialects listed in `backend.datasources`. */
+export const dialectsFromSettings = (
+  settings: Record<string, string>,
+): SqlDialect[] => {
+  const raw = settings["backend.datasources"];
+  if (raw === undefined || raw === "") return ["sqlite"];
+  const out: SqlDialect[] = [];
+  for (const name of raw.split(",")) {
+    const key = name.trim();
+    if (key === "") continue;
+    const dialect = requireDialect(key);
+    if (!out.includes(dialect)) out.push(dialect);
+  }
+  return out.length > 0 ? out : ["sqlite"];
+};
+
 export const q = (dialect: string, ident: string): string => {
   const driver = dialectDriver(dialect);
   return `${driver.quoteLeft}${ident}${driver.quoteRight}`;
