@@ -17,8 +17,8 @@ export type { IExecuteStoredProcedureStatement } from "./IExecuteStoredProcedure
 export type { IReturnStatement } from "./IReturnStatement.ts";
 export type { Column } from "./Column.ts";
 export type { ITableConstraint, TableConstraintKind } from "./ITableConstraint.ts";
-export type { Join, JoinKind } from "./Join.ts";
 export { Join } from "./Join.ts";
+export type { JoinKind } from "./Join.ts";
 export { Aggregate } from "./Aggregate.ts";
 export type { SortDirection } from "./OrderBy.ts";
 export { OrderBy } from "./OrderBy.ts";

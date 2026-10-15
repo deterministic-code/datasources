@@ -13,6 +13,16 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@datasources/core": ["datasources/src/index.ts"],
+      "@datasources/core/mocks": ["datasources/src/mocks/index.ts"],
+      "@datasources/json": ["providers/json/src/index.ts"],
+      "@datasources/memory": ["providers/memory/src/index.ts"],
+      "@datasources/mysql": ["providers/mysql/src/index.ts"],
+      "@datasources/postgres": ["providers/postgres/src/index.ts"],
+      "@datasources/sqlite": ["providers/sqlite/src/index.ts"]
+    }
   }
 }

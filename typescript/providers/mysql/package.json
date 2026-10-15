@@ -1,13 +1,26 @@
 {
   "name": "@datasources/mysql",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../rewrite-declaration-extensions.mjs dist",
+    "prepack": "npm run build",
     "test": "vitest run --coverage --exclude tests/**/*.integration.test.ts",
     "test:e2e": "vitest run tests/mysql.integration.test.ts tests/mysql.repository.integration.test.ts",
     "test:e2e:ci": "SKIP_DOCKER=1 vitest run tests/mysql.integration.test.ts tests/mysql.repository.integration.test.ts",

@@ -1,13 +1,26 @@
 {
   "name": "@datasources/sqlite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../rewrite-declaration-extensions.mjs dist",
+    "prepack": "npm run build",
     "test": "vitest run --coverage --exclude tests/**/*.repository.integration.test.ts",
     "test:e2e": "vitest run tests/*.repository.integration.test.ts",
     "test:e2e:ci": "vitest run tests/*.repository.integration.test.ts",

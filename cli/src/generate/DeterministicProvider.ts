@@ -10,6 +10,7 @@ import { generate as typescriptViewTypes } from "@deterministic-code/typescript-
 import { DeterministicParser } from "@deterministic-code/deterministic-specifications-typescript/parser";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
+import type { RepositoryModel } from "./RepositoryModel.ts";
 import { csharpRepositories } from "./CSharpRepositories.ts";
 import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
@@ -24,7 +25,7 @@ const typePacks: Record<Dialect, { datasource: (ctx: GenerateContext) => Promise
   rust: { datasource: rustDatasourceTypes, views: rustViewTypes },
 };
 
-const repositoryPacks: Record<Dialect, typeof csharpRepositories> = {
+const repositoryPacks: Record<Dialect, (models: RepositoryModel[], settings: Record<string, string>) => GenerateEntry[]> = {
   csharp: csharpRepositories,
   typescript: typescriptRepositories,
   rust: rustRepositories,
@@ -48,7 +49,7 @@ export const deterministic: CodeGenerationProvider = {
   },
   generateRepositories: async (request) => {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
-    return place(`${request.dialect}/repositories`, repositoryPacks[request.dialect](planRepositories(spec, request.dialect, request.settings)));
+    return place(`${request.dialect}/repositories`, repositoryPacks[request.dialect](planRepositories(spec, request.dialect, request.settings), request.settings));
   },
   generateDatasource: async (request) => place("sql", await generateSql(context(request))),
 };

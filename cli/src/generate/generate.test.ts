@@ -207,7 +207,12 @@ describe("generate", () => {
     expect(textOf(typescript, "repository-registry.ts")).toContain("RepositoryFactory.bind(register)");
     expect(textOf(typescript, "repository-registry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repository-registry.ts")).toContain('"ContactGroup", "contactGroups"');
-    expect(textOf(typescript, "contact-repository.ts")).toContain("createReadonly");
+    expect(contactTs).toContain("createReadonly");
+    expect(contactTs.slice(contactTs.indexOf("createReadonly"))).not.toContain("ids:");
+    expect(legacyTs.slice(legacyTs.indexOf("createReadonly"))).not.toContain("ids:");
+    expect(contactTs).not.toMatch(/from "[^"]+\.ts"/);
+    expect(legacyTs).not.toMatch(/from "[^"]+\.ts"/);
+    expect(textOf(typescript, "repository-registry.ts")).not.toMatch(/from "[^"]+\.ts"/);
     expect(textOf(rust, "repository_registry.rs")).toContain("RepositoryFactory::bind(register)");
     expect(textOf(rust, "repository_registry.rs")).toContain("#[ctor::ctor]");
     expect(textOf(rust, "repository_registry.rs")).not.toContain("Once");
@@ -218,6 +223,20 @@ describe("generate", () => {
     expect(textOf(rust, "repository_registry.rs")).toContain("fn contacts(&self)");
     expect(textOf(rust, "repository_registry.rs")).toContain("fn contact_groups(&self)");
     expect(textOf(rust, "mod.rs")).toContain("pub mod repository_registry;");
+  });
+
+  it("imports kebab type files and omits ids from createReadonly", async () => {
+    const typescript = await deterministic.generateRepositories(request("typescript", {
+      "backend.datasources": "sqlite",
+      "languages.typescript.casing.fields": "camel",
+      "languages.typescript.casing.file_names": "kebab",
+    }));
+    const addressType = textOf(typescript, "address-type-repository.ts");
+    expect(addressType).toContain('from "../types/generated/datasource/address-type"');
+    expect(addressType).not.toContain("addressType");
+    expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
+    expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
+    expect(addressType.slice(0, addressType.indexOf("createReadonly"))).toContain("ids:");
   });
 
   it("emits a typescript Contact type and sqlite tables", async () => {

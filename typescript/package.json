@@ -7,11 +7,13 @@
     "providers/*"
   ],
   "scripts": {
-    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build -w @datasources/core && npm run build -w @datasources/mysql && npm run build -w @datasources/postgres && npm run build -w @datasources/sqlite",
+    "test": "npm run build && npm run test --workspaces --if-present && npm run typecheck:consumer",
+    "typecheck:consumer": "tsc -p consumer/tsconfig.json --noEmit",
     "test:e2e": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e",
     "test:e2e:verbose": "VERBOSE=1 npm run test:e2e",
     "test:e2e:ci": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e:ci",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run build && npm run typecheck --workspaces --if-present && npm run typecheck:consumer"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
