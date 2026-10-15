@@ -4,7 +4,10 @@
   "type": "module",
   "exports": {
     ".": "./src/generateSql.ts",
-    "./generate-sql": "./src/sql/generate-sql.ts"
+    "./generate-sql": "./src/generate-sql.ts",
+    "./generate-stored-procedures": "./src/generate-stored-procedures.ts",
+    "./common/sql-dialect": "./src/sql/common/sql-dialect.ts",
+    "./sql/dialect-converters": "./src/sql/dialect-converters.ts"
   },
   "scripts": {
     "test": "vitest run",
