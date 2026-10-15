@@ -12,4 +12,16 @@ internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : St
 
     public override string Visit(BulkUpdateStatement update) =>
         new PostgresBulkUpdateStatementTextRenderer().Render(update);
+
+    public override string Visit(CreateTriggerStatement trigger) =>
+        new PostgresCreateTriggerStatementRenderer().Render(trigger);
+
+    public override string Visit(IdentityInsertStatement insert) =>
+        new PostgresIdentityInsertStatementRenderer().Render(insert);
+
+    public override string Visit(CreateRoutineStatement routine) =>
+        new PostgresCreateRoutineStatementRenderer().Render(routine);
+
+    public override string Visit(DropRoutineStatement routine) =>
+        new PostgresDropRoutineStatementRenderer().Render(routine);
 }

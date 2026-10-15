@@ -1,8 +1,17 @@
 mod command;
 mod connection;
+mod create_routine_statement_renderer;
+mod create_table_statement_renderer;
+mod create_trigger_statement_renderer;
+mod drop_routine_statement_renderer;
+mod driver;
 mod export;
+mod identity_insert_statement_renderer;
+mod sql_generate;
+mod statement_renderer;
 
-pub use connection::SqlServerDriver;
+pub use driver::SqlServerDriver;
+pub use sql_generate::{DEFAULTS, QUOTE_LEFT, QUOTE_RIGHT, TYPES};
 
 #[cfg(test)]
 mod tests {

@@ -12,4 +12,13 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
 
     public override string Visit(BulkUpdateStatement update) =>
         new MysqlBulkUpdateStatementTextRenderer().Render(update);
+
+    public override string Visit(CreateTriggerStatement trigger) =>
+        new MysqlCreateTriggerStatementRenderer().Render(trigger);
+
+    public override string Visit(CreateRoutineStatement routine) =>
+        new MysqlCreateRoutineStatementRenderer().Render(routine);
+
+    public override string Visit(DropRoutineStatement routine) =>
+        new MysqlDropRoutineStatementRenderer().Render(routine);
 }

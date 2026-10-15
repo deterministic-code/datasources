@@ -2,8 +2,13 @@ mod bind;
 mod command;
 mod connection;
 mod converters;
+mod create_routine_statement_renderer;
 mod create_table_statement_renderer;
+mod create_trigger_statement_renderer;
+mod drop_routine_statement_renderer;
 mod driver;
+mod identity_insert_statement_renderer;
+mod sql_generate;
 mod pg_value;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
@@ -11,6 +16,7 @@ mod statement_renderer;
 mod transaction;
 
 pub use driver::PostgresDriver;
+pub use sql_generate::{DEFAULTS, QUOTE_LEFT, QUOTE_RIGHT, TYPES};
 
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]

@@ -1,8 +1,9 @@
 use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
+use crate::create_trigger_statement_renderer::SqliteCreateTriggerStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::SqliteSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    CreateTableStatement, CreateTableStatementTextRenderer, SelectInsertedIdStatement,
-    StatementTextRenderer, StatementVisitor,
+    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
+    SelectInsertedIdStatement, StatementTextRenderer, StatementVisitor,
 };
 
 pub struct SqliteStatementRenderer;
@@ -14,6 +15,14 @@ impl StatementVisitor for SqliteStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         SqliteCreateTableStatementRenderer.render(statement)
+    }
+
+    fn visit_create_trigger(
+        &self,
+        statement: &CreateTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        SqliteCreateTriggerStatementRenderer.render(statement)
     }
 
     fn visit_select_inserted_id(

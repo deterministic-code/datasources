@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Datasources;
 
 namespace Datasources.Mysql;
@@ -6,7 +7,51 @@ public sealed class MysqlDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
         new(t => new MysqlStatementRenderer(t));
+    static readonly DeterministicTypeConverter Types = new(
+        new Dictionary<string, string>
+        {
+            ["string"] = "TEXT",
+            ["character"] = "CHAR(1)",
+            ["number"] = "INT",
+            ["integer"] = "INT",
+            ["unsignedinteger"] = "INT UNSIGNED",
+            ["smallinteger"] = "SMALLINT",
+            ["unsignedsmallinteger"] = "SMALLINT UNSIGNED",
+            ["biginteger"] = "BIGINT",
+            ["unsignedbiginteger"] = "BIGINT UNSIGNED",
+            ["float"] = "DOUBLE",
+            ["decimal"] = "DECIMAL(10, 2)",
+            ["boolean"] = "TINYINT(1)",
+            ["datetime"] = "DATETIME(3)",
+            ["binary"] = "BLOB",
+            ["uuid"] = "CHAR(36)",
+            ["reference"] = "INT",
+        },
+        new SpecFieldRules
+        {
+            DialectName = "mysql",
+            StringUnlimited = "TEXT",
+            StringSized = n => n <= 16383 ? $"VARCHAR({n})" : "LONGTEXT",
+            Character = "CHAR",
+            Decimal = new DecimalRule.Optional("DECIMAL", "DECIMAL(10, 2)"),
+            BinaryUnlimited = "BLOB",
+            BinarySized = n => n <= 65535 ? $"VARBINARY({n})" : "LONGBLOB",
+        });
+    static readonly DefaultValueConverter Defaults = new(new DefaultValueOptions
+    {
+        NewId = () => "(UUID())",
+        Now = () => "(NOW(3))",
+        UtcNow = () => "(UTC_TIMESTAMP(3))",
+        BooleanOn = "1",
+        BooleanOff = "0",
+        Hex = arg => $"X'{arg}'",
+        HexReverse = new Regex(@"^X'(.*)'$"),
+    });
 
+    public string QuoteLeft => "`";
+    public string QuoteRight => "`";
+    public IMapping<string, string>? TypeConverter => Types;
+    public DefaultValueConverter? DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         [

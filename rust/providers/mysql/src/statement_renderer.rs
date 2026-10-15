@@ -1,9 +1,12 @@
+use crate::create_routine_statement_renderer::MysqlCreateRoutineStatementRenderer;
 use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
+use crate::create_trigger_statement_renderer::MysqlCreateTriggerStatementRenderer;
+use crate::drop_routine_statement_renderer::MysqlDropRoutineStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateTableStatement,
-    CreateTableStatementTextRenderer, SelectInsertedIdStatement, StatementTextRenderer,
-    StatementVisitor,
+    BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateRoutineStatement,
+    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
+    DropRoutineStatement, SelectInsertedIdStatement, StatementTextRenderer, StatementVisitor,
 };
 
 pub struct MysqlStatementRenderer;
@@ -23,6 +26,30 @@ impl StatementVisitor for MysqlStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         MysqlSelectInsertedIdStatementTextRenderer.render(statement)
+    }
+
+    fn visit_create_trigger(
+        &self,
+        statement: &CreateTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlCreateTriggerStatementRenderer.render(statement)
+    }
+
+    fn visit_create_routine(
+        &self,
+        statement: &CreateRoutineStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlCreateRoutineStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_routine(
+        &self,
+        statement: &DropRoutineStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlDropRoutineStatementRenderer.render(statement)
     }
 
     fn visit_bulk_update(

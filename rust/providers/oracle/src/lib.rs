@@ -1,8 +1,15 @@
 mod command;
 mod connection;
+mod create_table_statement_renderer;
+mod create_trigger_statement_renderer;
+mod drop_table_statement_renderer;
+mod driver;
 mod export;
+mod sql_generate;
+mod statement_renderer;
 
-pub use connection::OracleDriver;
+pub use driver::OracleDriver;
+pub use sql_generate::{DEFAULTS, QUOTE_LEFT, QUOTE_RIGHT, TYPES};
 
 #[cfg(test)]
 mod tests {
