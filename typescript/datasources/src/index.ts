@@ -174,6 +174,21 @@ export { DatasourceError } from "./DatasourceError.ts";
 export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";
 export { TypeConverter } from "./converters/TypeConverter.ts";
+export {
+  emitsNativeRowVersion,
+  isOccBinaryColumn,
+  usesNativeRowVersion,
+  type FieldSize,
+  type SpecField,
+} from "./converters/SpecField.ts";
+export type { DecimalRule, SpecFieldRules } from "./converters/SpecFieldRules.ts";
+export { DeterministicTypeConverter } from "./converters/DeterministicTypeConverter.ts";
+export type { DefaultValueOptions } from "./converters/DefaultValueOptions.ts";
+export {
+  DefaultValueConverter,
+  EMPTY_UUID,
+  sqlStringLiteral,
+} from "./converters/DefaultValueConverter.ts";
 export { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 export { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 export { ToLowerCaseConverter } from "./converters/ToLowerCaseConverter.ts";

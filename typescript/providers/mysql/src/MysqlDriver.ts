@@ -1,5 +1,7 @@
 import {
   DatasourceError,
+  DefaultValueConverter,
+  DeterministicTypeConverter,
   StatementTextRenderer,
   type Cell,
   type DatasourceOptions,
@@ -37,6 +39,47 @@ export class MysqlDriver implements IDriver {
     changeLogs: [],
   };
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
+  readonly quoteLeft = "`";
+  readonly quoteRight = "`";
+  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+    {
+      string: "TEXT",
+      character: "CHAR(1)",
+      number: "INT",
+      integer: "INT",
+      unsignedinteger: "INT UNSIGNED",
+      smallinteger: "SMALLINT",
+      unsignedsmallinteger: "SMALLINT UNSIGNED",
+      biginteger: "BIGINT",
+      unsignedbiginteger: "BIGINT UNSIGNED",
+      float: "DOUBLE",
+      decimal: "DECIMAL(10, 2)",
+      boolean: "TINYINT(1)",
+      datetime: "DATETIME(3)",
+      binary: "BLOB",
+      uuid: "CHAR(36)",
+      reference: "INT",
+    },
+    {
+      dialectName: "mysql",
+      stringUnlimited: "TEXT",
+      stringSized: (n) => (n <= 16383 ? `VARCHAR(${n})` : "LONGTEXT"),
+      character: "CHAR",
+      decimal: { kind: "optional", type: "DECIMAL", fallback: "DECIMAL(10, 2)" },
+      binaryUnlimited: "BLOB",
+      binarySized: (n) => (n <= 65535 ? `VARBINARY(${n})` : "LONGBLOB"),
+      occBinary: "BINARY(8)",
+    },
+  );
+  readonly defaultValueConverter = new DefaultValueConverter({
+    newId: () => `(UUID())`,
+    now: () => `(NOW(3))`,
+    utcNow: () => `(UTC_TIMESTAMP(3))`,
+    booleanOn: "1",
+    booleanOff: "0",
+    hex: (arg) => `X'${arg}'`,
+    hexReverse: /^X'(.*)'$/,
+  });
   columnType = (name: string): string =>
     columnTypes[name] ??
     (() => {

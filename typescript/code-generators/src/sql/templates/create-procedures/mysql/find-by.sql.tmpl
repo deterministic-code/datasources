@@ -1,0 +1,7 @@
+DROP PROCEDURE IF EXISTS {{routineName}};
+GO
+CREATE PROCEDURE {{routineName}}(IN {{byField}} {{fieldType}})
+BEGIN
+  SELECT {{aliasedCols}} FROM {{tableTok}} t WHERE t.{{byField}} = {{byField}};
+END;
+GO

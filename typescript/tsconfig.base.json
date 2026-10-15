@@ -22,7 +22,10 @@
       "@datasources/memory": ["providers/memory/src/index.ts"],
       "@datasources/mysql": ["providers/mysql/src/index.ts"],
       "@datasources/postgres": ["providers/postgres/src/index.ts"],
-      "@datasources/sqlite": ["providers/sqlite/src/index.ts"]
+      "@datasources/sqlite": ["providers/sqlite/src/index.ts"],
+      "@datasources/sqlserver": ["providers/sqlserver/src/index.ts"],
+      "@datasources/oracle": ["providers/oracle/src/index.ts"],
+      "@datasources/code-generators": ["code-generators/src/generateSql.ts"]
     }
   }
 }

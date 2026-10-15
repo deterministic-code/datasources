@@ -4,7 +4,8 @@
   "type": "module",
   "workspaces": [
     "datasources",
-    "providers/*"
+    "providers/*",
+    "code-generators"
   ],
   "scripts": {
     "build": "npm run build -w @datasources/core && npm run build -w @datasources/mysql && npm run build -w @datasources/postgres && npm run build -w @datasources/sqlite",

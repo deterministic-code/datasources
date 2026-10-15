@@ -1,0 +1,30 @@
+{
+  "name": "@datasources/code-generators",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/generateSql.ts",
+    "./generate-sql": "./src/sql/generate-sql.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@datasources/core": "file:../datasources",
+    "@datasources/mysql": "file:../providers/mysql",
+    "@datasources/oracle": "file:../providers/oracle",
+    "@datasources/postgres": "file:../providers/postgres",
+    "@datasources/sqlite": "file:../providers/sqlite",
+    "@datasources/sqlserver": "file:../providers/sqlserver",
+    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
+    "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
+    "pluralize": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/pluralize": "^0.0.33",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}

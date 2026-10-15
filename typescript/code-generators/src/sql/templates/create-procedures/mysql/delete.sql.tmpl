@@ -1,0 +1,8 @@
+DROP PROCEDURE IF EXISTS {{routineName}};
+GO
+CREATE PROCEDURE {{routineName}}(IN {{pkName}} {{pkType}})
+BEGIN
+  DELETE t FROM {{tableTok}} t WHERE t.{{pkName}} = {{pkName}};
+  SELECT ROW_COUNT() AS affected;
+END;
+GO

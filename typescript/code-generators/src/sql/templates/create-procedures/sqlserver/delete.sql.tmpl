@@ -1,0 +1,7 @@
+CREATE OR ALTER PROCEDURE {{routineName}} @{{pkName}} {{pkType}}
+AS
+BEGIN
+  DELETE FROM {{tableTok}} WHERE {{pkName}} = @{{pkName}};
+  SELECT @@ROWCOUNT AS affected;
+END;
+GO
