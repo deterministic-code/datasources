@@ -30,5 +30,8 @@ export const loadSpec = async (
   }
   if (files["types.yaml"] === undefined) throw new Error(`missing types.yaml in ${dir}`);
   files["datasource.yaml"] ??= defaultDatasourceYaml;
-  return { files, settings: settingsFrom(await readOptional(fs, join(dir, "settings.yaml"))) };
+  return {
+    files,
+    settings: { ...settingsFrom(await readOptional(fs, join(dir, "settings.yaml"))), "paths.deterministic": dir },
+  };
 };
