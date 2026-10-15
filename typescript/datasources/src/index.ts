@@ -175,9 +175,6 @@ export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";
 export { TypeConverter } from "./converters/TypeConverter.ts";
 export {
-  emitsNativeRowVersion,
-  isOccBinaryColumn,
-  usesNativeRowVersion,
   type FieldSize,
   type SpecField,
 } from "./converters/SpecField.ts";

@@ -122,7 +122,7 @@ pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
 pub use converters::{
-    emits_native_row_version, is_occ_binary_column, uses_native_row_version, Casing,
+    Casing,
     ChangeCasingConverter, ConvertSchema, DecimalRule, DefaultValueConverter, DefaultValueOptions,
     DeterministicTypeConverter, FieldSize, Mapping, MetaDataRowTypeConverter, PluralizerConverter,
     RegexConverter, ReplaceConverter, RowTypeConverter, SpecField, SpecFieldRules,

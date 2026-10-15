@@ -28,9 +28,7 @@ pub use pluralizer_converter::PluralizerConverter;
 pub use regex_converter::RegexConverter;
 pub use replace_converter::ReplaceConverter;
 pub use row_type_converter::RowTypeConverter;
-pub use spec_field::{
-    emits_native_row_version, is_occ_binary_column, uses_native_row_version, FieldSize, SpecField,
-};
+pub use spec_field::{FieldSize, SpecField};
 pub use spec_field_rules::SpecFieldRules;
 pub use to_lower_case_converter::ToLowerCaseConverter;
 pub use to_upper_case_converter::ToUpperCaseConverter;
