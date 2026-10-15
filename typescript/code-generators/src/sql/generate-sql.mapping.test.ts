@@ -85,8 +85,8 @@ const upSql = async (settings: Record<string, string> = {}) => {
       "datasource.yaml": DATASOURCE,
       [DATASOURCE_SEEDS_YAML]: SEEDS,
     }),
-    settings: { "backend.datasources": "postgres", ...settings },
-  });
+    settings,
+  }, ["postgres"]);
   const up = files.find((e) => e.filename.endsWith("0001_initial_up.sql"));
   assert.ok(up, "expected initial up migration");
   return entryBody(up);
@@ -108,7 +108,7 @@ describe("generate-sql datasource mapping", () => {
     });
     assert.match(sql, /CREATE TABLE "user"/);
     assert.match(sql, /CONSTRAINT "user_primary_key"/);
-    assert.match(sql, /REFERENCES "user"\("id"\)/);
+    assert.match(sql, /REFERENCES "user"\s*\("id"\)/);
   });
 
   it("pluralizes an unmapped type name", async () => {
@@ -132,7 +132,7 @@ describe("generate-sql datasource mapping", () => {
 
   it("resolves logical FK references to the target physical name", async () => {
     const sql = await upSql();
-    assert.match(sql, /REFERENCES "users"\("id"\)/);
+    assert.match(sql, /REFERENCES "users"\s*\("id"\)/);
   });
 
   it("keeps a non-snake mapping verbatim when pluralize is on", async () => {

@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { fill } from "@deterministic-code/generators-common/fill";
 import type {
   SeedRow,
   SeedValue,
@@ -7,15 +6,9 @@ import type {
 } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
 import { sqlStringLiteral } from "@datasources/core";
-import { insertSeedTmpl } from "../resources/sql.ts";
-import { seedInsertStatementOf } from "../statements.ts";
-import { renderSeedAfter, renderSeedBefore } from "./render-ddl.ts";
-import {
-  dialectConverter,
-  q,
-  sqlDefault,
-  type SqlDialect,
-} from "./sql-dialect.ts";
+import { identityInsertStatementOf, seedInsertStatementOf } from "../statements.ts";
+import { renderSql, sqlDefault, type SqlDialect } from "./sql-dialect.ts";
+import { dialectConverter } from "./sql-dialect.ts";
 import type { SqlMapping } from "./sql-mapping.ts";
 import {
   isGeneratedIdentity,
@@ -99,31 +92,6 @@ const colsForRow = (
   ];
 };
 
-const insert = (
-  dialect: SqlDialect,
-  table: LiveTable,
-  seed: SeedRow,
-  mapping: SqlMapping,
-): string => {
-  const cols = colsForRow(table, seed.row);
-  const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
-  const values = cols.map((c) => {
-    if (generated.includes(c)) return idValue(table, seed.id);
-    if (c === "uuid") return sqlStringLiteral(seedUuid(table.name, seed.id));
-    return colValue(
-      dialect,
-      table.fields.find((f) => f.name === c),
-      seed.row[c],
-    );
-  });
-  const statement = seedInsertStatementOf(table, mapping, cols, values);
-  return fill(insertSeedTmpl, {
-    quotedTable: q(dialect, statement.table),
-    colList: statement.fields.map((field) => q(dialect, field.name)).join(", "),
-    valueList: statement.fields.map((field) => String(field.value)).join(", "),
-  }).trimEnd();
-};
-
 /** Per-table seed SQL blocks for the initial migration (`-- Seeds: <table>`). */
 export const seedSections = (
   dialect: SqlDialect,
@@ -135,29 +103,25 @@ export const seedSections = (
   for (const table of tables) {
     const rows = seeds.get(table.name) ?? [];
     if (rows.length === 0) continue;
-    const quoted = q(dialect, table.tableName);
+    const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
     const t = pkType(table);
-    const keys = tableIdentity(table);
-    const sequenced =
-      isGeneratedIdentity(table) && t !== "uuid" && t !== "string";
-    const idColumn = mapping.columnName(table, keys[0] ?? "id");
-    const before = sequenced ? renderSeedBefore(dialect, quoted) : "";
-    const after = sequenced
-      ? renderSeedAfter(
+    const identity = isGeneratedIdentity(table) && t !== "uuid" && t !== "string";
+    const inserts = rows.map((seed) => {
+      const cols = colsForRow(table, seed.row);
+      const values = cols.map((c) => {
+        if (generated.includes(c)) return idValue(table, seed.id);
+        if (c === "uuid") return sqlStringLiteral(seedUuid(table.name, seed.id));
+        return colValue(
           dialect,
-          table.tableName,
-          quoted,
-          idColumn,
-          q(dialect, idColumn),
-        )
-      : "";
+          table.fields.find((f) => f.name === c),
+          seed.row[c],
+        );
+      });
+      return seedInsertStatementOf(table, mapping, cols, values, dialect);
+    });
     lines.push(
       `-- Seeds: ${table.tableName}`,
-      [
-        ...(before ? [before] : []),
-        ...rows.map((s) => insert(dialect, table, s, mapping)),
-        ...(after ? [after] : []),
-      ].join("\n"),
+      renderSql(dialect, identityInsertStatementOf(dialect, table, mapping, inserts, identity)),
       "",
     );
   }

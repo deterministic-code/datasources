@@ -201,8 +201,12 @@ pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, ArrayExpression, CheckConstraint, ColumnDefault, Condition,
-    ConditionRenderer, ConditionVisitor, CreateIndexStatement, CreateTableStatement,
-    CreateIndexStatementTextRenderer, CreateTableStatementTextRenderer,
+    ConditionRenderer, ConditionVisitor, CreateIndexStatement, CreateRoutineStatement,
+    CreateTableStatement, CreateTriggerStatement, RoutineKind, RoutineParameter,
+    CreateIndexStatementTextRenderer, CreateRoutineStatementTextRenderer,
+    CreateTableStatementTextRenderer, CreateTriggerStatementTextRenderer,
+    DropRoutineStatement, DropRoutineStatementTextRenderer, DropTableStatement,
+    DropTableStatementTextRenderer, IdentityInsertStatement, IdentityInsertStatementTextRenderer,
     BulkDeleteStatement, BulkDeleteStatementTextRenderer, BulkInsertStatement,
     BulkInsertStatementTextRenderer, BulkUpdateRow, BulkUpdateStatement,
     BulkUpdateStatementTextRenderer, DefaultStatementTextRenderer, DeleteStatement,

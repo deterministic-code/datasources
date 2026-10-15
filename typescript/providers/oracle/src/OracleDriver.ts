@@ -2,6 +2,7 @@ import {
   columnType as identityColumnType,
   DefaultValueConverter,
   DeterministicTypeConverter,
+  StatementTextRenderer,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -13,8 +14,12 @@ import {
   type TypeConverter,
 } from "@datasources/core";
 import { OracleConnection } from "./connection.ts";
+import { OracleStatementRenderer } from "./OracleStatementRenderer.ts";
+
+const statements = new StatementTextRenderer(t => new OracleStatementRenderer(t));
 
 export class OracleDriver implements IDriver {
+  readonly statementRenderer = statements;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   readonly quoteLeft = '"';
   readonly quoteRight = '"';

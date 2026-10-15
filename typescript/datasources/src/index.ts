@@ -9,9 +9,17 @@ export type { Information } from "./Information.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory } from "./DatasourceFactory.ts";
 export { ProviderCatalog } from "./ProviderCatalog.ts";
+export { DriverLoader } from "./DriverLoader.ts";
 export type {
   ICreateTableStatement,
   ICreateIndexStatement,
+  IDropTableStatement,
+  ICreateTriggerStatement,
+  IIdentityInsertStatement,
+  ICreateRoutineStatement,
+  IDropRoutineStatement,
+  RoutineKind,
+  RoutineParameter,
   IDeleteStatement,
   IExpression,
   IBulkDeleteStatement,
@@ -97,6 +105,16 @@ export {
   CreateTableStatement,
   CreateTableStatementTextRenderer,
   CreateIndexStatementTextRenderer,
+  DropTableStatement,
+  DropTableStatementTextRenderer,
+  CreateTriggerStatement,
+  CreateTriggerStatementTextRenderer,
+  IdentityInsertStatement,
+  IdentityInsertStatementTextRenderer,
+  CreateRoutineStatement,
+  CreateRoutineStatementTextRenderer,
+  DropRoutineStatement,
+  DropRoutineStatementTextRenderer,
   SelectStatementTextRenderer,
   InsertStatementTextRenderer,
   UpdateStatementTextRenderer,

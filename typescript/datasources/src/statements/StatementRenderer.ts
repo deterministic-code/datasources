@@ -7,12 +7,22 @@ import { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
 import { BulkUpdateStatementTextRenderer } from "./BulkUpdateStatementTextRenderer.ts";
 import { CreateIndexStatement } from "./CreateIndexStatement.ts";
 import { CreateIndexStatementTextRenderer } from "./CreateIndexStatementTextRenderer.ts";
+import { CreateRoutineStatement } from "./CreateRoutineStatement.ts";
+import { CreateRoutineStatementTextRenderer } from "./CreateRoutineStatementTextRenderer.ts";
 import { CreateTableStatement } from "./CreateTableStatement.ts";
 import { CreateTableStatementTextRenderer } from "./CreateTableStatementTextRenderer.ts";
+import { CreateTriggerStatement } from "./CreateTriggerStatement.ts";
+import { CreateTriggerStatementTextRenderer } from "./CreateTriggerStatementTextRenderer.ts";
 import { DeleteStatement } from "./DeleteStatement.ts";
 import { DeleteStatementTextRenderer } from "./DeleteStatementTextRenderer.ts";
+import { DropRoutineStatement } from "./DropRoutineStatement.ts";
+import { DropRoutineStatementTextRenderer } from "./DropRoutineStatementTextRenderer.ts";
+import { DropTableStatement } from "./DropTableStatement.ts";
+import { DropTableStatementTextRenderer } from "./DropTableStatementTextRenderer.ts";
 import { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureStatement.ts";
 import { ExecuteStoredProcedureStatementTextRenderer } from "./ExecuteStoredProcedureStatementTextRenderer.ts";
+import { IdentityInsertStatement } from "./IdentityInsertStatement.ts";
+import { IdentityInsertStatementTextRenderer } from "./IdentityInsertStatementTextRenderer.ts";
 import { InsertStatement } from "./InsertStatement.ts";
 import { InsertStatementTextRenderer } from "./InsertStatementTextRenderer.ts";
 import { ReturnStatement } from "./ReturnStatement.ts";
@@ -37,7 +47,12 @@ type AnyStatement =
   | SelectInsertedIdStatement
   | BulkInsertStatement
   | BulkUpdateStatement
-  | BulkDeleteStatement;
+  | BulkDeleteStatement
+  | DropTableStatement
+  | CreateTriggerStatement
+  | IdentityInsertStatement
+  | CreateRoutineStatement
+  | DropRoutineStatement;
 
 export class StatementRenderer implements IStatementVisitor {
   constructor(protected readonly text: StatementTextRenderer) {}
@@ -54,20 +69,33 @@ export class StatementRenderer implements IStatementVisitor {
   visit(statement: BulkInsertStatement): string;
   visit(statement: BulkUpdateStatement): string;
   visit(statement: BulkDeleteStatement): string;
+  visit(statement: DropTableStatement): string;
+  visit(statement: CreateTriggerStatement): string;
+  visit(statement: IdentityInsertStatement): string;
+  visit(statement: CreateRoutineStatement): string;
+  visit(statement: DropRoutineStatement): string;
   visit(statement: AnyStatement): string {
-    if (statement instanceof SelectStatement) return this.visitSelect(statement);
-    if (statement instanceof InsertStatement) return this.visitInsert(statement);
-    if (statement instanceof UpdateStatement) return this.visitUpdate(statement);
-    if (statement instanceof DeleteStatement) return this.visitDelete(statement);
-    if (statement instanceof CreateTableStatement) return this.visitCreateTable(statement);
-    if (statement instanceof CreateIndexStatement) return this.visitCreateIndex(statement);
-    if (statement instanceof ExecuteStoredProcedureStatement)
-      return this.visitExecuteStoredProcedure(statement);
-    if (statement instanceof ReturnStatement) return this.visitReturn(statement);
-    if (statement instanceof BulkInsertStatement) return this.visitBulkInsert(statement);
-    if (statement instanceof BulkUpdateStatement) return this.visitBulkUpdate(statement);
-    if (statement instanceof BulkDeleteStatement) return this.visitBulkDelete(statement);
-    return this.visitSelectInsertedId(statement as SelectInsertedIdStatement);
+    return ({
+      SelectStatement: () => this.visitSelect(statement as SelectStatement),
+      InsertStatement: () => this.visitInsert(statement as InsertStatement),
+      UpdateStatement: () => this.visitUpdate(statement as UpdateStatement),
+      DeleteStatement: () => this.visitDelete(statement as DeleteStatement),
+      CreateTableStatement: () => this.visitCreateTable(statement as CreateTableStatement),
+      CreateIndexStatement: () => this.visitCreateIndex(statement as CreateIndexStatement),
+      ExecuteStoredProcedureStatement: () =>
+        this.visitExecuteStoredProcedure(statement as ExecuteStoredProcedureStatement),
+      ReturnStatement: () => this.visitReturn(statement as ReturnStatement),
+      BulkInsertStatement: () => this.visitBulkInsert(statement as BulkInsertStatement),
+      BulkUpdateStatement: () => this.visitBulkUpdate(statement as BulkUpdateStatement),
+      BulkDeleteStatement: () => this.visitBulkDelete(statement as BulkDeleteStatement),
+      DropTableStatement: () => this.visitDropTable(statement as DropTableStatement),
+      CreateTriggerStatement: () => this.visitCreateTrigger(statement as CreateTriggerStatement),
+      IdentityInsertStatement: () => this.visitIdentityInsert(statement as IdentityInsertStatement),
+      CreateRoutineStatement: () => this.visitCreateRoutine(statement as CreateRoutineStatement),
+      DropRoutineStatement: () => this.visitDropRoutine(statement as DropRoutineStatement),
+      SelectInsertedIdStatement: () =>
+        this.visitSelectInsertedId(statement as SelectInsertedIdStatement),
+    }[statement.constructor.name] ?? (() => this.visitSelectInsertedId(statement as SelectInsertedIdStatement)))();
   }
 
   protected visitSelect(statement: SelectStatement): string {
@@ -116,5 +144,25 @@ export class StatementRenderer implements IStatementVisitor {
 
   protected visitBulkDelete(statement: BulkDeleteStatement): string {
     return new BulkDeleteStatementTextRenderer().render(statement);
+  }
+
+  protected visitDropTable(statement: DropTableStatement): string {
+    return new DropTableStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateTrigger(statement: CreateTriggerStatement): string {
+    return new CreateTriggerStatementTextRenderer().render(statement);
+  }
+
+  protected visitIdentityInsert(statement: IdentityInsertStatement): string {
+    return new IdentityInsertStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateRoutine(statement: CreateRoutineStatement): string {
+    return new CreateRoutineStatementTextRenderer().render(statement);
+  }
+
+  protected visitDropRoutine(statement: DropRoutineStatement): string {
+    return new DropRoutineStatementTextRenderer().render(statement);
   }
 }

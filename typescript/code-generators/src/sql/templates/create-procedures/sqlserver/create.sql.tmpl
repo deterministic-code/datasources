@@ -1,9 +1,0 @@
-CREATE OR ALTER PROCEDURE {{routineName}}
-{{{params}}}
-AS
-BEGIN
-  INSERT INTO {{tableTok}} ({{cols}})
-  VALUES ({{placeholders}});
-  SELECT CAST(SCOPE_IDENTITY() AS BIGINT) AS id;
-END;
-GO

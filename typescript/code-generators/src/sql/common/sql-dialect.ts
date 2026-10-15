@@ -1,48 +1,46 @@
-import type {
-  DefaultValueConverter,
-  DeterministicTypeConverter,
-  IDriver,
-  SpecField,
+import { createRequire } from "node:module";
+import {
+  DriverLoader,
+  ProviderCatalog,
+  type DefaultValueConverter,
+  type DeterministicTypeConverter,
+  type IDriver,
+  type IStatement,
+  type SpecField,
+  type StatementTextRenderer,
 } from "@datasources/core";
-import { MysqlDriver } from "@datasources/mysql";
-import { OracleDriver } from "@datasources/oracle";
-import { PostgresDriver } from "@datasources/postgres";
-import { SqliteDriver } from "@datasources/sqlite";
-import { SqlServerDriver } from "@datasources/sqlserver";
 
-const SQL_DIALECTS = [
-  "sqlite",
-  "mysql",
-  "postgres",
-  "sqlserver",
-  "oracle",
-] as const;
+const require = createRequire(import.meta.url);
 
-export type SqlDialect = (typeof SQL_DIALECTS)[number];
+export type SqlDialect = string;
 
 export type SqlGenerateDriver = IDriver & {
   quoteLeft: string;
   quoteRight: string;
   typeConverter: DeterministicTypeConverter;
   defaultValueConverter: DefaultValueConverter;
-};
-
-const drivers: Record<SqlDialect, () => SqlGenerateDriver> = {
-  sqlite: () => new SqliteDriver(),
-  mysql: () => new MysqlDriver(),
-  postgres: () => new PostgresDriver(),
-  sqlserver: () => new SqlServerDriver(),
-  oracle: () => new OracleDriver(),
+  statementRenderer: StatementTextRenderer;
 };
 
 export const dialectDriver = (dialect: string): SqlGenerateDriver => {
-  const create = drivers[dialect as SqlDialect];
-  if (create === undefined) {
-    throw new Error(
-      `Unknown SQL dialect "${dialect}". Valid: ${SQL_DIALECTS.join(", ")}.`,
-    );
+  const catalog = ProviderCatalog.default[dialect];
+  if (catalog === undefined) throw new Error(`Unknown SQL dialect "${dialect}".`);
+  const driver = DriverLoader.load(
+    new ProviderCatalog(catalog.name, require.resolve(catalog.location), catalog.module),
+  );
+  if (
+    driver.typeConverter == null ||
+    driver.defaultValueConverter == null ||
+    driver.statementRenderer == null
+  ) {
+    throw new Error(`"${dialect}" is not a SQL dialect.`);
   }
-  return create();
+  return driver as SqlGenerateDriver;
+};
+
+export const renderSql = (dialect: string, statement: IStatement): string => {
+  const sql = dialectDriver(dialect).statementRenderer.render(statement).trimEnd();
+  return sql === "" ? "" : /[;/]$/.test(sql) ? sql : `${sql};`;
 };
 
 export const dialectConverter = (dialect: string): {
@@ -62,22 +60,7 @@ export const dialectConverter = (dialect: string): {
 
 export const requireDialect = (language: string): SqlDialect => {
   dialectDriver(language);
-  return language as SqlDialect;
-};
-
-export const dialectsFromSettings = (
-  settings: Record<string, string>,
-): SqlDialect[] => {
-  const raw = settings["backend.datasources"];
-  if (raw === undefined || raw === "") return ["sqlite"];
-  const out: SqlDialect[] = [];
-  for (const name of raw.split(",")) {
-    const key = name.trim();
-    if (key === "") continue;
-    const dialect = requireDialect(key);
-    if (!out.includes(dialect)) out.push(dialect);
-  }
-  return out.length > 0 ? out : ["sqlite"];
+  return language;
 };
 
 export const q = (dialect: string, ident: string): string => {

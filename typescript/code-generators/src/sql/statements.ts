@@ -1,9 +1,14 @@
 import {
   ColumnDefault,
   CreateIndexStatement,
+  CreateRoutineStatement,
   CreateTableStatement,
+  CreateTriggerStatement,
   DeleteStatement,
+  DropRoutineStatement,
+  DropTableStatement,
   ForeignKey,
+  IdentityInsertStatement,
   InsertStatement,
   NotNull,
   PrimaryKey,
@@ -27,6 +32,7 @@ import {
 } from "./common/sql-schema.ts";
 import type { SqlMapping } from "./common/sql-mapping.ts";
 import {
+  dialectDriver,
   mapColumnType,
   q,
   sqlDefault,
@@ -36,13 +42,21 @@ import {
 const columnOf = (dialect: SqlDialect, mapping: SqlMapping, table: LiveTable, field: TypeField): Column => {
   const overlay = fieldOverlay(table, field.name);
   const converterField = converterFieldOf(field);
-  const defaultExpr = sqlDefault(dialect, converterField);
+  const generated = usesGeneratedIdColumn(table, field);
+  const identity = generated && field.type !== "uuid" && field.type !== "string";
+  const named = mapping.constraintName(table, mapping.fieldStem(table, field.name), "default_constraint");
+  const utcNow = dialectDriver(dialect).defaultValueConverter.convert("datetime", "UtcNow");
+  const newId = dialectDriver(dialect).defaultValueConverter.convert("uuid", "NewId");
+  const fromSpec = sqlDefault(dialect, converterField);
+  const defaultExpr =
+    fromSpec ??
+    (field.name === "created" || field.name === "updated" ? utcNow : null) ??
+    (field.name === "uuid" || (generated && field.type === "uuid") ? newId : null);
   const keys = tableIdentity(table);
-  const identity = usesGeneratedIdColumn(table, field) && field.type !== "uuid" && field.type !== "string";
   return {
-    name: mapping.columnName(table, field.name),
+    name: q(dialect, mapping.columnName(table, field.name)),
     type: mapColumnType(dialect, converterField),
-    ...(defaultExpr !== null ? { default: new ColumnDefault(defaultExpr) } : {}),
+    ...(defaultExpr ? { default: new ColumnDefault(defaultExpr, q(dialect, named)) } : {}),
     ...(!field.isNullable || keys.includes(field.name) ? { notNull: new NotNull() } : {}),
     ...(identity ? { identity: true } : {}),
   };
@@ -60,8 +74,8 @@ export const createTableStatementOf = (
     .map(
       (field) =>
         new UniqueConstraint(
-          mapping.constraintName(table, mapping.fieldStem(table, field.name), "unique_constraint"),
-          [mapping.columnName(table, field.name)],
+          q(dialect, mapping.constraintName(table, mapping.fieldStem(table, field.name), "unique_constraint")),
+          [q(dialect, mapping.columnName(table, field.name))],
         ),
     );
   const foreignKeys = table.fields
@@ -69,31 +83,49 @@ export const createTableStatementOf = (
     .map((field) => {
       const ref = mapping.resolveReference(field.references!);
       return new ForeignKey(
-        mapping.constraintName(table, mapping.fieldStem(table, field.name), "foreign_key"),
-        [mapping.columnName(table, field.name)],
-        ref.tableName,
-        [ref.columnName],
+        q(dialect, mapping.constraintName(table, mapping.fieldStem(table, field.name), "foreign_key")),
+        [q(dialect, mapping.columnName(table, field.name))],
+        q(dialect, ref.tableName),
+        [q(dialect, ref.columnName)],
       );
     });
   const pk =
     keys.length > 1
-      ? [new PrimaryKey(mapping.constraintName(table, "primary_key"), keys.map((key) => mapping.columnName(table, key)))]
+      ? [new PrimaryKey(q(dialect, mapping.constraintName(table, "primary_key")), keys.map((key) => q(dialect, mapping.columnName(table, key))))]
       : keys.length === 1 && table.fields.some((field) => isPkField(field, table, overlayOf(table)))
-        ? [new PrimaryKey(mapping.constraintName(table, "primary_key"), [mapping.columnName(table, keys[0]!)])]
+        ? [new PrimaryKey(q(dialect, mapping.constraintName(table, "primary_key")), [q(dialect, mapping.columnName(table, keys[0]!))])]
         : [];
-  return new CreateTableStatement(table.tableName, columns, [...pk, ...uniques, ...foreignKeys]);
+  return new CreateTableStatement(q(dialect, table.tableName), columns, [...pk, ...uniques, ...foreignKeys]);
 };
 
 export const createIndexStatementOf = (
+  dialect: SqlDialect,
   mapping: SqlMapping,
   table: LiveTable,
   idx: DatasourceIndex,
 ): CreateIndexStatement =>
   new CreateIndexStatement(
-    mapping.constraintName(table, idx.name, "index"),
-    table.tableName,
-    idx.fields.map((column) => mapping.columnName(table, column)),
+    q(dialect, mapping.constraintName(table, idx.name, "index")),
+    q(dialect, table.tableName),
+    idx.fields.map((column) => q(dialect, mapping.columnName(table, column))),
     idx.isUnique,
+  );
+
+export const dropTableStatementOf = (dialect: SqlDialect, table: string): DropTableStatement =>
+  new DropTableStatement(q(dialect, table));
+
+export const createTriggerStatementOf = (
+  dialect: SqlDialect,
+  table: LiveTable,
+  mapping: SqlMapping,
+  key: string,
+): CreateTriggerStatement =>
+  new CreateTriggerStatement(
+    q(dialect, table.tableName),
+    q(dialect, mapping.triggerName(table)),
+    q(dialect, mapping.columnName(table, "updated")),
+    q(dialect, mapping.columnName(table, key)),
+    dialectDriver(dialect).defaultValueConverter.convert("datetime", "UtcNow") ?? "",
   );
 
 export const seedInsertStatementOf = (
@@ -101,14 +133,31 @@ export const seedInsertStatementOf = (
   mapping: SqlMapping,
   columns: string[],
   values: string[],
+  dialect: SqlDialect,
 ): InsertStatement =>
   new InsertStatement(
-    table.tableName,
+    q(dialect, table.tableName),
     columns.map((column, i) => ({
-      name: mapping.columnName(table, column),
+      name: q(dialect, mapping.columnName(table, column)),
       value: values[i] ?? "NULL",
     })),
   );
+
+export const identityInsertStatementOf = (
+  dialect: SqlDialect,
+  table: LiveTable,
+  mapping: SqlMapping,
+  inserts: InsertStatement[],
+  identity: boolean,
+): IdentityInsertStatement => {
+  const keys = tableIdentity(table);
+  return new IdentityInsertStatement(
+    table.tableName,
+    mapping.columnName(table, keys[0] ?? "id"),
+    inserts,
+    identity,
+  );
+};
 
 export const findStatementOf = (
   dialect: SqlDialect,
@@ -149,3 +198,21 @@ export const updateStatementOf = (
 
 export const deleteStatementOf = (table: string, keys: string[]): DeleteStatement =>
   new DeleteStatement(table, equalsWhere(keys));
+
+export const createRoutineStatementOf = (
+  name: string,
+  kind: CreateRoutineStatement["kind"],
+  table: string,
+  columns: readonly string[],
+  parameters: CreateRoutineStatement["parameters"],
+  key: string,
+  keyType: string,
+  writable: readonly string[],
+  byField?: string,
+  generatedKey = false,
+  auditUpdated?: string,
+): CreateRoutineStatement =>
+  new CreateRoutineStatement(name, kind, table, columns, parameters, key, keyType, writable, byField, generatedKey, auditUpdated);
+
+export const dropRoutineStatementOf = (name: string): DropRoutineStatement =>
+  new DropRoutineStatement(name);

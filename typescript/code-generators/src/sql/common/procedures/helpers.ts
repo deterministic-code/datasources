@@ -1,4 +1,4 @@
-/** Dialect-agnostic helpers shared by the postgres/mysql/sqlserver stored-procedure generators. */
+/** Helpers shared by stored-procedure generation. */
 
 interface ProcField {
   name: string;
