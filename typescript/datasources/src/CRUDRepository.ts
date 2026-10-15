@@ -1,7 +1,7 @@
 import type { IConnection } from "./IConnection.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Response } from "./Response.ts";
-import type { IWhere } from "./IWhere.ts";
+import type { IWhere } from "./statements/IWhere.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
