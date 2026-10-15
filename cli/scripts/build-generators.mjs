@@ -81,7 +81,7 @@ await build({
   logLevel: "warning",
 });
 
-for (const name of ["generators-common", "typescript-generators", "csharp-generators", "rust-generators", "generators-sql"]) {
+for (const name of ["generators-common", "typescript-generators", "csharp-generators", "rust-generators"]) {
   await transpile(name);
 }
 
@@ -103,7 +103,6 @@ const stubs = [
   ["csharp-generators", "generate-view-types"],
   ["rust-generators", "generate-datasource-types"],
   ["rust-generators", "generate-view-types"],
-  ["generators-sql", "generate-sql"],
 ];
 for (const [name, file] of stubs) {
   const path = join(packages, name, "dist", `${file}.d.ts`);

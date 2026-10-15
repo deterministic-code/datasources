@@ -122,9 +122,11 @@ pub use command_middleware_host::CommandMiddlewareHost;
 pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
 pub use converters::{
-    Casing, ChangeCasingConverter, ConvertSchema, MetaDataRowTypeConverter, PluralizerConverter,
-    RegexConverter, ReplaceConverter, RowTypeConverter, ToLowerCaseConverter, ToUpperCaseConverter,
-    TypeConverter,
+    emits_native_row_version, is_occ_binary_column, uses_native_row_version, Casing,
+    ChangeCasingConverter, ConvertSchema, DecimalRule, DefaultValueConverter, DefaultValueOptions,
+    DeterministicTypeConverter, FieldSize, MetaDataRowTypeConverter, PluralizerConverter,
+    RegexConverter, ReplaceConverter, RowTypeConverter, SpecField, SpecFieldRules,
+    ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter, EMPTY_UUID,
 };
 pub use create::{create, default};
 pub use create_crud_repository_options::create_crud_repository_options;

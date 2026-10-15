@@ -62,6 +62,8 @@ export default defineConfig({
         "src/Row.ts",
         "src/converters/Cell.ts",
         "src/converters/Constructable.ts",
+        "src/converters/DefaultValueOptions.ts",
+        "src/converters/SpecFieldRules.ts",
         "src/mappers/IMapper.ts",
       ],
       thresholds: {

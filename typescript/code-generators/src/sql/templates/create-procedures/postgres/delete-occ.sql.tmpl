@@ -1,0 +1,12 @@
+CREATE OR REPLACE FUNCTION {{routineName}}(
+{{{params}}}
+) RETURNS INT LANGUAGE plpgsql AS $$
+DECLARE
+  affected INT;
+BEGIN
+  DELETE FROM {{tableTok}} t
+  WHERE t.{{pkName}} = {{routineName}}.{{pkName}} AND t.{{occCol}} = {{routineName}}.{{expectedOcc}};
+  GET DIAGNOSTICS affected = ROW_COUNT;
+  RETURN affected;
+END;
+$$;

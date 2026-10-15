@@ -1,5 +1,7 @@
 import {
   DatasourceError,
+  DefaultValueConverter,
+  DeterministicTypeConverter,
   StatementTextRenderer,
   type Cell,
   type DatasourceOptions,
@@ -36,6 +38,43 @@ export class SqliteDriver implements IDriver {
     changeLogs: [],
   };
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
+  readonly quoteLeft = '"';
+  readonly quoteRight = '"';
+  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+    {
+      string: "TEXT",
+      character: "TEXT",
+      number: "INTEGER",
+      integer: "INTEGER",
+      unsignedinteger: "INTEGER",
+      smallinteger: "INTEGER",
+      unsignedsmallinteger: "INTEGER",
+      biginteger: "INTEGER",
+      unsignedbiginteger: "INTEGER",
+      float: "REAL",
+      decimal: "NUMERIC",
+      boolean: "BOOLEAN",
+      datetime: "TEXT",
+      binary: "BLOB",
+      uuid: "TEXT",
+      reference: "INTEGER",
+    },
+    {
+      dialectName: "sqlite",
+      stringUnlimited: "TEXT",
+      stringSized: (n) => `VARCHAR(${n})`,
+      occBinary: "BLOB",
+    },
+  );
+  readonly defaultValueConverter = new DefaultValueConverter({
+    newId: () => "",
+    now: () => `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))`,
+    utcNow: () => `(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+    booleanOn: "1",
+    booleanOff: "0",
+    hex: (arg) => `X'${arg}'`,
+    hexReverse: /^X'(.*)'$/,
+  });
   columnType = (name: string): string =>
     columnTypes[name] ??
     (() => {

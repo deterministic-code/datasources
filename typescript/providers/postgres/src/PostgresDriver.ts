@@ -1,5 +1,7 @@
 import {
   DatasourceError,
+  DefaultValueConverter,
+  DeterministicTypeConverter,
   StatementTextRenderer,
   type Cell,
   type DatasourceOptions,
@@ -38,6 +40,45 @@ export class PostgresDriver implements IDriver {
     changeLogs: [],
   };
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
+  readonly quoteLeft = '"';
+  readonly quoteRight = '"';
+  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+    {
+      string: "TEXT",
+      character: "CHAR(1)",
+      number: "INTEGER",
+      integer: "INTEGER",
+      unsignedinteger: "BIGINT",
+      smallinteger: "SMALLINT",
+      unsignedsmallinteger: "INTEGER",
+      biginteger: "BIGINT",
+      unsignedbiginteger: "NUMERIC(20)",
+      float: "DOUBLE PRECISION",
+      decimal: "NUMERIC",
+      boolean: "BOOLEAN",
+      datetime: "TIMESTAMPTZ",
+      binary: "BYTEA",
+      uuid: "UUID",
+      reference: "INTEGER",
+    },
+    {
+      dialectName: "postgres",
+      stringUnlimited: "TEXT",
+      stringSized: (n) => `VARCHAR(${n})`,
+      character: "CHAR",
+      decimal: { kind: "optional", type: "NUMERIC", fallback: "NUMERIC" },
+      occBinary: "BYTEA",
+    },
+  );
+  readonly defaultValueConverter = new DefaultValueConverter({
+    newId: () => "gen_random_uuid()",
+    now: () => "LOCALTIMESTAMP",
+    utcNow: () => `(NOW() AT TIME ZONE 'UTC')`,
+    booleanOn: "TRUE",
+    booleanOff: "FALSE",
+    hex: (arg) => `'\\x${arg}'`,
+    hexReverse: /^'\\x(.*)'$/,
+  });
   columnType = (name: string): string =>
     columnTypes[name] ??
     (() => {

@@ -75,6 +75,26 @@ columnType(name: string): string
 
 **Returns** `string`
 
+##### deterministicTypeConverter
+
+Spec-type to native SQL column type. SQL drivers set this. Other drivers omit it.
+
+```typescript
+deterministicTypeConverter?: DeterministicTypeConverter | null
+```
+
+**Returns** `DeterministicTypeConverter | null | undefined`
+
+##### defaultValueConverter
+
+Spec default token (`UtcNow`, `NewId`, …) to native SQL. SQL drivers set this. Other drivers omit it.
+
+```typescript
+defaultValueConverter?: DefaultValueConverter | null
+```
+
+**Returns** `DefaultValueConverter | null | undefined`
+
 ##### information
 
 Optional provider notes: descriptions, overrides, and change logs. Omitted or `null` when the driver has none.
@@ -161,6 +181,26 @@ string ColumnType(string name)
 
 **Returns** `string`
 
+##### DeterministicTypeConverter
+
+Spec-type to native SQL column type. The default returns `null`. SQL drivers set this.
+
+```csharp
+DeterministicTypeConverter? DeterministicTypeConverter
+```
+
+**Returns** `DeterministicTypeConverter?`
+
+##### DefaultValueConverter
+
+Spec default token (`UtcNow`, `NewId`, …) to native SQL. The default returns `null`. SQL drivers set this.
+
+```csharp
+DefaultValueConverter? DefaultValueConverter
+```
+
+**Returns** `DefaultValueConverter?`
+
 ##### Information
 
 Optional provider notes: descriptions, overrides, and change logs. The default returns `null`.
@@ -246,6 +286,26 @@ fn column_type(&self, name: &str) -> Result<String>
 
 **Returns** `Result<String>`
 
+##### deterministic_type_converter()
+
+Spec-type to native SQL column type. The default returns `None`. SQL drivers set this.
+
+```rust
+fn deterministic_type_converter(&self) -> Option<&DeterministicTypeConverter>
+```
+
+**Returns** `Option<&DeterministicTypeConverter>`
+
+##### default_value_converter()
+
+Spec default token (`UtcNow`, `NewId`, …) to native SQL. The default returns `None`. SQL drivers set this.
+
+```rust
+fn default_value_converter(&self) -> Option<&DefaultValueConverter>
+```
+
+**Returns** `Option<&DefaultValueConverter>`
+
 ##### information()
 
 Optional provider notes: descriptions, overrides, and change logs. The default returns `None`.
@@ -278,6 +338,8 @@ Published drivers list that metadata (and {{RowTypeConverters|rowTypeConverters|
 The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`, and the repository reads that row. Commands do not sniff SQL for the inserted id. {{SelectInsertedIdStatementTextRenderer.Render|SelectInsertedIdStatementTextRenderer.render|SelectInsertedIdStatementTextRenderer::render}} throws until a provider overrides it.
 
 {{ColumnType|columnType|column_type}} maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
+
+{{DeterministicTypeConverter|deterministicTypeConverter|deterministic_type_converter}} maps a spec field (`integer`, sized `string`, OCC binary) to a native column type. {{DefaultValueConverter|defaultValueConverter|default_value_converter}} maps a spec default token (`UtcNow`, `NewId`) to a native SQL expression. SQL drivers set both. Other drivers leave them unset.
 
 ::: prose
 ### typescript

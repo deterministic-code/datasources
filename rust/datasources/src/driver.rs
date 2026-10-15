@@ -1,6 +1,6 @@
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::converters::TypeConverter;
+use crate::converters::{DefaultValueConverter, DeterministicTypeConverter, TypeConverter};
 use crate::information::Information;
 use crate::isolation_level::IsolationLevel;
 use crate::statements::StatementTextRenderer;
@@ -23,6 +23,14 @@ pub trait Driver: Send + Sync {
 
     fn column_type(&self, name: &str) -> crate::Result<String> {
         Ok(name.to_string())
+    }
+
+    fn deterministic_type_converter(&self) -> Option<&DeterministicTypeConverter> {
+        None
+    }
+
+    fn default_value_converter(&self) -> Option<&DefaultValueConverter> {
+        None
     }
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {
