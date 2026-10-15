@@ -1,0 +1,7 @@
+settings:
+  backend:
+    datasources: sqlite,mysql,postgres
+  languages:
+    typescript:
+      casing:
+        fields: camel
