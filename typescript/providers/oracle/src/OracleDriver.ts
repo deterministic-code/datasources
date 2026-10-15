@@ -2,6 +2,7 @@ import {
   columnType as identityColumnType,
   DefaultValueConverter,
   DeterministicTypeConverter,
+  StatementTextRenderer,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -13,12 +14,16 @@ import {
   type TypeConverter,
 } from "@datasources/core";
 import { OracleConnection } from "./connection.ts";
+import { OracleStatementRenderer } from "./OracleStatementRenderer.ts";
+
+const statements = new StatementTextRenderer(t => new OracleStatementRenderer(t));
 
 export class OracleDriver implements IDriver {
+  readonly statementRenderer = statements;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "CLOB",
       character: "CHAR(1)",
@@ -45,7 +50,6 @@ export class OracleDriver implements IDriver {
       decimal: { kind: "required", type: "NUMBER" },
       binaryUnlimited: "BLOB",
       binarySized: (n: number) => `RAW(${n})`,
-      occBinary: "RAW(8)",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

@@ -40,10 +40,6 @@ export class SqlMapping {
     return this.casing.triggerName(this.tableStem(table));
   }
 
-  occTriggerName(table: SqlTable): string {
-    return this.casing.occTriggerName(this.tableStem(table));
-  }
-
   tableOf(logicalName: string): SqlTable {
     const table = this.byLogicalName.get(logicalName);
     if (!table) {

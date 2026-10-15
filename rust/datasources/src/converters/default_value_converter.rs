@@ -22,6 +22,10 @@ impl DefaultValueConverter {
         Self { dictionary: dictionary_of(options) }
     }
 
+    pub fn sql_string_literal(value: impl AsRef<str>) -> String {
+        sql_string_literal(value.as_ref())
+    }
+
     pub fn convert(&self, spec_type: &str, text: &str) -> Result<Option<String>> {
         let (token, arg) = parse(spec_type, Some(text));
         if token == "None" {

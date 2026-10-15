@@ -3,14 +3,17 @@ mod connection;
 mod connection_string;
 mod converters;
 mod create_table_statement_renderer;
+mod create_trigger_statement_renderer;
 mod driver;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
 mod sqlite_path;
+mod sql_generate;
 mod statement_renderer;
 mod transaction;
 
 pub use driver::SqliteDriver;
+pub use sql_generate::{DEFAULTS, QUOTE_LEFT, QUOTE_RIGHT, TYPES};
 pub use statement_renderer::SqliteStatementRenderer;
 
 #[cfg(test)]

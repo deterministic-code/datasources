@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Datasources;
 
 namespace Datasources.Sqlite;
@@ -6,7 +7,47 @@ public sealed class SqliteDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
         new(t => new SqliteStatementRenderer(t));
+    static readonly DeterministicTypeConverter Types = new(
+        new Dictionary<string, string>
+        {
+            ["string"] = "TEXT",
+            ["character"] = "TEXT",
+            ["number"] = "INTEGER",
+            ["integer"] = "INTEGER",
+            ["unsignedinteger"] = "INTEGER",
+            ["smallinteger"] = "INTEGER",
+            ["unsignedsmallinteger"] = "INTEGER",
+            ["biginteger"] = "INTEGER",
+            ["unsignedbiginteger"] = "INTEGER",
+            ["float"] = "REAL",
+            ["decimal"] = "NUMERIC",
+            ["boolean"] = "BOOLEAN",
+            ["datetime"] = "TEXT",
+            ["binary"] = "BLOB",
+            ["uuid"] = "TEXT",
+            ["reference"] = "INTEGER",
+        },
+        new SpecFieldRules
+        {
+            DialectName = "sqlite",
+            StringUnlimited = "TEXT",
+            StringSized = n => $"VARCHAR({n})",
+        });
+    static readonly DefaultValueConverter Defaults = new(new DefaultValueOptions
+    {
+        NewId = () => "",
+        Now = () => "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))",
+        UtcNow = () => "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+        BooleanOn = "1",
+        BooleanOff = "0",
+        Hex = arg => $"X'{arg}'",
+        HexReverse = new Regex(@"^X'(.*)'$"),
+    });
 
+    public string QuoteLeft => "\"";
+    public string QuoteRight => "\"";
+    public IMapping<string, string>? TypeConverter => Types;
+    public DefaultValueConverter? DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         [

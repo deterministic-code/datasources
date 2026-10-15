@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="Datasources/Datasources.csproj" />
   <Project Path="Datasources.Tests/Datasources.Tests.csproj" />
+  <Project Path="CodeGenerators/Datasources.CodeGenerators.csproj" />
+  <Project Path="CodeGenerators.Tests/Datasources.CodeGenerators.Tests.csproj" />
   <Folder Name="/Providers/">
     <Project Path="Providers/DynamoDb/Datasources.DynamoDb.csproj" />
     <Project Path="Providers/DynamoDb.Tests/Datasources.DynamoDb.Tests.csproj" />

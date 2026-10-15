@@ -42,7 +42,7 @@ export class PostgresDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "TEXT",
       character: "CHAR(1)",
@@ -67,7 +67,6 @@ export class PostgresDriver implements IDriver {
       stringSized: (n) => `VARCHAR(${n})`,
       character: "CHAR",
       decimal: { kind: "optional", type: "NUMERIC", fallback: "NUMERIC" },
-      occBinary: "BYTEA",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

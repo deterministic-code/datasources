@@ -1,7 +1,0 @@
-DROP PROCEDURE IF EXISTS {{routineName}};
-GO
-CREATE PROCEDURE {{routineName}}()
-BEGIN
-  SELECT {{aliasedCols}} FROM {{tableTok}} t ORDER BY t.{{pkName}};
-END;
-GO

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Datasources;
 
 namespace Datasources.Postgres;
@@ -6,7 +7,49 @@ public sealed class PostgresDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
         new(t => new PostgresStatementRenderer(t));
+    static readonly DeterministicTypeConverter Types = new(
+        new Dictionary<string, string>
+        {
+            ["string"] = "TEXT",
+            ["character"] = "CHAR(1)",
+            ["number"] = "INTEGER",
+            ["integer"] = "INTEGER",
+            ["unsignedinteger"] = "BIGINT",
+            ["smallinteger"] = "SMALLINT",
+            ["unsignedsmallinteger"] = "INTEGER",
+            ["biginteger"] = "BIGINT",
+            ["unsignedbiginteger"] = "NUMERIC(20)",
+            ["float"] = "DOUBLE PRECISION",
+            ["decimal"] = "NUMERIC",
+            ["boolean"] = "BOOLEAN",
+            ["datetime"] = "TIMESTAMPTZ",
+            ["binary"] = "BYTEA",
+            ["uuid"] = "UUID",
+            ["reference"] = "INTEGER",
+        },
+        new SpecFieldRules
+        {
+            DialectName = "postgres",
+            StringUnlimited = "TEXT",
+            StringSized = n => $"VARCHAR({n})",
+            Character = "CHAR",
+            Decimal = new DecimalRule.Optional("NUMERIC", "NUMERIC"),
+        });
+    static readonly DefaultValueConverter Defaults = new(new DefaultValueOptions
+    {
+        NewId = () => "gen_random_uuid()",
+        Now = () => "LOCALTIMESTAMP",
+        UtcNow = () => "(NOW() AT TIME ZONE 'UTC')",
+        BooleanOn = "TRUE",
+        BooleanOff = "FALSE",
+        Hex = arg => $"'\\x{arg}'",
+        HexReverse = new Regex(@"^'\\x(.*)'$"),
+    });
 
+    public string QuoteLeft => "\"";
+    public string QuoteRight => "\"";
+    public IMapping<string, string>? TypeConverter => Types;
+    public DefaultValueConverter? DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         [

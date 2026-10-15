@@ -1,8 +1,13 @@
+use crate::create_routine_statement_renderer::PostgresCreateRoutineStatementRenderer;
 use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
+use crate::create_trigger_statement_renderer::PostgresCreateTriggerStatementRenderer;
+use crate::drop_routine_statement_renderer::PostgresDropRoutineStatementRenderer;
+use crate::identity_insert_statement_renderer::PostgresIdentityInsertStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::PostgresSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    BulkInsertStatement, BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateTableStatement,
-    CreateTableStatementTextRenderer, InsertStatement, SelectInsertedIdStatement,
+    BulkInsertStatement, BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateRoutineStatement,
+    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
+    DropRoutineStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
     StatementTextRenderer, StatementVisitor, Value,
 };
 
@@ -23,6 +28,38 @@ impl StatementVisitor for PostgresStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         PostgresSelectInsertedIdStatementTextRenderer.render(statement)
+    }
+
+    fn visit_create_trigger(
+        &self,
+        statement: &CreateTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        PostgresCreateTriggerStatementRenderer.render(statement)
+    }
+
+    fn visit_identity_insert(
+        &self,
+        statement: &IdentityInsertStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        PostgresIdentityInsertStatementRenderer.render(statement)
+    }
+
+    fn visit_create_routine(
+        &self,
+        statement: &CreateRoutineStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        PostgresCreateRoutineStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_routine(
+        &self,
+        statement: &DropRoutineStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        PostgresDropRoutineStatementRenderer.render(statement)
     }
 
     fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {

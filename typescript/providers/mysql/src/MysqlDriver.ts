@@ -41,7 +41,7 @@ export class MysqlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
   readonly quoteLeft = "`";
   readonly quoteRight = "`";
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "TEXT",
       character: "CHAR(1)",
@@ -68,7 +68,6 @@ export class MysqlDriver implements IDriver {
       decimal: { kind: "optional", type: "DECIMAL", fallback: "DECIMAL(10, 2)" },
       binaryUnlimited: "BLOB",
       binarySized: (n) => (n <= 65535 ? `VARBINARY(${n})` : "LONGBLOB"),
-      occBinary: "BINARY(8)",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

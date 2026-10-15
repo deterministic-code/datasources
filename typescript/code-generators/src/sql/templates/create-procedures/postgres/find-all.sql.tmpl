@@ -1,2 +1,0 @@
-CREATE OR REPLACE FUNCTION {{routineName}}() RETURNS SETOF {{tableTok}}
-LANGUAGE sql AS $$ SELECT {{aliasedCols}} FROM {{tableTok}} t ORDER BY t.{{pkName}}; $$;

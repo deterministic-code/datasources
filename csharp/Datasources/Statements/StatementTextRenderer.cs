@@ -29,6 +29,11 @@ public class StatementTextRenderer
         BulkInsertStatement s => s.Accept(Statements),
         BulkUpdateStatement s => s.Accept(Statements),
         BulkDeleteStatement s => s.Accept(Statements),
+        DropTableStatement s => s.Accept(Statements),
+        CreateTriggerStatement s => s.Accept(Statements),
+        IdentityInsertStatement s => s.Accept(Statements),
+        CreateRoutineStatement s => s.Accept(Statements),
+        DropRoutineStatement s => s.Accept(Statements),
         _ => statement.Accept(Statements)
     };
 

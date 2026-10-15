@@ -120,18 +120,6 @@ export const hasAuditColumns = (table: {
   table.fields.some((f) => f.name === "created") &&
   table.fields.some((f) => f.name === "updated");
 
-export const occOverlayOf = (
-  table: SqlTable,
-): DatasourceFieldOverlay | undefined =>
-  table.overlays.find((overlay) => overlay.isOptimisticConcurrency === true);
-
-export const occFieldOf = (table: SqlTable): TypeField | undefined => {
-  const overlay = occOverlayOf(table);
-  return overlay
-    ? table.fields.find((field) => field.name === overlay.name)
-    : undefined;
-};
-
 export type SqlFile = { path: string; content: string };
 
 const referenceParents = (

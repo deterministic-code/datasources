@@ -2,6 +2,7 @@ import {
   columnType as identityColumnType,
   DefaultValueConverter,
   DeterministicTypeConverter,
+  StatementTextRenderer,
   StubTransaction,
   type Cell,
   type DatasourceOptions,
@@ -13,12 +14,16 @@ import {
   type TypeConverter,
 } from "@datasources/core";
 import { SqlServerConnection } from "./connection.ts";
+import { SqlServerStatementRenderer } from "./SqlServerStatementRenderer.ts";
+
+const statements = new StatementTextRenderer(t => new SqlServerStatementRenderer(t));
 
 export class SqlServerDriver implements IDriver {
+  readonly statementRenderer = statements;
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   readonly quoteLeft = "[";
   readonly quoteRight = "]";
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "NVARCHAR(MAX)",
       character: "NCHAR(1)",
@@ -45,8 +50,6 @@ export class SqlServerDriver implements IDriver {
       decimal: { kind: "required", type: "DECIMAL" },
       binaryUnlimited: "VARBINARY(MAX)",
       binarySized: (n: number) => `VARBINARY(${n})`,
-      occBinary: "BINARY(8)",
-      rowVersion: "ROWVERSION",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

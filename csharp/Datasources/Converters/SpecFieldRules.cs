@@ -9,6 +9,4 @@ public sealed class SpecFieldRules
     public DecimalRule? Decimal { get; init; }
     public string? BinaryUnlimited { get; init; }
     public Func<int, string>? BinarySized { get; init; }
-    public string? OccBinary { get; init; }
-    public string? RowVersion { get; init; }
 }

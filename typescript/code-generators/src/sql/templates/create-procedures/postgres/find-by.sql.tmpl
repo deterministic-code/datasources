@@ -1,2 +1,0 @@
-CREATE OR REPLACE FUNCTION {{routineName}}({{byField}} {{fieldType}}) RETURNS SETOF {{tableTok}}
-LANGUAGE sql AS $$ SELECT {{aliasedCols}} FROM {{tableTok}} t WHERE t.{{byField}} = {{routineName}}.{{byField}}; $$;

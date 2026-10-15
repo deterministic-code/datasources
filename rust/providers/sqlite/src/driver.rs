@@ -2,14 +2,26 @@ use crate::connection::SqliteConnection;
 use crate::converters;
 use crate::statement_renderer::SqliteStatementRenderer;
 use crate::transaction::SqliteTransaction;
+use crate::sql_generate;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, Driver, Information, IsolationLevel,
-    Result, StatementTextRenderer, Transaction, TypeConverter, Value,
+    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter, Driver,
+    Information, IsolationLevel, Mapping, Result, StatementTextRenderer, Transaction, TypeConverter,
+    Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
 pub struct SqliteDriver;
+
+impl SqliteDriver {
+    pub const QUOTE_LEFT: &'static str = sql_generate::QUOTE_LEFT;
+    pub const QUOTE_RIGHT: &'static str = sql_generate::QUOTE_RIGHT;
+
+    pub fn statement_text_renderer() -> &'static StatementTextRenderer {
+        static DRIVER: SqliteDriver = SqliteDriver;
+        Driver::statement_renderer(&DRIVER).expect("sqlite")
+    }
+}
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
     LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(SqliteStatementRenderer)), None));
@@ -68,6 +80,14 @@ impl Driver for SqliteDriver {
         column_sql(name)
             .map(str::to_string)
             .ok_or_else(|| DatasourceError::message(format!("Unknown sqlite type \"{name}\"")))
+    }
+
+    fn type_converter(&self) -> Option<&dyn Mapping<String, String>> {
+        Some(&*sql_generate::TYPES)
+    }
+
+    fn default_value_converter(&self) -> Option<&DefaultValueConverter> {
+        Some(&sql_generate::DEFAULTS)
     }
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {

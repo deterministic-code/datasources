@@ -12,6 +12,7 @@ base64 = "0.22"
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
+regex = "1"
 futures-core = "0.3"
 rust_decimal = { version = "1", features = ["db-tokio-postgres"] }
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }

@@ -33,6 +33,15 @@ const repositoryPacks: Record<Dialect, (models: RepositoryModel[], settings: Rec
 
 const context = (request: GenerateRequest): GenerateContext => ({ reader: request.reader, settings: request.settings });
 
+const dialectsOf = (settings: Record<string, string>): string[] => {
+  const out: string[] = [];
+  for (const name of (settings["backend.datasources"] ?? "").split(",")) {
+    const key = name.trim();
+    if (key !== "" && !out.includes(key)) out.push(key);
+  }
+  return out;
+};
+
 export const deterministic: CodeGenerationProvider = {
   name: "deterministic",
   generateTypes: async (request) => {
@@ -51,5 +60,6 @@ export const deterministic: CodeGenerationProvider = {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
     return place(`${request.dialect}/repositories`, repositoryPacks[request.dialect](planRepositories(spec, request.dialect, request.settings), request.settings));
   },
-  generateDatasource: async (request) => place("sql", await generateSql(context(request))),
+  generateDatasource: async (request) =>
+    place("sql", await generateSql(context(request), dialectsOf(request.settings))),
 };

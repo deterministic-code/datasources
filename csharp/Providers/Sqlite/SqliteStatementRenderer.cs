@@ -9,4 +9,7 @@ public sealed class SqliteStatementRenderer(StatementTextRenderer text) : Statem
 
     public override string Visit(CreateTableStatement create) =>
         new SqliteCreateTableStatementRenderer().Render(create);
+
+    public override string Visit(CreateTriggerStatement trigger) =>
+        new SqliteCreateTriggerStatementRenderer().Render(trigger);
 }

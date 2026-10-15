@@ -1,15 +1,27 @@
 use crate::connection::MysqlConnection;
 use crate::converters;
+use crate::sql_generate;
 use crate::statement_renderer::MysqlStatementRenderer;
 use crate::transaction::MysqlTransaction;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, Driver, Information, IsolationLevel,
-    Result, StatementTextRenderer, Transaction, TypeConverter, Value,
+    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter, Driver,
+    Information, IsolationLevel, Mapping, Result, StatementTextRenderer, Transaction, TypeConverter,
+    Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
 pub struct MysqlDriver;
+
+impl MysqlDriver {
+    pub const QUOTE_LEFT: &'static str = sql_generate::QUOTE_LEFT;
+    pub const QUOTE_RIGHT: &'static str = sql_generate::QUOTE_RIGHT;
+
+    pub fn statement_text_renderer() -> &'static StatementTextRenderer {
+        static DRIVER: MysqlDriver = MysqlDriver;
+        Driver::statement_renderer(&DRIVER).expect("mysql")
+    }
+}
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
     LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(MysqlStatementRenderer)), None));
@@ -70,6 +82,14 @@ impl Driver for MysqlDriver {
         column_sql(name)
             .map(str::to_string)
             .ok_or_else(|| DatasourceError::message(format!("Unknown mysql type \"{name}\"")))
+    }
+
+    fn type_converter(&self) -> Option<&dyn Mapping<String, String>> {
+        Some(&*sql_generate::TYPES)
+    }
+
+    fn default_value_converter(&self) -> Option<&DefaultValueConverter> {
+        Some(&sql_generate::DEFAULTS)
     }
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {

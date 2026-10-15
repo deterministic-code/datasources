@@ -7,8 +7,18 @@ use super::bulk_update_statement::BulkUpdateStatement;
 use super::bulk_update_statement_text_renderer::BulkUpdateStatementTextRenderer;
 use super::create_index_statement::CreateIndexStatement;
 use super::create_index_statement_text_renderer::CreateIndexStatementTextRenderer;
+use super::create_routine_statement::CreateRoutineStatement;
+use super::create_routine_statement_text_renderer::CreateRoutineStatementTextRenderer;
 use super::create_table_statement::CreateTableStatement;
 use super::create_table_statement_text_renderer;
+use super::create_trigger_statement::CreateTriggerStatement;
+use super::create_trigger_statement_text_renderer::CreateTriggerStatementTextRenderer;
+use super::drop_routine_statement::DropRoutineStatement;
+use super::drop_routine_statement_text_renderer::DropRoutineStatementTextRenderer;
+use super::drop_table_statement::DropTableStatement;
+use super::drop_table_statement_text_renderer::DropTableStatementTextRenderer;
+use super::identity_insert_statement::IdentityInsertStatement;
+use super::identity_insert_statement_text_renderer::IdentityInsertStatementTextRenderer;
 use super::delete_statement::DeleteStatement;
 use super::delete_statement_text_renderer::DeleteStatementTextRenderer;
 use super::execute_stored_procedure_statement::ExecuteStoredProcedureStatement;
@@ -99,6 +109,46 @@ pub trait StatementVisitor: Send + Sync {
         _text: &StatementTextRenderer,
     ) -> String {
         BulkDeleteStatementTextRenderer.render(statement)
+    }
+
+    fn visit_drop_table(
+        &self,
+        statement: &DropTableStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        DropTableStatementTextRenderer.render(statement)
+    }
+
+    fn visit_create_trigger(
+        &self,
+        statement: &CreateTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateTriggerStatementTextRenderer.render(statement)
+    }
+
+    fn visit_identity_insert(
+        &self,
+        statement: &IdentityInsertStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        IdentityInsertStatementTextRenderer.render(statement)
+    }
+
+    fn visit_create_routine(
+        &self,
+        statement: &CreateRoutineStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateRoutineStatementTextRenderer.render(statement)
+    }
+
+    fn visit_drop_routine(
+        &self,
+        statement: &DropRoutineStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        DropRoutineStatementTextRenderer.render(statement)
     }
 }
 

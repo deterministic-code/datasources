@@ -62,18 +62,20 @@ const entryBody = (entry: GenerateEntry): string => {
 const generateWith = (
   settings: Record<string, string>,
   withSeeds = false,
+  dialects: readonly string[] = ["postgres"],
 ) =>
   generate({
     reader: fixtureReader(withSeeds),
-    settings: { "backend.datasources": "postgres", ...settings },
-  });
+    settings,
+  }, dialects);
 
 const byFilename = async (
   settings: Record<string, string>,
   withSeeds = false,
+  dialects: readonly string[] = ["postgres"],
 ) => {
   const map = new Map<string, string>();
-  for (const entry of await generateWith(settings, withSeeds)) {
+  for (const entry of await generateWith(settings, withSeeds, dialects)) {
     map.set(entry.filename, entryBody(entry));
   }
   return map;
@@ -208,7 +210,7 @@ describe("generate-sql casing", () => {
     assert.match(sql, /CREATE TABLE "users"/);
     assert.match(sql, /"channel_name"/);
     assert.match(sql, /"notification_types_user_id_foreign_key"/);
-    assert.match(sql, /REFERENCES "users"\("id"\)/);
+    assert.match(sql, /REFERENCES "users"\s*\("id"\)/);
   });
 
   for (const format of FORMATS) {
@@ -232,7 +234,7 @@ describe("generate-sql casing", () => {
         assert.match(sql, new RegExp(`"${expected.constraint}"`));
         assert.match(
           sql,
-          new RegExp(`REFERENCES "${expected.userTable}"\\("id"\\)`),
+          new RegExp(`REFERENCES "${expected.userTable}"\\s*\\("id"\\)`),
         );
         if (pluralize === "off") {
           assert.doesNotMatch(sql, /CREATE TABLE "notification_types"/);
@@ -263,7 +265,7 @@ describe("generate-sql casing", () => {
       assert.match(sql, new RegExp(`"${expected.userId}"`));
       assert.match(
         sql,
-        new RegExp(`REFERENCES "users"\\("${expected.id}"\\)`),
+        new RegExp(`REFERENCES "users"\\s*\\("${expected.id}"\\)`),
       );
     });
   }
@@ -277,7 +279,7 @@ describe("generate-sql casing", () => {
     assert.match(sql, /CREATE TABLE "NotificationTypes"/);
     assert.match(sql, /"channelName"/);
     assert.match(sql, /"NotificationTypesUserIdForeignKey"/);
-    assert.match(sql, /REFERENCES "Users"\("id"\)/);
+    assert.match(sql, /REFERENCES "Users"\s*\("id"\)/);
     const procs = await procSql(settings);
     assert.match(procs, /CREATE OR REPLACE FUNCTION CreateNotificationType\(/);
     assert.match(procs, /channelName/);
@@ -310,10 +312,10 @@ describe("generate-sql casing", () => {
     assert.match(sql, /create table "notification_types"/);
     assert.match(sql, /create table "users"/);
     assert.match(sql, /not null/);
-    assert.match(sql, /references "users"\("id"\)/);
+    assert.match(sql, /references "users"\s*\("id"\)/);
     assert.match(sql, /"email" text not null/);
     assert.match(sql, /integer not null/);
-    assert.match(sql, /timestamptz not null default/);
+    assert.match(sql, /timestamptz constraint .* default/);
     assert.doesNotMatch(sql, /CREATE TABLE/);
     assert.doesNotMatch(sql, /NOT NULL/);
     const procs = await procSql({ "datasource.casing.keywords": "lower" });
@@ -329,7 +331,7 @@ describe("generate-sql casing", () => {
     assert.match(sql, /CREATE TABLE "USERS"/);
     assert.match(sql, /"channel_name"/);
     assert.match(sql, /"NOTIFICATION_TYPES_USER_ID_FOREIGN_KEY"/);
-    assert.match(sql, /REFERENCES "USERS"\("id"\)/);
+    assert.match(sql, /REFERENCES "USERS"\s*\("id"\)/);
     assert.doesNotMatch(sql, /CREATE TABLE "notification_types"/);
     const procs = await procSql({ "datasource.casing.objects": "upper" });
     assert.match(procs, /CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPE\(/);
@@ -349,7 +351,7 @@ describe("generate-sql casing", () => {
       "datasource.casing.keywords": "lower",
     });
     assert.match(sql, /create table "NOTIFICATION_TYPES"/);
-    assert.match(sql, /references "USERS"\("id"\)/);
+    assert.match(sql, /references "USERS"\s*\("id"\)/);
     assert.match(sql, /not null/);
   });
 
@@ -434,11 +436,14 @@ describe("generate-sql casing", () => {
 
   for (const [dialect, [left, right]] of Object.entries(DIALECT_QUOTES)) {
     it(`keywords lower keeps ${dialect} quoted object names`, async () => {
-      const files = await byFilename({
-        "backend.datasources": dialect,
-        "datasource.casing.keywords": "lower",
-        "datasource.casing.objects": "upper",
-      });
+      const files = await byFilename(
+        {
+          "datasource.casing.keywords": "lower",
+          "datasource.casing.objects": "upper",
+        },
+        false,
+        [dialect],
+      );
       const body = files.get(`${dialect}/migrations/0001_initial_up.sql`);
       assert.ok(body, `expected ${dialect} up migration`);
       const quoted = `${left}NOTIFICATION_TYPES${right}`;

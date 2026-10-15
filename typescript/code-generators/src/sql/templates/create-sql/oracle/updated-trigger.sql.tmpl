@@ -1,7 +1,0 @@
-CREATE OR REPLACE TRIGGER {{quotedTrigger}}
-BEFORE UPDATE ON {{quotedTable}}
-FOR EACH ROW
-BEGIN
-  :NEW.{{quotedUpdated}} := {{{utcNow}}};
-END;
-/

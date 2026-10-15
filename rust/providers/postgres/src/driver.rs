@@ -1,15 +1,27 @@
 use crate::connection::PostgresConnection;
 use crate::converters;
+use crate::sql_generate;
 use crate::statement_renderer::PostgresStatementRenderer;
 use crate::transaction::PostgresTransaction;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, Driver, Information, IsolationLevel,
-    Result, StatementTextRenderer, Transaction, TypeConverter, Value,
+    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter, Driver,
+    Information, IsolationLevel, Mapping, Result, StatementTextRenderer, Transaction, TypeConverter,
+    Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
 pub struct PostgresDriver;
+
+impl PostgresDriver {
+    pub const QUOTE_LEFT: &'static str = sql_generate::QUOTE_LEFT;
+    pub const QUOTE_RIGHT: &'static str = sql_generate::QUOTE_RIGHT;
+
+    pub fn statement_text_renderer() -> &'static StatementTextRenderer {
+        static DRIVER: PostgresDriver = PostgresDriver;
+        Driver::statement_renderer(&DRIVER).expect("postgres")
+    }
+}
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
     LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(PostgresStatementRenderer)), None));
@@ -72,6 +84,14 @@ impl Driver for PostgresDriver {
         column_sql(name)
             .map(str::to_string)
             .ok_or_else(|| DatasourceError::message(format!("Unknown postgres type \"{name}\"")))
+    }
+
+    fn type_converter(&self) -> Option<&dyn Mapping<String, String>> {
+        Some(&*sql_generate::TYPES)
+    }
+
+    fn default_value_converter(&self) -> Option<&DefaultValueConverter> {
+        Some(&sql_generate::DEFAULTS)
     }
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {

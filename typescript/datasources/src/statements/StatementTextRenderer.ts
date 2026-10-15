@@ -3,20 +3,8 @@ import type { IConditionVisitor } from "./IConditionVisitor.ts";
 import type { IStatement } from "./IStatement.ts";
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
 import { ConditionRenderer } from "./ConditionRenderer.ts";
-import { BulkDeleteStatement } from "./BulkDeleteStatement.ts";
-import { BulkInsertStatement } from "./BulkInsertStatement.ts";
-import { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
-import { CreateIndexStatement } from "./CreateIndexStatement.ts";
-import { CreateTableStatement } from "./CreateTableStatement.ts";
-import { DeleteStatement } from "./DeleteStatement.ts";
-import { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureStatement.ts";
 import { ExpressionRenderer } from "./ExpressionRenderer.ts";
-import { InsertStatement } from "./InsertStatement.ts";
-import { ReturnStatement } from "./ReturnStatement.ts";
-import { SelectInsertedIdStatement } from "./SelectInsertedIdStatement.ts";
-import { SelectStatement } from "./SelectStatement.ts";
 import { StatementRenderer } from "./StatementRenderer.ts";
-import { UpdateStatement } from "./UpdateStatement.ts";
 import { Where } from "./Where.ts";
 import { WhereText } from "./WhereText.ts";
 
@@ -37,22 +25,13 @@ export class StatementTextRenderer {
   render(statement: IStatement): string;
   render(condition: ICondition): string;
   render(target: IStatement | ICondition): string {
+    if (target.constructor.name === "Where" || target.constructor.name === "WhereText") {
+      return (target as ICondition).accept(this.conditions);
+    }
+    if (target.constructor.name.endsWith("Statement")) {
+      return (target as IStatement).accept(this.statements);
+    }
     if (target instanceof Where || target instanceof WhereText) return target.accept(this.conditions);
-    if (
-      target instanceof SelectStatement ||
-      target instanceof InsertStatement ||
-      target instanceof UpdateStatement ||
-      target instanceof DeleteStatement ||
-      target instanceof CreateTableStatement ||
-      target instanceof CreateIndexStatement ||
-      target instanceof ExecuteStoredProcedureStatement ||
-      target instanceof ReturnStatement ||
-      target instanceof SelectInsertedIdStatement ||
-      target instanceof BulkInsertStatement ||
-      target instanceof BulkUpdateStatement ||
-      target instanceof BulkDeleteStatement
-    )
-      return target.accept(this.statements);
     return "where" in target || "fields" in target || "joins" in target || "column" in target
       ? (target as IStatement).accept(this.statements)
       : (target as ICondition).accept(this.conditions);

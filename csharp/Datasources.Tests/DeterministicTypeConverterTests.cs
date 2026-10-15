@@ -5,7 +5,7 @@ namespace Datasources.Tests;
 public class DeterministicTypeConverterTests
 {
     [Fact]
-    public void MapsSizedStringAndRowVersion()
+    public void MapsNameAndSizedString()
     {
         var sqlite = new DeterministicTypeConverter(
             new Dictionary<string, string> { ["string"] = "TEXT", ["uuid"] = "TEXT" },
@@ -15,24 +15,7 @@ public class DeterministicTypeConverterTests
                 StringUnlimited = "TEXT",
                 StringSized = n => $"VARCHAR({n})",
             });
+        Assert.Equal("TEXT", sqlite.Convert("string"));
         Assert.Equal("VARCHAR(64)", sqlite.Convert(new SpecField { Type = "string", Size = 64 }));
-        var sqlserver = new DeterministicTypeConverter(
-            new Dictionary<string, string> { ["binary"] = "VARBINARY(MAX)" },
-            new SpecFieldRules
-            {
-                DialectName = "sqlserver",
-                StringUnlimited = "NVARCHAR(MAX)",
-                StringSized = n => $"NVARCHAR({n})",
-                OccBinary = "BINARY(8)",
-                RowVersion = "ROWVERSION",
-            });
-        Assert.Equal(
-            "ROWVERSION",
-            sqlserver.Convert(new SpecField
-            {
-                Type = "binary",
-                IsOptimisticConcurrency = true,
-                UseNativeRowVersion = true,
-            }));
     }
 }

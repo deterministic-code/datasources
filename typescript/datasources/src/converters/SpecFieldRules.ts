@@ -10,6 +10,4 @@ export type SpecFieldRules = {
   decimal?: DecimalRule;
   binaryUnlimited?: string;
   binarySized?: (n: number) => string;
-  occBinary?: string;
-  rowVersion?: string;
 };

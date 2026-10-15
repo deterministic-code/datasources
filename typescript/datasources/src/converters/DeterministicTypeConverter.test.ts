@@ -1,9 +1,4 @@
 import { describe, expect, it } from "vitest";
-import {
-  emitsNativeRowVersion,
-  isOccBinaryColumn,
-  usesNativeRowVersion,
-} from "./SpecField.ts";
 import { DeterministicTypeConverter } from "./DeterministicTypeConverter.ts";
 
 const sqlite = () =>
@@ -20,7 +15,6 @@ const sqlite = () =>
       dialectName: "sqlite",
       stringUnlimited: "TEXT",
       stringSized: (n) => `VARCHAR(${n})`,
-      occBinary: "BLOB",
     },
   );
 
@@ -40,8 +34,6 @@ const sqlserver = () =>
       decimal: { kind: "required", type: "DECIMAL" },
       binaryUnlimited: "VARBINARY(MAX)",
       binarySized: (n) => `VARBINARY(${n})`,
-      occBinary: "BINARY(8)",
-      rowVersion: "ROWVERSION",
     },
   );
 
@@ -58,7 +50,8 @@ const postgres = () =>
   );
 
 describe("DeterministicTypeConverter", () => {
-  it("maps strings, characters, decimals, and binary variants", () => {
+  it("maps names and sized type definitions", () => {
+    expect(sqlite().convert("uuid")).toBe("TEXT");
     expect(sqlite().convert({ type: "string" })).toBe("TEXT");
     expect(sqlite().convert({ type: "string", size: 64 })).toBe("VARCHAR(64)");
     expect(sqlserver().convert({ type: "character" })).toBe("NCHAR(1)");
@@ -68,23 +61,8 @@ describe("DeterministicTypeConverter", () => {
     expect(sqlserver().convert({ type: "decimal", name: "amount", size: [10, 2] })).toBe(
       "DECIMAL(10, 2)",
     );
-    expect(
-      sqlserver().convert({
-        type: "binary",
-        isOptimisticConcurrency: true,
-        useNativeRowVersion: true,
-      }),
-    ).toBe("ROWVERSION");
-    expect(sqlserver().convert({ type: "binary", isOptimisticConcurrency: true })).toBe("BINARY(8)");
     expect(sqlserver().convert({ type: "binary", size: 16 })).toBe("VARBINARY(16)");
     expect(sqlserver().convert({ type: "binary" })).toBe("VARBINARY(MAX)");
-    expect(sqlite().convert({ type: "binary", isOptimisticConcurrency: true })).toBe("BLOB");
-    expect(sqlite().convert({ type: "uuid" })).toBe("TEXT");
-    const occ = { type: "binary", isOptimisticConcurrency: true, useNativeRowVersion: true };
-    expect(usesNativeRowVersion(occ)).toBe(true);
-    expect(emitsNativeRowVersion(occ, "sqlserver")).toBe(true);
-    expect(emitsNativeRowVersion(occ, "sqlite")).toBe(false);
-    expect(isOccBinaryColumn({ type: "binary", isOptimisticConcurrency: true })).toBe(true);
   });
 
   it("rejects invalid decimals and unknown types", () => {
@@ -111,6 +89,7 @@ describe("DeterministicTypeConverter", () => {
   });
 
   it("reverses unique natives", () => {
+    expect(sqlite().convert("integer")).toBe("INTEGER");
     expect(sqlite().reverseConvert("INTEGER")).toBe("integer");
     expect(() => sqlite().reverseConvert("NOPE")).toThrow(/Unknown native/);
     const multi = new DeterministicTypeConverter(

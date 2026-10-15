@@ -39,4 +39,19 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
 
     public virtual string Visit(BulkDeleteStatement statement) =>
         new BulkDeleteStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(DropTableStatement statement) =>
+        new DropTableStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateTriggerStatement statement) =>
+        new CreateTriggerStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(IdentityInsertStatement statement) =>
+        new IdentityInsertStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateRoutineStatement statement) =>
+        new CreateRoutineStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(DropRoutineStatement statement) =>
+        new DropRoutineStatementTextRenderer().Render(statement);
 }

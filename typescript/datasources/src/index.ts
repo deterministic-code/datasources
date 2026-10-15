@@ -9,9 +9,17 @@ export type { Information } from "./Information.ts";
 export type { DatasourceOptions } from "./DatasourceOptions.ts";
 export { DatasourceFactory } from "./DatasourceFactory.ts";
 export { ProviderCatalog } from "./ProviderCatalog.ts";
+export { DriverLoader } from "./DriverLoader.ts";
 export type {
   ICreateTableStatement,
   ICreateIndexStatement,
+  IDropTableStatement,
+  ICreateTriggerStatement,
+  IIdentityInsertStatement,
+  ICreateRoutineStatement,
+  IDropRoutineStatement,
+  RoutineKind,
+  RoutineParameter,
   IDeleteStatement,
   IExpression,
   IBulkDeleteStatement,
@@ -97,6 +105,16 @@ export {
   CreateTableStatement,
   CreateTableStatementTextRenderer,
   CreateIndexStatementTextRenderer,
+  DropTableStatement,
+  DropTableStatementTextRenderer,
+  CreateTriggerStatement,
+  CreateTriggerStatementTextRenderer,
+  IdentityInsertStatement,
+  IdentityInsertStatementTextRenderer,
+  CreateRoutineStatement,
+  CreateRoutineStatementTextRenderer,
+  DropRoutineStatement,
+  DropRoutineStatementTextRenderer,
   SelectStatementTextRenderer,
   InsertStatementTextRenderer,
   UpdateStatementTextRenderer,
@@ -175,13 +193,11 @@ export type { Cell, Cells } from "./converters/Cell.ts";
 export type { Constructable } from "./converters/Constructable.ts";
 export { TypeConverter } from "./converters/TypeConverter.ts";
 export {
-  emitsNativeRowVersion,
-  isOccBinaryColumn,
-  usesNativeRowVersion,
   type FieldSize,
   type SpecField,
 } from "./converters/SpecField.ts";
 export type { DecimalRule, SpecFieldRules } from "./converters/SpecFieldRules.ts";
+export type { IMapping } from "./converters/IMapping.ts";
 export { DeterministicTypeConverter } from "./converters/DeterministicTypeConverter.ts";
 export type { DefaultValueOptions } from "./converters/DefaultValueOptions.ts";
 export {
