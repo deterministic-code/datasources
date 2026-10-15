@@ -55,7 +55,10 @@ public sealed class DatasourceFactory : IDatasourceFactory
     {
         if (options is null) return;
         foreach (var name in Installed(options))
+        {
+            if (Factories.ContainsKey(name)) continue;
             Register(name, DriverLoader.Load(Catalog(name)));
+        }
     }
 
     static ProviderCatalog Catalog(string name) =>

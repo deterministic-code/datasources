@@ -17,7 +17,8 @@ public sealed class GenerateE2ETests
             Require(Exec(
                 Which("node"),
                 [
-                    "--experimental-strip-types",
+                    "--import",
+                    "tsx",
                     Path.Combine(repo, "cli", "src", "main.ts"),
                     "generate",
                     "all",

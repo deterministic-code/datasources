@@ -1,4 +1,11 @@
-import { ConsoleCommandMiddleware, Datasource } from "@datasources/core";
+import { ConsoleCommandMiddleware, Datasource, DatasourceFactory } from "@datasources/core";
+import { MysqlDriver } from "@datasources/mysql";
+import { PostgresDriver } from "@datasources/postgres";
+import { SqliteDriver } from "@datasources/sqlite";
+
+DatasourceFactory.register("sqlite", new SqliteDriver());
+DatasourceFactory.register("mysql", new MysqlDriver());
+DatasourceFactory.register("postgres", new PostgresDriver());
 import { existsSync, readFileSync } from "node:fs";
 import { App } from "./app.ts";
 import { migrate } from "./migrate.ts";

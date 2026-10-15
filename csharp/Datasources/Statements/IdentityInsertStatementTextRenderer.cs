@@ -8,7 +8,7 @@ public class IdentityInsertStatementTextRenderer
         string.Join("\n", statement.Inserts.Select(Insert));
 
     protected virtual string Insert(InsertStatement statement) =>
-        $"INSERT INTO {statement.Table} ({string.Join(", ", statement.Fields.Select(field => field.Name))}) VALUES ({string.Join(", ", statement.Fields.Select(Sql))})";
+        $"INSERT INTO {statement.Table} ({string.Join(", ", statement.Fields.Select(field => field.Name))}) VALUES ({string.Join(", ", statement.Fields.Select(Sql))});";
 
     static string Sql(Parameter field) => field.Value switch
     {

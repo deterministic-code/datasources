@@ -186,7 +186,7 @@ async fn main() -> Result<()> {
     let mut create_ms = 0.0;
     let mut update_ms = 0.0;
     let mut related = env("PERF_RELATED", "10").parse::<i64>().expect("related");
-    let mut total = rows;
+    let total;
     if !reading {
         let mut contacts = load_contacts(rows);
         let create_started = Instant::now();

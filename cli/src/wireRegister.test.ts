@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
 import { attached, cargoWithCtor, hookContents, hookPath, specFrom, wireRegister } from "./wireRegister.ts";
 
+const tsRegistry = (cwd: string) => join(cwd, "generated", "typescript/repositories/repository-registry.ts");
+const rustRegistry = (cwd: string) => join(cwd, "generated", "rust/repositories/mod.rs");
+
 const mem = (entries: string[], files: Record<string, string> = {}): { files: Record<string, string>; fs: Fs } => {
   const store = { ...files };
   return {
@@ -46,6 +49,7 @@ describe("wireRegister", () => {
     const cwd = "app";
     const { files, fs } = mem(["src"], {
       [join(cwd, "src", "index.ts")]: `export const app = 1;\n`,
+      [tsRegistry(cwd)]: "export const register = () => {};\n",
     });
     const logs: string[] = [];
     await wireRegister(cwd, "generated", "typescript", true, { fs, log: (line) => logs.push(line) });
@@ -53,10 +57,21 @@ describe("wireRegister", () => {
     expect(logs).toContain(hookPath(cwd, "typescript", true));
   });
 
+  it("skips a hook when generated registry is missing", async () => {
+    const cwd = "app";
+    const { files, fs } = mem(["src"], {
+      [join(cwd, "src", "index.ts")]: `export const app = 1;\n`,
+    });
+    await wireRegister(cwd, "generated", "typescript", false, { fs, log: () => undefined });
+    expect(files[hookPath(cwd, "typescript", true)]).toBeUndefined();
+    expect(files[join(cwd, "src", "index.ts")]).toBe(`export const app = 1;\n`);
+  });
+
   it("writes and attaches a typescript hook", async () => {
     const cwd = "app";
     const { files, fs } = mem(["package.json", "src"], {
       [join(cwd, "src", "index.ts")]: `export const app = 1;\n`,
+      [tsRegistry(cwd)]: "export const register = () => {};\n",
     });
     const logs: string[] = [];
     await wireRegister(cwd, "generated", "typescript", false, { fs, log: (line) => logs.push(line) });
@@ -69,6 +84,7 @@ describe("wireRegister", () => {
     const cwd = "app";
     const { files, fs } = mem(["src"], {
       [join(cwd, "src", "lib.rs")]: `pub fn ready() {}\n`,
+      [rustRegistry(cwd)]: "pub struct Repositories;\n",
     });
     await wireRegister(cwd, "generated", "rust", false, { fs, log: () => undefined });
     expect(files[hookPath(cwd, "rust", true)]).toContain("#[path");
@@ -80,6 +96,7 @@ describe("wireRegister", () => {
     const { files, fs } = mem(["Cargo.toml", "src"], {
       [join(cwd, "Cargo.toml")]: `[package]\nname = "app"\n\n[dependencies]\ndatasources = "0.1"\n`,
       [join(cwd, "src", "lib.rs")]: `pub fn ready() {}\n`,
+      [rustRegistry(cwd)]: "pub struct Repositories;\n",
     });
     await wireRegister(cwd, "generated", "rust", false, { fs, log: () => undefined });
     expect(files[hookPath(cwd, "rust", true)]).toContain("#[path");
@@ -159,6 +176,7 @@ describe("wireRegister", () => {
     const cwd = "app";
     const { files, fs } = mem(["src"], {
       [join(cwd, "src", "main.ts")]: `import "./datasources-register.ts";\n`,
+      [tsRegistry(cwd)]: "export const register = () => {};\n",
     });
     await wireRegister(cwd, "generated", "typescript", false, { fs, log: () => undefined });
     await wireRegister(cwd, "generated", "typescript", false, { fs, log: () => undefined });

@@ -17,6 +17,8 @@ public class SplitStatementsTests
         Assert.Equal([mysql], SplitStatements.Split(mysql));
         var postgres = "CREATE PROCEDURE bulk_create_user(payload jsonb)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  INSERT INTO t VALUES (1);\nEND;\n$$";
         Assert.Equal([postgres], SplitStatements.Split(postgres));
+        var trigger = "CREATE TRIGGER trg AFTER UPDATE ON t\nBEGIN\n  UPDATE t SET id = id WHERE id = OLD.id;\nEND";
+        Assert.Equal([trigger], SplitStatements.Split(trigger));
     }
 
     [Fact]

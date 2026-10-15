@@ -12,6 +12,9 @@ pub fn defaults(options: HashMap<String, String>) -> Result<()> {
 
 pub fn register_listed(options: &HashMap<String, String>) -> Result<()> {
     for name in installed(options)? {
+        if crate::registered().iter().any(|existing| existing == &name) {
+            continue;
+        }
         let catalog = ProviderCatalog::default()
             .get(&name)
             .cloned()

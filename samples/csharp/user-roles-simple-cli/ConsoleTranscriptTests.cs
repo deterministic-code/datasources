@@ -132,7 +132,7 @@ public sealed class ConsoleTranscriptTests
                 await using var admin = new NpgsqlConnection(ToPostgres(url));
                 await admin.OpenAsync();
                 await using var drop = admin.CreateCommand();
-                drop.CommandText = $"DROP SCHEMA {schema} CASCADE";
+                drop.CommandText = $"DROP SCHEMA IF EXISTS {schema} CASCADE";
                 await drop.ExecuteNonQueryAsync();
             }
             finally
@@ -204,14 +204,16 @@ public sealed class ConsoleTranscriptTests
         text = Date.Replace(text, "<date>");
         text = Uuid.Replace(text, "<uuid>");
         text = Ident.Replace(text, "$1");
+        text = Cast.Replace(text, "");
         text = Password.Replace(text, "password: <token>");
         text = Updated.Replace(text, "updated: <token>");
         return Token.Replace(text, match => match.Value.Any(char.IsDigit) && match.Value.Any(char.IsLetter) ? "<token>" : match.Value);
     }
 
-    static readonly Regex Date = new(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", RegexOptions.Compiled);
+    static readonly Regex Date = new(@"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\.\d{3}Z?", RegexOptions.Compiled);
     static readonly Regex Uuid = new(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b", RegexOptions.Compiled);
     static readonly Regex Ident = new(@"[""`]([A-Za-z_][A-Za-z0-9_]*)[""`]", RegexOptions.Compiled);
+    static readonly Regex Cast = new(@"::[A-Z][A-Z0-9_]*", RegexOptions.Compiled);
     static readonly Regex Password = new(@"password: [^,}\]]+", RegexOptions.Compiled);
     static readonly Regex Updated = new(@"updated: [^,}\]]+", RegexOptions.Compiled);
     static readonly Regex Token = new(@"[A-Za-z0-9+/]{4,}={0,2}", RegexOptions.Compiled);
@@ -242,7 +244,7 @@ public sealed class ConsoleTranscriptTests
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
         Exec("docker", $"compose rm -sf -v {service}");
         Exec("docker", $"rm -f datasources-{service}-1");
-        Require(Exec("docker", $"compose up -d --force-recreate --wait {service}"));
+        Require(Exec("docker", $"compose up -d --wait {service}"));
         if (service == "mysql")
             Require(Exec("docker", "compose exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\""));
     }
@@ -291,7 +293,7 @@ public sealed class ConsoleTranscriptTests
         var port = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.Trim('/');
         var password = user.Length > 1 ? Uri.UnescapeDataString(user[1]) : "";
-        return $"Host={uri.Host};Port={port};Username={Uri.UnescapeDataString(user[0])};Password={password};Database={database}";
+        return $"Host={uri.Host};Port={port};Username={Uri.UnescapeDataString(user[0])};Password={password};Database={database};Pooling=false";
     }
 
     static string ToMysql(string url)
@@ -301,7 +303,7 @@ public sealed class ConsoleTranscriptTests
         var port = uri.Port > 0 ? uri.Port : 3306;
         var database = uri.AbsolutePath.Trim('/');
         var password = user.Length > 1 ? Uri.UnescapeDataString(user[1]) : "";
-        return $"Server={uri.Host};Port={port};User ID={Uri.UnescapeDataString(user[0])};Password={password};Database={database}";
+        return $"Server={uri.Host};Port={port};User ID={Uri.UnescapeDataString(user[0])};Password={password};Database={database};Pooling=false";
     }
 
     static string ReplaceMysqlDb(string url, string name) =>

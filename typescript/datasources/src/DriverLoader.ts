@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire, registerHooks } from "node:module";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { IDriver } from "./IDriver.ts";
 import type { ProviderCatalog } from "./ProviderCatalog.ts";
@@ -21,6 +22,7 @@ type TypeScript = {
 };
 
 const require = createRequire(import.meta.url);
+const appRequire = () => createRequire(join(process.cwd(), "package.json"));
 const virtual = new Map<string, string>();
 const virtualBySource = new Map<string, string>();
 let typeScriptHook = false;
@@ -74,7 +76,7 @@ const instantiate = (catalog: ProviderCatalog): IDriver => {
 };
 
 const instantiateLoaded = (catalog: ProviderCatalog): IDriver => {
-  const loaded = require(catalog.location) as DriverModule;
+  const loaded = appRequire()(catalog.location) as DriverModule;
   const Type = loaded[catalog.module];
   if (typeof Type !== "function") throw new ProviderNotInstalledError(catalog.name);
   return new Type();

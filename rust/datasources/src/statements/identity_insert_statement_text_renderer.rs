@@ -28,7 +28,7 @@ impl IdentityInsertStatementTextRenderer {
 
     fn insert(&self, statement: &InsertStatement) -> String {
         format!(
-            "INSERT INTO {} ({}) VALUES ({})",
+            "INSERT INTO {} ({}) VALUES ({});",
             statement.table(),
             statement
                 .fields()

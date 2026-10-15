@@ -17,7 +17,11 @@ const dollarTag = (sql: string, i: number): string | undefined => {
 
 const routine = (sql: string, start: number, i: number): boolean => {
   const head = sql.slice(start, i).toUpperCase();
-  return head.includes("CREATE PROCEDURE") || head.includes("CREATE FUNCTION");
+  return (
+    head.includes("CREATE PROCEDURE") ||
+    head.includes("CREATE FUNCTION") ||
+    head.includes("CREATE TRIGGER")
+  );
 };
 
 export const splitStatements = (sql: string): string[] => {
