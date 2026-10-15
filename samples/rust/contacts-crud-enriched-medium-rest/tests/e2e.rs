@@ -13,7 +13,8 @@ fn repo() -> PathBuf {
 fn generate(cwd: &Path) {
     let status = Command::new("node")
         .args([
-            "--experimental-strip-types",
+            "--import",
+            "tsx",
             repo()
                 .join("cli/src/main.ts")
                 .to_str()

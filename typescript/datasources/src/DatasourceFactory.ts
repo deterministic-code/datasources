@@ -53,6 +53,7 @@ const registerInstalled = (options: DatasourceOptions): void => {
   for (const name of installed(options)) {
     const catalog = ProviderCatalog.default[name];
     if (!catalog) throw new ProviderNotInstalledError(name);
+    if (factories.has(name)) continue;
     DatasourceFactory.register(name, DriverLoader.load(catalog));
   }
 };

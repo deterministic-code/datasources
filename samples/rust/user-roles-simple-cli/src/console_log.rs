@@ -10,7 +10,7 @@ fn regex(source: &str) -> &'static Regex {
     static TOKEN: OnceLock<Regex> = OnceLock::new();
     match source {
         "date" => DATE.get_or_init(|| {
-            Regex::new(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z").expect("date")
+            Regex::new(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\.\d{3}Z?").expect("date")
         }),
         "uuid" => UUID.get_or_init(|| {
             Regex::new(
@@ -22,6 +22,10 @@ fn regex(source: &str) -> &'static Regex {
             .get_or_init(|| Regex::new(r#"[\"`]([A-Za-z_][A-Za-z0-9_]*)[\"`]"#).expect("ident")),
         "password" => PASSWORD.get_or_init(|| Regex::new(r"password: [^,}\]]+").expect("password")),
         "updated" => UPDATED.get_or_init(|| Regex::new(r"updated: [^,}\]]+").expect("updated")),
+        "cast" => {
+            static CAST: OnceLock<Regex> = OnceLock::new();
+            CAST.get_or_init(|| Regex::new(r"::[A-Z][A-Z0-9_]*").expect("cast"))
+        }
         _ => TOKEN.get_or_init(|| Regex::new(r"[A-Za-z0-9+/]{4,}={0,2}").expect("token")),
     }
 }
@@ -36,7 +40,8 @@ pub fn normalize_console_line(line: &str) -> String {
     let dated = regex("date").replace_all(&signed, "<date>");
     let unique = regex("uuid").replace_all(&dated, "<uuid>");
     let quoted = regex("ident").replace_all(&unique, "$1");
-    let secret = regex("password").replace_all(&quoted, "password: <token>");
+    let uncast = regex("cast").replace_all(&quoted, "");
+    let secret = regex("password").replace_all(&uncast, "password: <token>");
     let stamped = regex("updated").replace_all(&secret, "updated: <token>");
     regex("token")
         .replace_all(&stamped, |caps: &Captures| {

@@ -111,7 +111,8 @@ public static class SplitStatements
     {
         var head = sql[start..i].ToUpperInvariant();
         return head.Contains("CREATE PROCEDURE", StringComparison.Ordinal)
-            || head.Contains("CREATE FUNCTION", StringComparison.Ordinal);
+            || head.Contains("CREATE FUNCTION", StringComparison.Ordinal)
+            || head.Contains("CREATE TRIGGER", StringComparison.Ordinal);
     }
 
     static bool EndsWithWord(string sql, string token)

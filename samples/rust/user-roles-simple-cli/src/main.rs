@@ -18,6 +18,9 @@ async fn main() {
 
 async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
     let parsed = parse::args(&args)?;
+    datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
+    datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
+    datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
     let ds = datasources::default()?;
     let connection = ds.create_connection().await?;
     connection.open().await?;

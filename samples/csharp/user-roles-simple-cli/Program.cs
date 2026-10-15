@@ -1,4 +1,7 @@
 using Datasources;
+using Datasources.Mysql;
+using Datasources.Postgres;
+using Datasources.Sqlite;
 using UserRolesSimpleCli;
 
 return await Run(args);
@@ -8,6 +11,9 @@ static async Task<int> Run(string[] args)
     try
     {
         var parsed = Parse.Args(args);
+        DatasourceFactory.Register("sqlite", new SqliteDriver());
+        DatasourceFactory.Register("mysql", new MysqlDriver());
+        DatasourceFactory.Register("postgres", new PostgresDriver());
         var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();

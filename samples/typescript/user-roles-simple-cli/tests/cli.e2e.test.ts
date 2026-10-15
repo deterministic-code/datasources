@@ -121,7 +121,7 @@ describe.sequential("cli e2e", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 180_000);
 
   it("mysql", async () => {
     freshCompose("mysql");

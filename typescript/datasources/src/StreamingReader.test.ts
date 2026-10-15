@@ -31,6 +31,9 @@ describe("splitStatements", () => {
     const postgres =
       "CREATE PROCEDURE bulk_create_user(payload jsonb)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  INSERT INTO t VALUES (1);\nEND;\n$$";
     expect(splitStatements(postgres)).toEqual([postgres]);
+    const trigger =
+      'CREATE TRIGGER trg AFTER UPDATE ON t\nBEGIN\n  UPDATE t SET id = id WHERE id = OLD.id;\nEND';
+    expect(splitStatements(trigger)).toEqual([trigger]);
   });
 
   it("matches a parameter token at a word boundary", () => {

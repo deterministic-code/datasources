@@ -1,11 +1,14 @@
 import { CreateTableStatement, CreateTableStatementTextRenderer, PrimaryKey, type Column } from "@datasources/core";
 import { columnTypes } from "./columnTypes.ts";
 
+const primaryKey = (constraint: { kind: string }): constraint is PrimaryKey =>
+  constraint.kind === "primaryKey";
+
 export class SqliteCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
   override render(statement: CreateTableStatement): string {
     const identity = new Set(statement.columns.filter((column) => column.identity).map((column) => column.name));
     const constraints = statement.constraints.filter(
-      (constraint) => !(constraint instanceof PrimaryKey) || !constraint.columns.every((column) => identity.has(column)),
+      (constraint) => !primaryKey(constraint) || !constraint.columns.every((column) => identity.has(column)),
     );
     return super.render(
       constraints.length === statement.constraints.length

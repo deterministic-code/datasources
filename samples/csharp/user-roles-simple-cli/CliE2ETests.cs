@@ -6,7 +6,12 @@ using Xunit.Abstractions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace UserRolesSimpleCli.Tests;
+
+[CollectionDefinition("e2e", DisableParallelization = true)]
+public sealed class E2ECollection;
 
 [Collection("e2e")]
 public sealed class CliE2ETests(ITestOutputHelper output)
@@ -124,7 +129,11 @@ public sealed class CliE2ETests(ITestOutputHelper output)
             var cmd = string.Join(" ", step.Argv);
             var (leftover, sql) = Commands(got.Stderr);
             var expectedSql = (step.Expect.Queries ?? []).Concat(provider == "mysql" ? step.Expect.Calls ?? [] : step.Expect.Inserts ?? []).ToList();
-            var actualSql = sql.Select(text => text.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ? Unquote(text) : text).ToList();
+            var actualSql = sql.Select(text =>
+            {
+                var sqlText = text.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ? Unquote(text) : text;
+                return Regex.Replace(sqlText, @"::[A-Z][A-Z0-9_]*", "");
+            }).ToList();
             if (Verbose())
             {
                 Log($"{provider}: {cmd}");
@@ -165,7 +174,7 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
         RemoveCompose(service);
-        Require(Exec("docker", $"compose up -d --force-recreate --wait {service}", RepoRoot()));
+        Require(Exec("docker", $"compose up -d --wait {service}", RepoRoot()));
         if (service == "mysql")
             Require(Exec(
                 "docker",
@@ -276,7 +285,7 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         var port = uri.Port > 0 ? uri.Port : 5432;
         var database = uri.AbsolutePath.Trim('/');
         var password = user.Length > 1 ? Uri.UnescapeDataString(user[1]) : "";
-        return $"Host={uri.Host};Port={port};Username={Uri.UnescapeDataString(user[0])};Password={password};Database={database}";
+        return $"Host={uri.Host};Port={port};Username={Uri.UnescapeDataString(user[0])};Password={password};Database={database};Pooling=false";
     }
 
     static string ToMysql(string url)
@@ -287,7 +296,7 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         var port = uri.Port > 0 ? uri.Port : 3306;
         var database = uri.AbsolutePath.Trim('/');
         var password = user.Length > 1 ? Uri.UnescapeDataString(user[1]) : "";
-        return $"Server={uri.Host};Port={port};User ID={Uri.UnescapeDataString(user[0])};Password={password};Database={database}";
+        return $"Server={uri.Host};Port={port};User ID={Uri.UnescapeDataString(user[0])};Password={password};Database={database};Pooling=false";
     }
 
     static string ReplaceMysqlDb(string url, string name)

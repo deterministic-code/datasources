@@ -46,6 +46,11 @@ const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
 
 const outputRoot = (cwd: string, output: string): string => (isAbsolute(output) ? output : join(cwd, output));
 
+const registryPath = (root: string, dialect: "typescript" | "rust"): string =>
+  dialect === "typescript"
+    ? join(root, "typescript/repositories/repository-registry.ts")
+    : join(root, "rust/repositories/mod.rs");
+
 const firstFile = async (fs: Fs, cwd: string, names: string[]): Promise<{ path: string; text: string } | undefined> => {
   for (const name of names) {
     const path = join(cwd, name);
@@ -84,6 +89,7 @@ export const wireRegister = async (
   if (dialect === "csharp") return wireCsharp(cwd, output, dryRun, deps);
   const root = outputRoot(cwd, output);
   if (relative(cwd, root).startsWith("..")) return;
+  if ((await optional(deps.fs, registryPath(root, dialect))) === undefined) return;
   const entries = await deps.fs.readdir(cwd).catch(() => []);
   const hook = hookPath(cwd, dialect, entries.includes("src"));
   const text = hookContents(dialect, hook, root);

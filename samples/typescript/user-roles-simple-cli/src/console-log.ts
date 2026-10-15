@@ -8,7 +8,7 @@ const token = (value: string): string =>
 
 export const normalizeConsoleLine = (line: string): string =>
   signature(line)
-    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, "<date>")
+    .replace(/\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}\.\d{3}Z?/g, "<date>")
     .replace(/\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g, "<uuid>")
     .replace(/["`]([A-Za-z_][A-Za-z0-9_]*)["`]/g, "$1")
     .replace(/password: [^,}\]]+/g, "password: <token>")

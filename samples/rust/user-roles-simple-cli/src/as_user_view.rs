@@ -26,6 +26,23 @@ fn id(row: &MappedRow, name: &str) -> i64 {
     }
 }
 
+fn stamp_text(value: &str) -> String {
+    match value.split_once(' ') {
+        Some((date, time)) if date.len() == 10 && date.as_bytes().get(4) == Some(&b'-') => {
+            format!("{date}T{time}Z")
+        }
+        _ => value.to_string(),
+    }
+}
+
+fn stamp(row: &MappedRow, name: &str) -> String {
+    match cell(row, name) {
+        Some(Value::Text(value)) => stamp_text(value),
+        Some(Value::DateTime(date)) => Value::iso_datetime(*date),
+        _ => text(row, name),
+    }
+}
+
 fn text(row: &MappedRow, name: &str) -> String {
     match cell(row, name) {
         Some(Value::Text(value)) => value.clone(),
@@ -70,7 +87,7 @@ pub fn from_mapped(rows: &[MappedRow]) -> Vec<UserView> {
                 id: id(row, "id"),
                 username: text(row, "username"),
                 is_enabled: flag(row, "is_enabled"),
-                created: text(row, "created"),
+                created: stamp(row, "created"),
                 roles,
                 groups,
             }

@@ -9,8 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "cli": "node --experimental-strip-types src/main.ts",
-    "setup": "node --experimental-strip-types src/main.ts setup",
+    "cli": "tsx src/main.ts",
+    "setup": "tsx src/main.ts setup",
     "test": "node scripts/build-generators.mjs && vitest run --coverage",
     "typecheck": "node scripts/build-generators.mjs && tsc --noEmit"
   },
@@ -22,6 +22,7 @@
     "@deterministic-code/rust-generators": "github:deterministic-code/generators-rust#main",
     "@deterministic-code/typescript-generators": "github:deterministic-code/generators-typescript#main",
     "@inquirer/prompts": "^7.8.0",
+    "tsx": "^4.20.5",
     "yaml": "^2.6.0"
   },
   "devDependencies": {

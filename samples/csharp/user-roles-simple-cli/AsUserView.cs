@@ -49,7 +49,13 @@ public static class AsUserView
     static string Stamp(Dictionary<string, MappedValue> row, string name)
     {
         var value = Cell(row, name);
-        return value is Value.DateTime ? value.IsoDateTime() : Text(row, name);
+        if (value is Value.DateTime) return value.IsoDateTime();
+        var text = Text(row, name);
+        return text.Length >= 11 && text[4] == '-' && text[10] == ' '
+            ? DateTime.Parse(string.Concat(text.AsSpan(0, 10), "T", text.AsSpan(11), "Z"), null, System.Globalization.DateTimeStyles.RoundtripKind)
+                .ToUniversalTime()
+                .ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'")
+            : text;
     }
 
     static bool Flag(Dictionary<string, MappedValue> row, string name) =>

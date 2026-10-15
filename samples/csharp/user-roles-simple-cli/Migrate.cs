@@ -11,9 +11,15 @@ public static class Migrate
     {
         var provider = command.Connection.Provider;
         foreach (var table in Schema.Tables(provider))
-            await (provider == "sqlite"
-                ? command.Execute(Native.N(IfNotExists(Sqlite.Render(table))))
-                : command.Execute(table));
+            try
+            {
+                await (provider == "sqlite"
+                    ? command.Execute(Native.N(IfNotExists(Sqlite.Render(table))))
+                    : command.Execute(table));
+            }
+            catch (Exception ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+            {
+            }
         if (command.Connection.Provider == "mysql")
             foreach (var sql in Schema.MysqlProcedures())
                 await command.Execute(Native.N(sql));

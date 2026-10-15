@@ -82,7 +82,8 @@ const generate = (kind, dialect, out) => {
     spawnSync(
       process.execPath,
       [
-        "--experimental-strip-types",
+        "--import",
+        "tsx",
         join(root, "cli/src/main.ts"),
         "generate",
         kind,

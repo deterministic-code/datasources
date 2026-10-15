@@ -111,7 +111,7 @@ fn remove_compose(service: &str) {
 
 fn fresh_compose(service: &str) {
     remove_compose(service);
-    docker(&["compose", "up", "-d", "--force-recreate", "--wait", service]);
+    docker(&["compose", "up", "-d", "--wait", service]);
     if service == "mysql" {
         docker(&[
             "compose",
@@ -227,11 +227,15 @@ fn script(url: &str, schema: &str, provider: &str) {
         let actual_sql: Vec<String> = sql
             .into_iter()
             .map(|text| {
-                if text.to_ascii_uppercase().starts_with("SELECT") {
+                let text = if text.to_ascii_uppercase().starts_with("SELECT") {
                     unquote(&text)
                 } else {
                     text
-                }
+                };
+                regex::Regex::new(r"::[A-Z][A-Z0-9_]*")
+                    .expect("cast")
+                    .replace_all(&text, "")
+                    .into_owned()
             })
             .collect();
         if verbose() {

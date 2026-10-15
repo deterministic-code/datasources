@@ -22,8 +22,11 @@ pub async fn apply(command: &dyn Command, provider: &str) -> Result<()> {
                     None,
                 )
                 .await?;
-        } else {
-            command.execute_statement(&table, None).await?;
+        } else if let Err(error) = command.execute_statement(&table, None).await {
+            let text = error.to_string();
+            if !text.to_ascii_lowercase().contains("already exists") {
+                return Err(error);
+            }
         }
     }
     if provider == "mysql" {

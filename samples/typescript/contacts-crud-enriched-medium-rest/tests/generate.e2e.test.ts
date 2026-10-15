@@ -25,7 +25,8 @@ describe("generate-and-register", () => {
       execFileSync(
         process.execPath,
         [
-          "--experimental-strip-types",
+          "--import",
+          "tsx",
           join(repo, "cli/src/main.ts"),
           "generate",
           "all",

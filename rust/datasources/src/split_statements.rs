@@ -165,7 +165,7 @@ fn word(chars: &[char], i: usize, token: &str) -> bool {
 
 fn routine(sql: &str, start: usize, i: usize) -> bool {
     let head = sql[start..i].to_ascii_uppercase();
-    head.contains("CREATE PROCEDURE") || head.contains("CREATE FUNCTION")
+    head.contains("CREATE PROCEDURE") || head.contains("CREATE FUNCTION") || head.contains("CREATE TRIGGER")
 }
 
 fn ends_with_word(sql: &str, token: &str) -> bool {
@@ -210,6 +210,8 @@ mod tests {
         assert_eq!(split_statements(sql), vec![sql]);
         let dollar = "CREATE PROCEDURE bulk_create_user(payload jsonb)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  INSERT INTO t VALUES (1);\nEND;\n$$";
         assert_eq!(split_statements(dollar), vec![dollar]);
+        let trigger = "CREATE TRIGGER trg AFTER UPDATE ON t\nBEGIN\n  UPDATE t SET id = id WHERE id = OLD.id;\nEND";
+        assert_eq!(split_statements(trigger), vec![trigger]);
     }
 
     #[test]
