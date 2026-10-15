@@ -18,7 +18,6 @@ import {
   findByTmpl,
   updateTmpl,
   deleteTmpl,
-  deleteOccTmpl,
 } from "../../resources/procedures-sqlserver.ts";
 
 const dialectName = "sqlserver";
@@ -121,23 +120,6 @@ const generateDelete = ({
     tableTok,
   }).trimEnd();
 
-const generateDeleteOcc = (
-  { routineName, tableTok, pk, columnName, table }: RenderCtx,
-  params: Param[],
-): string =>
-  fill(deleteOccTmpl, {
-    routineName,
-    params: renderParams(params),
-    tableTok,
-    pkName: columnName(pk.name),
-    occCol: table.occField
-      ? columnName(table.occField.name)
-      : columnName("updated"),
-    expectedOcc: table.occField
-      ? `expected_${columnName(table.occField.name)}`
-      : columnName("expected_updated"),
-  }).trimEnd();
-
 export const dialect: Dialect = {
   dialectName,
   paramType,
@@ -147,5 +129,4 @@ export const dialect: Dialect = {
   generateFindBy,
   generateUpdate,
   generateDelete,
-  generateDeleteOcc,
 };

@@ -13,7 +13,6 @@ export const [
   findByTmpl,
   updateTmpl,
   deleteTmpl,
-  deleteOccTmpl,
   migrationUpTmpl,
   migrationDownTmpl,
 ] = await Promise.all([
@@ -23,7 +22,6 @@ export const [
   resource("find-by.sql.tmpl"),
   resource("update.sql.tmpl"),
   resource("delete.sql.tmpl"),
-  resource("delete-occ.sql.tmpl"),
   resource("migration-up.sql.tmpl"),
   resource("migration-down.sql.tmpl"),
 ]);

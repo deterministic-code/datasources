@@ -18,7 +18,7 @@ export class SqlServerDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   readonly quoteLeft = "[";
   readonly quoteRight = "]";
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "NVARCHAR(MAX)",
       character: "NCHAR(1)",
@@ -45,8 +45,6 @@ export class SqlServerDriver implements IDriver {
       decimal: { kind: "required", type: "DECIMAL" },
       binaryUnlimited: "VARBINARY(MAX)",
       binarySized: (n: number) => `VARBINARY(${n})`,
-      occBinary: "BINARY(8)",
-      rowVersion: "ROWVERSION",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

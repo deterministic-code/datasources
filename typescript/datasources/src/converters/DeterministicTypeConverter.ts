@@ -1,6 +1,5 @@
+import type { IMapping } from "./IMapping.ts";
 import {
-  isOccBinaryColumn,
-  usesNativeRowVersion,
   type FieldSize,
   type SpecField,
 } from "./SpecField.ts";
@@ -32,7 +31,7 @@ const decimalPrecisionScale = (field: SpecField): [number, number] | null => {
   );
 };
 
-export class DeterministicTypeConverter {
+export class DeterministicTypeConverter implements IMapping<string, string> {
   readonly dictionary: Record<string, string>;
   readonly #reverse: Map<string, string[]>;
   readonly #rules: SpecFieldRules;
@@ -48,7 +47,15 @@ export class DeterministicTypeConverter {
     }
   }
 
-  convert = (field: SpecField): string => {
+  convert(from: string): string;
+  convert(from: SpecField): string;
+  convert(from: string | SpecField): string {
+    if (typeof from === "string") {
+      const native = this.dictionary[from];
+      if (native === undefined) throw new Error(`Unknown spec field type: ${from}`);
+      return native;
+    }
+    const field = from;
     const row = this.#rules;
     if (field.type === "string") return sized(row.stringUnlimited, row.stringSized, field);
     if (field.type === "character" && row.character !== undefined) {
@@ -68,16 +75,12 @@ export class DeterministicTypeConverter {
       return ps ? `${rule.type}(${ps[0]}, ${ps[1]})` : rule.fallback;
     }
     if (field.type === "binary") {
-      if (row.rowVersion !== undefined && usesNativeRowVersion(field)) return row.rowVersion;
-      if (row.occBinary !== undefined && isOccBinaryColumn(field)) return row.occBinary;
       if (row.binarySized !== undefined && row.binaryUnlimited !== undefined) {
         return sized(row.binaryUnlimited, row.binarySized, field);
       }
     }
-    const native = this.dictionary[field.type];
-    if (native === undefined) throw new Error(`Unknown spec field type: ${field.type}`);
-    return native;
-  };
+    return this.convert(field.type);
+  }
 
   reverseConvert = (native: string): string => {
     const specTypes = this.#reverse.get(native);

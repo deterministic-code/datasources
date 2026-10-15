@@ -18,7 +18,7 @@ export class OracleDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "CLOB",
       character: "CHAR(1)",
@@ -45,7 +45,6 @@ export class OracleDriver implements IDriver {
       decimal: { kind: "required", type: "NUMBER" },
       binaryUnlimited: "BLOB",
       binarySized: (n: number) => `RAW(${n})`,
-      occBinary: "RAW(8)",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

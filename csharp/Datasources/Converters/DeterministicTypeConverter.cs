@@ -1,6 +1,6 @@
 namespace Datasources;
 
-public sealed class DeterministicTypeConverter
+public sealed class DeterministicTypeConverter : IMapping<string, string>
 {
     readonly IReadOnlyDictionary<string, string> dictionary;
     readonly Dictionary<string, List<string>> reverse = [];
@@ -19,6 +19,11 @@ public sealed class DeterministicTypeConverter
             specTypes.Add(specType);
         }
     }
+
+    public string Convert(string from) =>
+        dictionary.TryGetValue(from, out var native)
+            ? native
+            : throw new InvalidOperationException($"Unknown spec field type: {from}");
 
     public string Convert(SpecField field)
     {
@@ -42,16 +47,10 @@ public sealed class DeterministicTypeConverter
         }
         if (field.Type == "binary")
         {
-            if (rules.RowVersion is { } rowVersion && SpecField.UsesNativeRowVersion(field))
-                return rowVersion;
-            if (rules.OccBinary is { } occ && SpecField.IsOccBinaryColumn(field))
-                return occ;
             if (rules.BinarySized is { } sized && rules.BinaryUnlimited is { } unlimited)
                 return Sized(unlimited, sized, field);
         }
-        return dictionary.TryGetValue(field.Type, out var native)
-            ? native
-            : throw new InvalidOperationException($"Unknown spec field type: {field.Type}");
+        return Convert(field.Type);
     }
 
     public string ReverseConvert(string native) =>

@@ -7,7 +7,7 @@ public interface IDriver
     ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted);
     IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; }
     string ColumnType(string name) => name;
-    DeterministicTypeConverter? DeterministicTypeConverter => null;
+    IMapping<string, string>? TypeConverter => null;
     DefaultValueConverter? DefaultValueConverter => null;
     StatementTextRenderer? StatementRenderer => null;
     Information? Information => null;

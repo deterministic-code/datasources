@@ -10,13 +10,14 @@ import {
   SelectStatement,
   UniqueConstraint,
   UpdateStatement,
+  Operator,
   Where,
   eq,
   type Column,
 } from "@datasources/core";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
-import { converterFieldOf } from "./common/occ-sql.ts";
+import { converterFieldOf } from "./common/converter-field.ts";
 import {
   fieldOverlay,
   overlayOf,
@@ -34,7 +35,7 @@ import {
 
 const columnOf = (dialect: SqlDialect, mapping: SqlMapping, table: LiveTable, field: TypeField): Column => {
   const overlay = fieldOverlay(table, field.name);
-  const converterField = converterFieldOf(field, overlay);
+  const converterField = converterFieldOf(field);
   const defaultExpr = sqlDefault(dialect, converterField);
   const keys = tableIdentity(table);
   const identity = usesGeneratedIdColumn(table, field) && field.type !== "uuid" && field.type !== "string";
@@ -127,16 +128,24 @@ export const insertStatementOf = (table: string, fields: string[]): InsertStatem
     fields.map((name) => ({ name, value: name })),
   );
 
+const equalsWhere = ([first, ...rest]: string[]): Where =>
+  new Where(
+    rest.reduce(
+      (condition, column) => new Operator.And(condition, eq(column, column)),
+      eq(first!, first!),
+    ),
+  );
+
 export const updateStatementOf = (
   table: string,
   fields: string[],
-  key: string,
+  keys: string[],
 ): UpdateStatement =>
   new UpdateStatement(
     table,
     fields.map((name) => ({ name, value: name })),
-    new Where(eq(key, key)),
+    equalsWhere(keys),
   );
 
-export const deleteStatementOf = (table: string, key: string): DeleteStatement =>
-  new DeleteStatement(table, new Where(eq(key, key)));
+export const deleteStatementOf = (table: string, keys: string[]): DeleteStatement =>
+  new DeleteStatement(table, equalsWhere(keys));

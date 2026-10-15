@@ -5,8 +5,6 @@ import {
 } from "../../resources/procedures-shared.ts";
 import type { PackCasing } from "../default-casing.ts";
 import { q } from "../sql-dialect.ts";
-import { occBumpSql } from "../occ-sql.ts";
-import { requireDialect } from "../sql-dialect.ts";
 import {
   pad,
   paramAlignWidth,
@@ -18,8 +16,6 @@ import {
 export type ProcField = {
   name: string;
   type: string;
-  isOptimisticConcurrency?: boolean;
-  useNativeRowVersion?: boolean;
 };
 
 export type ProcTable = {
@@ -27,7 +23,6 @@ export type ProcTable = {
   entityName: string;
   fields: ProcField[];
   pkName?: string;
-  occField?: ProcField;
 };
 
 export type Param = {
@@ -36,7 +31,6 @@ export type Param = {
 };
 
 export type Variant = {
-  occ?: boolean;
   byField?: string;
 };
 
@@ -46,10 +40,8 @@ type ProcOp =
   | "findAll"
   | "findBy"
   | "update"
-  | "updateOcc"
   | "updateBy"
-  | "delete"
-  | "deleteOcc";
+  | "delete";
 
 type ProcSpec = {
   op: ProcOp;
@@ -72,7 +64,6 @@ export type UpdateSpec = {
   writable: ProcField[];
   name: string;
   params: Param[];
-  occExpectedName?: string;
   auditUpdated?: boolean;
 };
 
@@ -85,14 +76,12 @@ export type Dialect = {
   generateFindBy(ctx: RenderCtx, field: ProcField): string;
   generateUpdate(ctx: RenderCtx, variant: Variant, spec: UpdateSpec): string;
   generateDelete(ctx: RenderCtx): string;
-  generateDeleteOcc(ctx: RenderCtx, params: Param[]): string;
 };
 
 /** Ordered CRUD ops + routine names for one entity (CREATE bodies and DROP names). */
 export const procedureSpecs = (
   entityName: string,
   byFields: string[],
-  occ: boolean,
   casing: PackCasing,
 ): ProcSpec[] => {
   const name = (stem: string): string => casing.routineName(stem);
@@ -109,28 +98,12 @@ export const procedureSpecs = (
       byField: bf,
     })),
     { op: "update", name: name(`update_${entityName}`) },
-    ...(occ
-      ? [
-          {
-            op: "updateOcc" as const,
-            name: name(`update_${entityName}_optimistic_concurrency`),
-          },
-        ]
-      : []),
     ...byFields.map((bf) => ({
       op: "updateBy" as const,
       name: name(`update_${entityName}_by_${bf}`),
       byField: bf,
     })),
     { op: "delete", name: name(`delete_${entityName}`) },
-    ...(occ
-      ? [
-          {
-            op: "deleteOcc" as const,
-            name: name(`delete_${entityName}_optimistic_concurrency`),
-          },
-        ]
-      : []),
   ];
 };
 
@@ -149,8 +122,7 @@ const requireField = (
 };
 
 const hasAuditUpdated = (table: ProcTable): boolean =>
-  table.fields.some((f) => f.name === "updated") &&
-  table.occField?.name !== "updated";
+  table.fields.some((f) => f.name === "updated");
 
 const updateSpec = (
   dialect: Dialect,
@@ -159,28 +131,18 @@ const updateSpec = (
   name: string,
   columnName: (logical: string) => string,
 ): UpdateSpec => {
-  const { occ = false, byField } = variant;
+  const { byField } = variant;
   const key = byField ? requireField(table, byField, name) : pkFieldOf(table);
-  const writable = writableNonAuditFields({
-    ...table,
-    occField: table.occField?.name,
-  }).filter((f) => f.name !== byField);
+  const writable = writableNonAuditFields(table).filter((f) => f.name !== byField);
   const col = (field: string): string => columnName(field);
-  const occField = table.occField;
-  const occExpectedName =
-    occ && occField ? `expected_${col(occField.name)}` : undefined;
   const audit = hasAuditUpdated(table);
   const updated = audit ? updatedFieldOf(table) : undefined;
   return {
     writable,
     name,
-    occExpectedName,
     auditUpdated: audit,
     params: [
       { name: col(key.name), type: dialect.paramType(key) },
-      ...(occExpectedName && occField
-        ? [{ name: occExpectedName, type: dialect.paramType(occField) }]
-        : []),
       ...writable.map((f) => ({
         name: col(f.name),
         type: dialect.paramType(f),
@@ -206,14 +168,9 @@ const renderOp = (dialect: Dialect, spec: ProcSpec, ctx: RenderCtx): string => {
         requireField(ctx.table, spec.byField, spec.name),
       );
     case "update":
-    case "updateOcc":
     case "updateBy": {
       const variant: Variant =
-        spec.op === "updateOcc"
-          ? { occ: true }
-          : spec.op === "updateBy"
-            ? { byField: spec.byField }
-            : {};
+        spec.op === "updateBy" ? { byField: spec.byField } : {};
       return dialect.generateUpdate(
         ctx,
         variant,
@@ -222,17 +179,6 @@ const renderOp = (dialect: Dialect, spec: ProcSpec, ctx: RenderCtx): string => {
     }
     case "delete":
       return dialect.generateDelete(ctx);
-    case "deleteOcc": {
-      const { pk, table, columnName } = ctx;
-      const occ = table.occField ?? updatedFieldOf(table);
-      return dialect.generateDeleteOcc(ctx, [
-        { name: columnName(pk.name), type: dialect.paramType(pk) },
-        {
-          name: `expected_${columnName(occ.name)}`,
-          type: dialect.paramType(occ),
-        },
-      ]);
-    }
   }
 };
 
@@ -240,7 +186,6 @@ export const generateProceduresFor = (
   dialect: Dialect,
   table: ProcTable,
   byFields: string[],
-  occ: boolean,
   casing: PackCasing,
   columnName: (logical: string) => string,
 ): string[] => {
@@ -253,7 +198,7 @@ export const generateProceduresFor = (
     columnName,
     dialectName: dialect.dialectName,
   };
-  return procedureSpecs(table.entityName, byFields, occ, casing).map((spec) =>
+  return procedureSpecs(table.entityName, byFields, casing).map((spec) =>
     renderOp(dialect, spec, { ...base, routineName: spec.name }),
   );
 };
@@ -285,17 +230,9 @@ export const makeGenerateUpdate =
     const col = (field: string): string => ctx.columnName(field);
     const argOf = (field: string) => d.argRef(col(field), spec.name);
     const pk = ctx.pk.name;
-    const occ = ctx.table.occField;
-    const occCol = occ ? col(occ.name) : undefined;
-    const occBump =
-      occ === undefined
-        ? null
-        : occBumpSql(requireDialect(ctx.dialectName), occ, d.colRef(occCol!));
     const where = variant.byField
       ? `${d.colRef(col(variant.byField))} = ${argOf(variant.byField)}`
-      : variant.occ === true && occCol && spec.occExpectedName
-        ? `${d.colRef(col(pk))} = ${argOf(pk)} AND ${d.colRef(occCol)} = ${d.argRef(spec.occExpectedName, spec.name)}`
-        : `${d.colRef(col(pk))} = ${argOf(pk)}`;
+      : `${d.colRef(col(pk))} = ${argOf(pk)}`;
     const sets = [
       ...spec.writable.map((f) => ({
         lhs: d.setLhs(col(f.name)),
@@ -311,15 +248,6 @@ export const makeGenerateUpdate =
               rhs: argOf("new_updated"),
             },
           ]),
-      ...(occCol && occBump
-        ? [
-            {
-              lhs: d.setLhs(occCol),
-              padEq: " = ",
-              rhs: occBump,
-            },
-          ]
-        : []),
     ];
     return d.wrap(
       ctx,

@@ -23,7 +23,7 @@ export type SqlDialect = (typeof SQL_DIALECTS)[number];
 export type SqlGenerateDriver = IDriver & {
   quoteLeft: string;
   quoteRight: string;
-  deterministicTypeConverter: DeterministicTypeConverter;
+  typeConverter: DeterministicTypeConverter;
   defaultValueConverter: DefaultValueConverter;
 };
 
@@ -56,7 +56,7 @@ export const dialectConverter = (dialect: string): {
     quoteLeft: driver.quoteLeft,
     quoteRight: driver.quoteRight,
     defaultValueConverter: driver.defaultValueConverter,
-    toColumnType: (field) => driver.deterministicTypeConverter.convert(field),
+    toColumnType: (field) => driver.typeConverter.convert(field),
   };
 };
 
@@ -86,7 +86,7 @@ export const q = (dialect: string, ident: string): string => {
 };
 
 export const mapColumnType = (dialect: string, field: SpecField): string =>
-  dialectDriver(dialect).deterministicTypeConverter.convert(field);
+  dialectDriver(dialect).typeConverter.convert(field);
 
 export const sqlDefault = (dialect: string, field: SpecField): string | null => {
   if (field.defaultValue === undefined || field.defaultValue === null) return null;

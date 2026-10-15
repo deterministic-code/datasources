@@ -182,6 +182,7 @@ export {
   type SpecField,
 } from "./converters/SpecField.ts";
 export type { DecimalRule, SpecFieldRules } from "./converters/SpecFieldRules.ts";
+export type { IMapping } from "./converters/IMapping.ts";
 export { DeterministicTypeConverter } from "./converters/DeterministicTypeConverter.ts";
 export type { DefaultValueOptions } from "./converters/DefaultValueOptions.ts";
 export {

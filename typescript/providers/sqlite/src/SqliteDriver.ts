@@ -40,7 +40,7 @@ export class SqliteDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
-  readonly deterministicTypeConverter = new DeterministicTypeConverter(
+  readonly typeConverter = new DeterministicTypeConverter(
     {
       string: "TEXT",
       character: "TEXT",
@@ -63,7 +63,6 @@ export class SqliteDriver implements IDriver {
       dialectName: "sqlite",
       stringUnlimited: "TEXT",
       stringSized: (n) => `VARCHAR(${n})`,
-      occBinary: "BLOB",
     },
   );
   readonly defaultValueConverter = new DefaultValueConverter({

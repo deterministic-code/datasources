@@ -11,8 +11,6 @@ import {
   buildLiveTables,
   datasourceSettings,
   hasAuditColumns,
-  occFieldOf,
-  occOverlayOf,
   overlayOf,
   sqlTablesFrom,
 } from "./sql-schema.ts";
@@ -69,50 +67,29 @@ export const generateProceduresForDialect = async (
   const types = sqlTablesFrom(spec);
   const casing = createCasing(ctx.settings);
   const mapping = new SqlMapping(casing, types);
-  const tables = buildLiveTables(types, mapping).filter(
-    (t) => hasAuditColumns(t) || occFieldOf(t) !== undefined,
-  );
+  const tables = buildLiveTables(types, mapping).filter(hasAuditColumns);
   if (tables.length === 0) return [];
 
   const byFields = byFieldsFromDatasource(types);
   const parts = tables.map((t) => {
     const fields = byFields.get(t.name) ?? [];
-    const occField = occFieldOf(t);
-    const occOverlay = occOverlayOf(t);
-    const occ = occField !== undefined;
     const table = {
       name: t.tableName,
       entityName: t.name,
       fields: t.fields.map((f) => ({
         name: f.name,
         type: f.type,
-        ...(f.name === occField?.name
-          ? {
-              isOptimisticConcurrency: true,
-              useNativeRowVersion: occOverlay?.useNativeRowVersion,
-            }
-          : {}),
       })),
       pkName: pkName(t, overlayOf(t)),
-      ...(occField
-        ? {
-            occField: {
-              name: occField.name,
-              type: occField.type,
-              isOptimisticConcurrency: true,
-              useNativeRowVersion: occOverlay?.useNativeRowVersion,
-            },
-          }
-        : {}),
     };
     return {
       body: [
         `-- ${t.name}`,
-        ...generateProceduresFor(pack.dialect, table, fields, occ, casing, (logical) =>
+        ...generateProceduresFor(pack.dialect, table, fields, casing, (logical) =>
           mapping.columnName(t, logical),
         ),
       ].join("\n\n"),
-      drops: procedureSpecs(t.name, fields, occ, casing).map((spec) =>
+      drops: procedureSpecs(t.name, fields, casing).map((spec) =>
         fill(dropRoutineTmpl, { verb: pack.verb, name: spec.name }).trimEnd(),
       ),
     };

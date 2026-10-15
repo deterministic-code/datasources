@@ -14,8 +14,6 @@ import {
   buildLiveTables,
   fieldOverlay,
   hasAuditColumns,
-  occFieldOf,
-  occOverlayOf,
   overlayOf,
   sqlTablesFrom,
   tableIdentity,
@@ -32,8 +30,7 @@ import {
   sqlDefault,
   type SqlDialect,
 } from "./sql-dialect.ts";
-import { emitsNativeRowVersion } from "@datasources/core";
-import { converterFieldOf, occZeroDefault } from "./occ-sql.ts";
+import { converterFieldOf } from "./converter-field.ts";
 import { buildCustomMigrationFiles } from "./generate-custom-migrations.ts";
 import { generateProceduresForDialect } from "./generate-procedures.ts";
 import { seedSections } from "./seed-generator.ts";
@@ -50,7 +47,6 @@ import {
 } from "../resources/sql.ts";
 import {
   renderDropTable,
-  renderOccBumpTrigger,
   renderPreamble,
   renderUpdatedTrigger,
 } from "./render-ddl.ts";
@@ -93,23 +89,11 @@ const columnDef = (
   field: TypeField,
 ): string => {
   const overlay = fieldOverlay(table, field.name);
-  const converterField = converterFieldOf(field, overlay);
+  const converterField = converterFieldOf(field);
   let defaultExpr = sqlDefault(dialect, converterField);
   if (defaultExpr === null && field.name === "uuid") {
     defaultExpr =
       dialectConverter(dialect).defaultValueConverter.convert("uuid", "NewId");
-  }
-  if (emitsNativeRowVersion(converterField, dialect)) defaultExpr = null;
-  else if (
-    converterField.isOptimisticConcurrency === true &&
-    field.type === "binary" &&
-    (defaultExpr === null ||
-      defaultExpr === "" ||
-      defaultExpr === "0x" ||
-      defaultExpr === "X''" ||
-      defaultExpr === `'\\x'`)
-  ) {
-    defaultExpr = occZeroDefault(dialect);
   }
   if (defaultExpr === "") defaultExpr = null;
   const keys = tableIdentity(table);
@@ -324,19 +308,10 @@ const flattenTable = (
   const audit = hasAuditColumns(table)
     ? renderUpdatedTrigger(dialect, live, mapping)
     : "";
-  const occField = occFieldOf(table);
-  const occOverlay = occOverlayOf(table);
-  const occConverter = occField
-    ? converterFieldOf(occField, occOverlay)
-    : undefined;
-  const occ =
-    occConverter && !emitsNativeRowVersion(occConverter, dialect)
-      ? renderOccBumpTrigger(dialect, live, mapping, occConverter)
-      : "";
   return {
     createTable: createTableSql(dialect, table, mapping),
     indexesBlock: indexes.join("\n"),
-    trigger: [audit, occ].filter((part) => part !== "").join("\n\n"),
+    trigger: audit,
   };
 };
 

@@ -9,6 +9,4 @@ pub struct SpecFieldRules {
     pub decimal: Option<DecimalRule>,
     pub binary_unlimited: Option<String>,
     pub binary_sized: Option<fn(i32) -> String>,
-    pub occ_binary: Option<String>,
-    pub row_version: Option<String>,
 }

@@ -1,5 +1,6 @@
 use super::decimal_rule::DecimalRule;
-use super::spec_field::{is_occ_binary_column, uses_native_row_version, FieldSize, SpecField};
+use super::mapping::Mapping;
+use super::spec_field::{FieldSize, SpecField};
 use super::spec_field_rules::SpecFieldRules;
 use crate::datasource_error::DatasourceError;
 use crate::result::Result;
@@ -21,6 +22,10 @@ impl DeterministicTypeConverter {
     }
 
     pub fn convert(&self, field: &SpecField) -> Result<String> {
+        self.convert_field(field)
+    }
+
+    fn convert_field(&self, field: &SpecField) -> Result<String> {
         let row = &self.rules;
         if field.type_name == "string" {
             return Ok(sized(&row.string_unlimited, row.string_sized, field));
@@ -52,16 +57,6 @@ impl DeterministicTypeConverter {
             }
         }
         if field.type_name == "binary" {
-            if let Some(row_version) = &row.row_version {
-                if uses_native_row_version(field) {
-                    return Ok(row_version.clone());
-                }
-            }
-            if let Some(occ) = &row.occ_binary {
-                if is_occ_binary_column(field) {
-                    return Ok(occ.clone());
-                }
-            }
             if let (Some(unlimited), Some(render)) = (&row.binary_unlimited, row.binary_sized) {
                 return Ok(sized(unlimited, render, field));
             }
@@ -75,6 +70,18 @@ impl DeterministicTypeConverter {
     }
 
     pub fn reverse_convert(&self, native: &str) -> Result<String> {
+        Mapping::reverse_convert(self, &native.to_string())
+    }
+}
+
+impl Mapping<String, String> for DeterministicTypeConverter {
+    fn convert(&self, from: &String) -> Result<String> {
+        self.dictionary.get(from).cloned().ok_or_else(|| {
+            DatasourceError::message(format!("Unknown spec field type: {from}"))
+        })
+    }
+
+    fn reverse_convert(&self, native: &String) -> Result<String> {
         let spec_types = self.reverse.get(native).ok_or_else(|| {
             DatasourceError::message(format!("Unknown native field type: {native}"))
         })?;
@@ -130,8 +137,6 @@ mod tests {
                 decimal: None,
                 binary_unlimited: None,
                 binary_sized: None,
-                occ_binary: None,
-                row_version: None,
             },
         );
         let field = SpecField {

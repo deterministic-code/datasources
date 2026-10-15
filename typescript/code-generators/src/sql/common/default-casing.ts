@@ -18,7 +18,6 @@ export type PackCasing = ICasingStrategy & {
   columnName: (field: string) => string
   constraintName: (entity: string, ...parts: string[]) => string
   triggerName: (entity: string) => string
-  occTriggerName: (entity: string) => string
   routineName: (stem: string) => string
   fileBase: (stem: string) => string
   filePath: (stem: string) => string
@@ -98,7 +97,6 @@ export const createCasing = (
             naming.tableName([naming.physicalStem(entity), ...parts].join("_")),
           ),
     triggerName: (entity) => trigger(entity, "updated_at"),
-    occTriggerName: (entity) => trigger(entity, "occ"),
     routineName: (stem) => objectIdent(stem, naming.tableName(stem)),
     fileBase,
     filePath: (stem) => `${fileBase(stem)}.sql`,

@@ -75,15 +75,15 @@ columnType(name: string): string
 
 **Returns** `string`
 
-##### deterministicTypeConverter
+##### typeConverter
 
-Spec-type to native SQL column type. SQL drivers set this. Other drivers omit it.
+Spec type name to native SQL column type. SQL drivers set a `DeterministicTypeConverter`. Other drivers omit it.
 
 ```typescript
-deterministicTypeConverter?: DeterministicTypeConverter | null
+typeConverter?: IMapping<string, string> | null
 ```
 
-**Returns** `DeterministicTypeConverter | null | undefined`
+**Returns** `IMapping<string, string> | null | undefined`
 
 ##### defaultValueConverter
 
@@ -181,15 +181,15 @@ string ColumnType(string name)
 
 **Returns** `string`
 
-##### DeterministicTypeConverter
+##### TypeConverter
 
-Spec-type to native SQL column type. The default returns `null`. SQL drivers set this.
+Spec type name to native SQL column type. The default returns `null`. SQL drivers set a `DeterministicTypeConverter`.
 
 ```csharp
-DeterministicTypeConverter? DeterministicTypeConverter
+IMapping<string, string>? TypeConverter
 ```
 
-**Returns** `DeterministicTypeConverter?`
+**Returns** `IMapping<string, string>?`
 
 ##### DefaultValueConverter
 
@@ -286,15 +286,15 @@ fn column_type(&self, name: &str) -> Result<String>
 
 **Returns** `Result<String>`
 
-##### deterministic_type_converter()
+##### type_converter()
 
-Spec-type to native SQL column type. The default returns `None`. SQL drivers set this.
+Spec type name to native SQL column type. The default returns `None`. SQL drivers set a `DeterministicTypeConverter`.
 
 ```rust
-fn deterministic_type_converter(&self) -> Option<&DeterministicTypeConverter>
+fn type_converter(&self) -> Option<&dyn Mapping<String, String>>
 ```
 
-**Returns** `Option<&DeterministicTypeConverter>`
+**Returns** `Option<&dyn Mapping<String, String>>`
 
 ##### default_value_converter()
 
@@ -339,7 +339,7 @@ The statement factory formats `SelectInsertedIdStatement` as a `SelectStatement`
 
 {{ColumnType|columnType|column_type}} maps a canonical column type to the engine SQL type name. It does not convert cell values. The default returns the name unchanged. MySQL, Postgres, and SQLite override it and throw on an unknown name.
 
-{{DeterministicTypeConverter|deterministicTypeConverter|deterministic_type_converter}} maps a spec field (`integer`, sized `string`, OCC binary) to a native column type. {{DefaultValueConverter|defaultValueConverter|default_value_converter}} maps a spec default token (`UtcNow`, `NewId`) to a native SQL expression. SQL drivers set both. Other drivers leave them unset.
+{{TypeConverter|typeConverter|type_converter}} is an {{IMapping|IMapping|Mapping}} from a spec type name (`integer`, `string`) to a native column type. SQL drivers set a {{DeterministicTypeConverter|DeterministicTypeConverter|DeterministicTypeConverter}}. A sized field uses the type definition (`size`), not a generator flag. Concurrency is a {{Where|where|Where}} on the update or delete. {{DefaultValueConverter|defaultValueConverter|default_value_converter}} maps a spec default token (`UtcNow`, `NewId`) to a native SQL expression. Other drivers leave them unset.
 
 ::: prose
 ### typescript
