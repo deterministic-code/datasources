@@ -19,6 +19,8 @@ import {
   type NpmManifest,
 } from "./installed.ts";
 import { applyGenerate } from "./generate/applyGenerate.ts";
+import { applyMigrations } from "./generate/applyMigrations.ts";
+import { migrateInitCommands, sqlMigrateProviders } from "./migrateInit.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
 import { wireRegister } from "./wireRegister.ts";
@@ -48,7 +50,7 @@ const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<voi
   if (command.kind === "setup") return applySetup(flags, deps);
   if (command.kind === "add") return applyAddRemove(flags, deps, requireProviders(needNames(command.providers, "add")), []);
   if (command.kind === "remove") return applyAddRemove(flags, deps, [], requireProviders(needNames(command.providers, "remove")));
-  return applyGenerate(command, flags, deps);
+  return command.kind === "migrations-create" ? applyMigrations(command, flags, deps) : applyGenerate(command, flags, deps);
 };
 
 const needNames = (names: string[], verb: string): string[] =>
@@ -82,6 +84,7 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
     installed.filter((name) => !selected.includes(name)),
     selected,
   );
+  await applyMigrateInit(flags, deps, ecosystem, selected);
   const dialect: Dialect = ecosystem === "ts" ? "typescript" : ecosystem;
   await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
   if (!answers.scaffold) return;
@@ -112,6 +115,7 @@ const applyAddRemove = async (
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
   await applyPackages(flags, deps, ecosystem, entries, add, remove, remaining);
+  await applyMigrateInit(flags, deps, ecosystem, remaining);
 };
 
 const applyPackages = async (
@@ -141,6 +145,19 @@ const applyPackages = async (
         if (copied) deps.log(`copy ${copied}`);
       }
     }
+  }
+};
+
+const applyMigrateInit = async (
+  flags: Flags,
+  deps: Deps,
+  ecosystem: Ecosystem,
+  remaining: Provider[],
+): Promise<void> => {
+  if (ecosystem !== "ts") return;
+  for (const proc of migrateInitCommands(sqlMigrateProviders(remaining))) {
+    deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
+    if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
   }
 };
 

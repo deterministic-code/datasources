@@ -9,13 +9,14 @@ npx @datasources/cli setup
 npx @datasources/cli add sqlite
 npx @datasources/cli remove sqlite
 npx @datasources/cli generate all --dialect typescript
+npx @datasources/cli migrations create
 ```
 
 Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
 
 ## Setup
 
-Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate).
+Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate). On a TypeScript project, checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init` for that set. `add` and `remove` re-run init with the remaining SQL dialects.
 
 ```sh
 npx @datasources/cli setup

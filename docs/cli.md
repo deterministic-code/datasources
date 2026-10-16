@@ -7,13 +7,14 @@ npx @datasources/cli setup
 npx @datasources/cli add sqlite
 npx @datasources/cli remove sqlite
 npx @datasources/cli generate all --dialect typescript
+npx @datasources/cli migrations create
 ```
 
 Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
 
 ## Setup
 
-Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate).
+Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate). On a TypeScript project, checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init` for that set. `add` and `remove` re-run init with the remaining SQL dialects.
 
 ```sh
 npx @datasources/cli setup
@@ -76,6 +77,25 @@ When `datasource.yaml` is omitted, generate includes every `datasource_type` and
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
 `setup` and `generate` (for `all` or `repositories`) write a project hook so {{Datasource.Default|Datasource.default|default()}} applies the generated registry: `src/datasources-register.ts` or `src/datasources_register.rs`, plus one attach line on the detected entry (`src/index.ts` / `src/lib.rs` / `src/main.rs`). Rust also adds `ctor = "0.4"` to `Cargo.toml` so `#[ctor::ctor]` can queue `RepositoryFactory::bind` at load. C# compiles `RepositoryRegistry` when it sits in the project; generate adds a csproj `Compile` include only when `--output` is outside the project.
+
+## Migrations
+
+`migrations create` writes SQL from the deterministic spec into the [migraters](https://github.com/deterministic-code/migraters) directory layout. Dialects come from `settings.yaml` (`backend.datasources`, default `sqlite`). Apply with `migrate-up` / `migrate-down`.
+
+```sh
+npx @datasources/cli migrations create
+npx @datasources/cli migrations create --input ./deterministic --migrations-root sql
+npx @datasources/cli migrations create --migrations-path ./db/sqlite/migrations
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--provider <name>` | Spec provider (default: `deterministic`) |
+| `--input <dir>` | Deterministic project (default: `./deterministic`) |
+| `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` (default: `sql`) |
+| `--migrations-path <dir>` | One migrations directory. The spec must list a single SQL dialect. |
+
+`--migrations-path` wins over `--migrations-root`. Re-running overwrites the same files.
 
 ## .env
 
