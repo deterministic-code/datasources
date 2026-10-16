@@ -22,12 +22,21 @@ export type GenerateCommand = {
   output: string;
 };
 
+export type MigrationsCreateCommand = {
+  kind: "migrations-create";
+  provider: string;
+  input: string;
+  migrationsRoot: string;
+  migrationsPath?: string;
+};
+
 export type Command =
   | { kind: "setup" }
   | { kind: "add"; providers: string[] }
   | { kind: "remove"; providers: string[] }
   | { kind: "help" }
-  | GenerateCommand;
+  | GenerateCommand
+  | MigrationsCreateCommand;
 
 export const help = `Usage: datasources <command> [options]
 
@@ -53,6 +62,12 @@ generate <all|types|repositories|datasource>
   --provider <name>           Spec provider (default: deterministic)
   --input <dir>               Deterministic project (default: ./deterministic)
   --output <dir>              Generated files (default: ./generated)
+
+migrations create     SQL migrations from the spec (migraters layout)
+  --provider <name>           Spec provider (default: deterministic)
+  --input <dir>               Deterministic project (default: ./deterministic)
+  --migrations-root <dir>     Root prefix (default: sql)
+  --migrations-path <dir>     One migrations directory (single SQL dialect)
 `;
 
 const isTarget = (value: string): value is GenerateTarget => (generateTargets as readonly string[]).includes(value);
@@ -61,7 +76,14 @@ const take = (argv: string[], index: number, name: string): string => argv[index
 
 export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags: Flags } => {
   const flags: Flags = { cwd, dryRun: false, yes: false };
-  const generate = { dialect: "", provider: "deterministic", input: "deterministic", output: "generated" };
+  const generate = {
+    dialect: "",
+    provider: "deterministic",
+    input: "deterministic",
+    output: "generated",
+    migrationsRoot: "sql",
+    migrationsPath: "",
+  };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -79,6 +101,10 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg.startsWith("--input=")) generate.input = arg.slice("--input=".length);
     else if (arg === "--output") generate.output = take(argv, ++i, "--output");
     else if (arg.startsWith("--output=")) generate.output = arg.slice("--output=".length);
+    else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
+    else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
+    else if (arg === "--migrations-path") generate.migrationsPath = take(argv, ++i, "--migrations-path");
+    else if (arg.startsWith("--migrations-path=")) generate.migrationsPath = arg.slice("--migrations-path=".length);
     else if (arg === "--help" || arg === "-h") return { command: { kind: "help" }, flags };
     else rest.push(arg);
   }
@@ -89,14 +115,37 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
 const commandOf = (
   verb: string | undefined,
   names: string[],
-  generate: { dialect: string; provider: string; input: string; output: string },
+  generate: {
+    dialect: string;
+    provider: string;
+    input: string;
+    output: string;
+    migrationsRoot: string;
+    migrationsPath: string;
+  },
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
   if (verb === "setup") return { kind: "setup" };
   if (verb === "add") return { kind: "add", providers: names };
   if (verb === "remove") return { kind: "remove", providers: names };
   if (verb === "generate") return generateCommand(names, generate);
+  if (verb === "migrations") return migrationsCommand(names, generate);
   throw new Error(`Unknown command: ${verb}\n${help}`);
+};
+
+const migrationsCommand = (
+  names: string[],
+  generate: { provider: string; input: string; migrationsRoot: string; migrationsPath: string },
+): MigrationsCreateCommand => {
+  if (names.length !== 1 || names[0] !== "create")
+    throw new Error(`Usage: datasources migrations create\n${help}`);
+  return {
+    kind: "migrations-create",
+    provider: generate.provider,
+    input: generate.input,
+    migrationsRoot: generate.migrationsRoot,
+    ...(generate.migrationsPath === "" ? {} : { migrationsPath: generate.migrationsPath }),
+  };
 };
 
 const generateCommand = (

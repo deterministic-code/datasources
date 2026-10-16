@@ -78,7 +78,41 @@ describe("run", () => {
     expect(io.ran[0]).toMatch(/npm install/);
     expect(io.ran[0]).toMatch(/@datasources\/sqlite/);
     expect(io.ran[0]).not.toMatch(/better-sqlite3/);
+    expect(io.ran).toContain("npm install @deterministic-code/migraters");
+    expect(io.ran).toContain("npx migrate-init --dialect sqlite");
     expect(files[join(cwd, "deterministic", "types.yaml")]).toBeUndefined();
+  });
+
+  it("inits migraters for checked SQL dialects and skips json-only", async () => {
+    const sql = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }),
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite,postgres\nDATASOURCE_URL=sqlite:///:memory:\n",
+    });
+    const sqlIo = deps(sql.fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], sqlIo)).toBe(0);
+    expect(sqlIo.ran).toContain("npm install @deterministic-code/migraters");
+    expect(sqlIo.ran).toContain("npx migrate-init --dialect sqlite --dialect postgres");
+    const json = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@datasources/json": "*" } }),
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
+    });
+    const jsonIo = deps(json.fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], jsonIo)).toBe(0);
+    expect(jsonIo.ran.some((line) => line.includes("migraters") || line.includes("migrate-init"))).toBe(false);
+    const dry = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@datasources/sqlite": "*" } }),
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
+    });
+    const dryIo = deps(dry.fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--dry-run"], dryIo)).toBe(0);
+    expect(dryIo.ran).toEqual([]);
+    expect(dryIo.logs.some((line) => line.includes("migrate-init --dialect sqlite"))).toBe(true);
+    const addIo = deps(mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@datasources/sqlite": "*" } }),
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    }).fs);
+    expect(await run(["add", "postgres", "--cwd", cwd, "--ecosystem", "ts"], addIo)).toBe(0);
+    expect(addIo.ran).toContain("npx migrate-init --dialect sqlite --dialect postgres");
   });
 
   it("runs interactive setup and diffs add/remove", async () => {
@@ -215,7 +249,7 @@ describe("run", () => {
     });
     const io = deps(fs);
     expect(await run(["setup", "--yes", "--cwd", cwd], io)).toBe(0);
-    expect(io.ran).toEqual([]);
+    expect(io.ran).toEqual(["npm install @deterministic-code/migraters", "npx migrate-init --dialect sqlite"]);
   });
 
   it("returns errors for bad usage", async () => {

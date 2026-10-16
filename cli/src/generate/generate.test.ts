@@ -246,6 +246,8 @@ describe("generate", () => {
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
+    await deterministic.generateDatasource(request("typescript", {}));
+    await deterministic.generateDatasource(request("typescript", { "backend.datasources": "sqlite, sqlite,," }));
     const script = sql.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(script).toMatch(/CREATE TABLE/);
     expect(script).toContain("contacts");
@@ -341,6 +343,30 @@ types:
       - solos:
           type: solo[]
           references: solo.parent_id
+      - missing_map:
+          type: ghost{}
+      - no_owner:
+          type: empty_dict{}
+      - keyed:
+          type: keyed_dict{}
+  - empty_dict:
+      tags: [datasource_type]
+      inherits: dictionary
+      fields:
+      - key:
+          type: string
+  - keyed_dict:
+      tags: [datasource_type]
+      inherits: dictionary
+      fields:
+      - bag_id:
+          references: bag.id
+      - key:
+          type: string
+  - solo_card:
+      tags: [view_type]
+      inherits: solo
+      fields: []
 `,
       "datasource.yaml": `version: 1.0.0
 includes:
@@ -352,7 +378,36 @@ types:
 `,
     };
     const spec = await DeterministicParser(memoryReader(edge)).parse({ "backend.datasources": "sqlite" });
+    const contacts = await DeterministicParser(memoryReader(contactsFiles())).parse({ "backend.datasources": "sqlite" });
+    const withoutValue = (name: string) => (type: (typeof contacts.types)[number]) =>
+      type.name === name ? { ...type, fields: type.fields.filter((field) => field.name !== "value") } : type;
+    planRepositories(
+      {
+        ...contacts,
+        types: contacts.types.map(withoutValue("contact_settings")),
+        expandedTypes: contacts.expandedTypes.map(withoutValue("contact_settings")),
+      },
+      "typescript",
+      { "backend.datasources": "sqlite" },
+    );
+    planRepositories(
+      {
+        ...contacts,
+        expandedTypes: contacts.expandedTypes.filter((type) => type.name !== "locale_preferences"),
+      },
+      "typescript",
+      { "backend.datasources": "sqlite" },
+    );
     const models = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" });
+    planRepositories(
+      {
+        ...spec,
+        types: spec.types.filter((type) => type.name !== "solo"),
+        expandedTypes: spec.expandedTypes.filter((type) => type.name !== "solo"),
+      },
+      "csharp",
+      { "backend.datasources": "sqlite" },
+    );
     expect(models.some((model) => model.specName === "base")).toBe(false);
     expect(models.some((model) => model.specName === "mapped_parent")).toBe(true);
     expect(models.some((model) => model.specName === "abstract_ref")).toBe(true);
@@ -477,5 +532,43 @@ types: []
     const registry = store.files[join(cwd, "generated/typescript/repositories/repository-registry.ts")];
     expect(registry).toContain('"Kept", "kepts"');
     expect(registry).not.toContain('"Dropped"');
+  });
+
+  it("writes migrations create into the migraters layout", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    const store = mem(seeded);
+    const io = deps(store.fs);
+    expect(await run(["migrations", "create", "--cwd", cwd], io, cwd)).toBe(0);
+    const up = store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")];
+    expect(up).toMatch(/CREATE TABLE/i);
+    const dry = mem(seeded);
+    const dryIo = deps(dry.fs);
+    expect(await run(["migrations", "create", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
+    expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
+    expect(dryIo.logs.some((line) => line.endsWith("sql/sqlite/migrations/0001_initial_up.sql"))).toBe(true);
+    const pathStore = mem(seeded);
+    const pathIo = deps(pathStore.fs);
+    expect(await run(["migrations", "create", "--cwd", cwd, "--migrations-path", "db/changes"], pathIo, cwd)).toBe(0);
+    expect(pathStore.files[join(cwd, "db/changes/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+    const dual = mem({
+      ...seeded,
+      [join(input, "settings.yaml")]: "settings:\n  backend:\n    datasources: sqlite,postgres\n",
+    });
+    expect(await run(["migrations", "create", "--cwd", cwd, "--migrations-path", "db/changes"], deps(dual.fs), cwd)).toBe(1);
+    const absolute = mem({
+      [join("/tmp/spec", "types.yaml")]: typesYaml,
+      [join("/tmp/spec", "datasource.yaml")]: datasourceYaml,
+    });
+    expect(
+      await run(
+        ["migrations", "create", "--input", "/tmp/spec", "--migrations-path", "/tmp/mig"],
+        deps(absolute.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(absolute.files[join("/tmp/mig", "0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });
 });

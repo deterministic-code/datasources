@@ -63,4 +63,42 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["generate", "all", "--dialect"])).toThrow(/Missing value for --dialect/);
     expect(help).toMatch(/generate <all\|types\|repositories\|datasource>/);
   });
+
+  it("parses migrations create", () => {
+    expect(parseArgs(["migrations", "create"]).command).toEqual({
+      kind: "migrations-create",
+      provider: "deterministic",
+      input: "deterministic",
+      migrationsRoot: "sql",
+    });
+    expect(
+      parseArgs([
+        "migrations",
+        "create",
+        "--provider",
+        "deterministic",
+        "--input",
+        "in",
+        "--migrations-root",
+        "db",
+        "--migrations-path",
+        "./sql/sqlite/migrations",
+      ]).command,
+    ).toEqual({
+      kind: "migrations-create",
+      provider: "deterministic",
+      input: "in",
+      migrationsRoot: "db",
+      migrationsPath: "./sql/sqlite/migrations",
+    });
+    expect(parseArgs(["migrations", "create", "--migrations-root=out", "--migrations-path=here"]).command).toMatchObject({
+      migrationsRoot: "out",
+      migrationsPath: "here",
+    });
+    expect(() => parseArgs(["migrations"])).toThrow(/Usage: datasources migrations create/);
+    expect(() => parseArgs(["migrations", "up"])).toThrow(/Usage: datasources migrations create/);
+    expect(() => parseArgs(["migrations", "create", "extra"])).toThrow(/Usage: datasources migrations create/);
+    expect(() => parseArgs(["migrations", "create", "--migrations-path"])).toThrow(/Missing value for --migrations-path/);
+    expect(help).toMatch(/migrations create/);
+  });
 });

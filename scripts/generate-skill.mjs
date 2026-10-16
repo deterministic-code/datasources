@@ -28,7 +28,7 @@ const TOPICS = [
   {
     file: "generation.md",
     title: "Repository generation",
-    sources: [{ path: "cli.md", sections: ["Generate"] }, { path: "repository-generation.md" }],
+    sources: [{ path: "cli.md", sections: ["Generate", "Migrations"] }, { path: "repository-generation.md" }],
   },
   {
     file: "mappings.md",
@@ -86,6 +86,7 @@ const TOPICS = [
 
 const HASH_ROUTES = [
   { path: "cli.md", hash: "generate", file: "generation.md" },
+  { path: "cli.md", hash: "migrations", file: "generation.md" },
   { path: "quickstart.md", hash: "installation-from-source", file: "downloading.md" },
 ];
 
