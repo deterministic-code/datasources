@@ -8,7 +8,7 @@ var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, str
 });
 var command = await ds.CreateCommand();
 await command.Execute(Native.N("PRAGMA foreign_keys = ON"));
-foreach (var sql in Statements.Of(await File.ReadAllTextAsync(args[0])))
+foreach (var sql in Statements.Of(Statements.UpSql(args[0])))
     await command.Execute(Native.N(sql));
 var contacts = ds.CreateRepository<Contact>("Contacts");
 var created = await contacts.Create(new Contact
@@ -31,6 +31,17 @@ if (loaded?.FirstName != "Ada")
 
 static class Statements
 {
+    public static string UpSql(string path) =>
+        Directory.Exists(path)
+            ? string.Join('\n', Directory.GetFiles(path)
+                .Select(Path.GetFileName)
+                .Where(name => name is not null
+                    && System.Text.RegularExpressions.Regex.IsMatch(name, @"^\d{4}_up\.sql$")
+                    && !name.EndsWith("_stored_procedures_up.sql", StringComparison.Ordinal))
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .Select(name => File.ReadAllText(Path.Combine(path, name!))))
+            : File.ReadAllText(path);
+
     public static IEnumerable<string> Of(string sql)
     {
         var cleaned = string.Join('\n', sql.Split('\n').Where(line => !line.TrimStart().StartsWith("--", StringComparison.Ordinal)));

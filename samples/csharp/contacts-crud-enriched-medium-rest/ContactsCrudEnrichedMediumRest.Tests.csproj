@@ -15,5 +15,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Compile Include="GenerateE2ETests.cs" />
+    <Compile Include="MigrationsE2ETests.cs" />
+    <ProjectReference Include="..\..\..\csharp\Providers\Sqlite.Microsoft\Datasources.Sqlite.Microsoft.csproj" />
   </ItemGroup>
 </Project>

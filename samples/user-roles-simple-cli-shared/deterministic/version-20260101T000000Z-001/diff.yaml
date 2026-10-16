@@ -1,0 +1,152 @@
+datasource.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    includes:
+      - types:
+          filter: tag == "datasource_type"
+    types:
+      - group:
+          fields:
+            - name:
+                mapping: ugly_name
+      - user_role:
+          fields:
+            - role_id:
+                mapping: bad_role_id
+settings.yaml:
+  added: true
+  content:
+    settings:
+      backend:
+        datasources: sqlite,mysql,postgres
+      languages:
+        typescript:
+          casing:
+            fields: camel
+types.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    types:
+      - user:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - username:
+                type: string
+            - password:
+                type: string
+            - nickname:
+                type: string
+                is_nullable: true
+            - is_enabled:
+                type: boolean
+                default_value: true
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - role:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - name:
+                type: string
+            - description:
+                type: string
+                is_nullable: true
+            - is_enabled:
+                type: boolean
+                default_value: true
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - group:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - name:
+                type: string
+            - is_enabled:
+                type: boolean
+                default_value: true
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - user_group:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - user_id:
+                references: user.id
+            - group_id:
+                references: group.id
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - user_role:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - user_id:
+                references: user.id
+            - role_id:
+                references: role.id
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - session:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - user_id:
+                references: user.id
+            - token:
+                type: string
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - audit_log:
+          tags:
+            - datasource_type
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - message:
+                type: string
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')

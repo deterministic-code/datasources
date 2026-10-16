@@ -1,0 +1,426 @@
+datasource.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    includes:
+      - types:
+          filter: tag == "datasource_type"
+    types:
+      - contact_source:
+          fields:
+            - name:
+                is_unique: true
+      - contacts_base:
+          mapping: contacts
+      - address_base:
+          mapping: addresses
+      - phone_base:
+          mapping: phones
+      - contact_groups_base:
+          mapping: contact_groups
+          fields:
+            - name:
+                is_unique: true
+      - legacy_contact:
+          mapping: OldContactsTbl
+          fields:
+            - key:
+                is_fixed_id: true
+                is_readonly: true
+                is_unique: true
+                mapping: CntID
+            - first_name:
+                mapping: FirstNm
+            - last_name:
+                mapping: LastNm
+            - email:
+                mapping: EmailAddr
+            - imported_at:
+                mapping: ImpDate
+datasource_seeds.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    seeds:
+      - contact_source:
+          - id1:
+              name: Manual
+          - id2:
+              name: Imported
+              description: Loaded from a CSV or vCard import.
+          - id3:
+              name: OAuth
+              description: Synced from a third-party provider.
+      - address_type:
+          - id1:
+              name: Home
+      - phone_type:
+          - id1:
+              name: Mobile
+      - contact_groups_base:
+          - id1:
+              name: Friends
+              description: Friends
+          - id2:
+              name: Work
+              description: Work contacts
+settings.yaml:
+  added: true
+  content:
+    settings:
+      backend:
+        datasources: sqlite,mysql,postgres
+      languages:
+        typescript:
+          casing:
+            fields: camel
+types.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    types:
+      - base:
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - uuid:
+                type: uuid
+            - created:
+                type: datetime
+            - updated:
+                type: datetime
+            - version:
+                type: binary
+      - contact_source:
+          tags:
+            - datasource_type
+            - readonly_lookup
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 64
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - address_type:
+          tags:
+            - datasource_type
+            - readonly_lookup
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 64
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - phone_type:
+          tags:
+            - datasource_type
+            - readonly_lookup
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 64
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - contacts_base:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - contact_source_id:
+                references: contact_source.id
+            - first_name:
+                type: string
+                size: 128
+            - last_name:
+                type: string
+                size: 128
+            - middle_name:
+                type: string
+                size: 128
+                is_nullable: true
+            - email:
+                type: string
+                size: 256
+                is_nullable: true
+            - notes:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - address_base:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - address_type_id:
+                references: address_type.id
+            - line1:
+                type: string
+                size: 256
+            - line2:
+                type: string
+                size: 256
+                is_nullable: true
+            - line3:
+                type: string
+                size: 256
+                is_nullable: true
+            - city:
+                type: string
+                size: 128
+            - region:
+                type: string
+                size: 128
+                is_nullable: true
+            - postal_code:
+                type: string
+                size: 32
+                is_nullable: true
+            - country:
+                type: string
+                size: 64
+                is_nullable: true
+      - phone_base:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - phone_type_id:
+                references: phone_type.id
+            - number:
+                type: string
+                size: 32
+            - label:
+                type: string
+                size: 32
+                is_nullable: true
+      - tag:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - name:
+                type: string
+                size: 64
+      - note_pad:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - body:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - contact_groups_base:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - name:
+                type: string
+                size: 128
+            - description:
+                type: string
+                size: unlimited
+                is_nullable: true
+      - contact:
+          tags:
+            - view_type
+          inherits: contacts_base
+          union:
+            - contact_source
+          extract:
+            - contact_source.name
+            - contact_source.description
+          mapping:
+            name: contact_source_name
+          fields:
+            - addresses:
+                type: address[]
+                references: address.contact_id
+            - phones:
+                type: phone[]
+                references: phone.contact_id
+            - settings:
+                type: contact_settings{}
+                references: contact_settings.key
+            - prefs:
+                type: contact_preferences{}
+                references: contact_preferences.key
+      - contact_settings:
+          tags:
+            - datasource_type
+          inherits: dictionary
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - key:
+                type: string
+                size: 64
+            - value:
+                type: string
+                size: unlimited
+      - locale_preferences:
+          tags:
+            - view_type
+          fields:
+            - locale:
+                type: string
+                size: 16
+            - timezone:
+                type: string
+                size: 64
+      - contact_preferences:
+          tags:
+            - datasource_type
+          inherits: dictionary
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - key:
+                type: string
+                size: 64
+            - value:
+                type: locale_preferences
+      - card_labels:
+          tags:
+            - view_type
+          inherits: dictionary
+          fields:
+            - key:
+                type: string
+                size: 64
+            - value:
+                type: string
+                size: 128
+      - contact_card:
+          tags:
+            - view_type
+          fields:
+            - display_name:
+                type: string
+                size: 256
+            - labels:
+                type: card_labels{}
+                references: card_labels.key
+      - address:
+          tags:
+            - view_type
+          inherits: address_base
+          union:
+            - address_type
+          extract:
+            - address_type.name
+            - address_type.description
+          mapping:
+            name: address_type_name
+          fields: []
+      - phone:
+          tags:
+            - view_type
+          inherits: phone_base
+          union:
+            - phone_type
+          extract:
+            - phone_type.name
+            - phone_type.description
+          mapping:
+            name: phone_type_name
+          fields: []
+      - contact_group:
+          tags:
+            - view_type
+          inherits: contact_groups_base
+          fields:
+            - members:
+                type: contact[]
+                references: contact_group_member.contact_group_id
+      - contact_group_member:
+          tags:
+            - datasource_type
+            - many_to_many
+          inherits: base
+          fields:
+            - contact_id:
+                references: contacts_base.id
+            - contact_group_id:
+                references: contact_groups_base.id
+      - legacy_contact:
+          tags:
+            - datasource_type
+            - view_type
+          fields:
+            - key:
+                type: string
+                size: 64
+            - first_name:
+                type: string
+                size: 128
+            - last_name:
+                type: string
+                size: 128
+            - email:
+                type: string
+                size: 256
+                is_nullable: true
+            - imported_at:
+                type: datetime
+                is_nullable: true
+      - contact_change_log:
+          tags:
+            - datasource_type
+            - view_type
+          inherits: set
+          fields:
+            - occurred_at:
+                type: datetime
+            - contact_id:
+                type: number
+            - changed_by:
+                type: string
+                size: 128
+            - change_summary:
+                type: string
+                size: unlimited
+      - import_contacts_request:
+          fields:
+            - source:
+                type: string
+                size: 64
+            - payload:
+                type: string
+                size: unlimited
+      - import_contacts_result:
+          fields:
+            - imported_count:
+                type: number
+            - skipped_count:
+                type: number
+            - failed_count:
+                type: number
+      - legacy_migration_result:
+          fields:
+            - migrated_count:
+                type: number
+            - skipped_count:
+                type: number
+            - completed_at:
+                type: datetime
+                is_nullable: true

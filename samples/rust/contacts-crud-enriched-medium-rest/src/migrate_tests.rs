@@ -17,5 +17,5 @@ async fn applies_generated_sqlite_sql() {
     )
     .unwrap()
     .to_string_lossy()
-    .contains("0001_initial_up.sql"));
+    .ends_with("migrations"));
 }

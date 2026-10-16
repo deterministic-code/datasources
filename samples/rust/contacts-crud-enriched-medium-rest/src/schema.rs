@@ -1,7 +1,31 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const GENERATED_SQL: &str =
-    include_str!("../generated/sql/sqlite/migrations/0001_initial_up.sql");
+pub const GENERATED_SQL: &str = concat!(
+    include_str!("../generated/sql/sqlite/migrations/0001_up.sql"),
+    "\n",
+    include_str!("../generated/sql/sqlite/migrations/0002_up.sql"),
+    "\n",
+    include_str!("../generated/sql/sqlite/migrations/0003_up.sql"),
+);
+
+fn is_up(name: &str) -> bool {
+    name.len() == 11
+        && name.ends_with("_up.sql")
+        && name.as_bytes()[..4].iter().all(|byte| byte.is_ascii_digit())
+        && !name.ends_with("_stored_procedures_up.sql")
+}
+
+fn is_migrations(dir: &Path) -> bool {
+    dir.is_dir()
+        && fs::read_dir(dir).ok().is_some_and(|entries| {
+            entries.flatten().any(|entry| {
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
+                is_up(&name) || name == "0001_initial_up.sql"
+            })
+        })
+}
 
 pub fn sql_path(start: impl AsRef<Path>) -> Result<PathBuf, String> {
     let mut dir = start.as_ref().to_path_buf();
@@ -10,9 +34,8 @@ pub fn sql_path(start: impl AsRef<Path>) -> Result<PathBuf, String> {
             .join("generated")
             .join("sql")
             .join("sqlite")
-            .join("migrations")
-            .join("0001_initial_up.sql");
-        if direct.is_file() {
+            .join("migrations");
+        if is_migrations(&direct) {
             return Ok(direct);
         }
         let nested = dir
@@ -22,15 +45,37 @@ pub fn sql_path(start: impl AsRef<Path>) -> Result<PathBuf, String> {
             .join("generated")
             .join("sql")
             .join("sqlite")
-            .join("migrations")
-            .join("0001_initial_up.sql");
-        if nested.is_file() {
+            .join("migrations");
+        if is_migrations(&nested) {
             return Ok(nested);
         }
         if !dir.pop() {
             return Err("generated sql".into());
         }
     }
+}
+
+pub fn up_sql_from(path: impl AsRef<Path>) -> Result<String, String> {
+    let path = path.as_ref();
+    if path.is_file() {
+        return fs::read_to_string(path).map_err(|_| "generated sql".into());
+    }
+    let mut names: Vec<_> = fs::read_dir(path)
+        .map_err(|_| "generated sql".to_string())?
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| is_up(name))
+        .collect();
+    names.sort();
+    if !names.is_empty() {
+        return Ok(names
+            .into_iter()
+            .map(|name| fs::read_to_string(path.join(name)).expect("up"))
+            .collect::<Vec<_>>()
+            .join("\n"));
+    }
+    let initial = path.join("0001_initial_up.sql");
+    fs::read_to_string(initial).map_err(|_| "generated sql".into())
 }
 
 pub fn statements(sql: &str) -> Vec<String> {

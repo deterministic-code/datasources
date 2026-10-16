@@ -8,6 +8,8 @@ fn loads_generated_sql() {
     assert!(sql.iter().any(|item| item.starts_with("CREATE TABLE \"contact_preferences\"")));
     assert!(sql.iter().all(|item| !item.contains("CREATE TABLE \"bases\"")));
     assert!(sql.iter().any(|item| item.contains("INSERT INTO \"contact_sources\"")));
+    assert!(sql.iter().any(|item| item.contains("DROP COLUMN")));
+    assert!(sql.iter().any(|item| item.contains("DROP TABLE")));
     assert!(sql.iter().all(|item| item.ends_with(';')));
 }
 
@@ -90,7 +92,7 @@ CREATE TABLE "XBEGIN" ("id" INTEGER);
     assert!(sql_path(env!("CARGO_MANIFEST_DIR"))
         .unwrap()
         .to_string_lossy()
-        .contains("0001_initial_up.sql"));
+        .ends_with("migrations"));
     let missing = std::env::temp_dir().join(format!("contacts-{}", std::process::id()));
     std::fs::create_dir_all(&missing).unwrap();
     assert!(sql_path(&missing).is_err());

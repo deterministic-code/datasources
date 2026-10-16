@@ -1,12 +1,12 @@
 import { Datasource, n, Operator, Where } from "@datasources/core";
 import { SqliteDriver } from "@datasources/sqlite";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { statements } from "../src/schema.ts";
+import { statements, upSqlFrom } from "../src/schema.ts";
 
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(sample, "../../..");
@@ -45,7 +45,7 @@ describe("generate-and-register", () => {
       }) as Datasource & { contacts: ContactRepo };
       const command = await ds.createCommand();
       await command.executeNative(n("PRAGMA foreign_keys = ON"));
-      for (const sql of statements(readFileSync(join(out, "sql/sqlite/migrations/0001_initial_up.sql"), "utf8")))
+      for (const sql of statements(upSqlFrom(join(out, "sql/sqlite/migrations"))))
         await command.executeNative(n(sql));
       const created: Contact = await ds.contacts.create({
         firstName: "Ada",

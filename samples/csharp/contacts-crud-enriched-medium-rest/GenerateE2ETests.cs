@@ -58,7 +58,7 @@ public sealed class GenerateE2ETests
                     "--project",
                     Path.Combine(run, "Run.csproj"),
                     "--",
-                    Path.Combine(tmp, "sql", "sqlite", "migrations", "0001_initial_up.sql"),
+                    Path.Combine(tmp, "sql", "sqlite", "migrations"),
                 ],
                 run,
                 new Dictionary<string, string> { ["MSBUILDDISABLENODEREUSE"] = "1" }));
