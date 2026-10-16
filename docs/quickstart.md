@@ -79,6 +79,22 @@ npx @datasources/cli generate all --dialect typescript
 
 See [Generate](./cli.md#generate). Walkthroughs for a User, an enriched users-and-roles spec, and a legacy table mapping are on [Repository Generation](./repository-generation.md).
 
+## Migrating
+
+::: skill-prompt
+Create migrations and migrate up for sqlite
+:::
+
+`migrations create` writes SQL from the spec. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+```
+
+See [Migrations](./cli.md#migrations).
+
 ## Using the generated code
 
 `setup` and `generate` wire the generated registry so {{Datasource.Default|Datasource.default|default()}} binds {{Items|items|items()}}. {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity.
