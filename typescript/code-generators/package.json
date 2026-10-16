@@ -22,7 +22,8 @@
     "@datasources/sqlserver": "file:../providers/sqlserver",
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
-    "pluralize": "^8.0.0"
+    "pluralize": "^8.0.0",
+    "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",

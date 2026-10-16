@@ -15,6 +15,7 @@ pub fn for_dialect(
     dialect: &str,
     files: &HashMap<String, String>,
     settings: &HashMap<String, String>,
+    order: i32,
 ) -> Result<Vec<GenerateEntry>> {
     if !schema::use_stored_procedures(settings) {
         return Ok(Vec::new());
@@ -126,11 +127,11 @@ pub fn for_dialect(
     }
     Ok(vec![
         GenerateEntry::new(
-            format!("{dialect}/migrations/0002_stored_procedures_up.sql"),
+            format!("{dialect}/migrations/{order:04}_stored_procedures_up.sql"),
             with_nl(&format!("-- Stored procedures\n{}", bodies.join("\n\n")), &casing),
         ),
         GenerateEntry::new(
-            format!("{dialect}/migrations/0002_stored_procedures_down.sql"),
+            format!("{dialect}/migrations/{order:04}_stored_procedures_down.sql"),
             with_nl(&format!("-- DROP stored procedures\n{}", drops.join("\n")), &casing),
         ),
     ])

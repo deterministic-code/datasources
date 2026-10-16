@@ -1,20 +1,24 @@
 import {
+  AlterTableStatement,
   BulkUpdateStatement,
   CreateRoutineStatement,
   CreateTableStatement,
   CreateTriggerStatement,
   DropRoutineStatement,
+  DropTriggerStatement,
   IdentityInsertStatement,
   SelectInsertedIdStatement,
   SelectInsertedIdStatementTextRenderer,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@datasources/core";
+import { PostgresAlterTableStatementRenderer } from "./PostgresAlterTableStatementRenderer.ts";
 import { PostgresBulkUpdateStatementTextRenderer } from "./PostgresBulkUpdateStatementTextRenderer.ts";
 import { PostgresCreateRoutineStatementRenderer } from "./PostgresCreateRoutineStatementRenderer.ts";
 import { PostgresCreateTableStatementRenderer } from "./PostgresCreateTableStatementRenderer.ts";
 import { PostgresCreateTriggerStatementRenderer } from "./PostgresCreateTriggerStatementRenderer.ts";
 import { PostgresDropRoutineStatementRenderer } from "./PostgresDropRoutineStatementRenderer.ts";
+import { PostgresDropTriggerStatementRenderer } from "./PostgresDropTriggerStatementRenderer.ts";
 import { PostgresIdentityInsertStatementRenderer } from "./PostgresIdentityInsertStatementRenderer.ts";
 
 class PostgresSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
@@ -34,6 +38,14 @@ export class PostgresStatementRenderer extends StatementRenderer {
 
   protected override visitCreateTable(create: CreateTableStatement): string {
     return new PostgresCreateTableStatementRenderer().render(create);
+  }
+
+  protected override visitAlterTable(alter: AlterTableStatement): string {
+    return new PostgresAlterTableStatementRenderer().renderAlter(alter);
+  }
+
+  protected override visitDropTrigger(trigger: DropTriggerStatement): string {
+    return new PostgresDropTriggerStatementRenderer().render(trigger);
   }
 
   protected override visitBulkUpdate(update: BulkUpdateStatement): string {

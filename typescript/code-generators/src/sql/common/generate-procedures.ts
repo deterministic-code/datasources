@@ -26,10 +26,13 @@ const withNl = (text: string, casing: PackCasing): string => {
   return out.endsWith("\n") ? out : `${out}\n`;
 };
 
+const pad = (n: number): string => String(n).padStart(4, "0");
+
 /** Stored-procedure migration — empty when the driver does not render routines. */
 export const generateProceduresForDialect = async (
   dialect: SqlDialect,
   ctx: GenerateContext,
+  order = 2,
 ): Promise<GenerateEntry[]> => {
   if (!datasourceSettings(ctx.settings).useStoredProcedures) return [];
 
@@ -108,11 +111,11 @@ export const generateProceduresForDialect = async (
 
   return [
     content(
-      `${dialect}/migrations/0002_stored_procedures_up.sql`,
+      `${dialect}/migrations/${pad(order)}_stored_procedures_up.sql`,
       withNl(`-- Stored procedures\n${bodies.join("\n\n")}`, casing),
     ),
     content(
-      `${dialect}/migrations/0002_stored_procedures_down.sql`,
+      `${dialect}/migrations/${pad(order)}_stored_procedures_down.sql`,
       withNl(`-- DROP stored procedures\n${drops.join("\n")}`, casing),
     ),
   ];

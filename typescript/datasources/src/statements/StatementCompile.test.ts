@@ -3,8 +3,11 @@ import {
   Aggregate,
   CheckConstraint,
   ColumnDefault,
+  AlterTableStatement,
   CreateIndexStatement,
   CreateTableStatement,
+  DropIndexStatement,
+  DropTriggerStatement,
   DeleteStatement,
   ForeignKey,
   InsertStatement,
@@ -183,6 +186,70 @@ describe("statement compile", () => {
     expect(DefaultStatementTextRenderer.instance.render(createIndex)).toBe(
       "CREATE UNIQUE INDEX uq_orders_code ON orders (code)",
     );
+  });
+
+  it("compiles an alter table add column", () => {
+    const alter = new AlterTableStatement("users", {
+      kind: "addColumn",
+      column: { name: "email", type: "TEXT", notNull: new NotNull() },
+    });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe(
+      "ALTER TABLE users ADD COLUMN email TEXT NOT NULL",
+    );
+  });
+
+  it("compiles an alter table drop column", () => {
+    const alter = new AlterTableStatement("users", { kind: "dropColumn", name: "email" });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe("ALTER TABLE users DROP COLUMN email");
+  });
+
+  it("compiles an alter table alter column", () => {
+    const alter = new AlterTableStatement("users", {
+      kind: "alterColumn",
+      column: { name: "age", type: "INTEGER", default: new ColumnDefault("0"), notNull: new NotNull() },
+    });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe(
+      "ALTER TABLE users ALTER COLUMN age TYPE INTEGER DEFAULT 0 NOT NULL",
+    );
+  });
+
+  it("compiles an alter table rename column", () => {
+    const alter = new AlterTableStatement("users", { kind: "renameColumn", from: "email", to: "email_address" });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe(
+      "ALTER TABLE users RENAME COLUMN email TO email_address",
+    );
+  });
+
+  it("compiles an alter table rename table", () => {
+    const alter = new AlterTableStatement("users", { kind: "renameTable", to: "accounts" });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe("ALTER TABLE users RENAME TO accounts");
+  });
+
+  it("compiles an alter table add constraint", () => {
+    const alter = new AlterTableStatement("orders", {
+      kind: "addConstraint",
+      constraint: new UniqueConstraint("uq_orders_user", ["user_id"]),
+    });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe(
+      "ALTER TABLE orders ADD CONSTRAINT uq_orders_user UNIQUE (user_id)",
+    );
+  });
+
+  it("compiles an alter table drop constraint", () => {
+    const alter = new AlterTableStatement("orders", { kind: "dropConstraint", name: "uq_orders_user" });
+    expect(DefaultStatementTextRenderer.instance.render(alter)).toBe(
+      "ALTER TABLE orders DROP CONSTRAINT uq_orders_user",
+    );
+  });
+
+  it("compiles a drop index", () => {
+    const drop = new DropIndexStatement("idx_orders_user", "orders");
+    expect(DefaultStatementTextRenderer.instance.render(drop)).toBe("DROP INDEX IF EXISTS idx_orders_user");
+  });
+
+  it("compiles a drop trigger", () => {
+    const drop = new DropTriggerStatement("trg_users_updated", "users");
+    expect(DefaultStatementTextRenderer.instance.render(drop)).toBe("DROP TRIGGER IF EXISTS trg_users_updated");
   });
 
   it("compiles a call", () => {

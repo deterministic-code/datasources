@@ -222,6 +222,104 @@ fn compiles_a_create_unique_index() {
 }
 
 #[test]
+fn compiles_an_alter_table_add_column() {
+    let alter = AlterTableStatement::new(
+        "users",
+        AlterAction::AddColumn(Column::new("email", "TEXT").not_null(NotNull::new(None))),
+    );
+    assert_eq!(
+        stmt_text(&alter),
+        "ALTER TABLE users ADD COLUMN email TEXT NOT NULL"
+    );
+}
+
+#[test]
+fn compiles_an_alter_table_drop_column() {
+    let alter = AlterTableStatement::new("users", AlterAction::DropColumn { name: "email".into() });
+    assert_eq!(stmt_text(&alter), "ALTER TABLE users DROP COLUMN email");
+}
+
+#[test]
+fn compiles_an_alter_table_alter_column() {
+    let alter = AlterTableStatement::new(
+        "users",
+        AlterAction::AlterColumn(
+            Column::new("age", "INTEGER")
+                .default(ColumnDefault::new("0", None))
+                .not_null(NotNull::new(None)),
+        ),
+    );
+    assert_eq!(
+        stmt_text(&alter),
+        "ALTER TABLE users ALTER COLUMN age TYPE INTEGER DEFAULT 0 NOT NULL"
+    );
+}
+
+#[test]
+fn compiles_an_alter_table_rename_column() {
+    let alter = AlterTableStatement::new(
+        "users",
+        AlterAction::RenameColumn {
+            from: "email".into(),
+            to: "email_address".into(),
+        },
+    );
+    assert_eq!(
+        stmt_text(&alter),
+        "ALTER TABLE users RENAME COLUMN email TO email_address"
+    );
+}
+
+#[test]
+fn compiles_an_alter_table_rename_table() {
+    let alter = AlterTableStatement::new(
+        "users",
+        AlterAction::RenameTable {
+            to: "accounts".into(),
+        },
+    );
+    assert_eq!(stmt_text(&alter), "ALTER TABLE users RENAME TO accounts");
+}
+
+#[test]
+fn compiles_an_alter_table_add_constraint() {
+    let alter = AlterTableStatement::new(
+        "orders",
+        AlterAction::AddConstraint(UniqueConstraint::new("uq_orders_user", &["user_id"])),
+    );
+    assert_eq!(
+        stmt_text(&alter),
+        "ALTER TABLE orders ADD CONSTRAINT uq_orders_user UNIQUE (user_id)"
+    );
+}
+
+#[test]
+fn compiles_an_alter_table_drop_constraint() {
+    let alter = AlterTableStatement::new(
+        "orders",
+        AlterAction::DropConstraint {
+            name: "uq_orders_user".into(),
+        },
+    );
+    assert_eq!(
+        stmt_text(&alter),
+        "ALTER TABLE orders DROP CONSTRAINT uq_orders_user"
+    );
+}
+
+#[test]
+fn compiles_a_drop_index() {
+    let drop = DropIndexStatement::new("idx_orders_user", "orders");
+    assert_eq!(stmt_text(&drop), "DROP INDEX IF EXISTS idx_orders_user");
+}
+
+#[test]
+fn compiles_a_drop_trigger() {
+    let drop = DropTriggerStatement::new("trg_users_updated", "users");
+    assert_eq!(stmt_text(&drop), "DROP TRIGGER IF EXISTS trg_users_updated");
+}
+
+#[test]
 fn compiles_a_call() {
     let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
     let call = ExecuteStoredProcedureStatement::new("save", &fields);

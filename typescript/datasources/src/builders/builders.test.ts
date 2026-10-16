@@ -4,8 +4,11 @@ import {
   ArrayExpression,
   CheckConstraint,
   ColumnDefault,
+  AlterTableStatement,
   CreateIndexStatement,
   CreateTableStatement,
+  DropIndexStatement,
+  DropTriggerStatement,
   CreateTableStatementTextRenderer,
   DeleteStatement,
   ForeignKey,
@@ -354,6 +357,46 @@ describe("statements", () => {
     expect(DefaultStatementTextRenderer.instance.render(createIndex)).toBe("CREATE INDEX idx_orders_user ON orders (user_id)");
     expect(DefaultStatementTextRenderer.instance.render(new CreateIndexStatement("uq_orders_code", "orders", ["code"], true))).toBe(
       "CREATE UNIQUE INDEX uq_orders_code ON orders (code)",
+    );
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT", notNull: new NotNull() } }),
+      ),
+    ).toBe("ALTER TABLE users ADD COLUMN email TEXT NOT NULL");
+    expect(
+      DefaultStatementTextRenderer.instance.render(new AlterTableStatement("users", { kind: "dropColumn", name: "email" })),
+    ).toBe("ALTER TABLE users DROP COLUMN email");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("users", {
+          kind: "alterColumn",
+          column: { name: "age", type: "INTEGER", default: new ColumnDefault("0"), notNull: new NotNull() },
+        }),
+      ),
+    ).toBe("ALTER TABLE users ALTER COLUMN age TYPE INTEGER DEFAULT 0 NOT NULL");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("users", { kind: "renameColumn", from: "email", to: "email_address" }),
+      ),
+    ).toBe("ALTER TABLE users RENAME COLUMN email TO email_address");
+    expect(
+      DefaultStatementTextRenderer.instance.render(new AlterTableStatement("users", { kind: "renameTable", to: "accounts" })),
+    ).toBe("ALTER TABLE users RENAME TO accounts");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("orders", { kind: "addConstraint", constraint: new UniqueConstraint("uq_orders_user", ["user_id"]) }),
+      ),
+    ).toBe("ALTER TABLE orders ADD CONSTRAINT uq_orders_user UNIQUE (user_id)");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("orders", { kind: "dropConstraint", name: "uq_orders_user" }),
+      ),
+    ).toBe("ALTER TABLE orders DROP CONSTRAINT uq_orders_user");
+    expect(DefaultStatementTextRenderer.instance.render(new DropIndexStatement("idx_orders_user", "orders"))).toBe(
+      "DROP INDEX IF EXISTS idx_orders_user",
+    );
+    expect(DefaultStatementTextRenderer.instance.render(new DropTriggerStatement("trg_users_updated", "users"))).toBe(
+      "DROP TRIGGER IF EXISTS trg_users_updated",
     );
     const call = new ExecuteStoredProcedureStatement("save", [...fields]);
     expect(DefaultStatementTextRenderer.instance.render(call)).toBe("CALL save($id, $name)");

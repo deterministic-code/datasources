@@ -168,6 +168,69 @@ public class StatementCompileTests
     }
 
     [Fact]
+    public void CompilesAnAlterTableAddColumn()
+    {
+        var alter = new AlterTableStatement("users", new AlterTableStatement.AddColumn(new Column("email", "TEXT", NotNull: new NotNull())));
+        Assert.Equal("ALTER TABLE users ADD COLUMN email TEXT NOT NULL", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesAnAlterTableDropColumn()
+    {
+        var alter = new AlterTableStatement("users", new AlterTableStatement.DropColumn("email"));
+        Assert.Equal("ALTER TABLE users DROP COLUMN email", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesAnAlterTableAlterColumn()
+    {
+        var alter = new AlterTableStatement("users", new AlterTableStatement.AlterColumn(new Column("age", "INTEGER", new ColumnDefault("0"), new NotNull())));
+        Assert.Equal("ALTER TABLE users ALTER COLUMN age TYPE INTEGER DEFAULT 0 NOT NULL", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesAnAlterTableRenameColumn()
+    {
+        var alter = new AlterTableStatement("users", new AlterTableStatement.RenameColumn("email", "email_address"));
+        Assert.Equal("ALTER TABLE users RENAME COLUMN email TO email_address", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesAnAlterTableRenameTable()
+    {
+        var alter = new AlterTableStatement("users", new AlterTableStatement.RenameTable("accounts"));
+        Assert.Equal("ALTER TABLE users RENAME TO accounts", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesAnAlterTableAddConstraint()
+    {
+        var alter = new AlterTableStatement("orders", new AlterTableStatement.AddConstraint(new UniqueConstraint("uq_orders_user", ["user_id"])));
+        Assert.Equal("ALTER TABLE orders ADD CONSTRAINT uq_orders_user UNIQUE (user_id)", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesAnAlterTableDropConstraint()
+    {
+        var alter = new AlterTableStatement("orders", new AlterTableStatement.DropConstraint("uq_orders_user"));
+        Assert.Equal("ALTER TABLE orders DROP CONSTRAINT uq_orders_user", DefaultStatementTextRenderer.Instance.Render(alter));
+    }
+
+    [Fact]
+    public void CompilesADropIndex()
+    {
+        var drop = new DropIndexStatement("idx_orders_user", "orders");
+        Assert.Equal("DROP INDEX IF EXISTS idx_orders_user", DefaultStatementTextRenderer.Instance.Render(drop));
+    }
+
+    [Fact]
+    public void CompilesADropTrigger()
+    {
+        var drop = new DropTriggerStatement("trg_users_updated", "users");
+        Assert.Equal("DROP TRIGGER IF EXISTS trg_users_updated", DefaultStatementTextRenderer.Instance.Render(drop));
+    }
+
+    [Fact]
     public void CompilesACall()
     {
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };

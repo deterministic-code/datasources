@@ -5,7 +5,8 @@ public static class GenerateProcedures
     public static IReadOnlyList<GenerateEntry> ForDialect(
         string dialect,
         IReadOnlyDictionary<string, string> files,
-        IReadOnlyDictionary<string, string> settings)
+        IReadOnlyDictionary<string, string> settings,
+        int order = 2)
     {
         if (!SqlSchema.UseStoredProcedures(settings)) return [];
         var spec = SpecParser.Parse(files);
@@ -72,8 +73,8 @@ public static class GenerateProcedures
         if (bodies.Count == 0) return [];
         return
         [
-            new($"{dialect}/migrations/0002_stored_procedures_up.sql", WithNl($"-- Stored procedures\n{string.Join("\n\n", bodies)}", casing)),
-            new($"{dialect}/migrations/0002_stored_procedures_down.sql", WithNl($"-- DROP stored procedures\n{string.Join("\n", drops)}", casing)),
+            new($"{dialect}/migrations/{order:0000}_stored_procedures_up.sql", WithNl($"-- Stored procedures\n{string.Join("\n\n", bodies)}", casing)),
+            new($"{dialect}/migrations/{order:0000}_stored_procedures_down.sql", WithNl($"-- DROP stored procedures\n{string.Join("\n", drops)}", casing)),
         ];
     }
 

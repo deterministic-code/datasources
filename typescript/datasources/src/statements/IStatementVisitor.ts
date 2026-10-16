@@ -1,13 +1,16 @@
 import type { BulkDeleteStatement } from "./BulkDeleteStatement.ts";
 import type { BulkInsertStatement } from "./BulkInsertStatement.ts";
 import type { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
+import type { AlterTableStatement } from "./AlterTableStatement.ts";
 import type { CreateIndexStatement } from "./CreateIndexStatement.ts";
 import type { CreateRoutineStatement } from "./CreateRoutineStatement.ts";
 import type { CreateTableStatement } from "./CreateTableStatement.ts";
 import type { CreateTriggerStatement } from "./CreateTriggerStatement.ts";
 import type { DeleteStatement } from "./DeleteStatement.ts";
+import type { DropIndexStatement } from "./DropIndexStatement.ts";
 import type { DropRoutineStatement } from "./DropRoutineStatement.ts";
 import type { DropTableStatement } from "./DropTableStatement.ts";
+import type { DropTriggerStatement } from "./DropTriggerStatement.ts";
 import type { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureStatement.ts";
 import type { IdentityInsertStatement } from "./IdentityInsertStatement.ts";
 import type { InsertStatement } from "./InsertStatement.ts";
@@ -30,6 +33,9 @@ export interface IStatementVisitor {
   visit(statement: BulkUpdateStatement): string;
   visit(statement: BulkDeleteStatement): string;
   visit(statement: DropTableStatement): string;
+  visit(statement: AlterTableStatement): string;
+  visit(statement: DropIndexStatement): string;
+  visit(statement: DropTriggerStatement): string;
   visit(statement: CreateTriggerStatement): string;
   visit(statement: IdentityInsertStatement): string;
   visit(statement: CreateRoutineStatement): string;

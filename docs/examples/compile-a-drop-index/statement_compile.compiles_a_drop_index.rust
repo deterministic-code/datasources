@@ -1,0 +1,1 @@
+let drop = DropIndexStatement::new("idx_orders_user", "orders");

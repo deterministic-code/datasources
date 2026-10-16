@@ -1,0 +1,1 @@
+var drop = new DropTriggerStatement("trg_users_updated", "users");

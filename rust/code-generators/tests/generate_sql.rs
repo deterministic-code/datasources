@@ -310,3 +310,53 @@ types:
         .unwrap()
         .is_match(&sql));
 }
+
+fn frozen_diff(types_yaml: &str) -> String {
+    let types: serde_yaml::Value = serde_yaml::from_str(types_yaml).unwrap();
+    let mut envelope = serde_yaml::Mapping::new();
+    envelope.insert(serde_yaml::Value::String("added".into()), serde_yaml::Value::Bool(true));
+    envelope.insert(serde_yaml::Value::String("content".into()), types);
+    let mut doc = serde_yaml::Mapping::new();
+    doc.insert(
+        serde_yaml::Value::String("types.yaml".into()),
+        serde_yaml::Value::Mapping(envelope),
+    );
+    serde_yaml::to_string(&serde_yaml::Value::Mapping(doc)).unwrap()
+}
+
+#[test]
+fn emits_numbered_up_down_files_from_frozen_diffs() {
+    let path = "version-20261016T000000Z-001/diff.yaml";
+    let mut files = files(TYPES_YAML, None, None);
+    files.insert(path.into(), frozen_diff(TYPES_YAML));
+    let names = names(&generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap());
+    assert_eq!(
+        names,
+        vec![
+            "sqlite/migrations/0001_down.sql".to_string(),
+            "sqlite/migrations/0001_up.sql".to_string()
+        ]
+    );
+}
+
+#[test]
+fn throws_when_live_yaml_drifted_from_frozen_diffs() {
+    let path = "version-20261016T000000Z-001/diff.yaml";
+    let mut files = files(TYPES_YAML, None, None);
+    files.insert(path.into(), frozen_diff(TYPES_YAML));
+    files.insert(
+        "types.yaml".into(),
+        r#"
+types:
+  - extra:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - name:
+            type: string
+"#
+        .into(),
+    );
+    let error = generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap_err();
+    assert!(error.to_string().contains("run datasources version first"));
+}

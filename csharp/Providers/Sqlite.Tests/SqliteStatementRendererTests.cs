@@ -43,4 +43,14 @@ public class SqliteStatementRendererTests
             "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)",
             Renderer.Render(new CreateTableStatement("users", [new Column("id", "int", null, null, true)], [new PrimaryKey("pk_users", ["id"])])));
     }
+
+    [Fact]
+    public void RendersAlterAddColumnAndThrowsOnAlterColumn()
+    {
+        Assert.Equal(
+            "ALTER TABLE users ADD COLUMN email TEXT NOT NULL",
+            Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.AddColumn(new Column("email", "TEXT", NotNull: new NotNull())))));
+        Assert.Throws<InvalidOperationException>(() =>
+            Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.AlterColumn(new Column("age", "INTEGER")))));
+    }
 }

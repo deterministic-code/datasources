@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Datasources.CodeGenerators;
 
@@ -23,17 +24,44 @@ public static class GenerateSql
     {
         var key = SqlDialect.Require(dialect);
         var casing = PackCasing.Of(settings);
-        var spec = SpecParser.Parse(files);
-        var types = SqlSchema.From(spec);
-        var initial = Initial(key, types, spec.DatasourceSeeds, casing);
+        var schema = SchemaFiles(key, files, settings, casing);
         settings.TryGetValue("paths.deterministic", out var dir);
         return
         [
-            new($"{key}/migrations/{initial.Up.Filename}", initial.Up.Content),
-            new($"{key}/migrations/{initial.Down.Filename}", initial.Down.Content),
+            .. schema.Entries,
             .. CustomMigrations.Of(files, key, dir),
-            .. GenerateProcedures.ForDialect(dialect, files, settings),
+            .. GenerateProcedures.ForDialect(dialect, files, settings, schema.Count + 1),
         ];
+    }
+
+    static (IReadOnlyList<GenerateEntry> Entries, int Count) SchemaFiles(
+        string key,
+        IReadOnlyDictionary<string, string> files,
+        IReadOnlyDictionary<string, string> settings,
+        PackCasing casing)
+    {
+        if (VersionMigrations.DiffPaths(files).Count > 0)
+        {
+            var versions = VersionMigrations.Files(key, files, settings, casing)
+                .Select(entry => new GenerateEntry($"{key}/migrations/{entry.Filename}", entry.Content))
+                .ToList();
+            var count = versions
+                .Select(entry => Regex.Match(entry.Filename, @"/(\d{4})_"))
+                .Where(match => match.Success)
+                .Select(match => int.Parse(match.Groups[1].Value))
+                .DefaultIfEmpty(0)
+                .Max();
+            return (versions, count);
+        }
+        var spec = SpecParser.Parse(files);
+        var types = SqlSchema.From(spec);
+        var initial = Initial(key, types, spec.DatasourceSeeds, casing);
+        return (
+            [
+                new($"{key}/migrations/{initial.Up.Filename}", initial.Up.Content),
+                new($"{key}/migrations/{initial.Down.Filename}", initial.Down.Content),
+            ],
+            1);
     }
 
     static (GenerateEntry Up, GenerateEntry Down) Initial(

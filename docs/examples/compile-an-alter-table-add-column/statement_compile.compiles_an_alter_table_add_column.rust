@@ -1,0 +1,4 @@
+let alter = AlterTableStatement::new(
+    "users",
+    AlterAction::AddColumn(Column::new("email", "TEXT").not_null(NotNull::new(None))),
+);

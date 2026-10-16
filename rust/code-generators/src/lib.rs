@@ -13,12 +13,15 @@ mod procedure_fields;
 mod procedure_spec;
 mod procedure_specs;
 mod schema;
+mod schema_diff;
 mod seed_generator;
 mod spec;
 mod sql_dialect;
 mod sql_generate_driver;
 mod sql_keywords;
 mod table_statements;
+mod version_delta;
+mod version_migrations;
 mod yaml_cursor;
 
 pub use generate_entry::GenerateEntry;

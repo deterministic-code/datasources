@@ -1,3 +1,4 @@
+use crate::alter_table_statement_renderer::PostgresAlterTableStatementRenderer;
 use crate::create_routine_statement_renderer::PostgresCreateRoutineStatementRenderer;
 use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::PostgresCreateTriggerStatementRenderer;
@@ -5,9 +6,10 @@ use crate::drop_routine_statement_renderer::PostgresDropRoutineStatementRenderer
 use crate::identity_insert_statement_renderer::PostgresIdentityInsertStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::PostgresSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    BulkInsertStatement, BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateRoutineStatement,
-    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
-    DropRoutineStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
+    AlterTableStatement, BulkInsertStatement, BulkUpdateStatement,
+    BulkUpdateStatementTextRenderer, CreateRoutineStatement, CreateTableStatement,
+    CreateTableStatementTextRenderer, CreateTriggerStatement, DropRoutineStatement,
+    DropTriggerStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
     StatementTextRenderer, StatementVisitor, Value,
 };
 
@@ -20,6 +22,26 @@ impl StatementVisitor for PostgresStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         PostgresCreateTableStatementRenderer.render(statement)
+    }
+
+    fn visit_alter_table(
+        &self,
+        statement: &AlterTableStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        PostgresAlterTableStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_trigger(
+        &self,
+        statement: &DropTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        format!(
+            "DROP TRIGGER IF EXISTS {} ON {}",
+            statement.name(),
+            statement.table()
+        )
     }
 
     fn visit_select_inserted_id(

@@ -1,18 +1,22 @@
 import {
+  AlterTableStatement,
   BulkUpdateStatement,
   CreateRoutineStatement,
   CreateTableStatement,
   CreateTriggerStatement,
+  DropIndexStatement,
   DropRoutineStatement,
   SelectInsertedIdStatement,
   SelectInsertedIdStatementTextRenderer,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@datasources/core";
+import { MysqlAlterTableStatementRenderer } from "./MysqlAlterTableStatementRenderer.ts";
 import { MysqlBulkUpdateStatementTextRenderer } from "./MysqlBulkUpdateStatementTextRenderer.ts";
 import { MysqlCreateRoutineStatementRenderer } from "./MysqlCreateRoutineStatementRenderer.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
 import { MysqlCreateTriggerStatementRenderer } from "./MysqlCreateTriggerStatementRenderer.ts";
+import { MysqlDropIndexStatementRenderer } from "./MysqlDropIndexStatementRenderer.ts";
 import { MysqlDropRoutineStatementRenderer } from "./MysqlDropRoutineStatementRenderer.ts";
 
 class MysqlSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
@@ -32,6 +36,14 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   protected override visitCreateTable(create: CreateTableStatement): string {
     return new MysqlCreateTableStatementRenderer().render(create);
+  }
+
+  protected override visitAlterTable(alter: AlterTableStatement): string {
+    return new MysqlAlterTableStatementRenderer().renderAlter(alter);
+  }
+
+  protected override visitDropIndex(index: DropIndexStatement): string {
+    return new MysqlDropIndexStatementRenderer().render(index);
   }
 
   protected override visitBulkUpdate(update: BulkUpdateStatement): string {

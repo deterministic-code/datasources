@@ -1,11 +1,13 @@
+use crate::alter_table_statement_renderer::SqlServerAlterTableStatementRenderer;
 use crate::create_routine_statement_renderer::SqlServerCreateRoutineStatementRenderer;
 use crate::create_table_statement_renderer::SqlServerCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::SqlServerCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::SqlServerDropRoutineStatementRenderer;
 use crate::identity_insert_statement_renderer::SqlServerIdentityInsertStatementRenderer;
 use datasources::{
-    CreateRoutineStatement, CreateTableStatement, CreateTableStatementTextRenderer,
-    CreateTriggerStatement, DropRoutineStatement, IdentityInsertStatement, StatementTextRenderer,
+    AlterTableStatement, CreateRoutineStatement,
+    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
+    DropIndexStatement, DropRoutineStatement, IdentityInsertStatement, StatementTextRenderer,
     StatementVisitor,
 };
 
@@ -18,6 +20,22 @@ impl StatementVisitor for SqlServerStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         SqlServerCreateTableStatementRenderer.render(statement)
+    }
+
+    fn visit_alter_table(
+        &self,
+        statement: &AlterTableStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        SqlServerAlterTableStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_index(
+        &self,
+        statement: &DropIndexStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        format!("DROP INDEX {} ON {}", statement.name(), statement.table())
     }
 
     fn visit_create_trigger(

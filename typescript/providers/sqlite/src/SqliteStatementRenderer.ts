@@ -1,4 +1,5 @@
 import {
+  AlterTableStatement,
   CreateTableStatement,
   CreateTriggerStatement,
   SelectInsertedIdStatement,
@@ -6,6 +7,7 @@ import {
   StatementRenderer,
   type StatementTextRenderer,
 } from "@datasources/core";
+import { SqliteAlterTableStatementRenderer } from "./SqliteAlterTableStatementRenderer.ts";
 import { SqliteCreateTableStatementRenderer } from "./SqliteCreateTableStatementRenderer.ts";
 import { SqliteCreateTriggerStatementRenderer } from "./SqliteCreateTriggerStatementRenderer.ts";
 
@@ -26,6 +28,10 @@ export class SqliteStatementRenderer extends StatementRenderer {
 
   protected override visitCreateTable(create: CreateTableStatement): string {
     return new SqliteCreateTableStatementRenderer().render(create);
+  }
+
+  protected override visitAlterTable(alter: AlterTableStatement): string {
+    return new SqliteAlterTableStatementRenderer().renderAlter(alter);
   }
 
   protected override visitCreateTrigger(trigger: CreateTriggerStatement): string {

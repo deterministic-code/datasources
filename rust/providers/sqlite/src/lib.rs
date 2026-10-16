@@ -1,3 +1,4 @@
+mod alter_table_statement_renderer;
 mod command;
 mod connection;
 mod connection_string;

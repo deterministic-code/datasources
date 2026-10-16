@@ -43,6 +43,15 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
     public virtual string Visit(DropTableStatement statement) =>
         new DropTableStatementTextRenderer().Render(statement);
 
+    public virtual string Visit(AlterTableStatement statement) =>
+        new AlterTableStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(DropIndexStatement statement) =>
+        new DropIndexStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(DropTriggerStatement statement) =>
+        new DropTriggerStatementTextRenderer().Render(statement);
+
     public virtual string Visit(CreateTriggerStatement statement) =>
         new CreateTriggerStatementTextRenderer().Render(statement);
 

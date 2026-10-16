@@ -1,9 +1,11 @@
+use crate::alter_table_statement_renderer::SqliteAlterTableStatementRenderer;
 use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::SqliteCreateTriggerStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::SqliteSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
-    SelectInsertedIdStatement, StatementTextRenderer, StatementVisitor,
+    AlterTableStatement, CreateTableStatement,
+    CreateTableStatementTextRenderer, CreateTriggerStatement, SelectInsertedIdStatement,
+    StatementTextRenderer, StatementVisitor,
 };
 
 pub struct SqliteStatementRenderer;
@@ -15,6 +17,14 @@ impl StatementVisitor for SqliteStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         SqliteCreateTableStatementRenderer.render(statement)
+    }
+
+    fn visit_alter_table(
+        &self,
+        statement: &AlterTableStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        SqliteAlterTableStatementRenderer.render(statement)
     }
 
     fn visit_create_trigger(
@@ -112,5 +122,26 @@ mod tests {
             renderer().render(&keyed),
             "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)"
         );
+    }
+
+    #[test]
+    fn renders_alter_add_column() {
+        use datasources::{AlterAction, AlterTableStatement, NotNull};
+        let alter = AlterTableStatement::new(
+            "users",
+            AlterAction::AddColumn(Column::new("email", "TEXT").not_null(NotNull::new(None))),
+        );
+        assert_eq!(
+            renderer().render(&alter),
+            "ALTER TABLE users ADD COLUMN email TEXT NOT NULL"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "SQLite cannot ALTER COLUMN")]
+    fn throws_on_alter_column() {
+        use datasources::{AlterAction, AlterTableStatement};
+        let alter = AlterTableStatement::new("users", AlterAction::AlterColumn(Column::new("age", "INTEGER")));
+        renderer().render(&alter);
     }
 }

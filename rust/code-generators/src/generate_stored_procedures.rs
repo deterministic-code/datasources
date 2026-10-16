@@ -12,7 +12,7 @@ pub fn generate_stored_procedures(
     let mut entries = Vec::new();
     for dialect in dialects {
         let key = sql_dialect::require(dialect)?;
-        entries.extend(generate_procedures::for_dialect(&key, files, settings)?);
+        entries.extend(generate_procedures::for_dialect(&key, files, settings, 2)?);
     }
     Ok(entries)
 }

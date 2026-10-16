@@ -5,6 +5,7 @@ use super::bulk_insert_statement::BulkInsertStatement;
 use super::bulk_insert_statement_text_renderer::BulkInsertStatementTextRenderer;
 use super::bulk_update_statement::BulkUpdateStatement;
 use super::bulk_update_statement_text_renderer::BulkUpdateStatementTextRenderer;
+use super::alter_table_statement::AlterTableStatement;
 use super::create_index_statement::CreateIndexStatement;
 use super::create_index_statement_text_renderer::CreateIndexStatementTextRenderer;
 use super::create_routine_statement::CreateRoutineStatement;
@@ -13,10 +14,14 @@ use super::create_table_statement::CreateTableStatement;
 use super::create_table_statement_text_renderer;
 use super::create_trigger_statement::CreateTriggerStatement;
 use super::create_trigger_statement_text_renderer::CreateTriggerStatementTextRenderer;
+use super::drop_index_statement::DropIndexStatement;
+use super::drop_index_statement_text_renderer::DropIndexStatementTextRenderer;
 use super::drop_routine_statement::DropRoutineStatement;
 use super::drop_routine_statement_text_renderer::DropRoutineStatementTextRenderer;
 use super::drop_table_statement::DropTableStatement;
 use super::drop_table_statement_text_renderer::DropTableStatementTextRenderer;
+use super::drop_trigger_statement::DropTriggerStatement;
+use super::drop_trigger_statement_text_renderer::DropTriggerStatementTextRenderer;
 use super::identity_insert_statement::IdentityInsertStatement;
 use super::identity_insert_statement_text_renderer::IdentityInsertStatementTextRenderer;
 use super::delete_statement::DeleteStatement;
@@ -117,6 +122,30 @@ pub trait StatementVisitor: Send + Sync {
         _text: &StatementTextRenderer,
     ) -> String {
         DropTableStatementTextRenderer.render(statement)
+    }
+
+    fn visit_alter_table(
+        &self,
+        statement: &AlterTableStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        super::alter_table_statement_text_renderer::render(statement)
+    }
+
+    fn visit_drop_index(
+        &self,
+        statement: &DropIndexStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        DropIndexStatementTextRenderer.render(statement)
+    }
+
+    fn visit_drop_trigger(
+        &self,
+        statement: &DropTriggerStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        DropTriggerStatementTextRenderer.render(statement)
     }
 
     fn visit_create_trigger(
