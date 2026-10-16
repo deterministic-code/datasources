@@ -1,4 +1,4 @@
-use crate::contact_view::ContactView;
+use super::contact_view::ContactView;
 
 pub fn contact_with(contacts: &[ContactView], addresses: usize, phones: usize) -> &ContactView {
     contacts

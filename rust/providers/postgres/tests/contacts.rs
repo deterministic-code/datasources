@@ -1,7 +1,7 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
 use datasources::Connection;
-use datasources_sql_specs::{
+use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
     contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
     statements_of, SEED_CONTACT_COUNT,

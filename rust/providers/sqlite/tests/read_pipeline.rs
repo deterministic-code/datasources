@@ -2,7 +2,7 @@ use datasources::{
     default, ConvertSchema, DictionaryMapper, Driver, Mapper, MetaDataRowTypeConverter, Parameter,
     Row, RowTypeConverter, Value,
 };
-use datasources_sql_specs::apply_schema;
+use datasources_tests::apply_schema;
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
 use uuid::Uuid;

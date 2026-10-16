@@ -21,7 +21,7 @@ tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"
 uuid = "1"
 
 [dev-dependencies]
-datasources-sql-specs = { path = "../../sql-specs" }
+datasources-tests = { path = "../../datasources-tests" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }

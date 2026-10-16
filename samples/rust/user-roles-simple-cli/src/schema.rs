@@ -27,7 +27,7 @@ fn quote(provider: &str, id: &str) -> String {
 }
 
 pub fn tables(provider: &str) -> Result<Vec<CreateTableStatement>> {
-    Ok(datasources_sql_specs::schema_tables(
+    Ok(datasources_tests::schema_tables(
         "user-roles-cli",
         |id| ident(provider, id),
         None,

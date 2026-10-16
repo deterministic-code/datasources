@@ -1,9 +1,10 @@
 [package]
-name = "datasources-sql-specs"
+name = "datasources-tests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Shared SQL repository spec runner"
+publish = false
+description = "Shared SQL spec runner and contact fixtures for provider tests"
 
 [dependencies]
 base64 = "0.22"

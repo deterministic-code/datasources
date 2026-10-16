@@ -608,20 +608,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "datasources-sql-specs"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "datasources",
- "rust_decimal",
- "serde",
- "serde_yaml",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "datasources-sqlite"
 version = "0.1.0"
 dependencies = [
@@ -631,6 +617,20 @@ dependencies = [
  "regex",
  "rusqlite",
  "rust_decimal",
+ "uuid",
+]
+
+[[package]]
+name = "datasources-tests"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "datasources",
+ "rust_decimal",
+ "serde",
+ "serde_yaml",
+ "tokio",
  "uuid",
 ]
 
@@ -2533,8 +2533,8 @@ dependencies = [
  "datasources",
  "datasources-mysql",
  "datasources-postgres",
- "datasources-sql-specs",
  "datasources-sqlite",
+ "datasources-tests",
  "futures-util",
  "mysql_async",
  "regex",

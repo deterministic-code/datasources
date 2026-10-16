@@ -1,4 +1,4 @@
-use crate::contact_lookups::ContactLookups;
+use super::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
     encode_rows, CRUDRepository, DatasourceError, ICRUDRepository, IReadonlyRepository, Operator,

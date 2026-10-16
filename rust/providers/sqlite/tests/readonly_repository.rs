@@ -5,7 +5,7 @@ use datasources::{
     Result, Row, TransformMapper, TypeConverter, Value, Where,
 };
 use std::sync::Arc;
-use datasources_sql_specs::apply_schema;
+use datasources_tests::apply_schema;
 use std::collections::HashMap;
 use uuid::Uuid;
 

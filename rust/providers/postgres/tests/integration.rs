@@ -97,7 +97,7 @@ fn render_schema(name: &str) -> String {
         Some(Box::new(crate::statement_renderer::PostgresStatementRenderer)),
         None,
     );
-    datasources_sql_specs::schema_tables(name, quote_ident, None)
+    datasources_tests::schema_tables(name, quote_ident, None)
         .iter()
         .map(|statement| renderer.render(statement))
         .collect::<Vec<_>>()

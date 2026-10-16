@@ -16,7 +16,7 @@ rust_decimal = "1"
 uuid = "1"
 
 [dev-dependencies]
-datasources-sql-specs = { path = "../../sql-specs" }
+datasources-tests = { path = "../../datasources-tests" }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"

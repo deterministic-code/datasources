@@ -5,7 +5,7 @@ use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
     ICRUDRepository, IReadonlyRepository, Mapper, Operator, TypeConverter, Value, Where,
 };
-use datasources_sql_specs::{
+use datasources_tests::{
     add_extra_contact, apply_schema, apply_sql, as_contacts_view, columns, contact_entity,
     contact_lookup_ids, contact_seed, contact_with, contacts_join_query, contacts_parity, join_entity,
     contacts_service_of, contacts_view, expect_contacts_view, from_mapped_contacts, references,

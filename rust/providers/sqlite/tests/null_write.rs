@@ -20,7 +20,7 @@ fn item_converter() -> RowTypeConverter {
 async fn omits_null_datetime_and_version() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
-    datasources_sql_specs::apply_schema(conn.as_ref(), "null-write-item")
+    datasources_tests::apply_schema(conn.as_ref(), "null-write-item")
         .await
         .unwrap();
     let mut options = CRUDRepositoryOptions::default();

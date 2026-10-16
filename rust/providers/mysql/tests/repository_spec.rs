@@ -1,7 +1,7 @@
 use super::command::MysqlCommand;
 use super::connection::MysqlConnection;
 use datasources::Connection;
-use datasources_sql_specs::RepositoryDialect;
+use datasources_tests::RepositoryDialect;
 use mysql_async::prelude::Queryable;
 use mysql_async::Conn;
 use std::sync::Arc;
@@ -38,7 +38,7 @@ async fn user_crud() {
     let Ok(base) = std::env::var("MYSQL_URL") else {
         return;
     };
-    for path in datasources_sql_specs::files() {
+    for path in datasources_tests::files() {
         let name = format!(
             "ds_{:x}",
             SystemTime::now()
@@ -56,7 +56,7 @@ async fn user_crud() {
         let conn = Arc::new(MysqlConnection::new(Some(url)));
         conn.open().await.unwrap();
         let command = Arc::new(MysqlCommand::new(conn.clone()));
-        datasources_sql_specs::run(&path, &dialect(), conn, command)
+        datasources_tests::run(&path, &dialect(), conn, command)
             .await
             .unwrap();
         let mut admin = Conn::from_url(base.clone()).await.unwrap();

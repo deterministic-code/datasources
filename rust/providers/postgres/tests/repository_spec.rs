@@ -1,7 +1,7 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
 use datasources::Connection;
-use datasources_sql_specs::RepositoryDialect;
+use datasources_tests::RepositoryDialect;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio_postgres::NoTls;
@@ -24,7 +24,7 @@ async fn user_crud() {
     let Ok(url) = std::env::var("POSTGRES_URL") else {
         return;
     };
-    for path in datasources_sql_specs::files() {
+    for path in datasources_tests::files() {
         let schema = format!(
             "ds_{:x}",
             SystemTime::now()
@@ -46,7 +46,7 @@ async fn user_crud() {
         ));
         conn.open().await.unwrap();
         let command = Arc::new(PostgresCommand::new(conn.clone()));
-        datasources_sql_specs::run(&path, &dialect(), conn, command)
+        datasources_tests::run(&path, &dialect(), conn, command)
             .await
             .unwrap();
         client
