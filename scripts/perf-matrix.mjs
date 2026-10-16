@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { writePerfData } from "./perf-data.mjs";
 
 const root = dirname(fileURLToPath(new URL(".", import.meta.url)));
-const artifacts = join(root, "artifacts/perf");
+const artifacts = join(root, "scripts/artifacts/perf");
 const composeFile = join(root, "docker/perf/compose.yml");
 const project = "datasources-perf";
 const list = (name, fallback) =>

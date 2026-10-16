@@ -25,5 +25,5 @@ coverage.info
 *.nupkg
 .deterministic-cache/
 file:*
-artifacts/e2e-matrix/
-evals/workspace/
+scripts/artifacts/
+docs/evals/workspace/

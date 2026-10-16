@@ -104,17 +104,23 @@ fn docker_ok(args: &[&str]) {
         .status();
 }
 
+fn compose_args(args: &[&str]) -> Vec<&str> {
+    ["compose", "-p", "datasources", "-f", "docker/compose.yml"]
+        .into_iter()
+        .chain(args.iter().copied())
+        .collect()
+}
+
 fn remove_compose(service: &str) {
-    docker_ok(&["compose", "rm", "-sf", "-v", service]);
+    docker_ok(&compose_args(&["rm", "-sf", "-v", service]));
     docker_ok(&["rm", "-f", &format!("datasources-{service}-1")]);
 }
 
 fn fresh_compose(service: &str) {
     remove_compose(service);
-    docker(&["compose", "up", "-d", "--wait", service]);
+    docker(&compose_args(&["up", "-d", "--wait", service]));
     if service == "mysql" {
-        docker(&[
-            "compose",
+        docker(&compose_args(&[
             "exec",
             "-T",
             "mysql",
@@ -123,7 +129,7 @@ fn fresh_compose(service: &str) {
             "-proot",
             "-e",
             "GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;",
-        ]);
+        ]));
     }
 }
 
@@ -531,6 +537,104 @@ fn replace_mysql_db(url: &str, name: &str) -> String {
         Some(index) => format!("{}/{name}", &url[..index]),
         None => format!("{url}/{name}"),
     }
+}
+
+#[test]
+fn drops_extra_fields_and_tables_across_three_versions() {
+    let tmp = std::env::temp_dir().join(format!(
+        "user-roles-mig-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("time")
+            .as_nanos()
+    ));
+    fs::create_dir_all(&tmp).expect("tmp");
+    let status = Command::new("node")
+        .args([
+            "--import",
+            "tsx",
+            repo().join("cli/src/main.ts").to_str().expect("cli"),
+            "migrations",
+            "create",
+            "--input",
+            repo()
+                .join("samples/user-roles-simple-cli-shared/deterministic")
+                .to_str()
+                .expect("spec"),
+            "--migrations-root",
+            tmp.join("sql").to_str().expect("sql"),
+        ])
+        .current_dir(repo().join("cli"))
+        .status()
+        .expect("generate");
+    assert!(status.success(), "migrations create");
+    let dir = tmp.join("sql/sqlite/migrations");
+    let mut files: Vec<_> = fs::read_dir(&dir)
+        .expect("migrations")
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.len() == 10 && name.ends_with("_up.sql"))
+        })
+        .collect();
+    files.sort();
+    assert_eq!(
+        files
+            .iter()
+            .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect::<Vec<_>>(),
+        ["0001_up.sql", "0002_up.sql", "0003_up.sql"]
+    );
+    let connection = rusqlite::Connection::open_in_memory().expect("sqlite");
+    connection.execute_batch("PRAGMA foreign_keys = ON").expect("pragma");
+    connection
+        .execute_batch(&fs::read_to_string(&files[0]).expect("0001"))
+        .expect("0001");
+    let names = table_names(&connection);
+    assert!(names.iter().any(|name| name == "sessions"));
+    assert!(names.iter().any(|name| name == "audit_logs"));
+    assert!(columns(&connection, "users").iter().any(|name| name == "nickname"));
+    assert!(columns(&connection, "roles").iter().any(|name| name == "description"));
+    connection
+        .execute_batch(&fs::read_to_string(&files[1]).expect("0002"))
+        .expect("0002");
+    let names = table_names(&connection);
+    assert!(names.iter().all(|name| name != "sessions"));
+    assert!(columns(&connection, "users").iter().all(|name| name != "nickname"));
+    connection
+        .execute_batch(&fs::read_to_string(&files[2]).expect("0003"))
+        .expect("0003");
+    let names = table_names(&connection);
+    assert!(names.iter().all(|name| name != "audit_logs"));
+    assert!(columns(&connection, "roles").iter().all(|name| name != "description"));
+    assert!(names.iter().any(|name| name == "users"));
+    assert!(names.iter().any(|name| name == "roles"));
+    assert!(names.iter().any(|name| name == "groups"));
+    let _ = fs::remove_dir_all(&tmp);
+}
+
+fn table_names(connection: &rusqlite::Connection) -> Vec<String> {
+    let mut statement = connection
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+        .expect("tables");
+    statement
+        .query_map([], |row| row.get(0))
+        .expect("query")
+        .map(|name| name.expect("name"))
+        .collect()
+}
+
+fn columns(connection: &rusqlite::Connection, table: &str) -> Vec<String> {
+    let mut statement = connection
+        .prepare(&format!("PRAGMA table_info(\"{table}\")"))
+        .expect("columns");
+    statement
+        .query_map([], |row| row.get(1))
+        .expect("query")
+        .map(|name| name.expect("name"))
+        .collect()
 }
 
 fn uuid() -> String {

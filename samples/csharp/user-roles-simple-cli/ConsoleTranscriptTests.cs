@@ -242,17 +242,17 @@ public sealed class ConsoleTranscriptTests
     static void FreshCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Exec("docker", $"compose rm -sf -v {service}");
+        Exec("docker", $"compose -p datasources -f docker/compose.yml rm -sf -v {service}");
         Exec("docker", $"rm -f datasources-{service}-1");
-        Require(Exec("docker", $"compose up -d --wait {service}"));
+        Require(Exec("docker", $"compose -p datasources -f docker/compose.yml up -d --wait {service}"));
         if (service == "mysql")
-            Require(Exec("docker", "compose exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\""));
+            Require(Exec("docker", "compose -p datasources -f docker/compose.yml exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\""));
     }
 
     static void StopCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Exec("docker", $"compose rm -sf -v {service}");
+        Exec("docker", $"compose -p datasources -f docker/compose.yml rm -sf -v {service}");
         Exec("docker", $"rm -f datasources-{service}-1");
     }
 
