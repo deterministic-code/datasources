@@ -30,13 +30,19 @@ export type MigrationsCreateCommand = {
   migrationsPath?: string;
 };
 
+export type VersionCommand = {
+  kind: "version";
+  input: string;
+};
+
 export type Command =
   | { kind: "setup" }
   | { kind: "add"; providers: string[] }
   | { kind: "remove"; providers: string[] }
   | { kind: "help" }
   | GenerateCommand
-  | MigrationsCreateCommand;
+  | MigrationsCreateCommand
+  | VersionCommand;
 
 export const help = `Usage: datasources <command> [options]
 
@@ -68,6 +74,11 @@ migrations create     SQL migrations from the spec (migraters layout)
   --input <dir>               Deterministic project (default: ./deterministic)
   --migrations-root <dir>     Root prefix (default: sql)
   --migrations-path <dir>     One migrations directory (single SQL dialect)
+
+version               Snapshot top-level YAML as the next version-*/diff.yaml
+  --cwd <dir>                 Consumer project directory (default: .)
+  --input <dir>               Deterministic project (default: ./deterministic)
+  --dry-run                   Print the version path without writing
 `;
 
 const isTarget = (value: string): value is GenerateTarget => (generateTargets as readonly string[]).includes(value);
@@ -130,6 +141,7 @@ const commandOf = (
   if (verb === "remove") return { kind: "remove", providers: names };
   if (verb === "generate") return generateCommand(names, generate);
   if (verb === "migrations") return migrationsCommand(names, generate);
+  if (verb === "version") return versionCommand(names, generate.input);
   throw new Error(`Unknown command: ${verb}\n${help}`);
 };
 
@@ -146,6 +158,11 @@ const migrationsCommand = (
     migrationsRoot: generate.migrationsRoot,
     ...(generate.migrationsPath === "" ? {} : { migrationsPath: generate.migrationsPath }),
   };
+};
+
+const versionCommand = (names: string[], input: string): VersionCommand => {
+  if (names.length) throw new Error(`Usage: datasources version\n${help}`);
+  return { kind: "version", input };
 };
 
 const generateCommand = (
