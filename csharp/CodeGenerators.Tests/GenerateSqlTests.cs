@@ -233,4 +233,50 @@ public class GenerateSqlTests
         Assert.Matches(@"CREATE UNIQUE INDEX .* ON ""contact_settings""", sql);
         Assert.Matches(@"CREATE UNIQUE INDEX .* ON ""contact_preferences""", sql);
     }
+
+    [Fact]
+    public void EmitsNumberedUpDownFilesFromFrozenDiffs()
+    {
+        const string path = "version-20261016T000000Z-001/diff.yaml";
+        var files = Files(TypesYaml);
+        files[path] = VersionDelta.Yaml(new Dictionary<string, object?>
+        {
+            ["types.yaml"] = new Dictionary<string, object?>
+            {
+                ["added"] = true,
+                ["content"] = VersionDelta.Parse(TypesYaml),
+            },
+        });
+        var names = Names(GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
+        Assert.Equal(
+            ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"],
+            names);
+    }
+
+    [Fact]
+    public void ThrowsWhenLiveYamlDriftedFromFrozenDiffs()
+    {
+        const string path = "version-20261016T000000Z-001/diff.yaml";
+        var files = Files(TypesYaml);
+        files[path] = VersionDelta.Yaml(new Dictionary<string, object?>
+        {
+            ["types.yaml"] = new Dictionary<string, object?>
+            {
+                ["added"] = true,
+                ["content"] = VersionDelta.Parse(TypesYaml),
+            },
+        });
+        files["types.yaml"] = """
+            types:
+              - extra:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - name:
+                        type: string
+            """;
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
+        Assert.Contains("run datasources version first", error.Message);
+    }
 }

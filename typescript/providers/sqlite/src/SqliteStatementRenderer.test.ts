@@ -1,4 +1,5 @@
 import {
+  AlterTableStatement,
   ColumnDefault,
   CreateTableStatement,
   DefaultStatementTextRenderer,
@@ -56,5 +57,16 @@ describe("SqliteStatementRenderer", () => {
       [new PrimaryKey("pk_users", ["id"])],
     );
     expect(renderer.render(keyed)).toBe("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)");
+  });
+
+  it("renders alter add column and throws on alter column", () => {
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT", notNull: new NotNull() } }),
+      ),
+    ).toBe("ALTER TABLE users ADD COLUMN email TEXT NOT NULL");
+    expect(() =>
+      renderer.render(new AlterTableStatement("users", { kind: "alterColumn", column: { name: "age", type: "INTEGER" } })),
+    ).toThrow(/SQLite cannot ALTER COLUMN/);
   });
 });

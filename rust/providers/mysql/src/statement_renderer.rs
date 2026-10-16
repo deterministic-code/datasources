@@ -1,11 +1,13 @@
+use crate::alter_table_statement_renderer::MysqlAlterTableStatementRenderer;
 use crate::create_routine_statement_renderer::MysqlCreateRoutineStatementRenderer;
 use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::MysqlCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::MysqlDropRoutineStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
 use datasources::{
-    BulkUpdateStatement, BulkUpdateStatementTextRenderer, CreateRoutineStatement,
-    CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
+    AlterTableStatement, BulkUpdateStatement,
+    BulkUpdateStatementTextRenderer, CreateRoutineStatement, CreateTableStatement,
+    CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
     DropRoutineStatement, SelectInsertedIdStatement, StatementTextRenderer, StatementVisitor,
 };
 
@@ -18,6 +20,22 @@ impl StatementVisitor for MysqlStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         MysqlCreateTableStatementRenderer.render(statement)
+    }
+
+    fn visit_alter_table(
+        &self,
+        statement: &AlterTableStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlAlterTableStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_index(
+        &self,
+        statement: &DropIndexStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        format!("DROP INDEX {} ON {}", statement.name(), statement.table())
     }
 
     fn visit_select_inserted_id(

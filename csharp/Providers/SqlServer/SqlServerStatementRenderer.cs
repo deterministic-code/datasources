@@ -7,6 +7,12 @@ internal sealed class SqlServerStatementRenderer(StatementTextRenderer text) : S
     public override string Visit(CreateTableStatement create) =>
         new SqlServerCreateTableStatementRenderer().Render(create);
 
+    public override string Visit(AlterTableStatement alter) =>
+        new SqlServerAlterTableStatementRenderer().Render(alter);
+
+    public override string Visit(DropIndexStatement index) =>
+        new SqlServerDropIndexStatementRenderer().Render(index);
+
     public override string Visit(CreateTriggerStatement trigger) =>
         new SqlServerCreateTriggerStatementRenderer().Render(trigger);
 

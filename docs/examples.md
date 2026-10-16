@@ -153,6 +153,18 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 - [Compile a CREATE INDEX](./sections/create-index-statement.md#compile-a-create-index)
 - [Compile a CREATE UNIQUE INDEX](./sections/create-index-statement.md#compile-a-create-unique-index)
 
+## Alter Table Statement
+
+- [Compile an ALTER TABLE ADD COLUMN](./sections/alter-table-statement.md#compile-an-alter-table-add-column)
+
+## Drop Index Statement
+
+- [Compile a DROP INDEX](./sections/drop-index-statement.md#compile-a-drop-index)
+
+## Drop Trigger Statement
+
+- [Compile a DROP TRIGGER](./sections/drop-trigger-statement.md#compile-a-drop-trigger)
+
 ## Execute Stored Procedure Statement
 
 - [Compile a CALL](./sections/execute-stored-procedure-statement.md#compile-a-call)

@@ -3,8 +3,9 @@ use crate::schema::{field_overlay, overlay_of, table_identity, uses_generated_id
 use crate::spec::{is_pk_field, SpecTypeField};
 use crate::sql_dialect;
 use datasources::{
-    Column, ColumnDefault, CreateIndexStatement, CreateRoutineStatement, CreateTableStatement,
-    CreateTriggerStatement, DropRoutineStatement, DropTableStatement, ForeignKey,
+    AlterAction, AlterTableStatement, Column, ColumnDefault, CreateIndexStatement,
+    CreateRoutineStatement, CreateTableStatement, CreateTriggerStatement, DropIndexStatement,
+    DropRoutineStatement, DropTableStatement, DropTriggerStatement, ForeignKey,
     IdentityInsertStatement, InsertStatement, NotNull, Parameter, PrimaryKey, Result, RoutineKind,
     RoutineParameter, TableConstraint, UniqueConstraint, Value,
 };
@@ -105,6 +106,66 @@ pub fn create_index(
 
 pub fn drop_table(dialect: &str, table: &str) -> Result<DropTableStatement> {
     Ok(DropTableStatement::new(sql_dialect::q(dialect, table)?))
+}
+
+pub fn drop_index(dialect: &str, name: &str, table: &str) -> Result<DropIndexStatement> {
+    Ok(DropIndexStatement::new(
+        sql_dialect::q(dialect, name)?,
+        sql_dialect::q(dialect, table)?,
+    ))
+}
+
+pub fn drop_trigger(dialect: &str, name: &str, table: &str) -> Result<DropTriggerStatement> {
+    Ok(DropTriggerStatement::new(
+        sql_dialect::q(dialect, name)?,
+        sql_dialect::q(dialect, table)?,
+    ))
+}
+
+pub fn column(dialect: &str, mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {
+    column_of(dialect, mapping, table, field)
+}
+
+pub fn unique_of(
+    dialect: &str,
+    mapping: &SqlMapping,
+    table: &SqlTable,
+    field: &SpecTypeField,
+) -> Result<TableConstraint> {
+    let name = sql_dialect::q(
+        dialect,
+        &mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "unique_constraint"]),
+    )?;
+    let col = sql_dialect::q(dialect, &mapping.column_name(table, &field.name))?;
+    Ok(UniqueConstraint::new(name, &[col.as_str()]))
+}
+
+pub fn foreign_key_of(
+    dialect: &str,
+    mapping: &SqlMapping,
+    table: &SqlTable,
+    field: &SpecTypeField,
+) -> Result<TableConstraint> {
+    let reference = mapping.resolve_reference(field)?;
+    let name = sql_dialect::q(
+        dialect,
+        &mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "foreign_key"]),
+    )?;
+    let col = sql_dialect::q(dialect, &mapping.column_name(table, &field.name))?;
+    let table_name = sql_dialect::q(dialect, &reference.0)?;
+    let ref_col = sql_dialect::q(dialect, &reference.1)?;
+    Ok(ForeignKey::new(
+        name,
+        &[col.as_str()],
+        table_name,
+        &[ref_col.as_str()],
+        None,
+        None,
+    ))
+}
+
+pub fn alter_table(table: impl AsRef<str>, action: AlterAction) -> AlterTableStatement {
+    AlterTableStatement::new(table, action)
 }
 
 pub fn create_trigger(dialect: &str, table: &SqlTable, mapping: &SqlMapping, key: &str) -> Result<CreateTriggerStatement> {

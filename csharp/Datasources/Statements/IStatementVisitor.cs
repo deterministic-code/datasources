@@ -15,6 +15,9 @@ public interface IStatementVisitor
     string Visit(BulkUpdateStatement statement);
     string Visit(BulkDeleteStatement statement);
     string Visit(DropTableStatement statement);
+    string Visit(AlterTableStatement statement);
+    string Visit(DropIndexStatement statement);
+    string Visit(DropTriggerStatement statement);
     string Visit(CreateTriggerStatement statement);
     string Visit(IdentityInsertStatement statement);
     string Visit(CreateRoutineStatement statement);

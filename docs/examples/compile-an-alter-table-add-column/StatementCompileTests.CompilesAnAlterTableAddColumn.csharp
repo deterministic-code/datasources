@@ -1,0 +1,1 @@
+var alter = new AlterTableStatement("users", new AlterTableStatement.AddColumn(new Column("email", "TEXT", NotNull: new NotNull())));

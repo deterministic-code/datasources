@@ -8,6 +8,7 @@ use crate::seed_generator;
 use crate::spec::{self, SeedRow};
 use crate::sql_dialect;
 use crate::table_statements;
+use crate::version_migrations;
 use datasources::Result;
 use regex::Regex;
 use std::collections::HashMap;
@@ -32,17 +33,39 @@ fn for_dialect(
 ) -> Result<Vec<GenerateEntry>> {
     let key = sql_dialect::require(dialect)?;
     let casing = PackCasing::of(settings)?;
+    let schema = schema_files(&key, files, settings, &casing)?;
+    let dir = settings.get("paths.deterministic").map(String::as_str);
+    let mut entries = schema.0;
+    entries.extend(custom_migrations::of(files, &key, dir)?);
+    entries.extend(generate_procedures::for_dialect(dialect, files, settings, schema.1 + 1)?);
+    Ok(entries)
+}
+
+fn schema_files(
+    key: &str,
+    files: &HashMap<String, String>,
+    settings: &HashMap<String, String>,
+    casing: &PackCasing,
+) -> Result<(Vec<GenerateEntry>, i32)> {
+    if !version_migrations::diff_paths(files).is_empty() {
+        let versions = version_migrations::files(key, files, settings, casing)?;
+        let count = (versions.len() / 2) as i32;
+        let entries = versions
+            .into_iter()
+            .map(|entry| GenerateEntry::new(format!("{key}/migrations/{}", entry.filename), entry.content))
+            .collect();
+        return Ok((entries, count));
+    }
     let parsed = spec::parse(files)?;
     let types = schema::from_spec(&parsed);
-    let initial = initial(&key, &types, &parsed.datasource_seeds, &casing)?;
-    let dir = settings.get("paths.deterministic").map(String::as_str);
-    let mut entries = vec![
-        GenerateEntry::new(format!("{key}/migrations/{}", initial.0.filename), initial.0.content),
-        GenerateEntry::new(format!("{key}/migrations/{}", initial.1.filename), initial.1.content),
-    ];
-    entries.extend(custom_migrations::of(files, &key, dir)?);
-    entries.extend(generate_procedures::for_dialect(dialect, files, settings)?);
-    Ok(entries)
+    let initial = initial(key, &types, &parsed.datasource_seeds, casing)?;
+    Ok((
+        vec![
+            GenerateEntry::new(format!("{key}/migrations/{}", initial.0.filename), initial.0.content),
+            GenerateEntry::new(format!("{key}/migrations/{}", initial.1.filename), initial.1.content),
+        ],
+        1,
+    ))
 }
 
 fn initial(

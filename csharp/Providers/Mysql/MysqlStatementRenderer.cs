@@ -10,6 +10,12 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
     public override string Visit(CreateTableStatement create) =>
         new MysqlCreateTableStatementRenderer().Render(create);
 
+    public override string Visit(AlterTableStatement alter) =>
+        new MysqlAlterTableStatementRenderer().Render(alter);
+
+    public override string Visit(DropIndexStatement index) =>
+        new MysqlDropIndexStatementRenderer().Render(index);
+
     public override string Visit(BulkUpdateStatement update) =>
         new MysqlBulkUpdateStatementTextRenderer().Render(update);
 

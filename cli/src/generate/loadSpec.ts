@@ -19,6 +19,8 @@ const readOptional = async (fs: Fs, path: string): Promise<string | undefined> =
   }
 };
 
+const versionDir = /^version-\d{8}T\d{6}Z-\d{3}$/;
+
 export const loadSpec = async (
   fs: Fs,
   dir: string,
@@ -30,8 +32,22 @@ export const loadSpec = async (
   }
   if (files["types.yaml"] === undefined) throw new Error(`missing types.yaml in ${dir}`);
   files["datasource.yaml"] ??= defaultDatasourceYaml;
+  const names = await fs.readdir(dir).catch(() => [] as string[]);
+  const diffs = names.filter((name) => versionDir.test(name)).sort();
+  const versionFiles: string[] = [];
+  for (const name of diffs) {
+    const path = `${name}/diff.yaml`;
+    const text = await readOptional(fs, join(dir, path));
+    if (text === undefined) continue;
+    files[path] = text;
+    versionFiles.push(path);
+  }
   return {
     files,
-    settings: { ...settingsFrom(await readOptional(fs, join(dir, "settings.yaml"))), "paths.deterministic": dir },
+    settings: {
+      ...settingsFrom(await readOptional(fs, join(dir, "settings.yaml"))),
+      "paths.deterministic": dir,
+      ...(versionFiles.length ? { "version.diffs": versionFiles.join("\n") } : {}),
+    },
   };
 };

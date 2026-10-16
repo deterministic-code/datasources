@@ -1,0 +1,147 @@
+use crate::casing::PackCasing;
+use crate::generate_entry::GenerateEntry;
+use crate::mapping::SqlMapping;
+use crate::schema::{self, SqlTable};
+use crate::schema_diff::{self, DdlStatement};
+use crate::seed_generator;
+use crate::spec::{self, SeedRow};
+use crate::sql_dialect;
+use crate::version_delta;
+use datasources::{DatasourceError, Result};
+use regex::Regex;
+use serde_yaml::Value;
+use std::collections::HashMap;
+
+const DEFAULT_DATASOURCE: &str = "version: 1.0.0\nincludes:\n  - types:\n      filter: tag == \"datasource_type\" || tag == \"view_type\"\ntypes: []\n";
+
+pub fn diff_paths(files: &HashMap<String, String>) -> Vec<String> {
+    let pattern = Regex::new(r"^version-\d{8}T\d{6}Z-\d{3}/diff\.yaml$").expect("version");
+    let mut paths: Vec<String> = files.keys().filter(|path| pattern.is_match(path)).cloned().collect();
+    paths.sort();
+    paths
+}
+
+pub fn files(
+    dialect: &str,
+    files: &HashMap<String, String>,
+    settings: &HashMap<String, String>,
+    casing: &PackCasing,
+) -> Result<Vec<GenerateEntry>> {
+    let paths = diff_paths(files);
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut before = HashMap::new();
+    let mut snapshots = Vec::new();
+    for path in &paths {
+        let text = files.get(path).map(String::as_str).unwrap_or("");
+        if text.is_empty() {
+            continue;
+        }
+        let parsed = version_delta::parse(text).map_err(|error| DatasourceError::message(error.to_string()))?;
+        let doc = version_delta::as_document(&parsed, path).map_err(DatasourceError::message)?;
+        before = version_delta::apply_document(&before, &doc);
+        snapshots.push(before.clone());
+    }
+    if snapshots.is_empty() {
+        return Ok(Vec::new());
+    }
+    let last = snapshots.last().unwrap();
+    let live_types = version_delta::parse(files.get("types.yaml").map(String::as_str).unwrap_or(""))
+        .map_err(|error| DatasourceError::message(error.to_string()))?;
+    let live_datasource = version_delta::parse(
+        files.get("datasource.yaml").map(String::as_str).unwrap_or(DEFAULT_DATASOURCE),
+    )
+    .map_err(|error| DatasourceError::message(error.to_string()))?;
+    let snapshot_types = last.get("types.yaml").cloned().unwrap_or(Value::Null);
+    let snapshot_datasource = last
+        .get("datasource.yaml")
+        .cloned()
+        .unwrap_or(version_delta::parse(DEFAULT_DATASOURCE).map_err(|error| DatasourceError::message(error.to_string()))?);
+    if !version_delta::equal(&snapshot_types, &live_types)
+        || !version_delta::equal(&snapshot_datasource, &live_datasource)
+    {
+        return Err(DatasourceError::message(
+            "types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first",
+        ));
+    }
+
+    let mut output = Vec::new();
+    let mut previous = compile(&HashMap::new(), settings)?;
+    let mut number = 0;
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        let current = compile(snapshot, settings)?;
+        let up = schema_diff::of(dialect, &previous.0, &previous.1, &current.0, &current.1)?;
+        let down = schema_diff::of(dialect, &current.0, &current.1, &previous.0, &previous.1)?;
+        if up.is_empty() && down.is_empty() {
+            previous = current;
+            continue;
+        }
+        number += 1;
+        let seeds = if index == 0 && up.iter().any(DdlStatement::is_create_table) {
+            seed_generator::sections(dialect, &current.0, &current.2, &current.1)?
+        } else {
+            Vec::new()
+        };
+        let mut up_sql = format!("-- Generated migration for {dialect}\n{}", render(dialect, &up)?);
+        if !seeds.is_empty() {
+            up_sql.push_str("\n\n-- Seed data\n");
+            for block in seeds {
+                up_sql.push_str(&block);
+                if !block.ends_with('\n') {
+                    up_sql.push('\n');
+                }
+            }
+        }
+        let down_sql = format!("-- Rollback migration for {dialect}\n{}", render(dialect, &down)?);
+        output.push(GenerateEntry::new(
+            format!("{:04}_up.sql", number),
+            finalize(&up_sql, casing),
+        ));
+        output.push(GenerateEntry::new(
+            format!("{:04}_down.sql", number),
+            finalize(&down_sql, casing),
+        ));
+        previous = current;
+    }
+    Ok(output)
+}
+
+fn compile(
+    snapshot: &HashMap<String, Value>,
+    settings: &HashMap<String, String>,
+) -> Result<(Vec<SqlTable>, SqlMapping, HashMap<String, Vec<SeedRow>>)> {
+    let mut files = HashMap::new();
+    for (path, value) in snapshot {
+        files.insert(
+            path.clone(),
+            version_delta::yaml(value).map_err(|error| DatasourceError::message(error.to_string()))?,
+        );
+    }
+    files.entry("datasource.yaml".into()).or_insert_with(|| DEFAULT_DATASOURCE.into());
+    let parsed = spec::parse(&files)?;
+    let types = schema::from_spec(&parsed);
+    let mapping = SqlMapping::new(PackCasing::of(settings)?, &types);
+    Ok((schema::build_live(&types, &mapping), mapping, parsed.datasource_seeds))
+}
+
+fn render(dialect: &str, statements: &[DdlStatement]) -> Result<String> {
+    let mut parts = Vec::new();
+    for statement in statements {
+        let sql = sql_dialect::render_sql(dialect, statement.as_statement())?;
+        if !sql.is_empty() {
+            parts.push(sql);
+        }
+    }
+    Ok(parts.join("\n"))
+}
+
+fn finalize(text: &str, casing: &PackCasing) -> String {
+    let collapsed = regex::Regex::new(r"\n{3,}").expect("nl").replace_all(text, "\n\n");
+    let output = casing.apply_keywords(&collapsed);
+    if output.ends_with('\n') {
+        output
+    } else {
+        format!("{output}\n")
+    }
+}

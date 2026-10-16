@@ -19,6 +19,7 @@ import { renderSql, requireDialect, type SqlDialect } from "./sql-dialect.ts";
 import { buildCustomMigrationFiles } from "./generate-custom-migrations.ts";
 import { generateProceduresForDialect } from "./generate-procedures.ts";
 import { seedSections } from "./seed-generator.ts";
+import { versionDiffPaths, versionMigrationFiles } from "./version-migrations.ts";
 import { migrationDownTmpl, migrationUpTmpl } from "../resources/sql.ts";
 import {
   createIndexStatementOf,
@@ -134,18 +135,45 @@ export const generateSqlFor = async (
 ): Promise<GenerateEntry[]> => {
   const key = requireDialect(dialect);
   const casing = createCasing(ctx.settings);
-  const data = await loadSchema(ctx);
   const dir = ctx.settings["paths.deterministic"];
-  const initial = generateInitialMigration(
-    key,
-    data.types,
-    data.seeds,
-    casing,
-  );
+  const schema = await schemaFiles(key, ctx, casing);
   return [
-    content(`${key}/migrations/${initial.up.path}`, initial.up.content),
-    content(`${key}/migrations/${initial.down.path}`, initial.down.content),
+    ...schema.entries,
     ...(await customEntries(key, dir)),
-    ...(await generateProceduresForDialect(dialect, ctx)),
+    ...(await generateProceduresForDialect(dialect, ctx, schema.count + 1)),
   ];
+};
+
+const schemaFiles = async (
+  key: SqlDialect,
+  ctx: GenerateContext,
+  casing: PackCasing,
+): Promise<{ entries: GenerateEntry[]; count: number }> => {
+  if (versionDiffPaths(ctx.settings).length > 0) {
+    const liveTypes = (await ctx.reader.exists("types.yaml"))
+      ? await ctx.reader.read("types.yaml")
+      : undefined;
+    const liveDatasource = (await ctx.reader.exists("datasource.yaml"))
+      ? await ctx.reader.read("datasource.yaml")
+      : undefined;
+    const versions = await versionMigrationFiles(key, ctx, casing, {
+      typesYaml: liveTypes,
+      datasourceYaml: liveDatasource,
+    });
+    return {
+      entries: versions.files.map((file) =>
+        content(`${key}/migrations/${file.path}`, file.content),
+      ),
+      count: versions.count,
+    };
+  }
+  const data = await loadSchema(ctx);
+  const initial = generateInitialMigration(key, data.types, data.seeds, casing);
+  return {
+    entries: [
+      content(`${key}/migrations/${initial.up.path}`, initial.up.content),
+      content(`${key}/migrations/${initial.down.path}`, initial.down.content),
+    ],
+    count: 1,
+  };
 };

@@ -43,6 +43,30 @@ public static class TableStatements
     public static DropTableStatement DropTable(string dialect, string table) =>
         new(SqlDialect.Q(dialect, table));
 
+    public static DropIndexStatement DropIndex(string dialect, string name, string table) =>
+        new(SqlDialect.Q(dialect, name), SqlDialect.Q(dialect, table));
+
+    public static DropTriggerStatement DropTrigger(string dialect, string name, string table) =>
+        new(SqlDialect.Q(dialect, name), SqlDialect.Q(dialect, table));
+
+    public static Column Column(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field) =>
+        ColumnOf(dialect, mapping, table, field);
+
+    public static UniqueConstraint UniqueOf(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field) =>
+        new(
+            SqlDialect.Q(dialect, mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint")),
+            [SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name))]);
+
+    public static ForeignKey ForeignKeyOf(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field)
+    {
+        var reference = mapping.ResolveReference(field);
+        return new ForeignKey(
+            SqlDialect.Q(dialect, mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "foreign_key")),
+            [SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name))],
+            SqlDialect.Q(dialect, reference.TableName),
+            [SqlDialect.Q(dialect, reference.ColumnName)]);
+    }
+
     public static CreateTriggerStatement CreateTrigger(string dialect, SqlTable table, SqlMapping mapping, string key) =>
         new(
             SqlDialect.Q(dialect, table.TableName),

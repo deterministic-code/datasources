@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
+import { parse, stringify } from "yaml";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { generate as generateSql } from "./generate-sql.ts";
 import { generate as generateStoredProcedures } from "./generate-stored-procedures.ts";
@@ -283,5 +284,52 @@ describe("generate-stored-procedures datasource.use_stored_procedures", () => {
   it("emits nothing when the flag is absent", async () => {
     const files = await generateStoredProcedures(ctx({}), ["postgres"]);
     assert.deepEqual(files, []);
+  });
+});
+
+describe("generate-sql version diffs", () => {
+  it("emits numbered up/down files from frozen diffs", async () => {
+    const path = "version-20261016T000000Z-001/diff.yaml";
+    const diff = stringify({
+      "types.yaml": { added: true, content: parse(TYPES_YAML) },
+    });
+    const files = names(
+      await generateSql(
+        {
+          reader: memoryReader({ "types.yaml": TYPES_YAML, [path]: diff }),
+          settings: { "version.diffs": path },
+        },
+        ["sqlite"],
+      ),
+    );
+    assert.deepEqual(files, ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"]);
+  });
+
+  it("throws when live yaml drifted from frozen diffs", async () => {
+    const path = "version-20261016T000000Z-001/diff.yaml";
+    const diff = stringify({
+      "types.yaml": { added: true, content: parse(TYPES_YAML) },
+    });
+    await assert.rejects(
+      () =>
+        generateSql(
+          {
+            reader: memoryReader({
+              "types.yaml": `types:
+  - extra:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - name:
+            type: string
+`,
+              [path]: diff,
+            }),
+            settings: { "version.diffs": path },
+          },
+          ["sqlite"],
+        ),
+      /run datasources version first/,
+    );
   });
 });

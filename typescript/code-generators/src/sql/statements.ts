@@ -5,8 +5,10 @@ import {
   CreateTableStatement,
   CreateTriggerStatement,
   DeleteStatement,
+  DropIndexStatement,
   DropRoutineStatement,
   DropTableStatement,
+  DropTriggerStatement,
   ForeignKey,
   IdentityInsertStatement,
   InsertStatement,
@@ -39,7 +41,7 @@ import {
   type SqlDialect,
 } from "./common/sql-dialect.ts";
 
-const columnOf = (dialect: SqlDialect, mapping: SqlMapping, table: LiveTable, field: TypeField): Column => {
+export const columnOf = (dialect: SqlDialect, mapping: SqlMapping, table: LiveTable, field: TypeField): Column => {
   const overlay = fieldOverlay(table, field.name);
   const converterField = converterFieldOf(field);
   const generated = usesGeneratedIdColumn(table, field);
@@ -113,6 +115,44 @@ export const createIndexStatementOf = (
 
 export const dropTableStatementOf = (dialect: SqlDialect, table: string): DropTableStatement =>
   new DropTableStatement(q(dialect, table));
+
+export const dropIndexStatementOf = (
+  dialect: SqlDialect,
+  name: string,
+  table: string,
+): DropIndexStatement => new DropIndexStatement(q(dialect, name), q(dialect, table));
+
+export const dropTriggerStatementOf = (
+  dialect: SqlDialect,
+  name: string,
+  table: string,
+): DropTriggerStatement => new DropTriggerStatement(q(dialect, name), q(dialect, table));
+
+export const uniqueConstraintOf = (
+  dialect: SqlDialect,
+  mapping: SqlMapping,
+  table: LiveTable,
+  field: TypeField,
+): UniqueConstraint =>
+  new UniqueConstraint(
+    q(dialect, mapping.constraintName(table, mapping.fieldStem(table, field.name), "unique_constraint")),
+    [q(dialect, mapping.columnName(table, field.name))],
+  );
+
+export const foreignKeyOf = (
+  dialect: SqlDialect,
+  mapping: SqlMapping,
+  table: LiveTable,
+  field: TypeField,
+): ForeignKey => {
+  const ref = mapping.resolveReference(field.references!);
+  return new ForeignKey(
+    q(dialect, mapping.constraintName(table, mapping.fieldStem(table, field.name), "foreign_key")),
+    [q(dialect, mapping.columnName(table, field.name))],
+    q(dialect, ref.tableName),
+    [q(dialect, ref.columnName)],
+  );
+};
 
 export const createTriggerStatementOf = (
   dialect: SqlDialect,

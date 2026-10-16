@@ -1,0 +1,1 @@
+var drop = new DropIndexStatement("idx_orders_user", "orders");
