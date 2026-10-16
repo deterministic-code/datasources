@@ -101,4 +101,12 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["migrations", "create", "--migrations-path"])).toThrow(/Missing value for --migrations-path/);
     expect(help).toMatch(/migrations create/);
   });
+
+  it("parses version", () => {
+    expect(parseArgs(["version"]).command).toEqual({ kind: "version", input: "deterministic" });
+    expect(parseArgs(["version", "--input", "in"]).command).toEqual({ kind: "version", input: "in" });
+    expect(parseArgs(["version", "--input=spec"]).command).toEqual({ kind: "version", input: "spec" });
+    expect(() => parseArgs(["version", "extra"])).toThrow(/Usage: datasources version/);
+    expect(help).toMatch(/version[\s\S]*version-\*\/diff\.yaml/);
+  });
 });

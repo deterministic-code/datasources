@@ -1,0 +1,63 @@
+import { isAbsolute, join } from "node:path";
+import type { Flags, VersionCommand } from "../parse.ts";
+import type { Deps } from "../run.ts";
+import type { Json } from "./delta.ts";
+import { applyDocument, asDocument, parseYaml, render } from "./render.ts";
+
+const versionDir = /^version-\d{8}T\d{6}Z-(\d{3})$/;
+
+const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
+
+export const applyVersion = async (
+  command: VersionCommand,
+  flags: Flags,
+  deps: Deps,
+  now = () => new Date(),
+): Promise<void> => {
+  const root = at(flags.cwd, command.input);
+  const names = await deps.fs.readdir(root);
+  const versions = names.filter((name) => versionDir.test(name)).sort();
+  let before: { [path: string]: Json } = {};
+  for (const dir of versions) {
+    const text = await optional(deps.fs, join(root, dir, "diff.yaml"));
+    if (text === undefined || text === "") continue;
+    before = applyDocument(before, asDocument(parseYaml(text), `${dir}/diff.yaml`));
+  }
+  const current = names.filter((name) => name.endsWith(".yaml")).sort();
+  const paths = [...new Set([...Object.keys(before), ...current])];
+  const yaml = render(
+    await Promise.all(
+      paths.map(async (path) => ({
+        path,
+        before: before[path],
+        after: current.includes(path) ? parseYaml(await deps.fs.readFile(join(root, path))) : undefined,
+      })),
+    ),
+  );
+  if (yaml === "") {
+    deps.log("unchanged");
+    return;
+  }
+  const out = join(root, `version-${stamp(now())}-${pad(nextSeq(versions))}`, "diff.yaml");
+  if (!flags.dryRun) await deps.fs.writeFile(out, yaml);
+  deps.log(out);
+};
+
+const nextSeq = (versions: string[]): number => {
+  const next =
+    versions.reduce((max, name) => Math.max(max, Number(name.match(versionDir)![1])), 0) + 1;
+  return next <= 999 ? next : (() => { throw new Error("version sequence exceeds 999"); })();
+};
+
+const pad = (n: number): string => String(n).padStart(3, "0");
+
+const stamp = (date: Date): string =>
+  date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+const optional = async (fs: Deps["fs"], path: string): Promise<string | undefined> => {
+  try {
+    return await fs.readFile(path);
+  } catch {
+    return undefined;
+  }
+};

@@ -22,6 +22,7 @@ import { applyGenerate } from "./generate/applyGenerate.ts";
 import { applyMigrations } from "./generate/applyMigrations.ts";
 import { migrateInitCommands, sqlMigrateProviders } from "./migrateInit.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
+import { applyVersion } from "./version/applyVersion.ts";
 import { envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
 import { wireRegister } from "./wireRegister.ts";
 import type { Dialect } from "./generate/GenerateRequest.ts";
@@ -50,6 +51,7 @@ const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<voi
   if (command.kind === "setup") return applySetup(flags, deps);
   if (command.kind === "add") return applyAddRemove(flags, deps, requireProviders(needNames(command.providers, "add")), []);
   if (command.kind === "remove") return applyAddRemove(flags, deps, [], requireProviders(needNames(command.providers, "remove")));
+  if (command.kind === "version") return applyVersion(command, flags, deps);
   return command.kind === "migrations-create" ? applyMigrations(command, flags, deps) : applyGenerate(command, flags, deps);
 };
 
