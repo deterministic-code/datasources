@@ -115,6 +115,24 @@ npx @datasources/cli generate all --dialect typescript
 
 See [Generate](docs/cli.md#generate). Walkthroughs for a User, an enriched users-and-roles spec, and a legacy table mapping are on [Repository Generation](#repository-generation).
 
+### Migrating
+
+**Prompt**
+
+```
+Create migrations and migrate up for sqlite
+```
+
+`migrations create` writes SQL from the spec. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+```
+
+See [Migrations](docs/cli.md#migrations).
+
 ### Using the generated code
 
 `setup` and `generate` wire the generated registry so `Datasource.Default` / `Datasource.default` / `default()` binds `Items` / `items` / `items()`. `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity.
@@ -721,6 +739,14 @@ npx @datasources/cli generate all --dialect rust
 npx @datasources/cli generate all --dialect typescript
 ```
 
+`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+```
+
 `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity. `Update` and `Delete` return `Response`.
 
 ##### C#
@@ -827,6 +853,14 @@ npx @datasources/cli generate all --dialect rust
 
 ```typescript
 npx @datasources/cli generate all --dialect typescript
+```
+
+`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
 
 Create a role, then a user that lists that role. `Create` / `create` / `create` writes the junction row. `ReadSingle` / `readSingle` / `read_single` fills `Roles` / `roles` / `roles`. Delete removes the user and the junction; the role row stays.
@@ -944,6 +978,14 @@ npx @datasources/cli generate all --dialect rust
 
 ```typescript
 npx @datasources/cli generate all --dialect typescript
+```
+
+`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
 
 The generated repository maps those stored names. The CRUD call still uses `Username` / `username` / `username`.
@@ -1357,6 +1399,9 @@ _None._
   - [Delete Statement](docs/sections/delete-statement.md)
   - [Create Table Statement](docs/sections/create-table-statement.md)
   - [Create Index Statement](docs/sections/create-index-statement.md)
+  - [Alter Table Statement](docs/sections/alter-table-statement.md)
+  - [Drop Index Statement](docs/sections/drop-index-statement.md)
+  - [Drop Trigger Statement](docs/sections/drop-trigger-statement.md)
   - [Execute Stored Procedure Statement](docs/sections/execute-stored-procedure-statement.md)
   - [Return Statement](docs/sections/return-statement.md)
   - [Where](docs/sections/where-clause.md)

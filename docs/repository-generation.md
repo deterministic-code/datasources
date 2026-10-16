@@ -39,6 +39,14 @@ npx @datasources/cli generate all --dialect typescript
 ```
 :::
 
+`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+```
+
 {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity. `Update` and `Delete` return `Response`.
 
 ::: dialects
@@ -134,6 +142,14 @@ npx @datasources/cli generate all --dialect rust
 npx @datasources/cli generate all --dialect typescript
 ```
 :::
+
+`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+```
 
 Create a role, then a user that lists that role. {{Create|create|create}} writes the junction row. {{ReadSingle|readSingle|read_single}} fills {{Roles|roles|roles}}. Delete removes the user and the junction; the role row stays.
 
@@ -239,6 +255,14 @@ npx @datasources/cli generate all --dialect rust
 npx @datasources/cli generate all --dialect typescript
 ```
 :::
+
+`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
+
+```sh
+npx @datasources/cli migrations create
+npx migrate-up --provider sqlite --connection ./app.sqlite
+npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+```
 
 The generated repository maps those stored names. The CRUD call still uses {{Username|username|username}}.
 
