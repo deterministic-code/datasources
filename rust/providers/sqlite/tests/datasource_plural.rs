@@ -3,7 +3,7 @@ use datasources::{
     Casing, ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository, Response, Row, Value,
     Where,
 };
-use datasources_sql_specs::apply_schema;
+use datasources_tests::apply_schema;
 use std::sync::Arc;
 
 struct User;

@@ -1,4 +1,4 @@
-use crate::contact_view::ContactView;
+use super::contact_view::ContactView;
 
 pub fn as_contacts_view(contacts: &[ContactView]) -> Vec<ContactView> {
     let mut items = contacts.to_vec();

@@ -1,5 +1,5 @@
-use crate::contact_columns::{columns, snake};
-use crate::contact_lookups::ContactLookups;
+use super::contact_columns::{columns, snake};
+use super::contact_lookups::ContactLookups;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Connection, DatasourceError, IReadonlyRepository,

@@ -1,4 +1,4 @@
-use crate::contact_view::{AddressView, ContactView, PhoneView};
+use super::contact_view::{AddressView, ContactView, PhoneView};
 use datasources::{Row, Value};
 
 fn text(row: &Row, key: &str) -> String {

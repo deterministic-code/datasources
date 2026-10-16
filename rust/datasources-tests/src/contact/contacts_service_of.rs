@@ -1,4 +1,4 @@
-use crate::contact_columns::{columns, contact_entity, references, snake};
+use super::contact_columns::{columns, contact_entity, references, snake};
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, CRUDRepository, CRUDRepositoryOptions, CommandMiddleware, Connection,

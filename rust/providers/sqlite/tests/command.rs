@@ -4,7 +4,7 @@ use datasources::{
     Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, TypeMap, TypeMapField,
     TypeMapGroup, Value,
 };
-use datasources_sql_specs::apply_schema;
+use datasources_tests::apply_schema;
 use futures_util::TryStreamExt;
 
 struct NameValue;

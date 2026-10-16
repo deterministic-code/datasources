@@ -16,37 +16,8 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-mod add_extra_contact;
-mod as_contacts_view;
-mod contact_columns;
-mod contact_lookup_ids;
-mod contact_lookups;
-mod contact_view;
-mod contacts_join_query;
-mod contacts_parity;
-mod contacts_service_of;
-mod contacts_view;
-mod expect_contacts_view;
-mod from_enriched_contacts;
-mod from_mapped_contacts;
-mod schema_spec;
-mod seed_contacts;
-
-pub use add_extra_contact::add_extra_contact;
-pub use as_contacts_view::as_contacts_view;
-pub use contact_columns::{columns, contact_entity, join_entity, references, snake};
-pub use contact_lookup_ids::contact_lookup_ids;
-pub use contact_lookups::ContactLookups;
-pub use contact_view::{AddressView, ContactView, PhoneView};
-pub use contacts_join_query::contacts_join_query;
-pub use contacts_parity::{apply_sql, contact_schema, contact_seed, contacts_parity, statements_of};
-pub use contacts_service_of::contacts_service_of;
-pub use contacts_view::contacts_view;
-pub use expect_contacts_view::{contact_with, expect_contacts_view};
-pub use from_mapped_contacts::from_mapped_contacts;
-pub use schema_spec::apply_schema;
-pub use schema_spec::tables as schema_tables;
-pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
+use crate::repo_root;
+use crate::schema_spec::tables as schema_tables;
 
 pub struct RepositoryDialect {
     pub provider: &'static str,
@@ -144,14 +115,6 @@ struct UpdateByOp {
     where_clause: BTreeMap<String, serde_yaml::Value>,
     #[serde(default)]
     expect: Option<serde_yaml::Value>,
-}
-
-pub fn repo_root() -> std::path::PathBuf {
-    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|p| p.parent())
-        .expect("repo root")
-        .to_path_buf()
 }
 
 fn verbose() -> bool {

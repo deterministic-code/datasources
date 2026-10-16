@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "datasources",
-    "sql-specs",
+    "datasources-tests",
     "code-generators",
     "providers/*",
 ]

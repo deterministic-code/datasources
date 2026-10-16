@@ -643,7 +643,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "datasources",
- "datasources-sql-specs",
+ "datasources-tests",
  "futures-core",
  "mysql_async",
  "regex",
@@ -673,7 +673,7 @@ dependencies = [
  "bytes",
  "chrono",
  "datasources",
- "datasources-sql-specs",
+ "datasources-tests",
  "futures-core",
  "regex",
  "rust_decimal",
@@ -686,27 +686,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "datasources-sql-specs"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "datasources",
- "rust_decimal",
- "serde",
- "serde_yaml",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "datasources-sqlite"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
  "datasources",
- "datasources-sql-specs",
+ "datasources-tests",
  "futures-util",
  "regex",
  "rusqlite",
@@ -725,6 +711,20 @@ dependencies = [
  "datasources",
  "regex",
  "tokio",
+]
+
+[[package]]
+name = "datasources-tests"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "datasources",
+ "rust_decimal",
+ "serde",
+ "serde_yaml",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
