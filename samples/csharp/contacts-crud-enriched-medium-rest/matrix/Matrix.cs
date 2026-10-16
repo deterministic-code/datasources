@@ -28,7 +28,7 @@ try
     await connection.Open();
     var command = connection.CreateCommand();
     if (provider == "sqlite") await command.Execute(new Native("PRAGMA foreign_keys = ON"));
-    foreach (var sql in Statements(await File.ReadAllTextAsync(Environment.GetEnvironmentVariable("E2E_MATRIX_SQL") ?? throw new InvalidOperationException("E2E_MATRIX_SQL"))))
+    foreach (var sql in Statements(UpSql(Environment.GetEnvironmentVariable("E2E_MATRIX_SQL") ?? throw new InvalidOperationException("E2E_MATRIX_SQL"))))
         await command.Execute(new Native(sql));
     var stamp = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
     var n = 0;
@@ -108,6 +108,17 @@ static string At(JsonElement root, string pointer)
         _ => current.GetRawText()
     };
 }
+
+static string UpSql(string path) =>
+    Directory.Exists(path)
+        ? string.Join('\n', Directory.GetFiles(path)
+            .Select(Path.GetFileName)
+            .Where(name => name is not null
+                && System.Text.RegularExpressions.Regex.IsMatch(name, @"^\d{4}_up\.sql$")
+                && !name.EndsWith("_stored_procedures_up.sql", StringComparison.Ordinal))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .Select(name => File.ReadAllText(Path.Combine(path, name!))))
+        : File.ReadAllText(path);
 
 static IEnumerable<string> Statements(string sql)
 {

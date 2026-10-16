@@ -1,0 +1,9 @@
+types.yaml:
+  types:
+    changed:
+      - role:
+          fields:
+            removed:
+              - description
+    removed:
+      - audit_log

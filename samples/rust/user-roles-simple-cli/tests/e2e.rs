@@ -104,11 +104,10 @@ fn docker_ok(args: &[&str]) {
         .status();
 }
 
-fn compose_args(args: &[&str]) -> Vec<&str> {
-    ["compose", "-p", "datasources", "-f", "docker/compose.yml"]
-        .into_iter()
-        .chain(args.iter().copied())
-        .collect()
+fn compose_args<'a>(args: &'a [&str]) -> Vec<&'a str> {
+    let mut out = vec!["compose", "-p", "datasources", "-f", "docker/compose.yml"];
+    out.extend(args.iter().copied());
+    out
 }
 
 fn remove_compose(service: &str) {
@@ -576,7 +575,7 @@ fn drops_extra_fields_and_tables_across_three_versions() {
         .filter(|path| {
             path.file_name()
                 .and_then(|name| name.to_str())
-                .is_some_and(|name| name.len() == 10 && name.ends_with("_up.sql"))
+                .is_some_and(|name| name.len() == 11 && name.ends_with("_up.sql"))
         })
         .collect();
     files.sort();

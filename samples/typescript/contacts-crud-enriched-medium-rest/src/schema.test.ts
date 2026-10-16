@@ -12,6 +12,8 @@ describe("schema", () => {
     expect(sql.some((item) => item.startsWith('CREATE TABLE "contact_preferences"'))).toBe(true);
     expect(sql.every((item) => !item.includes('CREATE TABLE "bases"'))).toBe(true);
     expect(sql.some((item) => item.includes("INSERT INTO \"contact_sources\""))).toBe(true);
+    expect(sql.some((item) => item.includes("DROP COLUMN"))).toBe(true);
+    expect(sql.some((item) => item.includes("DROP TABLE"))).toBe(true);
     expect(sql.every((item) => item.endsWith(";"))).toBe(true);
   });
 
@@ -78,7 +80,7 @@ END;
 CREATE TABLE "XBEGIN" ("id" INTEGER);
 `).length,
     ).toBe(2);
-    expect(sqlPath()).toContain("0001_initial_up.sql");
+    expect(sqlPath()).toMatch(/migrations$/);
     expect(() => sqlPath(mkdtempSync(join(tmpdir(), "contacts-")))).toThrow(/generated sql/);
   });
 });

@@ -57,7 +57,7 @@ async fn main() {
     }
     let sql = std::env::var("E2E_MATRIX_SQL")
         .ok()
-        .and_then(|path| std::fs::read_to_string(path).ok())
+        .and_then(|path| schema::up_sql_from(path).ok())
         .unwrap_or_else(|| schema::GENERATED_SQL.to_string());
     for statement in schema::statements(&sql) {
         command

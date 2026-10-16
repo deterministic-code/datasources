@@ -15,5 +15,8 @@ serde_json = "1"
 serde_yaml = "0.9"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
+[dev-dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+
 [lints.rust]
 warnings = "deny"

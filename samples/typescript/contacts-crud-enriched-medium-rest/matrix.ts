@@ -10,7 +10,7 @@ import { Api } from "./src/api.ts";
 import { clock } from "./src/clock.ts";
 import { LegacyContactRepository } from "./generated/typescript/repositories/legacy-contact-repository.ts";
 import { ContactRepository } from "./generated/typescript/repositories/contact-repository.ts";
-import { statements } from "./src/schema.ts";
+import { statements, upSqlFrom } from "./src/schema.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
 type Scalar = string | number | boolean | null;
@@ -74,7 +74,7 @@ try {
   await connection.open();
   const command = connection.createCommand();
   if (provider === "sqlite") await command.executeNative(new Native("PRAGMA foreign_keys = ON"));
-  for (const sql of sqlFile ? statements(readFileSync(sqlFile, "utf8")) : statements())
+  for (const sql of sqlFile ? statements(upSqlFrom(sqlFile)) : statements())
     await command.executeNative(new Native(sql));
   const stamp = new Date(spec.now);
   let n = 0;

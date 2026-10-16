@@ -10,6 +10,6 @@ describe("migrate", () => {
     const connection = new SqliteDriver().connection({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     await migrate(connection.createCommand());
-    expect(sqlPath(resolve(dirname(fileURLToPath(import.meta.url)), "../../../.."))).toContain("0001_initial_up.sql");
+    expect(sqlPath(resolve(dirname(fileURLToPath(import.meta.url)), "../../../.."))).toMatch(/migrations$/);
   });
 });

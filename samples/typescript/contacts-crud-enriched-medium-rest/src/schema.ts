@@ -1,11 +1,21 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const upName = (name: string): boolean => /^\d{4}_up\.sql$/.test(name) && !name.endsWith("_stored_procedures_up.sql");
+
+const isMigrations = (dir: string): boolean => {
+  try {
+    return readdirSync(dir).some((name) => upName(name) || name === "0001_initial_up.sql");
+  } catch {
+    return false;
+  }
+};
+
 export const sqlPath = (start = dirname(fileURLToPath(import.meta.url))): string => {
   for (let dir = start; dir !== dirname(dir); dir = dirname(dir)) {
-    const direct = join(dir, "generated", "sql", "sqlite", "migrations", "0001_initial_up.sql");
-    if (exists(direct)) return direct;
+    const direct = join(dir, "generated", "sql", "sqlite", "migrations");
+    if (isMigrations(direct)) return direct;
     const nested = join(
       dir,
       "samples",
@@ -15,14 +25,23 @@ export const sqlPath = (start = dirname(fileURLToPath(import.meta.url))): string
       "sql",
       "sqlite",
       "migrations",
-      "0001_initial_up.sql",
     );
-    if (exists(nested)) return nested;
+    if (isMigrations(nested)) return nested;
   }
   throw new Error("generated sql");
 };
 
-export const statements = (sql = readFileSync(sqlPath(), "utf8")): string[] => {
+export const upSqlFrom = (path: string): string => {
+  if (!existsSync(path)) throw new Error("generated sql");
+  if (statSync(path).isFile()) return readFileSync(path, "utf8");
+  const names = readdirSync(path).filter(upName).sort();
+  if (names.length > 0) return names.map((name) => readFileSync(join(path, name), "utf8")).join("\n");
+  const initial = join(path, "0001_initial_up.sql");
+  if (existsSync(initial)) return readFileSync(initial, "utf8");
+  throw new Error("generated sql");
+};
+
+export const statements = (sql = upSqlFrom(sqlPath())): string[] => {
   const cleaned = sql
     .split("\n")
     .filter((line) => !line.trimStart().startsWith("--"))
@@ -57,15 +76,6 @@ export const withSeedVersion = (sql: string): string => {
   return values < 0
     ? sql
     : `${sql.slice(0, values)}, ${quote}version${quote}) VALUES (${sql.slice(values + ") VALUES (".length, -2)}, X'00');`;
-};
-
-const exists = (path: string): boolean => {
-  try {
-    readFileSync(path);
-    return true;
-  } catch {
-    return false;
-  }
 };
 
 const word = (sql: string, i: number, token: string): boolean => {

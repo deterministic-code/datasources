@@ -2538,6 +2538,7 @@ dependencies = [
  "futures-util",
  "mysql_async",
  "regex",
+ "rusqlite",
  "serde",
  "serde_json",
  "serde_yaml",

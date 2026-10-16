@@ -1,0 +1,9 @@
+types.yaml:
+  types:
+    changed:
+      - address_base:
+          fields:
+            removed:
+              - line3
+    removed:
+      - note_pad
