@@ -174,11 +174,11 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
         RemoveCompose(service);
-        Require(Exec("docker", $"compose up -d --wait {service}", RepoRoot()));
+        Require(Exec("docker", $"compose -p datasources -f docker/compose.yml up -d --wait {service}", RepoRoot()));
         if (service == "mysql")
             Require(Exec(
                 "docker",
-                "compose exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\"",
+                "compose -p datasources -f docker/compose.yml exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\"",
                 RepoRoot()));
     }
 
@@ -190,7 +190,7 @@ public sealed class CliE2ETests(ITestOutputHelper output)
 
     static void RemoveCompose(string service)
     {
-        Exec("docker", $"compose rm -sf -v {service}", RepoRoot());
+        Exec("docker", $"compose -p datasources -f docker/compose.yml rm -sf -v {service}", RepoRoot());
         Exec("docker", $"rm -f datasources-{service}-1", RepoRoot());
     }
 

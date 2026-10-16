@@ -7,7 +7,7 @@ import { parsePointer, slug, snippetFile } from "./sync-examples.mjs";
 import { parseToc, uniquePages } from "./toc.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-export const SKILL_ROOTS = ["skills", ".cursor/skills/datasources", ".claude/skills/datasources"];
+export const SKILL_ROOTS = ["skills", ".cursor/skills/datasources"];
 export const SKILL_REPO = "deterministic-code/datasources";
 const BANNER = "<!-- Generated from docs/. Edit the markdown in docs/ and run npm run docs:skill. -->\n\n";
 const SKIP_DOCS = new Set(["docs/examples.md", "docs/sections/where-statement.md"]);

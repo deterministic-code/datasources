@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 const compose = (...args: string[]) =>
-  execFileSync("docker", ["compose", ...args], { cwd: root, stdio: "inherit" });
+  execFileSync("docker", ["compose", "-p", "datasources", "-f", "docker/compose.yml", ...args], {
+    cwd: root,
+    stdio: "inherit",
+  });
 
 const up = (service: "mysql" | "postgres") => {
   let last: unknown;
