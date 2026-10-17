@@ -20,6 +20,10 @@ export type GenerateCommand = {
   provider: string;
   input: string;
   output: string;
+  migrations: boolean;
+  migrate: boolean;
+  migrationsRoot: string;
+  migrationsPath?: string;
 };
 
 export type MigrationsCreateCommand = {
@@ -68,6 +72,10 @@ generate <all|types|repositories|datasource>
   --provider <name>           Spec provider (default: deterministic)
   --input <dir>               Deterministic project (default: ./deterministic)
   --output <dir>              Generated files (default: ./generated)
+  --no-migrations             Skip SQL migrations (generate all writes them)
+  --no-migrate                Skip migrate-up (generate all applies them)
+  --migrations-root <dir>     Root prefix for generate all (default: sql)
+  --migrations-path <dir>     One migrations directory (single SQL dialect)
 
 migrations create     SQL migrations from the spec (migraters layout)
   --provider <name>           Spec provider (default: deterministic)
@@ -92,6 +100,8 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     provider: "deterministic",
     input: "deterministic",
     output: "generated",
+    migrations: true,
+    migrate: true,
     migrationsRoot: "sql",
     migrationsPath: "",
   };
@@ -112,6 +122,8 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg.startsWith("--input=")) generate.input = arg.slice("--input=".length);
     else if (arg === "--output") generate.output = take(argv, ++i, "--output");
     else if (arg.startsWith("--output=")) generate.output = arg.slice("--output=".length);
+    else if (arg === "--no-migrations") generate.migrations = false;
+    else if (arg === "--no-migrate") generate.migrate = false;
     else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
     else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
     else if (arg === "--migrations-path") generate.migrationsPath = take(argv, ++i, "--migrations-path");
@@ -131,6 +143,8 @@ const commandOf = (
     provider: string;
     input: string;
     output: string;
+    migrations: boolean;
+    migrate: boolean;
     migrationsRoot: string;
     migrationsPath: string;
   },
@@ -167,13 +181,33 @@ const versionCommand = (names: string[], input: string): VersionCommand => {
 
 const generateCommand = (
   names: string[],
-  generate: { dialect: string; provider: string; input: string; output: string },
+  generate: {
+    dialect: string;
+    provider: string;
+    input: string;
+    output: string;
+    migrations: boolean;
+    migrate: boolean;
+    migrationsRoot: string;
+    migrationsPath: string;
+  },
 ): GenerateCommand => {
   if (names.length !== 1) throw new Error(`Usage: datasources generate <all|types|repositories|datasource>\n${help}`);
   const target = names[0] as string;
   if (!isTarget(target)) throw new Error(`Usage: datasources generate <all|types|repositories|datasource>\n${help}`);
   if (!isDialect(generate.dialect)) throw new Error("--dialect is required (csharp|typescript|rust)");
-  return { kind: "generate", target, dialect: generate.dialect, provider: generate.provider, input: generate.input, output: generate.output };
+  return {
+    kind: "generate",
+    target,
+    dialect: generate.dialect,
+    provider: generate.provider,
+    input: generate.input,
+    output: generate.output,
+    migrations: generate.migrations,
+    migrate: generate.migrate,
+    migrationsRoot: generate.migrationsRoot,
+    ...(generate.migrationsPath === "" ? {} : { migrationsPath: generate.migrationsPath }),
+  };
 };
 
 const ecosystem = (value: string | undefined): Ecosystem =>

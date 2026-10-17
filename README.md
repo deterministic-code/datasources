@@ -93,7 +93,7 @@ types:
             size: 128
 ```
 
-`generate all` writes the types, the repositories, and SQL for one language. The default input directory is `./deterministic`. The default output directory is `./generated`.
+`generate all` writes the types, the repositories, and SQL for one language. It also writes SQL migrations and runs migrate-up. The default input directory is `./deterministic`. The default output directory is `./generated`. See [Migrating](#migrating).
 
 ##### C#
 
@@ -123,7 +123,29 @@ See [Generate](docs/cli.md#generate). Walkthroughs for a User, an enriched users
 Create migrations and migrate up for sqlite
 ```
 
-`migrations create` writes SQL from the spec. `migrate-up` applies it. `migrate-down` rolls one step back.
+`generate all` writes SQL migrations under `sql/<dialect>/migrations` and runs migrate-up. The connection is `PROVIDER` and `DATASOURCE_URL` from `.env`. Process env overrides the file. An in-memory `DATASOURCE_URL` skips migrate-up.
+
+```sh
+PROVIDER=sqlite
+DATASOURCE_URL=sqlite:///./app.sqlite
+```
+
+```sh
+npx @datasources/cli generate all --dialect typescript
+```
+
+`--no-migrations` skips writing the migration files. `--no-migrate` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
+
+```sh
+npx @datasources/cli generate all --dialect typescript --no-migrations
+npx @datasources/cli generate all --dialect typescript --no-migrate
+```
+
+See [Migrations](docs/cli.md#migrations).
+
+### Adding migrations manually
+
+`migrations create` writes the same SQL files as `generate all` and leaves the database unchanged. `migrate-up` applies every pending file. `migrate-down` rolls one step back and needs the token it prints, passed as `--confirm`.
 
 ```sh
 npx @datasources/cli migrations create
@@ -131,7 +153,18 @@ npx migrate-up --provider sqlite --connection ./app.sqlite
 npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
 
-See [Migrations](docs/cli.md#migrations).
+Add a migration that generate keeps. Put an up file and a down file under `deterministic/custom/<dialect>/`. The file name is `<order>_<name>_<up|down>.sql`. `order` is 1–999. `name` starts with a letter or digit. The next `generate all` copies the pair into `sql/<dialect>/migrations` and runs migrate-up.
+
+```text
+deterministic/custom/sqlite/0001_add_notes_up.sql
+deterministic/custom/sqlite/0001_add_notes_down.sql
+```
+
+Scaffold an empty pair in the migrations directory with migraters:
+
+```sh
+npx migrate-create --provider sqlite --name add_notes
+```
 
 ### Using the generated code
 
@@ -739,13 +772,7 @@ npx @datasources/cli generate all --dialect rust
 npx @datasources/cli generate all --dialect typescript
 ```
 
-`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
-
-```sh
-npx @datasources/cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
-```
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity. `Update` and `Delete` return `Response`.
 
@@ -855,13 +882,7 @@ npx @datasources/cli generate all --dialect rust
 npx @datasources/cli generate all --dialect typescript
 ```
 
-`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
-
-```sh
-npx @datasources/cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
-```
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 Create a role, then a user that lists that role. `Create` / `create` / `create` writes the junction row. `ReadSingle` / `readSingle` / `read_single` fills `Roles` / `roles` / `roles`. Delete removes the user and the junction; the role row stays.
 
@@ -980,13 +1001,7 @@ npx @datasources/cli generate all --dialect rust
 npx @datasources/cli generate all --dialect typescript
 ```
 
-`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
-
-```sh
-npx @datasources/cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
-```
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 The generated repository maps those stored names. The CRUD call still uses `Username` / `username` / `username`.
 

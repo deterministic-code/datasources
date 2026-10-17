@@ -58,6 +58,7 @@ const silent: Prompter = {
   select: async ({ default: def }) => def,
   checkbox: async ({ choices }) => choices.filter((choice) => choice.checked).map((choice) => choice.value),
   input: async ({ default: def }) => def,
+  confirm: async ({ default: def }) => def,
 };
 
 const deps = (fs: Fs): Deps & { logs: string[] } => {
@@ -453,7 +454,13 @@ types: []
     for (const target of targets) {
       const store = mem(seeded);
       const io = deps(store.fs);
-      expect(await run(["generate", target, "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+      expect(
+        await run(
+          ["generate", target, "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-migrate"],
+          io,
+          cwd,
+        ),
+      ).toBe(0);
       expect(io.logs.length).toBeGreaterThan(0);
     }
     const rustTypes = mem(seeded);
@@ -532,6 +539,62 @@ types: []
     const registry = store.files[join(cwd, "generated/typescript/repositories/repository-registry.ts")];
     expect(registry).toContain('"Kept", "kepts"');
     expect(registry).not.toContain('"Dropped"');
+  });
+
+  it("generate all writes migrations and migrates up", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "PROVIDER=sqlite\nDATASOURCE_URL=sqlite:///./app.sqlite\n";
+    const store = mem(seeded);
+    const ran: string[] = [];
+    const io = deps(store.fs);
+    io.run = async (command, args) => {
+      ran.push(`${command} ${args.join(" ")}`);
+    };
+    const previous = { PROVIDER: process.env.PROVIDER, DATASOURCE_URL: process.env.DATASOURCE_URL };
+    delete process.env.PROVIDER;
+    delete process.env.DATASOURCE_URL;
+    try {
+      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+      expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+      expect(ran).toEqual(["npx migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql"]);
+      const dry = mem(seeded);
+      const dryRan: string[] = [];
+      const dryIo = deps(dry.fs);
+      dryIo.run = async (command, args) => {
+        dryRan.push(`${command} ${args.join(" ")}`);
+      };
+      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
+      expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
+      expect(dryIo.logs.some((line) => line.includes("migrate-up --provider sqlite"))).toBe(true);
+      expect(dryRan).toEqual([]);
+      const skipped = mem(seeded);
+      const skipIo = deps(skipped.fs);
+      expect(
+        await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-migrate"], skipIo, cwd),
+      ).toBe(0);
+      expect(skipped.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
+      expect(skipIo.logs.some((line) => line.includes("migrate-up"))).toBe(false);
+      const memory = mem({
+        ...seeded,
+        [join(cwd, ".env")]: "PROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
+      });
+      const memoryIo = deps(memory.fs);
+      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], memoryIo, cwd)).toBe(0);
+      expect(memoryIo.logs.some((line) => line.includes("in-memory"))).toBe(true);
+      const mismatch = mem({
+        ...seeded,
+        [join(cwd, ".env")]: "PROVIDER=postgres\nDATASOURCE_URL=postgres://localhost/db\n",
+      });
+      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], deps(mismatch.fs), cwd)).toBe(1);
+    } finally {
+      if (previous.PROVIDER === undefined) delete process.env.PROVIDER;
+      else process.env.PROVIDER = previous.PROVIDER;
+      if (previous.DATASOURCE_URL === undefined) delete process.env.DATASOURCE_URL;
+      else process.env.DATASOURCE_URL = previous.DATASOURCE_URL;
+    }
   });
 
   it("writes migrations create into the migraters layout", async () => {

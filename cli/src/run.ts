@@ -20,6 +20,7 @@ import {
 } from "./installed.ts";
 import { applyGenerate } from "./generate/applyGenerate.ts";
 import { applyMigrations } from "./generate/applyMigrations.ts";
+import { applyMigrateUp } from "./generate/migrateUp.ts";
 import { migrateInitCommands, sqlMigrateProviders } from "./migrateInit.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { applyVersion } from "./version/applyVersion.ts";
@@ -52,7 +53,22 @@ const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<voi
   if (command.kind === "add") return applyAddRemove(flags, deps, requireProviders(needNames(command.providers, "add")), []);
   if (command.kind === "remove") return applyAddRemove(flags, deps, [], requireProviders(needNames(command.providers, "remove")));
   if (command.kind === "version") return applyVersion(command, flags, deps);
-  return command.kind === "migrations-create" ? applyMigrations(command, flags, deps) : applyGenerate(command, flags, deps);
+  if (command.kind === "migrations-create") return applyMigrations(command, flags, deps);
+  await applyGenerate(command, flags, deps);
+  if (command.target !== "all") return;
+  if (command.migrations)
+    await applyMigrations(
+      {
+        kind: "migrations-create",
+        provider: command.provider,
+        input: command.input,
+        migrationsRoot: command.migrationsRoot,
+        ...(command.migrationsPath === undefined ? {} : { migrationsPath: command.migrationsPath }),
+      },
+      flags,
+      deps,
+    );
+  if (command.migrate) await applyMigrateUp(command, flags, deps);
 };
 
 const needNames = (names: string[], verb: string): string[] =>
