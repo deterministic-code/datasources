@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use crate::default_write_enrichment_strategy::{
     decode_rows, encode_rows, related_ids, required, row_key,
 };
@@ -104,7 +105,7 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                 ))),
                 None, None
         )
-            .await?;
+            .try_collect::<Vec<_>>().await?;
         let wanted = related_ids(parent, enrichment)?;
         let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();
         for row in &existing {

@@ -25,6 +25,7 @@ struct CallState {
 pub struct MockConnection {
     state: Mutex<CallState>,
     transaction: Arc<dyn Transaction>,
+    mock_transaction: Option<Arc<MockTransaction>>,
     command: Arc<dyn Command>,
     provider: String,
 }
@@ -42,9 +43,11 @@ impl MockConnection {
         command: Arc<dyn Command>,
         provider: impl Into<String>,
     ) -> Arc<Self> {
+        let mock_transaction = Arc::new(MockTransaction::new_unbound());
         Arc::new(Self {
             state: Mutex::new(CallState::default()),
-            transaction: Arc::new(MockTransaction::new_unbound()),
+            transaction: Arc::clone(&mock_transaction) as Arc<dyn Transaction>,
+            mock_transaction: Some(mock_transaction),
             command,
             provider: provider.into(),
         })
@@ -54,6 +57,7 @@ impl MockConnection {
         Arc::new(Self {
             state: Mutex::new(CallState::default()),
             transaction,
+            mock_transaction: None,
             command: Arc::new(MockCommand::new()),
             provider: "mock".into(),
         })
@@ -138,7 +142,11 @@ impl Connection for MockConnection {
         if let Some(error) = &state.start_error {
             return Err(DatasourceError::message(error.clone()));
         }
-        state.last_isolation = isolation.unwrap_or_default();
+        let isolation = isolation.unwrap_or(IsolationLevel::Serializable);
+        state.last_isolation = isolation;
+        if let Some(transaction) = &self.mock_transaction {
+            transaction.set_isolation(isolation);
+        }
         Ok(self.transaction.clone())
     }
 }

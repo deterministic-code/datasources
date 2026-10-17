@@ -1,6 +1,7 @@
 use crate::connection::SqliteConnection;
 use async_trait::async_trait;
 use datasources::{IsolationLevel, Result, Transaction};
+use std::sync::Arc;
 
 pub struct SqliteTransaction {
     connection: SqliteConnection,
@@ -18,6 +19,10 @@ impl SqliteTransaction {
 
 #[async_trait]
 impl Transaction for SqliteTransaction {
+    fn connection(&self) -> Arc<dyn datasources::Connection> {
+        Arc::new(self.connection.share())
+    }
+
     fn isolation(&self) -> IsolationLevel {
         self.isolation
     }

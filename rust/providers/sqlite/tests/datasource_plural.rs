@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use datasources::{
     create_crud_repository_options, create_readonly_repository_mapping_options, default, eq,
     Casing, ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository, Response, Row, Value,
@@ -69,9 +70,9 @@ async fn creates_using_dynamic_after_register() {
     let mut created = Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let created = users.create(&mut created).await.unwrap();
+    let mut created = users.create(&mut created).await.unwrap();
     let loaded: Option<Row> = users.read_single(None, None, None).await.unwrap();
-    let updated: Response = users.update(&created, None).await.unwrap();
+    let updated: Response = users.update(&mut created, None).await.unwrap();
     let deleted: Response = users.delete(&created, None).await.unwrap();
     assert_eq!(
         matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0),
@@ -110,10 +111,10 @@ async fn writes_user_through_plural_name() {
             None,
             None,
         )
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap();
     created.insert("Username".into(), Value::from("ada-v2"));
-    let updated = users_repo.update(&created, None).await.unwrap();
+    let updated = users_repo.update(&mut created, None).await.unwrap();
     let renamed = users_repo
         .read_single_by_id(created.get("Id").unwrap())
         .await
@@ -151,7 +152,7 @@ async fn reads_through_access_create_readonly() {
     let mut created = datasources::Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let created = ds.as_ref().users().create(&mut created).await.unwrap();
+    let mut created = ds.as_ref().users().create(&mut created).await.unwrap();
     let users_repo = ds
         .as_ref()
         .access("users", None)

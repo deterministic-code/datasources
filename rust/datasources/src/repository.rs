@@ -8,7 +8,9 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use async_trait::async_trait;
+use futures_core::Stream;
 use std::any::TypeId;
+use std::pin::Pin;
 use std::sync::Arc;
 
 #[async_trait]
@@ -26,18 +28,18 @@ pub trait IReadonlyRepository: IRepository {
         parameters: Option<&[crate::Parameter]>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>>;
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>>;
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [crate::Parameter]>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>;
 }
 
 #[async_trait]
 pub trait ICRUDRepository: IReadonlyRepository {
     async fn create(&self, item: &mut Row) -> Result<Row>;
-    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>;
+    async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response>;
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response>;
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>>;
 
@@ -67,13 +69,13 @@ impl IReadonlyRepository for AsReadonly {
         self.0.read_single(query, parameters, options).await
     }
 
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
-        self.0.read(query, parameters, options).await
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [crate::Parameter]>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.0.read(query, parameters, options)
     }
 }
 

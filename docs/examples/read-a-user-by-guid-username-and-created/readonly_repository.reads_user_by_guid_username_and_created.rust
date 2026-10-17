@@ -38,12 +38,12 @@ let by_login = repo
         Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
         None, None
     )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap();
 let later = repo
     .read(
         Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
         None, None
     )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap();

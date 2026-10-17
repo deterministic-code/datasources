@@ -269,7 +269,7 @@ types:
     expect(csharp).not.toContain("OptimisticConcurrency");
     expect(typescript).toContain("this.update = async (item, byWhere)");
     expect(typescript).toContain("this.delete = async (item, byWhere)");
-    expect(typescript).toContain("version: Number(expected) + 1");
+    expect(typescript).toContain("item.version = Number(expected) + 1");
     expect(typescript).toContain('.and("version", eq, expected)');
     expect(typescript).toContain("rowsAffected !== 1");
     expect(typescript).not.toContain("optimisticConcurrency:");

@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use super::contact_columns::join_entity;
 use super::contact_view::ContactView;
 use super::contacts_join_query::contacts_join_query;
@@ -68,12 +69,12 @@ pub async fn contacts_parity(
     let query = contacts_join_query(None);
     let eager = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
-        join_repo.read(Some(&query), None, None).await?,
+        join_repo.read(Some(&query), None, None).try_collect::<Vec<_>>().await?,
     ));
     let enriched = from_enriched_contacts(
         &contacts_service_of(connection, verbose.then_some(middleware), field)
             .read(None, None, None)
-            .await?,
+            .try_collect::<Vec<_>>().await?,
     );
     Ok((eager, enriched))
 }

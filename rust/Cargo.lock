@@ -582,22 +582,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "datasources-code-generators"
-version = "0.1.0"
-dependencies = [
- "datasources",
- "datasources-mysql",
- "datasources-oracle",
- "datasources-postgres",
- "datasources-sqlite",
- "datasources-sqlserver",
- "indexmap",
- "regex",
- "serde_yaml",
- "sha1",
-]
-
-[[package]]
 name = "datasources-dynamodb"
 version = "0.1.0"
 dependencies = [
@@ -612,6 +596,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "datasources",
+ "futures-util",
  "serde_json",
  "tokio",
 ]
@@ -622,6 +607,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "datasources",
+ "futures-util",
  "serde_json",
  "tokio",
 ]
@@ -720,6 +706,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "datasources",
+ "futures-util",
  "rust_decimal",
  "serde",
  "serde_yaml",

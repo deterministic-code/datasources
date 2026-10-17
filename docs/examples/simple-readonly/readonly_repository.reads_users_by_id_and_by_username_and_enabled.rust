@@ -28,7 +28,7 @@ let row = repo
         Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
         None, None
     )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
     .next()

@@ -8,7 +8,10 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use async_trait::async_trait;
+use futures_core::Stream;
+use futures_util::stream::once;
 use std::any::TypeId;
+use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct StubRepository {
@@ -50,13 +53,14 @@ impl IReadonlyRepository for StubRepository {
         Err(fail(&self.provider))
     }
 
-    async fn read(
-        &self,
-        _query: Option<&dyn ReadInput>,
-        _parameters: Option<&[crate::Parameter]>,
-        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
-        Err(fail(&self.provider))
+    fn read<'a>(
+        &'a self,
+        _query: Option<&'a dyn ReadInput>,
+        _parameters: Option<&'a [crate::Parameter]>,
+        _options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        let provider = self.provider.clone();
+        Box::pin(once(async move { Err(fail(&provider)) }))
     }
 }
 
@@ -66,7 +70,7 @@ impl ICRUDRepository for StubRepository {
         Err(fail(&self.provider))
     }
 
-    async fn update(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, _item: &mut Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 

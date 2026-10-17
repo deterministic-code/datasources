@@ -49,7 +49,8 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let response = repo.update(item, by_where).await?;
+            let mut item = item.clone();
+            let response = repo.update(&mut item, by_where).await?;
             result = response.result;
             rows_affected += response.rows_affected;
         }

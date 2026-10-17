@@ -1,4 +1,5 @@
 use crate::command_middleware::CommandMiddleware;
+use crate::connection::Connection;
 use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
@@ -11,6 +12,7 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait Command: Send + Sync {
+    fn connection(&self) -> Arc<dyn Connection>;
     fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>);
     async fn execute_reader_native(
         &self,

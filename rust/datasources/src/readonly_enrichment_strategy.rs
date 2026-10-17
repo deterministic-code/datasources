@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use crate::default_write_enrichment_strategy::{encode_row, encode_rows};
 use crate::enrichment::Enrichment;
 use crate::repository::IReadonlyRepository;
@@ -95,7 +96,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                     ))),
                     None, None
         )
-                .await?;
+                .try_collect::<Vec<_>>().await?;
             parent.insert(
                 enrichment.destination_property.clone(),
                 encode_rows(&related),
@@ -129,7 +130,7 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                     ))),
                     None, None
         )
-                .await?;
+                .try_collect::<Vec<_>>().await?;
             let mut related_rows = Vec::new();
             for row in links {
                 let Some(id) = row.get(&association.related).cloned() else {

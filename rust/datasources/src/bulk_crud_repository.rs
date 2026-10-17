@@ -21,8 +21,10 @@ use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
 use async_trait::async_trait;
+use futures_core::Stream;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
+use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct BulkCRUDRepository {
@@ -69,11 +71,13 @@ impl BulkCRUDRepository {
         })
     }
 
-    pub fn memory(items: Vec<Row>) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn memory(items: Vec<Row>) -> Self {
         Self::memory_with(items, None)
     }
 
-    pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
         let resolved = write
             .clone()
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
@@ -247,13 +251,13 @@ impl IReadonlyRepository for BulkCRUDRepository {
         self.crud.read_single(query, parameters, options).await
     }
 
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
-        self.crud.read(query, parameters, options).await
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [crate::Parameter]>,
+        options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.crud.read(query, parameters, options)
     }
 }
 
@@ -271,7 +275,7 @@ impl ICRUDRepository for BulkCRUDRepository {
         self.crud.create(item).await
     }
 
-    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.crud.update(item, by_where).await
     }
 

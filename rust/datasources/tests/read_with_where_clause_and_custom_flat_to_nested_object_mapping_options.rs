@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use datasources::*;
 use datasources_memory::MemoryDriver;
 use std::sync::Arc;
@@ -118,7 +119,10 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
             None,
             EnrichmentPropertyType::List,
         ),
-        Arc::new(CRUDRepository::memory(vec![])),
+        Arc::new(CRUDRepository::new(
+            Arc::new(StubConnection::new("memory")),
+            CRUDRepositoryOptions::default(),
+        ).unwrap()),
         Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
             "Id",
             vec![
@@ -155,7 +159,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
     options.entity_mapper = Some(Arc::new(join_entity()));
     let items = join_repo
         .read(Some(&join), None, Some(&options))
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap();
     assert_eq!(
         enriched.as_ref().unwrap().get("TypeName"),

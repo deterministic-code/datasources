@@ -1,11 +1,14 @@
+use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
 use crate::isolation_level::IsolationLevel;
 use crate::result::Result;
+use crate::stubs::StubConnection;
 use crate::transaction::Transaction;
 use async_trait::async_trait;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 pub struct MockTransaction {
+    connection: Arc<dyn Connection>,
     isolation: Mutex<IsolationLevel>,
     commit_calls: Mutex<usize>,
     abort_calls: Mutex<usize>,
@@ -18,6 +21,7 @@ pub struct MockTransaction {
 impl MockTransaction {
     pub fn new_unbound() -> Self {
         Self {
+            connection: Arc::new(StubConnection::new("mock")),
             isolation: Mutex::new(IsolationLevel::ReadCommitted),
             commit_calls: Mutex::new(0),
             abort_calls: Mutex::new(0),
@@ -59,6 +63,10 @@ impl MockTransaction {
 
 #[async_trait]
 impl Transaction for MockTransaction {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::clone(&self.connection)
+    }
+
     fn isolation(&self) -> IsolationLevel {
         *self.isolation.lock().expect("mock")
     }

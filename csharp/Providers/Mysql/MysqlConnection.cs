@@ -43,7 +43,7 @@ internal sealed class MysqlConnection : IConnection
         IsOpen = false;
     }
 
-    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
+    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         EnsureOpen();
         await Exec($"SET TRANSACTION ISOLATION LEVEL {MysqlBind.IsolationSql(isolation)}");

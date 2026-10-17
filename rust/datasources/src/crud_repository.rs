@@ -32,8 +32,10 @@ use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
 use crate::{Expression, Literal, Operator, Where};
 use async_trait::async_trait;
+use futures_core::Stream;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
+use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct CRUDRepository {
@@ -88,11 +90,13 @@ impl CRUDRepository {
         })
     }
 
-    pub fn memory(items: Vec<Row>) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn memory(items: Vec<Row>) -> Self {
         Self::memory_with(items, None)
     }
 
-    pub fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
         let ids = vec!["id".into()];
         let readonly = ReadonlyRepository::memory(items);
         let tree = tree_for(&readonly);
@@ -507,13 +511,13 @@ impl IReadonlyRepository for CRUDRepository {
         self.readonly.read_single(query, parameters, options).await
     }
 
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
-        self.readonly.read(query, parameters, options).await
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [Parameter]>,
+        options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.readonly.read(query, parameters, options)
     }
 }
 
@@ -528,7 +532,7 @@ impl ICRUDRepository for CRUDRepository {
         .await
     }
 
-    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),

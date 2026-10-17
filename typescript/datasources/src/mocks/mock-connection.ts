@@ -44,7 +44,7 @@ export class MockConnection implements IConnection {
 
   [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
-  async startTransaction(isolation: Isolation = IsolationLevel.ReadCommitted): Promise<ITransaction> {
+  async startTransaction(isolation: Isolation = IsolationLevel.Serializable): Promise<ITransaction> {
     this.startTransactionCalls += 1;
     if (this.startTransactionError) {
       throw this.startTransactionError;

@@ -116,7 +116,7 @@ impl Connection for SqliteConnection {
         isolation: Option<IsolationLevel>,
     ) -> Result<Arc<dyn Transaction>> {
         self.ensure_open()?;
-        let isolation = isolation.unwrap_or_default();
+        let isolation = isolation.unwrap_or(IsolationLevel::Serializable);
         self.begin(isolation)?;
         Ok(Arc::new(SqliteTransaction::new(self.share(), isolation)))
     }

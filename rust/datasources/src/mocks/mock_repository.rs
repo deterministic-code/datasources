@@ -9,6 +9,9 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use async_trait::async_trait;
+use futures_core::Stream;
+use futures_util::stream::{iter, once};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 pub struct MockRepository {
@@ -73,16 +76,18 @@ impl IReadonlyRepository for MockRepository {
         Ok(self.items.lock().expect("mock").first().cloned())
     }
 
-    async fn read(
-        &self,
-        _query: Option<&dyn ReadInput>,
-        _parameters: Option<&[crate::Parameter]>,
-        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
+    fn read<'a>(
+        &'a self,
+        _query: Option<&'a dyn ReadInput>,
+        _parameters: Option<&'a [crate::Parameter]>,
+        _options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
-            return Err(DatasourceError::message(error.clone()));
+            let error = error.clone();
+            return Box::pin(once(async move { Err(DatasourceError::message(error)) }));
         }
-        Ok(self.items.lock().expect("mock").clone())
+        let items = self.items.lock().expect("mock").clone();
+        Box::pin(iter(items.into_iter().map(Ok)))
     }
 }
 
@@ -96,7 +101,7 @@ impl ICRUDRepository for MockRepository {
         Ok(item.clone())
     }
 
-    async fn update(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, _item: &mut Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }

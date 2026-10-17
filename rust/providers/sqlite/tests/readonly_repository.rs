@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_readonly_repository_mapping_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
@@ -100,7 +101,7 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
             Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
             None, None
         )
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
         .next()
@@ -212,14 +213,14 @@ async fn reads_user_by_guid_username_and_created() {
             Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
             None, None
         )
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap();
     let later = repo
         .read(
             Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
             None, None
         )
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
     assert_eq!(by_id.get("Key"), Some(&Value::from(ADA)));
@@ -562,7 +563,10 @@ mod users_view_roles {
         let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
-            Arc::new(ReadonlyRepository::memory(vec![])),
+            Arc::new(ReadonlyRepository::new(
+                connection.clone(),
+                ReadonlyRepositoryMappingOptions::default(),
+            ).unwrap()),
             Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
                 TypeMap::new(
                     "Key",
@@ -588,7 +592,7 @@ mod users_view_roles {
             ))),
         );
         let joined = joined_users();
-        let items = users_repo.read(Some(&joined), None, None).await.unwrap();
+        let items = users_repo.read(Some(&joined), None, None).try_collect::<Vec<_>>().await.unwrap();
         let view = |login: &str| {
             items
                 .iter()
@@ -596,7 +600,7 @@ mod users_view_roles {
                 .unwrap()
                 .clone()
         };
-        let ada = view("ada");
+        let mut ada = view("ada");
         let grace = view("grace");
         let lin = view("lin");
         assert_eq!(items.len(), 3);
@@ -678,10 +682,10 @@ mod user_crud {
                 )),
                 None, None
         )
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap();
         created.insert("Username".into(), Value::from("ada-v2"));
-        let updated = users_repo.update(&created, None).await.unwrap();
+        let updated = users_repo.update(&mut created, None).await.unwrap();
         let renamed = users_repo
             .read_single_by_id(created.get("Id").unwrap())
             .await
@@ -871,7 +875,7 @@ mod user_crud {
         loaded.insert("Version".into(), Value::Int(2));
         let updated = users_repo
             .update(
-                &loaded,
+                &mut loaded,
                 Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
             )
             .await
@@ -883,7 +887,7 @@ mod user_crud {
             .unwrap();
         let stale = users_repo
             .update(
-                &loaded,
+                &mut loaded,
                 Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
             )
             .await
@@ -899,7 +903,7 @@ mod user_crud {
         assert_eq!(current_names, ["admin", "editor", "owner"]);
         let roles = user_roles_repo
             .read(Some(&Where::binary("UserId", eq, key.clone())), None, None)
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
         assert_eq!(user.get("Key"), Some(&Value::Int(1)));
@@ -952,7 +956,7 @@ mod user_crud {
         key.insert("Id".into(), Value::Int(1));
         let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
         ada.insert("Name".into(), Value::from("ada-v2"));
-        let updated = accounts_repo.update(&ada, None).await.unwrap();
+        let updated = accounts_repo.update(&mut ada, None).await.unwrap();
         let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
         let removed = accounts_repo.delete(&ada, None).await.unwrap();
         let gone = accounts_repo.read_single_by_id(&key).await.unwrap();

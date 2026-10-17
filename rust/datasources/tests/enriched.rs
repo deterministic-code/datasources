@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use datasources::*;
 use datasources_memory::MemoryDriver;
 use std::sync::Arc;
@@ -155,7 +156,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         types_repo,
         None,
     );
-    let items = parents_repo.read(None, None, None).await.unwrap();
+    let items = parents_repo.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(items[0]["TypeName"], Value::from("person"));
     assert!(!items[1].contains_key("TypeName") || items[1]["TypeName"] == Value::from(""));
 }
@@ -197,14 +198,14 @@ async fn deep_create_writes_children_stamps_fk() {
         .await
         .unwrap();
     assert!(num(&created, "Id") > 0);
-    let stored_parents = parents.read(None, None, None).await.unwrap();
-    let stored = children.read(None, None, None).await.unwrap();
+    let stored_parents = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored_parents[0]["Id"], created["Id"]);
     assert_eq!(stored.len(), 2);
     assert_eq!(stored[0]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(stored[1]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(
-        types.read(None, None, None).await.unwrap()[0]["Name"],
+        types.read(None, None, None).try_collect::<Vec<_>>().await.unwrap()[0]["Name"],
         Value::from("person")
     );
 }
@@ -280,36 +281,34 @@ async fn round_trips_string_and_object_dictionaries() {
     assert!(prefs_text.contains("Key=home"));
     assert!(prefs_text.contains("Timezone=Europe/London"));
     assert!(prefs_text.contains("Key=travel"));
-    hosts
-        .update(
-            &record(&[
-                ("Id", created["Id"].clone()),
-                ("Label", Value::from("ada")),
-                (
-                    "Settings",
-                    encode_rows(&[
-                        record(&[("Key", Value::from("theme")), ("Value", Value::from("light"))]),
-                        record(&[("Key", Value::from("locale")), ("Value", Value::from("en"))]),
-                    ]),
-                ),
-                (
-                    "Prefs",
-                    encode_rows(&[
-                        record(&[
-                            ("Key", Value::from("home")),
-                            ("Locale", Value::from("en-GB")),
-                            ("Timezone", Value::from("Europe/Paris")),
-                        ]),
-                        record(&[
-                            ("Key", Value::from("work")),
-                            ("Locale", Value::from("en-US")),
-                            ("Timezone", Value::from("America/New_York")),
-                        ]),
-                    ]),
-                ),
+    let mut updated_row_1 = record(&[
+        ("Id", created["Id"].clone()),
+        ("Label", Value::from("ada")),
+        (
+            "Settings",
+            encode_rows(&[
+                record(&[("Key", Value::from("theme")), ("Value", Value::from("light"))]),
+                record(&[("Key", Value::from("locale")), ("Value", Value::from("en"))]),
             ]),
-            None,
-        )
+        ),
+        (
+            "Prefs",
+            encode_rows(&[
+                record(&[
+                    ("Key", Value::from("home")),
+                    ("Locale", Value::from("en-GB")),
+                    ("Timezone", Value::from("Europe/Paris")),
+                ]),
+                record(&[
+                    ("Key", Value::from("work")),
+                    ("Locale", Value::from("en-US")),
+                    ("Timezone", Value::from("America/New_York")),
+                ]),
+            ]),
+        ),
+    ]);
+    hosts
+        .update(&mut updated_row_1, None)
         .await
         .unwrap();
     let updated = hosts.read_single(None, None, None).await.unwrap().unwrap();
@@ -322,9 +321,9 @@ async fn round_trips_string_and_object_dictionaries() {
     assert!(prefs_text.contains("Timezone=Europe/Paris"));
     assert!(prefs_text.contains("Key=work"));
     assert!(!prefs_text.contains("Key=travel"));
-    let settings_rows = settings.read(None, None, None).await.unwrap();
+    let settings_rows = settings.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(settings_rows.len(), 2);
-    let pref_rows = prefs.read(None, None, None).await.unwrap();
+    let pref_rows = prefs.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(pref_rows.len(), 2);
 }
 
@@ -396,7 +395,7 @@ async fn contacts_service_fills_names_and_child_lists() {
     assert!(num(&created, "Id") > 0);
     let contact = service
         .read(None, None, None)
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
         .find(|item| item.get("FirstName") == Some(&Value::from("Ada")))
@@ -511,9 +510,7 @@ async fn deep_update_replace_syncs_children() {
         children.clone(),
         None,
     );
-    let updated = parents
-        .update(
-            &record(&[
+    let mut updated_row_2 = record(&[
                 ("Id", parent_id.clone()),
                 ("Label", Value::from("p")),
                 (
@@ -526,13 +523,16 @@ async fn deep_update_replace_syncs_children() {
                         record(&[("Label", Value::from("c"))]),
                     ]),
                 ),
-            ]),
+            ]);
+    let updated = parents
+        .update(
+            &mut updated_row_2,
             None,
         )
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
-    let stored = children.read(None, None, None).await.unwrap();
+    let stored = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored.len(), 2);
     assert_eq!(
         stored
@@ -605,9 +605,7 @@ async fn cascade_update_deletes_children_and_recreates() {
         children.clone(),
         None,
     );
-    let updated = parents
-        .update(
-            &record(&[
+    let mut updated_row_3 = record(&[
                 ("Id", parent_id.clone()),
                 ("Label", Value::from("p")),
                 (
@@ -617,13 +615,16 @@ async fn cascade_update_deletes_children_and_recreates() {
                         ("Label", Value::from("fresh")),
                     ])]),
                 ),
-            ]),
+            ]);
+    let updated = parents
+        .update(
+            &mut updated_row_3,
             None,
         )
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
-    let stored = children.read(None, None, None).await.unwrap();
+    let stored = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let created = stored
         .iter()
         .find(|row| row.get("Label") == Some(&Value::from("fresh")))
@@ -632,7 +633,7 @@ async fn cascade_update_deletes_children_and_recreates() {
     assert_eq!(created.get("Id"), Some(&child_id));
     assert_eq!(created.get("Label"), Some(&Value::from("fresh")));
     assert_eq!(created.get("ParentId"), Some(&parent_id));
-    assert!(notes.read(None, None, None).await.unwrap().is_empty());
+    assert!(notes.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -695,13 +696,14 @@ async fn cascade_update_replaces_links_and_keeps_related() {
         links.clone(),
         None,
     );
-    let updated = parents
-        .update(
-            &record(&[
+    let mut updated_row_4 = record(&[
                 ("Id", parent_id.clone()),
                 ("Label", Value::from("p")),
                 ("Tags", encode_rows(&[record(&[("Id", keep_id.clone())])])),
-            ]),
+            ]);
+    let updated = parents
+        .update(
+            &mut updated_row_4,
             None,
         )
         .await
@@ -709,7 +711,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     assert_eq!(updated.rows_affected, 1);
     let stored_links: Vec<_> = links
         .read(None, None, None)
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
         .filter(|row| row.get("ParentId") == Some(&parent_id))
@@ -718,7 +720,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     assert_eq!(stored_links[0].get("TagId"), Some(&keep_id));
     assert_eq!(stored_links[0].get("ParentId"), Some(&parent_id));
     assert_ne!(stored_links[0].get("Id"), Some(&old_link_id));
-    assert_eq!(tags.read(None, None, None).await.unwrap().len(), 2);
+    assert_eq!(tags.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().len(), 2);
 }
 
 #[tokio::test]
@@ -734,7 +736,7 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         ])
         .await
         .unwrap();
-    let stored = parents.read(None, None, None).await.unwrap();
+    let stored = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();
@@ -758,7 +760,7 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("Missing Id"));
-    let after = parents.read(None, None, None).await.unwrap();
+    let after = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(
         after
             .iter()
@@ -785,7 +787,7 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         ])
         .await
         .unwrap();
-    let stored = parents.read(None, None, None).await.unwrap();
+    let stored = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();
@@ -809,7 +811,7 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("Missing Id"));
-    let after = parents.read(None, None, None).await.unwrap();
+    let after = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(
         after
             .iter()
@@ -874,10 +876,10 @@ async fn deep_delete_cascades_children_then_parent() {
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
-    assert!(parents.read(None, None, None).await.unwrap().is_empty());
-    assert!(children.read(None, None, None).await.unwrap().is_empty());
+    assert!(parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+    assert!(children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
     assert_eq!(
-        notes.read(None, None, None).await.unwrap()[0]["Text"],
+        notes.read(None, None, None).try_collect::<Vec<_>>().await.unwrap()[0]["Text"],
         Value::from("other")
     );
 }
@@ -931,9 +933,9 @@ async fn bulk_create_writes_parents_and_children() {
         ])
         .await
         .unwrap();
-    let stored_parents = parents.read(None, None, None).await.unwrap();
+    let stored_parents = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored_parents.len(), 2);
-    assert_eq!(children.read(None, None, None).await.unwrap().len(), 3);
+    assert_eq!(children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().len(), 3);
     let mut created_ids: Vec<_> = ids.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored_parents.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();

@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use super::command::SqliteCommand;
 use super::connection::SqliteConnection;
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
@@ -76,7 +77,7 @@ async fn maps_join_rows_to_nested_contacts() {
         &FlatToNestedMapper::new(contacts_view()),
         join_repo
             .read(Some(&contacts_join_query(None)), None, None)
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap(),
     ));
     let mapped = contact_with(&contacts, 2, 1);

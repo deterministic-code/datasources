@@ -53,7 +53,7 @@ internal sealed class PostgresConnection : IConnection
         IsOpen = false;
     }
 
-    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
+    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         EnsureOpen();
         await Exec($"BEGIN ISOLATION LEVEL {PostgresBind.IsolationSql(isolation)}");

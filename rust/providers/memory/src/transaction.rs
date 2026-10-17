@@ -1,6 +1,6 @@
-use crate::connection::MemoryState;
+use crate::connection::{MemoryConnection, MemoryState};
 use async_trait::async_trait;
-use datasources::{IsolationLevel, Result, Transaction};
+use datasources::{Connection, IsolationLevel, Result, Transaction};
 use std::sync::Arc;
 
 pub struct MemoryTransaction {
@@ -16,6 +16,12 @@ impl MemoryTransaction {
 
 #[async_trait]
 impl Transaction for MemoryTransaction {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::new(MemoryConnection {
+            state: Arc::clone(&self.state),
+        })
+    }
+
     fn isolation(&self) -> IsolationLevel {
         self.isolation
     }
