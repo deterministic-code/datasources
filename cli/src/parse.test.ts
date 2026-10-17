@@ -40,6 +40,28 @@ describe("parseArgs", () => {
       provider: "deterministic",
       input: "in",
       output: "out",
+      migrations: true,
+      migrate: true,
+      migrationsRoot: "sql",
+    });
+    expect(
+      parseArgs([
+        "generate",
+        "all",
+        "--dialect",
+        "typescript",
+        "--no-migrations",
+        "--no-migrate",
+        "--migrations-root",
+        "db",
+        "--migrations-path",
+        "changes",
+      ]).command,
+    ).toMatchObject({
+      migrations: false,
+      migrate: false,
+      migrationsRoot: "db",
+      migrationsPath: "changes",
     });
     expect(parseArgs(["generate", "types", "--dialect=csharp", "--provider=deterministic", "--input=in", "--output=out"]).command).toMatchObject({
       target: "types",

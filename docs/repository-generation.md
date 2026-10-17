@@ -39,13 +39,7 @@ npx @datasources/cli generate all --dialect typescript
 ```
 :::
 
-`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
-
-```sh
-npx @datasources/cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
-```
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity. `Update` and `Delete` return `Response`.
 
@@ -143,13 +137,7 @@ npx @datasources/cli generate all --dialect typescript
 ```
 :::
 
-`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
-
-```sh
-npx @datasources/cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
-```
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 Create a role, then a user that lists that role. {{Create|create|create}} writes the junction row. {{ReadSingle|readSingle|read_single}} fills {{Roles|roles|roles}}. Delete removes the user and the junction; the role row stays.
 
@@ -256,13 +244,7 @@ npx @datasources/cli generate all --dialect typescript
 ```
 :::
 
-`migrations create` writes the SQL. `migrate-up` applies it. `migrate-down` rolls one step back.
-
-```sh
-npx @datasources/cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
-```
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 The generated repository maps those stored names. The CRUD call still uses {{Username|username|username}}.
 
