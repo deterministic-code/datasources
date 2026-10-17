@@ -280,4 +280,14 @@ describe("app", () => {
     await expect(app.run({ kind: "enable-user", username: "bad" })).rejects.toThrow("not found");
     await expect(app.run({ kind: "nope" } as never)).rejects.toThrow("empty command");
   });
+
+  it("ignores already-exists migrate errors", async () => {
+    const connection = new MockConnection(undefined, "sqlite");
+    const command = new MockCommand(connection);
+    connection.command = command;
+    command.executeError = new Error("table already exists");
+    await migrate(command);
+    command.executeError = "busy";
+    await expect(migrate(command)).rejects.toBe("busy");
+  });
 });

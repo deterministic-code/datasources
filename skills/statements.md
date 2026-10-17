@@ -158,6 +158,9 @@ visit(statement: UpdateStatement): string
 visit(statement: DeleteStatement): string
 visit(statement: CreateTableStatement): string
 visit(statement: CreateIndexStatement): string
+visit(statement: AlterTableStatement): string
+visit(statement: DropIndexStatement): string
+visit(statement: DropTriggerStatement): string
 visit(statement: ExecuteStoredProcedureStatement): string
 visit(statement: ReturnStatement): string
 visit(statement: SelectInsertedIdStatement): string
@@ -368,6 +371,9 @@ string Visit(UpdateStatement statement)
 string Visit(DeleteStatement statement)
 string Visit(CreateTableStatement statement)
 string Visit(CreateIndexStatement statement)
+string Visit(AlterTableStatement statement)
+string Visit(DropIndexStatement statement)
+string Visit(DropTriggerStatement statement)
 string Visit(ExecuteStoredProcedureStatement statement)
 string Visit(ReturnStatement statement)
 string Visit(SelectInsertedIdStatement statement)
@@ -580,6 +586,9 @@ Bound values live on [Where](where.md). [IStatement](#istatement) is not an [IEx
 - [DeleteStatement](delete-statement.md)
 - [CreateTableStatement](other-statements.md)
 - [CreateIndexStatement](other-statements.md)
+- [AlterTableStatement](docs/sections/alter-table-statement.md)
+- [DropIndexStatement](docs/sections/drop-index-statement.md)
+- [DropTriggerStatement](docs/sections/drop-trigger-statement.md)
 - [ExecuteStoredProcedureStatement](other-statements.md)
 - [ReturnStatement](other-statements.md)
 - [Where](where.md)

@@ -97,6 +97,18 @@ public sealed class AppTests
     }
 
     [Fact]
+    public async Task IgnoresAlreadyExistsMigrateErrors()
+    {
+        var connection = new MockConnection { Provider = "sqlite" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        command.ExecuteError = new InvalidOperationException("table already exists");
+        await Migrate.Apply(command);
+        command.ExecuteError = new InvalidOperationException("busy");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Migrate.Apply(command));
+    }
+
+    [Fact]
     public async Task UsesDefaultClockAndHash()
     {
         var connection = new MockConnection { Provider = "sqlite" };

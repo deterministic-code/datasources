@@ -34,6 +34,13 @@ describe("splitStatements", () => {
     const trigger =
       'CREATE TRIGGER trg AFTER UPDATE ON t\nBEGIN\n  UPDATE t SET id = id WHERE id = OLD.id;\nEND';
     expect(splitStatements(trigger)).toEqual([trigger]);
+    const tagged =
+      "CREATE FUNCTION f() RETURNS int LANGUAGE sql AS $body$\nSELECT 1;\n$body$";
+    expect(splitStatements(tagged)).toEqual([tagged]);
+    const nested =
+      "CREATE PROCEDURE p()\nBEGIN\n  BEGIN\n    INSERT INTO t VALUES (1);\n  END;\n  INSERT INTO t VALUES (2);\nEND";
+    expect(splitStatements(nested)).toEqual([nested]);
+    expect(splitStatements("SELECT $id; SELECT 2")).toEqual(["SELECT $id", "SELECT 2"]);
   });
 
   it("matches a parameter token at a word boundary", () => {
@@ -46,6 +53,8 @@ describe("splitStatements", () => {
       "a__1",
       "b__1",
     ]);
+    expect(statementParameters("SELECT $tag$")).toEqual([]);
+    expect(statementParameters("SELECT $")).toEqual([]);
   });
 });
 

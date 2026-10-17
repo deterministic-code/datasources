@@ -11,5 +11,9 @@ describe("SqliteDriver converters", () => {
       "VARCHAR(64)",
     );
     expect(driver.typeConverter.convert({ type: "uuid" })).toBe("TEXT");
+    expect(driver.defaultValueConverter.convert("datetime", "Now")).toBe(
+      `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))`,
+    );
+    expect(driver.defaultValueConverter.convert("binary", "Hex('ab')")).toBe("X'ab'");
   });
 });

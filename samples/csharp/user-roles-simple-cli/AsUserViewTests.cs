@@ -72,9 +72,21 @@ public sealed class AsUserViewTests
                 ["id"] = new MappedValue.Cell(new Value.Float(1.2)),
                 ["username"] = new MappedValue.Cell(Value.Null.Instance),
                 ["is_enabled"] = new MappedValue.Cell(new Value.Text("x")),
-                ["created"] = new MappedValue.Cell(Value.Null.Instance)
+                ["created"] = new MappedValue.Cell(new Value.Text("2026-01-02 03:04:05"))
             }
         ])[0].id);
+        Assert.Equal(
+            "2026-01-02T03:04:05.000Z",
+            AsUserView.FromMapped(
+            [
+                new Dictionary<string, MappedValue>
+                {
+                    ["id"] = new MappedValue.Cell(1),
+                    ["username"] = new MappedValue.Cell("ada"),
+                    ["is_enabled"] = new MappedValue.Cell(true),
+                    ["created"] = new MappedValue.Cell(new Value.Text("2026-01-02 03:04:05"))
+                }
+            ])[0].created);
         var empty = AsUserView.FromMapped([new Dictionary<string, MappedValue>
         {
             ["username"] = new MappedValue.Many([])
