@@ -7,7 +7,7 @@ import { generate as rustDatasourceTypes } from "@deterministic-code/rust-genera
 import { generate as rustViewTypes } from "@deterministic-code/rust-generators/generate-view-types";
 import { generate as typescriptDatasourceTypes } from "@deterministic-code/typescript-generators/generate-datasource-types";
 import { generate as typescriptViewTypes } from "@deterministic-code/typescript-generators/generate-view-types";
-import { DeterministicParser } from "@deterministic-code/deterministic-specifications-typescript/parser";
+import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
 import type { RepositoryModel } from "./RepositoryModel.ts";

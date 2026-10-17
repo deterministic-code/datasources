@@ -67,17 +67,18 @@ const transpile = async (name) => {
   await cp(join(src, "templates"), join(dist, "templates"), { recursive: true }).catch(() => undefined);
 };
 
-const parserSource = join(packages, "deterministic-specifications-typescript/parser/parser/specification-parser.ts");
+const parserRoot = join(packages, "deterministic-generators-common/typescript/parser");
+const parserSource = join(parserRoot, "parser/specification-parser.ts");
 const parserText = await readFile(parserSource, "utf8");
 if (!parserText.startsWith("// @ts-nocheck")) await writeFile(parserSource, `// @ts-nocheck\n${parserText}`);
 
 await build({
-  entryPoints: [join(packages, "deterministic-specifications-typescript/parser/specification-parser.ts")],
+  entryPoints: [join(parserRoot, "specification-parser.ts")],
   bundle: true,
   format: "esm",
   platform: "node",
   packages: "external",
-  outfile: join(packages, "deterministic-specifications-typescript/parser/dist/specification-parser.js"),
+  outfile: join(parserRoot, "dist/specification-parser.js"),
   logLevel: "warning",
 });
 

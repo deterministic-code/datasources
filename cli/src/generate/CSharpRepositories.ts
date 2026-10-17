@@ -6,6 +6,7 @@ import {
   children as childModels,
   pluralPascal,
   repositoryFile,
+  type OptimisticConcurrency,
   type PlannedEnrichment,
   type RepositoryModel,
 } from "./RepositoryModel.ts";
@@ -23,6 +24,32 @@ const enrichment = (item: PlannedEnrichment, host: "ctor" | "readonly" = "ctor")
   const type = item.kind === "object" ? "" : item.kind === "dictionary" ? ", Type: EnrichmentPropertyType.Dictionary" : ", Type: EnrichmentPropertyType.List";
   const call = host === "readonly" ? "repo.AddEnriched" : "AddEnriched";
   return `${call}(new(${head}${related}${type}), ${via});`;
+};
+
+const tokenWhere = (model: RepositoryModel, token: OptimisticConcurrency, expected: string): string => {
+  const [first, ...rest] = [...model.ids, token.property];
+  const value = (name: string) => name === token.property ? expected : `item.${name}`;
+  return `new("${quote(first as string)}", eq, Value.From(${value(first as string)}))${rest.map((name) => `.And("${quote(name)}", eq, Value.From(${value(name)}))`).join("")}`;
+};
+
+const occMethods = (model: RepositoryModel, type: string): string => {
+  const token = model.optimisticConcurrency;
+  if (token === undefined) return "";
+  const bump = token.increment ? `\n        item.${token.property} += 1;` : "";
+  return `
+    public new async Task<Response> Update(${type} item, IWhere? byWhere = null)
+    {
+        var expected = item.${token.property};${bump}
+        var response = await base.Update(item, byWhere ?? ${tokenWhere(model, token, "expected")});
+        return response.RowsAffected == 1 ? response : throw new DatasourceException($"Update affected {response.RowsAffected} rows");
+    }
+
+    public new async Task<Response> Delete(${type} item, IWhere? byWhere = null)
+    {
+        var response = await base.Delete(item, byWhere ?? ${tokenWhere(model, token, `item.${token.property}`)});
+        return response.RowsAffected == 1 ? response : throw new DatasourceException($"Delete affected {response.RowsAffected} rows");
+    }
+`;
 };
 
 const createReadonly = (model: RepositoryModel, type: string): string => {
@@ -49,9 +76,11 @@ export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] =
       : `    public ${model.typeName}Repository(IConnection connection) : base(connection, Options())\n    {\n${lines.join("\n")}\n    }`;
     const ids = model.ids.map((name) => `"${quote(name)}"`).join(", ");
     const read = model.readProperties.map((name) => `"${quote(name)}"`).join(", ");
+    const implementsOcc = model.optimisticConcurrency === undefined ? "" : `, ICRUDRepository<${type}>`;
+    const usings = model.optimisticConcurrency === undefined ? "using Datasources;\n" : "using Datasources;\nusing static Datasources.Cmp;\n";
     return content(
       repositoryFile("csharp", model),
-      `using Datasources;\n\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n\n    static CRUDRepositoryOptions<${type}> Options() => new()\n    {\n        Entity = "${quote(model.entity)}",\n        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),\n${mapping}        Ids = [${ids}],\n        ReadProperties = [${read}],\n    };\n}\n`,
+      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n${occMethods(model, type)}\n    static CRUDRepositoryOptions<${type}> Options() => new()\n    {\n        Entity = "${quote(model.entity)}",\n        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),\n${mapping}        Ids = [${ids}],\n        ReadProperties = [${read}],\n    };\n}\n`,
     );
   });
   const register = models.map((model) => {

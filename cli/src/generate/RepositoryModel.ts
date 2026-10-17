@@ -14,6 +14,11 @@ export type PlannedEnrichment = {
   relatedFk?: string;
 };
 
+export type OptimisticConcurrency = {
+  property: string;
+  increment: boolean;
+};
+
 export type RepositoryModel = {
   specName: string;
   typeName: string;
@@ -23,6 +28,7 @@ export type RepositoryModel = {
   propertyMappings: Pair[];
   ids: string[];
   readProperties: string[];
+  optimisticConcurrency?: OptimisticConcurrency;
   enrichments: PlannedEnrichment[];
 };
 

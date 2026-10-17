@@ -7,4 +7,6 @@ public sealed class DatasourceFieldOverlay
     public bool? IsUnique { get; init; }
     public string? Mapping { get; init; }
     public bool? IsFixedId { get; init; }
+    public bool? IsOptimisticConcurrency { get; init; }
+    public bool? UseNativeRowVersion { get; init; }
 }

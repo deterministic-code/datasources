@@ -1,5 +1,5 @@
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childField, children as childModels, isLinked, pluralSnake, repositoryFile, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
+import { childField, children as childModels, isLinked, pluralSnake, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
 
 const rustString = (value: string): string => `"${value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}"`;
 
@@ -58,10 +58,108 @@ const readonlyFn = (model: RepositoryModel, nested: Set<string>): string => {
   return `pub fn ${model.specName}_readonly_repository(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository> {\n${body}\n}`;
 };
 
+const rustTokenWhere = (model: RepositoryModel, token: OptimisticConcurrency): string => {
+  const [first, ...rest] = [...model.ids, token.property] as [string, ...string[]];
+  const value = (name: string) => name === token.property ? "expected.clone()" : `item.get(${rustString(name)}).cloned().ok_or_else(|| DatasourceError::message(${rustString(name)}))?`;
+  return `        let expected = item.get(${rustString(token.property)}).cloned().ok_or_else(|| DatasourceError::message(${rustString(token.property)}))?;\n        let clause = Where::binary(${rustString(first)}, eq, ${value(first)})${rest.map((name) => `.and(${rustString(name)}, eq, ${value(name)})`).join("")};`;
+};
+
+const rustOcc = (model: RepositoryModel): string => {
+  const token = model.optimisticConcurrency;
+  if (token === undefined) return "";
+  const name = `${model.typeName}Optimistic`;
+  const bump = token.increment
+    ? `        let mut written = item.clone();\n        if let Some(value) = written.get(${rustString(token.property)}).cloned() {\n            written.insert(${rustString(token.property)}.into(), match value {\n                Value::Int(n) => Value::Int(n + 1),\n                Value::Float(n) => Value::Float(n + 1.0),\n                other => other,\n            });\n        }\n        let item = &written;\n`
+    : "";
+  const where = rustTokenWhere(model, token);
+  return `
+use datasources::{async_trait, CommandMiddleware, DatasourceError, IReadonlyRepository, IRepository, IdKey, IWhere, Parameter, ReadInput, Response, Value, Where, eq};
+use std::any::TypeId;
+
+pub struct ${name} {
+    repo: CRUDRepository,
+}
+
+impl ${name} {
+    pub fn new(repo: CRUDRepository) -> Self {
+        Self { repo }
+    }
+}
+
+impl IRepository for ${name} {
+    fn entity_type(&self) -> TypeId {
+        self.repo.entity_type()
+    }
+}
+
+#[async_trait]
+impl IReadonlyRepository for ${name} {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
+        Some(self)
+    }
+
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<datasources::Row>> {
+        self.repo.read_single(query, parameters, options).await
+    }
+
+    async fn read(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Vec<datasources::Row>> {
+        self.repo.read(query, parameters, options).await
+    }
+}
+
+#[async_trait]
+impl ICRUDRepository for ${name} {
+    async fn create(&self, item: &mut datasources::Row) -> Result<datasources::Row> {
+        self.repo.create(item).await
+    }
+
+    async fn update(&self, item: &datasources::Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+${where}
+${bump}        let response = self.repo.update(item, Some(by_where.unwrap_or(&clause))).await?;
+        if response.rows_affected != 1 {
+            return Err(DatasourceError::message(format!("Update affected {} rows", response.rows_affected)));
+        }
+        Ok(response)
+    }
+
+    async fn delete(&self, item: &datasources::Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+${where}
+        let response = self.repo.delete(item, Some(by_where.unwrap_or(&clause))).await?;
+        if response.rows_affected != 1 {
+            return Err(DatasourceError::message(format!("Delete affected {} rows", response.rows_affected)));
+        }
+        Ok(response)
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<datasources::Row>> {
+        self.repo.read_single_by_id(id).await
+    }
+
+    fn id_names(&self) -> Vec<String> {
+        self.repo.id_names()
+    }
+
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.repo.add_middleware(middleware)
+    }
+}
+`;
+};
+
 const pad = (text: string): string => text.split("\n").map((line) => `    ${line}`).join("\n");
 
 const plain = (model: RepositoryModel, nested: Set<string>): string =>
-  `${uses}\n\npub fn ${model.specName}_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n${crudOptions(model)}\n    CRUDRepository::new(connection, options)\n}\n\n${readonlyFn(model, nested)}\n`;
+  `${uses}\n\npub fn ${model.specName}_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n${crudOptions(model)}\n    CRUDRepository::new(connection, options)\n}\n\n${readonlyFn(model, nested)}\n${rustOcc(model)}`;
 
 const wrapped = (model: RepositoryModel, nested: Set<string>): string => {
   const type = `${model.typeName}Repository`;
@@ -75,7 +173,7 @@ const wrapped = (model: RepositoryModel, nested: Set<string>): string => {
     .join("\n");
   const assign = children.map((child) => child.specName).join(", ");
   const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, nested)}`).join("\n");
-  return `${uses}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model))}\n${childLets(children, nested)}\n        let mut repo = CRUDRepository::new(Arc::clone(&connection), options)?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${model.specName}_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${readonlyFn(model, nested)}\n`;
+  return `${uses}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model))}\n${childLets(children, nested)}\n        let mut repo = CRUDRepository::new(Arc::clone(&connection), options)?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${model.specName}_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${readonlyFn(model, nested)}\n${rustOcc(model)}`;
 };
 
 export const rustRepositories = (models: RepositoryModel[]): GenerateEntry[] => {
@@ -85,7 +183,10 @@ export const rustRepositories = (models: RepositoryModel[]): GenerateEntry[] => 
   );
   const register = models.map((model) => {
     const module = `${model.specName}_repository`;
-    return `    factory.register_named(\n        ${rustString(model.entity)},\n        ${rustString(pluralSnake(model.specName))},\n        |connection| Arc::new(super::${module}::${model.specName}_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,\n        |connection| Arc::new(super::${module}::${model.specName}_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,\n    );`;
+    const crud = model.optimisticConcurrency === undefined
+      ? `Arc::new(super::${module}::${model.specName}_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>`
+      : `Arc::new(super::${module}::${model.typeName}Optimistic::new(super::${module}::${model.specName}_repository(connection).expect("repository"))) as Arc<dyn ICRUDRepository>`;
+    return `    factory.register_named(\n        ${rustString(model.entity)},\n        ${rustString(pluralSnake(model.specName))},\n        |connection| ${crud},\n        |connection| Arc::new(super::${module}::${model.specName}_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,\n    );`;
   });
   const methods = models.map((model) => {
     const name = pluralSnake(model.specName);
