@@ -253,6 +253,10 @@ impl PackCasing {
         self.object_ident(entity, &self.always_plural.resolve_table(entity))
     }
 
+    pub fn plural_stem(&self, entity: &str) -> String {
+        self.always_plural.physical_stem(entity)
+    }
+
     pub fn column_name(&self, field: &str) -> String {
         self.naming.resolve_column(field)
     }

@@ -1,8 +1,14 @@
 import {
   AlterTableStatement,
-  CreateRoutineStatement,
+  CreateBulkCreateStoredProcedureStatement,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
+  CreateUpdateStoredProcedureStatement,
   DropIndexStatement,
   DropRoutineStatement,
   IdentityInsertStatement,
@@ -10,11 +16,11 @@ import {
   type StatementTextRenderer,
 } from "@datasources/core";
 import { SqlServerAlterTableStatementRenderer } from "./SqlServerAlterTableStatementRenderer.ts";
-import { SqlServerCreateRoutineStatementRenderer } from "./SqlServerCreateRoutineStatementRenderer.ts";
 import { SqlServerCreateTableStatementRenderer } from "./SqlServerCreateTableStatementRenderer.ts";
 import { SqlServerCreateTriggerStatementRenderer } from "./SqlServerCreateTriggerStatementRenderer.ts";
 import { SqlServerDropIndexStatementRenderer } from "./SqlServerDropIndexStatementRenderer.ts";
 import { SqlServerDropRoutineStatementRenderer } from "./SqlServerDropRoutineStatementRenderer.ts";
+import { SqlServerStoredProcedureStatementRenderer } from "./SqlServerStoredProcedureStatementRenderer.ts";
 import { SqlServerIdentityInsertStatementRenderer } from "./SqlServerIdentityInsertStatementRenderer.ts";
 
 export class SqlServerStatementRenderer extends StatementRenderer {
@@ -42,11 +48,35 @@ export class SqlServerStatementRenderer extends StatementRenderer {
     return new SqlServerIdentityInsertStatementRenderer().render(insert);
   }
 
-  protected override visitCreateRoutine(routine: CreateRoutineStatement): string {
-    return new SqlServerCreateRoutineStatementRenderer().render(routine);
-  }
-
   protected override visitDropRoutine(routine: DropRoutineStatement): string {
     return new SqlServerDropRoutineStatementRenderer().render(routine);
+  }
+
+  protected override visitCreateCreateStoredProcedureStatement(statement: CreateCreateStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderCreate(statement);
+  }
+
+  protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderUpdate(statement);
+  }
+
+  protected override visitCreateDeleteStoredProcedureStatement(statement: CreateDeleteStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderDelete(statement);
+  }
+
+  protected override visitCreateBulkCreateStoredProcedureStatement(statement: CreateBulkCreateStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderBulkCreate(statement);
+  }
+
+  protected override visitCreateBulkUpdateStoredProcedureStatement(statement: CreateBulkUpdateStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderBulkUpdate(statement);
+  }
+
+  protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderBulkDelete(statement);
   }
 }

@@ -1,13 +1,21 @@
 import {
+  AlterTableStatement,
   BulkUpdateStatement,
   ColumnDefault,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
+  CreateTriggerStatement,
+  CreateUpdateStoredProcedureStatement,
   DefaultStatementTextRenderer,
+  DropIndexStatement,
+  DropRoutineStatement,
   ForeignKey,
-  SelectInsertedIdStatement,
   NotNull,
   PrimaryKey,
   ReferentialAction,
+  SelectInsertedIdStatement,
   SelectStatement,
   StatementTextRenderer,
 } from "@datasources/core";
@@ -60,5 +68,78 @@ describe("MysqlStatementRenderer", () => {
     expect(renderer.render(update)).toBe(
       "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label",
     );
+  });
+
+  it("renders alter, trigger, and drop statements", () => {
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", { kind: "alterColumn", column: { name: "id", type: "int", identity: true } }),
+      ),
+    ).toBe("ALTER TABLE users MODIFY COLUMN id INT AUTO_INCREMENT");
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT" } }),
+      ),
+    ).toBe("ALTER TABLE users ADD COLUMN email TEXT");
+    expect(renderer.render(new DropIndexStatement("ix_users_email", "users"))).toBe(
+      "DROP INDEX ix_users_email ON users",
+    );
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "UTC_TIMESTAMP()"))).toBe(
+      "CREATE TRIGGER tr_users BEFORE UPDATE ON users\nFOR EACH ROW SET NEW.updated = UTC_TIMESTAMP()",
+    );
+    expect(renderer.render(new DropRoutineStatement("sp_users"))).toBe("DROP PROCEDURE IF EXISTS sp_users");
+  });
+
+  it("renders create/read/update stored procedure statements", () => {
+    expect(
+      renderer.render(
+        new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id", "name"], [{ name: "name", type: "TEXT" }], "id", "INT", ["name"]),
+      ),
+    ).toContain("CREATE PROCEDURE CreateUsers");
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], []),
+      ),
+    ).toContain("ORDER BY t.id");
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement(
+          "ReadUsersById",
+          "users",
+          ["id", "name"],
+          [{ name: "id", type: "INT" }],
+          "id",
+          "INT",
+          [],
+          ["id"],
+        ),
+      ),
+    ).toContain("WHERE t.id = id");
+    expect(
+      renderer.render(
+        new CreateUpdateStoredProcedureStatement(
+          "UpdateUsersByIdVersion",
+          "users",
+          ["id", "name", "version"],
+          [{ name: "id", type: "INT" }, { name: "version", type: "INT" }, { name: "name", type: "TEXT" }],
+          "id",
+          "INT",
+          ["name"],
+          ["id", "version"],
+        ),
+      ),
+    ).toContain("WHERE t.id = id AND t.version = version");
+    expect(
+      renderer.render(
+        new CreateBulkDeleteStoredProcedureStatement(
+          "BulkDeleteUsers",
+          "users",
+          [{ name: "id", type: "INT" }],
+          { name: "payload", type: "JSON" },
+          "id",
+          "INT",
+        ),
+      ),
+    ).toContain("JSON_TABLE");
   });
 });

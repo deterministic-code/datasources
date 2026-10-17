@@ -95,14 +95,14 @@ fn auto_plus_pluralize_uses_snake_plural_tables_and_snake_columns() {
 #[test]
 fn types_casing_matrix() {
     let cases = [
-        ("Camel", "on", "notificationTypes", "users", "notificationTypesUserIdForeignKey", "createNotificationType", "findNotificationTypes"),
-        ("Pascal", "on", "NotificationTypes", "Users", "NotificationTypesUserIdForeignKey", "CreateNotificationType", "FindNotificationTypes"),
-        ("Snake", "on", "notification_types", "users", "notification_types_user_id_foreign_key", "create_notification_type", "find_notification_types"),
-        ("Kebab", "on", "notification-types", "users", "notification-types-user-id-foreign-key", "create-notification-type", "find-notification-types"),
-        ("Camel", "off", "notificationType", "user", "notificationTypeUserIdForeignKey", "createNotificationType", "findNotificationTypes"),
-        ("Pascal", "off", "NotificationType", "User", "NotificationTypeUserIdForeignKey", "CreateNotificationType", "FindNotificationTypes"),
-        ("Snake", "off", "notification_type", "user", "notification_type_user_id_foreign_key", "create_notification_type", "find_notification_types"),
-        ("Kebab", "off", "notification-type", "user", "notification-type-user-id-foreign-key", "create-notification-type", "find-notification-types"),
+        ("Camel", "on", "notificationTypes", "users", "notificationTypesUserIdForeignKey", "createNotificationTypes", "readNotificationTypes"),
+        ("Pascal", "on", "NotificationTypes", "Users", "NotificationTypesUserIdForeignKey", "CreateNotificationTypes", "ReadNotificationTypes"),
+        ("Snake", "on", "notification_types", "users", "notification_types_user_id_foreign_key", "create_notification_types", "read_notification_types"),
+        ("Kebab", "on", "notification-types", "users", "notification-types-user-id-foreign-key", "create-notification-types", "read-notification-types"),
+        ("Camel", "off", "notificationType", "user", "notificationTypeUserIdForeignKey", "createNotificationTypes", "readNotificationTypes"),
+        ("Pascal", "off", "NotificationType", "User", "NotificationTypeUserIdForeignKey", "CreateNotificationTypes", "ReadNotificationTypes"),
+        ("Snake", "off", "notification_type", "user", "notification_type_user_id_foreign_key", "create_notification_types", "read_notification_types"),
+        ("Kebab", "off", "notification-type", "user", "notification-type-user-id-foreign-key", "create-notification-types", "read-notification-types"),
     ];
     for (format, pluralize, notification, user, constraint, create_fn, find_all) in cases {
         let mut settings = HashMap::from([("datasource.casing.types".into(), format.into())]);
@@ -160,7 +160,7 @@ fn pascal_types_and_camel_fields_apply_independently() {
     assert!(sql.contains("\"NotificationTypesUserIdForeignKey\""));
     assert!(Regex::new(r#"REFERENCES "Users"\s*\("id"\)"#).unwrap().is_match(&sql));
     let procs = proc_sql(&settings);
-    assert!(Regex::new(r#"CREATE OR REPLACE FUNCTION CreateNotificationType\("#)
+    assert!(Regex::new(r#"CREATE OR REPLACE FUNCTION CreateNotificationTypes\("#)
         .unwrap()
         .is_match(&procs));
     assert!(procs.contains("channelName"));
@@ -189,7 +189,7 @@ fn keywords_lower_lowercases_sql_keywords_and_types() {
     assert!(sql.contains("\"email\" text not null"));
     assert!(!sql.contains("CREATE TABLE"));
     let procs = proc_sql(&settings);
-    assert!(Regex::new(r#"create or replace function create_notification_type\("#)
+    assert!(Regex::new(r#"create or replace function create_notification_types\("#)
         .unwrap()
         .is_match(&procs));
     assert!(!procs.contains("CREATE OR REPLACE"));
@@ -204,7 +204,7 @@ fn objects_upper_screams_table_constraint_and_routine_names() {
     assert!(sql.contains("\"channel_name\""));
     assert!(!sql.contains("CREATE TABLE \"notification_types\""));
     let procs = proc_sql(&settings);
-    assert!(Regex::new(r#"CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPE\("#)
+    assert!(Regex::new(r#"CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPES\("#)
         .unwrap()
         .is_match(&procs));
 }

@@ -58,9 +58,27 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
     public virtual string Visit(IdentityInsertStatement statement) =>
         new IdentityInsertStatementTextRenderer().Render(statement);
 
-    public virtual string Visit(CreateRoutineStatement statement) =>
-        new CreateRoutineStatementTextRenderer().Render(statement);
-
     public virtual string Visit(DropRoutineStatement statement) =>
         new DropRoutineStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateCreateStoredProcedureStatement statement) =>
+        new CreateCreateStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateReadStoredProcedureStatement statement) =>
+        new CreateReadStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateUpdateStoredProcedureStatement statement) =>
+        new CreateUpdateStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateDeleteStoredProcedureStatement statement) =>
+        new CreateDeleteStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateBulkCreateStoredProcedureStatement statement) =>
+        new CreateBulkCreateStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateBulkUpdateStoredProcedureStatement statement) =>
+        new CreateBulkUpdateStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
+        new CreateBulkDeleteStoredProcedureStatementTextRenderer().Render(statement);
 }

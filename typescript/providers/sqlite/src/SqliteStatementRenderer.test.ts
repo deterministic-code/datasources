@@ -1,15 +1,18 @@
 import {
   AlterTableStatement,
   ColumnDefault,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
+  CreateTriggerStatement,
   DefaultStatementTextRenderer,
   ForeignKey,
-  SelectInsertedIdStatement,
   NotNull,
   PrimaryKey,
   ReferentialAction,
+  SelectInsertedIdStatement,
   SelectStatement,
   StatementTextRenderer,
+  UniqueConstraint,
 } from "@datasources/core";
 import { describe, expect, it } from "vitest";
 import { SqliteCreateTableStatementRenderer } from "./SqliteCreateTableStatementRenderer.ts";
@@ -65,8 +68,44 @@ describe("SqliteStatementRenderer", () => {
         new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT", notNull: new NotNull() } }),
       ),
     ).toBe("ALTER TABLE users ADD COLUMN email TEXT NOT NULL");
+    expect(
+      renderer.render(new AlterTableStatement("users", { kind: "dropColumn", name: "email" })),
+    ).toBe("ALTER TABLE users DROP COLUMN email");
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", { kind: "renameColumn", from: "old", to: "new" }),
+      ),
+    ).toBe("ALTER TABLE users RENAME COLUMN old TO new");
+    expect(
+      renderer.render(new AlterTableStatement("users", { kind: "renameTable", to: "people" })),
+    ).toBe("ALTER TABLE users RENAME TO people");
     expect(() =>
       renderer.render(new AlterTableStatement("users", { kind: "alterColumn", column: { name: "age", type: "INTEGER" } })),
     ).toThrow(/SQLite cannot ALTER COLUMN/);
+    expect(() =>
+      renderer.render(
+        new AlterTableStatement("users", { kind: "addConstraint", constraint: new UniqueConstraint("uq_email", ["email"]) }),
+      ),
+    ).toThrow(/SQLite cannot ADD CONSTRAINT/);
+    expect(() =>
+      renderer.render(new AlterTableStatement("users", { kind: "dropConstraint", name: "uq_email" })),
+    ).toThrow(/SQLite cannot DROP CONSTRAINT/);
+    expect(() =>
+      renderer.render(new AlterTableStatement("users", { kind: "empty" } as never)),
+    ).toThrow(/empty alter/);
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id"], [], "id", "INT", [], []),
+      ),
+    ).toBe("");
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "CURRENT_TIMESTAMP"))).toBe(
+      `CREATE TRIGGER tr_users
+AFTER UPDATE ON users
+FOR EACH ROW
+WHEN NEW.updated IS OLD.updated
+BEGIN
+  UPDATE users SET updated = CURRENT_TIMESTAMP WHERE id = OLD.id;
+END`,
+    );
   });
 });

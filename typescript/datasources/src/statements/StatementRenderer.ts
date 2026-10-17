@@ -9,8 +9,6 @@ import { AlterTableStatement } from "./AlterTableStatement.ts";
 import { AlterTableStatementTextRenderer } from "./AlterTableStatementTextRenderer.ts";
 import { CreateIndexStatement } from "./CreateIndexStatement.ts";
 import { CreateIndexStatementTextRenderer } from "./CreateIndexStatementTextRenderer.ts";
-import { CreateRoutineStatement } from "./CreateRoutineStatement.ts";
-import { CreateRoutineStatementTextRenderer } from "./CreateRoutineStatementTextRenderer.ts";
 import { CreateTableStatement } from "./CreateTableStatement.ts";
 import { CreateTableStatementTextRenderer } from "./CreateTableStatementTextRenderer.ts";
 import { CreateTriggerStatement } from "./CreateTriggerStatement.ts";
@@ -21,6 +19,20 @@ import { DropIndexStatement } from "./DropIndexStatement.ts";
 import { DropIndexStatementTextRenderer } from "./DropIndexStatementTextRenderer.ts";
 import { DropRoutineStatement } from "./DropRoutineStatement.ts";
 import { DropRoutineStatementTextRenderer } from "./DropRoutineStatementTextRenderer.ts";
+import { CreateCreateStoredProcedureStatement } from "./CreateCreateStoredProcedureStatement.ts";
+import { CreateCreateStoredProcedureStatementTextRenderer } from "./CreateCreateStoredProcedureStatementTextRenderer.ts";
+import { CreateReadStoredProcedureStatement } from "./CreateReadStoredProcedureStatement.ts";
+import { CreateReadStoredProcedureStatementTextRenderer } from "./CreateReadStoredProcedureStatementTextRenderer.ts";
+import { CreateUpdateStoredProcedureStatement } from "./CreateUpdateStoredProcedureStatement.ts";
+import { CreateUpdateStoredProcedureStatementTextRenderer } from "./CreateUpdateStoredProcedureStatementTextRenderer.ts";
+import { CreateDeleteStoredProcedureStatement } from "./CreateDeleteStoredProcedureStatement.ts";
+import { CreateDeleteStoredProcedureStatementTextRenderer } from "./CreateDeleteStoredProcedureStatementTextRenderer.ts";
+import { CreateBulkCreateStoredProcedureStatement } from "./CreateBulkCreateStoredProcedureStatement.ts";
+import { CreateBulkCreateStoredProcedureStatementTextRenderer } from "./CreateBulkCreateStoredProcedureStatementTextRenderer.ts";
+import { CreateBulkUpdateStoredProcedureStatement } from "./CreateBulkUpdateStoredProcedureStatement.ts";
+import { CreateBulkUpdateStoredProcedureStatementTextRenderer } from "./CreateBulkUpdateStoredProcedureStatementTextRenderer.ts";
+import { CreateBulkDeleteStoredProcedureStatement } from "./CreateBulkDeleteStoredProcedureStatement.ts";
+import { CreateBulkDeleteStoredProcedureStatementTextRenderer } from "./CreateBulkDeleteStoredProcedureStatementTextRenderer.ts";
 import { DropTableStatement } from "./DropTableStatement.ts";
 import { DropTableStatementTextRenderer } from "./DropTableStatementTextRenderer.ts";
 import { DropTriggerStatement } from "./DropTriggerStatement.ts";
@@ -60,8 +72,14 @@ type AnyStatement =
   | DropTriggerStatement
   | CreateTriggerStatement
   | IdentityInsertStatement
-  | CreateRoutineStatement
-  | DropRoutineStatement;
+  | DropRoutineStatement
+  | CreateCreateStoredProcedureStatement
+  | CreateReadStoredProcedureStatement
+  | CreateUpdateStoredProcedureStatement
+  | CreateDeleteStoredProcedureStatement
+  | CreateBulkCreateStoredProcedureStatement
+  | CreateBulkUpdateStoredProcedureStatement
+  | CreateBulkDeleteStoredProcedureStatement;
 
 export class StatementRenderer implements IStatementVisitor {
   constructor(protected readonly text: StatementTextRenderer) {}
@@ -84,8 +102,14 @@ export class StatementRenderer implements IStatementVisitor {
   visit(statement: DropTriggerStatement): string;
   visit(statement: CreateTriggerStatement): string;
   visit(statement: IdentityInsertStatement): string;
-  visit(statement: CreateRoutineStatement): string;
   visit(statement: DropRoutineStatement): string;
+  visit(statement: CreateCreateStoredProcedureStatement): string;
+  visit(statement: CreateReadStoredProcedureStatement): string;
+  visit(statement: CreateUpdateStoredProcedureStatement): string;
+  visit(statement: CreateDeleteStoredProcedureStatement): string;
+  visit(statement: CreateBulkCreateStoredProcedureStatement): string;
+  visit(statement: CreateBulkUpdateStoredProcedureStatement): string;
+  visit(statement: CreateBulkDeleteStoredProcedureStatement): string;
   visit(statement: AnyStatement): string {
     return ({
       SelectStatement: () => this.visitSelect(statement as SelectStatement),
@@ -106,8 +130,14 @@ export class StatementRenderer implements IStatementVisitor {
       DropTriggerStatement: () => this.visitDropTrigger(statement as DropTriggerStatement),
       CreateTriggerStatement: () => this.visitCreateTrigger(statement as CreateTriggerStatement),
       IdentityInsertStatement: () => this.visitIdentityInsert(statement as IdentityInsertStatement),
-      CreateRoutineStatement: () => this.visitCreateRoutine(statement as CreateRoutineStatement),
       DropRoutineStatement: () => this.visitDropRoutine(statement as DropRoutineStatement),
+      CreateCreateStoredProcedureStatement: () => this.visitCreateCreateStoredProcedureStatement(statement as CreateCreateStoredProcedureStatement),
+      CreateReadStoredProcedureStatement: () => this.visitCreateReadStoredProcedureStatement(statement as CreateReadStoredProcedureStatement),
+      CreateUpdateStoredProcedureStatement: () => this.visitCreateUpdateStoredProcedureStatement(statement as CreateUpdateStoredProcedureStatement),
+      CreateDeleteStoredProcedureStatement: () => this.visitCreateDeleteStoredProcedureStatement(statement as CreateDeleteStoredProcedureStatement),
+      CreateBulkCreateStoredProcedureStatement: () => this.visitCreateBulkCreateStoredProcedureStatement(statement as CreateBulkCreateStoredProcedureStatement),
+      CreateBulkUpdateStoredProcedureStatement: () => this.visitCreateBulkUpdateStoredProcedureStatement(statement as CreateBulkUpdateStoredProcedureStatement),
+      CreateBulkDeleteStoredProcedureStatement: () => this.visitCreateBulkDeleteStoredProcedureStatement(statement as CreateBulkDeleteStoredProcedureStatement),
       SelectInsertedIdStatement: () =>
         this.visitSelectInsertedId(statement as SelectInsertedIdStatement),
     }[statement.constructor.name] ?? (() => this.visitSelectInsertedId(statement as SelectInsertedIdStatement)))();
@@ -185,11 +215,35 @@ export class StatementRenderer implements IStatementVisitor {
     return new IdentityInsertStatementTextRenderer().render(statement);
   }
 
-  protected visitCreateRoutine(statement: CreateRoutineStatement): string {
-    return new CreateRoutineStatementTextRenderer().render(statement);
-  }
-
   protected visitDropRoutine(statement: DropRoutineStatement): string {
     return new DropRoutineStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateCreateStoredProcedureStatement(statement: CreateCreateStoredProcedureStatement): string {
+    return new CreateCreateStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
+    return new CreateReadStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {
+    return new CreateUpdateStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateDeleteStoredProcedureStatement(statement: CreateDeleteStoredProcedureStatement): string {
+    return new CreateDeleteStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateBulkCreateStoredProcedureStatement(statement: CreateBulkCreateStoredProcedureStatement): string {
+    return new CreateBulkCreateStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateBulkUpdateStoredProcedureStatement(statement: CreateBulkUpdateStoredProcedureStatement): string {
+    return new CreateBulkUpdateStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
+    return new CreateBulkDeleteStoredProcedureStatementTextRenderer().render(statement);
   }
 }

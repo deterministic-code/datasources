@@ -1,14 +1,18 @@
 use crate::alter_table_statement_renderer::MysqlAlterTableStatementRenderer;
-use crate::create_routine_statement_renderer::MysqlCreateRoutineStatementRenderer;
+use crate::stored_procedure_statement_renderer::MysqlStoredProcedureStatementRenderer;
 use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::MysqlCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::MysqlDropRoutineStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
 use datasources::{
     AlterTableStatement, BulkUpdateStatement,
-    BulkUpdateStatementTextRenderer, CreateRoutineStatement, CreateTableStatement,
-    CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
-    DropRoutineStatement, SelectInsertedIdStatement, StatementTextRenderer, StatementVisitor,
+    BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
+    CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
+    CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
+    CreateReadStoredProcedureStatement, CreateTableStatement,
+    CreateTableStatementTextRenderer, CreateTriggerStatement, CreateUpdateStoredProcedureStatement,
+    DropIndexStatement, DropRoutineStatement, SelectInsertedIdStatement, StatementTextRenderer,
+    StatementVisitor,
 };
 
 pub struct MysqlStatementRenderer;
@@ -54,14 +58,6 @@ impl StatementVisitor for MysqlStatementRenderer {
         MysqlCreateTriggerStatementRenderer.render(statement)
     }
 
-    fn visit_create_routine(
-        &self,
-        statement: &CreateRoutineStatement,
-        _text: &StatementTextRenderer,
-    ) -> String {
-        MysqlCreateRoutineStatementRenderer.render(statement)
-    }
-
     fn visit_drop_routine(
         &self,
         statement: &DropRoutineStatement,
@@ -76,6 +72,62 @@ impl StatementVisitor for MysqlStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         BulkUpdateStatementTextRenderer.render_join(statement)
+    }
+
+    fn visit_create_create_stored_procedure(
+        &self,
+        statement: &CreateCreateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_create(statement)
+    }
+
+    fn visit_create_read_stored_procedure(
+        &self,
+        statement: &CreateReadStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_read(statement)
+    }
+
+    fn visit_create_update_stored_procedure(
+        &self,
+        statement: &CreateUpdateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_update(statement)
+    }
+
+    fn visit_create_delete_stored_procedure(
+        &self,
+        statement: &CreateDeleteStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_delete(statement)
+    }
+
+    fn visit_create_bulk_create_stored_procedure(
+        &self,
+        statement: &CreateBulkCreateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_bulk_create(statement)
+    }
+
+    fn visit_create_bulk_update_stored_procedure(
+        &self,
+        statement: &CreateBulkUpdateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_bulk_update(statement)
+    }
+
+    fn visit_create_bulk_delete_stored_procedure(
+        &self,
+        statement: &CreateBulkDeleteStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_bulk_delete(statement)
     }
 }
 

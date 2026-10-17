@@ -2,7 +2,6 @@ mod alter_table_statement_renderer;
 mod command;
 mod connection;
 mod converters;
-mod create_routine_statement_renderer;
 mod create_table_statement_renderer;
 mod create_trigger_statement_renderer;
 mod drop_routine_statement_renderer;
@@ -12,6 +11,7 @@ mod engine;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
 mod statement_renderer;
+mod stored_procedure_statement_renderer;
 mod transaction;
 
 pub use driver::MysqlDriver;

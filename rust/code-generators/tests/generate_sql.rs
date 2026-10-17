@@ -38,7 +38,7 @@ fn names(entries: &[datasources_code_generators::GenerateEntry]) -> Vec<String> 
 
 #[test]
 fn emits_stored_procedure_migrations_when_the_flag_is_true_on_postgres() {
-    let files = names(
+    let listed = names(
         &generate_sql(
             &files(TYPES_YAML, None, None),
             &HashMap::from([("datasource.use_stored_procedures".into(), "true".into())]),
@@ -46,9 +46,22 @@ fn emits_stored_procedure_migrations_when_the_flag_is_true_on_postgres() {
         )
         .unwrap(),
     );
-    assert!(files.iter().any(|f| f == "postgres/migrations/0001_initial_up.sql"));
-    assert!(files.iter().any(|f| f == "postgres/migrations/0002_stored_procedures_up.sql"));
-    assert!(files.iter().any(|f| f == "postgres/migrations/0002_stored_procedures_down.sql"));
+    assert!(listed.iter().any(|f| f == "postgres/migrations/0001_initial_up.sql"));
+    assert!(listed.iter().any(|f| f == "postgres/migrations/0002_stored_procedures_up.sql"));
+    assert!(listed.iter().any(|f| f == "postgres/migrations/0002_stored_procedures_down.sql"));
+    let up = generate_sql(
+        &files(TYPES_YAML, None, None),
+        &HashMap::from([("datasource.use_stored_procedures".into(), "true".into())]),
+        &["postgres".into()],
+    )
+    .unwrap()
+    .into_iter()
+    .find(|e| e.filename.ends_with("_stored_procedures_up.sql"))
+    .unwrap()
+    .content;
+    assert!(up.contains("read_users"));
+    assert!(up.contains("bulk_create_users"));
+    assert!(up.contains("CREATE OR REPLACE"));
 }
 
 #[test]
@@ -337,6 +350,61 @@ fn emits_numbered_up_down_files_from_frozen_diffs() {
             "sqlite/migrations/0001_up.sql".to_string()
         ]
     );
+}
+
+fn replacement_diff(types_yaml: &str) -> String {
+    let types: serde_yaml::Value = serde_yaml::from_str(types_yaml).unwrap();
+    let mut doc = serde_yaml::Mapping::new();
+    doc.insert(
+        serde_yaml::Value::String("types.yaml".into()),
+        types,
+    );
+    serde_yaml::to_string(&serde_yaml::Value::Mapping(doc)).unwrap()
+}
+
+#[test]
+fn replaces_stored_procedures_when_a_later_version_adds_a_column() {
+    let first = "version-20261016T000000Z-001/diff.yaml";
+    let second = "version-20261016T000000Z-002/diff.yaml";
+    let next = r#"
+types:
+  - user:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - email:
+            type: string
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+        - notes:
+            type: string
+"#;
+    let mut files = files(next, None, None);
+    files.insert(first.into(), frozen_diff(TYPES_YAML));
+    files.insert(second.into(), replacement_diff(next));
+    let entries = generate_sql(
+        &files,
+        &HashMap::from([("datasource.use_stored_procedures".into(), "true".into())]),
+        &["postgres".into()],
+    )
+    .unwrap();
+    let up2 = entries
+        .iter()
+        .find(|e| e.filename == "postgres/migrations/0002_up.sql")
+        .unwrap()
+        .content
+        .clone();
+    let down2 = entries
+        .iter()
+        .find(|e| e.filename == "postgres/migrations/0002_down.sql")
+        .unwrap()
+        .content
+        .clone();
+    assert!(up2.contains("notes"));
+    assert!(up2.contains("CREATE OR REPLACE"));
+    assert!(down2.contains("CREATE OR REPLACE"));
 }
 
 #[test]

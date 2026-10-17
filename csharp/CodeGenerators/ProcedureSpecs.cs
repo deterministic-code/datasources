@@ -2,18 +2,24 @@ namespace Datasources.CodeGenerators;
 
 public static class ProcedureSpecs
 {
-    public static IReadOnlyList<ProcedureSpec> Of(string entityName, IReadOnlyList<string> byFields, PackCasing casing)
+    public static IReadOnlyList<ProcedureSpec> Of(string entityName, IReadOnlyList<IReadOnlyList<string>> byGroups, PackCasing casing)
     {
         string Name(string stem) => casing.RoutineName(stem);
+        var plural = casing.PluralStem(entityName);
+        string Suffix(IReadOnlyList<string> props) => props.Count == 0 ? "" : $"_by_{string.Join("_", props)}";
         return
         [
-            new("create", Name($"create_{entityName}")),
-            new("findOne", Name($"find_{entityName}")),
-            new("findAll", Name($"find_{casing.PluralTableName(entityName)}")),
-            .. byFields.Select(bf => new ProcedureSpec("findBy", Name($"find_{entityName}_by_{bf}"), bf)),
-            new("update", Name($"update_{entityName}")),
-            .. byFields.Select(bf => new ProcedureSpec("updateBy", Name($"update_{entityName}_by_{bf}"), bf)),
-            new("delete", Name($"delete_{entityName}")),
+            new("create", Name($"create_{plural}"), []),
+            new("read", Name($"read_{plural}"), []),
+            .. byGroups.SelectMany(props => new ProcedureSpec[]
+            {
+                new("read", Name($"read_{plural}{Suffix(props)}"), props),
+                new("update", Name($"update_{plural}{Suffix(props)}"), props),
+                new("delete", Name($"delete_{plural}{Suffix(props)}"), props),
+            }),
+            new("bulkCreate", Name($"bulk_create_{plural}"), []),
+            new("bulkUpdate", Name($"bulk_update_{plural}"), []),
+            new("bulkDelete", Name($"bulk_delete_{plural}"), []),
         ];
     }
 }

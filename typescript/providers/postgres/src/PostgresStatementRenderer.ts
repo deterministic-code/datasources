@@ -1,9 +1,15 @@
 import {
   AlterTableStatement,
   BulkUpdateStatement,
-  CreateRoutineStatement,
+  CreateBulkCreateStoredProcedureStatement,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
+  CreateUpdateStoredProcedureStatement,
   DropRoutineStatement,
   DropTriggerStatement,
   IdentityInsertStatement,
@@ -14,10 +20,10 @@ import {
 } from "@datasources/core";
 import { PostgresAlterTableStatementRenderer } from "./PostgresAlterTableStatementRenderer.ts";
 import { PostgresBulkUpdateStatementTextRenderer } from "./PostgresBulkUpdateStatementTextRenderer.ts";
-import { PostgresCreateRoutineStatementRenderer } from "./PostgresCreateRoutineStatementRenderer.ts";
 import { PostgresCreateTableStatementRenderer } from "./PostgresCreateTableStatementRenderer.ts";
 import { PostgresCreateTriggerStatementRenderer } from "./PostgresCreateTriggerStatementRenderer.ts";
 import { PostgresDropRoutineStatementRenderer } from "./PostgresDropRoutineStatementRenderer.ts";
+import { PostgresStoredProcedureStatementRenderer } from "./PostgresStoredProcedureStatementRenderer.ts";
 import { PostgresDropTriggerStatementRenderer } from "./PostgresDropTriggerStatementRenderer.ts";
 import { PostgresIdentityInsertStatementRenderer } from "./PostgresIdentityInsertStatementRenderer.ts";
 
@@ -60,11 +66,35 @@ export class PostgresStatementRenderer extends StatementRenderer {
     return new PostgresIdentityInsertStatementRenderer().render(insert);
   }
 
-  protected override visitCreateRoutine(routine: CreateRoutineStatement): string {
-    return new PostgresCreateRoutineStatementRenderer().render(routine);
-  }
-
   protected override visitDropRoutine(routine: DropRoutineStatement): string {
     return new PostgresDropRoutineStatementRenderer().render(routine);
+  }
+
+  protected override visitCreateCreateStoredProcedureStatement(statement: CreateCreateStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderCreate(statement);
+  }
+
+  protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderUpdate(statement);
+  }
+
+  protected override visitCreateDeleteStoredProcedureStatement(statement: CreateDeleteStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderDelete(statement);
+  }
+
+  protected override visitCreateBulkCreateStoredProcedureStatement(statement: CreateBulkCreateStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderBulkCreate(statement);
+  }
+
+  protected override visitCreateBulkUpdateStoredProcedureStatement(statement: CreateBulkUpdateStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderBulkUpdate(statement);
+  }
+
+  protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderBulkDelete(statement);
   }
 }

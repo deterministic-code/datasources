@@ -3,10 +3,13 @@ use crate::schema::{field_overlay, overlay_of, table_identity, uses_generated_id
 use crate::spec::{is_pk_field, SpecTypeField};
 use crate::sql_dialect;
 use datasources::{
-    AlterAction, AlterTableStatement, Column, ColumnDefault, CreateIndexStatement,
-    CreateRoutineStatement, CreateTableStatement, CreateTriggerStatement, DropIndexStatement,
+    AlterAction, AlterTableStatement, Column, ColumnDefault, CreateBulkCreateStoredProcedureStatement,
+    CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
+    CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement, CreateIndexStatement,
+    CreateReadStoredProcedureStatement, CreateTableStatement,
+    CreateTriggerStatement, CreateUpdateStoredProcedureStatement, DropIndexStatement,
     DropRoutineStatement, DropTableStatement, DropTriggerStatement, ForeignKey,
-    IdentityInsertStatement, InsertStatement, NotNull, Parameter, PrimaryKey, Result, RoutineKind,
+    IdentityInsertStatement, InsertStatement, NotNull, Parameter, PrimaryKey, Result,
     RoutineParameter, TableConstraint, UniqueConstraint, Value,
 };
 
@@ -216,36 +219,108 @@ pub fn identity_insert(
     )
 }
 
-pub fn create_routine(
+pub fn drop_routine(name: impl AsRef<str>) -> DropRoutineStatement {
+    DropRoutineStatement::new(name)
+}
+
+pub fn create_create_stored_procedure(
     name: impl AsRef<str>,
-    kind: RoutineKind,
     table: impl AsRef<str>,
     columns: Vec<String>,
     parameters: Vec<RoutineParameter>,
     key: impl AsRef<str>,
     key_type: impl AsRef<str>,
     writable: Vec<String>,
-    by_field: Option<String>,
     generated_key: bool,
     audit_updated: Option<String>,
-) -> CreateRoutineStatement {
-    CreateRoutineStatement::new(
-        name,
-        kind,
-        table,
-        columns,
-        parameters,
-        key,
-        key_type,
-        writable,
-        by_field,
-        generated_key,
-        audit_updated,
+) -> CreateCreateStoredProcedureStatement {
+    CreateCreateStoredProcedureStatement::new(
+        name, table, columns, parameters, key, key_type, writable, generated_key, audit_updated,
     )
 }
 
-pub fn drop_routine(name: impl AsRef<str>) -> DropRoutineStatement {
-    DropRoutineStatement::new(name)
+pub fn create_read_stored_procedure(
+    name: impl AsRef<str>,
+    table: impl AsRef<str>,
+    columns: Vec<String>,
+    parameters: Vec<RoutineParameter>,
+    key: impl AsRef<str>,
+    key_type: impl AsRef<str>,
+    writable: Vec<String>,
+    by_properties: Vec<String>,
+    generated_key: bool,
+    audit_updated: Option<String>,
+) -> CreateReadStoredProcedureStatement {
+    CreateReadStoredProcedureStatement::new(
+        name, table, columns, parameters, key, key_type, writable, by_properties, generated_key, audit_updated,
+    )
+}
+
+pub fn create_update_stored_procedure(
+    name: impl AsRef<str>,
+    table: impl AsRef<str>,
+    columns: Vec<String>,
+    parameters: Vec<RoutineParameter>,
+    key: impl AsRef<str>,
+    key_type: impl AsRef<str>,
+    writable: Vec<String>,
+    by_properties: Vec<String>,
+    generated_key: bool,
+    audit_updated: Option<String>,
+) -> CreateUpdateStoredProcedureStatement {
+    CreateUpdateStoredProcedureStatement::new(
+        name, table, columns, parameters, key, key_type, writable, by_properties, generated_key, audit_updated,
+    )
+}
+
+pub fn create_delete_stored_procedure(
+    name: impl AsRef<str>,
+    table: impl AsRef<str>,
+    columns: Vec<String>,
+    parameters: Vec<RoutineParameter>,
+    key: impl AsRef<str>,
+    key_type: impl AsRef<str>,
+    writable: Vec<String>,
+    by_properties: Vec<String>,
+    generated_key: bool,
+    audit_updated: Option<String>,
+) -> CreateDeleteStoredProcedureStatement {
+    CreateDeleteStoredProcedureStatement::new(
+        name, table, columns, parameters, key, key_type, writable, by_properties, generated_key, audit_updated,
+    )
+}
+
+pub fn create_bulk_create_stored_procedure(
+    name: impl AsRef<str>,
+    table: impl AsRef<str>,
+    columns: Vec<RoutineParameter>,
+    payload: RoutineParameter,
+    key: impl AsRef<str>,
+    key_type: impl AsRef<str>,
+) -> CreateBulkCreateStoredProcedureStatement {
+    CreateBulkCreateStoredProcedureStatement::new(name, table, columns, payload, key, key_type)
+}
+
+pub fn create_bulk_update_stored_procedure(
+    name: impl AsRef<str>,
+    table: impl AsRef<str>,
+    columns: Vec<RoutineParameter>,
+    payload: RoutineParameter,
+    key: impl AsRef<str>,
+    key_type: impl AsRef<str>,
+) -> CreateBulkUpdateStoredProcedureStatement {
+    CreateBulkUpdateStoredProcedureStatement::new(name, table, columns, payload, key, key_type)
+}
+
+pub fn create_bulk_delete_stored_procedure(
+    name: impl AsRef<str>,
+    table: impl AsRef<str>,
+    columns: Vec<RoutineParameter>,
+    payload: RoutineParameter,
+    key: impl AsRef<str>,
+    key_type: impl AsRef<str>,
+) -> CreateBulkDeleteStoredProcedureStatement {
+    CreateBulkDeleteStoredProcedureStatement::new(name, table, columns, payload, key, key_type)
 }
 
 fn column_of(dialect: &str, mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {

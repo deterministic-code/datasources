@@ -9,6 +9,7 @@ import {
   type ICommand,
   type IConnection,
   type IDriver,
+  type Information,
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
@@ -20,6 +21,19 @@ const statements = new StatementTextRenderer(t => new OracleStatementRenderer(t)
 
 export class OracleDriver implements IDriver {
   readonly statementRenderer = statements;
+  readonly information: Information = {
+    descriptions: ["Oracle driver."],
+    overrides: [
+      "Overrides CreateCreateStoredProcedureStatement to PROCEDURE Create{Plural}",
+      "Overrides CreateReadStoredProcedureStatement to PROCEDURE Read{Plural}By{Properties}",
+      "Overrides CreateUpdateStoredProcedureStatement to PROCEDURE Update{Plural}By{Properties}",
+      "Overrides CreateDeleteStoredProcedureStatement to PROCEDURE Delete{Plural}By{Properties}",
+      "Overrides CreateBulkCreateStoredProcedureStatement to PROCEDURE BulkCreate{Plural}",
+      "Overrides CreateBulkUpdateStoredProcedureStatement to PROCEDURE BulkUpdate{Plural}",
+      "Overrides CreateBulkDeleteStoredProcedureStatement to PROCEDURE BulkDelete{Plural}",
+    ],
+    changeLogs: [],
+  };
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
   readonly quoteLeft = '"';
   readonly quoteRight = '"';

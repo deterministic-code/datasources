@@ -1,5 +1,7 @@
 use crate::casing::PackCasing;
+use crate::by_groups;
 use crate::generate_entry::GenerateEntry;
+use crate::generate_procedures;
 use crate::mapping::SqlMapping;
 use crate::schema::{self, SqlTable};
 use crate::schema_diff::{self, DdlStatement};
@@ -73,7 +75,9 @@ pub fn files(
         let current = compile(snapshot, settings)?;
         let up = schema_diff::of(dialect, &previous.0, &previous.1, &current.0, &current.1)?;
         let down = schema_diff::of(dialect, &current.0, &current.1, &previous.0, &previous.1)?;
-        if up.is_empty() && down.is_empty() {
+        let up_procs = procedure_sql(dialect, settings, &previous.0, &current.0, &current.1, casing)?;
+        let down_procs = procedure_sql(dialect, settings, &current.0, &previous.0, &previous.1, casing)?;
+        if up.is_empty() && down.is_empty() && up_procs.is_empty() && down_procs.is_empty() {
             previous = current;
             continue;
         }
@@ -84,6 +88,12 @@ pub fn files(
             Vec::new()
         };
         let mut up_sql = format!("-- Generated migration for {dialect}\n{}", render(dialect, &up)?);
+        if !up_procs.is_empty() {
+            if !up_sql.ends_with('\n') {
+                up_sql.push('\n');
+            }
+            up_sql.push_str(&up_procs);
+        }
         if !seeds.is_empty() {
             up_sql.push_str("\n\n-- Seed data\n");
             for block in seeds {
@@ -93,7 +103,13 @@ pub fn files(
                 }
             }
         }
-        let down_sql = format!("-- Rollback migration for {dialect}\n{}", render(dialect, &down)?);
+        let mut down_sql = format!("-- Rollback migration for {dialect}\n{}", render(dialect, &down)?);
+        if !down_procs.is_empty() {
+            if !down_sql.ends_with('\n') {
+                down_sql.push('\n');
+            }
+            down_sql.push_str(&down_procs);
+        }
         output.push(GenerateEntry::new(
             format!("{:04}_up.sql", number),
             finalize(&up_sql, casing),
@@ -123,6 +139,46 @@ fn compile(
     let types = schema::from_spec(&parsed);
     let mapping = SqlMapping::new(PackCasing::of(settings)?, &types);
     Ok((schema::build_live(&types, &mapping), mapping, parsed.datasource_seeds))
+}
+
+fn fields_of(table: &SqlTable) -> String {
+    table
+        .fields
+        .iter()
+        .map(|field| format!("{}:{}", field.name, field.type_name))
+        .collect::<Vec<_>>()
+        .join("|")
+}
+
+fn procedure_sql(
+    dialect: &str,
+    settings: &HashMap<String, String>,
+    before: &[SqlTable],
+    after: &[SqlTable],
+    after_map: &SqlMapping,
+    casing: &PackCasing,
+) -> Result<String> {
+    if !schema::use_stored_procedures(settings) {
+        return Ok(String::new());
+    }
+    let previous: HashMap<_, _> = before.iter().map(|table| (table.name.as_str(), table)).collect();
+    let groups = by_groups::from(after);
+    let mut parts = Vec::new();
+    for table in after {
+        let Some(prior) = previous.get(table.name.as_str()) else { continue };
+        if !schema::has_audit_columns(table) || fields_of(prior) == fields_of(table) {
+            continue;
+        }
+        let group = groups.get(&table.name).cloned().unwrap_or_default();
+        let (statements, _) = generate_procedures::for_table(dialect, table, after_map, casing, &group)?;
+        for statement in statements {
+            let sql = sql_dialect::render_sql(dialect, statement.as_ref())?;
+            if !sql.is_empty() {
+                parts.push(sql);
+            }
+        }
+    }
+    Ok(parts.join("\n"))
 }
 
 fn render(dialect: &str, statements: &[DdlStatement]) -> Result<String> {

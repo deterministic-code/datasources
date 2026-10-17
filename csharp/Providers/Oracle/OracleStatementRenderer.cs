@@ -21,4 +21,25 @@ internal sealed class OracleStatementRenderer(StatementTextRenderer text) : Stat
 
     public override string Visit(DropTableStatement drop) =>
         new OracleDropTableStatementRenderer().Render(drop);
+
+    public override string Visit(CreateCreateStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateReadStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateDeleteStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkCreateStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkUpdateStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
 }

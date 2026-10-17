@@ -91,10 +91,10 @@ public class GenerateSqlCasingTests
         };
         var routines = new Dictionary<string, (string createFn, string findAllFn)>
         {
-            ["Camel"] = ("createNotificationType", "findNotificationTypes"),
-            ["Pascal"] = ("CreateNotificationType", "FindNotificationTypes"),
-            ["Snake"] = ("create_notification_type", "find_notification_types"),
-            ["Kebab"] = ("create-notification-type", "find-notification-types"),
+            ["Camel"] = ("createNotificationTypes", "readNotificationTypes"),
+            ["Pascal"] = ("CreateNotificationTypes", "ReadNotificationTypes"),
+            ["Snake"] = ("create_notification_types", "read_notification_types"),
+            ["Kebab"] = ("create-notification-types", "read-notification-types"),
         };
         foreach (var format in new[] { "Camel", "Pascal", "Snake", "Kebab" })
         foreach (var pluralize in new[] { "on", "off" })
@@ -148,7 +148,7 @@ public class GenerateSqlCasingTests
         Assert.Matches("\"NotificationTypesUserIdForeignKey\"", sql);
         Assert.Matches(@"REFERENCES ""Users""\s*\(""id""\)", sql);
         var procs = ProcSql(settings);
-        Assert.Matches(@"CREATE OR REPLACE FUNCTION CreateNotificationType\(", procs);
+        Assert.Matches(@"CREATE OR REPLACE FUNCTION CreateNotificationTypes\(", procs);
         Assert.Matches("channelName", procs);
     }
 
@@ -177,7 +177,7 @@ public class GenerateSqlCasingTests
         Assert.Matches("\"email\" text not null", sql);
         Assert.DoesNotMatch("CREATE TABLE", sql);
         var procs = ProcSql(new Dictionary<string, string> { ["datasource.casing.keywords"] = "lower" });
-        Assert.Matches(@"create or replace function create_notification_type\(", procs);
+        Assert.Matches(@"create or replace function create_notification_types\(", procs);
         Assert.DoesNotMatch("CREATE OR REPLACE", procs);
     }
 
@@ -190,7 +190,7 @@ public class GenerateSqlCasingTests
         Assert.Matches("\"channel_name\"", sql);
         Assert.DoesNotMatch("CREATE TABLE \"notification_types\"", sql);
         var procs = ProcSql(new Dictionary<string, string> { ["datasource.casing.objects"] = "upper" });
-        Assert.Matches(@"CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPE\(", procs);
+        Assert.Matches(@"CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPES\(", procs);
     }
 
     [Fact]

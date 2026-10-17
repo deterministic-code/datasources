@@ -56,4 +56,33 @@ public class MysqlStatementRendererTests
             "UPDATE parents JOIN (SELECT $label__0 AS label, $id__0 AS id UNION ALL SELECT $label__1 AS label, $id__1 AS id) AS data ON parents.id = data.id SET parents.label = data.label",
             Renderer.Render(update));
     }
+
+    [Fact]
+    public void RendersCreateReadUpdateStoredProcedureStatements()
+    {
+        Assert.Contains("CREATE PROCEDURE CreateUsers", Renderer.Render(
+            new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id", "name"], [new RoutineParameter("name", "TEXT")], "id", "INT", ["name"])));
+        Assert.Contains("ORDER BY t.id", Renderer.Render(
+            new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], [])));
+        Assert.Contains("WHERE t.id = id", Renderer.Render(
+            new CreateReadStoredProcedureStatement("ReadUsersById", "users", ["id", "name"], [new RoutineParameter("id", "INT")], "id", "INT", [], ["id"])));
+        Assert.Contains("WHERE t.id = id AND t.version = version", Renderer.Render(
+            new CreateUpdateStoredProcedureStatement(
+                "UpdateUsersByIdVersion",
+                "users",
+                ["id", "name", "version"],
+                [new RoutineParameter("id", "INT"), new RoutineParameter("version", "INT"), new RoutineParameter("name", "TEXT")],
+                "id",
+                "INT",
+                ["name"],
+                ["id", "version"])));
+        Assert.Contains("JSON_TABLE", Renderer.Render(
+            new CreateBulkDeleteStoredProcedureStatement(
+                "BulkDeleteUsers",
+                "users",
+                [new RoutineParameter("id", "INT")],
+                new RoutineParameter("payload", "JSON"),
+                "id",
+                "INT")));
+    }
 }

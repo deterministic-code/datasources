@@ -231,6 +231,26 @@ public class StatementCompileTests
     }
 
     [Fact]
+    public void RendersStoredProcedureStatementsEmpty()
+    {
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id"], [], "id", "INT", [])));
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id"], [], "id", "INT", [], [])));
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateUpdateStoredProcedureStatement("UpdateUsersById", "users", ["id"], [], "id", "INT", [], ["id"])));
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateDeleteStoredProcedureStatement("DeleteUsersById", "users", ["id"], [], "id", "INT", [], ["id"])));
+        var payload = new RoutineParameter("payload", "JSON");
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateBulkCreateStoredProcedureStatement("BulkCreateUsers", "users", [payload], payload, "id", "INT")));
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateBulkUpdateStoredProcedureStatement("BulkUpdateUsers", "users", [payload], payload, "id", "INT")));
+        Assert.Equal("", DefaultStatementTextRenderer.Instance.Render(
+            new CreateBulkDeleteStoredProcedureStatement("BulkDeleteUsers", "users", [payload], payload, "id", "INT")));
+    }
+
+    [Fact]
     public void CompilesACall()
     {
         var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };

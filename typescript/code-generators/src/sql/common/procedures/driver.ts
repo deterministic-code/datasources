@@ -1,45 +1,40 @@
 import type { PackCasing } from "../default-casing.ts";
 
-type ProcOp =
+export type ProcOp =
   | "create"
-  | "findOne"
-  | "findAll"
-  | "findBy"
+  | "read"
   | "update"
-  | "updateBy"
-  | "delete";
+  | "delete"
+  | "bulkCreate"
+  | "bulkUpdate"
+  | "bulkDelete";
 
-type ProcSpec = {
-  op: ProcOp;
-  name: string;
-  byField?: string;
+export type ProcSpec = {
+  op: ProcOp
+  name: string
+  byProperties: string[]
 };
 
-/** Ordered CRUD ops + routine names for one entity (CREATE bodies and DROP names). */
+/** Ordered CRUD ops + routine names for one entity. */
 export const procedureSpecs = (
   entityName: string,
-  byFields: string[],
+  byGroups: string[][],
   casing: PackCasing,
 ): ProcSpec[] => {
   const name = (stem: string): string => casing.routineName(stem);
+  const plural = casing.pluralStem(entityName);
+  const bySuffix = (props: string[]): string =>
+    props.length === 0 ? "" : `_by_${props.join("_")}`;
   return [
-    { op: "create", name: name(`create_${entityName}`) },
-    { op: "findOne", name: name(`find_${entityName}`) },
-    {
-      op: "findAll",
-      name: name(`find_${casing.pluralTableName(entityName)}`),
-    },
-    ...byFields.map((bf) => ({
-      op: "findBy" as const,
-      name: name(`find_${entityName}_by_${bf}`),
-      byField: bf,
-    })),
-    { op: "update", name: name(`update_${entityName}`) },
-    ...byFields.map((bf) => ({
-      op: "updateBy" as const,
-      name: name(`update_${entityName}_by_${bf}`),
-      byField: bf,
-    })),
-    { op: "delete", name: name(`delete_${entityName}`) },
+    { op: "create", name: name(`create_${plural}`), byProperties: [] },
+    { op: "read", name: name(`read_${plural}`), byProperties: [] },
+    ...byGroups.flatMap((props) => [
+      { op: "read" as const, name: name(`read_${plural}${bySuffix(props)}`), byProperties: props },
+      { op: "update" as const, name: name(`update_${plural}${bySuffix(props)}`), byProperties: props },
+      { op: "delete" as const, name: name(`delete_${plural}${bySuffix(props)}`), byProperties: props },
+    ]),
+    { op: "bulkCreate", name: name(`bulk_create_${plural}`), byProperties: [] },
+    { op: "bulkUpdate", name: name(`bulk_update_${plural}`), byProperties: [] },
+    { op: "bulkDelete", name: name(`bulk_delete_${plural}`), byProperties: [] },
   ];
 };

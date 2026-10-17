@@ -95,4 +95,21 @@ public class PostgresStatementRendererTests
             "UPDATE contacts SET version = data.version FROM (SELECT $version__0::BYTEA AS version, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id",
             Renderer.Render(update));
     }
+
+    [Fact]
+    public void RendersCreateReadUpdateStoredProcedureStatements()
+    {
+        Assert.Contains("CREATE OR REPLACE FUNCTION CreateUsers", Renderer.Render(
+            new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id", "name"], [new RoutineParameter("name", "TEXT")], "id", "INT", ["name"])));
+        Assert.Contains("ORDER BY t.id", Renderer.Render(
+            new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], [])));
+        Assert.Contains("jsonb_to_recordset", Renderer.Render(
+            new CreateBulkDeleteStoredProcedureStatement(
+                "BulkDeleteUsers",
+                "users",
+                [new RoutineParameter("id", "INT")],
+                new RoutineParameter("payload", "jsonb"),
+                "id",
+                "INT")));
+    }
 }

@@ -19,9 +19,27 @@ internal sealed class SqlServerStatementRenderer(StatementTextRenderer text) : S
     public override string Visit(IdentityInsertStatement insert) =>
         new SqlServerIdentityInsertStatementRenderer().Render(insert);
 
-    public override string Visit(CreateRoutineStatement routine) =>
-        new SqlServerCreateRoutineStatementRenderer().Render(routine);
-
     public override string Visit(DropRoutineStatement routine) =>
         new SqlServerDropRoutineStatementRenderer().Render(routine);
+
+    public override string Visit(CreateCreateStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateReadStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateDeleteStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkCreateStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkUpdateStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
 }
