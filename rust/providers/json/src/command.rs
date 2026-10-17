@@ -24,6 +24,10 @@ impl JsonCommand {
 
 #[async_trait]
 impl Command for JsonCommand {
+    fn connection(&self) -> Arc<dyn datasources::Connection> {
+        Arc::clone(&self.connection) as Arc<dyn datasources::Connection>
+    }
+
     fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
         self.host.add_middleware(middleware);
     }

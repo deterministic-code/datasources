@@ -163,7 +163,7 @@ impl Connection for JsonConnection {
         *self.state.in_transaction.lock().unwrap() = true;
         Ok(Arc::new(JsonTransaction {
             state: self.state.clone(),
-            isolation: isolation.unwrap_or_default(),
+            isolation: isolation.unwrap_or(IsolationLevel::Serializable),
         }) as Arc<dyn Transaction>)
     }
 }

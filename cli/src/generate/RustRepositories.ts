@@ -69,12 +69,14 @@ const rustOcc = (model: RepositoryModel): string => {
   if (token === undefined) return "";
   const name = `${model.typeName}Optimistic`;
   const bump = token.increment
-    ? `        let mut written = item.clone();\n        if let Some(value) = written.get(${rustString(token.property)}).cloned() {\n            written.insert(${rustString(token.property)}.into(), match value {\n                Value::Int(n) => Value::Int(n + 1),\n                Value::Float(n) => Value::Float(n + 1.0),\n                other => other,\n            });\n        }\n        let item = &written;\n`
+    ? `        if let Some(value) = item.get(${rustString(token.property)}).cloned() {\n            item.insert(${rustString(token.property)}.into(), match value {\n                Value::Int(n) => Value::Int(n + 1),\n                Value::Float(n) => Value::Float(n + 1.0),\n                other => other,\n            });\n        }\n`
     : "";
   const where = rustTokenWhere(model, token);
   return `
 use datasources::{async_trait, CommandMiddleware, DatasourceError, IReadonlyRepository, IRepository, IdKey, IWhere, Parameter, ReadInput, Response, Value, Where, eq};
+use futures_core::Stream;
 use std::any::TypeId;
+use std::pin::Pin;
 
 pub struct ${name} {
     repo: CRUDRepository,
@@ -107,13 +109,13 @@ impl IReadonlyRepository for ${name} {
         self.repo.read_single(query, parameters, options).await
     }
 
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<datasources::Row>> {
-        self.repo.read(query, parameters, options).await
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [Parameter]>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<datasources::Row>> + Send + 'a>> {
+        self.repo.read(query, parameters, options)
     }
 }
 
@@ -123,7 +125,7 @@ impl ICRUDRepository for ${name} {
         self.repo.create(item).await
     }
 
-    async fn update(&self, item: &datasources::Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: &mut datasources::Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
 ${where}
 ${bump}        let response = self.repo.update(item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {

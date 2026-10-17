@@ -50,10 +50,10 @@ impl Driver for SqlServerDriver {
 
     fn transaction(
         &self,
-        _connection: Arc<dyn Connection>,
+        connection: Arc<dyn Connection>,
         _isolation: IsolationLevel,
     ) -> Arc<dyn Transaction> {
-        Arc::new(StubTransaction::new("sqlserver"))
+        Arc::new(StubTransaction::new("sqlserver", connection))
     }
 
     fn row_type_converters(

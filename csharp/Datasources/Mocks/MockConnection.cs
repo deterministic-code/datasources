@@ -34,7 +34,7 @@ public sealed class MockConnection : IConnection
         return Task.CompletedTask;
     }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         StartTransactionCalls++;
         if (StartTransactionError is not null) throw StartTransactionError;

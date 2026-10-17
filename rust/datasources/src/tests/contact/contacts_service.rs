@@ -8,7 +8,9 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use async_trait::async_trait;
+use futures_core::Stream;
 use std::any::TypeId;
+use std::pin::Pin;
 use std::sync::Arc;
 
 pub struct ContactsService {
@@ -117,13 +119,13 @@ impl IReadonlyRepository for ContactsService {
         self.contacts.read_single(query, parameters, options).await
     }
 
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
-        self.contacts.read(query, parameters, options).await
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [crate::Parameter]>,
+        options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.contacts.read(query, parameters, options)
     }
 }
 
@@ -133,7 +135,7 @@ impl ICRUDRepository for ContactsService {
         self.contacts.create(item).await
     }
 
-    async fn update(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.contacts.update(item, by_where).await
     }
 

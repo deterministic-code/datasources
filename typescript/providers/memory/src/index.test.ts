@@ -65,7 +65,7 @@ describe("Connection", () => {
     const connection = new MemoryConnection();
     await connection.open();
     const txn = await connection.startTransaction();
-    expect(txn.isolation).toBe("readCommitted");
+    expect(txn.isolation).toBe("serializable");
   });
 
   it("create and run a command", async () => {
@@ -92,7 +92,7 @@ describe("Transaction", () => {
     await connection.open();
     const txn = await connection.startTransaction();
     await txn.commit();
-    expect(txn.isolation).toBe("readCommitted");
+    expect(txn.isolation).toBe("serializable");
   });
 
   it("abort", async () => {
@@ -100,7 +100,7 @@ describe("Transaction", () => {
     await connection.open();
     const txn = await connection.startTransaction();
     await txn.abort();
-    expect(txn.isolation).toBe("readCommitted");
+    expect(txn.isolation).toBe("serializable");
   });
 
   it("command running in one atomic transaction", async () => {

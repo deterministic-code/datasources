@@ -69,13 +69,16 @@ impl Driver for LoadedDriver {
     }
 
     fn command(&self, connection: Arc<dyn Connection>) -> Arc<dyn Command> {
-        let loaded = connection
+        let slot = connection
             .as_any()
             .downcast_ref::<LoadedConnection>()
-            .expect("loaded connection");
+            .expect("loaded connection")
+            .sabi
+            .slot();
         Arc::new(LoadedCommand {
+            connection,
             library: Arc::clone(&self.library),
-            sabi: Arc::new(self.library.sabi.command(loaded.sabi.slot())),
+            sabi: Arc::new(self.library.sabi.command(slot)),
             host: CommandMiddlewareHost::new(),
         })
     }
@@ -85,13 +88,16 @@ impl Driver for LoadedDriver {
         connection: Arc<dyn Connection>,
         isolation: IsolationLevel,
     ) -> Arc<dyn Transaction> {
-        let loaded = connection
+        let slot = connection
             .as_any()
             .downcast_ref::<LoadedConnection>()
-            .expect("loaded connection");
+            .expect("loaded connection")
+            .sabi
+            .slot();
         Arc::new(LoadedTransaction {
+            connection,
             library: Arc::clone(&self.library),
-            sabi: Arc::new(self.library.sabi.transaction(loaded.sabi.slot(), isolation_tag(isolation))),
+            sabi: Arc::new(self.library.sabi.transaction(slot, isolation_tag(isolation))),
         })
     }
 
@@ -126,12 +132,14 @@ struct LoadedConnection {
 }
 
 struct LoadedCommand {
+    connection: Arc<dyn Connection>,
     library: Arc<LoadedLibrary>,
     sabi: Arc<SabiCommandBox>,
     host: CommandMiddlewareHost,
 }
 
 struct LoadedTransaction {
+    connection: Arc<dyn Connection>,
     library: Arc<LoadedLibrary>,
     sabi: Arc<SabiTransactionBox>,
 }
@@ -170,7 +178,12 @@ impl Connection for LoadedConnection {
     }
 
     fn create_command(&self) -> Arc<dyn Command> {
+        let connection: Arc<dyn Connection> = Arc::new(LoadedConnection {
+            library: Arc::clone(&self.library),
+            sabi: Arc::clone(&self.sabi),
+        });
         Arc::new(LoadedCommand {
+            connection,
             library: Arc::clone(&self.library),
             sabi: Arc::new(self.sabi.create_command()),
             host: CommandMiddlewareHost::new(),
@@ -200,7 +213,12 @@ impl Connection for LoadedConnection {
         })
         .await??;
         let _ = &library.sabi;
+        let connection: Arc<dyn Connection> = Arc::new(LoadedConnection {
+            library: Arc::clone(&library),
+            sabi: Arc::clone(&self.sabi),
+        });
         Ok(Arc::new(LoadedTransaction {
+            connection,
             library,
             sabi: Arc::new(started),
         }))
@@ -222,6 +240,10 @@ fn intern(name: String) -> &'static str {
 
 #[async_trait]
 impl Command for LoadedCommand {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::clone(&self.connection)
+    }
+
     fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
         self.host.add_middleware(middleware);
     }
@@ -282,6 +304,10 @@ impl Command for LoadedCommand {
 
 #[async_trait]
 impl Transaction for LoadedTransaction {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::clone(&self.connection)
+    }
+
     fn isolation(&self) -> IsolationLevel {
         isolation_of(self.sabi.isolation())
     }

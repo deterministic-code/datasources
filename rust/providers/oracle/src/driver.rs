@@ -50,10 +50,10 @@ impl Driver for OracleDriver {
 
     fn transaction(
         &self,
-        _: Arc<dyn Connection>,
+        connection: Arc<dyn Connection>,
         _: IsolationLevel,
     ) -> Arc<dyn Transaction> {
-        Arc::new(StubTransaction::new("oracle"))
+        Arc::new(StubTransaction::new("oracle", connection))
     }
 
     fn row_type_converters(

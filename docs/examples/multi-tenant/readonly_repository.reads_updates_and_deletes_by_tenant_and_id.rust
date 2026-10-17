@@ -21,7 +21,7 @@ key.insert("TenantId".into(), Value::Int(1));
 key.insert("Id".into(), Value::Int(1));
 let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 ada.insert("Name".into(), Value::from("ada-v2"));
-let updated = accounts_repo.update(&ada, None).await.unwrap();
+let updated = accounts_repo.update(&mut ada, None).await.unwrap();
 let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 let removed = accounts_repo.delete(&ada, None).await.unwrap();
 let gone = accounts_repo.read_single_by_id(&key).await.unwrap();

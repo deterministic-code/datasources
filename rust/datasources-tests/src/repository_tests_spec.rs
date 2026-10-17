@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
@@ -637,10 +638,10 @@ pub async fn run(
             } => {
                 let rows = if let Some(where_clause) = &query.where_clause {
                     repo.read(Some(&where_of(&mapping, where_clause)), None, None)
-                        .await
+                        .try_collect::<Vec<_>>().await
                         .unwrap()
                 } else {
-                    repo.read(None, None, None).await.unwrap()
+                    repo.read(None, None, None).try_collect::<Vec<_>>().await.unwrap()
                 };
                 if let Some(expect) = &query.expect {
                     assert_rows(&format!("{} QUERY", spec.name), &rows, expect);
@@ -662,8 +663,9 @@ pub async fn run(
                 update: Some(update),
                 ..
             } => {
+                let mut updated_row_1 = domain_record(&update.row, &spec.type_spec.mappings);
                 let response = repo
-                    .update(&domain_record(&update.row, &spec.type_spec.mappings), None)
+                    .update(&mut updated_row_1, None)
                     .await
                     .unwrap();
                 assert_affected(
@@ -677,9 +679,10 @@ pub async fn run(
                 ..
             } => {
                 let where_clause = where_of(&mapping, &update_by.where_clause);
+                let mut updated_row_2 = domain_record(&update_by.row, &spec.type_spec.mappings);
                 let response = repo
                     .update(
-                        &domain_record(&update_by.row, &spec.type_spec.mappings),
+                        &mut updated_row_2,
                         Some(&where_clause),
                     )
                     .await

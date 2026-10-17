@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
@@ -38,7 +39,7 @@ pub(crate) async fn load(
             Some(&Where::new(Operator::equals(enrichment.related_key.clone(), key))),
             None, None
         )
-        .await
+        .try_collect::<Vec<_>>().await
 }
 
 pub(crate) fn children_where(
@@ -110,9 +111,9 @@ mod tests {
             None,
         );
         parents.delete(&created, None).await.unwrap();
-        let left = children.read(None, None, None).await.unwrap();
+        let left = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].get("label"), Some(&Value::from("a")));
-        assert!(parents.read(None, None, None).await.unwrap().is_empty());
+        assert!(parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
     }
 }

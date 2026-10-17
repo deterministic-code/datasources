@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use crate::delete_enrichment_strategy::{load, children_where, DeleteEnrichmentStrategy};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
@@ -55,7 +56,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
                 ))),
                 None, None
         )
-            .await?;
+            .try_collect::<Vec<_>>().await?;
         for row in existing {
             let Some(related) = row.get(&association.related).cloned() else {
                 continue;

@@ -1,6 +1,6 @@
-use crate::connection::JsonState;
+use crate::connection::{JsonConnection, JsonState};
 use async_trait::async_trait;
-use datasources::{IsolationLevel, Result, Transaction};
+use datasources::{Connection, IsolationLevel, Result, Transaction};
 use std::sync::Arc;
 
 pub struct JsonTransaction {
@@ -16,6 +16,12 @@ impl JsonTransaction {
 
 #[async_trait]
 impl Transaction for JsonTransaction {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::new(JsonConnection {
+            state: Arc::clone(&self.state),
+        })
+    }
+
     fn isolation(&self) -> IsolationLevel {
         self.isolation
     }

@@ -42,7 +42,7 @@ internal sealed class SqliteConnection : IConnection
         IsOpen = false;
     }
 
-    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
+    public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
     {
         EnsureOpen();
         await _transactions.Begin(isolation);

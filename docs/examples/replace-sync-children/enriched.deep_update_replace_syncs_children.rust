@@ -28,9 +28,7 @@ parents.add_enriched(
     children.clone(),
     None,
 );
-let updated = parents
-    .update(
-        &record(&[
+let mut updated_row_2 = record(&[
             ("Id", parent_id.clone()),
             ("Label", Value::from("p")),
             (
@@ -43,7 +41,10 @@ let updated = parents
                     record(&[("Label", Value::from("c"))]),
                 ]),
             ),
-        ]),
+        ]);
+let updated = parents
+    .update(
+        &mut updated_row_2,
         None,
     )
     .await

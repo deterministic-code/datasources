@@ -35,7 +35,10 @@ impl Connection for StubConnection {
     }
 
     fn create_command(&self) -> Arc<dyn Command> {
-        Arc::new(StubCommand::new(&self.provider))
+        Arc::new(StubCommand::new(
+            &self.provider,
+            Arc::new(StubConnection::new(&self.provider)),
+        ))
     }
 
     async fn open(&self) -> Result<()> {
@@ -94,10 +97,10 @@ macro_rules! named_stub_connection {
 
             fn transaction(
                 &self,
-                _: std::sync::Arc<dyn $crate::Connection>,
+                connection: std::sync::Arc<dyn $crate::Connection>,
                 _: $crate::IsolationLevel,
             ) -> std::sync::Arc<dyn $crate::Transaction> {
-                std::sync::Arc::new($crate::StubTransaction::new($provider))
+                std::sync::Arc::new($crate::StubTransaction::new($provider, connection))
             }
 
             fn row_type_converters(

@@ -57,7 +57,10 @@ join_repo.add_enriched(
         None,
         EnrichmentPropertyType::List,
     ),
-    Arc::new(CRUDRepository::memory(vec![])),
+    Arc::new(CRUDRepository::new(
+        Arc::new(StubConnection::new("memory")),
+        CRUDRepositoryOptions::default(),
+    ).unwrap()),
     Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
         "Id",
         vec![
@@ -94,5 +97,5 @@ let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity_mapper = Some(Arc::new(join_entity()));
 let items = join_repo
     .read(Some(&join), None, Some(&options))
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap();

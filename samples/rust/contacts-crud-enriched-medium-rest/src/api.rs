@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use crate::clock::Clock;
 use crate::json_row::{
     ensure_text, json_to_row, object_from, row_to_json, rows_to_json, set_text, text,
@@ -75,7 +76,7 @@ impl Api {
         }
         let mut row = self.bind(object_from(body).map_err(ApiError::bad)?).await?;
         row.insert("id".into(), Value::Int(id));
-        self.contacts.update(&row, Some(&by)).await?;
+        self.contacts.update(&mut row, Some(&by)).await?;
         Ok(ok(200, row_to_json(&self.contacts.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 
@@ -113,7 +114,7 @@ impl Api {
         }
         let mut row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
         row.insert("key".into(), Value::Text(key));
-        self.legacy.update(&row, Some(&by)).await?;
+        self.legacy.update(&mut row, Some(&by)).await?;
         Ok(ok(200, row_to_json(&self.legacy.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 
@@ -134,7 +135,7 @@ impl Api {
         keys: &[&str],
     ) -> Result<Vec<Row>, ApiError> {
         let filter = where_query(query, keys);
-        Ok(repo.read(filter.as_ref().map(|item| item as &dyn ReadInput), None, None).await?)
+        Ok(repo.read(filter.as_ref().map(|item| item as &dyn ReadInput), None, None).try_collect::<Vec<_>>().await?)
     }
 
     async fn bind(&self, mut json: Json) -> Result<Row, ApiError> {

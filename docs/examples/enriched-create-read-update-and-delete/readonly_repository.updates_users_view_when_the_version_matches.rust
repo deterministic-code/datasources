@@ -107,7 +107,7 @@ loaded.insert(
 loaded.insert("Version".into(), Value::Int(2));
 let updated = users_repo
     .update(
-        &loaded,
+        &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
     )
     .await
@@ -119,7 +119,7 @@ let current = users_repo
     .unwrap();
 let stale = users_repo
     .update(
-        &loaded,
+        &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
     )
     .await

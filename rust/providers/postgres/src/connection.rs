@@ -150,7 +150,7 @@ impl Connection for PostgresConnection {
         isolation: Option<IsolationLevel>,
     ) -> Result<Arc<dyn Transaction>> {
         self.ensure_open()?;
-        let isolation = isolation.unwrap_or_default();
+        let isolation = isolation.unwrap_or(IsolationLevel::Serializable);
         self.exec(&format!(
             "BEGIN ISOLATION LEVEL {}",
             isolation_sql(isolation)

@@ -21,10 +21,10 @@ let matches = users_repo
         )),
         None, None
 )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
-let updated = users_repo.update(&created, None).await.unwrap();
+let updated = users_repo.update(&mut created, None).await.unwrap();
 let renamed = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await

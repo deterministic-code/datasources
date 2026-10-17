@@ -15,6 +15,7 @@ pub struct SharedItems {
 }
 
 impl SharedItems {
+    #[allow(dead_code)]
     pub fn new(items: Vec<Row>) -> Arc<Self> {
         let next_id = items
             .iter()

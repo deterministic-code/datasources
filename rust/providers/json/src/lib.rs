@@ -14,6 +14,7 @@ mod tests {
     use crate::connection::JsonConnection;
     use crate::file_store::{FileStore, MemoryFileStore};
     use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
+    use futures_util::TryStreamExt;
     use datasources::{
         converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
         Connection, ICRUDRepository, IReadonlyRepository, Parameter, Row, Value, WhereText,
@@ -53,7 +54,7 @@ mod tests {
             .is_none());
         assert!(!repo
             .read(Some(&WhereText::new("{\"id\":1}")), None, None)
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());
         assert!(repo
@@ -63,15 +64,17 @@ mod tests {
             .is_some());
         assert!(!repo
             .read(Some(&WhereText::new("{\"id\":1}")), None, None)
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());
         let created = repo.create(&mut rec(2, "b")).await.unwrap();
         assert_eq!(created.get("id"), Some(&Value::Int(2)));
-        let updated = repo.update(&rec(2, "B"), None).await.unwrap();
+        let mut updated_row_1 = rec(2, "B");
+        let updated = repo.update(&mut updated_row_1, None).await.unwrap();
         assert_eq!(updated.rows_affected, 0);
+        let mut updated_row_2 = rec(2, "C");
         let updated_by_where = repo
-            .update(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
+            .update(&mut updated_row_2, Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
         assert_eq!(updated_by_where.rows_affected, 1);
@@ -197,8 +200,9 @@ mod tests {
             .await
             .is_err());
         assert!(crud(closed.clone()).create(&mut rec(1, "a")).await.is_err());
+        let mut updated_row_3 = rec(1, "a");
         assert!(crud(closed.clone())
-            .update(&rec(1, "a"), None)
+            .update(&mut updated_row_3, None)
             .await
             .is_err());
         assert!(crud(closed).delete(&rec(1, "a"), None).await.is_err());

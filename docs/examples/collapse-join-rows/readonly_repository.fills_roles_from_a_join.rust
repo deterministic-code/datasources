@@ -24,7 +24,10 @@ options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
 let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
     datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
-    Arc::new(ReadonlyRepository::memory(vec![])),
+    Arc::new(ReadonlyRepository::new(
+        connection.clone(),
+        ReadonlyRepositoryMappingOptions::default(),
+    ).unwrap()),
     Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
         TypeMap::new(
             "Key",
@@ -50,7 +53,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(Some(&joined), None, None).await.unwrap();
+let items = users_repo.read(Some(&joined), None, None).try_collect::<Vec<_>>().await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -58,6 +61,6 @@ let view = |login: &str| {
         .unwrap()
         .clone()
 };
-let ada = view("ada");
+let mut ada = view("ada");
 let grace = view("grace");
 let lin = view("lin");

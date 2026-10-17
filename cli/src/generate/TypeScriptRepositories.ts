@@ -35,8 +35,8 @@ const tokenWhere = (model: RepositoryModel, token: OptimisticConcurrency, expect
 const occWrap = (model: RepositoryModel): string => {
   const token = model.optimisticConcurrency;
   if (token === undefined) return "";
-  const written = token.increment ? `{ ...item, ${token.property}: Number(expected) + 1 }` : "item";
-  return `    const update = this.update;\n    const remove = this.delete;\n    this.update = async (item, byWhere) => {\n      const expected = item.${token.property};\n      const response = await update(${written}, byWhere ?? ${tokenWhere(model, token, "expected")});\n      if (response.rowsAffected !== 1) throw new DatasourceError(\`Update affected \${response.rowsAffected} rows\`);\n      return response;\n    };\n    this.delete = async (item, byWhere) => {\n      const response = await remove(item, byWhere ?? ${tokenWhere(model, token, `item.${token.property}`)});\n      if (response.rowsAffected !== 1) throw new DatasourceError(\`Delete affected \${response.rowsAffected} rows\`);\n      return response;\n    };\n`;
+  const bump = token.increment ? `      item.${token.property} = Number(expected) + 1;\n` : "";
+  return `    const update = this.update;\n    const remove = this.delete;\n    this.update = async (item, byWhere) => {\n      const expected = item.${token.property};\n${bump}      const response = await update(item, byWhere ?? ${tokenWhere(model, token, "expected")});\n      if (response.rowsAffected !== 1) throw new DatasourceError(\`Update affected \${response.rowsAffected} rows\`);\n      return response;\n    };\n    this.delete = async (item, byWhere) => {\n      const response = await remove(item, byWhere ?? ${tokenWhere(model, token, `item.${token.property}`)});\n      if (response.rowsAffected !== 1) throw new DatasourceError(\`Delete affected \${response.rowsAffected} rows\`);\n      return response;\n    };\n`;
 };
 
 const repoImport = (specName: string): string => `./${specName.replaceAll("_", "-")}-repository`;

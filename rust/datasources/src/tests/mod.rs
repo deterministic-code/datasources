@@ -660,34 +660,34 @@ async fn stubs_throw() {
     let repo = ds.create_repository::<Cells>(None, None);
     let mut empty = Row::new();
     assert!(repo.read_single(None, None, None).await.is_err());
-    assert!(repo.read(None, None, None).await.is_err());
+    assert!(repo.read(None, None, None).try_collect::<Vec<_>>().await.is_err());
     assert!(repo
         .read_single(Some(&WhereText::new("1=1")), None, None)
         .await
         .is_err());
-    assert!(repo.read(Some(&WhereText::new("1=1")), None, None).await.is_err());
+    assert!(repo.read(Some(&WhereText::new("1=1")), None, None).try_collect::<Vec<_>>().await.is_err());
     assert!(repo.create(&mut empty).await.is_err());
-    assert!(repo.update(&empty, None).await.is_err());
+    assert!(repo.update(&mut empty, None).await.is_err());
     assert!(repo.delete(&empty, None).await.is_err());
     let readonly = ds.create_readonly_repository::<Cells>(None, None);
     assert!(readonly.read_single(None, None, None).await.is_err());
-    assert!(readonly.read(None, None, None).await.is_err());
+    assert!(readonly.read(None, None, None).try_collect::<Vec<_>>().await.is_err());
     assert!(readonly
         .read_single(Some(&WhereText::new("1=1")), None, None)
         .await
         .is_err());
     assert!(readonly
         .read(Some(&WhereText::new("1=1")), None, None)
-        .await
+        .try_collect::<Vec<_>>().await
         .is_err());
-    let txn = StubTransaction::new("text");
+    let conn = StubConnection::new("text");
+    let txn = StubTransaction::new("text", Arc::new(StubConnection::new("text")));
     assert!(txn.commit().await.is_err());
     assert!(txn.abort().await.is_err());
     let reader = StubReader::<Row>::new("text");
     assert!(reader.current().is_none());
     assert!(reader.next().await.is_err());
-    let conn = StubConnection::new("text");
-    let cmd = StubCommand::new("text");
+    let cmd = StubCommand::new("text", Arc::new(StubConnection::new("text")));
     cmd.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
@@ -768,7 +768,7 @@ async fn published_mocks() {
         .is_some());
     assert_eq!(
         repo.read(Some(&MockSelectStatement::new("all")), None, None)
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap()
             .len(),
         1
@@ -780,7 +780,7 @@ async fn published_mocks() {
         .is_some());
     assert_eq!(
         repo.read(Some(&MockWhere::new("all")), None, None)
-            .await
+            .try_collect::<Vec<_>>().await
             .unwrap()
             .len(),
         1
@@ -790,9 +790,10 @@ async fn published_mocks() {
         .await
         .unwrap();
     assert_eq!(created["id"], Value::Int(2));
+    let mut updated_row_1 = record(&[("id", Value::Int(2))]);
     let updated = repo
         .update(
-            &record(&[("id", Value::Int(2))]),
+            &mut updated_row_1,
             Some(&MockWhere::new("id=2")),
         )
         .await
@@ -806,11 +807,12 @@ async fn published_mocks() {
     repo.set_read_single_error("gs");
     assert!(repo.read_single(None, None, None).await.is_err());
     repo.set_read_error("g");
-    assert!(repo.read(None, None, None).await.is_err());
+    assert!(repo.read(None, None, None).try_collect::<Vec<_>>().await.is_err());
     repo.set_add_error("ad");
     assert!(repo.create(&mut Row::new()).await.is_err());
     repo.set_update_error("up");
-    assert!(repo.update(&Row::new(), None).await.is_err());
+    let mut updated_row_2 = Row::new();
+    assert!(repo.update(&mut updated_row_2, None).await.is_err());
     repo.set_delete_error("del");
     assert!(repo.delete(&Row::new(), None).await.is_err());
 
@@ -1683,7 +1685,7 @@ async fn read_calls_stored_procedure() {
     let repo = CRUDRepository::new(connection, options).unwrap();
     let parameters = [Parameter::new("id", 9_i64)];
     let call = ExecuteStoredProcedureStatement::new("get_user", &parameters);
-    let rows = repo.read(Some(&call), Some(&parameters), None).await.unwrap();
+    let rows = repo.read(Some(&call), Some(&parameters), None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["id"], Value::Int(1));
     assert_eq!(rows[0]["name"], Value::from("a"));
@@ -1722,7 +1724,7 @@ async fn table_repository() {
         before: Arc::new(|_| Ok(None)),
         after: Arc::new(|_, _| Ok(())),
     }));
-    let rows = repo.read(None, None, None).await.unwrap();
+    let rows = repo.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(
         command.reader_logs.lock().unwrap()[0].0,
@@ -1758,7 +1760,7 @@ async fn table_repository() {
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
         .read(Some(&Where::new(Operator::equals("id", 9_i64))), None, None)
-        .await
+        .try_collect::<Vec<_>>().await
         .unwrap()
         .is_empty());
 
@@ -1780,7 +1782,7 @@ async fn table_repository() {
         "INSERT INTO users (name) VALUES ($name)"
     );
     assert_eq!(created["id"], Value::Int(9));
-    let updated = repo.update(&obj, None).await.unwrap();
+    let updated = repo.update(&mut obj, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
@@ -1840,13 +1842,14 @@ async fn table_repository() {
         generated.execute_logs.lock().unwrap()[0].1[0].value,
         Value::Int(3)
     );
-    let updated = repo
-        .update(
-            &record(&[
+    let mut updated_row_3 = record(&[
                 ("org_id", Value::Int(1)),
                 ("user_id", Value::Int(2)),
                 ("name", Value::Int(4)),
-            ]),
+            ]);
+    let updated = repo
+        .update(
+            &mut updated_row_3,
             None,
         )
         .await
@@ -1866,16 +1869,18 @@ async fn table_repository() {
     let mut options = CRUDRepositoryOptions::default();
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::new(connection, options).unwrap();
+    let mut updated_row_4 = record(&[("name", Value::from("a"))]);
     assert!(repo
-        .update(&record(&[("name", Value::from("a"))]), None)
+        .update(&mut updated_row_4, None)
         .await
         .is_err());
     assert!(repo
         .delete(&record(&[("name", Value::from("a"))]), None)
         .await
         .is_err());
+    let mut updated_row_5 = record(&[("id", Value::Int(1))]);
     assert!(repo
-        .update(&record(&[("id", Value::Int(1))]), None)
+        .update(&mut updated_row_5, None)
         .await
         .is_err());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
@@ -1961,7 +1966,7 @@ async fn table_repository_crud_mapper() {
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO people (full_name) VALUES ($full_name)"
     );
-    let updated = repo.update(&row, None).await.unwrap();
+    let updated = repo.update(&mut row, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
@@ -2059,6 +2064,19 @@ struct Item;
 impl ConvertSchema for Item {
     fn schema() -> Vec<(&'static str, &'static str)> {
         vec![("id", "INTEGER"), ("name", "TEXT")]
+    }
+}
+
+struct Stamp;
+
+impl ConvertSchema for Stamp {
+    fn schema() -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("id", "INTEGER"),
+            ("name", "TEXT"),
+            ("created", "DATETIME"),
+            ("version", "BLOB"),
+        ]
     }
 }
 
@@ -2164,7 +2182,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
+    options.row_converter = Some(RowTypeConverter::of::<Stamp>());
     let repo = CRUDRepository::new(connection, options).unwrap();
     let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
@@ -2187,14 +2205,15 @@ async fn create_and_update_omit_null_datetime_and_version() {
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (name) VALUES ($name)"
     );
-    let updated = repo
-        .update(
-            &record(&[
+    let mut updated_row_6 = record(&[
                 ("id", Value::Int(1)),
                 ("name", Value::from("ada")),
                 ("created", Value::Null),
                 ("version", Value::Null),
-            ]),
+            ]);
+    let updated = repo
+        .update(
+            &mut updated_row_6,
             None,
         )
         .await

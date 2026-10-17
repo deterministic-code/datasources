@@ -432,8 +432,8 @@ async fn stored_procedure_persists_children_in_one_call() {
     .unwrap();
     let logs = command.execute_logs.lock().unwrap();
     assert_eq!(logs.len(), 2);
-    assert_eq!(logs[0].0, "CALL bulk_create_parent($payload)");
-    assert_eq!(logs[1].0, "CALL bulk_create_child($payload)");
+    assert_eq!(logs[0].0, "CALL bulk_create_parent($payload, $ids)");
+    assert_eq!(logs[1].0, "CALL bulk_create_child($payload, $ids)");
 }
 
 #[tokio::test]

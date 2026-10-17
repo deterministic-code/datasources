@@ -42,7 +42,7 @@ async fn omits_null_datetime_and_version() {
         .unwrap()
         .unwrap();
     omitted.insert("Name".into(), Value::from("ada-v2"));
-    let updated = repo.update(&omitted, None).await.unwrap();
+    let updated = repo.update(&mut omitted, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let kept = repo
         .read_single_by_id(omitted.get("Id").unwrap())

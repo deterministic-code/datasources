@@ -60,6 +60,8 @@ impl Drop for ConnKeep {
 struct CommandKeep {
     slots: Arc<Slots>,
     id: u64,
+    #[allow(dead_code)]
+    connection: Arc<dyn Connection>,
 }
 
 impl Drop for CommandKeep {
@@ -71,6 +73,8 @@ impl Drop for CommandKeep {
 struct TransactionKeep {
     slots: Arc<Slots>,
     id: u64,
+    #[allow(dead_code)]
+    connection: Arc<dyn Connection>,
 }
 
 impl Drop for TransactionKeep {
@@ -164,12 +168,14 @@ impl PluginReader {
 
 fn store_command(slots: &Arc<Slots>, command: Arc<dyn Command>) -> SabiCommandBox {
     let id = slots.id();
+    let connection = command.connection();
     slots.commands.lock().expect("commands").insert(id, command);
     SabiCommandBox::from_value(
         PluginCommand {
             keep: Arc::new(CommandKeep {
                 slots: Arc::clone(slots),
                 id,
+                connection,
             }),
         },
         TD_Opaque,
@@ -178,6 +184,7 @@ fn store_command(slots: &Arc<Slots>, command: Arc<dyn Command>) -> SabiCommandBo
 
 fn store_transaction(slots: &Arc<Slots>, transaction: Arc<dyn Transaction>) -> SabiTransactionBox {
     let id = slots.id();
+    let connection = transaction.connection();
     slots
         .transactions
         .lock()
@@ -188,6 +195,7 @@ fn store_transaction(slots: &Arc<Slots>, transaction: Arc<dyn Transaction>) -> S
             keep: Arc::new(TransactionKeep {
                 slots: Arc::clone(slots),
                 id,
+                connection,
             }),
         },
         TD_Opaque,

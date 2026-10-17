@@ -2,6 +2,7 @@ use super::not_implemented::fail;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::command_middleware_host::CommandMiddlewareHost;
+use crate::connection::Connection;
 use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
@@ -12,13 +13,15 @@ use std::sync::Arc;
 
 pub struct StubCommand {
     provider: String,
+    connection: Arc<dyn Connection>,
     host: CommandMiddlewareHost,
 }
 
 impl StubCommand {
-    pub fn new(provider: impl Into<String>) -> Self {
+    pub fn new(provider: impl Into<String>, connection: Arc<dyn Connection>) -> Self {
         Self {
             provider: provider.into(),
+            connection,
             host: CommandMiddlewareHost::new(),
         }
     }
@@ -26,6 +29,10 @@ impl StubCommand {
 
 #[async_trait]
 impl Command for StubCommand {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::clone(&self.connection)
+    }
+
     fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
         self.host.add_middleware(middleware);
     }
@@ -67,7 +74,7 @@ macro_rules! named_stub_command {
         impl $name {
             pub fn new(connection: std::sync::Arc<dyn $crate::Connection>) -> Self {
                 Self {
-                    inner: $crate::StubCommand::new($provider),
+                    inner: $crate::StubCommand::new($provider, std::sync::Arc::clone(&connection)),
                     _connection: connection,
                 }
             }
@@ -75,6 +82,10 @@ macro_rules! named_stub_command {
 
         #[async_trait::async_trait]
         impl $crate::Command for $name {
+            fn connection(&self) -> std::sync::Arc<dyn $crate::Connection> {
+                std::sync::Arc::clone(&self._connection)
+            }
+
             fn add_middleware(&self, middleware: std::sync::Arc<dyn $crate::CommandMiddleware>) {
                 self.inner.add_middleware(middleware);
             }

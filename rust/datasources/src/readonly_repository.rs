@@ -4,6 +4,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
 use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
+use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
@@ -11,6 +12,7 @@ use crate::i_where::IWhere;
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
+use crate::reader::Reader;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::repository::IReadonlyRepository;
@@ -27,8 +29,21 @@ use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::value::Value;
 use async_trait::async_trait;
+use futures_core::Stream;
+use futures_util::stream::try_unfold;
+use futures_util::TryStreamExt;
 use std::any::TypeId;
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+
+enum ReadRun {
+    Start,
+    Buffered(std::vec::IntoIter<Row>),
+    Source {
+        reader: Box<dyn Reader>,
+        mappers: StatementMappers,
+    },
+}
 
 pub struct ReadonlyRepository {
     pub(crate) connection: Arc<dyn Connection>,
@@ -81,7 +96,8 @@ impl ReadonlyRepository {
         }
     }
 
-    pub fn memory(items: Vec<Row>) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn memory(items: Vec<Row>) -> Self {
         let enrichments = Arc::new(Mutex::new(Vec::new()));
         let entity: Arc<dyn Mapper<String, String> + Send + Sync> =
             Arc::new(IdentityMapper::<String>::new());
@@ -297,16 +313,29 @@ impl ReadonlyRepository {
         if let Some(memory) = &self.memory {
             return Ok(memory.filter_input(query));
         }
+        let reader = self.reader_for(query, parameters, mappers, options).await?;
+        self.rows_from(reader, mappers).await
+    }
+
+    async fn reader_for(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+        mappers: &StatementMappers,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Box<dyn Reader>> {
         if let Some(where_clause) = query.and_then(ReadInput::as_where) {
             let (statement, params) = self.stored_query(where_clause, mappers, options)?;
             return self
-                .fetch_sources(&statement, parameters.unwrap_or(&params).to_vec(), mappers)
+                .command()
+                .execute_reader_statement(&statement, Some(parameters.unwrap_or(&params)))
                 .await;
         }
         let statement = query.and_then(ReadInput::as_statement);
         match statement {
             Some(statement) if statement.kind() == StatementKind::Procedure => {
-                self.fetch_sources(statement, parameters.unwrap_or(&[]).to_vec(), mappers)
+                self.command()
+                    .execute_reader_statement(statement, Some(parameters.unwrap_or(&[])))
                     .await
             }
             Some(statement) => match statement.as_any().downcast_ref::<SelectStatement>() {
@@ -320,7 +349,9 @@ impl ReadonlyRepository {
                             .map(|predicate| predicate.parameters())
                             .unwrap_or_default()
                     });
-                    self.fetch_sources(&mapped, params, mappers).await
+                    self.command()
+                        .execute_reader_statement(&mapped, Some(&params))
+                        .await
                 }
                 _ => {
                     let params = parameters.map(|items| items.to_vec()).unwrap_or_else(|| {
@@ -329,34 +360,68 @@ impl ReadonlyRepository {
                             .map(|predicate| predicate.parameters())
                             .unwrap_or_default()
                     });
-                    self.fetch_sources(statement, params, mappers).await
+                    self.command()
+                        .execute_reader_statement(statement, Some(&params))
+                        .await
                 }
             },
             None => {
                 let statement = self.own(self.readonly_statements.select(None), mappers, options)?;
-                self.fetch_sources(&statement, parameters.unwrap_or(&[]).to_vec(), mappers)
+                self.command()
+                    .execute_reader_statement(&statement, Some(parameters.unwrap_or(&[])))
                     .await
             }
         }
     }
 
-    async fn fetch_sources(
+    async fn rows_from(
         &self,
-        statement: &dyn Statement,
-        params: Vec<Parameter>,
+        reader: Box<dyn Reader>,
         mappers: &StatementMappers,
     ) -> Result<Vec<Row>> {
-        let reader = self
-            .command()
-            .execute_reader_statement(statement, Some(&params))
-            .await?;
         let mut rows = Vec::new();
         while reader.next().await? {
-            if let Some(row) = reader.current() {
-                rows.push(self.column_to_property_name(row, mappers));
-            }
+            let row = reader.current().ok_or_else(|| {
+                DatasourceError::message("Reader current must be a row")
+            })?;
+            rows.push(self.column_to_property_name(row, mappers));
         }
         Ok(rows)
+    }
+
+    fn convert_renamed(
+        &self,
+        renamed: Row,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Row> {
+        if self.memory.is_some() {
+            return Ok(renamed);
+        }
+        let cells = match self.rows(options) {
+            Some(converter) => converter.convert(&renamed)?,
+            None => renamed,
+        };
+        self.objects(options).convert(&cells)
+    }
+
+    async fn next_source(
+        &self,
+        reader: Box<dyn Reader>,
+        mappers: StatementMappers,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<(Row, ReadRun)>> {
+        if !reader.next().await? {
+            return Ok(None);
+        }
+        let current = reader
+            .current()
+            .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
+        let renamed = self.column_to_property_name(current, &mappers);
+        let item = self.convert_renamed(renamed, options)?;
+        Ok(Some((
+            item,
+            ReadRun::Source { reader, mappers },
+        )))
     }
 
     async fn apply(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<(Row, Option<Row>)>> {
@@ -428,22 +493,54 @@ impl IReadonlyRepository for ReadonlyRepository {
         parameters: Option<&[Parameter]>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
-        Ok(self.read(query, parameters, options).await?.into_iter().next())
+        self.read(query, parameters, options).try_next().await
     }
 
-    async fn read(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Vec<Row>> {
-        Ok(self
-            .read_tracked(query, parameters, options)
-            .await?
-            .into_iter()
-            .map(|(item, _)| item)
-            .collect())
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [Parameter]>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        Box::pin(try_unfold(ReadRun::Start, move |run| async move {
+            match run {
+                ReadRun::Start => {
+                    if self.enriched() {
+                        let items: Vec<Row> = self
+                            .read_tracked(query, parameters, options)
+                            .await?
+                            .into_iter()
+                            .map(|(item, _)| item)
+                            .collect();
+                        return next_buffered(items);
+                    }
+                    if let Some(memory) = &self.memory {
+                        let items = memory
+                            .filter_input(query)
+                            .into_iter()
+                            .map(|row| self.convert_renamed(row, options))
+                            .collect::<Result<Vec<_>>>()?;
+                        return next_buffered(items);
+                    }
+                    let mappers = self.mappers(options);
+                    let reader = self.reader_for(query, parameters, &mappers, options).await?;
+                    self.next_source(reader, mappers, options).await
+                }
+                ReadRun::Buffered(items) => next_buffered_iter(items),
+                ReadRun::Source { reader, mappers } => {
+                    self.next_source(reader, mappers, options).await
+                }
+            }
+        }))
     }
+}
+
+fn next_buffered(items: Vec<Row>) -> Result<Option<(Row, ReadRun)>> {
+    next_buffered_iter(items.into_iter())
+}
+
+fn next_buffered_iter(mut items: std::vec::IntoIter<Row>) -> Result<Option<(Row, ReadRun)>> {
+    Ok(items.next().map(|row| (row, ReadRun::Buffered(items))))
 }
 
 pub(crate) fn push_middleware(

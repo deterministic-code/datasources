@@ -164,7 +164,7 @@ mod tests {
         let txn = conn.start_transaction(None).await.unwrap();
         assert_eq!(
             datasources::Transaction::isolation(&*txn),
-            IsolationLevel::ReadCommitted
+            IsolationLevel::Serializable
         );
         txn.commit().await.unwrap();
         let txn = conn

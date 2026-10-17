@@ -1,3 +1,4 @@
+use futures_util::TryStreamExt;
 use crate::default_write_enrichment_strategy::{encode_row, encode_rows};
 use crate::enrichment::Enrichment;
 use crate::readonly_enrichment_strategy::{
@@ -35,7 +36,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
                 ))),
                 None, None
         )
-            .await?;
+            .try_collect::<Vec<_>>().await?;
         let mut index = HashMap::new();
         for related in loaded {
             if let Some(by) = related.get(&enrichment.related_key) {
@@ -82,7 +83,7 @@ impl ReadonlyEnrichmentStrategy for HashsetOptimizedReadonlyEnrichmentStrategy {
                 ))),
                 None, None
         )
-            .await?;
+            .try_collect::<Vec<_>>().await?;
         let mut index: HashMap<String, Vec<Row>> = HashMap::new();
         for row in loaded {
             if let Some(by) = row.get(&enrichment.related_key) {

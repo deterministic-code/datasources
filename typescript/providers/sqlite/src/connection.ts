@@ -60,7 +60,7 @@ export class SqliteConnection implements IConnection {
   [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
-    isolation: IsolationLevelName = IsolationLevel.ReadCommitted,
+    isolation: IsolationLevelName = IsolationLevel.Serializable,
   ): Promise<ITransaction> {
     this.ensureOpen();
     this.exec(pragma(isolation));

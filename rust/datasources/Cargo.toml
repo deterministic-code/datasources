@@ -21,6 +21,7 @@ uuid = "1"
 [dev-dependencies]
 tokio = { workspace = true }
 datasources-memory = { path = "../providers/memory" }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 
 [lints]
 workspace = true

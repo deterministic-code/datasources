@@ -1,6 +1,7 @@
 use crate::connection::MysqlConnection;
 use async_trait::async_trait;
 use datasources::{IsolationLevel, Result, Transaction};
+use std::sync::Arc;
 
 pub struct MysqlTransaction {
     connection: MysqlConnection,
@@ -18,6 +19,10 @@ impl MysqlTransaction {
 
 #[async_trait]
 impl Transaction for MysqlTransaction {
+    fn connection(&self) -> Arc<dyn datasources::Connection> {
+        Arc::new(self.connection.share())
+    }
+
     fn isolation(&self) -> IsolationLevel {
         self.isolation
     }

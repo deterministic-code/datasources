@@ -2,6 +2,7 @@ use crate::array_reader::ArrayReader;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::command_middleware_host::CommandMiddlewareHost;
+use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
 use crate::native::Native;
 use crate::parameter::Parameter;
@@ -12,10 +13,12 @@ use crate::row::Row;
 use crate::statement::Statement;
 use crate::statements::SelectInsertedIdStatement;
 use crate::value::Value;
+use crate::stubs::StubConnection;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 
 pub struct MockCommand {
+    connection: Arc<dyn Connection>,
     host: CommandMiddlewareHost,
     pub response: Mutex<Response>,
     pub reader_rows: Mutex<Vec<Row>>,
@@ -29,6 +32,7 @@ pub struct MockCommand {
 impl MockCommand {
     pub fn new() -> Self {
         Self {
+            connection: Arc::new(StubConnection::new("mock")),
             host: CommandMiddlewareHost::new(),
             response: Mutex::new(Response::new(Value::Null, 0, None)),
             reader_rows: Mutex::new(Vec::new()),
@@ -51,6 +55,10 @@ impl MockCommand {
 
 #[async_trait]
 impl Command for MockCommand {
+    fn connection(&self) -> Arc<dyn Connection> {
+        Arc::clone(&self.connection)
+    }
+
     fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
         self.host.add_middleware(middleware);
     }
