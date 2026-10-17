@@ -1,7 +1,7 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
 import { identityColumns, isCollectionField, isDictionaryType, isOwnerIdentityRef, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
-import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-specifications-typescript/parser";
+import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
 
@@ -81,12 +81,29 @@ export const planRepositories = (
         }),
         ids: identityColumns(tableType, table).map(property),
         readProperties: columns.map((field) => property(field.name)),
+        optimisticConcurrency: concurrencyToken(table, tableType, property),
         enrichments: relations(authored, full, casing, types, expanded, repoName, identity),
       },
     ];
   });
   guardCycles(models);
   return models.sort((left, right) => left.specName.localeCompare(right.specName));
+};
+
+const concurrencyToken = (
+  table: DatasourceTable,
+  tableType: Type,
+  property: (name: string) => string,
+): { property: string; increment: boolean } | undefined => {
+  if (table.useOptimisticConcurrency === false) return undefined;
+  const token = table.fields.find((field) => field.isOptimisticConcurrency === true);
+  if (token === undefined) return undefined;
+  return {
+    property: property(token.name),
+    increment: tableType.fields.some((field) =>
+      field.name === token.name && ["integer", "number"].includes((field as { type?: string }).type as string),
+    ),
+  };
 };
 
 const relations = (

@@ -1,3 +1,5 @@
+pub use async_trait::async_trait;
+
 mod array_reader;
 mod first_result_reader;
 mod association;

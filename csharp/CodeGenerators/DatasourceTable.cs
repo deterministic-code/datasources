@@ -7,4 +7,5 @@ public sealed class DatasourceTable
     public IReadOnlyList<DatasourceFieldOverlay> Fields { get; init; } = [];
     public IReadOnlyList<DatasourceIndex> Indexes { get; init; } = [];
     public IReadOnlyList<string> UniqueIndexFields { get; init; } = [];
+    public bool? UseOptimisticConcurrency { get; init; }
 }

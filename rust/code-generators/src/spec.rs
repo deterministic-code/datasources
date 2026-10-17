@@ -67,6 +67,8 @@ pub struct DatasourceFieldOverlay {
     pub is_unique: Option<bool>,
     pub mapping: Option<String>,
     pub is_fixed_id: Option<bool>,
+    pub is_optimistic_concurrency: Option<bool>,
+    pub use_native_row_version: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -83,6 +85,7 @@ pub struct DatasourceTable {
     pub fields: Vec<DatasourceFieldOverlay>,
     pub indexes: Vec<DatasourceIndex>,
     pub unique_index_fields: Vec<String>,
+    pub use_optimistic_concurrency: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -131,28 +134,136 @@ pub fn parse_field_type(raw: &str) -> (String, String, bool, bool) {
 }
 
 pub fn parse(files: &HashMap<String, String>) -> Result<ParsedSpec> {
-    let types = files
-        .get(TYPES_YAML)
-        .map(|yaml| parse_types(yaml))
-        .transpose()?
-        .unwrap_or_default();
-    let expanded = expand_types(&types)?;
-    let datasource = files
-        .get(DATASOURCE_YAML)
-        .map(|yaml| parse_datasource(yaml, &expanded))
-        .transpose()?
-        .unwrap_or_default();
-    let seeds = files
-        .get(SEEDS_YAML)
-        .map(|yaml| parse_seeds(yaml))
-        .transpose()?
-        .unwrap_or_default();
+    let spec = deterministic_generators_common::DeterministicParser::new(
+        deterministic_generators_common::memory_reader(files.clone()),
+    )
+    .parse(&HashMap::new())
+    .map_err(|error| DatasourceError::message(error.to_string()))?;
     Ok(ParsedSpec {
-        types,
-        expanded_types: expanded,
-        datasource,
-        datasource_seeds: seeds,
+        types: spec.types.iter().map(map_type).collect(),
+        expanded_types: spec.expanded_types.iter().map(map_type).collect(),
+        datasource: spec.datasource.iter().map(map_table).collect(),
+        datasource_seeds: spec
+            .datasource_seeds
+            .iter()
+            .map(|(name, rows)| (name.clone(), rows.iter().map(map_seed).collect()))
+            .collect(),
     })
+}
+
+fn map_type(type_: &deterministic_generators_common::Type) -> SpecType {
+    SpecType {
+        name: type_.name.clone(),
+        tags: type_.tags.clone(),
+        kind: match type_.kind {
+            deterministic_generators_common::TypeKind::Inherit => "inherit",
+            deterministic_generators_common::TypeKind::Union => "union",
+            deterministic_generators_common::TypeKind::Shaped => "shaped",
+        }
+        .into(),
+        inherits: type_.inherits.clone(),
+        union: type_.union.clone(),
+        mapping: type_.mapping.as_ref().map(|map| map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()),
+        extract: type_.extract.clone(),
+        remove_fields: type_.remove_fields.clone(),
+        ids: type_.ids.clone(),
+        fields: type_.fields.iter().map(map_field).collect(),
+    }
+}
+
+fn map_field(field: &deterministic_generators_common::TypeField) -> SpecTypeField {
+    let (references, reference_pair) = match &field.references {
+        Some(deterministic_generators_common::References::One(text)) => (Some(text.clone()), None),
+        Some(deterministic_generators_common::References::Pair(left, right)) => {
+            (None, Some(vec![left.clone(), right.clone()]))
+        }
+        None => (None, None),
+    };
+    SpecTypeField {
+        name: field.name.clone(),
+        type_name: field.type_name.clone(),
+        kind: match field.kind {
+            deterministic_generators_common::FieldKind::Primitive => "primitive",
+            deterministic_generators_common::FieldKind::Type => "type",
+        }
+        .into(),
+        base: field.base.clone(),
+        is_array: field.is_array,
+        is_map: field.is_map,
+        is_nullable: field.is_nullable,
+        is_id: field.is_id,
+        size: field.size.as_ref().map(|size| match size {
+            deterministic_generators_common::FieldSize::Unlimited => SpecSize::Unlimited,
+            deterministic_generators_common::FieldSize::Num(n) => SpecSize::Length(*n as i32),
+            deterministic_generators_common::FieldSize::Range(p, s) => SpecSize::Decimal(*p as i32, *s as i32),
+        }),
+        references,
+        reference_pair,
+        default_value: field.default_value.as_ref().map(literal_value),
+        has_default: field.has_default,
+        source: None,
+        original: None,
+    }
+}
+
+fn map_table(table: &deterministic_generators_common::DatasourceTable) -> DatasourceTable {
+    DatasourceTable {
+        name: table.name.clone(),
+        mapping: table.mapping.clone(),
+        fields: table
+            .fields
+            .iter()
+            .map(|field| DatasourceFieldOverlay {
+                name: field.name.clone(),
+                is_readonly: field.is_readonly,
+                is_unique: field.is_unique,
+                mapping: field.mapping.clone(),
+                is_fixed_id: field.is_fixed_id,
+                is_optimistic_concurrency: field.is_optimistic_concurrency,
+                use_native_row_version: field.use_native_row_version,
+            })
+            .collect(),
+        indexes: table
+            .indexes
+            .iter()
+            .map(|index| DatasourceIndex {
+                name: index.name.clone(),
+                fields: index.fields.clone(),
+                is_unique: index.is_unique,
+            })
+            .collect(),
+        unique_index_fields: table.unique_index_fields.clone(),
+        use_optimistic_concurrency: table.use_optimistic_concurrency,
+    }
+}
+
+fn map_seed(row: &deterministic_generators_common::SeedRow) -> SeedRow {
+    SeedRow {
+        id: i32::try_from(row.id).unwrap_or(i32::MAX),
+        row: row
+            .row
+            .iter()
+            .map(|(key, value)| (key.clone(), seed_value(value)))
+            .collect(),
+    }
+}
+
+fn literal_value(value: &deterministic_generators_common::YamlLiteral) -> Value {
+    match value {
+        deterministic_generators_common::YamlLiteral::String(text) => Value::String(text.clone()),
+        deterministic_generators_common::YamlLiteral::Number(n) => Value::Number(serde_yaml::Number::from(*n)),
+        deterministic_generators_common::YamlLiteral::Bool(flag) => Value::Bool(*flag),
+        deterministic_generators_common::YamlLiteral::Null => Value::Null,
+    }
+}
+
+fn seed_value(value: &deterministic_generators_common::SeedValue) -> Value {
+    match value {
+        deterministic_generators_common::SeedValue::String(text) => Value::String(text.clone()),
+        deterministic_generators_common::SeedValue::Number(n) => Value::Number(serde_yaml::Number::from(*n)),
+        deterministic_generators_common::SeedValue::Bool(flag) => Value::Bool(*flag),
+        deterministic_generators_common::SeedValue::Null => Value::Null,
+    }
 }
 
 fn parse_types(yaml: &str) -> Result<Vec<SpecType>> {

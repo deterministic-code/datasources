@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { content, patch } from "@deterministic-code/generators-common/generate-entry";
-import { DeterministicParser } from "@deterministic-code/deterministic-specifications-typescript/parser";
+import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "../io.ts";
 import { run, type Deps } from "../run.ts";
@@ -224,6 +224,112 @@ describe("generate", () => {
     expect(textOf(rust, "repository_registry.rs")).toContain("fn contacts(&self)");
     expect(textOf(rust, "repository_registry.rs")).toContain("fn contact_groups(&self)");
     expect(textOf(rust, "mod.rs")).toContain("pub mod repository_registry;");
+  });
+
+  it("generates update and delete overrides for optimistic concurrency", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - account:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - version:
+            type: integer
+        - name:
+            type: string
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - account:
+      fields:
+        - version:
+            is_optimistic_concurrency: true
+`,
+    };
+    const occ = (dialect: Dialect) => ({
+      dialect,
+      reader: memoryReader(files),
+      settings: { "backend.datasources": "sqlite" },
+    });
+    const csharp = textOf(await deterministic.generateRepositories(occ("csharp")), "AccountRepository.cs");
+    const typescript = textOf(await deterministic.generateRepositories(occ("typescript")), "account-repository.ts");
+    const rust = textOf(await deterministic.generateRepositories(occ("rust")), "account_repository.rs");
+    const registry = textOf(await deterministic.generateRepositories(occ("rust")), "repository_registry.rs");
+    expect(csharp).toContain("public new async Task<Response> Update");
+    expect(csharp).toContain("public new async Task<Response> Delete");
+    expect(csharp).toContain("item.Version += 1");
+    expect(csharp).toContain('.And("Version", eq, Value.From(expected))');
+    expect(csharp).toContain("RowsAffected == 1");
+    expect(csharp).not.toContain("OptimisticConcurrency");
+    expect(typescript).toContain("this.update = async (item, byWhere)");
+    expect(typescript).toContain("this.delete = async (item, byWhere)");
+    expect(typescript).toContain("version: Number(expected) + 1");
+    expect(typescript).toContain('.and("version", eq, expected)');
+    expect(typescript).toContain("rowsAffected !== 1");
+    expect(typescript).not.toContain("optimisticConcurrency:");
+    expect(rust).toContain("pub struct AccountOptimistic");
+    expect(rust).toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(rust).toContain("rows_affected != 1");
+    expect(rust).not.toContain("optimistic_concurrency");
+    expect(registry).toContain("AccountOptimistic::new");
+
+    const stamp = {
+      "types.yaml": `version: 1.0.0
+types:
+  - stamp:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - version:
+            type: binary
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - stamp:
+      use_optimistic_concurrency: true
+      fields:
+        - version:
+            is_optimistic_concurrency: true
+`,
+    };
+    const skipped = {
+      "types.yaml": files["types.yaml"],
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - account:
+      use_optimistic_concurrency: false
+      fields:
+        - version:
+            is_optimistic_concurrency: true
+`,
+    };
+    const stampReq = { reader: memoryReader(stamp), settings: { "backend.datasources": "sqlite" } };
+    const stampCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", ...stampReq }), "StampRepository.cs");
+    const stampTs = textOf(await deterministic.generateRepositories({ dialect: "typescript", ...stampReq }), "stamp-repository.ts");
+    const stampRs = textOf(await deterministic.generateRepositories({ dialect: "rust", ...stampReq }), "stamp_repository.rs");
+    const skippedCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(skipped), settings: { "backend.datasources": "sqlite" } }), "AccountRepository.cs");
+    expect(stampCs).toContain("public new async Task<Response> Update");
+    expect(stampCs).not.toContain("item.Version += 1");
+    expect(stampTs).toContain("this.update = async (item, byWhere)");
+    expect(stampTs).toContain("await update(item,");
+    expect(stampTs).not.toContain("Number(expected)");
+    expect(stampRs).toContain("pub struct StampOptimistic");
+    expect(stampRs).not.toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(skippedCs).not.toContain("public new async Task<Response> Update");
   });
 
   it("imports kebab type files and omits ids from createReadonly", async () => {
