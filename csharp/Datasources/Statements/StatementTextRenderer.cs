@@ -35,8 +35,14 @@ public class StatementTextRenderer
         DropTriggerStatement s => s.Accept(Statements),
         CreateTriggerStatement s => s.Accept(Statements),
         IdentityInsertStatement s => s.Accept(Statements),
-        CreateRoutineStatement s => s.Accept(Statements),
         DropRoutineStatement s => s.Accept(Statements),
+        CreateCreateStoredProcedureStatement s => s.Accept(Statements),
+        CreateReadStoredProcedureStatement s => s.Accept(Statements),
+        CreateUpdateStoredProcedureStatement s => s.Accept(Statements),
+        CreateDeleteStoredProcedureStatement s => s.Accept(Statements),
+        CreateBulkCreateStoredProcedureStatement s => s.Accept(Statements),
+        CreateBulkUpdateStoredProcedureStatement s => s.Accept(Statements),
+        CreateBulkDeleteStoredProcedureStatement s => s.Accept(Statements),
         _ => statement.Accept(Statements)
     };
 

@@ -15,6 +15,8 @@ export type PackCasing = ICasingStrategy & {
   tableName: (entity: string) => string
   /** Always-plural routine English (`find_contacts`); ignores the table flag. */
   pluralTableName: (entity: string) => string
+  /** Snake plural stem for routine names (`notification_types`). */
+  pluralStem: (entity: string) => string
   columnName: (field: string) => string
   constraintName: (entity: string, ...parts: string[]) => string
   triggerName: (entity: string) => string
@@ -89,6 +91,7 @@ export const createCasing = (
     tableName: (entity) => objectIdent(entity, naming.resolveTable(entity)),
     pluralTableName: (entity) =>
       objectIdent(entity, alwaysPlural.resolveTable(entity)),
+    pluralStem: (entity) => alwaysPlural.physicalStem(entity),
     columnName: (field) => naming.resolveColumn(field),
     constraintName: (entity, ...parts) =>
       naming.isVerbatim(entity)

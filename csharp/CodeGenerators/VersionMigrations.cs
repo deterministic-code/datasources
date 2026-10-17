@@ -51,8 +51,10 @@ public static class VersionMigrations
         for (var index = 0; index < snapshots.Count; index++)
         {
             var current = Compile(snapshots[index], settings);
-            var up = SchemaDiff.Of(dialect, previous.Tables, previous.Mapping, current.Tables, current.Mapping);
-            var down = SchemaDiff.Of(dialect, current.Tables, current.Mapping, previous.Tables, previous.Mapping);
+            var up = SchemaDiff.Of(dialect, previous.Tables, previous.Mapping, current.Tables, current.Mapping)
+                .Concat(ProcedureDiff(dialect, settings, previous.Tables, previous.Mapping, current.Tables, current.Mapping, casing)).ToList();
+            var down = SchemaDiff.Of(dialect, current.Tables, current.Mapping, previous.Tables, previous.Mapping)
+                .Concat(ProcedureDiff(dialect, settings, current.Tables, current.Mapping, previous.Tables, previous.Mapping, casing)).ToList();
             if (up.Count == 0 && down.Count == 0)
             {
                 previous = current;
@@ -72,6 +74,28 @@ public static class VersionMigrations
         }
         return output;
     }
+
+    static IEnumerable<IStatement> ProcedureDiff(
+        string dialect,
+        IReadOnlyDictionary<string, string> settings,
+        IReadOnlyList<SqlTable> before,
+        SqlMapping beforeMap,
+        IReadOnlyList<SqlTable> after,
+        SqlMapping afterMap,
+        PackCasing casing)
+    {
+        if (!SqlSchema.UseStoredProcedures(settings)) return [];
+        var previous = before.ToDictionary(table => table.Name, StringComparer.Ordinal);
+        var groups = ByGroups.From(after);
+        return after
+            .Where(table => previous.TryGetValue(table.Name, out var prior)
+                && SqlSchema.HasAuditColumns(table)
+                && FieldsOf(prior) != FieldsOf(table))
+            .SelectMany(table => GenerateProcedures.ForTable(dialect, table, afterMap, casing, groups.GetValueOrDefault(table.Name) ?? []).Statements);
+    }
+
+    static string FieldsOf(SqlTable table) =>
+        string.Join("|", table.Fields.Select(field => $"{field.Name}:{field.Type}"));
 
     static Dictionary<string, object?> Empty() => [];
 

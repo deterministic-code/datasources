@@ -1,9 +1,15 @@
 import {
   AlterTableStatement,
   BulkUpdateStatement,
-  CreateRoutineStatement,
+  CreateBulkCreateStoredProcedureStatement,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
+  CreateUpdateStoredProcedureStatement,
   DropIndexStatement,
   DropRoutineStatement,
   SelectInsertedIdStatement,
@@ -13,11 +19,11 @@ import {
 } from "@datasources/core";
 import { MysqlAlterTableStatementRenderer } from "./MysqlAlterTableStatementRenderer.ts";
 import { MysqlBulkUpdateStatementTextRenderer } from "./MysqlBulkUpdateStatementTextRenderer.ts";
-import { MysqlCreateRoutineStatementRenderer } from "./MysqlCreateRoutineStatementRenderer.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
 import { MysqlCreateTriggerStatementRenderer } from "./MysqlCreateTriggerStatementRenderer.ts";
 import { MysqlDropIndexStatementRenderer } from "./MysqlDropIndexStatementRenderer.ts";
 import { MysqlDropRoutineStatementRenderer } from "./MysqlDropRoutineStatementRenderer.ts";
+import { MysqlStoredProcedureStatementRenderer } from "./MysqlStoredProcedureStatementRenderer.ts";
 
 class MysqlSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
   override render(statement: SelectInsertedIdStatement): string {
@@ -54,11 +60,35 @@ export class MysqlStatementRenderer extends StatementRenderer {
     return new MysqlCreateTriggerStatementRenderer().render(trigger);
   }
 
-  protected override visitCreateRoutine(routine: CreateRoutineStatement): string {
-    return new MysqlCreateRoutineStatementRenderer().render(routine);
-  }
-
   protected override visitDropRoutine(routine: DropRoutineStatement): string {
     return new MysqlDropRoutineStatementRenderer().render(routine);
+  }
+
+  protected override visitCreateCreateStoredProcedureStatement(statement: CreateCreateStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderCreate(statement);
+  }
+
+  protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderUpdate(statement);
+  }
+
+  protected override visitCreateDeleteStoredProcedureStatement(statement: CreateDeleteStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderDelete(statement);
+  }
+
+  protected override visitCreateBulkCreateStoredProcedureStatement(statement: CreateBulkCreateStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderBulkCreate(statement);
+  }
+
+  protected override visitCreateBulkUpdateStoredProcedureStatement(statement: CreateBulkUpdateStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderBulkUpdate(statement);
+  }
+
+  protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderBulkDelete(statement);
   }
 }

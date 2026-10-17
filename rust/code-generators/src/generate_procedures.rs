@@ -1,14 +1,14 @@
-use crate::by_fields;
+use crate::by_groups;
 use crate::casing::PackCasing;
 use crate::generate_entry::GenerateEntry;
 use crate::mapping::SqlMapping;
 use crate::procedure_fields;
 use crate::procedure_specs;
-use crate::schema;
+use crate::schema::{self, SqlTable};
 use crate::spec;
 use crate::sql_dialect;
 use crate::table_statements;
-use datasources::{DatasourceError, Result, RoutineKind, RoutineParameter};
+use datasources::{DatasourceError, Result, RoutineParameter, Statement};
 use std::collections::HashMap;
 
 pub fn for_dialect(
@@ -31,89 +31,21 @@ pub fn for_dialect(
     if tables.is_empty() {
         return Ok(Vec::new());
     }
-    let by_fields = by_fields::from(&types);
+    let by_groups = by_groups::from(&types);
     let mut bodies = Vec::new();
     let mut drops = Vec::new();
     for t in &tables {
-        let fields = by_fields.get(&t.name).cloned().unwrap_or_default();
-        let pk = procedure_fields::pk_of(t);
-        let columns: Vec<String> = t.fields.iter().map(|f| mapping.column_name(t, &f.name)).collect();
-        let writable: Vec<String> = procedure_fields::writable_non_audit(t)
-            .iter()
-            .map(|f| mapping.column_name(t, &f.name))
-            .collect();
+        let groups = by_groups.get(&t.name).cloned().unwrap_or_default();
+        let (statements, names) = for_table(dialect, t, &mapping, &casing, &groups)?;
         let mut created = Vec::new();
-        for proc in procedure_specs::of(&t.name, &fields, &casing) {
-            let key_field = proc
-                .by_field
-                .as_ref()
-                .and_then(|by| t.fields.iter().find(|f| f.name == *by).cloned())
-                .unwrap_or_else(|| pk.clone());
-            let mut params_list = vec![RoutineParameter {
-                name: mapping.column_name(t, &key_field.name),
-                r#type: sql_dialect::map_column_type(dialect, &key_field.converter_field())?,
-            }];
-            for f in procedure_fields::writable_non_audit(t) {
-                if Some(&f.name) != proc.by_field.as_ref() {
-                    params_list.push(RoutineParameter {
-                        name: mapping.column_name(t, &f.name),
-                        r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
-                    });
-                }
-            }
-            if t.fields.iter().any(|f| f.name == "updated") {
-                let updated = t.fields.iter().find(|f| f.name == "updated").expect("updated");
-                params_list.push(RoutineParameter {
-                    name: mapping.column_name(t, "new_updated"),
-                    r#type: sql_dialect::map_column_type(dialect, &updated.converter_field())?,
-                });
-            }
-            let create_params = procedure_fields::create_params(t)
-                .into_iter()
-                .map(|f| {
-                    Ok(RoutineParameter {
-                        name: mapping.column_name(t, &f.name),
-                        r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
-                    })
-                })
-                .collect::<Result<Vec<_>>>()?;
-            let kind = if proc.op == "updateBy" { "update" } else { proc.op.as_str() };
-            let parameters = if proc.op == "create" {
-                create_params
-            } else if proc.op.starts_with("update") {
-                params_list
-            } else if proc.op == "findBy" {
-                vec![RoutineParameter {
-                    name: mapping.column_name(t, &key_field.name),
-                    r#type: sql_dialect::map_column_type(dialect, &key_field.converter_field())?,
-                }]
-            } else {
-                Vec::new()
-            };
-            let sql = sql_dialect::render_sql(
-                dialect,
-                &table_statements::create_routine(
-                    &proc.name,
-                    kind_of(kind)?,
-                    sql_dialect::q(dialect, &t.table_name)?,
-                    columns.clone(),
-                    parameters,
-                    mapping.column_name(t, &pk.name),
-                    sql_dialect::map_column_type(dialect, &pk.converter_field())?,
-                    writable.clone(),
-                    proc.by_field.as_ref().map(|by| mapping.column_name(t, by)),
-                    pk.type_name == "uuid",
-                    if t.fields.iter().any(|f| f.name == "updated") {
-                        Some(mapping.column_name(t, "updated"))
-                    } else {
-                        None
-                    },
-                ),
-            )?;
+        for statement in statements {
+            let sql = sql_dialect::render_sql(dialect, statement.as_ref())?;
             if !sql.is_empty() {
                 created.push(sql);
             }
-            let drop = sql_dialect::render_sql(dialect, &table_statements::drop_routine(&proc.name))?;
+        }
+        for name in names {
+            let drop = sql_dialect::render_sql(dialect, &table_statements::drop_routine(&name))?;
             if !drop.is_empty() {
                 drops.push(drop);
             }
@@ -137,16 +69,125 @@ pub fn for_dialect(
     ])
 }
 
-fn kind_of(op: &str) -> Result<RoutineKind> {
-    Ok(match op {
-        "create" => RoutineKind::Create,
-        "findOne" => RoutineKind::FindOne,
-        "findAll" => RoutineKind::FindAll,
-        "findBy" => RoutineKind::FindBy,
-        "update" => RoutineKind::Update,
-        "delete" => RoutineKind::Delete,
-        _ => return Err(DatasourceError::message(format!("{op}: empty step"))),
-    })
+pub fn for_table(
+    dialect: &str,
+    t: &SqlTable,
+    mapping: &SqlMapping,
+    casing: &PackCasing,
+    groups: &[Vec<String>],
+) -> Result<(Vec<Box<dyn Statement>>, Vec<String>)> {
+    let pk = procedure_fields::pk_of(t);
+    let columns: Vec<String> = t.fields.iter().map(|f| mapping.column_name(t, &f.name)).collect();
+    let writable: Vec<String> = procedure_fields::writable_non_audit(t)
+        .iter()
+        .map(|f| mapping.column_name(t, &f.name))
+        .collect();
+    let created_params = procedure_fields::create_params(t)
+        .into_iter()
+        .map(|f| {
+            Ok(RoutineParameter {
+                name: mapping.column_name(t, &f.name),
+                r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let typed_columns = t
+        .fields
+        .iter()
+        .map(|f| {
+            Ok(RoutineParameter {
+                name: mapping.column_name(t, &f.name),
+                r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let payload = RoutineParameter {
+        name: "payload".into(),
+        r#type: payload_type(dialect).into(),
+    };
+    let key = mapping.column_name(t, &pk.name);
+    let key_type = sql_dialect::map_column_type(dialect, &pk.converter_field())?;
+    let audit = t
+        .fields
+        .iter()
+        .any(|f| f.name == "updated")
+        .then(|| mapping.column_name(t, "updated"));
+    let generated_key = pk.type_name == "uuid";
+    let quoted = sql_dialect::q(dialect, &t.table_name)?;
+    let mut statements: Vec<Box<dyn Statement>> = Vec::new();
+    let mut names = Vec::new();
+    for proc in procedure_specs::of(&t.name, groups, casing) {
+        names.push(proc.name.clone());
+        let by: Vec<String> = proc.by_properties.iter().map(|logical| mapping.column_name(t, logical)).collect();
+        let by_params = proc
+            .by_properties
+            .iter()
+            .map(|logical| {
+                let field = t
+                    .fields
+                    .iter()
+                    .find(|f| f.name == *logical)
+                    .cloned()
+                    .unwrap_or_else(|| pk.clone());
+                Ok(RoutineParameter {
+                    name: mapping.column_name(t, &field.name),
+                    r#type: sql_dialect::map_column_type(dialect, &field.converter_field())?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let mut update_params = by_params.clone();
+        for f in procedure_fields::writable_non_audit(t) {
+            if !proc.by_properties.iter().any(|name| name == &f.name) {
+                update_params.push(RoutineParameter {
+                    name: mapping.column_name(t, &f.name),
+                    r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
+                });
+            }
+        }
+        if audit.is_some() {
+            let updated = t.fields.iter().find(|f| f.name == "updated").expect("updated");
+            update_params.push(RoutineParameter {
+                name: mapping.column_name(t, "new_updated"),
+                r#type: sql_dialect::map_column_type(dialect, &updated.converter_field())?,
+            });
+        }
+        let boxed: Box<dyn Statement> = match proc.op.as_str() {
+            "create" => Box::new(table_statements::create_create_stored_procedure(
+                &proc.name, &quoted, columns.clone(), created_params.clone(), &key, &key_type, writable.clone(), generated_key, audit.clone(),
+            )),
+            "read" => Box::new(table_statements::create_read_stored_procedure(
+                &proc.name, &quoted, columns.clone(), by_params.clone(), &key, &key_type, writable.clone(), by.clone(), generated_key, audit.clone(),
+            )),
+            "update" => Box::new(table_statements::create_update_stored_procedure(
+                &proc.name, &quoted, columns.clone(), update_params, &key, &key_type, writable.clone(), by, generated_key, audit.clone(),
+            )),
+            "delete" => Box::new(table_statements::create_delete_stored_procedure(
+                &proc.name, &quoted, columns.clone(), by_params.clone(), &key, &key_type, writable.clone(), by, generated_key, audit.clone(),
+            )),
+            "bulkCreate" => Box::new(table_statements::create_bulk_create_stored_procedure(
+                &proc.name, &quoted, typed_columns.clone(), payload.clone(), &key, &key_type,
+            )),
+            "bulkUpdate" => Box::new(table_statements::create_bulk_update_stored_procedure(
+                &proc.name, &quoted, typed_columns.clone(), payload.clone(), &key, &key_type,
+            )),
+            "bulkDelete" => Box::new(table_statements::create_bulk_delete_stored_procedure(
+                &proc.name, &quoted, typed_columns.clone(), payload.clone(), &key, &key_type,
+            )),
+            _ => return Err(DatasourceError::message(format!("{}: empty step", proc.op))),
+        };
+        statements.push(boxed);
+    }
+    Ok((statements, names))
+}
+
+fn payload_type(dialect: &str) -> &'static str {
+    match dialect {
+        "mysql" => "JSON",
+        "postgres" => "jsonb",
+        "sqlserver" => "NVARCHAR(MAX)",
+        "oracle" => "CLOB",
+        _ => "JSON",
+    }
 }
 
 fn with_nl(text: &str, casing: &PackCasing) -> String {

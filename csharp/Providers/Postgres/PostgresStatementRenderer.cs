@@ -25,9 +25,27 @@ internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : St
     public override string Visit(IdentityInsertStatement insert) =>
         new PostgresIdentityInsertStatementRenderer().Render(insert);
 
-    public override string Visit(CreateRoutineStatement routine) =>
-        new PostgresCreateRoutineStatementRenderer().Render(routine);
-
     public override string Visit(DropRoutineStatement routine) =>
         new PostgresDropRoutineStatementRenderer().Render(routine);
+
+    public override string Visit(CreateCreateStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateReadStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateDeleteStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkCreateStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkUpdateStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
 }

@@ -12,6 +12,9 @@ import { buildLiveTables, sqlTablesFrom } from "./sql-schema.ts";
 import { renderSql, type SqlDialect } from "./sql-dialect.ts";
 import { schemaDiff, type SchemaSnapshot } from "./schema-diff.ts";
 import { seedSections } from "./seed-generator.ts";
+import { byGroupsFromDatasource } from "./datasource-by-fields.ts";
+import { procedureStatementsForTable } from "./generate-procedures.ts";
+import { datasourceSettings, hasAuditColumns, type LiveTable } from "./sql-schema.ts";
 
 const versionDiff = /^version-\d{8}T\d{6}Z-\d{3}\/diff\.yaml$/;
 
@@ -92,8 +95,14 @@ export const versionMigrationFiles = async (
   let number = 0;
   for (const [index, snapshot] of snapshots.entries()) {
     const current = await compile(snapshot, ctx.settings);
-    const up = schemaDiff(dialect, previous, current);
-    const down = schemaDiff(dialect, current, previous);
+    const up = [
+      ...schemaDiff(dialect, previous, current),
+      ...procedureDiff(dialect, ctx.settings, previous, current),
+    ];
+    const down = [
+      ...schemaDiff(dialect, current, previous),
+      ...procedureDiff(dialect, ctx.settings, current, previous),
+    ];
     if (up.length === 0 && down.length === 0) {
       previous = current;
       continue;
@@ -122,6 +131,26 @@ export const versionMigrationFiles = async (
     previous = current;
   }
   return { files, count: number };
+};
+
+const fieldsOf = (table: LiveTable): string =>
+  JSON.stringify(table.fields.map((field) => [field.name, field.type, field.size ?? null]));
+
+const procedureDiff = (
+  dialect: SqlDialect,
+  settings: Record<string, string>,
+  before: SchemaSnapshot,
+  after: SchemaSnapshot,
+): IStatement[] => {
+  if (!datasourceSettings(settings).useStoredProcedures) return [];
+  const casing = createCasing(settings);
+  const previous = new Map(before.tables.map((table) => [table.name, table]));
+  const groups = byGroupsFromDatasource(after.tables);
+  return after.tables.flatMap((table) => {
+    const prior = previous.get(table.name);
+    if (prior === undefined || !hasAuditColumns(table) || fieldsOf(prior) === fieldsOf(table)) return [];
+    return procedureStatementsForTable(dialect, table, after.mapping, casing, groups.get(table.name) ?? []).statements;
+  });
 };
 
 const finalize = (text: string, casing: PackCasing): string => {

@@ -22,9 +22,27 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
     public override string Visit(CreateTriggerStatement trigger) =>
         new MysqlCreateTriggerStatementRenderer().Render(trigger);
 
-    public override string Visit(CreateRoutineStatement routine) =>
-        new MysqlCreateRoutineStatementRenderer().Render(routine);
-
     public override string Visit(DropRoutineStatement routine) =>
         new MysqlDropRoutineStatementRenderer().Render(routine);
+
+    public override string Visit(CreateCreateStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateReadStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateDeleteStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkCreateStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkUpdateStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
 }

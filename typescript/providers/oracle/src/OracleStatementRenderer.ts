@@ -1,7 +1,14 @@
 import {
   AlterTableStatement,
+  CreateBulkCreateStoredProcedureStatement,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
+  CreateUpdateStoredProcedureStatement,
   DropIndexStatement,
   DropTableStatement,
   DropTriggerStatement,
@@ -14,6 +21,7 @@ import { OracleCreateTriggerStatementRenderer } from "./OracleCreateTriggerState
 import { OracleDropIndexStatementRenderer } from "./OracleDropIndexStatementRenderer.ts";
 import { OracleDropTableStatementRenderer } from "./OracleDropTableStatementRenderer.ts";
 import { OracleDropTriggerStatementRenderer } from "./OracleDropTriggerStatementRenderer.ts";
+import { OracleStoredProcedureStatementRenderer } from "./OracleStoredProcedureStatementRenderer.ts";
 
 export class OracleStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
@@ -42,5 +50,33 @@ export class OracleStatementRenderer extends StatementRenderer {
 
   protected override visitDropTable(drop: DropTableStatement): string {
     return new OracleDropTableStatementRenderer().render(drop);
+  }
+
+  protected override visitCreateCreateStoredProcedureStatement(statement: CreateCreateStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderCreate(statement);
+  }
+
+  protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderUpdate(statement);
+  }
+
+  protected override visitCreateDeleteStoredProcedureStatement(statement: CreateDeleteStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderDelete(statement);
+  }
+
+  protected override visitCreateBulkCreateStoredProcedureStatement(statement: CreateBulkCreateStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderBulkCreate(statement);
+  }
+
+  protected override visitCreateBulkUpdateStoredProcedureStatement(statement: CreateBulkUpdateStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderBulkUpdate(statement);
+  }
+
+  protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderBulkDelete(statement);
   }
 }

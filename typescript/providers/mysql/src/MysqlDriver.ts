@@ -35,6 +35,13 @@ export class MysqlDriver implements IDriver {
       "Overrides SelectInsertedIdStatement to SELECT LAST_INSERT_ID() AS {column}",
       "Overrides CreateTableStatement identity to AUTO_INCREMENT",
       "Overrides CreateTableStatement type mapping (int→INT, uuid→CHAR(36), string/datetime→TEXT, bool→TINYINT, decimal→DECIMAL(18,4), float→DOUBLE, binary→BLOB)",
+      "Overrides CreateCreateStoredProcedureStatement to PROCEDURE Create{Plural}",
+      "Overrides CreateReadStoredProcedureStatement to PROCEDURE Read{Plural}By{Properties}",
+      "Overrides CreateUpdateStoredProcedureStatement to PROCEDURE Update{Plural}By{Properties}",
+      "Overrides CreateDeleteStoredProcedureStatement to PROCEDURE Delete{Plural}By{Properties}",
+      "Overrides CreateBulkCreateStoredProcedureStatement to PROCEDURE BulkCreate{Plural}",
+      "Overrides CreateBulkUpdateStoredProcedureStatement to PROCEDURE BulkUpdate{Plural}",
+      "Overrides CreateBulkDeleteStoredProcedureStatement to PROCEDURE BulkDelete{Plural}",
     ],
     changeLogs: [],
   };

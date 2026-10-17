@@ -8,8 +8,6 @@ use super::bulk_update_statement_text_renderer::BulkUpdateStatementTextRenderer;
 use super::alter_table_statement::AlterTableStatement;
 use super::create_index_statement::CreateIndexStatement;
 use super::create_index_statement_text_renderer::CreateIndexStatementTextRenderer;
-use super::create_routine_statement::CreateRoutineStatement;
-use super::create_routine_statement_text_renderer::CreateRoutineStatementTextRenderer;
 use super::create_table_statement::CreateTableStatement;
 use super::create_table_statement_text_renderer;
 use super::create_trigger_statement::CreateTriggerStatement;
@@ -18,6 +16,20 @@ use super::drop_index_statement::DropIndexStatement;
 use super::drop_index_statement_text_renderer::DropIndexStatementTextRenderer;
 use super::drop_routine_statement::DropRoutineStatement;
 use super::drop_routine_statement_text_renderer::DropRoutineStatementTextRenderer;
+use super::create_create_stored_procedure_statement::CreateCreateStoredProcedureStatement;
+use super::create_create_stored_procedure_statement_text_renderer::CreateCreateStoredProcedureStatementTextRenderer;
+use super::create_read_stored_procedure_statement::CreateReadStoredProcedureStatement;
+use super::create_read_stored_procedure_statement_text_renderer::CreateReadStoredProcedureStatementTextRenderer;
+use super::create_update_stored_procedure_statement::CreateUpdateStoredProcedureStatement;
+use super::create_update_stored_procedure_statement_text_renderer::CreateUpdateStoredProcedureStatementTextRenderer;
+use super::create_delete_stored_procedure_statement::CreateDeleteStoredProcedureStatement;
+use super::create_delete_stored_procedure_statement_text_renderer::CreateDeleteStoredProcedureStatementTextRenderer;
+use super::create_bulk_create_stored_procedure_statement::CreateBulkCreateStoredProcedureStatement;
+use super::create_bulk_create_stored_procedure_statement_text_renderer::CreateBulkCreateStoredProcedureStatementTextRenderer;
+use super::create_bulk_update_stored_procedure_statement::CreateBulkUpdateStoredProcedureStatement;
+use super::create_bulk_update_stored_procedure_statement_text_renderer::CreateBulkUpdateStoredProcedureStatementTextRenderer;
+use super::create_bulk_delete_stored_procedure_statement::CreateBulkDeleteStoredProcedureStatement;
+use super::create_bulk_delete_stored_procedure_statement_text_renderer::CreateBulkDeleteStoredProcedureStatementTextRenderer;
 use super::drop_table_statement::DropTableStatement;
 use super::drop_table_statement_text_renderer::DropTableStatementTextRenderer;
 use super::drop_trigger_statement::DropTriggerStatement;
@@ -164,20 +176,62 @@ pub trait StatementVisitor: Send + Sync {
         IdentityInsertStatementTextRenderer.render(statement)
     }
 
-    fn visit_create_routine(
-        &self,
-        statement: &CreateRoutineStatement,
-        _text: &StatementTextRenderer,
-    ) -> String {
-        CreateRoutineStatementTextRenderer.render(statement)
-    }
-
     fn visit_drop_routine(
         &self,
         statement: &DropRoutineStatement,
         _text: &StatementTextRenderer,
     ) -> String {
         DropRoutineStatementTextRenderer.render(statement)
+    }
+
+    fn visit_create_create_stored_procedure(
+        &self,
+        statement: &CreateCreateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateCreateStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_read_stored_procedure(
+        &self,
+        statement: &CreateReadStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateReadStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_update_stored_procedure(
+        &self,
+        statement: &CreateUpdateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateUpdateStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_delete_stored_procedure(
+        &self,
+        statement: &CreateDeleteStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateDeleteStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_bulk_create_stored_procedure(
+        &self,
+        statement: &CreateBulkCreateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateBulkCreateStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_bulk_update_stored_procedure(
+        &self,
+        statement: &CreateBulkUpdateStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateBulkUpdateStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_bulk_delete_stored_procedure(
+        &self,
+        statement: &CreateBulkDeleteStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateBulkDeleteStoredProcedureStatementTextRenderer.render(statement)
     }
 }
 

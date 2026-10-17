@@ -1,39 +1,51 @@
 use crate::casing::PackCasing;
 use crate::procedure_spec::ProcedureSpec;
 
-pub fn of(entity_name: &str, by_fields: &[String], casing: &PackCasing) -> Vec<ProcedureSpec> {
+pub fn of(entity_name: &str, by_groups: &[Vec<String>], casing: &PackCasing) -> Vec<ProcedureSpec> {
+    let plural = casing.plural_stem(entity_name);
+    let suffix = |props: &[String]| {
+        if props.is_empty() {
+            String::new()
+        } else {
+            format!("_by_{}", props.join("_"))
+        }
+    };
     let mut specs = vec![
-        ProcedureSpec::new("create", casing.routine_name(&format!("create_{entity_name}")), None),
-        ProcedureSpec::new("findOne", casing.routine_name(&format!("find_{entity_name}")), None),
-        ProcedureSpec::new(
-            "findAll",
-            casing.routine_name(&format!("find_{}", casing.plural_table_name(entity_name))),
-            None,
-        ),
+        ProcedureSpec::new("create", casing.routine_name(&format!("create_{plural}")), vec![]),
+        ProcedureSpec::new("read", casing.routine_name(&format!("read_{plural}")), vec![]),
     ];
-    for bf in by_fields {
+    for props in by_groups {
+        let by = suffix(props);
         specs.push(ProcedureSpec::new(
-            "findBy",
-            casing.routine_name(&format!("find_{entity_name}_by_{bf}")),
-            Some(bf.clone()),
+            "read",
+            casing.routine_name(&format!("read_{plural}{by}")),
+            props.clone(),
+        ));
+        specs.push(ProcedureSpec::new(
+            "update",
+            casing.routine_name(&format!("update_{plural}{by}")),
+            props.clone(),
+        ));
+        specs.push(ProcedureSpec::new(
+            "delete",
+            casing.routine_name(&format!("delete_{plural}{by}")),
+            props.clone(),
         ));
     }
     specs.push(ProcedureSpec::new(
-        "update",
-        casing.routine_name(&format!("update_{entity_name}")),
-        None,
+        "bulkCreate",
+        casing.routine_name(&format!("bulk_create_{plural}")),
+        vec![],
     ));
-    for bf in by_fields {
-        specs.push(ProcedureSpec::new(
-            "updateBy",
-            casing.routine_name(&format!("update_{entity_name}_by_{bf}")),
-            Some(bf.clone()),
-        ));
-    }
     specs.push(ProcedureSpec::new(
-        "delete",
-        casing.routine_name(&format!("delete_{entity_name}")),
-        None,
+        "bulkUpdate",
+        casing.routine_name(&format!("bulk_update_{plural}")),
+        vec![],
+    ));
+    specs.push(ProcedureSpec::new(
+        "bulkDelete",
+        casing.routine_name(&format!("bulk_delete_{plural}")),
+        vec![],
     ));
     specs
 }

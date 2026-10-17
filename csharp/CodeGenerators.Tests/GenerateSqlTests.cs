@@ -36,6 +36,11 @@ public class GenerateSqlTests
         Assert.Contains("postgres/migrations/0001_initial_up.sql", files);
         Assert.Contains("postgres/migrations/0002_stored_procedures_up.sql", files);
         Assert.Contains("postgres/migrations/0002_stored_procedures_down.sql", files);
+        var up = GenerateSql.Of(Files(TypesYaml), new Dictionary<string, string> { ["datasource.use_stored_procedures"] = "true" }, ["postgres"])
+            .Single(e => e.Filename.EndsWith("_stored_procedures_up.sql")).Content;
+        Assert.Contains("read_users", up);
+        Assert.Contains("bulk_create_users", up);
+        Assert.Contains("CREATE OR REPLACE", up);
     }
 
     [Fact]
@@ -251,6 +256,47 @@ public class GenerateSqlTests
         Assert.Equal(
             ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"],
             names);
+    }
+
+    [Fact]
+    public void ReplacesStoredProceduresWhenALaterVersionAddsAColumn()
+    {
+        const string first = "version-20261016T000000Z-001/diff.yaml";
+        const string second = "version-20261016T000000Z-002/diff.yaml";
+        const string nextYaml = """
+            types:
+              - user:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - email:
+                        type: string
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+                    - notes:
+                        type: string
+            """;
+        var files = Files(nextYaml);
+        files[first] = VersionDelta.Yaml(new Dictionary<string, object?>
+        {
+            ["types.yaml"] = new Dictionary<string, object?>
+            {
+                ["added"] = true,
+                ["content"] = VersionDelta.Parse(TypesYaml),
+            },
+        });
+        files[second] = VersionDelta.Yaml(new Dictionary<string, object?>
+        {
+            ["types.yaml"] = VersionDelta.Parse(nextYaml),
+        });
+        var entries = GenerateSql.Of(files, new Dictionary<string, string> { ["datasource.use_stored_procedures"] = "true" }, ["postgres"]);
+        var up2 = entries.Single(e => e.Filename == "postgres/migrations/0002_up.sql").Content;
+        var down2 = entries.Single(e => e.Filename == "postgres/migrations/0002_down.sql").Content;
+        Assert.Contains("notes", up2);
+        Assert.Contains("CREATE OR REPLACE", up2);
+        Assert.Contains("CREATE OR REPLACE", down2);
     }
 
     [Fact]

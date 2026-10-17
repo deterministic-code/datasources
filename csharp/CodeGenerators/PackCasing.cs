@@ -37,6 +37,7 @@ public sealed class PackCasing
     public bool IsVerbatim(string mapping) => naming.IsVerbatim(mapping);
     public string TableName(string entity) => ObjectIdent(entity, naming.ResolveTable(entity));
     public string PluralTableName(string entity) => ObjectIdent(entity, alwaysPlural.ResolveTable(entity));
+    public string PluralStem(string entity) => alwaysPlural.PhysicalStem(entity);
     public string ColumnName(string field) => naming.ResolveColumn(field);
     public string Keyword(string text) => Letter(text, keywordFormat);
     public string ApplyKeywords(string sql) => keywordFormat == "lower" ? SqlKeywords.Apply(sql, Keyword) : sql;

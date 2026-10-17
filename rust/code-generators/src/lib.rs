@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod by_fields;
+mod by_groups;
 mod casing;
 mod compile_filter;
 mod custom_migrations;

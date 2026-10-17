@@ -320,6 +320,106 @@ fn compiles_a_drop_trigger() {
 }
 
 #[test]
+fn renders_stored_procedure_statements_empty() {
+    let payload = RoutineParameter {
+        name: "payload".into(),
+        r#type: "JSON".into(),
+    };
+    assert_eq!(
+        stmt_text(&CreateCreateStoredProcedureStatement::new(
+            "CreateUsers",
+            "users",
+            vec!["id".into()],
+            vec![],
+            "id",
+            "INT",
+            vec![],
+            false,
+            None,
+        )),
+        ""
+    );
+    assert_eq!(
+        stmt_text(&CreateReadStoredProcedureStatement::new(
+            "ReadUsers",
+            "users",
+            vec!["id".into()],
+            vec![],
+            "id",
+            "INT",
+            vec![],
+            vec![],
+            false,
+            None,
+        )),
+        ""
+    );
+    assert_eq!(
+        stmt_text(&CreateUpdateStoredProcedureStatement::new(
+            "UpdateUsersById",
+            "users",
+            vec!["id".into()],
+            vec![],
+            "id",
+            "INT",
+            vec![],
+            vec!["id".into()],
+            false,
+            None,
+        )),
+        ""
+    );
+    assert_eq!(
+        stmt_text(&CreateDeleteStoredProcedureStatement::new(
+            "DeleteUsersById",
+            "users",
+            vec!["id".into()],
+            vec![],
+            "id",
+            "INT",
+            vec![],
+            vec!["id".into()],
+            false,
+            None,
+        )),
+        ""
+    );
+    assert_eq!(
+        stmt_text(&CreateBulkCreateStoredProcedureStatement::new(
+            "BulkCreateUsers",
+            "users",
+            vec![payload.clone()],
+            payload.clone(),
+            "id",
+            "INT",
+        )),
+        ""
+    );
+    assert_eq!(
+        stmt_text(&CreateBulkUpdateStoredProcedureStatement::new(
+            "BulkUpdateUsers",
+            "users",
+            vec![payload.clone()],
+            payload.clone(),
+            "id",
+            "INT",
+        )),
+        ""
+    );
+    assert_eq!(
+        stmt_text(&CreateBulkDeleteStoredProcedureStatement::new(
+            "BulkDeleteUsers",
+            "users",
+            vec![payload.clone()],
+            payload,
+            "id",
+            "INT",
+        )),
+        ""
+    );
+}
+
+#[test]
 fn compiles_a_call() {
     let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
     let call = ExecuteStoredProcedureStatement::new("save", &fields);

@@ -20,6 +20,12 @@ public interface IStatementVisitor
     string Visit(DropTriggerStatement statement);
     string Visit(CreateTriggerStatement statement);
     string Visit(IdentityInsertStatement statement);
-    string Visit(CreateRoutineStatement statement);
     string Visit(DropRoutineStatement statement);
+    string Visit(CreateCreateStoredProcedureStatement statement);
+    string Visit(CreateReadStoredProcedureStatement statement);
+    string Visit(CreateUpdateStoredProcedureStatement statement);
+    string Visit(CreateDeleteStoredProcedureStatement statement);
+    string Visit(CreateBulkCreateStoredProcedureStatement statement);
+    string Visit(CreateBulkUpdateStoredProcedureStatement statement);
+    string Visit(CreateBulkDeleteStoredProcedureStatement statement);
 }

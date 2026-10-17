@@ -163,20 +163,20 @@ const TYPES = {
 
 const ROUTINES = {
   Camel: {
-    createFn: "createNotificationType",
-    findAllFn: "findNotificationTypes",
+    createFn: "createNotificationTypes",
+    findAllFn: "readNotificationTypes",
   },
   Pascal: {
-    createFn: "CreateNotificationType",
-    findAllFn: "FindNotificationTypes",
+    createFn: "CreateNotificationTypes",
+    findAllFn: "ReadNotificationTypes",
   },
   Snake: {
-    createFn: "create_notification_type",
-    findAllFn: "find_notification_types",
+    createFn: "create_notification_types",
+    findAllFn: "read_notification_types",
   },
   Kebab: {
-    createFn: "create-notification-type",
-    findAllFn: "find-notification-types",
+    createFn: "create-notification-types",
+    findAllFn: "read-notification-types",
   },
 } as const;
 
@@ -281,7 +281,7 @@ describe("generate-sql casing", () => {
     assert.match(sql, /"NotificationTypesUserIdForeignKey"/);
     assert.match(sql, /REFERENCES "Users"\s*\("id"\)/);
     const procs = await procSql(settings);
-    assert.match(procs, /CREATE OR REPLACE FUNCTION CreateNotificationType\(/);
+    assert.match(procs, /CREATE OR REPLACE FUNCTION CreateNotificationTypes\(/);
     assert.match(procs, /channelName/);
   });
 
@@ -303,7 +303,7 @@ describe("generate-sql casing", () => {
     assert.match(sql, /NOT NULL/);
     assert.match(sql, /REFERENCES "users"/);
     const procs = await procSql({ "datasource.casing.keywords": "upper" });
-    assert.match(procs, /CREATE OR REPLACE FUNCTION create_notification_type\(/);
+    assert.match(procs, /CREATE OR REPLACE FUNCTION create_notification_types\(/);
     assert.match(procs, /INSERT INTO "notification_types"/);
   });
 
@@ -319,7 +319,7 @@ describe("generate-sql casing", () => {
     assert.doesNotMatch(sql, /CREATE TABLE/);
     assert.doesNotMatch(sql, /NOT NULL/);
     const procs = await procSql({ "datasource.casing.keywords": "lower" });
-    assert.match(procs, /create or replace function create_notification_type\(/);
+    assert.match(procs, /create or replace function create_notification_types\(/);
     assert.match(procs, /insert into "notification_types"/);
     assert.match(procs, /returns /);
     assert.doesNotMatch(procs, /CREATE OR REPLACE/);
@@ -334,7 +334,7 @@ describe("generate-sql casing", () => {
     assert.match(sql, /REFERENCES "USERS"\s*\("id"\)/);
     assert.doesNotMatch(sql, /CREATE TABLE "notification_types"/);
     const procs = await procSql({ "datasource.casing.objects": "upper" });
-    assert.match(procs, /CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPE\(/);
+    assert.match(procs, /CREATE OR REPLACE FUNCTION CREATE_NOTIFICATION_TYPES\(/);
     assert.match(procs, /INSERT INTO "NOTIFICATION_TYPES"/);
   });
 
@@ -398,10 +398,10 @@ describe("generate-sql casing", () => {
     assert.match(down, /drop table if exists "USERS"/);
     assert.doesNotMatch(down, /DROP TABLE/);
     const procs = await procSql(settings);
-    assert.match(procs, /create or replace function CREATE_NOTIFICATION_TYPE\(/);
+    assert.match(procs, /create or replace function CREATE_NOTIFICATION_TYPES\(/);
     assert.match(procs, /insert into "NOTIFICATION_TYPES"/);
     const procDown = await procDownSql(settings);
-    assert.match(procDown, /drop function if exists CREATE_NOTIFICATION_TYPE;/);
+    assert.match(procDown, /drop function if exists CREATE_NOTIFICATION_TYPES;/);
     assert.doesNotMatch(procDown, /DROP FUNCTION/);
   });
 

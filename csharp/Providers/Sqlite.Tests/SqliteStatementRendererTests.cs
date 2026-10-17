@@ -53,4 +53,12 @@ public class SqliteStatementRendererTests
         Assert.Throws<InvalidOperationException>(() =>
             Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.AlterColumn(new Column("age", "INTEGER")))));
     }
+
+    [Fact]
+    public void RendersStoredProcedureStatementsEmpty()
+    {
+        Assert.Equal(
+            "",
+            Renderer.Render(new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id"], [], "id", "INT", [], [])));
+    }
 }

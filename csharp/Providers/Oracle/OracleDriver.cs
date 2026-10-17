@@ -53,6 +53,18 @@ public sealed class OracleDriver : IDriver
     public IMapping<string, string>? TypeConverter => Types;
     public DefaultValueConverter? DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
+    public Information? Information { get; } = new(
+        ["Oracle driver."],
+        [
+            "Overrides CreateCreateStoredProcedureStatement to PROCEDURE Create{Plural}",
+            "Overrides CreateReadStoredProcedureStatement to PROCEDURE Read{Plural}By{Properties}",
+            "Overrides CreateUpdateStoredProcedureStatement to PROCEDURE Update{Plural}By{Properties}",
+            "Overrides CreateDeleteStoredProcedureStatement to PROCEDURE Delete{Plural}By{Properties}",
+            "Overrides CreateBulkCreateStoredProcedureStatement to PROCEDURE BulkCreate{Plural}",
+            "Overrides CreateBulkUpdateStoredProcedureStatement to PROCEDURE BulkUpdate{Plural}",
+            "Overrides CreateBulkDeleteStoredProcedureStatement to PROCEDURE BulkDelete{Plural}",
+        ],
+        []);
     public IConnection Connection(IReadOnlyDictionary<string, string?>? options) => new OracleConnection(options);
     public ICommand Command(IConnection connection) => connection.CreateCommand();
     public ITransaction Transaction(IConnection connection, IsolationLevel isolation = IsolationLevel.ReadCommitted) =>

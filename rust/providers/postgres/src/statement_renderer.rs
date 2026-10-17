@@ -1,5 +1,5 @@
 use crate::alter_table_statement_renderer::PostgresAlterTableStatementRenderer;
-use crate::create_routine_statement_renderer::PostgresCreateRoutineStatementRenderer;
+use crate::stored_procedure_statement_renderer::PostgresStoredProcedureStatementRenderer;
 use crate::create_table_statement_renderer::PostgresCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::PostgresCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::PostgresDropRoutineStatementRenderer;
@@ -7,7 +7,10 @@ use crate::identity_insert_statement_renderer::PostgresIdentityInsertStatementRe
 use crate::select_inserted_id_statement_text_renderer::PostgresSelectInsertedIdStatementTextRenderer;
 use datasources::{
     AlterTableStatement, BulkInsertStatement, BulkUpdateStatement,
-    BulkUpdateStatementTextRenderer, CreateRoutineStatement, CreateTableStatement,
+    BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
+    CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
+    CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
+    CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, DropRoutineStatement,
     DropTriggerStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
     StatementTextRenderer, StatementVisitor, Value,
@@ -66,14 +69,6 @@ impl StatementVisitor for PostgresStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         PostgresIdentityInsertStatementRenderer.render(statement)
-    }
-
-    fn visit_create_routine(
-        &self,
-        statement: &CreateRoutineStatement,
-        _text: &StatementTextRenderer,
-    ) -> String {
-        PostgresCreateRoutineStatementRenderer.render(statement)
     }
 
     fn visit_drop_routine(
@@ -144,6 +139,28 @@ impl StatementVisitor for PostgresStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         BulkUpdateStatementTextRenderer.render_cells(statement, pg_cell)
+    }
+
+    fn visit_create_create_stored_procedure(&self, statement: &CreateCreateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_create(statement)
+    }
+    fn visit_create_read_stored_procedure(&self, statement: &CreateReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_read(statement)
+    }
+    fn visit_create_update_stored_procedure(&self, statement: &CreateUpdateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_update(statement)
+    }
+    fn visit_create_delete_stored_procedure(&self, statement: &CreateDeleteStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_delete(statement)
+    }
+    fn visit_create_bulk_create_stored_procedure(&self, statement: &CreateBulkCreateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_bulk_create(statement)
+    }
+    fn visit_create_bulk_update_stored_procedure(&self, statement: &CreateBulkUpdateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_bulk_update(statement)
+    }
+    fn visit_create_bulk_delete_stored_procedure(&self, statement: &CreateBulkDeleteStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_bulk_delete(statement)
     }
 }
 

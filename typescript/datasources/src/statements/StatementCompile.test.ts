@@ -4,10 +4,27 @@ import {
   CheckConstraint,
   ColumnDefault,
   AlterTableStatement,
+  BulkDeleteStatement,
+  BulkUpdateStatement,
   CreateIndexStatement,
+  CreateBulkCreateStoredProcedureStatement,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
+  CreateUpdateStoredProcedureStatement,
   CreateTableStatement,
+  CreateTriggerStatement,
+  ConditionRenderer,
   DropIndexStatement,
+  DropRoutineStatement,
+  DropTableStatement,
   DropTriggerStatement,
+  ExpressionRenderer,
+  IdentityInsertStatement,
+  StatementRenderer,
+  StatementTextRenderer,
   DeleteStatement,
   ForeignKey,
   InsertStatement,
@@ -284,6 +301,107 @@ describe("statement compile", () => {
       new Operator.And(new Operator.Equals("id", 1), new Operator.GreaterThan("age", 18)),
     );
     expect(DefaultStatementTextRenderer.instance.render(where)).toBe("id = $id AND age > $age");
+  });
+
+  it("compiles trigger, routine, identity insert, and bulk update", () => {
+    expect(DefaultStatementTextRenderer.instance.render(new DropTableStatement("users"))).toBe(
+      "DROP TABLE IF EXISTS users",
+    );
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateTriggerStatement("users", "tr_users", "updated", "id", "CURRENT_TIMESTAMP"),
+      ),
+    ).toBe("");
+    expect(DefaultStatementTextRenderer.instance.render(new DropRoutineStatement("sp_users"))).toBe("");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id"], [], "id", "INT", []),
+      ),
+    ).toBe("");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id"], [], "id", "INT", [], []),
+      ),
+    ).toBe("");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateUpdateStoredProcedureStatement("UpdateUsersById", "users", ["id"], [], "id", "INT", [], ["id"]),
+      ),
+    ).toBe("");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateDeleteStoredProcedureStatement("DeleteUsersById", "users", ["id"], [], "id", "INT", [], ["id"]),
+      ),
+    ).toBe("");
+    const payload = { name: "payload", type: "JSON" };
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateBulkCreateStoredProcedureStatement("BulkCreateUsers", "users", [payload], payload, "id", "INT"),
+      ),
+    ).toBe("");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateBulkUpdateStoredProcedureStatement("BulkUpdateUsers", "users", [payload], payload, "id", "INT"),
+      ),
+    ).toBe("");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new CreateBulkDeleteStoredProcedureStatement("BulkDeleteUsers", "users", [payload], payload, "id", "INT"),
+      ),
+    ).toBe("");
+    const insert = new InsertStatement("users", [{ name: "id", value: 1 }]);
+    expect(
+      DefaultStatementTextRenderer.instance.render(new IdentityInsertStatement("users", "id", [insert], true)),
+    ).toBe("INSERT INTO users (id) VALUES (1);");
+    const update = new BulkUpdateStatement("users", ["name"], ["id", "org"], [
+      { fields: [{ name: "name", value: null }], ids: [{ name: "id", value: 1 }] },
+    ]);
+    expect(DefaultStatementTextRenderer.instance.render(update)).toBe(
+      "UPDATE users SET name = data.name FROM (SELECT $name__0 AS name, $id__0 AS id, $org__0 AS org) AS data WHERE users.id = data.id AND users.org = data.org",
+    );
+    expect(update.parameters.map((field) => field.name)).toEqual(["name__0", "id__0", "org__0"]);
+    expect(
+      DefaultStatementTextRenderer.instance.render(new BulkDeleteStatement("users", [], [])),
+    ).toBe("DELETE FROM users WHERE 1 = 1");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new BulkDeleteStatement("users", ["id"], [[{ name: "id", value: 1 }]]),
+      ),
+    ).toBe("DELETE FROM users WHERE id IN ($id__0)");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new BulkDeleteStatement("users", ["id", "org"], [[{ name: "id", value: 1 }, { name: "org", value: 2 }]]),
+      ),
+    ).toBe("DELETE FROM users WHERE (id, org) IN (($id__0, $org__0))");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("users", {
+          kind: "alterColumn",
+          column: { name: "age", type: "INTEGER", notNull: new NotNull("nn_age") },
+        }),
+      ),
+    ).toBe("ALTER TABLE users ALTER COLUMN age TYPE INTEGER CONSTRAINT nn_age NOT NULL");
+    expect(
+      DefaultStatementTextRenderer.instance.render(
+        new AlterTableStatement("users", { kind: "alterColumn", column: { name: "age", type: "INTEGER" } }),
+      ),
+    ).toBe("ALTER TABLE users ALTER COLUMN age TYPE INTEGER");
+    const text = new StatementTextRenderer(
+      (renderer) => new StatementRenderer(renderer),
+      (expressions) => new ConditionRenderer(expressions),
+      (renderer) => new ExpressionRenderer(renderer),
+    );
+    class CustomWhere extends Where {}
+    expect(text.render(new CustomWhere(new Operator.Equals("id", 1)))).toBe("id = $id");
+    expect(new ConditionRenderer(new ExpressionRenderer(text)).render(new WhereText("id = 1"))).toBe("id = 1");
+    expect(() =>
+      DefaultStatementTextRenderer.instance.render(new AlterTableStatement("users", { kind: "empty" } as never)),
+    ).toThrow(/empty alter/);
+    class QueryLike {
+      where = true;
+      accept = (visitor: { visit: (statement: object) => string }) => visitor.visit(this);
+    }
+    expect(() => DefaultStatementTextRenderer.instance.render(new QueryLike() as never)).toThrow();
   });
 
   it("attaches where to a query", () => {

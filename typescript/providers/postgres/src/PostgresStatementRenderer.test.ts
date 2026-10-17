@@ -1,14 +1,24 @@
 import {
+  AlterTableStatement,
   BulkUpdateStatement,
   type Cell,
   ColumnDefault,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
+  CreateUpdateStoredProcedureStatement,
+  CreateTriggerStatement,
   DefaultStatementTextRenderer,
+  DropRoutineStatement,
+  DropTriggerStatement,
   ForeignKey,
-  SelectInsertedIdStatement,
+  IdentityInsertStatement,
+  InsertStatement,
   NotNull,
   PrimaryKey,
   ReferentialAction,
+  SelectInsertedIdStatement,
   SelectStatement,
   StatementTextRenderer,
 } from "@datasources/core";
@@ -101,5 +111,102 @@ describe("PostgresStatementRenderer", () => {
     expect(renderer.render(update)).toBe(
       "UPDATE contacts SET version = data.version FROM (SELECT $version__0::BYTEA AS version, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id",
     );
+  });
+
+  it("renders alter, trigger, identity insert, and drop statements", () => {
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", {
+          kind: "alterColumn",
+          column: { name: "age", type: "int", default: new ColumnDefault("0"), notNull: new NotNull() },
+        }),
+      ),
+    ).toBe("ALTER TABLE users ALTER COLUMN age TYPE INTEGER, ALTER COLUMN age SET DEFAULT 0, ALTER COLUMN age SET NOT NULL");
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", { kind: "alterColumn", column: { name: "age", type: "int" } }),
+      ),
+    ).toBe("ALTER TABLE users ALTER COLUMN age TYPE INTEGER, ALTER COLUMN age DROP DEFAULT, ALTER COLUMN age DROP NOT NULL");
+    expect(
+      renderer.render(
+        new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT" } }),
+      ),
+    ).toBe("ALTER TABLE users ADD COLUMN email TEXT");
+    expect(renderer.render(new DropTriggerStatement("tr_users", "users"))).toBe(
+      "DROP TRIGGER IF EXISTS tr_users ON users",
+    );
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "NOW()"))).toBe(
+      `-- Shared updated_at function
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated = NOW() AT TIME ZONE 'UTC';
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER tr_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_updated_at()`,
+    );
+    const insert = new InsertStatement("users", [{ name: "id", value: 1 }, { name: "name", value: "ada" }]);
+    expect(renderer.render(new IdentityInsertStatement("users", "id", [insert], true))).toBe(
+      `INSERT INTO users (id, name) VALUES (1, ada);
+SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX("id") FROM users))`,
+    );
+    expect(renderer.render(new IdentityInsertStatement("users", "id", [insert]))).toBe(
+      "INSERT INTO users (id, name) VALUES (1, ada);",
+    );
+    expect(renderer.render(new IdentityInsertStatement("users", "id", [], true))).toBe("");
+    expect(renderer.render(new DropRoutineStatement("fn_users"))).toBe("DROP FUNCTION IF EXISTS fn_users");
+  });
+
+  it("renders create/read/update stored procedure statements", () => {
+    expect(
+      renderer.render(
+        new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id", "name"], [{ name: "name", type: "TEXT" }], "id", "INT", ["name"]),
+      ),
+    ).toContain("CREATE OR REPLACE FUNCTION CreateUsers");
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], []),
+      ),
+    ).toContain("ORDER BY t.id");
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement(
+          "ReadUsersById",
+          "users",
+          ["id", "name"],
+          [{ name: "id", type: "INT" }],
+          "id",
+          "INT",
+          [],
+          ["id"],
+        ),
+      ),
+    ).toContain("WHERE t.id = ReadUsersById.id");
+    expect(
+      renderer.render(
+        new CreateUpdateStoredProcedureStatement(
+          "UpdateUsersByIdVersion",
+          "users",
+          ["id", "name", "version"],
+          [{ name: "id", type: "INT" }, { name: "version", type: "INT" }, { name: "name", type: "TEXT" }],
+          "id",
+          "INT",
+          ["name"],
+          ["id", "version"],
+        ),
+      ),
+    ).toContain("t.id = UpdateUsersByIdVersion.id AND t.version = UpdateUsersByIdVersion.version");
+    expect(
+      renderer.render(
+        new CreateBulkDeleteStoredProcedureStatement(
+          "BulkDeleteUsers",
+          "users",
+          [{ name: "id", type: "INT" }],
+          { name: "payload", type: "jsonb" },
+          "id",
+          "INT",
+        ),
+      ),
+    ).toContain("jsonb_to_recordset");
   });
 });

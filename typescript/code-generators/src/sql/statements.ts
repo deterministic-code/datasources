@@ -1,9 +1,15 @@
 import {
   ColumnDefault,
+  CreateBulkCreateStoredProcedureStatement,
+  CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
+  CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
   CreateIndexStatement,
-  CreateRoutineStatement,
+  CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
+  CreateUpdateStoredProcedureStatement,
   DeleteStatement,
   DropIndexStatement,
   DropRoutineStatement,
@@ -21,6 +27,7 @@ import {
   Where,
   eq,
   type Column,
+  type RoutineParameter,
 } from "@datasources/core";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
@@ -239,20 +246,103 @@ export const updateStatementOf = (
 export const deleteStatementOf = (table: string, keys: string[]): DeleteStatement =>
   new DeleteStatement(table, equalsWhere(keys));
 
-export const createRoutineStatementOf = (
+export const dropRoutineStatementOf = (name: string): DropRoutineStatement =>
+  new DropRoutineStatement(name);
+
+const rowArgs = (
   name: string,
-  kind: CreateRoutineStatement["kind"],
   table: string,
   columns: readonly string[],
-  parameters: CreateRoutineStatement["parameters"],
+  parameters: readonly RoutineParameter[],
   key: string,
   keyType: string,
   writable: readonly string[],
-  byField?: string,
   generatedKey = false,
   auditUpdated?: string,
-): CreateRoutineStatement =>
-  new CreateRoutineStatement(name, kind, table, columns, parameters, key, keyType, writable, byField, generatedKey, auditUpdated);
+) =>
+  [name, table, columns, parameters, key, keyType, writable, generatedKey, auditUpdated] as const;
 
-export const dropRoutineStatementOf = (name: string): DropRoutineStatement =>
-  new DropRoutineStatement(name);
+export const createCreateStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly string[],
+  parameters: readonly RoutineParameter[],
+  key: string,
+  keyType: string,
+  writable: readonly string[],
+  generatedKey = false,
+  auditUpdated?: string,
+): CreateCreateStoredProcedureStatement =>
+  new CreateCreateStoredProcedureStatement(...rowArgs(name, table, columns, parameters, key, keyType, writable, generatedKey, auditUpdated));
+
+export const createReadStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly string[],
+  parameters: readonly RoutineParameter[],
+  key: string,
+  keyType: string,
+  writable: readonly string[],
+  byProperties: readonly string[] = [],
+  generatedKey = false,
+  auditUpdated?: string,
+): CreateReadStoredProcedureStatement =>
+  new CreateReadStoredProcedureStatement(name, table, columns, parameters, key, keyType, writable, byProperties, generatedKey, auditUpdated);
+
+export const createUpdateStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly string[],
+  parameters: readonly RoutineParameter[],
+  key: string,
+  keyType: string,
+  writable: readonly string[],
+  byProperties: readonly string[] = [],
+  generatedKey = false,
+  auditUpdated?: string,
+): CreateUpdateStoredProcedureStatement =>
+  new CreateUpdateStoredProcedureStatement(name, table, columns, parameters, key, keyType, writable, byProperties, generatedKey, auditUpdated);
+
+export const createDeleteStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly string[],
+  parameters: readonly RoutineParameter[],
+  key: string,
+  keyType: string,
+  writable: readonly string[],
+  byProperties: readonly string[] = [],
+  generatedKey = false,
+  auditUpdated?: string,
+): CreateDeleteStoredProcedureStatement =>
+  new CreateDeleteStoredProcedureStatement(name, table, columns, parameters, key, keyType, writable, byProperties, generatedKey, auditUpdated);
+
+export const createBulkCreateStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly RoutineParameter[],
+  payload: RoutineParameter,
+  key: string,
+  keyType: string,
+): CreateBulkCreateStoredProcedureStatement =>
+  new CreateBulkCreateStoredProcedureStatement(name, table, columns, payload, key, keyType);
+
+export const createBulkUpdateStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly RoutineParameter[],
+  payload: RoutineParameter,
+  key: string,
+  keyType: string,
+): CreateBulkUpdateStoredProcedureStatement =>
+  new CreateBulkUpdateStoredProcedureStatement(name, table, columns, payload, key, keyType);
+
+export const createBulkDeleteStoredProcedureOf = (
+  name: string,
+  table: string,
+  columns: readonly RoutineParameter[],
+  payload: RoutineParameter,
+  key: string,
+  keyType: string,
+): CreateBulkDeleteStoredProcedureStatement =>
+  new CreateBulkDeleteStoredProcedureStatement(name, table, columns, payload, key, keyType);

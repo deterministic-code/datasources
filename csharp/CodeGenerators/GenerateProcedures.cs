@@ -15,59 +15,14 @@ public static class GenerateProcedures
         var mapping = new SqlMapping(casing, types);
         var tables = SqlSchema.BuildLive(types, mapping).Where(SqlSchema.HasAuditColumns).ToList();
         if (tables.Count == 0) return [];
-        var byFields = ByFields.From(types);
+        var byGroups = ByGroups.From(types);
         var bodies = new List<string>();
         var drops = new List<string>();
         foreach (var t in tables)
         {
-            var fields = byFields.GetValueOrDefault(t.Name) ?? [];
-            var pk = ProcedureFields.PkOf(t);
-            string Column(string logical) => mapping.ColumnName(t, logical);
-            var columns = t.Fields.Select(f => Column(f.Name)).ToList();
-            var writable = ProcedureFields.WritableNonAudit(t).Select(f => Column(f.Name)).ToList();
-            string ParamType(SpecTypeField field) => SqlDialect.MapColumnType(dialect, field.ConverterField());
-            var created = new List<string>();
-            foreach (var proc in ProcedureSpecs.Of(t.Name, fields, casing))
-            {
-                var keyField = proc.ByField is { } by
-                    ? t.Fields.FirstOrDefault(f => f.Name == by) ?? pk
-                    : pk;
-                var paramsList = new List<RoutineParameter>
-                {
-                    new(Column(keyField.Name), ParamType(keyField)),
-                };
-                paramsList.AddRange(ProcedureFields.WritableNonAudit(t)
-                    .Where(f => f.Name != proc.ByField)
-                    .Select(f => new RoutineParameter(Column(f.Name), ParamType(f))));
-                if (t.Fields.Any(f => f.Name == "updated"))
-                    paramsList.Add(new RoutineParameter(Column("new_updated"), ParamType(t.Fields.First(f => f.Name == "updated"))));
-                var createParams = ProcedureFields.CreateParams(t)
-                    .Select(f => new RoutineParameter(Column(f.Name), ParamType(f)))
-                    .ToList();
-                var kind = proc.Op == "updateBy" ? "update" : proc.Op;
-                var parameters = proc.Op == "create"
-                    ? createParams
-                    : proc.Op.StartsWith("update", StringComparison.Ordinal)
-                        ? paramsList
-                        : proc.Op == "findBy"
-                            ? [new RoutineParameter(Column(keyField.Name), ParamType(keyField))]
-                            : new List<RoutineParameter>();
-                var sql = SqlDialect.RenderSql(dialect, TableStatements.CreateRoutine(
-                    proc.Name,
-                    Kind(kind),
-                    SqlDialect.Q(dialect, t.TableName),
-                    columns,
-                    parameters,
-                    Column(pk.Name),
-                    ParamType(pk),
-                    writable,
-                    proc.ByField is null ? null : Column(proc.ByField),
-                    pk.Type == "uuid",
-                    t.Fields.Any(f => f.Name == "updated") ? Column("updated") : null));
-                if (sql != "") created.Add(sql);
-                var drop = SqlDialect.RenderSql(dialect, TableStatements.DropRoutine(proc.Name));
-                if (drop != "") drops.Add(drop);
-            }
+            var (statements, names) = ForTable(dialect, t, mapping, casing, byGroups.GetValueOrDefault(t.Name) ?? []);
+            var created = statements.Select(statement => SqlDialect.RenderSql(dialect, statement)).Where(sql => sql != "").ToList();
+            drops.AddRange(names.Select(name => SqlDialect.RenderSql(dialect, TableStatements.DropRoutine(name))).Where(sql => sql != ""));
             if (created.Count > 0) bodies.Add($"-- {t.Name}\n\n{string.Join("\n\n", created)}");
         }
         if (bodies.Count == 0) return [];
@@ -78,15 +33,65 @@ public static class GenerateProcedures
         ];
     }
 
-    static RoutineKind Kind(string op) => op switch
+    public static (IReadOnlyList<IStatement> Statements, IReadOnlyList<string> Names) ForTable(
+        string dialect,
+        SqlTable t,
+        SqlMapping mapping,
+        PackCasing casing,
+        IReadOnlyList<IReadOnlyList<string>> groups)
     {
-        "create" => RoutineKind.Create,
-        "findOne" => RoutineKind.FindOne,
-        "findAll" => RoutineKind.FindAll,
-        "findBy" => RoutineKind.FindBy,
-        "update" => RoutineKind.Update,
-        "delete" => RoutineKind.Delete,
-        _ => throw new InvalidOperationException($"{op}: empty step"),
+        var pk = ProcedureFields.PkOf(t);
+        string Column(string logical) => mapping.ColumnName(t, logical);
+        var columns = t.Fields.Select(f => Column(f.Name)).ToList();
+        var writable = ProcedureFields.WritableNonAudit(t).Select(f => Column(f.Name)).ToList();
+        string ParamType(SpecTypeField field) => SqlDialect.MapColumnType(dialect, field.ConverterField());
+        var createdParams = ProcedureFields.CreateParams(t).Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
+        var typedColumns = t.Fields.Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
+        var payload = new RoutineParameter("payload", PayloadType(dialect));
+        var key = Column(pk.Name);
+        var keyType = ParamType(pk);
+        var audit = t.Fields.Any(f => f.Name == "updated") ? Column("updated") : null;
+        var generatedKey = pk.Type == "uuid";
+        var quoted = SqlDialect.Q(dialect, t.TableName);
+        var statements = new List<IStatement>();
+        var names = new List<string>();
+        foreach (var proc in ProcedureSpecs.Of(t.Name, groups, casing))
+        {
+            names.Add(proc.Name);
+            var by = proc.ByProperties.Select(Column).ToList();
+            var byParams = proc.ByProperties.Select(logical =>
+            {
+                var field = t.Fields.FirstOrDefault(f => f.Name == logical) ?? pk;
+                return new RoutineParameter(Column(field.Name), ParamType(field));
+            }).ToList();
+            var updateParams = byParams
+                .Concat(ProcedureFields.WritableNonAudit(t)
+                    .Where(f => !proc.ByProperties.Contains(f.Name))
+                    .Select(f => new RoutineParameter(Column(f.Name), ParamType(f))))
+                .Concat(audit is null ? [] : [new RoutineParameter(Column("new_updated"), ParamType(t.Fields.First(f => f.Name == "updated")))])
+                .ToList();
+            statements.Add(proc.Op switch
+            {
+                "create" => TableStatements.CreateCreateStoredProcedure(proc.Name, quoted, columns, createdParams, key, keyType, writable, generatedKey, audit),
+                "read" => TableStatements.CreateReadStoredProcedure(proc.Name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
+                "update" => TableStatements.CreateUpdateStoredProcedure(proc.Name, quoted, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
+                "delete" => TableStatements.CreateDeleteStoredProcedure(proc.Name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
+                "bulkCreate" => TableStatements.CreateBulkCreateStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
+                "bulkUpdate" => TableStatements.CreateBulkUpdateStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
+                "bulkDelete" => TableStatements.CreateBulkDeleteStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
+                _ => throw new InvalidOperationException($"{proc.Op}: empty step"),
+            });
+        }
+        return (statements, names);
+    }
+
+    static string PayloadType(string dialect) => dialect switch
+    {
+        "mysql" => "JSON",
+        "postgres" => "jsonb",
+        "sqlserver" => "NVARCHAR(MAX)",
+        "oracle" => "CLOB",
+        _ => "JSON",
     };
 
     static string WithNl(string text, PackCasing casing)

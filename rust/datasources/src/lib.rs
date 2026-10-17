@@ -201,9 +201,9 @@ pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, AlterAction, AlterTableStatement, ArrayExpression, CheckConstraint, ColumnDefault, Condition,
-    ConditionRenderer, ConditionVisitor, CreateIndexStatement, CreateRoutineStatement,
-    CreateTableStatement, CreateTriggerStatement, RoutineKind, RoutineParameter,
-    AlterTableStatementTextRenderer, CreateIndexStatementTextRenderer, CreateRoutineStatementTextRenderer,
+    ConditionRenderer, ConditionVisitor, CreateIndexStatement,
+    CreateTableStatement, CreateTriggerStatement, RoutineParameter,
+    AlterTableStatementTextRenderer, CreateIndexStatementTextRenderer, CreateCreateStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement, CreateDeleteStoredProcedureStatement, CreateBulkCreateStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement, CreateCreateStoredProcedureStatementTextRenderer, CreateReadStoredProcedureStatementTextRenderer, CreateUpdateStoredProcedureStatementTextRenderer, CreateDeleteStoredProcedureStatementTextRenderer, CreateBulkCreateStoredProcedureStatementTextRenderer, CreateBulkUpdateStoredProcedureStatementTextRenderer, CreateBulkDeleteStoredProcedureStatementTextRenderer,
     CreateTableStatementTextRenderer, CreateTriggerStatementTextRenderer,
     DropIndexStatement, DropIndexStatementTextRenderer, DropRoutineStatement,
     DropRoutineStatementTextRenderer, DropTableStatement, DropTableStatementTextRenderer,

@@ -92,21 +92,42 @@ public static class TableStatements
             identity);
     }
 
-    public static CreateRoutineStatement CreateRoutine(
-        string name,
-        RoutineKind kind,
-        string table,
-        IReadOnlyList<string> columns,
-        IReadOnlyList<RoutineParameter> parameters,
-        string key,
-        string keyType,
-        IReadOnlyList<string> writable,
-        string? byField = null,
-        bool generatedKey = false,
-        string? auditUpdated = null) =>
-        new(name, kind, table, columns, parameters, key, keyType, writable, byField, generatedKey, auditUpdated);
-
     public static DropRoutineStatement DropRoutine(string name) => new(name);
+
+    public static CreateCreateStoredProcedureStatement CreateCreateStoredProcedure(
+        string name, string table, IReadOnlyList<string> columns, IReadOnlyList<RoutineParameter> parameters,
+        string key, string keyType, IReadOnlyList<string> writable, bool generatedKey = false, string? auditUpdated = null) =>
+        new(name, table, columns, parameters, key, keyType, writable, generatedKey, auditUpdated);
+
+    public static CreateReadStoredProcedureStatement CreateReadStoredProcedure(
+        string name, string table, IReadOnlyList<string> columns, IReadOnlyList<RoutineParameter> parameters,
+        string key, string keyType, IReadOnlyList<string> writable, IReadOnlyList<string>? byProperties = null,
+        bool generatedKey = false, string? auditUpdated = null) =>
+        new(name, table, columns, parameters, key, keyType, writable, byProperties ?? [], generatedKey, auditUpdated);
+
+    public static CreateUpdateStoredProcedureStatement CreateUpdateStoredProcedure(
+        string name, string table, IReadOnlyList<string> columns, IReadOnlyList<RoutineParameter> parameters,
+        string key, string keyType, IReadOnlyList<string> writable, IReadOnlyList<string>? byProperties = null,
+        bool generatedKey = false, string? auditUpdated = null) =>
+        new(name, table, columns, parameters, key, keyType, writable, byProperties ?? [], generatedKey, auditUpdated);
+
+    public static CreateDeleteStoredProcedureStatement CreateDeleteStoredProcedure(
+        string name, string table, IReadOnlyList<string> columns, IReadOnlyList<RoutineParameter> parameters,
+        string key, string keyType, IReadOnlyList<string> writable, IReadOnlyList<string>? byProperties = null,
+        bool generatedKey = false, string? auditUpdated = null) =>
+        new(name, table, columns, parameters, key, keyType, writable, byProperties ?? [], generatedKey, auditUpdated);
+
+    public static CreateBulkCreateStoredProcedureStatement CreateBulkCreateStoredProcedure(
+        string name, string table, IReadOnlyList<RoutineParameter> columns, RoutineParameter payload, string key, string keyType) =>
+        new(name, table, columns, payload, key, keyType);
+
+    public static CreateBulkUpdateStoredProcedureStatement CreateBulkUpdateStoredProcedure(
+        string name, string table, IReadOnlyList<RoutineParameter> columns, RoutineParameter payload, string key, string keyType) =>
+        new(name, table, columns, payload, key, keyType);
+
+    public static CreateBulkDeleteStoredProcedureStatement CreateBulkDeleteStoredProcedure(
+        string name, string table, IReadOnlyList<RoutineParameter> columns, RoutineParameter payload, string key, string keyType) =>
+        new(name, table, columns, payload, key, keyType);
 
     static Column ColumnOf(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field)
     {

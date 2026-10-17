@@ -27,6 +27,9 @@ const names = (
   entries: { filename: string }[],
 ): string[] => entries.map((e) => e.filename).sort();
 
+const body = (entry: { content?: string; contents?: string } | undefined): string =>
+  entry === undefined ? "" : "contents" in entry && entry.contents !== undefined ? String(entry.contents) : String(entry.content ?? "");
+
 const postgresOn = {
   "datasource.use_stored_procedures": "true",
 };
@@ -279,6 +282,14 @@ describe("generate-stored-procedures datasource.use_stored_procedures", () => {
       "postgres/migrations/0002_stored_procedures_down.sql",
       "postgres/migrations/0002_stored_procedures_up.sql",
     ]);
+    const up = body(
+      (await generateStoredProcedures(ctx(postgresOn), ["postgres"])).find((entry) =>
+        entry.filename.endsWith("_stored_procedures_up.sql"),
+      ),
+    );
+    assert.ok(up.includes("read_users"));
+    assert.ok(up.includes("bulk_create_users"));
+    assert.ok(up.includes("CREATE OR REPLACE"));
   });
 
   it("emits nothing when the flag is absent", async () => {
@@ -303,6 +314,44 @@ describe("generate-sql version diffs", () => {
       ),
     );
     assert.deepEqual(files, ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"]);
+  });
+
+  it("replaces stored procedures when a later version adds a column", async () => {
+    const first = "version-20261016T000000Z-001/diff.yaml";
+    const second = "version-20261016T000000Z-002/diff.yaml";
+    const nextYaml = `types:
+  - user:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - email:
+            type: string
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+        - notes:
+            type: string
+`;
+    const entries = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": nextYaml,
+          [first]: stringify({ "types.yaml": { added: true, content: parse(TYPES_YAML) } }),
+          [second]: stringify({ "types.yaml": parse(nextYaml) }),
+        }),
+        settings: {
+          "version.diffs": `${first}\n${second}`,
+          "datasource.use_stored_procedures": "true",
+        },
+      },
+      ["postgres"],
+    );
+    const up2 = body(entries.find((entry) => entry.filename === "postgres/migrations/0002_up.sql"));
+    const down2 = body(entries.find((entry) => entry.filename === "postgres/migrations/0002_down.sql"));
+    assert.ok(up2.includes("notes"));
+    assert.ok(up2.includes("CREATE OR REPLACE"));
+    assert.ok(down2.includes("CREATE OR REPLACE"));
   });
 
   it("throws when live yaml drifted from frozen diffs", async () => {
