@@ -471,7 +471,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ### Compare tree
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L197-L204)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L260-L267)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -479,7 +479,7 @@ var where = new Where(new Operator.And(
     new Operator.GreaterThan("age", 18)));
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L249-L256)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L347-L354)
 
 ```rust
 let where_clause = Where::new(Operator::and(
@@ -488,7 +488,7 @@ let where_clause = Where::new(Operator::and(
 ));
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L215-L220)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L282-L287)
 
 ```typescript
 const where = new Where(
@@ -546,7 +546,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L386-L403)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L429-L446)
 
 ```typescript
 const equals = new Where("username", eq, "grace");
@@ -710,7 +710,7 @@ let yes = Value::Bool(true);
 let no = Value::Bool(false);
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L110-L188)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L113-L191)
 
 ```typescript
 

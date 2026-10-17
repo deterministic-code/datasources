@@ -334,7 +334,7 @@ let update = UpdateStatement::new("users", &fields, Some(&where_clause));
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L117-L130)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L120-L133)
 
 ```typescript
 const fields = [

@@ -27,4 +27,15 @@ describe("loadSpec", () => {
     expect(loaded.files[path]).toMatch(/added: true/);
     expect(loaded.settings["version.diffs"]).toBe(path);
   });
+
+  it("skips a version directory without a diff", async () => {
+    const dir = "app";
+    const loaded = await loadSpec(
+      mem(["types.yaml", "version-20261016T000000Z-001"], {
+        [join(dir, "types.yaml")]: "types: []\n",
+      }),
+      dir,
+    );
+    expect(loaded.settings["version.diffs"]).toBeUndefined();
+  });
 });

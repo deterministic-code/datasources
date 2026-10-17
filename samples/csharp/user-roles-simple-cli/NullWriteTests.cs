@@ -16,7 +16,9 @@ public sealed class NullWriteTests
     [Fact]
     public async Task OmitsNullCreatedAndUpdated()
     {
-        var connection = new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var driver = new SqliteDriver();
+        var ds = new Datasource("sqlite", driver, new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await ds.CreateConnection();
         await connection.Open();
         await connection.CreateCommand().Execute(Native.N("""
             CREATE TABLE users (
@@ -26,7 +28,7 @@ public sealed class NullWriteTests
                 updated BLOB NOT NULL DEFAULT X'0102'
             )
             """));
-        var repo = new CRUDRepository<UserStamp>(connection, new CRUDRepositoryOptions<UserStamp> { Entity = "users" });
+        var repo = ds.CreateRepository<UserStamp>(connection, new CRUDRepositoryOptions<UserStamp> { Entity = "users" });
         var omitted = new UserStamp { username = "ada" };
         await repo.Create(omitted);
         var stored = await repo.ReadSingleById(omitted.id);

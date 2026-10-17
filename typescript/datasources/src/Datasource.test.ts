@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, MockConnection, MockDriver } from "./index.ts";
+import { Datasource, DatasourceFactory, MockConnection, MockDriver, RepositoryNotRegisteredError } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -59,5 +59,15 @@ describe("Datasource", () => {
     expect(ds.createRepository(Item, undefined, { entity: "items", ids: ["id"] })).toBeTruthy();
     expect(ds.createReadonlyRepository(Item, undefined, { entity: "items" })).toBeTruthy();
     expect(ds.createReadonlyRepository(Item)).toBeTruthy();
+    ds.repositories.register(
+      "Item",
+      "items",
+      (connection) => ds.createRepository(Item, connection),
+      (connection) => ds.createReadonlyRepository(Item, connection),
+    );
+    expect((ds as Datasource & { items: object }).items).toBeTruthy();
+    expect(ds.createRepository("Item")).toBeTruthy();
+    expect(ds.createReadonlyRepository("items")).toBeTruthy();
+    expect(() => (ds as Datasource & { missing: object }).missing).toThrow(RepositoryNotRegisteredError);
   });
 });

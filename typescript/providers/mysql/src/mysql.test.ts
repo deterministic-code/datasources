@@ -27,7 +27,7 @@ class FakeClient implements IMysqlClient {
   rollbacks = 0;
   ended = false;
   header: MysqlQueryHeader = { affectedRows: 2, insertId: 5 };
-  rows: Cells[] = [{ id: 1 }];
+  rows: Record<string, Scalar | object>[] = [{ id: 1 }];
   arrayResult = false;
   /** Multi-result-set payload for CALL (array of row arrays). */
   callSets?: Cells[][];
@@ -241,6 +241,25 @@ describe("MysqlCommand", () => {
         { name: "result", direction: ParameterDirection.Output },
       ]),
     ).toMatchObject({ rowsAffected: 0 });
+    client.arrayResult = true;
+    client.rows = [{ blob: new Uint8Array([97]), meta: { a: 1 } }];
+    expect(
+      await command.executeStatement(
+        new ExecuteStoredProcedureStatement("bump", [
+          { name: "blob", direction: ParameterDirection.Output },
+          { name: "meta", direction: ParameterDirection.Output },
+        ]),
+        [
+          { name: "blob", direction: ParameterDirection.Output },
+          { name: "meta", direction: ParameterDirection.Output },
+        ],
+      ),
+    ).toMatchObject({
+      parameters: [
+        { name: "blob", direction: ParameterDirection.Output, value: "a" },
+        { name: "meta", direction: ParameterDirection.Output, value: '{"a":1}' },
+      ],
+    });
   });
 
   it("reads CALL result sets through the reader", async () => {

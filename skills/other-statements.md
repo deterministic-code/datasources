@@ -980,7 +980,7 @@ let create_table = CreateTableStatement::new(
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L143-L151)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L146-L154)
 
 ```typescript
 const createTable = new CreateTableStatement("users", [
@@ -1057,7 +1057,7 @@ let named_table = CreateTableStatement::new(
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L153-L172)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L156-L175)
 
 ```typescript
 const namedTable = new CreateTableStatement(
@@ -1369,7 +1369,7 @@ let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["use
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L174-L179)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L177-L182)
 
 ```typescript
 const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
@@ -1407,7 +1407,7 @@ let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L181-L186)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L184-L189)
 
 ```typescript
 const createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
@@ -1675,7 +1675,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](command.md#para
 
 #### Compile a CALL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L170-L176)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L233-L239)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -1688,7 +1688,7 @@ var call = new ExecuteStoredProcedureStatement("save", fields);
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L224-L229)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L322-L327)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
@@ -1701,7 +1701,7 @@ let call = ExecuteStoredProcedureStatement::new("save", &fields);
 CALL save($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L188-L195)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L255-L262)
 
 ```typescript
 const fields = [
@@ -1973,7 +1973,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](command.md#
 
 #### Compile a SELECT function call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L178-L184)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L241-L247)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -1986,7 +1986,7 @@ var ret = new ReturnStatement("add", fields);
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L231-L236)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L329-L334)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
@@ -1999,7 +1999,7 @@ let ret = ReturnStatement::new("add", &fields);
 SELECT add($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L197-L204)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L264-L271)
 
 ```typescript
 const fields = [

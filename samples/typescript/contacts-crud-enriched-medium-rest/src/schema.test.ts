@@ -1,8 +1,8 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { sqlPath, statements, withSeedVersion } from "./schema.ts";
+import { sqlPath, statements, upSqlFrom, withSeedVersion } from "./schema.ts";
 
 describe("schema", () => {
   it("loads generated sql", () => {
@@ -82,5 +82,21 @@ CREATE TABLE "XBEGIN" ("id" INTEGER);
     ).toBe(2);
     expect(sqlPath()).toMatch(/migrations$/);
     expect(() => sqlPath(mkdtempSync(join(tmpdir(), "contacts-")))).toThrow(/generated sql/);
+    const missing = join(tmpdir(), `contacts-missing-${Date.now()}`);
+    expect(() => upSqlFrom(missing)).toThrow(/generated sql/);
+    const file = join(mkdtempSync(join(tmpdir(), "contacts-file-")), "one.sql");
+    writeFileSync(file, "CREATE TABLE \"t\" (\"id\" INTEGER);\n");
+    expect(upSqlFrom(file)).toBe('CREATE TABLE "t" ("id" INTEGER);\n');
+    const initialDir = mkdtempSync(join(tmpdir(), "contacts-initial-"));
+    writeFileSync(join(initialDir, "0001_initial_up.sql"), "CREATE TABLE \"i\" (\"id\" INTEGER);\n");
+    expect(upSqlFrom(initialDir)).toBe('CREATE TABLE "i" ("id" INTEGER);\n');
+    expect(() => upSqlFrom(mkdtempSync(join(tmpdir(), "contacts-empty-")))).toThrow(/generated sql/);
+    const nested = mkdtempSync(join(tmpdir(), "contacts-nested-"));
+    mkdirSync(join(nested, "samples", "typescript", "contacts-crud-enriched-medium-rest", "generated", "sql", "sqlite", "migrations"), { recursive: true });
+    writeFileSync(
+      join(nested, "samples", "typescript", "contacts-crud-enriched-medium-rest", "generated", "sql", "sqlite", "migrations", "0001_initial_up.sql"),
+      "CREATE TABLE \"n\" (\"id\" INTEGER);\n",
+    );
+    expect(sqlPath(nested)).toMatch(/migrations$/);
   });
 });

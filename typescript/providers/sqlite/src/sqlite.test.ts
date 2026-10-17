@@ -147,6 +147,10 @@ describe("SqliteCommand", () => {
       rowsAffected: 2,
       parameters: [{ name: "id", value: 1 }],
     });
+    expect(await command.executeNative(new Native("SELECT $missing"))).toEqual({
+      result: null,
+      rowsAffected: 2,
+    });
     expect(await command.executeNative(new Native(""))).toEqual({ result: undefined, rowsAffected: 0 });
     db.rows = [{ abs: 3 }];
     const x = { name: "x", value: -3 };

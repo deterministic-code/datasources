@@ -186,9 +186,16 @@ describe("bulk write strategies", () => {
     await expect(
       repo.createBulk([Object.assign(new Odd(), { huge: Number.POSITIVE_INFINITY })]),
     ).rejects.toThrow(DatasourceError);
-    await expect(
-      repo.createBulk([Object.assign(new Odd(), { note: { bad: true } as never })]),
-    ).rejects.toThrow(DatasourceError);
+    const objects = new StoredProcedureBulkWriteStrategy<Odd>("create_odd", "update_odd", "delete_odd");
+    open(Odd, objects);
+    objects.options = {
+      ...objects.options,
+      rowConverter: {
+        convert: (row) => row,
+        reverseConvert: () => ({ note: { bad: true } as never }),
+      },
+    };
+    await expect(objects.repo.createBulk([new Odd()])).rejects.toThrow(DatasourceError);
   });
 
   class Child {
@@ -242,8 +249,8 @@ describe("bulk write strategies", () => {
       Object.assign(new Family(), { id: 2, label: "b", children: [Object.assign(new Child(), { id: 11, label: "y" })] }),
     ]);
     expect(command.executeCalls).toHaveLength(2);
-    expect(command.executeCalls[0]?.text).toBe("CALL bulk_create_parent($payload)");
-    expect(command.executeCalls[1]?.text).toBe("CALL bulk_create_child($payload)");
+    expect(command.executeCalls[0]?.text).toBe("CALL bulk_create_parent($payload, $ids)");
+    expect(command.executeCalls[1]?.text).toBe("CALL bulk_create_child($payload, $ids)");
   });
 
   it("stored procedure create writes generated ids onto items", async () => {

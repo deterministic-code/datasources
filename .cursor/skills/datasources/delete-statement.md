@@ -337,7 +337,7 @@ let delete = DeleteStatement::new("users", Some(&where_clause));
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L132-L141)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L135-L144)
 
 ```typescript
 const where = new Where(

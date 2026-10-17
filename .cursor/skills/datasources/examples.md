@@ -429,6 +429,27 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/compile-a-create-unique-index/statement_compile.compiles_a_create_unique_index.rust`
   - `docs/examples/compile-a-create-unique-index/StatementCompile.test.compiles-a-create-unique-index.typescript`
 
+## Alter Table Statement
+
+- Compile an ALTER TABLE ADD COLUMN
+  - `docs/examples/compile-an-alter-table-add-column/StatementCompileTests.CompilesAnAlterTableAddColumn.csharp`
+  - `docs/examples/compile-an-alter-table-add-column/statement_compile.compiles_an_alter_table_add_column.rust`
+  - `docs/examples/compile-an-alter-table-add-column/StatementCompile.test.compiles-an-alter-table-add-column.typescript`
+
+## Drop Index Statement
+
+- Compile a DROP INDEX
+  - `docs/examples/compile-a-drop-index/StatementCompileTests.CompilesADropIndex.csharp`
+  - `docs/examples/compile-a-drop-index/statement_compile.compiles_a_drop_index.rust`
+  - `docs/examples/compile-a-drop-index/StatementCompile.test.compiles-a-drop-index.typescript`
+
+## Drop Trigger Statement
+
+- Compile a DROP TRIGGER
+  - `docs/examples/compile-a-drop-trigger/StatementCompileTests.CompilesADropTrigger.csharp`
+  - `docs/examples/compile-a-drop-trigger/statement_compile.compiles_a_drop_trigger.rust`
+  - `docs/examples/compile-a-drop-trigger/StatementCompile.test.compiles-a-drop-trigger.typescript`
+
 ## Execute Stored Procedure Statement
 
 - Compile a CALL
