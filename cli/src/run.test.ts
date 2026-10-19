@@ -278,6 +278,11 @@ describe("run", () => {
       expect(io.logs.some((line) => line.includes("datasources_sqlite.dll"))).toBe(true);
       Object.defineProperty(process, "platform", { value: "linux" });
       expect(await run(["add", "sqlite", "--cwd", app, "--ecosystem", "rust"], deps(fs))).toBe(0);
+      await writeFile(join(app, "target", "debug", "libdatasources_sqlite.dylib"), "plugin");
+      Object.defineProperty(process, "platform", { value: "darwin" });
+      const darwinIo = deps(fs);
+      expect(await run(["add", "sqlite", "--cwd", app, "--ecosystem", "rust"], darwinIo)).toBe(0);
+      expect(darwinIo.logs.some((line) => line.includes("libdatasources_sqlite.dylib"))).toBe(true);
     } finally {
       if (platform) Object.defineProperty(process, "platform", platform);
       await rm(root, { recursive: true, force: true });

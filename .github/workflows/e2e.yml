@@ -24,6 +24,7 @@ jobs:
       - run: docker compose -p datasources -f docker/compose.yml up -d --wait
       - run: npm ci --prefix typescript
       - run: npm install --prefix samples/typescript/user-roles-simple-cli
+      - run: npm install --prefix samples/typescript/contacts-crud-enriched-medium-rest
       - run: npm run test:e2e:ci
       - run: npm run test:e2e:rust
       - run: npm run test:e2e:csharp
