@@ -1,7 +1,7 @@
 import {
   IdentityInsertStatementTextRenderer,
   type IdentityInsertStatement,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 
 export class PostgresIdentityInsertStatementRenderer extends IdentityInsertStatementTextRenderer {
   override render(statement: IdentityInsertStatement): string {

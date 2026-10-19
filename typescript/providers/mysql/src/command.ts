@@ -19,7 +19,7 @@ import {
   type IReader,
   type IStatement,
   type Parameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { bindParameters, toMysql } from "./bind.ts";
 import type { MysqlConnection } from "./connection.ts";
 import type { MysqlExecuteResult } from "./i-mysql-engine.ts";

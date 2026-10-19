@@ -1,6 +1,6 @@
 {
-  "name": "@datasources/code-generators",
-  "version": "0.1.0",
+  "name": "@deterministic-code/datasources-code-generators",
+  "version": "0.1.2",
   "type": "module",
   "exports": {
     ".": "./src/generateSql.ts",
@@ -10,16 +10,18 @@
     "./sql/dialect-converters": "./src/sql/dialect-converters.ts"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../rewrite-declaration-extensions.mjs dist && rm -rf dist/sql/templates && cp -R src/sql/templates dist/sql/templates",
+    "prepack": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "file:../datasources",
-    "@datasources/mysql": "file:../providers/mysql",
-    "@datasources/oracle": "file:../providers/oracle",
-    "@datasources/postgres": "file:../providers/postgres",
-    "@datasources/sqlite": "file:../providers/sqlite",
-    "@datasources/sqlserver": "file:../providers/sqlserver",
+    "@deterministic-code/datasources": "*",
+    "@deterministic-code/datasources-mysql": "*",
+    "@deterministic-code/datasources-oracle": "*",
+    "@deterministic-code/datasources-postgres": "*",
+    "@deterministic-code/datasources-sqlite": "*",
+    "@deterministic-code/datasources-sqlserver": "*",
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
     "pluralize": "^8.0.0",

@@ -1,5 +1,5 @@
 import type { ContactChangeLog } from "../types/generated/views/contactChangeLog.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 
 export class ContactChangeLogRepository extends CRUDRepository<ContactChangeLog> {
   constructor(connection: IConnection) {

@@ -1,4 +1,4 @@
-import { Native, type ICommand } from "@datasources/core";
+import { Native, type ICommand } from "@deterministic-code/datasources";
 import { statements } from "./schema.ts";
 
 export const migrate = async (command: ICommand): Promise<void> => {

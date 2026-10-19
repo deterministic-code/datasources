@@ -12,7 +12,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { MysqlConnection } from "./connection.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlTransaction } from "./transaction.ts";

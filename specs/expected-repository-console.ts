@@ -10,7 +10,7 @@ import {
   type Field,
   type IExpression,
   type Scalar,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { expectedConsoleSignatures } from "./expected-console-output.ts";
 
 const render = (statement: InsertStatement | SelectStatement | UpdateStatement | DeleteStatement): string =>

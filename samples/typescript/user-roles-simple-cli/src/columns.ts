@@ -1,4 +1,4 @@
-import { TransformMapper } from "@datasources/core";
+import { TransformMapper } from "@deterministic-code/datasources";
 
 export const columns = new TransformMapper(
   (name: string) =>

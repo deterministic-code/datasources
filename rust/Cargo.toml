@@ -8,9 +8,10 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
+authors = ["deterministic-code"]
 repository = "https://github.com/deterministic-code/datasources"
 
 [workspace.lints.rust]
@@ -18,7 +19,7 @@ warnings = "deny"
 
 [workspace.dependencies]
 async-trait = "0.1"
-datasources = { path = "datasources", version = "0.1.0" }
+datasources = { path = "datasources", version = "0.1.2" }
 tokio = { version = "1", features = ["macros", "rt"] }
 serde_json = "1"
 rusqlite = { version = "0.32", features = ["bundled", "column_decltype"] }

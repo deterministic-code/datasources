@@ -1,4 +1,4 @@
-import type { Parameter } from "@datasources/core";
+import type { Parameter } from "@deterministic-code/datasources";
 import type { App } from "../app.ts";
 import { ident } from "../schema.ts";
 import { lookupId } from "./lookup-id.ts";

@@ -13,7 +13,7 @@ import {
   SelectStatement,
   StatementTextRenderer,
   UniqueConstraint,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { SqliteCreateTableStatementRenderer } from "./SqliteCreateTableStatementRenderer.ts";
 import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";

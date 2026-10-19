@@ -1,5 +1,5 @@
 import type { PhoneType } from "../types/generated/datasource/phoneType.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 
 export class PhoneTypeRepository extends CRUDRepository<PhoneType> {
   constructor(connection: IConnection) {

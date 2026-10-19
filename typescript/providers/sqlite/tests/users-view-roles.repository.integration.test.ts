@@ -13,7 +13,7 @@ import {
   Native,
   type IConnection,
   type IDatasource,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 

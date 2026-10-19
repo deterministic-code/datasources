@@ -61,8 +61,8 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
     ];
     const imports = children.map((child) => `import { ${childClass(child.typeName)} } from "${repoImport(child.specName)}";`);
     const core = model.optimisticConcurrency === undefined
-      ? `import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";`
-      : `import { CRUDRepository, DatasourceError, DictionaryMapper, eq, ReadonlyRepository, Where, type IConnection } from "@datasources/core";`;
+      ? `import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";`
+      : `import { CRUDRepository, DatasourceError, DictionaryMapper, eq, ReadonlyRepository, Where, type IConnection } from "@deterministic-code/datasources";`;
     return content(
       repositoryFile("typescript", model),
       `import type { ${model.typeName} } from "../types/generated/${folder}/${casing.convertFileName(model.specName)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\nexport class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${crudOptions});\n${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model, readonlyOptions)}\n}\n`,
@@ -75,7 +75,7 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
     ...files,
     content(
       "repository-registry.ts",
-      `import { RepositoryFactory } from "@datasources/core";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\nRepositoryFactory.bind(register);\n\ndeclare module "@datasources/core" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
+      `import { RepositoryFactory } from "@deterministic-code/datasources";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\nRepositoryFactory.bind(register);\n\ndeclare module "@deterministic-code/datasources" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
     ),
   ];
 };

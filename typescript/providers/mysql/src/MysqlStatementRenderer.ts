@@ -16,7 +16,7 @@ import {
   SelectInsertedIdStatementTextRenderer,
   StatementRenderer,
   type StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { MysqlAlterTableStatementRenderer } from "./MysqlAlterTableStatementRenderer.ts";
 import { MysqlBulkUpdateStatementTextRenderer } from "./MysqlBulkUpdateStatementTextRenderer.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";

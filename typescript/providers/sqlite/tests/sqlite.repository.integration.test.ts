@@ -5,7 +5,7 @@ import {
 } from "../../repository-spec-runner.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
-import { execute } from "@datasources/core";
+import { execute } from "@deterministic-code/datasources";
 import { SqliteRowTypeConverters } from "../src/converters/SqliteRowTypeConverters.ts";
 import type { RepositoryDialect } from "../../repository-spec-runner.ts";
 

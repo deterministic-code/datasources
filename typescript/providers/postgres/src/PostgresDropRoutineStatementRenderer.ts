@@ -1,4 +1,4 @@
-import { DropRoutineStatementTextRenderer, type DropRoutineStatement } from "@datasources/core";
+import { DropRoutineStatementTextRenderer, type DropRoutineStatement } from "@deterministic-code/datasources";
 
 export class PostgresDropRoutineStatementRenderer extends DropRoutineStatementTextRenderer {
   override render(statement: DropRoutineStatement): string {

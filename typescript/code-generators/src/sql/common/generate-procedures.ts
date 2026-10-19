@@ -1,4 +1,4 @@
-import type { IStatement } from "@datasources/core";
+import type { IStatement } from "@deterministic-code/datasources";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";

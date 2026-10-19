@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import {
   AlterTableStatement,
   type IStatement,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import {
   createIndexStatementOf,

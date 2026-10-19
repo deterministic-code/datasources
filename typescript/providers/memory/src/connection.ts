@@ -7,7 +7,7 @@ import {
   type IsolationLevelName,
   type ITransaction,
   type Scalar,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { MemoryCommand } from "./command.ts";
 import type { MemoryConnectionOptions } from "./connection-options.ts";
 import { MemoryStore, type MemoryRecord } from "./store.ts";

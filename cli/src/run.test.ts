@@ -93,14 +93,14 @@ describe("run", () => {
     expect(sqlIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(sqlIo.ran).toContain("npx migrate-init --dialect sqlite --dialect postgres");
     const json = mem(["package.json"], {
-      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@datasources/json": "*" } }),
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-json": "*" } }),
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
     });
     const jsonIo = deps(json.fs);
     expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], jsonIo)).toBe(0);
     expect(jsonIo.ran.some((line) => line.includes("migraters") || line.includes("migrate-init"))).toBe(false);
     const dry = mem(["package.json"], {
-      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@datasources/sqlite": "*" } }),
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-sqlite": "*" } }),
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
     });
     const dryIo = deps(dry.fs);
@@ -108,7 +108,7 @@ describe("run", () => {
     expect(dryIo.ran).toEqual([]);
     expect(dryIo.logs.some((line) => line.includes("migrate-init --dialect sqlite"))).toBe(true);
     const addIo = deps(mem(["package.json"], {
-      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@datasources/sqlite": "*" } }),
+      [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-sqlite": "*" } }),
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     }).fs);
     expect(await run(["add", "postgres", "--cwd", cwd, "--ecosystem", "ts"], addIo)).toBe(0);
@@ -118,7 +118,7 @@ describe("run", () => {
   it("runs interactive setup and diffs add/remove", async () => {
     const { fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
-        dependencies: { "@datasources/json": "*", "@datasources/sqlite": "*" },
+        dependencies: { "@deterministic-code/datasources-json": "*", "@deterministic-code/datasources-sqlite": "*" },
       }),
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json,sqlite\nDATASOURCE_URL=json://\n",
     });
@@ -183,7 +183,7 @@ describe("run", () => {
   it("scaffolds a deterministic directory when setup confirms", async () => {
     const { files, fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
-        dependencies: { "@datasources/sqlite": "*" },
+        dependencies: { "@deterministic-code/datasources-sqlite": "*" },
       }),
     });
     const io = deps(fs);
@@ -196,7 +196,7 @@ describe("run", () => {
     const kept = "version: 1.0.0\ntypes: []\n";
     const { files, fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
-        dependencies: { "@datasources/sqlite": "*" },
+        dependencies: { "@deterministic-code/datasources-sqlite": "*" },
       }),
       [join(cwd, "deterministic", "datasource.yaml")]: kept,
     });
@@ -210,7 +210,7 @@ describe("run", () => {
     const kept = "version: 1.0.0\ntypes: []\n";
     const { files, fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
-        dependencies: { "@datasources/sqlite": "*" },
+        dependencies: { "@deterministic-code/datasources-sqlite": "*" },
       }),
       [join(cwd, "deterministic", "types.yaml")]: kept,
     });
@@ -230,7 +230,7 @@ describe("run", () => {
   it("logs scaffold paths on dry-run without writing them", async () => {
     const { files, fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
-        dependencies: { "@datasources/sqlite": "*" },
+        dependencies: { "@deterministic-code/datasources-sqlite": "*" },
       }),
     });
     const io = deps(fs);
@@ -244,7 +244,7 @@ describe("run", () => {
   it("skips package commands when the selection is already installed", async () => {
     const { fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
-        dependencies: { "@datasources/sqlite": "*" },
+        dependencies: { "@deterministic-code/datasources-sqlite": "*" },
       }),
     });
     const io = deps(fs);

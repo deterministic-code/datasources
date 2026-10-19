@@ -1187,7 +1187,7 @@ let with_where = SelectStatement::new(SelectStatementOptions {
 });
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L31-L39)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L49-L57)
 
 ```typescript
 const select = new SelectStatement({ table: "dual", fields: ["1"] });
@@ -1231,7 +1231,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L41-L50)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L59-L68)
 
 ```typescript
 const where = new Where(
@@ -1292,7 +1292,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L52-L66)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L70-L84)
 
 ```typescript
 const query = new SelectStatement({
@@ -1363,7 +1363,7 @@ let grouped = SelectStatement::new(SelectStatementOptions {
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L68-L81)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L86-L99)
 
 ```typescript
 const grouped = new SelectStatement({
@@ -1412,7 +1412,7 @@ let by_status = SelectStatement::new(SelectStatementOptions {
 SELECT id FROM users GROUP BY id
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L83-L86)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L101-L104)
 
 ```typescript
 const byStatus = new SelectStatement({ table: "users", fields: ["id"], groupBy: ["id"] });
@@ -1453,7 +1453,7 @@ let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L88-L91)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L106-L109)
 
 ```typescript
 const bounds = new SelectStatement({ table: "users", fields: [Aggregate.min("n"), Aggregate.max("n")] });
@@ -1494,7 +1494,7 @@ let ordered = SelectStatement::new(SelectStatementOptions {
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L93-L102)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L111-L120)
 
 ```typescript
 const ordered = new SelectStatement({
@@ -1539,7 +1539,7 @@ let limited = SelectStatement::new(SelectStatementOptions {
 SELECT id FROM users LIMIT 10
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L104-L107)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L122-L125)
 
 ```typescript
 const limited = new SelectStatement({ table: "users", fields: ["id"], limit: 10 });

@@ -1,4 +1,4 @@
-import type { Parameter } from "@datasources/core";
+import type { Parameter } from "@deterministic-code/datasources";
 import type { Cells, Scalar } from "./scalar.ts";
 
 export interface MysqlExecuteResult {

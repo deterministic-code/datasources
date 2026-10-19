@@ -8,7 +8,7 @@ import {
   type IStatement,
   type SpecField,
   type StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 
 const require = createRequire(import.meta.url);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryDriver } from "@datasources/memory";
+import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CRUDRepository, ChangeCasingMapper, Datasource, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
+import { CRUDRepository, ChangeCasingMapper, Datasource, createCRUDRepositoryOptions, type IConnection } from "@deterministic-code/datasources";
 import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 

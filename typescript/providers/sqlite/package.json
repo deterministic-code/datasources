@@ -1,6 +1,6 @@
 {
-  "name": "@datasources/sqlite",
-  "version": "0.1.1",
+  "name": "@deterministic-code/datasources-sqlite",
+  "version": "0.1.2",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*",
+    "@deterministic-code/datasources": "*",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^12.10.0"
   },

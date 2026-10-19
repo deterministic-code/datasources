@@ -6,7 +6,7 @@ import {
   SelectInsertedIdStatementTextRenderer,
   StatementRenderer,
   type StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { SqliteAlterTableStatementRenderer } from "./SqliteAlterTableStatementRenderer.ts";
 import { SqliteCreateTableStatementRenderer } from "./SqliteCreateTableStatementRenderer.ts";
 import { SqliteCreateTriggerStatementRenderer } from "./SqliteCreateTriggerStatementRenderer.ts";

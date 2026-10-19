@@ -1,4 +1,4 @@
-import { TypeConverter, type Cell } from "@datasources/core";
+import { TypeConverter, type Cell } from "@deterministic-code/datasources";
 
 export const isIsoDate = (value: string): boolean =>
   /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value));

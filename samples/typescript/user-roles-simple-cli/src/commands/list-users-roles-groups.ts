@@ -1,4 +1,4 @@
-import { FlatToNestedMapper, executeReader } from "@datasources/core";
+import { FlatToNestedMapper, executeReader } from "@deterministic-code/datasources";
 import type { App } from "../app.ts";
 import { asUserView } from "../as-user-view.ts";
 import { usersRolesGroupsQuery } from "../users-roles-groups-query.ts";

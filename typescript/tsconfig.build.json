@@ -2,9 +2,10 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": false,
-    "emitDeclarationOnly": true,
+    "emitDeclarationOnly": false,
     "declaration": true,
     "noCheck": true,
+    "rewriteRelativeImportExtensions": true,
     "baseUrl": ".",
     "paths": {}
   }

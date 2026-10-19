@@ -8,7 +8,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { MemoryConnection } from "./connection.ts";
 import { MemoryTransaction } from "./transaction.ts";
 

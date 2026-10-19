@@ -7,7 +7,7 @@ import type {
   CreateReadStoredProcedureStatement,
   CreateUpdateStoredProcedureStatement,
   RoutineParameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  ${p.name} ${p.type}`).join(",\n");

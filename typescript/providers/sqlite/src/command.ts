@@ -19,7 +19,7 @@ import {
   type IReader,
   type IStatement,
   type Parameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
 import { reverse, SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";

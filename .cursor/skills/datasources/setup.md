@@ -2,14 +2,14 @@
 
 # Command Line (CLI)
 
-`@datasources/cli` installs provider packages and writes a local `.env`. `Datasource.Default` / `Datasource.default` / `default()` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
+`@deterministic-code/datasources-cli` installs provider packages and writes a local `.env`. `Datasource.Default` / `Datasource.default` / `default()` reads `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. Process env overrides the same keys in `.env`. Missing `PROVIDER` throws.
 
 ```sh
-npx @datasources/cli setup
-npx @datasources/cli add sqlite
-npx @datasources/cli remove sqlite
-npx @datasources/cli generate all --dialect typescript
-npx @datasources/cli migrations create
+npx @deterministic-code/datasources-cli setup
+npx @deterministic-code/datasources-cli add sqlite
+npx @deterministic-code/datasources-cli remove sqlite
+npx @deterministic-code/datasources-cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli migrations create
 ```
 
 Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
@@ -19,8 +19,8 @@ Pass `--ecosystem ts|rust|csharp` when the directory has more than one project t
 Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate). On a TypeScript project, checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init` for that set. `add` and `remove` re-run init with the remaining SQL dialects.
 
 ```sh
-npx @datasources/cli setup
-npx @datasources/cli setup --yes
+npx @deterministic-code/datasources-cli setup
+npx @deterministic-code/datasources-cli setup --yes
 ```
 
 | Flag | Meaning |
@@ -35,7 +35,7 @@ npx @datasources/cli setup --yes
 Add provider packages. Updates `.env` `INSTALLED_PROVIDERS` when a `.env` already exists.
 
 ```sh
-npx @datasources/cli add sqlite postgres
+npx @deterministic-code/datasources-cli add sqlite postgres
 ```
 
 | Flag | Meaning |
@@ -49,7 +49,7 @@ npx @datasources/cli add sqlite postgres
 Remove provider packages and drop them from `.env`.
 
 ```sh
-npx @datasources/cli remove postgres
+npx @deterministic-code/datasources-cli remove postgres
 ```
 
 | Flag | Meaning |

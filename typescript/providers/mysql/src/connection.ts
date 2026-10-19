@@ -7,7 +7,7 @@ import {
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { createRequire } from "node:module";
 import { MysqlCommand } from "./command.ts";
 import type { MysqlConnectionOptions } from "./connection-options.ts";

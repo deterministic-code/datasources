@@ -1,4 +1,4 @@
-import { Operator, SelectStatement, Where, executeReader, type ICommand } from "@datasources/core";
+import { Operator, SelectStatement, Where, executeReader, type ICommand } from "@deterministic-code/datasources";
 
 export const lookupId = async (command: ICommand, table: string, column: string, value: string): Promise<number> => {
   const where = new Where(new Operator.Equals(column, value));

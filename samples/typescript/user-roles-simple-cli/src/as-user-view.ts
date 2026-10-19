@@ -1,4 +1,4 @@
-import type { Cell } from "@datasources/core";
+import type { Cell } from "@deterministic-code/datasources";
 import type { GroupView } from "./group-view.ts";
 import type { RoleView } from "./role-view.ts";
 import type { UserView } from "./user-view.ts";

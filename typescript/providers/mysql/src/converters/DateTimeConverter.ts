@@ -1,4 +1,4 @@
-import { TypeConverter, type Cell } from "@datasources/core";
+import { TypeConverter, type Cell } from "@deterministic-code/datasources";
 
 const stamp = (date: Date): string =>
   date.toISOString().replace("T", " ").replace("Z", "");

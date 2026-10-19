@@ -1,6 +1,6 @@
 {
-  "name": "@datasources/postgres",
-  "version": "0.1.1",
+  "name": "@deterministic-code/datasources-postgres",
+  "version": "0.1.2",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*",
+    "@deterministic-code/datasources": "*",
     "@types/pg": "^8.15.5",
     "pg": "^8.16.0",
     "pg-query-stream": "^4.17.0"

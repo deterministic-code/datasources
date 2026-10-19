@@ -1,6 +1,6 @@
 {
-  "name": "@datasources/mysql",
-  "version": "0.1.1",
+  "name": "@deterministic-code/datasources-mysql",
+  "version": "0.1.2",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*",
+    "@deterministic-code/datasources": "*",
     "mysql2": "^3.14.0"
   },
   "devDependencies": {

@@ -3,7 +3,7 @@ import {
   StubConnection,
   type DatasourceOptions,
   type ICommand,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 
 export class MongoDbConnection extends StubConnection {
   constructor(_options?: DatasourceOptions) {

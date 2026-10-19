@@ -1,5 +1,5 @@
 import type { ContactSettings } from "../types/generated/datasource/contactSettings.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 
 export class ContactSettingsRepository extends CRUDRepository<ContactSettings> {
   constructor(connection: IConnection) {

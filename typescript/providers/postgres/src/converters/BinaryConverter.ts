@@ -1,4 +1,4 @@
-import { TypeConverter, type Cell } from "@datasources/core";
+import { TypeConverter, type Cell } from "@deterministic-code/datasources";
 
 export const isBase64 = (value: string): boolean => {
   const text = value.trim();

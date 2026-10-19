@@ -1,17 +1,30 @@
 {
-  "name": "@datasources/memory",
-  "version": "0.1.0",
+  "name": "@deterministic-code/datasources-memory",
+  "version": "0.1.2",
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ../../rewrite-declaration-extensions.mjs dist",
+    "prepack": "npm run build",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@datasources/core": "*"
+    "@deterministic-code/datasources": "*"
   }
 }

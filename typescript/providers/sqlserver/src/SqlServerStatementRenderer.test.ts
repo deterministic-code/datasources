@@ -12,7 +12,7 @@ import {
   InsertStatement,
   NotNull,
   StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { SqlServerStatementRenderer } from "./SqlServerStatementRenderer.ts";
 

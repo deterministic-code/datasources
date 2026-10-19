@@ -7,7 +7,7 @@ import {
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { JsonCommand } from "./command.ts";
 import type { JsonConnectionOptions } from "./connection-options.ts";
 import { MemoryFileStore, type IFileStore } from "./file-store.ts";

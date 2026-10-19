@@ -28,7 +28,7 @@ import {
   eq,
   type Column,
   type RoutineParameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
 import { converterFieldOf } from "./common/converter-field.ts";

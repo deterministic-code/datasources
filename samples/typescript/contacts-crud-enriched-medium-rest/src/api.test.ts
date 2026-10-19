@@ -1,5 +1,5 @@
-import { ConsoleCommandMiddleware, DatasourceError, ExpectConsoleMiddleware, type ICommandMiddleware } from "@datasources/core";
-import { SqliteDriver } from "@datasources/sqlite";
+import { ConsoleCommandMiddleware, DatasourceError, ExpectConsoleMiddleware, type ICommandMiddleware } from "@deterministic-code/datasources";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -21,7 +21,7 @@ import {
   SelectInsertedIdStatement,
   SelectStatement,
   StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { PostgresCreateTableStatementRenderer } from "./PostgresCreateTableStatementRenderer.ts";
 import { PostgresStatementRenderer } from "./PostgresStatementRenderer.ts";

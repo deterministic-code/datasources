@@ -1,4 +1,4 @@
-import { DatasourceError, Operator, Where, type IWhere } from "@datasources/core";
+import { DatasourceError, Operator, Where, type IWhere } from "@deterministic-code/datasources";
 import type { Contact } from "../generated/typescript/types/generated/views/contact.ts";
 import type { Address } from "../generated/typescript/types/generated/views/address.ts";
 import type { Phone } from "../generated/typescript/types/generated/views/phone.ts";

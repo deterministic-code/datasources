@@ -1186,7 +1186,7 @@ ada-v2
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L653-L705)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L657-L709)
 
 ```rust
 let ds = default().unwrap();
@@ -1212,10 +1212,10 @@ let matches = users_repo
         )),
         None, None
 )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
-let updated = users_repo.update(&created, None).await.unwrap();
+let updated = users_repo.update(&mut created, None).await.unwrap();
 let renamed = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -1585,7 +1585,7 @@ ada-v2
 grace
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L928-L974)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L932-L978)
 
 ```rust
 let built = datasource();
@@ -1611,7 +1611,7 @@ key.insert("TenantId".into(), Value::Int(1));
 key.insert("Id".into(), Value::Int(1));
 let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 ada.insert("Name".into(), Value::from("ada-v2"));
-let updated = accounts_repo.update(&ada, None).await.unwrap();
+let updated = accounts_repo.update(&mut ada, None).await.unwrap();
 let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 let removed = accounts_repo.delete(&ada, None).await.unwrap();
 let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
@@ -2076,7 +2076,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L760-L913)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L764-L917)
 
 ```rust
 let ds = default().unwrap();
@@ -2188,7 +2188,7 @@ loaded.insert(
 loaded.insert("Version".into(), Value::Int(2));
 let updated = users_repo
     .update(
-        &loaded,
+        &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
     )
     .await
@@ -2200,7 +2200,7 @@ let current = users_repo
     .unwrap();
 let stale = users_repo
     .update(
-        &loaded,
+        &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
     )
     .await

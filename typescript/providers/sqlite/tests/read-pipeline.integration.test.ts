@@ -5,7 +5,7 @@ import {
   DictionaryMapper,
   MetaDataRowTypeConverter,
   RowTypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 import { applySchema } from "../../../schema-spec.ts";
 

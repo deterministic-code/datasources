@@ -1,4 +1,4 @@
-import { RepositoryFactory } from "@datasources/core";
+import { RepositoryFactory } from "@deterministic-code/datasources";
 import { AddressRepository } from "./address-repository.ts";
 import { AddressTypeRepository } from "./address-type-repository.ts";
 import { ContactRepository } from "./contact-repository.ts";
@@ -28,7 +28,7 @@ export const register = (factory: RepositoryFactory): void => {
 };
 RepositoryFactory.bind(register);
 
-declare module "@datasources/core" {
+declare module "@deterministic-code/datasources" {
   interface Datasource {
     readonly addresses: AddressRepository;
     readonly addressTypes: AddressTypeRepository;

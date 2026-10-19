@@ -14,7 +14,7 @@ import {
   type IWhere,
   Response,
   type Parameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { JsonConnection } from "./connection.ts";
 import {
   asRecord,

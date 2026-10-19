@@ -1,5 +1,5 @@
 import type { LegacyContact } from "../types/generated/views/legacyContact.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 
 export class LegacyContactRepository extends CRUDRepository<LegacyContact> {
   constructor(connection: IConnection) {

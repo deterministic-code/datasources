@@ -9,10 +9,10 @@
     "test:e2e:verbose": "VERBOSE=1 vitest run tests/*.e2e.test.ts"
   },
   "dependencies": {
-    "@datasources/core": "file:../../../typescript/datasources",
-    "@datasources/mysql": "file:../../../typescript/providers/mysql",
-    "@datasources/postgres": "file:../../../typescript/providers/postgres",
-    "@datasources/sqlite": "file:../../../typescript/providers/sqlite",
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.10.0",
     "mysql2": "^3.14.0",
@@ -29,11 +29,11 @@
     "vitest": "^3.1.2"
   },
   "overrides": {
-    "@datasources/core": "file:../../../typescript/datasources",
-    "@datasources/json": "file:../../../typescript/providers/json",
-    "@datasources/memory": "file:../../../typescript/providers/memory",
-    "@datasources/mysql": "file:../../../typescript/providers/mysql",
-    "@datasources/postgres": "file:../../../typescript/providers/postgres",
-    "@datasources/sqlite": "file:../../../typescript/providers/sqlite"
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-json": "file:../../../typescript/providers/json",
+    "@deterministic-code/datasources-memory": "file:../../../typescript/providers/memory",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite"
   }
 }

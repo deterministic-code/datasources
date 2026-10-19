@@ -2,7 +2,7 @@ import {
   AlterTableStatementTextRenderer,
   type AlterAction,
   type AlterTableStatement,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 
 export class SqlServerAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
   override renderAlter(statement: AlterTableStatement): string {

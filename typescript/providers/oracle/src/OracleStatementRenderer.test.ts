@@ -10,7 +10,7 @@ import {
   DropTableStatement,
   DropTriggerStatement,
   StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { OracleStatementRenderer } from "./OracleStatementRenderer.ts";
 

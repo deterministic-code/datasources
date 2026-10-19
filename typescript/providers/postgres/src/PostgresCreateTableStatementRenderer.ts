@@ -2,7 +2,7 @@ import {
   ColumnDefault,
   CreateTableStatementTextRenderer,
   type Column,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
 import { columnTypes } from "./columnTypes.ts";
 

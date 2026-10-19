@@ -1,4 +1,4 @@
-import type { Cell, Cells, Scalar } from "@datasources/core";
+import type { Cell, Cells, Scalar } from "@deterministic-code/datasources";
 
 export interface SqliteStatement {
   run(params?: Record<string, Scalar>): {

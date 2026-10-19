@@ -24,7 +24,7 @@ import {
   SelectStatement,
   UpdateStatement,
   WhereText,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { JsonCommand } from "./command.ts";
 import { JsonConnection } from "./connection.ts";
 import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";

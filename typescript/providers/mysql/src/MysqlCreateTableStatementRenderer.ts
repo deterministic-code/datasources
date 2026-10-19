@@ -1,4 +1,4 @@
-import { CreateTableStatementTextRenderer, type Column } from "@datasources/core";
+import { CreateTableStatementTextRenderer, type Column } from "@deterministic-code/datasources";
 import { columnTypes } from "./columnTypes.ts";
 
 export class MysqlCreateTableStatementRenderer extends CreateTableStatementTextRenderer {

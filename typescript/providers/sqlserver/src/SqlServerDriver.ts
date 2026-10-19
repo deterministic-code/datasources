@@ -13,7 +13,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { SqlServerConnection } from "./connection.ts";
 import { SqlServerStatementRenderer } from "./SqlServerStatementRenderer.ts";
 

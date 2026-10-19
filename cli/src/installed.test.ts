@@ -5,8 +5,8 @@ describe("installed", () => {
   it("reads npm workspace packages", () => {
     expect(
       npmProviders({
-        dependencies: { "@datasources/sqlite": "0.1.0", lodash: "4" },
-        devDependencies: { "@datasources/json": "*" },
+        dependencies: { "@deterministic-code/datasources-sqlite": "0.1.0", lodash: "4" },
+        devDependencies: { "@deterministic-code/datasources-json": "*" },
       }),
     ).toEqual(["json", "sqlite"]);
     expect(npmProviders({})).toEqual([]);

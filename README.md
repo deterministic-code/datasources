@@ -2,6 +2,8 @@
 
 # Datasources
 
+[![ci](https://github.com/deterministic-code/datasources/actions/workflows/ci.yml/badge.svg)](https://github.com/deterministic-code/datasources/actions/workflows/ci.yml)
+
 Datasources is a data-access and object-relational mapper library. It aims for parity across [Languages and Datasource Providers](#languages-and-datasource-providers).
 
 The [Feature Stack:](#feature-stack) starts with commands, connections, and object mapping. Higher up, the API is more opinionated. Types and repositories are generated from a Types Specification, which can be the source of truth for the datasource schema and the generated code. The specification describes unions and inherited types. A type may contain referenced lists and dictionaries, and those references are generated as enriched repositories.
@@ -31,7 +33,7 @@ npx skills add deterministic-code/datasources
 ##### TypeScript
 
 ```typescript
-npm install @datasources/core
+npm install @deterministic-code/datasources
 ```
 
 ##### C#
@@ -57,15 +59,15 @@ Run setup and add sqlite and postgres for csharp and rust
 The skill runs the CLI. `setup` writes `.env`. `add` installs provider packages. `--ecosystem` is one language per call.
 
 ```sh
-npx @datasources/cli setup --yes --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem rust
+npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem rust
 ```
 
 Run interactive setup when you want prompts instead of `--yes`.
 
 ```sh
-npx @datasources/cli setup
+npx @deterministic-code/datasources-cli setup
 ```
 
 ### Generating code from specification
@@ -98,19 +100,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 See [Generate](docs/cli.md#generate). Walkthroughs for a User, an enriched users-and-roles spec, and a legacy table mapping are on [Repository Generation](#repository-generation).
@@ -131,14 +133,14 @@ DATASOURCE_URL=sqlite:///./app.sqlite
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `--no-migrations` skips writing the migration files. `--no-migrate` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
 
 ```sh
-npx @datasources/cli generate all --dialect typescript --no-migrations
-npx @datasources/cli generate all --dialect typescript --no-migrate
+npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrations
+npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrate
 ```
 
 See [Migrations](docs/cli.md#migrations).
@@ -148,7 +150,7 @@ See [Migrations](docs/cli.md#migrations).
 `migrations create` writes the same SQL files as `generate all` and leaves the database unchanged. `migrate-up` applies every pending file. `migrate-down` rolls one step back and needs the token it prints, passed as `--confirm`.
 
 ```sh
-npx @datasources/cli migrations create
+npx @deterministic-code/datasources-cli migrations create
 npx migrate-up --provider sqlite --connection ./app.sqlite
 npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
@@ -203,7 +205,7 @@ let deleted: Response = items.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -256,7 +258,7 @@ while reader.next().await? {
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 const connection = await ds.createConnection();
@@ -419,9 +421,9 @@ Run setup and add sqlite and postgres for csharp and rust
 **Expected**
 
 ```sh
-npx @datasources/cli setup --yes --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem rust
+npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem rust
 ```
 
 ## Example prompts
@@ -454,7 +456,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ```csharp
@@ -519,7 +521,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 ```csharp
@@ -686,7 +688,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 ```csharp
@@ -757,19 +759,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
@@ -810,7 +812,7 @@ let deleted: Response = users.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -867,19 +869,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
@@ -927,7 +929,7 @@ let deleted: Response = users.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -986,19 +988,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
@@ -1039,7 +1041,7 @@ let deleted: Response = users.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 

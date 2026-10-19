@@ -1,4 +1,4 @@
-import { parametersToRecord, type Cell, type Parameter } from "@datasources/core";
+import { parametersToRecord, type Cell, type Parameter } from "@deterministic-code/datasources";
 import { isBase64 } from "./converters/BinaryConverter.ts";
 import { isIsoDate } from "./converters/DateTimeConverter.ts";
 import { reverse } from "./converters/PostgresRowTypeConverters.ts";

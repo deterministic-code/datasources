@@ -1,4 +1,4 @@
-import { AlterTableStatementTextRenderer, type AlterAction } from "@datasources/core";
+import { AlterTableStatementTextRenderer, type AlterAction } from "@deterministic-code/datasources";
 
 export class OracleAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
   protected override actionSql(action: AlterAction): string {

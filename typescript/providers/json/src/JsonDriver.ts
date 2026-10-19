@@ -8,7 +8,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { JsonConnection } from "./connection.ts";
 import { JsonTransaction } from "./transaction.ts";
 

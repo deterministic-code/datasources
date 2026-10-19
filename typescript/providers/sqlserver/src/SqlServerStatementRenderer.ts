@@ -14,7 +14,7 @@ import {
   IdentityInsertStatement,
   StatementRenderer,
   type StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { SqlServerAlterTableStatementRenderer } from "./SqlServerAlterTableStatementRenderer.ts";
 import { SqlServerCreateTableStatementRenderer } from "./SqlServerCreateTableStatementRenderer.ts";
 import { SqlServerCreateTriggerStatementRenderer } from "./SqlServerCreateTriggerStatementRenderer.ts";

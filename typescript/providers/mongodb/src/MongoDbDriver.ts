@@ -9,7 +9,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { MongoDbConnection } from "./connection.ts";
 
 export class MongoDbDriver implements IDriver {
