@@ -3,11 +3,14 @@ name = "datasources-code-generators"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
 description = "SQL migration code generator"
+publish = false
 
 [dependencies]
 datasources = { workspace = true }
-deterministic_generators_common = { path = "../../deterministic-generators-common/rust" }
+deterministic_generators_common = { path = "../../../deterministic-generators-common/rust" }
 indexmap = "2"
 regex = "1"
 serde_yaml = "0.9"

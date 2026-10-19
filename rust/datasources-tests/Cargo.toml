@@ -3,6 +3,8 @@ name = "datasources-tests"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
 publish = false
 description = "Shared SQL spec runner and contact fixtures for provider tests"
 

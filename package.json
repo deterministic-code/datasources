@@ -25,7 +25,9 @@
     "test:perf:reads": "node scripts/perf-matrix.mjs --reads",
     "setup": "npm run setup --prefix cli --",
     "cli": "npm run cli --prefix cli --",
-    "publish:npm": "node typescript/publish-npm.mjs"
+    "publish:npm": "node typescript/publish-npm.mjs",
+    "publish:nuget": "node scripts/publish-nuget.mjs",
+    "publish:cargo": "node scripts/publish-cargo.mjs"
   },
   "devDependencies": {
     "debug": "^4.4.3",

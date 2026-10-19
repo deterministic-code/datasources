@@ -3,6 +3,8 @@ name = "datasources"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
 description = "Async datasource interfaces, middleware, registry, and test doubles"
 
 [dependencies]
