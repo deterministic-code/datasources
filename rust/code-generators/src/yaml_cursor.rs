@@ -91,7 +91,8 @@ fn is_literal(value: &Value) -> bool {
     matches!(
         value,
         Value::Null | Value::String(_) | Value::Bool(_) | Value::Number(_)
-    )
+    ) || matches!(value, Value::Sequence(items) if items.is_empty())
+        || matches!(value, Value::Mapping(map) if map.is_empty())
 }
 
 fn yaml_to_string(value: &Value) -> String {
