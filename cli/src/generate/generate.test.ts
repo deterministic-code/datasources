@@ -549,6 +549,24 @@ types: []
     };
     const cycled = await DeterministicParser(memoryReader(cycle)).parse({});
     expect(() => planRepositories(cycled, "typescript", {})).toThrow(/repository cycle/);
+    const mismatch = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - address_base:
+      tags: [datasource_type]
+      fields:
+      - id:
+          type: integer
+          is_id: true
+`,
+        "datasource.yaml": `version: 1.0.0
+types:
+  - addresses_base: {}
+`,
+      }),
+    ).parse({});
+    expect(() => planRepositories(mismatch, "csharp", {})).toThrow(/no matching type in types.yaml/);
   });
 
   it("writes each generate target", async () => {
