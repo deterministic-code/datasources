@@ -379,9 +379,7 @@ try {
   const sqlFor = Object.fromEntries(
     samples.filter((sample) => sample.sql).map((sample) => [sample.name, generateSql(sample.name)]),
   );
-  const csharpOut = Object.fromEntries(
-    samples.filter((sample) => sample.sql).map((sample) => [sample.name, generateCsharp(sample.name)]),
-  );
+  const csharpOut = Object.fromEntries(samples.map((sample) => [sample.name, generateCsharp(sample.name)]));
   for (const sample of samples) {
     for (const dialect of dialects) {
       for (const provider of providers) {
@@ -393,7 +391,7 @@ try {
               dialect,
               provider,
               sample.sql ? sqlFor[sample.name](provider) : undefined,
-              sample.sql && dialect === "csharp" ? csharpOut[sample.name] : undefined,
+              dialect === "csharp" ? csharpOut[sample.name] : undefined,
             ),
           );
         } catch (error) {

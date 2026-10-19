@@ -6,8 +6,10 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <CollectCoverage>false</CollectCoverage>
+    <NoWarn>CS8618</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(E2E_MATRIX_GENERATED)\csharp\Types\**\*.cs" Condition="'$(E2E_MATRIX_GENERATED)' != ''" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
   <ItemGroup>
