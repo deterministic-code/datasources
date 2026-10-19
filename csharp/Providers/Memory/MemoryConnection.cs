@@ -42,7 +42,7 @@ internal sealed class MemoryConnection : IConnection
         return Task.CompletedTask;
     }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         EnsureOpen();
         _snapshot = Store.Snapshot();

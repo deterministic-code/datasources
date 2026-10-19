@@ -119,6 +119,7 @@ describe("MysqlConnection", () => {
     expect(client.rollbacks).toBe(1);
     expect(client.queries.map((q) => q.sql)).toEqual([
       "SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')",
+      "SET time_zone = '+00:00'",
       "INSERT INTO items (id) VALUES (:id)",
       "CREATE TABLE users (id INTEGER)",
       "SELECT 1",
@@ -162,7 +163,7 @@ describe("MysqlConnection", () => {
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
     await connection.close();
     expect(client.ended).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);

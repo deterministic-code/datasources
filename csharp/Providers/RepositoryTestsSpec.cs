@@ -201,7 +201,7 @@ public static class RepositoryTestsSpec
         {
             var sql = step switch
             {
-                { Create: { } create } => DefaultStatementTextRenderer.Instance.Render(new InsertStatement(table, Fields(Flatten(create.Row, spec.Type), col => !ids.Contains(col)))),
+                { Create: { } create } => InsertSql(table, Flatten(create.Row, spec.Type), ids),
                 { Read: { } read } => DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = table, Fields = columns, Where = new Where(new Operator.Equals("id", Value.From(read.Id))) })),
                 { Query: { } query } => DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = table, Fields = columns, Where = query.Where is { } where ? SqlWhere(where) : null })),
                 { ReadBy: { } readBy } => DefaultStatementTextRenderer.Instance.Render(new SelectStatement(new() { Table = table, Fields = columns, Where = SqlWhere(readBy.Where) })),
@@ -212,7 +212,10 @@ public static class RepositoryTestsSpec
                 _ => throw new InvalidOperationException($"{spec.Name}: empty step")
             };
             yield return sql;
-            if (step.Create is not null && spec.Type.Ids.Count == 1 && InsertedIdSql(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
+            if (step.Create is { } created
+                && spec.Type.Ids.Count == 1
+                && !Assigned(Flatten(created.Row, spec.Type).GetValueOrDefault(spec.Type.Ids[0]))
+                && InsertedIdSql(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
                 yield return inserted;
         }
     }
@@ -239,6 +242,15 @@ public static class RepositoryTestsSpec
         }
         return dest;
     }
+
+    static string InsertSql(string table, Dictionary<string, object?> flat, HashSet<string> ids) =>
+        DefaultStatementTextRenderer.Instance.Render(new InsertStatement(table, Fields(flat, col => !ids.Contains(col) || Assigned(flat.GetValueOrDefault(col)))));
+
+    static bool Assigned(object? value) => value switch
+    {
+        null or "" or 0 or 0L => false,
+        _ => true
+    };
 
     static IReadOnlyList<Parameter> Fields(Dictionary<string, object?> row, Func<string, bool> include) =>
         row.Where(pair => include(pair.Key)).OrderBy(pair => pair.Key)

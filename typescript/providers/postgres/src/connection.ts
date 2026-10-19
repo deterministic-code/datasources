@@ -73,7 +73,7 @@ export class PostgresConnection implements IConnection {
   [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
-    isolation: IsolationLevelName = IsolationLevel.Serializable,
+    isolation: IsolationLevelName = IsolationLevel.ReadCommitted,
   ): Promise<ITransaction> {
     this.ensureOpen();
     await this.exec(`BEGIN ISOLATION LEVEL ${isoSql(isolation)}`);

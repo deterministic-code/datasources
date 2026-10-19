@@ -162,7 +162,7 @@ impl Connection for MemoryConnection {
         *self.state.in_transaction.lock().unwrap() = true;
         Ok(Arc::new(MemoryTransaction {
             state: self.state.clone(),
-            isolation: isolation.unwrap_or(IsolationLevel::Serializable),
+            isolation: isolation.unwrap_or(IsolationLevel::ReadCommitted),
         }) as Arc<dyn Transaction>)
     }
 }

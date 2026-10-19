@@ -53,10 +53,10 @@ const seed = () => `
     (1, 'admin'),
     (2, 'editor'),
     (3, 'viewer');
-  INSERT INTO user_roles (user_id, role_id) VALUES
-    ('${ada}', 1),
-    ('${ada}', 2),
-    ('${grace}', 3);
+  INSERT INTO user_roles (user_id, role_id, name) VALUES
+    ('${ada}', 1, 'admin'),
+    ('${ada}', 2, 'editor'),
+    ('${grace}', 3, 'viewer');
 `;
 
 const names = (roles: UserRole[]) => roles.map((role) => role.Name).sort();

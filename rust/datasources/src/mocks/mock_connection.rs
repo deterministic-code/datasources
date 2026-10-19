@@ -142,7 +142,7 @@ impl Connection for MockConnection {
         if let Some(error) = &state.start_error {
             return Err(DatasourceError::message(error.clone()));
         }
-        let isolation = isolation.unwrap_or(IsolationLevel::Serializable);
+        let isolation = isolation.unwrap_or(IsolationLevel::ReadCommitted);
         state.last_isolation = isolation;
         if let Some(transaction) = &self.mock_transaction {
             transaction.set_isolation(isolation);

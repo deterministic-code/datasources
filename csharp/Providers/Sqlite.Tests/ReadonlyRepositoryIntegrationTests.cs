@@ -580,10 +580,10 @@ public class UsersViewRoleTests
             (1, 'admin'),
             (2, 'editor'),
             (3, 'viewer');
-        INSERT INTO user_roles (user_id, role_id) VALUES
-            ('{Ada}', 1),
-            ('{Ada}', 2),
-            ('{Grace}', 3);
+        INSERT INTO user_roles (user_id, role_id, name) VALUES
+            ('{Ada}', 1, 'admin'),
+            ('{Ada}', 2, 'editor'),
+            ('{Grace}', 3, 'viewer');
         """;
 
     static async Task<IConnection> Open(IDatasource ds)

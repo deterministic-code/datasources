@@ -89,15 +89,16 @@ impl StoredProcedureBulkWriteStrategy {
         let statements = write_statements(&built.statements);
         let mut row = Row::new();
         for name in statements.read_columns() {
+            let physical = self.column(name);
             if create && self.identity(name) && !assigned(stored.get(name).or_else(|| stored.get(self.ids()[0].as_str()))) {
                 continue;
             }
             let value = stored
                 .iter()
-                .find(|(key, _)| self.column(key) == *name)
+                .find(|(key, _)| *key == name || self.column(key) == physical)
                 .map(|(_, value)| value.clone())
                 .unwrap_or(Value::Null);
-            row.insert(name.clone(), value);
+            row.insert(physical, value);
         }
         Ok(row)
     }

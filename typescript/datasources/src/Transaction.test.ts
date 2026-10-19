@@ -32,6 +32,6 @@ describe("Transaction", () => {
     const saved = true;
     if (saved) await txn.commit();
     else await txn.abort();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
   });
 });

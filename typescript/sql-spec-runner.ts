@@ -138,12 +138,27 @@ const resolveRows = (
 const params = (map?: Cells): Parameter[] =>
   Object.entries(map ?? {}).map(([name, value]) => ({ name, value }));
 
-const norm = (value: Scalar): Scalar =>
-  typeof value === "bigint"
-    ? Number(value)
-    : typeof value === "number" && Number.isInteger(value)
-      ? Math.trunc(value)
-      : value;
+const isoZ = (date: Date): string => date.toISOString().replace(/\.000Z$/, "Z");
+
+const utcDate = (text: string): Date | undefined => {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return;
+  const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(text)
+    ? text
+    : `${text.includes("T") ? text : text.replace(" ", "T")}Z`;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const norm = (value: Scalar | Date): Scalar =>
+  value instanceof Date
+    ? isoZ(value)
+    : typeof value === "bigint"
+      ? Number(value)
+      : typeof value === "number" && Number.isInteger(value)
+        ? Math.trunc(value)
+        : typeof value === "string"
+          ? (utcDate(value)?.toISOString().replace(/\.000Z$/, "Z") ?? value)
+          : value;
 
 const cells = (row: Cells): Cells =>
   Object.fromEntries(Object.entries(row).map(([key, value]) => [key, norm(value)]));

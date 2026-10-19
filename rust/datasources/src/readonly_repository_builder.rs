@@ -40,25 +40,18 @@ pub(crate) fn assemble(
         entity_mapper.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
     let property_mappings: Arc<dyn Mapper<String, String> + Send + Sync> =
         property_mappings.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
-    let table = Mapper::map(&entity_mapper, entity);
+    let table = entity;
     let mut names: Vec<String> = if read_properties.is_empty() {
         row_converter
             .as_ref()
-            .map(|converter| {
-                converter
-                    .column_names()
-                    .iter()
-                    .map(|name| Mapper::map(&property_mappings, name.clone()))
-                    .collect()
-            })
+            .map(|converter| converter.column_names().to_vec())
             .unwrap_or_default()
     } else {
         read_properties
-            .into_iter()
-            .map(|name| Mapper::map(&property_mappings, name))
-            .collect()
     };
-    names.sort();
+    names.sort_by(|left, right| {
+        Mapper::map(&property_mappings, left.clone()).cmp(&Mapper::map(&property_mappings, right.clone()))
+    });
     let mappings = StatementMappers::new(Arc::clone(&entity_mapper), Arc::clone(&property_mappings));
     Ok(BuiltRepository {
         connection,

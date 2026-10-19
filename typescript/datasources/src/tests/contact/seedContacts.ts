@@ -29,3 +29,15 @@ export const seedContactsSql = (count = 250, version = "X''"): string[] => {
 };
 
 export const seedContactCount = 250;
+
+export const seedIdentitySql = (engine: string): string[] => {
+  const tables = ["contacts_base", "address", "phone"] as const;
+  return engine === "postgres"
+    ? tables.map(
+        (table) =>
+          `SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 1))`,
+      )
+    : engine === "mysql"
+      ? tables.map((table) => `ALTER TABLE ${table} AUTO_INCREMENT = ${seedContactCount + 1}`)
+      : [];
+};

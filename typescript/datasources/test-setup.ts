@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "node_modules/@datasources");
+const root = join(dirname(fileURLToPath(import.meta.url)), "node_modules/@deterministic-code");
 for (const name of [
   "sqlite",
   "xml",
@@ -16,7 +16,7 @@ for (const name of [
   "mongodb",
   "dynamodb",
 ]) {
-  const dir = join(root, name);
+  const dir = join(root, `datasources-${name}`);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),

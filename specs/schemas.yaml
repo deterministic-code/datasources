@@ -67,6 +67,7 @@ schemas:
       columns:
         - { name: user_id, type: uuid, notNull: true }
         - { name: role_id, type: int, notNull: true }
+        - { name: name, type: string, notNull: true }
 
   user-view-version:
     - name: user_type

@@ -61,16 +61,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     }
 
     public virtual IAsyncEnumerable<T> Read(IWhere where, ReadonlyRepositoryMappingOptions<T>? options = null) =>
-        Read(
-            CompileStatement(Mappers(options).Apply(where, (name, cell) => Cell(name, cell, false, options)) ?? where),
-            null,
-            options);
+        Read(CompileStatement(where), null, options);
 
     public virtual Task<T?> ReadSingle(IWhere where, ReadonlyRepositoryMappingOptions<T>? options = null) =>
-        ReadSingle(
-            CompileStatement(Mappers(options).Apply(where, (name, cell) => Cell(name, cell, false, options)) ?? where),
-            null,
-            options);
+        ReadSingle(CompileStatement(where), null, options);
 
     public virtual IAsyncEnumerable<T> Read(
         IStatement? query = null,

@@ -197,6 +197,19 @@ fn mapping_of(spec: &Spec, dialect: &RepositoryDialect) -> RowTypeConverter {
         .with_fields(fields_overlay(&spec.type_spec, dialect.field))
 }
 
+fn assigned_yaml(value: Option<&serde_yaml::Value>) -> bool {
+    match value {
+        None | Some(serde_yaml::Value::Null) => false,
+        Some(serde_yaml::Value::String(text)) if text.is_empty() => false,
+        Some(serde_yaml::Value::Number(number))
+            if number.as_i64() == Some(0) || number.as_u64() == Some(0) =>
+        {
+            false
+        }
+        _ => true,
+    }
+}
+
 fn flatten_yaml(
     row: &BTreeMap<String, serde_yaml::Value>,
     mappings: &BTreeMap<String, BTreeMap<String, String>>,
@@ -399,13 +412,11 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
         .iter()
         .flat_map(|step| {
             let sql = if let Some(create) = &step.create {
+                let flat = flatten_yaml(&create.row, &spec.type_spec.mappings);
                 with_statement_sql(
                     DefaultStatementTextRenderer::instance().render(&InsertStatement::new(
                         &table,
-                        &fields_of(
-                            &flatten_yaml(&create.row, &spec.type_spec.mappings),
-                            |col| !ids.contains(col),
-                        ),
+                        &fields_of(&flat, |col| !ids.contains(col) || assigned_yaml(flat.get(col))),
                     )),
                     true,
                     &spec.type_spec,
@@ -498,17 +509,17 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
                 panic!("{}: empty step", spec.name);
             };
             let mut out = vec![sql];
-            if step.create.is_some() && spec.type_spec.ids.len() == 1 {
-                if let Some(inserted) = spec
-                    .type_spec
-                    .ids
-                    .first()
-                    .and_then(|column| {
-                        let sql = inserted_id_sql(provider, column);
-                        (!sql.is_empty()).then_some(sql)
-                    })
-                {
-                    out.push(inserted);
+            if let Some(create) = &step.create {
+                if spec.type_spec.ids.len() == 1 {
+                    if let Some(column) = spec.type_spec.ids.first() {
+                        let flat = flatten_yaml(&create.row, &spec.type_spec.mappings);
+                        if !assigned_yaml(flat.get(column)) {
+                            let inserted = inserted_id_sql(provider, column);
+                            if !inserted.is_empty() {
+                                out.push(inserted);
+                            }
+                        }
+                    }
                 }
             }
             out

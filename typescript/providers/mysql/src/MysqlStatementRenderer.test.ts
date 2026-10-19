@@ -2,8 +2,11 @@ import {
   AlterTableStatement,
   BulkUpdateStatement,
   ColumnDefault,
+  CreateBulkCreateStoredProcedureStatement,
   CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
@@ -98,6 +101,20 @@ describe("MysqlStatementRenderer", () => {
     ).toContain("CREATE PROCEDURE CreateUsers");
     expect(
       renderer.render(
+        new CreateCreateStoredProcedureStatement(
+          "CreateUsersGenerated",
+          "users",
+          ["id", "name"],
+          [{ name: "name", type: "TEXT" }],
+          "id",
+          "VARCHAR(36)",
+          ["name"],
+          true,
+        ),
+      ),
+    ).toContain("SET new_id = UUID()");
+    expect(
+      renderer.render(
         new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], []),
       ),
     ).toContain("ORDER BY t.id");
@@ -131,6 +148,74 @@ describe("MysqlStatementRenderer", () => {
     ).toContain("WHERE t.id = id AND t.version = version");
     expect(
       renderer.render(
+        new CreateUpdateStoredProcedureStatement(
+          "UpdateUsersAudit",
+          "users",
+          ["id", "name", "updated"],
+          [{ name: "id", type: "INT" }, { name: "name", type: "TEXT" }, { name: "new_updated", type: "DATETIME" }],
+          "id",
+          "INT",
+          ["name"],
+          ["id"],
+          false,
+          "updated",
+        ),
+      ),
+    ).toContain("t.updated = new_updated");
+    expect(
+      renderer.render(
+        new CreateUpdateStoredProcedureStatement(
+          "UpdateUsersAuditMissing",
+          "users",
+          ["id", "name", "updated"],
+          [{ name: "id", type: "INT" }, { name: "name", type: "TEXT" }],
+          "id",
+          "INT",
+          ["name"],
+          [],
+          false,
+          "updated",
+        ),
+      ),
+    ).toContain("UPDATE users t");
+    expect(
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement(
+          "DeleteUsersById",
+          "users",
+          ["id"],
+          [{ name: "id", type: "BIGINT" }],
+          "id",
+          "INT",
+          [],
+          ["id"],
+        ),
+      ),
+    ).toContain("IN id BIGINT");
+    expect(
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByKey", "users", ["id"], [], "id", "INT", [], []),
+      ),
+    ).toContain("WHERE t.id = id");
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement("ReadUsersByName", "users", ["id", "name"], [], "id", "INT", [], ["name"]),
+      ),
+    ).toContain("IN name INT");
+    expect(
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByName", "users", ["id"], [], "id", "INT", [], ["name"]),
+      ),
+    ).toContain("IN name INT");
+    const payload = { name: "payload", type: "JSON" };
+    expect(
+      renderer.render(new CreateBulkCreateStoredProcedureStatement("BulkCreateUsers", "users", [payload], payload, "id", "INT")),
+    ).toContain("JSON_TABLE");
+    expect(
+      renderer.render(new CreateBulkUpdateStoredProcedureStatement("BulkUpdateUsers", "users", [payload], payload, "id", "INT")),
+    ).toContain("JSON_TABLE");
+    expect(
+      renderer.render(
         new CreateBulkDeleteStoredProcedureStatement(
           "BulkDeleteUsers",
           "users",
@@ -141,5 +226,17 @@ describe("MysqlStatementRenderer", () => {
         ),
       ),
     ).toContain("JSON_TABLE");
+    expect(
+      renderer.render(
+        new CreateBulkDeleteStoredProcedureStatement(
+          "BulkDeleteUsersByKeyType",
+          "users",
+          [],
+          { name: "payload", type: "JSON" },
+          "id",
+          "INT",
+        ),
+      ),
+    ).toContain("id INT PATH '$.id'");
   });
 });

@@ -3,8 +3,11 @@ import {
   BulkUpdateStatement,
   type Cell,
   ColumnDefault,
+  CreateBulkCreateStoredProcedureStatement,
   CreateBulkDeleteStoredProcedureStatement,
+  CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
+  CreateDeleteStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateUpdateStoredProcedureStatement,
@@ -196,6 +199,74 @@ SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX("id") FROM user
         ),
       ),
     ).toContain("t.id = UpdateUsersByIdVersion.id AND t.version = UpdateUsersByIdVersion.version");
+    expect(
+      renderer.render(
+        new CreateUpdateStoredProcedureStatement(
+          "UpdateUsersAudit",
+          "users",
+          ["id", "name", "updated"],
+          [{ name: "id", type: "INT" }, { name: "name", type: "TEXT" }, { name: "new_updated", type: "TIMESTAMPTZ" }],
+          "id",
+          "INT",
+          ["name"],
+          ["id"],
+          false,
+          "updated",
+        ),
+      ),
+    ).toContain("updated = UpdateUsersAudit.new_updated");
+    expect(
+      renderer.render(
+        new CreateUpdateStoredProcedureStatement(
+          "UpdateUsersAuditMissing",
+          "users",
+          ["id", "name", "updated"],
+          [{ name: "id", type: "INT" }, { name: "name", type: "TEXT" }],
+          "id",
+          "INT",
+          ["name"],
+          [],
+          false,
+          "updated",
+        ),
+      ),
+    ).toContain("UPDATE users t");
+    expect(
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement(
+          "DeleteUsersById",
+          "users",
+          ["id"],
+          [{ name: "id", type: "BIGINT" }],
+          "id",
+          "INT",
+          [],
+          ["id"],
+        ),
+      ),
+    ).toContain("id BIGINT");
+    expect(
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByKey", "users", ["id"], [], "id", "INT", [], []),
+      ),
+    ).toContain("WHERE t.id = DeleteUsersByKey.id");
+    expect(
+      renderer.render(
+        new CreateReadStoredProcedureStatement("ReadUsersByName", "users", ["id", "name"], [], "id", "INT", [], ["name"]),
+      ),
+    ).toContain("name INT");
+    expect(
+      renderer.render(
+        new CreateDeleteStoredProcedureStatement("DeleteUsersByName", "users", ["id"], [], "id", "INT", [], ["name"]),
+      ),
+    ).toContain("name INT");
+    const payload = { name: "payload", type: "jsonb" };
+    expect(
+      renderer.render(new CreateBulkCreateStoredProcedureStatement("BulkCreateUsers", "users", [payload], payload, "id", "INT")),
+    ).toContain("jsonb_to_recordset");
+    expect(
+      renderer.render(new CreateBulkUpdateStoredProcedureStatement("BulkUpdateUsers", "users", [payload], payload, "id", "INT")),
+    ).toContain("jsonb_to_recordset");
     expect(
       renderer.render(
         new CreateBulkDeleteStoredProcedureStatement(

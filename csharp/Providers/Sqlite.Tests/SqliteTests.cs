@@ -23,7 +23,7 @@ public class SqliteTests
         await command.ExecuteReader(new Native(""));
 
         var txn = await conn.StartTransaction();
-        Assert.Equal(IsolationLevel.Serializable, txn.Isolation);
+        Assert.Equal(IsolationLevel.ReadCommitted, txn.Isolation);
         await txn.Commit();
         var dirty = await conn.StartTransaction(IsolationLevel.ReadUncommitted);
         Assert.Equal(IsolationLevel.ReadUncommitted, dirty.Isolation);

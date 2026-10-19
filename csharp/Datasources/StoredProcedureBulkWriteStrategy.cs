@@ -53,9 +53,10 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
         var row = new Row();
         foreach (var name in builder.CRUDStatements?.ReadColumns ?? [])
         {
+            var physical = Column(name);
             if (create && Identity(name) && !Assigned(stored, name)) continue;
-            var match = stored.FirstOrDefault(pair => Column(pair.Key) == name);
-            row[name] = match.Key is null ? Value.Null.Instance : match.Value;
+            var match = stored.FirstOrDefault(pair => pair.Key == name || Column(pair.Key) == physical);
+            row[physical] = match.Key is null ? Value.Null.Instance : match.Value;
         }
         return row;
     }

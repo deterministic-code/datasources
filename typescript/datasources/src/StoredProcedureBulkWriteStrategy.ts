@@ -109,9 +109,10 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
     const statements = repositoryParts(this.command.connection, this.options).statements;
     const row: Cells = {};
     for (const name of statements.readColumns) {
+      const physical = this.column(name);
       if (create && this.identity(name) && !assigned(stored[name] ?? stored[this.ids()[0]!])) continue;
-      const match = Object.entries(stored).find(([key]) => this.column(key) === name);
-      row[name] = match?.[1] ?? null;
+      const match = Object.entries(stored).find(([key]) => key === name || this.column(key) === physical);
+      row[physical] = match?.[1] ?? null;
     }
     return row;
   };

@@ -183,7 +183,7 @@ describe("PostgresConnection", () => {
     const txn2 = await connection.startTransaction(IsolationLevel.ReadUncommitted);
     expect(txn2.isolation).toBe(IsolationLevel.ReadUncommitted);
     await txn2.abort();
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
     await connection.close();
     expect(FakeClient.latest.ended).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);

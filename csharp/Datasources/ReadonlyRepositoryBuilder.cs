@@ -16,8 +16,7 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
         PropertyMappers = property;
         var names = options.ReadProperties is { Count: > 0 } listed ? listed : Columns();
         var columns = names
-            .Select(property.Map)
-            .OrderBy(name => name, StringComparer.Ordinal)
+            .OrderBy(name => property.Map(name), StringComparer.Ordinal)
             .ToArray();
         var converter = options.ObjectConverter ?? new MetaDataRowTypeConverter<T> { ShouldCoerceId = true };
         if (converter is MetaDataRowTypeConverter<T> meta)
@@ -34,7 +33,7 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
             converter,
             property,
             entity,
-            Statements(entity.Map(options.Entity ?? typeof(T).Name), columns),
+            Statements(options.Entity ?? typeof(T).Name, columns),
             Ids(options));
     }
 

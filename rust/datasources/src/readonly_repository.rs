@@ -168,6 +168,7 @@ impl ReadonlyRepository {
         }
     }
 
+    #[allow(dead_code)]
     fn store_where(
         &self,
         where_clause: &dyn IWhere,
@@ -462,20 +463,16 @@ impl ReadonlyRepository {
         mappers: &StatementMappers,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<(SelectStatement, Vec<Parameter>)> {
-        match self.store_where(where_clause, false, mappers, options)? {
-            Some(stored) => Ok((
-                self.own(self.readonly_statements.select(Some(&stored)), mappers, options)?,
-                stored.parameters(),
-            )),
-            None => Ok((
-                self.own(
-                    self.readonly_statements.select(Some(where_clause)),
-                    mappers,
-                    options,
-                )?,
-                where_clause.parameters(),
-            )),
-        }
+        let mapped = self.own(
+            self.readonly_statements.select(Some(where_clause)),
+            mappers,
+            options,
+        )?;
+        let params = mapped
+            .predicate()
+            .map(|clause| clause.parameters())
+            .unwrap_or_default();
+        Ok((mapped, params))
     }
 }
 

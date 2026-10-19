@@ -31,7 +31,7 @@ test("topic files expand examples", () => {
 });
 
 test("downloading lists sqlite packages", () => {
-  assert.match(files["downloading.md"], /@datasources\/sqlite/);
+  assert.match(files["downloading.md"], /@deterministic-code\/datasources-sqlite/);
   assert.match(files["downloading.md"], /datasources-sqlite/);
   assert.match(files["downloading.md"], /Datasources\.Sqlite/);
 });
