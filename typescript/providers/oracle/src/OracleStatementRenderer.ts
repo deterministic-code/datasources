@@ -14,7 +14,7 @@ import {
   DropTriggerStatement,
   StatementRenderer,
   type StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { OracleAlterTableStatementRenderer } from "./OracleAlterTableStatementRenderer.ts";
 import { OracleCreateTableStatementRenderer } from "./OracleCreateTableStatementRenderer.ts";
 import { OracleCreateTriggerStatementRenderer } from "./OracleCreateTriggerStatementRenderer.ts";

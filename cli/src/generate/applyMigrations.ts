@@ -1,5 +1,5 @@
 import { isAbsolute, join } from "node:path";
-import { generate as generateSql } from "@datasources/code-generators/generate-sql";
+import { generate as generateSql } from "@deterministic-code/datasources-code-generators/generate-sql";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import type { Flags, MigrationsCreateCommand } from "../parse.ts";

@@ -1,5 +1,5 @@
 import { beforeAll, describe, it } from "vitest";
-import { execute } from "@datasources/core";
+import { execute } from "@deterministic-code/datasources";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
   repositorySpecFiles,

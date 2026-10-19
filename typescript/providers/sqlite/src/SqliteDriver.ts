@@ -12,7 +12,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { SqliteConnection } from "./connection.ts";
 import { SqliteCommand } from "./command.ts";
 import { SqliteTransaction } from "./transaction.ts";

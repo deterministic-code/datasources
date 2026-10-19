@@ -9,9 +9,9 @@ Run setup and add sqlite and postgres for csharp and rust
 **Expected**
 
 ```sh
-npx @datasources/cli setup --yes --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem rust
+npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem rust
 ```
 
 # Example prompts
@@ -42,7 +42,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ```csharp
@@ -105,7 +105,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 ```csharp
@@ -264,7 +264,7 @@ types:
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 ```csharp

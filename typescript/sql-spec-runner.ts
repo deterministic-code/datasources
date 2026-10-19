@@ -16,7 +16,7 @@ import {
   type ITransaction,
   type IsolationLevelName,
   type Parameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import {
   consoleSignature,
   expectedConsoleSignatures,

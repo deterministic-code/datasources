@@ -10,7 +10,7 @@ import {
   type IConnection,
   type IDatasource,
   type IReadonlyRepository,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { applySchema } from "../../../schema-spec.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
@@ -42,7 +42,7 @@ const register = (ds: IDatasource) => {
   );
 };
 
-declare module "@datasources/core" {
+declare module "@deterministic-code/datasources" {
   interface IDatasource {
     readonly users: ICRUDRepository<User>;
   }

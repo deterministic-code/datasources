@@ -2,7 +2,7 @@ import {
   IsolationLevel,
   type ITransaction,
   type IsolationLevelName,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { MysqlConnection } from "./connection.ts";
 
 export class MysqlTransaction implements ITransaction {

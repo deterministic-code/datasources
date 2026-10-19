@@ -5,7 +5,7 @@ import type {
   TypeField,
 } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
-import { sqlStringLiteral } from "@datasources/core";
+import { sqlStringLiteral } from "@deterministic-code/datasources";
 import { identityInsertStatementOf, seedInsertStatementOf } from "../statements.ts";
 import { renderSql, sqlDefault, type SqlDialect } from "./sql-dialect.ts";
 import { dialectConverter } from "./sql-dialect.ts";

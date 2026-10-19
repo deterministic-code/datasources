@@ -12,7 +12,7 @@ import {
   type ITransaction,
   type IsolationLevel,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { PostgresConnection } from "./connection.ts";
 import { PostgresCommand } from "./command.ts";
 import { PostgresTransaction } from "./transaction.ts";

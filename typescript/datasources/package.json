@@ -1,6 +1,6 @@
 {
-  "name": "@datasources/core",
-  "version": "0.1.1",
+  "name": "@deterministic-code/datasources",
+  "version": "0.1.2",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./dist/index.d.ts",
@@ -24,8 +24,8 @@
     "access": "public"
   },
   "devDependencies": {
-    "@datasources/json": "*",
-    "@datasources/memory": "*"
+    "@deterministic-code/datasources-json": "*",
+    "@deterministic-code/datasources-memory": "*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../rewrite-declaration-extensions.mjs dist",

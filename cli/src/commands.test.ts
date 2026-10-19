@@ -6,13 +6,13 @@ describe("commands", () => {
     expect(addCommands("ts", ["sqlite"], ["package.json"])).toEqual([
       {
         command: "npm",
-        args: ["install", "@datasources/core", "@datasources/sqlite"],
+        args: ["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"],
       },
     ]);
     expect(addCommands("ts", ["xml"], ["package.json"])[0]?.args).toEqual([
       "install",
-      "@datasources/core",
-      "@datasources/xml",
+      "@deterministic-code/datasources",
+      "@deterministic-code/datasources-xml",
     ]);
   });
 
@@ -42,7 +42,7 @@ describe("commands", () => {
 
   it("uninstalls unused dialects", () => {
     expect(removeCommands("ts", ["sqlite"], ["json"], [])).toEqual([
-      { command: "npm", args: ["uninstall", "@datasources/sqlite"] },
+      { command: "npm", args: ["uninstall", "@deterministic-code/datasources-sqlite"] },
     ]);
     expect(removeCommands("ts", [], ["sqlite"], [])).toEqual([]);
     expect(removeCommands("rust", ["sqlite"], ["json"], [])).toEqual([

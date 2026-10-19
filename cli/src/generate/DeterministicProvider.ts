@@ -2,7 +2,7 @@ import { generate as csharpDatasourceTypes } from "@deterministic-code/csharp-ge
 import { generate as csharpViewTypes } from "@deterministic-code/csharp-generators/generate-view-types";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { generateSql } from "@datasources/code-generators";
+import { generateSql } from "@deterministic-code/datasources-code-generators";
 import { generate as rustDatasourceTypes } from "@deterministic-code/rust-generators/generate-datasource-types";
 import { generate as rustViewTypes } from "@deterministic-code/rust-generators/generate-view-types";
 import { generate as typescriptDatasourceTypes } from "@deterministic-code/typescript-generators/generate-datasource-types";

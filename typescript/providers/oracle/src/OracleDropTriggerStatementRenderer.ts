@@ -1,4 +1,4 @@
-import { DropTriggerStatementTextRenderer, type DropTriggerStatement } from "@datasources/core";
+import { DropTriggerStatementTextRenderer, type DropTriggerStatement } from "@deterministic-code/datasources";
 
 export class OracleDropTriggerStatementRenderer extends DropTriggerStatementTextRenderer {
   override render(statement: DropTriggerStatement): string {

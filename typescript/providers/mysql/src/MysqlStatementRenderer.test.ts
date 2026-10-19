@@ -18,7 +18,7 @@ import {
   SelectInsertedIdStatement,
   SelectStatement,
   StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { describe, expect, it } from "vitest";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
 import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";

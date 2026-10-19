@@ -1,4 +1,4 @@
-import { TypeConverter, type Cell } from "@datasources/core";
+import { TypeConverter, type Cell } from "@deterministic-code/datasources";
 
 const bytes = (value: Cell): Cell =>
   typeof value === "string" ? Uint8Array.from(Buffer.from(value, "base64")) : value;

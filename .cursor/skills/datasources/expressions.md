@@ -471,7 +471,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ### Compare tree
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L260-L267)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L280-L287)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -479,7 +479,7 @@ var where = new Where(new Operator.And(
     new Operator.GreaterThan("age", 18)));
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L347-L354)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L447-L454)
 
 ```rust
 let where_clause = Where::new(Operator::and(
@@ -488,7 +488,7 @@ let where_clause = Where::new(Operator::and(
 ));
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L282-L287)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L300-L305)
 
 ```typescript
 const where = new Where(
@@ -522,7 +522,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2137-L2143)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2155-L2161)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -697,7 +697,7 @@ var evaluator = new ExpressionEvaluator();
 IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1412-L1597)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1414-L1599)
 
 ```rust
 let evaluator = ExpressionEvaluator;

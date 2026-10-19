@@ -4,10 +4,10 @@
     {
       "id": "run-setup-and-add-providers",
       "prompt": "Run setup and add sqlite and postgres for csharp and rust",
-      "expected_output": "npx @datasources/cli setup --yes --ecosystem csharp; add sqlite postgres --ecosystem csharp; add sqlite postgres --ecosystem rust. One ecosystem per add.",
+      "expected_output": "npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp; add sqlite postgres --ecosystem csharp; add sqlite postgres --ecosystem rust. One ecosystem per add.",
       "files": [],
       "assertions": [
-        { "id": "setup-yes", "text": "Runs npx @datasources/cli setup --yes" },
+        { "id": "setup-yes", "text": "Runs npx @deterministic-code/datasources-cli setup --yes" },
         { "id": "add-csharp", "text": "Adds sqlite and postgres with --ecosystem csharp" },
         { "id": "add-rust", "text": "Adds sqlite and postgres with --ecosystem rust" }
       ]
@@ -15,10 +15,10 @@
     {
       "id": "generate-a-user-repository",
       "prompt": "Generate a user with field id: username, is_enabled in types.yaml and generate repositories for csharp",
-      "expected_output": "types.yaml with user tagged datasource_type; npx @datasources/cli generate all --dialect csharp; then ds.Users create, ReadSingle, Update, and Delete. No hand-written repository class.",
+      "expected_output": "types.yaml with user tagged datasource_type; npx @deterministic-code/datasources-cli generate all --dialect csharp; then ds.Users create, ReadSingle, Update, and Delete. No hand-written repository class.",
       "files": [],
       "assertions": [
-        { "id": "generate-command", "text": "Runs npx @datasources/cli generate all --dialect csharp" },
+        { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect csharp" },
         { "id": "types-yaml-user", "text": "Writes types.yaml with a user datasource_type and id, username, is_enabled" },
         { "id": "generated-users", "text": "Calls create, readSingle, update, and delete on the generated users repository" },
         { "id": "no-handwritten-repo", "text": "Does not define a hand-written repository class" }
@@ -30,7 +30,7 @@
       "expected_output": "types.yaml with user, role, and user_role; generate all --dialect typescript; ds.roles.create then ds.users.create with roles: [admin]. ReadSingle fills roles. No hand-written AddLinked.",
       "files": [],
       "assertions": [
-        { "id": "generate-command", "text": "Runs npx @datasources/cli generate all --dialect typescript" },
+        { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect typescript" },
         { "id": "types-yaml-roles", "text": "Writes user, role, and user_role with many_to_many and a roles list that references user_role.user_id" },
         { "id": "create-role-then-user", "text": "Creates a role, then a user whose roles list includes that role" },
         { "id": "no-handwritten-addlinked", "text": "Does not call AddLinked or addLinked by hand" }
@@ -84,7 +84,7 @@
         { "id": "table-mapping", "text": "datasource.yaml maps user to OldUsersTbl" },
         { "id": "column-mappings", "text": "Maps id to UsrID, username to LoginNm, is_enabled to ActvFlg" },
         { "id": "unique-username", "text": "Sets is_unique on username" },
-        { "id": "generate-command", "text": "Runs npx @datasources/cli generate all --dialect typescript" },
+        { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect typescript" },
         { "id": "crud-uses-username", "text": "Create, read, update, and delete still use Username / username" }
       ]
     }

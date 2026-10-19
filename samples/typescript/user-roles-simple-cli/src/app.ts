@@ -1,4 +1,4 @@
-import type { ICommand, Scalar } from "@datasources/core";
+import type { ICommand, Scalar } from "@deterministic-code/datasources";
 import { addGroup } from "./commands/add-group.ts";
 import { addRole } from "./commands/add-role.ts";
 import { addUser } from "./commands/add-user.ts";

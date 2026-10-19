@@ -7,8 +7,8 @@
 `generate` reads a deterministic project and writes one language dialect. The word after `generate` is `all`, `types`, `repositories`, or `datasource`. `--dialect` is `csharp`, `typescript`, or `rust`. SQL dialects come from `settings.yaml` (`backend.datasources`, default `sqlite`).
 
 ```sh
-npx @datasources/cli generate all --dialect typescript --input ./deterministic --output ./generated
-npx @datasources/cli generate repositories --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect typescript --input ./deterministic --output ./generated
+npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 ```
 
 | Flag | Meaning |
@@ -37,9 +37,9 @@ When `datasource.yaml` is omitted, generate includes every `datasource_type` and
 A pair under `deterministic/custom/<dialect>/` named `<order>_<name>_<up|down>.sql` is copied into the migrations directory. `order` is 1–999. `npx migrate-create --provider sqlite --name add_notes` scaffolds an empty pair in that directory.
 
 ```sh
-npx @datasources/cli migrations create
-npx @datasources/cli migrations create --input ./deterministic --migrations-root sql
-npx @datasources/cli migrations create --migrations-path ./db/sqlite/migrations
+npx @deterministic-code/datasources-cli migrations create
+npx @deterministic-code/datasources-cli migrations create --input ./deterministic --migrations-root sql
+npx @deterministic-code/datasources-cli migrations create --migrations-path ./db/sqlite/migrations
 ```
 
 | Flag | Meaning |
@@ -90,19 +90,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
@@ -143,7 +143,7 @@ let deleted: Response = users.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -200,19 +200,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
@@ -260,7 +260,7 @@ let deleted: Response = users.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -319,19 +319,19 @@ types:
 ##### C#
 
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 
 ##### Rust
 
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 
 ##### TypeScript
 
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
@@ -372,7 +372,7 @@ let deleted: Response = users.delete(&created, None).await?;
 ##### TypeScript
 
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 

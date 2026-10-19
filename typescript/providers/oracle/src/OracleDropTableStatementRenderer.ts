@@ -1,4 +1,4 @@
-import { DropTableStatementTextRenderer, type DropTableStatement } from "@datasources/core";
+import { DropTableStatementTextRenderer, type DropTableStatement } from "@deterministic-code/datasources";
 
 export class OracleDropTableStatementRenderer extends DropTableStatementTextRenderer {
   override render(statement: DropTableStatement): string {

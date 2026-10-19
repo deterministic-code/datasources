@@ -1,4 +1,4 @@
-import { BulkUpdateStatementTextRenderer, type BulkUpdateStatement } from "@datasources/core";
+import { BulkUpdateStatementTextRenderer, type BulkUpdateStatement } from "@deterministic-code/datasources";
 
 export class MysqlBulkUpdateStatementTextRenderer extends BulkUpdateStatementTextRenderer {
   override render = (statement: BulkUpdateStatement): string => {

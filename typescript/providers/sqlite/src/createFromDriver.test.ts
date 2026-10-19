@@ -1,4 +1,4 @@
-import { CRUDRepository, Datasource } from "@datasources/core";
+import { CRUDRepository, Datasource } from "@deterministic-code/datasources";
 import { expect, it } from "vitest";
 import { SqliteDriver } from "./SqliteDriver.ts";
 

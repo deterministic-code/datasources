@@ -1,5 +1,5 @@
-import { CRUDRepository, Datasource, Native, createCRUDRepositoryOptions, type IConnection } from "@datasources/core";
-import { SqliteDriver } from "@datasources/sqlite";
+import { CRUDRepository, Datasource, Native, createCRUDRepositoryOptions, type IConnection } from "@deterministic-code/datasources";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { describe, expect, it } from "vitest";
 
 class UserStamp {

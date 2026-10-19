@@ -1,7 +1,7 @@
-import { ExpectConsoleMiddleware, type IConnection } from "@datasources/core";
-import { MysqlDriver } from "@datasources/mysql";
-import { PostgresDriver } from "@datasources/postgres";
-import { SqliteDriver } from "@datasources/sqlite";
+import { ExpectConsoleMiddleware, type IConnection } from "@deterministic-code/datasources";
+import { MysqlDriver } from "@deterministic-code/datasources-mysql";
+import { PostgresDriver } from "@deterministic-code/datasources-postgres";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -22,7 +22,7 @@ afterAll(() => {
 describe("ProviderCatalog", () => {
   it("default stores location and module", () => {
     const sqlite = ProviderCatalog.default.sqlite;
-    expect(sqlite?.location).toBe("@datasources/sqlite");
+    expect(sqlite?.location).toBe("@deterministic-code/datasources-sqlite");
     expect(sqlite?.module).toBe("SqliteDriver");
     expect(ProviderCatalog.default.sqlserver?.module).toBe("SqlServerDriver");
     expect(ProviderCatalog.default.mongodb?.module).toBe("MongoDbDriver");
@@ -82,7 +82,7 @@ describe("ProviderCatalog", () => {
 
   it("missing export throws", () => {
     expect(() =>
-      DriverLoader.load(new ProviderCatalog("json", "@datasources/json", "MissingDriver")),
+      DriverLoader.load(new ProviderCatalog("json", "@deterministic-code/datasources-json", "MissingDriver")),
     ).toThrow(ProviderNotInstalledError);
   });
 

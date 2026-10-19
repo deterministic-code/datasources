@@ -1,7 +1,7 @@
-import { ConsoleCommandMiddleware, Datasource, DatasourceFactory } from "@datasources/core";
-import { MysqlDriver } from "@datasources/mysql";
-import { PostgresDriver } from "@datasources/postgres";
-import { SqliteDriver } from "@datasources/sqlite";
+import { ConsoleCommandMiddleware, Datasource, DatasourceFactory } from "@deterministic-code/datasources";
+import { MysqlDriver } from "@deterministic-code/datasources-mysql";
+import { PostgresDriver } from "@deterministic-code/datasources-postgres";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 
 DatasourceFactory.register("sqlite", new SqliteDriver());
 DatasourceFactory.register("mysql", new MysqlDriver());

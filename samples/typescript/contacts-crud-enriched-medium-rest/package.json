@@ -7,10 +7,10 @@
     "test:e2e": "vitest run tests/*.e2e.test.ts"
   },
   "dependencies": {
-    "@datasources/core": "file:../../../typescript/datasources",
-    "@datasources/mysql": "file:../../../typescript/providers/mysql",
-    "@datasources/postgres": "file:../../../typescript/providers/postgres",
-    "@datasources/sqlite": "file:../../../typescript/providers/sqlite",
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",
     "better-sqlite3": "^12.10.0",
     "mysql2": "^3.14.0",
     "pg": "^8.16.0",
@@ -25,9 +25,9 @@
     "vitest": "^3.1.2"
   },
   "overrides": {
-    "@datasources/core": "file:../../../typescript/datasources",
-    "@datasources/mysql": "file:../../../typescript/providers/mysql",
-    "@datasources/postgres": "file:../../../typescript/providers/postgres",
-    "@datasources/sqlite": "file:../../../typescript/providers/sqlite"
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite"
   }
 }

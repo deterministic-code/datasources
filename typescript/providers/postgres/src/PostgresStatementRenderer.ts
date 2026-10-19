@@ -17,7 +17,7 @@ import {
   SelectInsertedIdStatementTextRenderer,
   StatementRenderer,
   type StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { PostgresAlterTableStatementRenderer } from "./PostgresAlterTableStatementRenderer.ts";
 import { PostgresBulkUpdateStatementTextRenderer } from "./PostgresBulkUpdateStatementTextRenderer.ts";
 import { PostgresCreateTableStatementRenderer } from "./PostgresCreateTableStatementRenderer.ts";

@@ -23,37 +23,37 @@ export type ProviderPackages = {
 };
 
 export const catalog: Record<Provider, ProviderPackages> = {
-  json: { npm: "@datasources/json", cargo: "datasources-json", nuget: "Datasources.Json" },
-  memory: { npm: "@datasources/memory", cargo: "datasources-memory", nuget: "Datasources.Memory" },
-  sqlite: { npm: "@datasources/sqlite", cargo: "datasources-sqlite", nuget: "Datasources.Sqlite" },
-  xml: { npm: "@datasources/xml", cargo: "datasources-xml", nuget: "Datasources.Xml" },
-  yaml: { npm: "@datasources/yaml", cargo: "datasources-yaml", nuget: "Datasources.Yaml" },
+  json: { npm: "@deterministic-code/datasources-json", cargo: "datasources-json", nuget: "Datasources.Json" },
+  memory: { npm: "@deterministic-code/datasources-memory", cargo: "datasources-memory", nuget: "Datasources.Memory" },
+  sqlite: { npm: "@deterministic-code/datasources-sqlite", cargo: "datasources-sqlite", nuget: "Datasources.Sqlite" },
+  xml: { npm: "@deterministic-code/datasources-xml", cargo: "datasources-xml", nuget: "Datasources.Xml" },
+  yaml: { npm: "@deterministic-code/datasources-yaml", cargo: "datasources-yaml", nuget: "Datasources.Yaml" },
   mysql: {
-    npm: "@datasources/mysql",
+    npm: "@deterministic-code/datasources-mysql",
     cargo: "datasources-mysql",
     nuget: "Datasources.Mysql",
   },
   sqlserver: {
-    npm: "@datasources/sqlserver",
+    npm: "@deterministic-code/datasources-sqlserver",
     cargo: "datasources-sqlserver",
     nuget: "Datasources.SqlServer",
   },
   postgres: {
-    npm: "@datasources/postgres",
+    npm: "@deterministic-code/datasources-postgres",
     cargo: "datasources-postgres",
     nuget: "Datasources.Postgres",
   },
-  oracle: { npm: "@datasources/oracle", cargo: "datasources-oracle", nuget: "Datasources.Oracle" },
-  mongodb: { npm: "@datasources/mongodb", cargo: "datasources-mongodb", nuget: "Datasources.MongoDb" },
+  oracle: { npm: "@deterministic-code/datasources-oracle", cargo: "datasources-oracle", nuget: "Datasources.Oracle" },
+  mongodb: { npm: "@deterministic-code/datasources-mongodb", cargo: "datasources-mongodb", nuget: "Datasources.MongoDb" },
   dynamodb: {
-    npm: "@datasources/dynamodb",
+    npm: "@deterministic-code/datasources-dynamodb",
     cargo: "datasources-dynamodb",
     nuget: "Datasources.DynamoDb",
   },
 };
 
 export const host = {
-  ts: { core: "@datasources/core" },
+  ts: { core: "@deterministic-code/datasources" },
   rust: { core: "datasources" },
   csharp: { core: "Datasources" },
 } as const;

@@ -1,4 +1,4 @@
-import { type CreateTableStatement } from "@datasources/core";
+import { type CreateTableStatement } from "@deterministic-code/datasources";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

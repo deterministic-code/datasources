@@ -1,4 +1,4 @@
-import { Join, OrderBy, SelectStatement, type ISelectStatement } from "@datasources/core";
+import { Join, OrderBy, SelectStatement, type ISelectStatement } from "@deterministic-code/datasources";
 import { ident } from "./schema.ts";
 
 export const usersRolesGroupsQuery = (provider = "sqlite"): ISelectStatement => {

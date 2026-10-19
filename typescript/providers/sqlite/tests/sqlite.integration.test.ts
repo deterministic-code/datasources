@@ -10,7 +10,7 @@ import {
   MetaDataRowTypeConverter,
   StatementTextRenderer,
   TransformMapper,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import {
   loadDialect,
   runSpec,

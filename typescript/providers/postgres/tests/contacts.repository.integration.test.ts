@@ -11,7 +11,7 @@ import { contactsServiceOf } from "../../../datasources/src/tests/contact/contac
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { execute, Native } from "@datasources/core";
+import { execute, Native } from "@deterministic-code/datasources";
 import { tables } from "../../../schema-spec.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";

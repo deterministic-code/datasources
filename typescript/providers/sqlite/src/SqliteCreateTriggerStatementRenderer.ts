@@ -1,4 +1,4 @@
-import { CreateTriggerStatementTextRenderer, type CreateTriggerStatement } from "@datasources/core";
+import { CreateTriggerStatementTextRenderer, type CreateTriggerStatement } from "@deterministic-code/datasources";
 
 export class SqliteCreateTriggerStatementRenderer extends CreateTriggerStatementTextRenderer {
   override render(statement: CreateTriggerStatement): string {

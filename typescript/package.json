@@ -8,7 +8,7 @@
     "code-generators"
   ],
   "scripts": {
-    "build": "npm run build -w @datasources/core && npm run build -w @datasources/mysql && npm run build -w @datasources/postgres && npm run build -w @datasources/sqlite",
+    "build": "npm run build --workspaces --if-present",
     "test": "npm run build && npm run test --workspaces --if-present",
     "test:e2e": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e",
     "test:e2e:verbose": "VERBOSE=1 npm run test:e2e",

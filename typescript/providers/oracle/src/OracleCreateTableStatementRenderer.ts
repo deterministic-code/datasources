@@ -1,4 +1,4 @@
-import { CreateTableStatementTextRenderer, type Column } from "@datasources/core";
+import { CreateTableStatementTextRenderer, type Column } from "@deterministic-code/datasources";
 
 export class OracleCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
   protected identity(column: Column): string {

@@ -2,7 +2,7 @@ import {
   AlterTableStatementTextRenderer,
   type AlterAction,
   type Column,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { columnTypes } from "./columnTypes.ts";
 
 export class SqliteAlterTableStatementRenderer extends AlterTableStatementTextRenderer {

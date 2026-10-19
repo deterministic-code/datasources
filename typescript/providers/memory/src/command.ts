@@ -17,7 +17,7 @@ import {
   Response,
   type Parameter,
   type Scalar,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { MemoryConnection } from "./connection.ts";
 import type { MemoryRecord } from "./store.ts";
 import { matches, parametersToObject, parseFilter } from "./filter.ts";

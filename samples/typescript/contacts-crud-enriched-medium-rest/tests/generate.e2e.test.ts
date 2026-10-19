@@ -1,5 +1,5 @@
-import { Datasource, n, Operator, Where } from "@datasources/core";
-import { SqliteDriver } from "@datasources/sqlite";
+import { Datasource, n, Operator, Where } from "@deterministic-code/datasources";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

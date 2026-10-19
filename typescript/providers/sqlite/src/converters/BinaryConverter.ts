@@ -1,4 +1,4 @@
-import { TypeConverter, type Cell } from "@datasources/core";
+import { TypeConverter, type Cell } from "@deterministic-code/datasources";
 
 export class BinaryConverter extends TypeConverter<Cell, Cell> {
   convert = (from: Cell): Cell => from;

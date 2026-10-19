@@ -5,7 +5,7 @@ describe("catalog", () => {
   it("lists every dialect with npm, cargo, and nuget ids", () => {
     expect(providers).toHaveLength(11);
     for (const name of providers) {
-      expect(catalog[name].npm).toBe(`@datasources/${name}`);
+      expect(catalog[name].npm).toBe(`@deterministic-code/datasources-${name}`);
       expect(catalog[name].cargo).toMatch(/^datasources-/);
       expect(catalog[name].nuget).toMatch(/^Datasources\./);
     }

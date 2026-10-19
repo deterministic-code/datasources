@@ -1,4 +1,4 @@
-import { parametersToRecord, type Cell, type Parameter } from "@datasources/core";
+import { parametersToRecord, type Cell, type Parameter } from "@deterministic-code/datasources";
 import { reverse } from "./converters/MysqlRowTypeConverters.ts";
 import type { Scalar } from "./scalar.ts";
 

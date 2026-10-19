@@ -17,7 +17,7 @@ import {
   ReturnStatement,
   SelectStatement,
   type Scalar,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { SqliteCommand } from "./command.ts";
 import { SqliteConnection } from "./connection.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";

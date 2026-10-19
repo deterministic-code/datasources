@@ -16,7 +16,7 @@ import {
   type IConnection,
   type Scalar,
   type TypeConverter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import {
   expectedRepositoryConsoleSignatures,
   physicalTableOf,

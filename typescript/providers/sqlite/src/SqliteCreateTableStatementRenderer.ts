@@ -1,4 +1,4 @@
-import { CreateTableStatement, CreateTableStatementTextRenderer, PrimaryKey, type Column } from "@datasources/core";
+import { CreateTableStatement, CreateTableStatementTextRenderer, PrimaryKey, type Column } from "@deterministic-code/datasources";
 import { columnTypes } from "./columnTypes.ts";
 
 const primaryKey = (constraint: { kind: string }): constraint is PrimaryKey =>

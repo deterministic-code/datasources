@@ -1,6 +1,6 @@
 import { parse, stringify } from "yaml";
-import type { IStatement } from "@datasources/core";
-import { CreateTableStatement } from "@datasources/core";
+import type { IStatement } from "@deterministic-code/datasources";
+import { CreateTableStatement } from "@deterministic-code/datasources";
 import type { SeedRow } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";

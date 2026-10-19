@@ -1,5 +1,5 @@
 import type { Address } from "../types/generated/views/address.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 import { AddressTypeRepository } from "./address-type-repository.ts";
 
 export class AddressRepository extends CRUDRepository<Address> {

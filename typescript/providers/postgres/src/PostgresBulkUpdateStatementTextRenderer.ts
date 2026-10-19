@@ -1,4 +1,4 @@
-import { BulkUpdateStatementTextRenderer, type Cell } from "@datasources/core";
+import { BulkUpdateStatementTextRenderer, type Cell } from "@deterministic-code/datasources";
 import { columnTypes } from "./columnTypes.ts";
 import { isBase64 } from "./converters/BinaryConverter.ts";
 import { isIsoDate } from "./converters/DateTimeConverter.ts";

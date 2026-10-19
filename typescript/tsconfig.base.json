@@ -16,16 +16,16 @@
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
-      "@datasources/core": ["datasources/src/index.ts"],
-      "@datasources/core/mocks": ["datasources/src/mocks/index.ts"],
-      "@datasources/json": ["providers/json/src/index.ts"],
-      "@datasources/memory": ["providers/memory/src/index.ts"],
-      "@datasources/mysql": ["providers/mysql/src/index.ts"],
-      "@datasources/postgres": ["providers/postgres/src/index.ts"],
-      "@datasources/sqlite": ["providers/sqlite/src/index.ts"],
-      "@datasources/sqlserver": ["providers/sqlserver/src/index.ts"],
-      "@datasources/oracle": ["providers/oracle/src/index.ts"],
-      "@datasources/code-generators": ["code-generators/src/generateSql.ts"]
+      "@deterministic-code/datasources": ["datasources/src/index.ts"],
+      "@deterministic-code/datasources/mocks": ["datasources/src/mocks/index.ts"],
+      "@deterministic-code/datasources-json": ["providers/json/src/index.ts"],
+      "@deterministic-code/datasources-memory": ["providers/memory/src/index.ts"],
+      "@deterministic-code/datasources-mysql": ["providers/mysql/src/index.ts"],
+      "@deterministic-code/datasources-postgres": ["providers/postgres/src/index.ts"],
+      "@deterministic-code/datasources-sqlite": ["providers/sqlite/src/index.ts"],
+      "@deterministic-code/datasources-sqlserver": ["providers/sqlserver/src/index.ts"],
+      "@deterministic-code/datasources-oracle": ["providers/oracle/src/index.ts"],
+      "@deterministic-code/datasources-code-generators": ["code-generators/src/generateSql.ts"]
     }
   }
 }

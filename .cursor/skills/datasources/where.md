@@ -788,7 +788,7 @@ Construct the predicate with [Operator](expressions.md#operator) records, then w
 
 ### Compare, groups, not, and in
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L249-L258)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L269-L278)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -809,7 +809,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L336-L345)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L436-L445)
 
 ```rust
 let where_clause = Where::new(Operator::and(
@@ -831,7 +831,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L273-L280)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L291-L298)
 
 ```typescript
 const where = new Where(
@@ -878,7 +878,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2137-L2143)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2155-L2161)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -929,7 +929,7 @@ username = $username AND is_enabled = $is_enabled
 
 ### Attach to a query
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L269-L277)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L289-L297)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -944,7 +944,7 @@ var query = new SelectStatement(new() { Table = "users", Fields = ["id", "name"]
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L356-L370)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L456-L470)
 
 ```rust
 let where_clause = Where::new(Operator::and(
@@ -963,7 +963,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L289-L297)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L413-L421)
 
 ```typescript
 const where = new Where(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MemoryDriver } from "@datasources/memory";
+import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import { collectAsync } from "./collectAsync.ts";
 import type { Cells } from "./converters/Cell.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";

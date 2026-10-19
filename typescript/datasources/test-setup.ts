@@ -20,7 +20,7 @@ for (const name of [
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
-    JSON.stringify({ name: `@datasources/${name}`, type: "module" }),
+    JSON.stringify({ name: `@deterministic-code/datasources-${name}`, type: "module" }),
   );
   writeFileSync(join(dir, "index.js"), "throw new Error(\"not installed\");\n");
 }

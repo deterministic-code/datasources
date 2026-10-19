@@ -1,4 +1,4 @@
-import { CreateTableStatementTextRenderer, type Column } from "@datasources/core";
+import { CreateTableStatementTextRenderer, type Column } from "@deterministic-code/datasources";
 
 export class SqlServerCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
   protected identity(column: Column): string {

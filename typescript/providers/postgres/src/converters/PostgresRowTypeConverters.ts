@@ -1,4 +1,4 @@
-import { type Cell, type TypeConverter } from "@datasources/core";
+import { type Cell, type TypeConverter } from "@deterministic-code/datasources";
 import { BinaryConverter } from "./BinaryConverter.ts";
 import { BoolConverter } from "./BoolConverter.ts";
 import { DateTimeConverter } from "./DateTimeConverter.ts";

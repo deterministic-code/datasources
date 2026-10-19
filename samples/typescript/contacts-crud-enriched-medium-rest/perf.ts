@@ -16,10 +16,10 @@ import {
   type IConnection,
   type IWhere,
   type TypeMap,
-} from "@datasources/core";
-import { MysqlDriver } from "@datasources/mysql";
-import { PostgresDriver } from "@datasources/postgres";
-import { SqliteDriver } from "@datasources/sqlite";
+} from "@deterministic-code/datasources";
+import { MysqlDriver } from "@deterministic-code/datasources-mysql";
+import { PostgresDriver } from "@deterministic-code/datasources-postgres";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

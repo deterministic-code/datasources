@@ -1,4 +1,4 @@
-import type { Parameter } from "@datasources/core";
+import type { Parameter } from "@deterministic-code/datasources";
 import QueryStream from "pg-query-stream";
 import type { Cells, Scalar, Wire } from "./scalar.ts";
 

@@ -14,7 +14,7 @@ import {
   type Column,
   type IConnection,
   type ITableConstraint,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 
 type ColumnSpec = {
   name: string;

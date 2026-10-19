@@ -19,10 +19,10 @@ import { AddressType } from "../../../datasources/src/tests/contact/AddressType.
 import { Phone } from "../../../datasources/src/tests/contact/Phone.ts";
 import { PhoneType } from "../../../datasources/src/tests/contact/PhoneType.ts";
 import { columns, contactEntity, joinEntity, snake } from "../../../datasources/src/tests/contact/contactColumns.ts";
-import { Operator, Where } from "@datasources/core";
+import { Operator, Where } from "@deterministic-code/datasources";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { Native } from "@datasources/core";
+import { Native } from "@deterministic-code/datasources";
 import { applySchema } from "../../../schema-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";

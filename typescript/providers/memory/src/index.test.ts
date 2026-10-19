@@ -17,7 +17,7 @@ import {
   UpdateStatement,
   Where,
   WhereText,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { MemoryCommand } from "./command.ts";
 import { MemoryConnection } from "./connection.ts";
 import { asRecord, matches, parametersToObject, parseFilter } from "./filter.ts";

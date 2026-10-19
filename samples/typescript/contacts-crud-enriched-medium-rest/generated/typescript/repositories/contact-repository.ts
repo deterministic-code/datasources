@@ -1,5 +1,5 @@
 import type { Contact } from "../types/generated/views/contact.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 import { AddressRepository } from "./address-repository.ts";
 import { PhoneRepository } from "./phone-repository.ts";
 import { ContactSettingsRepository } from "./contact-settings-repository.ts";

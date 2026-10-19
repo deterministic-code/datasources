@@ -1,5 +1,5 @@
-import { ExpectConsoleMiddleware } from "@datasources/core";
-import { SqliteDriver } from "@datasources/sqlite";
+import { ExpectConsoleMiddleware } from "@deterministic-code/datasources";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

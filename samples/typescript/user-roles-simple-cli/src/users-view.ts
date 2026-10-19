@@ -1,4 +1,4 @@
-import type { TypeMap } from "@datasources/core";
+import type { TypeMap } from "@deterministic-code/datasources";
 import type { UserView } from "./user-view.ts";
 
 export const usersView: TypeMap<UserView> = {

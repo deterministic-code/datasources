@@ -2,7 +2,7 @@ import {
   IsolationLevel,
   type ITransaction,
   type IsolationLevelName,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import type { JsonConnection } from "./connection.ts";
 
 export class JsonTransaction implements ITransaction {

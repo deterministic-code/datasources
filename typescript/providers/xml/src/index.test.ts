@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, Native, ProviderNotImplementedError, StubCommand, untyped } from "@datasources/core";
+import { Datasource, DatasourceFactory, Native, ProviderNotImplementedError, StubCommand, untyped } from "@deterministic-code/datasources";
 import { XmlConnection } from "./connection.ts";
 import { XmlDriver } from "./XmlDriver.ts";
 

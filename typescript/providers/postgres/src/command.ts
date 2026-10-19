@@ -17,7 +17,7 @@ import {
   type IReader,
   type IStatement,
   type Parameter,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { bindParameters, toPostgres } from "./bind.ts";
 import type { PostgresConnection } from "./connection.ts";
 import type { PostgresExecuteResult } from "./i-postgres-driver.ts";

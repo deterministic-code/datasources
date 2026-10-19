@@ -8,7 +8,7 @@ import {
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { createRequire } from "node:module";
 import { PostgresCommand } from "./command.ts";
 import type { PostgresConnectionOptions } from "./connection-options.ts";

@@ -7,7 +7,7 @@ import {
   type IConnection,
   type IsolationLevelName,
   type ITransaction,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { createRequire } from "node:module";
 import { SqliteCommand } from "./command.ts";
 import type { SqliteConnectionOptions } from "./connection-options.ts";

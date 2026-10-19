@@ -1,5 +1,5 @@
 import type { ContactGroup } from "../types/generated/views/contactGroup.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@datasources/core";
+import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
 import { ContactRepository } from "./contact-repository.ts";
 import { ContactGroupMemberRepository } from "./contact-group-member-repository.ts";
 

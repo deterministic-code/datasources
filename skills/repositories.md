@@ -150,7 +150,7 @@ var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L18-L26) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L45-L55) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L41-L43) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L68-L113)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L19-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L46-L56) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L42-L44) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L69-L114)
 
 ```rust
 impl ConvertSchema for User {
@@ -209,7 +209,7 @@ let row = repo
         Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
         None, None
     )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
     .next()
@@ -317,7 +317,7 @@ var gone = await usersRepo.ReadSingleById(created.Id);
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L18-L26) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L653-L705)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L19-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L657-L709)
 
 ```rust
 impl ConvertSchema for User {
@@ -353,10 +353,10 @@ let matches = users_repo
         )),
         None, None
 )
-    .await
+    .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
-let updated = users_repo.update(&created, None).await.unwrap();
+let updated = users_repo.update(&mut created, None).await.unwrap();
 let renamed = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -579,7 +579,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L718-L729) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L733-L737) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L741-L745) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L760-L913)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L722-L733) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L737-L741) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L745-L749) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L764-L917)
 
 ```rust
 impl ConvertSchema for User {
@@ -716,7 +716,7 @@ loaded.insert(
 loaded.insert("Version".into(), Value::Int(2));
 let updated = users_repo
     .update(
-        &loaded,
+        &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
     )
     .await
@@ -728,7 +728,7 @@ let current = users_repo
     .unwrap();
 let stale = users_repo
     .update(
-        &loaded,
+        &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
     )
     .await
@@ -1004,7 +1004,7 @@ let ids = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(None, None, None).await.unwrap();
+let stored_parents = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L49)

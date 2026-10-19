@@ -1,5 +1,5 @@
-import { execute, Native, type ICommand } from "@datasources/core";
-import { SqliteDriver } from "@datasources/sqlite";
+import { execute, Native, type ICommand } from "@deterministic-code/datasources";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { mysqlProcedures, schema } from "./schema.ts";
 
 export const ifNotExists = (sql: string): string =>

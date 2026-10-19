@@ -10,7 +10,7 @@ npx skills add deterministic-code/datasources
 
 ::: dialects
 ```typescript
-npm install @datasources/core
+npm install @deterministic-code/datasources
 ```
 ```csharp
 dotnet add package Datasources
@@ -29,15 +29,15 @@ Run setup and add sqlite and postgres for csharp and rust
 The skill runs the CLI. `setup` writes `.env`. `add` installs provider packages. `--ecosystem` is one language per call.
 
 ```sh
-npx @datasources/cli setup --yes --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem csharp
-npx @datasources/cli add sqlite postgres --ecosystem rust
+npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem csharp
+npx @deterministic-code/datasources-cli add sqlite postgres --ecosystem rust
 ```
 
 Run interactive setup when you want prompts instead of `--yes`.
 
 ```sh
-npx @datasources/cli setup
+npx @deterministic-code/datasources-cli setup
 ```
 
 ## Generating code from specification
@@ -67,13 +67,13 @@ types:
 
 ::: dialects
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
@@ -93,14 +93,14 @@ DATASOURCE_URL=sqlite:///./app.sqlite
 ```
 
 ```sh
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
 `--no-migrations` skips writing the migration files. `--no-migrate` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
 
 ```sh
-npx @datasources/cli generate all --dialect typescript --no-migrations
-npx @datasources/cli generate all --dialect typescript --no-migrate
+npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrations
+npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrate
 ```
 
 See [Migrations](./cli.md#migrations).
@@ -110,7 +110,7 @@ See [Migrations](./cli.md#migrations).
 `migrations create` writes the same SQL files as `generate all` and leaves the database unchanged. `migrate-up` applies every pending file. `migrate-down` rolls one step back and needs the token it prints, passed as `--confirm`.
 
 ```sh
-npx @datasources/cli migrations create
+npx @deterministic-code/datasources-cli migrations create
 npx migrate-up --provider sqlite --connection ./app.sqlite
 npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
@@ -158,7 +158,7 @@ let updated: Response = items.update(&created, None).await?;
 let deleted: Response = items.delete(&created, None).await?;
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -205,7 +205,7 @@ while reader.next().await? {
 }
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 const connection = await ds.createConnection();

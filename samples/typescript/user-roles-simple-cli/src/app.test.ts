@@ -1,8 +1,8 @@
-import { MockCommand, MockConnection, MockReader } from "@datasources/core/mocks";
-import { CreateTableStatement, DefaultStatementTextRenderer, FlatToNestedMapper, type IDriver } from "@datasources/core";
-import { MysqlDriver } from "@datasources/mysql";
-import { PostgresDriver } from "@datasources/postgres";
-import { SqliteDriver } from "@datasources/sqlite";
+import { MockCommand, MockConnection, MockReader } from "@deterministic-code/datasources/mocks";
+import { CreateTableStatement, DefaultStatementTextRenderer, FlatToNestedMapper, type IDriver } from "@deterministic-code/datasources";
+import { MysqlDriver } from "@deterministic-code/datasources-mysql";
+import { PostgresDriver } from "@deterministic-code/datasources-postgres";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import bcrypt from "bcryptjs";
 import { describe, expect, it } from "vitest";
 import { App } from "./app.ts";

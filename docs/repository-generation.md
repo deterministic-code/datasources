@@ -29,13 +29,13 @@ types:
 
 ::: dialects
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
@@ -70,7 +70,7 @@ let updated: Response = users.update(&created, None).await?;
 let deleted: Response = users.delete(&created, None).await?;
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -127,13 +127,13 @@ types:
 
 ::: dialects
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
@@ -175,7 +175,7 @@ let loaded = users.read_single(None, None, None).await?;
 let deleted: Response = users.delete(&created, None).await?;
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 
@@ -234,13 +234,13 @@ types:
 
 ::: dialects
 ```csharp
-npx @datasources/cli generate all --dialect csharp
+npx @deterministic-code/datasources-cli generate all --dialect csharp
 ```
 ```rust
-npx @datasources/cli generate all --dialect rust
+npx @deterministic-code/datasources-cli generate all --dialect rust
 ```
 ```typescript
-npx @datasources/cli generate all --dialect typescript
+npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
@@ -275,7 +275,7 @@ let updated: Response = users.update(&created, None).await?;
 let deleted: Response = users.delete(&created, None).await?;
 ```
 ```typescript
-import { Datasource } from "@datasources/core";
+import { Datasource } from "@deterministic-code/datasources";
 
 const ds = Datasource.default;
 

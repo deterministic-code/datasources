@@ -243,7 +243,7 @@ const packagesTable = () =>
   [
     "## Provider packages",
     "",
-    "Install providers with `npx @datasources/cli add <name>`. Do not invent package names.",
+    "Install providers with `npx @deterministic-code/datasources-cli add <name>`. Do not invent package names.",
     "",
     "| Provider | npm | cargo | nuget |",
     "| --- | --- | --- | --- |",

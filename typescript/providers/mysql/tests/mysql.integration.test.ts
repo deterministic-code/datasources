@@ -5,7 +5,7 @@ import {
   ReturnStatement,
   ExecuteStoredProcedureStatement,
   StatementTextRenderer,
-} from "@datasources/core";
+} from "@deterministic-code/datasources";
 import { ensureCompose } from "../../ensure-compose.ts";
 import {
   loadDialect,
