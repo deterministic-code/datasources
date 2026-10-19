@@ -49,6 +49,7 @@ pub fn overlay_of(table: &SqlTable) -> DatasourceTable {
         fields: table.overlays.clone(),
         indexes: table.indexes.clone(),
         unique_index_fields: table.unique_index_fields.clone(),
+        use_optimistic_concurrency: None,
     }
 }
 

@@ -254,6 +254,8 @@ fn literal_value(value: &deterministic_generators_common::YamlLiteral) -> Value 
         deterministic_generators_common::YamlLiteral::Number(n) => Value::Number(serde_yaml::Number::from(*n)),
         deterministic_generators_common::YamlLiteral::Bool(flag) => Value::Bool(*flag),
         deterministic_generators_common::YamlLiteral::Null => Value::Null,
+        deterministic_generators_common::YamlLiteral::EmptyArray => Value::Sequence(vec![]),
+        deterministic_generators_common::YamlLiteral::EmptyMap => Value::Mapping(Default::default()),
     }
 }
 
@@ -305,6 +307,16 @@ fn read_field(name: &str, node: &YamlCursor) -> SpecTypeField {
     let raw = node.str("type").unwrap_or_else(|| "string".into());
     let (kind, base, is_array, is_map) = parse_field_type(&raw);
     let (references, pair) = references_of(node);
+    let authored = node.has("default_value");
+    let default_value = if authored {
+        node.literal("default_value")
+    } else if is_array {
+        Some(Value::Sequence(vec![]))
+    } else if is_map {
+        Some(Value::Mapping(Default::default()))
+    } else {
+        None
+    };
     SpecTypeField {
         name: name.into(),
         type_name: raw,
@@ -317,12 +329,8 @@ fn read_field(name: &str, node: &YamlCursor) -> SpecTypeField {
         size: size_of(node),
         references,
         reference_pair: pair,
-        has_default: node.has("default_value"),
-        default_value: if node.has("default_value") {
-            node.literal("default_value")
-        } else {
-            None
-        },
+        has_default: authored || default_value.is_some(),
+        default_value,
         source: None,
         original: None,
     }
@@ -363,6 +371,12 @@ fn parse_datasource(yaml: &str, types: &[SpecType]) -> Result<Vec<DatasourceTabl
                     is_unique: field.has("is_unique").then(|| field.bool("is_unique")),
                     mapping: field.str("mapping"),
                     is_fixed_id: field.has("is_fixed_id").then(|| field.bool("is_fixed_id")),
+                    is_optimistic_concurrency: field
+                        .has("is_optimistic_concurrency")
+                        .then(|| field.bool("is_optimistic_concurrency")),
+                    use_native_row_version: field
+                        .has("use_native_row_version")
+                        .then(|| field.bool("use_native_row_version")),
                 })
                 .collect();
             DatasourceTable {
@@ -371,6 +385,9 @@ fn parse_datasource(yaml: &str, types: &[SpecType]) -> Result<Vec<DatasourceTabl
                 fields: overlays,
                 indexes,
                 unique_index_fields: unique,
+                use_optimistic_concurrency: node
+                    .has("use_optimistic_concurrency")
+                    .then(|| node.bool("use_optimistic_concurrency")),
             }
         })
         .collect();
@@ -390,6 +407,7 @@ fn parse_datasource(yaml: &str, types: &[SpecType]) -> Result<Vec<DatasourceTabl
             fields: vec![],
             indexes: vec![],
             unique_index_fields: vec![],
+            use_optimistic_concurrency: None,
         }
     });
     Ok(tables
