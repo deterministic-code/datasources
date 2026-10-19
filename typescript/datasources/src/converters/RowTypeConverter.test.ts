@@ -58,7 +58,16 @@ describe("MetaDataRowTypeConverter", () => {
     expect(bare.convert({ Type: 4 }, Bare).Type).toEqual({ id: 4 });
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: { Id: 3 } })).Type).toBe(3);
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: { id: 5 } })).Type).toBe(5);
+    expect(converter.reverseConvert(Object.assign(new Item(), { Type: 9 as never })).Type).toBe(9);
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: undefined as never })).Type).toBeUndefined();
+    class Dated {
+      created = new Date(0);
+      blob = new Uint8Array();
+    }
+    const dated = new MetaDataRowTypeConverter<Dated>();
+    const created = new Date("2024-01-15T10:00:00.000Z");
+    const blob = new Uint8Array([1, 2]);
+    expect(dated.reverseConvert(Object.assign(new Dated(), { created, blob }))).toEqual({ created, blob });
     class Flip extends TypeConverter<Cell, Cell> {
       convert = (value: Cell): Cell => value;
       reverseConvert = (): Cell => 7;

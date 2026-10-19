@@ -356,6 +356,7 @@ dependencies = [
  "datasources-mysql",
  "datasources-postgres",
  "datasources-sqlite",
+ "futures-util",
  "rusqlite",
  "serde",
  "serde_json",
@@ -558,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "datasources"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "abi_stable",
  "async-trait",
@@ -575,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-mysql"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -591,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-postgres"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -609,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-sqlite"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "chrono",

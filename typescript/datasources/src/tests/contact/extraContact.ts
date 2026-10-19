@@ -54,7 +54,7 @@ export const addExtraContact = async (
   const created = await service.create(contact);
   if (!(created.Id > 0)) throw new Error("create returned no id");
   const loaded = (
-    await collectAsync(service.read(new Where(new Operator.Equals("Id", contact.Id))))
+    await collectAsync(service.read(new Where(new Operator.Equals("Id", created.Id))))
   )[0];
   if (!loaded) throw new Error("extra contact missing after create");
   return loaded;

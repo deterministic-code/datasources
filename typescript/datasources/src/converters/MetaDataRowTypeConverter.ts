@@ -5,7 +5,7 @@ import type { IMapper } from "../mappers/IMapper.ts";
 import { IdentityMapper } from "../mappers/IdentityMapper.ts";
 
 const scalarId = (value: Cell | object | undefined): Cell | undefined => {
-  if (value === undefined || value === null || typeof value !== "object" || value instanceof Date || value instanceof Uint8Array)
+  if (value === undefined || value === null || typeof value !== "object")
     return value === undefined ? undefined : (value as Cell);
   const record = value as Record<string, Cell | undefined>;
   return record.Id !== undefined ? record.Id : record.id;

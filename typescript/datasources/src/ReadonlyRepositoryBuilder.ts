@@ -19,7 +19,7 @@ export class ReadonlyRepositoryBuilder<T = object> {
     const propertyMappings = options.propertyMappings ?? new IdentityMapper<string>();
     this.entityMapper = entityMapper;
     this.propertyMapper = propertyMappings;
-    const entity = entityMapper.map(options.entity ?? options.type?.name ?? "");
+    const entity = options.entity ?? options.type?.name ?? "";
     const names = options.readProperties ?? (options.type ? fieldNamesOf(options.type) : []);
     if (objectConverter instanceof MetaDataRowTypeConverter && options.type) {
       const instance = new options.type() as Record<string, string | number | boolean | bigint | null | object>;
@@ -27,13 +27,18 @@ export class ReadonlyRepositoryBuilder<T = object> {
       objectConverter.referenceColumns = propertyMappings;
       for (const name of names) {
         const value = instance[name];
-        if (value !== null && typeof value === "object" && !Array.isArray(value))
+        if (
+          value !== null &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          !(value instanceof Date) &&
+          !(value instanceof Uint8Array)
+        )
           objectConverter.references.add(name);
       }
     }
-    const columns = [...names]
-      .map((name) => propertyMappings.map(name))
-      .sort((left, right) => left.localeCompare(right));
+    const columns = [...names].sort((left, right) =>
+      propertyMappings.map(left).localeCompare(propertyMappings.map(right)));
     return {
       connection,
       rowConverter,

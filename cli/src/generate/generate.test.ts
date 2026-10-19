@@ -17,8 +17,13 @@ import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
 
 const specDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/contacts-crud-enriched-medium-rest-shared/deterministic");
+const userRolesDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/user-roles-simple-cli-shared/deterministic");
 const typesYaml = readFileSync(join(specDir, "types.yaml"), "utf8");
 const datasourceYaml = readFileSync(join(specDir, "datasource.yaml"), "utf8");
+const userRolesFiles = (): Record<string, string> => ({
+  "types.yaml": readFileSync(join(userRolesDir, "types.yaml"), "utf8"),
+  "datasource.yaml": readFileSync(join(userRolesDir, "datasource.yaml"), "utf8"),
+});
 const contactsFiles = (): Record<string, string> => ({ "types.yaml": typesYaml, "datasource.yaml": datasourceYaml });
 
 const request = (
@@ -360,6 +365,28 @@ types:
     expect(script).toContain("contacts");
     expect(script).toContain("OldContactsTbl");
     expect(script).toContain("CntID");
+  });
+
+  it("emits C# auto-properties without a semicolon after the accessor", async () => {
+    const contacts = (await deterministic.generateTypes(request("csharp")))
+      .filter((entry) => entry.kind === "content")
+      .map((entry) => entry.contents)
+      .join("\n");
+    expect(contacts).toContain("{ get; set; }");
+    expect(contacts).not.toContain("{ get; set; };");
+    const userRoles = (
+      await deterministic.generateTypes({
+        dialect: "csharp",
+        reader: memoryReader(userRolesFiles()),
+        settings: { "backend.datasources": "sqlite" },
+      })
+    )
+      .filter((entry) => entry.kind === "content")
+      .map((entry) => entry.contents)
+      .join("\n");
+    expect(userRoles).toMatch(/\{ get; set; \} = /);
+    expect(userRoles).toMatch(/\{ get; set; \}\n/);
+    expect(userRoles).not.toContain("{ get; set; };");
   });
 
   it("skips an abstract parent and rejects a repository cycle", async () => {

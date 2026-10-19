@@ -76,7 +76,7 @@ describe("run", () => {
     expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_URL=sqlite:\/\/\/:memory:/);
     expect(files[join(cwd, ".env")]).toMatch(/CUSTOM=keep/);
     expect(io.ran[0]).toMatch(/npm install/);
-    expect(io.ran[0]).toMatch(/@datasources\/sqlite/);
+    expect(io.ran[0]).toMatch(/@deterministic-code\/datasources-sqlite/);
     expect(io.ran[0]).not.toMatch(/better-sqlite3/);
     expect(io.ran).toContain("npm install @deterministic-code/migraters");
     expect(io.ran).toContain("npx migrate-init --dialect sqlite");

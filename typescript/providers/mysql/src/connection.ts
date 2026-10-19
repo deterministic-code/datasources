@@ -59,6 +59,7 @@ export class MysqlConnection implements IConnection {
       this.client = await this.connect(this.url);
     }
     await this.client.query("SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')");
+    await this.client.query("SET time_zone = '+00:00'");
     this.isOpen = true;
   }
 
@@ -71,7 +72,7 @@ export class MysqlConnection implements IConnection {
   [Symbol.asyncDispose] = (): Promise<void> => this.close();
 
   async startTransaction(
-    isolation: IsolationLevelName = IsolationLevel.Serializable,
+    isolation: IsolationLevelName = IsolationLevel.ReadCommitted,
   ): Promise<ITransaction> {
     this.ensureOpen();
     const client = this.require();

@@ -8,7 +8,7 @@ import { contactWith, expectContactsView } from "../../../datasources/src/tests/
 import { logMapped } from "../../../datasources/src/tests/contact/logMapped.ts";
 import { addExtraContact } from "../../../datasources/src/tests/contact/extraContact.ts";
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
-import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
+import { seedContactCount, seedContactsSql, seedIdentitySql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
 import { execute, Native } from "@deterministic-code/datasources";
@@ -59,7 +59,11 @@ describe("contacts readonly repository", () => {
       const command = new PostgresCommand(connection);
       for (const statement of tables("contacts", quote))
         await execute(command, statement);
-      for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql(seedContactCount, "'\\x'")])
+      for (const sql of [
+        ...statementsOf(readFileSync(seedPath, "utf8")),
+        ...seedContactsSql(seedContactCount, "'\\x'"),
+        ...seedIdentitySql("postgres"),
+      ])
         await command.executeNative(new Native(sql));
 
       const { eager, enriched } = await contactsParity(connection, specVerbose());

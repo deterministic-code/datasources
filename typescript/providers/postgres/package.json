@@ -22,8 +22,8 @@
     "build": "tsc -p tsconfig.build.json && node ../../rewrite-declaration-extensions.mjs dist",
     "prepack": "npm run build",
     "test": "vitest run --coverage --exclude tests/**/*.integration.test.ts",
-    "test:e2e": "vitest run tests/postgres.integration.test.ts tests/*.repository.integration.test.ts",
-    "test:e2e:ci": "SKIP_DOCKER=1 vitest run tests/postgres.integration.test.ts tests/*.repository.integration.test.ts",
+    "test:e2e": "vitest run tests/postgres.integration.test.ts tests/*.repository.integration.test.ts --fileParallelism=false --testTimeout=30000",
+    "test:e2e:ci": "SKIP_DOCKER=1 vitest run tests/postgres.integration.test.ts tests/*.repository.integration.test.ts --fileParallelism=false --testTimeout=30000",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

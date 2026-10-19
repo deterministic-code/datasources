@@ -94,7 +94,7 @@ mod tests {
         let connection = MemoryConnection::from_options(None);
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
-        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+        assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
     }
 
     #[tokio::test]
@@ -103,7 +103,7 @@ mod tests {
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
         txn.commit().await.unwrap();
-        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+        assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
     }
 
     #[tokio::test]
@@ -112,7 +112,7 @@ mod tests {
         connection.open().await.unwrap();
         let txn = connection.start_transaction(None).await.unwrap();
         txn.abort().await.unwrap();
-        assert_eq!(txn.isolation(), IsolationLevel::Serializable);
+        assert_eq!(txn.isolation(), IsolationLevel::ReadCommitted);
     }
 
     #[tokio::test]

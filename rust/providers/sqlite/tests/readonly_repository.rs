@@ -416,10 +416,10 @@ mod users_view_roles {
                 (1, 'admin'),
                 (2, 'editor'),
                 (3, 'viewer');
-            INSERT INTO user_roles (user_id, role_id) VALUES
-                ('{ADA}', 1),
-                ('{ADA}', 2),
-                ('{GRACE}', 3);
+            INSERT INTO user_roles (user_id, role_id, name) VALUES
+                ('{ADA}', 1, 'admin'),
+                ('{ADA}', 2, 'editor'),
+                ('{GRACE}', 3, 'viewer');
             "
         )
     }

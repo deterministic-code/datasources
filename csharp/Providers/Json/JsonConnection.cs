@@ -56,7 +56,7 @@ internal sealed class JsonConnection : IConnection
         return Task.CompletedTask;
     }
 
-    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.Serializable)
+    public Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         EnsureOpen();
         _snapshot = Data.DeepClone();

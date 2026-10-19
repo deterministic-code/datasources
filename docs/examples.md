@@ -311,7 +311,7 @@ CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, 
 CREATE TABLE user_type (id int, name string NOT NULL, CONSTRAINT pk_user_type PRIMARY KEY (id));
 CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, created datetime NOT NULL, user_type_id int NOT NULL, CONSTRAINT pk_user PRIMARY KEY (id));
 CREATE TABLE roles (id int, name string NOT NULL, CONSTRAINT pk_roles PRIMARY KEY (id));
-CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL)
+CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL, name string NOT NULL)
 ```
 
 ### user-view-version

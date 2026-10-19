@@ -119,7 +119,7 @@ describe("SqliteConnection", () => {
       "BEGIN",
       "ROLLBACK",
     ]);
-    expect(txn.isolation).toBe("serializable");
+    expect(txn.isolation).toBe("readCommitted");
     await connection.close();
     expect(db.closed).toBe(true);
     expect(() => connection.ensureOpen()).toThrow(DatasourceError);

@@ -68,6 +68,9 @@ export type RepositorySpec = {
 
 const idsOf = (spec: RepositoryTypeSpec): Set<string> => new Set(spec.ids);
 
+const assigned = (value: Scalar | RepositoryRow | undefined): boolean =>
+  value !== null && value !== undefined && value !== "" && value !== 0 && typeof value !== "object";
+
 const columnsOf = (spec: RepositoryTypeSpec): string[] =>
   Object.keys(spec.fields).sort((left, right) => left.localeCompare(right));
 
@@ -108,12 +111,7 @@ const idWhere = (spec: RepositoryTypeSpec, id: Scalar) =>
 export const physicalTableOf = (type: RepositoryTypeSpec): string =>
   type.crudMapper?.entity ?? type.table;
 
-const withStatementSql = (sql: string, write: boolean, type: RepositoryTypeSpec): string =>
-  `${sql}${
-    write
-      ? (type.crudMapper?.writeSuffix ?? "")
-      : (type.crudMapper?.querySuffix ?? "")
-  }`;
+const withStatementSql = (sql: string, _write: boolean, _type: RepositoryTypeSpec): string => sql;
 
 const insertedIdSql = (provider: string, column: string): string =>
   ({
@@ -129,10 +127,8 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
   const table = physicalTableOf(type);
   return spec.steps.map((step) => {
     if (step.CREATE) {
-      const fields = fieldsOf(
-        flattenRepositoryRow(step.CREATE.row, type.mappings),
-        (col) => !ids.has(col),
-      );
+      const flat = flattenRepositoryRow(step.CREATE.row, type.mappings);
+      const fields = fieldsOf(flat, (col) => !ids.has(col) || assigned(flat[col]));
       return withStatementSql(render(new InsertStatement(table, fields)), true, type);
     }
     if (step.READ)
@@ -194,9 +190,11 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
     throw new Error(`${spec.name}: empty step`);
   }).flatMap((sql, index) => {
     const step = spec.steps[index];
+    const id = spec.type.ids[0] ?? "id";
     const inserted =
       step?.CREATE && spec.type.ids.length === 1
-        ? insertedIdSql(provider, spec.type.ids[0] ?? "id")
+      && !assigned(flattenRepositoryRow(step.CREATE.row, type.mappings)[id])
+        ? insertedIdSql(provider, id)
         : "";
     return inserted ? [sql, inserted] : [sql];
   });

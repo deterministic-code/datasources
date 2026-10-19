@@ -19,6 +19,7 @@ import {
 } from "@deterministic-code/datasources";
 import {
   expectedRepositoryConsoleSignatures,
+  flattenRepositoryRow,
   physicalTableOf,
   type AffectedExpect,
   type CanonicalType,
@@ -197,6 +198,8 @@ export const runRepositorySpec = async (
   for (const statement of tables(spec.schema, dialect.quote, rename))
     await execute(statement);
   const mapping = new MetaDataRowTypeConverter<SpecRow>(fieldsOf(spec.type, types));
+  const mappings = spec.type.mappings ?? {};
+  const flatten = (row: RepositoryRow): RepositoryRow => flattenRepositoryRow(row, mappings);
   const repo = new CRUDRepository<SpecRow>(connection, {
     ids: spec.type.ids,
     type: typeOf(spec.type),
@@ -210,34 +213,34 @@ export const runRepositorySpec = async (
   for (const step of spec.steps) {
     await ({
       CREATE: async () => {
-        if (step.CREATE) await repo.create(step.CREATE.row);
+        if (step.CREATE) await repo.create(flatten(step.CREATE.row));
       },
       READ: async () => {
         if (!step.READ) return;
         const row = await repo.readSingle(new Where(new Operator.Equals("id", step.READ.id)));
-        if ("expect" in step.READ) assertRow(`${spec.name} READ`, row, step.READ.expect ?? null);
+        if ("expect" in step.READ) assertRow(`${spec.name} READ`, row, step.READ.expect ? flatten(step.READ.expect) : null);
       },
       QUERY: async () => {
         if (!step.QUERY) return;
-        const query = step.QUERY.where ? whereOf(mapping, step.QUERY.where) : undefined;
+        const query = step.QUERY.where ? whereOf(mapping, flatten(step.QUERY.where)) : undefined;
         const rows: SpecRow[] = [];
         for await (const row of repo.read(query)) rows.push(row);
-        if (step.QUERY.expect) assertRows(`${spec.name} QUERY`, rows, step.QUERY.expect);
+        if (step.QUERY.expect) assertRows(`${spec.name} QUERY`, rows, step.QUERY.expect.map(flatten));
       },
       READBY: async () => {
         if (!step.READBY) return;
-        const row = await repo.readSingle(whereOf(mapping, step.READBY.where));
-        if ("expect" in step.READBY) assertRow(`${spec.name} READBY`, row, step.READBY.expect ?? null);
+        const row = await repo.readSingle(whereOf(mapping, flatten(step.READBY.where)));
+        if ("expect" in step.READBY) assertRow(`${spec.name} READBY`, row, step.READBY.expect ? flatten(step.READBY.expect) : null);
       },
       UPDATE: async () => {
         if (!step.UPDATE) return;
-        assertAffected(`${spec.name} UPDATE`, await repo.update(step.UPDATE.row), step.UPDATE.expect);
+        assertAffected(`${spec.name} UPDATE`, await repo.update(flatten(step.UPDATE.row)), step.UPDATE.expect);
       },
       UPDATEBY: async () => {
         if (!step.UPDATEBY) return;
         assertAffected(
           `${spec.name} UPDATEBY`,
-          await repo.update(step.UPDATEBY.row, whereOf(mapping, step.UPDATEBY.where)),
+          await repo.update(flatten(step.UPDATEBY.row), whereOf(mapping, flatten(step.UPDATEBY.where))),
           step.UPDATEBY.expect,
         );
       },

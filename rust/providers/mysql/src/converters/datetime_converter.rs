@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use datasources::{Result, TypeConverter, Value};
 
 fn stamp(date: DateTime<Utc>) -> String {
@@ -12,6 +12,11 @@ impl TypeConverter<Value, Value> for DateTimeConverter {
         Ok(match from {
             Value::Text(text) => DateTime::parse_from_rfc3339(text)
                 .map(|parsed| Value::DateTime(parsed.with_timezone(&Utc)))
+                .or_else(|_| {
+                    NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f")
+                        .or_else(|_| NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S"))
+                        .map(|naive| Value::DateTime(naive.and_utc()))
+                })
                 .unwrap_or_else(|_| from.clone()),
             other => other.clone(),
         })
@@ -43,6 +48,12 @@ mod tests {
         assert_eq!(
             converter.reverse_convert(&native).unwrap(),
             Value::from("2020-01-02 03:04:05.000")
+        );
+        assert_eq!(
+            converter
+                .convert(&Value::from("2020-01-02 03:04:05.000"))
+                .unwrap(),
+            native
         );
         assert_eq!(
             converter.convert(&Value::from("nope")).unwrap(),
