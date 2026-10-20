@@ -482,21 +482,57 @@ types:
       - no_owner:
           type: empty_dict{}
       - keyed:
-          type: keyed_dict{}
+          type: keyed_dict_map{}
+          references: keyed_dict.bag_id
+      - named:
+          type: named_dict_map{}
+          references: named_dict.bag_id
   - empty_dict:
-      tags: [datasource_type]
+      tags: [view_type]
       inherits: dictionary
       fields:
       - key:
           type: string
+      - value:
+          type: string
   - keyed_dict:
       tags: [datasource_type]
-      inherits: dictionary
+      inherits: set
       fields:
       - bag_id:
           references: bag.id
       - key:
           type: string
+      - value:
+          type: string
+  - keyed_dict_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+      - key:
+          type: string
+      - value:
+          type: string
+  - named_dict:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+      - bag_id:
+          references: bag.id
+      - attribute_name:
+          type: string
+      - attribute_value:
+          type: string
+  - named_dict_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+      - key:
+          type: string
+          references: named_dict.attribute_name
+      - value:
+          type: string
+          references: named_dict.attribute_value
   - solo_card:
       tags: [view_type]
       inherits: solo
@@ -518,8 +554,8 @@ types:
     planRepositories(
       {
         ...contacts,
-        types: contacts.types.map(withoutValue("contact_settings")),
-        expandedTypes: contacts.expandedTypes.map(withoutValue("contact_settings")),
+        types: contacts.types.map(withoutValue("contact_settings_map")),
+        expandedTypes: contacts.expandedTypes.map(withoutValue("contact_settings_map")),
       },
       "typescript",
       { "backend.datasources": "sqlite" },
@@ -545,6 +581,10 @@ types:
     expect(models.some((model) => model.specName === "base")).toBe(false);
     expect(models.some((model) => model.specName === "mapped_parent")).toBe(true);
     expect(models.some((model) => model.specName === "abstract_ref")).toBe(true);
+    const named = models.find((model) => model.specName === "bag")?.enrichments.find((item) => item.destination === "Named");
+    expect(named?.relatedKey).toBe("BagId");
+    expect(named?.relatedProperty).toBe("AttributeValue");
+    expect(named?.via).toBe("named_dict");
     const cycle = {
       "types.yaml": `version: 1.0.0
 types:

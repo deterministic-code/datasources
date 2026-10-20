@@ -256,7 +256,7 @@ types:
             type: string
   - contact_settings:
       tags: [datasource_type]
-      inherits: dictionary
+      inherits: set
       fields:
         - contact_id:
             type: integer
@@ -267,15 +267,74 @@ types:
             type: string
   - contact_preferences:
       tags: [datasource_type]
-      inherits: dictionary
+      inherits: set
       fields:
         - contact_id:
             type: integer
             references: contact.id
         - key:
             type: string
+        - locale:
+            type: string
+        - timezone:
+            type: string
+  - contact_settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+        - value:
+            type: string
+  - contact_preferences_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
         - value:
             type: locale_preferences
+  - contact_view:
+      tags: [view_type]
+      inherits: contact
+      fields:
+        - settings:
+            type: contact_settings_map{}
+            references: contact_settings.contact_id
+        - prefs:
+            type: contact_preferences_map{}
+            references: contact_preferences.contact_id
+  - phone:
+      tags: [datasource_type]
+      inherits: set
+  - phone_attribute:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - phone_id:
+            type: integer
+            references: phone.id
+        - attribute_name:
+            type: string
+        - attribute_value:
+            type: string
+  - phone_attribute_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            references: phone_attribute.attribute_name
+        - value:
+            type: string
+            references: phone_attribute.attribute_value
+  - phone_view:
+      tags: [view_type]
+      inherits: phone
+      fields:
+        - attributes:
+            type: phone_attribute_map{}
+            references: phone_attribute.phone_id
   - card_labels:
       tags: [view_type]
       inherits: dictionary
@@ -307,7 +366,7 @@ types:
     assert!(settings.contains("\"contact_id\""));
     assert!(settings.contains("\"key\""));
     assert!(settings.contains("\"value\""));
-    assert!(!Regex::new(r#"(?m)^\s*"id""#).unwrap().is_match(&settings));
+    assert!(Regex::new(r#"(?m)^\s*"id""#).unwrap().is_match(&settings));
     let prefs = Regex::new(r#"CREATE TABLE "contact_preferences" \(([\s\S]*?)\);"#)
         .unwrap()
         .captures(&sql)
@@ -322,6 +381,11 @@ types:
     assert!(Regex::new(r#"CREATE UNIQUE INDEX .* ON "contact_preferences""#)
         .unwrap()
         .is_match(&sql));
+    assert!(
+        Regex::new(r#"CREATE UNIQUE INDEX .* ON "phone_attributes".*"phone_id".*"attribute_name""#)
+            .unwrap()
+            .is_match(&sql)
+    );
 }
 
 fn frozen_diff(types_yaml: &str) -> String {

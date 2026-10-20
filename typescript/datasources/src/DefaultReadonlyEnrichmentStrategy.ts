@@ -116,7 +116,12 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
           ? (row[enrichment.relatedProperty] ?? null)
           : Object.fromEntries(
               Object.entries(row).filter(
-                ([name]) => name !== mapKey && name !== enrichment.relatedKey && name !== "Id" && name !== "id",
+                ([name]) =>
+                  name !== mapKey &&
+                  name !== enrichment.relatedKey &&
+                  !["id", "Id", "uuid", "Uuid", "created", "Created", "updated", "Updated", "version", "Version"].includes(
+                    name,
+                  ),
               ),
             );
       }

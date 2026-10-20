@@ -1,6 +1,6 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
-import { identityColumns, isCollectionField, isDictionaryType, isOwnerIdentityRef, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
+import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
@@ -66,8 +66,8 @@ export const planRepositories = (
     const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
     const projected = new Set(Object.values(authored.mapping ?? {}));
-    const columns = (isDictionaryType(tableType) ? persistedColumnFields(tableType, expanded) : tableType.fields)
-      .filter((field) => !isCollectionField(field) && !projected.has(field.name));
+    const columns = persistedColumnFields(tableType, expanded)
+      .filter((field) => !projected.has(field.name));
     return [
       {
         specName: authored.name,
@@ -127,16 +127,24 @@ const relations = (
     if (!isCollectionField(field)) continue;
     if (field.isMap === true) {
       const dict = expanded.get(field.base) ?? types.get(field.base);
-      const owner = dict?.fields.find((item) => isOwnerIdentityRef(item.references, dict.name, expanded));
+      const owner = referenceOf(field.references);
       if (dict === undefined || owner === undefined) continue;
-      const via = named(dict.name);
+      const via = named(owner.type);
       const value = dict.fields.find((item) => item.name === "value");
-      const nested = value === undefined ? undefined : expanded.get(value.base) ?? types.get(value.base);
+      const nested =
+        value !== undefined && value.kind === "type" && !value.isArray && value.isMap !== true
+          ? expanded.get(value.base) ?? types.get(value.base)
+          : undefined;
+      const roleColumn = (role: string): string => {
+        const item = dict.fields.find((entry) => entry.name === role);
+        const ref = referenceOf(item?.references);
+        return ref?.type === owner.type ? ref.field : role;
+      };
       planned.push({
         destination: property(field.name),
         source,
-        relatedKey: property(owner.name),
-        relatedProperty: nested === undefined ? property("value") : undefined,
+        relatedKey: property(owner.field),
+        relatedProperty: nested === undefined ? property(roleColumn("value")) : undefined,
         kind: "dictionary",
         via: via.via,
         viaType: via.viaType,

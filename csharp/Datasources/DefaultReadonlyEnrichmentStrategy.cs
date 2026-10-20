@@ -115,7 +115,16 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         if (valueType == typeof(string) || valueType.IsValueType)
             return Get(item, "Value") ?? Get(item, "value");
         var copy = Activator.CreateInstance(valueType)!;
-        var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { MapKey(enrichment.RelatedKey), enrichment.RelatedKey };
+        var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            MapKey(enrichment.RelatedKey),
+            enrichment.RelatedKey,
+            "id",
+            "uuid",
+            "created",
+            "updated",
+            "version",
+        };
         foreach (var prop in item.GetType().GetProperties())
         {
             if (skip.Contains(prop.Name)) continue;

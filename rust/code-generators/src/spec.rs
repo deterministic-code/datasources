@@ -876,36 +876,47 @@ fn identity_names_of(
     }
 }
 
-pub fn persisted_column_fields(type_: &SpecType, by_name: &HashMap<String, SpecType>) -> Vec<SpecTypeField> {
-    if !is_dictionary_type(Some(type_)) {
-        return column_fields(type_.fields.clone());
-    }
-    let Some(value) = type_.fields.iter().find(|f| f.name == "value") else {
-        return column_fields(type_.fields.clone());
+pub fn persisted_column_fields(type_: &SpecType, _by_name: &HashMap<String, SpecType>) -> Vec<SpecTypeField> {
+    column_fields(type_.fields.clone())
+}
+
+fn role_column(dict: &SpecType, role: &str, table_name: &str) -> String {
+    let Some(field) = dict.fields.iter().find(|item| item.name == role) else {
+        return role.into();
     };
-    if value.kind != "type" || value.is_array || value.is_map {
-        return column_fields(type_.fields.clone());
+    if let Some(references) = field.references.as_deref() {
+        if let Some((table, column)) = split_dot(references) {
+            if table == table_name {
+                return column;
+            }
+        }
     }
-    let Some(nested) = by_name.get(&value.base) else {
-        return column_fields(type_.fields.clone());
-    };
-    let mut cols = column_fields(type_.fields.iter().filter(|f| f.name != "value").cloned());
-    cols.extend(column_fields(nested.fields.clone()));
-    cols
+    role.into()
 }
 
 pub fn dictionary_unique_columns(type_: &SpecType, by_name: &HashMap<String, SpecType>) -> Vec<String> {
-    if !is_dictionary_type(Some(type_)) {
-        return vec![];
+    for candidate in by_name.values() {
+        for field in &candidate.fields {
+            if !field.is_map {
+                continue;
+            }
+            let Some(dict) = by_name.get(&field.base) else {
+                continue;
+            };
+            if !is_dictionary_type(Some(dict)) {
+                continue;
+            }
+            let Some(references) = field.references.as_deref() else {
+                continue;
+            };
+            let Some((table, owner)) = split_dot(references) else {
+                continue;
+            };
+            if table != type_.name {
+                continue;
+            }
+            return vec![owner, role_column(dict, "key", &type_.name)];
+        }
     }
-    let mut owners: Vec<String> = type_
-        .fields
-        .iter()
-        .filter(|f| is_owner_identity_ref(f, &type_.name, by_name))
-        .map(|f| f.name.clone())
-        .collect();
-    if type_.fields.iter().any(|f| f.name == "key") {
-        owners.push("key".into());
-    }
-    owners
+    vec![]
 }
