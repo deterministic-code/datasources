@@ -2,8 +2,6 @@ namespace Datasources.CodeGenerators;
 
 public static class SqlSchema
 {
-    static readonly HashSet<string> GeneratedIdTypes = ["integer", "biginteger", "uuid", "string"];
-
     public static bool UseStoredProcedures(IReadOnlyDictionary<string, string> settings) =>
         settings.TryGetValue("datasource.use_stored_procedures", out var value) && value == "true";
 
@@ -36,12 +34,14 @@ public static class SqlSchema
     }
 
     public static bool UsesGeneratedIdColumn(SqlTable table, SpecTypeField field) =>
-        IsGeneratedIdentity(table)
-        && field.Name == TableIdentity(table).FirstOrDefault()
-        && GeneratedIdTypes.Contains(field.Type);
+        field.IsId && IsGeneratedIdentity(table);
 
     public static IReadOnlyList<SqlTable> From(ParsedSpec spec)
     {
+        foreach (var type in spec.Types)
+            foreach (var field in type.Fields)
+                if (field.Name == "id" && !field.IsId)
+                    throw new InvalidOperationException($"{type.Name}.id must have is_id: true");
         var overlays = SpecTables.TableByName(spec);
         var byName = spec.ExpandedTypes.ToDictionary(t => t.Name, StringComparer.Ordinal);
         return SpecTables.DatasourceTypesOf(spec).Select(type =>

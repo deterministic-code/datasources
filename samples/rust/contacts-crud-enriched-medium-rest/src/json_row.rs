@@ -87,7 +87,10 @@ fn rows_to_map(value: &Value) -> Json {
                 let rest: Map<String, Json> = row
                     .iter()
                     .filter(|(name, _)| {
-                        *name != "key" && *name != "contact_id" && *name != "id"
+                        !matches!(
+                            name.as_str(),
+                            "key" | "contact_id" | "id" | "uuid" | "created" | "updated" | "version"
+                        )
                     })
                     .map(|(name, cell)| (name.clone(), value_json(cell)))
                     .collect();

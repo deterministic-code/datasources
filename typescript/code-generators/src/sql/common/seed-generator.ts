@@ -9,11 +9,13 @@ import { sqlStringLiteral } from "@deterministic-code/datasources";
 import { identityInsertStatementOf, seedInsertStatementOf } from "../statements.ts";
 import { renderSql, sqlDefault, type SqlDialect } from "./sql-dialect.ts";
 import { dialectConverter } from "./sql-dialect.ts";
+import { converterFieldOf } from "./converter-field.ts";
 import type { SqlMapping } from "./sql-mapping.ts";
 import {
   isGeneratedIdentity,
   overlayOf,
   tableIdentity,
+  usesGeneratedIdColumn,
   type LiveTable,
 } from "./sql-schema.ts";
 
@@ -104,8 +106,11 @@ export const seedSections = (
     const rows = seeds.get(table.name) ?? [];
     if (rows.length === 0) continue;
     const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
-    const t = pkType(table);
-    const identity = isGeneratedIdentity(table) && t !== "uuid" && t !== "string";
+    const pk = table.fields.find((field) => field.name === tableIdentity(table)[0]);
+    const identity =
+      pk != null &&
+      usesGeneratedIdColumn(table, pk) &&
+      sqlDefault(dialect, converterFieldOf(pk)) == null;
     const inserts = rows.map((seed) => {
       const cols = colsForRow(table, seed.row);
       const values = cols.map((c) => {

@@ -24,7 +24,7 @@ fn signature(line: &str) -> String {
         }
         _ => line.to_string(),
     };
-    drop_float_zeros(&replace_dates(&stripped))
+    drop_float_zeros(&replace_uuids(&replace_dates(&stripped)))
 }
 
 fn drop_float_zeros(text: &str) -> String {
@@ -46,6 +46,36 @@ fn drop_float_zeros(text: &str) -> String {
         i += 1;
     }
     out
+}
+
+fn replace_uuids(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    let mut out = String::new();
+    while i < bytes.len() {
+        if uuid_at(bytes, i) {
+            out.push_str("<uuid>");
+            i += 36;
+            continue;
+        }
+        out.push(bytes[i] as char);
+        i += 1;
+    }
+    out
+}
+
+fn uuid_at(bytes: &[u8], i: usize) -> bool {
+    if i + 36 > bytes.len() {
+        return false;
+    }
+    const DASHES: [usize; 4] = [8, 13, 18, 23];
+    bytes[i..i + 36].iter().enumerate().all(|(offset, byte)| {
+        if DASHES.contains(&offset) {
+            *byte == b'-'
+        } else {
+            byte.is_ascii_hexdigit()
+        }
+    })
 }
 
 fn replace_dates(text: &str) -> String {

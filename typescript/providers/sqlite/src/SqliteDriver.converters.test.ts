@@ -15,5 +15,6 @@ describe("SqliteDriver converters", () => {
       `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))`,
     );
     expect(driver.defaultValueConverter.convert("binary", "Hex('ab')")).toBe("X'ab'");
+    expect(driver.defaultValueConverter.convert("uuid", "NewId")).toContain("randomblob");
   });
 });

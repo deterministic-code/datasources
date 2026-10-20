@@ -170,6 +170,16 @@ fn dictionary_of(opts: DefaultValueOptions) -> HashMap<String, HashMap<String, D
             move |_| new_id.clone()
         }, None)]),
     );
+    dictionary.insert(
+        "binary".into(),
+        HashMap::from([entry(
+            "Hex",
+            r"^Hex\('([0-9a-fA-F]{2})*'\)$",
+            opts.hex_reverse.clone(),
+            opts.hex,
+            Some(|arg| format!("Hex('{arg}')")),
+        )]),
+    );
     dictionary
 }
 
@@ -209,6 +219,10 @@ mod tests {
         assert_eq!(
             converter.convert("datetime", "UtcNow").expect("ok"),
             Some("(NOW() AT TIME ZONE 'UTC')".into())
+        );
+        assert_eq!(
+            converter.convert("binary", "Hex('00')").expect("ok"),
+            Some("'\\x00'".into())
         );
     }
 }
