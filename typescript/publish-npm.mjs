@@ -9,10 +9,11 @@ const repo = resolve(tsRoot, "..");
 const cliRoot = join(repo, "cli");
 const argv = process.argv.slice(2);
 const doPublish = argv.includes("--publish");
+const cliOnly = argv.includes("--cli-only");
 const versionAt = argv.indexOf("--version");
 const stamp = versionAt >= 0 ? argv[versionAt + 1] : undefined;
 if (versionAt >= 0 && !stamp) {
-  console.error("usage: npm run publish:npm -- [--publish] [--version x.y.z]");
+  console.error("usage: npm run publish:npm -- [--publish] [--cli-only] [--version x.y.z]");
   process.exit(1);
 }
 
@@ -65,6 +66,36 @@ const published = (name, version) => {
     allowFail: true,
   });
   return result.status === 0 && result.stdout.trim() === version;
+};
+
+const assertVendoredOnMain = async () => {
+  const lock = JSON.parse(await readFile(join(cliRoot, "package-lock.json"), "utf8"));
+  const stale = [];
+  for (const [path, meta] of Object.entries(lock.packages ?? {})) {
+    if (!/^node_modules\/@deterministic-code\/[^/]+$/.test(path)) continue;
+    const resolved = String(meta.resolved ?? "");
+    const match = resolved.match(/github\.com\/deterministic-code\/(.+?)\.git#([0-9a-f]{40})$/);
+    if (!match) continue;
+    const [, name, sha] = match;
+    const remote = run(
+      "git",
+      ["ls-remote", `https://github.com/deterministic-code/${name}.git`, "refs/heads/main"],
+      repo,
+      { capture: true, allowFail: true },
+    );
+    const head = (remote.stdout ?? "").trim().split(/\s+/)[0] ?? "";
+    if (remote.status !== 0 || head.length !== 40) {
+      console.error(`cannot read main for ${name}`);
+      process.exit(remote.status ?? 1);
+    }
+    if (head !== sha)
+      stale.push(`${path} ${sha.slice(0, 7)} is behind main ${head.slice(0, 7)}`);
+  }
+  if (stale.length === 0) return;
+  console.error("bundled generator commits are behind GitHub main:");
+  for (const line of stale) console.error(`  ${line}`);
+  console.error("run npm update in cli/, commit package-lock.json, and publish a new CLI version");
+  process.exit(1);
 };
 
 const rewriteExports = (value) => {
@@ -193,7 +224,7 @@ const rewriteVendorManifest = async (dir, versions, version) => {
   await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
 };
 
-const stageCli = async (version, versions) => {
+const stageCli = async (version, versions, libraryVersion = version) => {
   const dest = await mkdtemp(join(tmpdir(), "ds-cli-"));
   const codegenSrc = join(tsRoot, "code-generators");
   const codegenDest = join(dest, "node_modules/@deterministic-code/datasources-code-generators");
@@ -210,12 +241,12 @@ const stageCli = async (version, versions) => {
           JSON.parse(await readFile(join(codegenSrc, "package.json"), "utf8")).exports,
         ),
         dependencies: {
-          "@deterministic-code/datasources": `^${version}`,
-          "@deterministic-code/datasources-mysql": `^${version}`,
-          "@deterministic-code/datasources-oracle": `^${version}`,
-          "@deterministic-code/datasources-postgres": `^${version}`,
-          "@deterministic-code/datasources-sqlite": `^${version}`,
-          "@deterministic-code/datasources-sqlserver": `^${version}`,
+          "@deterministic-code/datasources": `^${libraryVersion}`,
+          "@deterministic-code/datasources-mysql": `^${libraryVersion}`,
+          "@deterministic-code/datasources-oracle": `^${libraryVersion}`,
+          "@deterministic-code/datasources-postgres": `^${libraryVersion}`,
+          "@deterministic-code/datasources-sqlite": `^${libraryVersion}`,
+          "@deterministic-code/datasources-sqlserver": `^${libraryVersion}`,
           "@deterministic-code/deterministic-generators-common":
             versions["@deterministic-code/deterministic-generators-common"],
           "@deterministic-code/generators-common": versions["@deterministic-code/generators-common"],
@@ -235,7 +266,7 @@ const stageCli = async (version, versions) => {
     const to = join(detRoot, name);
     await cp(from, to, { recursive: true });
     await rm(join(to, "node_modules"), { recursive: true, force: true });
-    await rewriteVendorManifest(to, versions, version);
+    await rewriteVendorManifest(to, versions, libraryVersion);
   }
 
   await mkdir(join(dest, "bin"), { recursive: true });
@@ -252,8 +283,8 @@ const stageCli = async (version, versions) => {
   const dependencies = {
     "@deterministic-code/datasources-code-generators": versions["@deterministic-code/datasources-code-generators"],
     ...Object.fromEntries(vendorNames.map((name) => [`@deterministic-code/${name}`, versions[`@deterministic-code/${name}`]])),
-    "@deterministic-code/datasources": `^${version}`,
-    ...Object.fromEntries(sqlProviders.map((name) => [`@deterministic-code/datasources-${name}`, `^${version}`])),
+    "@deterministic-code/datasources": `^${libraryVersion}`,
+    ...Object.fromEntries(sqlProviders.map((name) => [`@deterministic-code/datasources-${name}`, `^${libraryVersion}`])),
     "@inquirer/prompts": "^7.8.0",
     yaml: "^2.6.0",
     mustache: "^4.2.0",
@@ -308,33 +339,61 @@ const smoke = async (tarballs) => {
   await rm(dir, { recursive: true, force: true });
 };
 
+const smokeCli = async (tarball) => {
+  const dir = await mkdtemp(join(tmpdir(), "ds-cli-smoke-"));
+  run("npm", ["init", "-y"], dir);
+  if (!existsSync(tarball)) {
+    console.error("missing packed tarball", tarball);
+    process.exit(1);
+  }
+  run("npm", ["install", tarball], dir);
+  run(join(dir, "node_modules/.bin/datasources"), ["--help"], dir);
+  await rm(dir, { recursive: true, force: true });
+};
+
 const packName = (name, version) =>
   `${name.replace("@", "").replace("/", "-")}-${version}.tgz`;
 
-console.log("building typescript packages");
-run("npm", ["run", "build"], tsRoot);
+if (!cliOnly) await assertVendoredOnMain();
+
+if (!cliOnly) {
+  console.log("building typescript packages");
+  run("npm", ["run", "build"], tsRoot);
+}
 console.log("building cli generators");
 run(process.execPath, [join(cliRoot, "scripts/build-generators.mjs")], cliRoot);
 console.log("compiling cli");
 await compileCli();
 
 const versions = await vendorVersions();
-const coreVersion = stamp ?? JSON.parse(await readFile(join(tsRoot, "datasources/package.json"), "utf8")).version;
+const publishedCore = run("npm", ["view", "@deterministic-code/datasources", "version"], repo, {
+  capture: true,
+  allowFail: true,
+});
+const libraryVersion =
+  stamp ??
+  (cliOnly && publishedCore.status === 0 && publishedCore.stdout.trim()
+    ? publishedCore.stdout.trim()
+    : JSON.parse(await readFile(join(tsRoot, "datasources/package.json"), "utf8")).version);
+const cliVersion = stamp ?? JSON.parse(await readFile(join(cliRoot, "package.json"), "utf8")).version;
 
 const staged = [];
-for (const pkg of libraries) {
-  const version = stamp ?? JSON.parse(await readFile(join(pkg.dir, "package.json"), "utf8")).version;
-  console.log(`staging ${pkg.name}@${version}`);
-  staged.push({ ...pkg, version, dest: await stageLibrary(pkg, version) });
+if (!cliOnly) {
+  for (const pkg of libraries) {
+    const version = stamp ?? JSON.parse(await readFile(join(pkg.dir, "package.json"), "utf8")).version;
+    console.log(`staging ${pkg.name}@${version}`);
+    staged.push({ ...pkg, version, dest: await stageLibrary(pkg, version) });
+  }
 }
-console.log(`staging @deterministic-code/datasources-cli@${coreVersion}`);
+console.log(`staging @deterministic-code/datasources-cli@${cliVersion}`);
 staged.push({
   dir: cliRoot,
   name: "@deterministic-code/datasources-cli",
-  version: stamp ?? JSON.parse(await readFile(join(cliRoot, "package.json"), "utf8")).version,
+  version: cliVersion,
   dest: await stageCli(
-    stamp ?? JSON.parse(await readFile(join(cliRoot, "package.json"), "utf8")).version,
+    cliVersion,
     { ...versions, "@deterministic-code/datasources-code-generators": stamp ?? versions["@deterministic-code/datasources-code-generators"] },
+    libraryVersion,
   ),
 });
 
@@ -347,7 +406,8 @@ for (const pkg of staged) {
 }
 
 console.log("smoke-testing packed tarballs");
-await smoke(tarballs);
+if (cliOnly) await smokeCli(tarballs[0]);
+else await smoke(tarballs);
 
 if (!doPublish) {
   console.log("dry-run complete; pass --publish to release");
