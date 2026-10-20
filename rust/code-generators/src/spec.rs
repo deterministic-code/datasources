@@ -139,7 +139,7 @@ pub fn parse(files: &HashMap<String, String>) -> Result<ParsedSpec> {
     )
     .parse(&HashMap::new())
     .map_err(|error| DatasourceError::message(error.to_string()))?;
-    Ok(ParsedSpec {
+    let parsed = ParsedSpec {
         types: spec.types.iter().map(map_type).collect(),
         expanded_types: spec.expanded_types.iter().map(map_type).collect(),
         datasource: spec.datasource.iter().map(map_table).collect(),
@@ -148,7 +148,23 @@ pub fn parse(files: &HashMap<String, String>) -> Result<ParsedSpec> {
             .iter()
             .map(|(name, rows)| (name.clone(), rows.iter().map(map_seed).collect()))
             .collect(),
-    })
+    };
+    require_id_is_id(&parsed.types)?;
+    Ok(parsed)
+}
+
+fn require_id_is_id(types: &[SpecType]) -> Result<()> {
+    for type_ in types {
+        for field in &type_.fields {
+            if field.name == "id" && !field.is_id {
+                return Err(DatasourceError::message(format!(
+                    "{}.id must have is_id: true",
+                    type_.name
+                )));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn map_type(type_: &deterministic_generators_common::Type) -> SpecType {
@@ -556,6 +572,7 @@ fn set_fields() -> Vec<SpecTypeField> {
 }
 
 pub fn expand_types(types: &[SpecType]) -> Result<Vec<SpecType>> {
+    require_id_is_id(types)?;
     let by_name: HashMap<String, SpecType> = types.iter().map(|t| (t.name.clone(), t.clone())).collect();
     let mut cache: HashMap<String, Vec<SpecTypeField>> = HashMap::new();
 

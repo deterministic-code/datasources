@@ -27,8 +27,17 @@ pub fn sections(
         } else {
             Vec::new()
         };
-        let pk = pk_type(table);
-        let identity = schema::is_generated_identity(table) && pk != "uuid" && pk != "string";
+        let pk = table
+            .fields
+            .iter()
+            .find(|field| schema::table_identity(table).first().map(String::as_str) == Some(field.name.as_str()));
+        let identity = match pk {
+            Some(field) => {
+                schema::uses_generated_id_column(table, field)
+                    && sql_dialect::sql_default(dialect, &field.converter_field())?.is_none()
+            }
+            None => false,
+        };
         let mut inserts = Vec::new();
         for seed in rows {
             let cols = cols_for_row(table, &seed.row, &generated);

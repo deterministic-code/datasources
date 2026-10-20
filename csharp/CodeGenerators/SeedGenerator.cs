@@ -18,8 +18,10 @@ public static class SeedGenerator
         {
             if (!seeds.TryGetValue(table.Name, out var rows) || rows.Count == 0) continue;
             var generated = SqlSchema.IsGeneratedIdentity(table) ? SqlSchema.TableIdentity(table) : [];
-            var pk = PkType(table);
-            var identity = SqlSchema.IsGeneratedIdentity(table) && pk is not "uuid" and not "string";
+            var pk = table.Fields.FirstOrDefault(field => field.Name == SqlSchema.TableIdentity(table).FirstOrDefault());
+            var identity = pk is not null
+                && SqlSchema.UsesGeneratedIdColumn(table, pk)
+                && SqlDialect.SqlDefault(dialect, pk.ConverterField()) is null;
             var inserts = rows.Select(seed =>
             {
                 var cols = ColsForRow(table, seed.Row, generated);

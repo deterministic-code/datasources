@@ -44,12 +44,15 @@ export const fieldOverlay = (
 ): DatasourceFieldOverlay | undefined =>
   table.overlays.find((overlay) => overlay.name === fieldName);
 
-const GENERATED_ID_TYPES = new Set([
-  "integer",
-  "biginteger",
-  "uuid",
-  "string",
-]);
+const requireIdIsId = (spec: IDeterministic): void => {
+  for (const type of spec.types) {
+    for (const field of type.fields) {
+      if (field.name === "id" && field.isId !== true) {
+        throw new Error(`${type.name}.id must have is_id: true`);
+      }
+    }
+  }
+};
 
 export const tableIdentity = (table: SqlTable): string[] => {
   const keys = identityColumns(table, overlayOf(table));
@@ -75,12 +78,10 @@ export const isGeneratedIdentity = (table: SqlTable): boolean => {
 export const usesGeneratedIdColumn = (
   table: SqlTable,
   field: TypeField,
-): boolean =>
-  isGeneratedIdentity(table) &&
-  field.name === tableIdentity(table)[0] &&
-  GENERATED_ID_TYPES.has(field.type);
+): boolean => field.isId === true && isGeneratedIdentity(table);
 
 export const sqlTablesFrom = (spec: IDeterministic): SqlTable[] => {
+  requireIdIsId(spec);
   const overlays = tableByName(spec);
   const byName = new Map(spec.expandedTypes.map((t) => [t.name, t]));
   return datasourceTypesOf(spec).map((type) => {

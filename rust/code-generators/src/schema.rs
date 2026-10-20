@@ -82,10 +82,7 @@ pub fn is_generated_identity(table: &SqlTable) -> bool {
 }
 
 pub fn uses_generated_id_column(table: &SqlTable, field: &SpecTypeField) -> bool {
-    const GENERATED: &[&str] = &["integer", "biginteger", "uuid", "string"];
-    is_generated_identity(table)
-        && table_identity(table).first().map(String::as_str) == Some(field.name.as_str())
-        && GENERATED.contains(&field.type_name.as_str())
+    field.is_id && is_generated_identity(table)
 }
 
 pub fn from_spec(spec: &ParsedSpec) -> Vec<SqlTable> {

@@ -46,7 +46,7 @@ pub static TYPES: LazyLock<DeterministicTypeConverter> = LazyLock::new(|| {
 
 pub static DEFAULTS: LazyLock<DefaultValueConverter> = LazyLock::new(|| {
     DefaultValueConverter::new(DefaultValueOptions {
-        new_id: || String::new(),
+        new_id: || "(lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))), 2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))), 2) || '-' || lower(hex(randomblob(6))))".into(),
         now: || "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))".into(),
         utc_now: || "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))".into(),
         boolean_on: "1".into(),

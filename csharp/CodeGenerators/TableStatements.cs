@@ -133,19 +133,14 @@ public static class TableStatements
     {
         var converterField = field.ConverterField();
         var generated = SqlSchema.UsesGeneratedIdColumn(table, field);
-        var identity = generated && field.Type is not "uuid" and not "string";
         var named = mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "default_constraint");
-        var utcNow = SqlDialect.DriverOf(dialect).DefaultValueConverter.Convert("datetime", "UtcNow");
-        var newId = SqlDialect.DriverOf(dialect).DefaultValueConverter.Convert("uuid", "NewId");
         var fromSpec = SqlDialect.SqlDefault(dialect, converterField);
-        var defaultExpr = fromSpec
-            ?? (field.Name is "created" or "updated" ? utcNow : null)
-            ?? (field.Name == "uuid" || generated && field.Type == "uuid" ? newId : null);
+        var identity = generated && fromSpec is null;
         var keys = SqlSchema.TableIdentity(table);
         return new Column(
             SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name)),
             SqlDialect.MapColumnType(dialect, converterField),
-            defaultExpr is null ? null : new ColumnDefault(defaultExpr, SqlDialect.Q(dialect, named)),
+            fromSpec is null ? null : new ColumnDefault(fromSpec, SqlDialect.Q(dialect, named)),
             !field.IsNullable || keys.Contains(field.Name) ? new NotNull() : null,
             identity);
     }

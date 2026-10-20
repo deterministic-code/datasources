@@ -326,36 +326,15 @@ pub fn create_bulk_delete_stored_procedure(
 fn column_of(dialect: &str, mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {
     let converter_field = field.converter_field();
     let generated = uses_generated_id_column(table, field);
-    let identity = generated && field.type_name != "uuid" && field.type_name != "string";
     let named = mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "default_constraint"]);
-    let utc_now = sql_dialect::driver_of(dialect)?
-        .default_value_converter
-        .convert("datetime", "UtcNow")?;
-    let new_id = sql_dialect::driver_of(dialect)?
-        .default_value_converter
-        .convert("uuid", "NewId")?;
     let from_spec = sql_dialect::sql_default(dialect, &converter_field)?;
-    let default_expr = from_spec
-        .or_else(|| {
-            if field.name == "created" || field.name == "updated" {
-                utc_now.clone()
-            } else {
-                None
-            }
-        })
-        .or_else(|| {
-            if field.name == "uuid" || generated && field.type_name == "uuid" {
-                new_id.clone()
-            } else {
-                None
-            }
-        });
+    let identity = generated && from_spec.is_none();
     let keys = table_identity(table);
     let mut column = Column::new(
         sql_dialect::q(dialect, &mapping.column_name(table, &field.name))?,
         sql_dialect::map_column_type(dialect, &converter_field)?,
     );
-    if let Some(expr) = default_expr {
+    if let Some(expr) = from_spec {
         let quoted = sql_dialect::q(dialect, &named)?;
         column = column.default(ColumnDefault::new(expr, Some(quoted.as_str())));
     }

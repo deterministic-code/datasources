@@ -52,20 +52,14 @@ export const columnOf = (dialect: SqlDialect, mapping: SqlMapping, table: LiveTa
   const overlay = fieldOverlay(table, field.name);
   const converterField = converterFieldOf(field);
   const generated = usesGeneratedIdColumn(table, field);
-  const identity = generated && field.type !== "uuid" && field.type !== "string";
   const named = mapping.constraintName(table, mapping.fieldStem(table, field.name), "default_constraint");
-  const utcNow = dialectDriver(dialect).defaultValueConverter.convert("datetime", "UtcNow");
-  const newId = dialectDriver(dialect).defaultValueConverter.convert("uuid", "NewId");
   const fromSpec = sqlDefault(dialect, converterField);
-  const defaultExpr =
-    fromSpec ??
-    (field.name === "created" || field.name === "updated" ? utcNow : null) ??
-    (field.name === "uuid" || (generated && field.type === "uuid") ? newId : null);
+  const identity = generated && fromSpec == null;
   const keys = tableIdentity(table);
   return {
     name: q(dialect, mapping.columnName(table, field.name)),
     type: mapColumnType(dialect, converterField),
-    ...(defaultExpr ? { default: new ColumnDefault(defaultExpr, q(dialect, named)) } : {}),
+    ...(fromSpec ? { default: new ColumnDefault(fromSpec, q(dialect, named)) } : {}),
     ...(!field.isNullable || keys.includes(field.name) ? { notNull: new NotNull() } : {}),
     ...(identity ? { identity: true } : {}),
   };

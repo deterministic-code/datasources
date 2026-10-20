@@ -7,12 +7,16 @@ types:
             is_id: true
         - uuid:
             type: uuid
+            default_value: NewId
         - created:
             type: datetime
+            default_value: UtcNow
         - updated:
             type: datetime
+            default_value: UtcNow
         - version:
             type: binary
+            default_value: Hex('00')
   - contact_source:
       tags:
         - datasource_type
