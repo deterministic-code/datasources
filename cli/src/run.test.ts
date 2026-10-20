@@ -121,6 +121,26 @@ describe("run", () => {
     );
   });
 
+  it("inits migraters when csharp or rust adds SQL dialects", async () => {
+    const init = "npx --yes --package @deterministic-code/migraters migrate-init --dialect sqlite --dialect postgres";
+    const csharp = mem(["App.csproj"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
+    const csharpIo = deps(csharp.fs);
+    expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--ecosystem", "csharp"], csharpIo)).toBe(0);
+    expect(csharpIo.ran).toContain("npm install @deterministic-code/migraters");
+    expect(csharpIo.ran).toContain(init);
+    const rust = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
+    const rustIo = deps(rust.fs);
+    expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--ecosystem", "rust"], rustIo)).toBe(0);
+    expect(rustIo.ran).toContain("npm install @deterministic-code/migraters");
+    expect(rustIo.ran).toContain(init);
+    const json = mem(["App.csproj"], {
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
+    });
+    const jsonIo = deps(json.fs);
+    expect(await run(["add", "json", "--cwd", cwd, "--ecosystem", "csharp"], jsonIo)).toBe(0);
+    expect(jsonIo.ran.some((line) => line.includes("migraters") || line.includes("migrate-init"))).toBe(false);
+  });
+
   it("runs interactive setup and diffs add/remove", async () => {
     const { fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
