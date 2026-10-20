@@ -22,6 +22,7 @@ jobs:
       - run: docker compose -p datasources -f docker/compose.yml up -d --wait
       - run: npm install --prefix typescript
       - run: npm install --prefix samples/typescript/user-roles-simple-cli
+      - run: npm install --prefix samples/typescript/contacts-crud-enriched-medium-rest
       - run: git clone --depth 1 --branch main https://github.com/deterministic-code/deterministic-generators-common.git deterministic-generators-common
       - run: npm run test:e2e:ci
       - run: npm run test:e2e:rust
