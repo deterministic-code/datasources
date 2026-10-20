@@ -34,7 +34,7 @@ When `datasource.yaml` is omitted, generate includes every `datasource_type` and
 
 `generate all` writes these files and runs migrate-up. `migrations create` writes the same SQL and leaves the database unchanged. Dialects come from `settings.yaml` (`backend.datasources`, default `sqlite`). Without `version-*/diff.yaml`, the files are `0001_initial_up.sql` and `0001_initial_down.sql`. Version snapshots write `0001_up.sql`, `0002_up.sql`, and so on.
 
-A pair under `deterministic/custom/<dialect>/` named `<order>_<name>_<up|down>.sql` is copied into the migrations directory. `order` is 1–999. `npx migrate-create --provider sqlite --name add_notes` scaffolds an empty pair in that directory.
+A pair under `deterministic/custom/<dialect>/` named `<order>_<name>_<up|down>.sql` is copied into the migrations directory. `order` is 1–999. `npx --yes --package @deterministic-code/migraters migrate-create --provider sqlite --name add_notes` scaffolds an empty pair in that directory.
 
 ```sh
 npx @deterministic-code/datasources-cli migrations create
@@ -54,8 +54,8 @@ npx @deterministic-code/datasources-cli migrations create --migrations-path ./db
 Apply and roll back with migraters. TypeScript `setup` / `add` already installs `@deterministic-code/migraters` and runs `migrate-init`. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
 
 ```sh
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection ./app.sqlite
+npx --yes --package @deterministic-code/migraters migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
 
 ## Repository Generation
