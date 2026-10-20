@@ -102,7 +102,7 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
     installed.filter((name) => !selected.includes(name)),
     selected,
   );
-  await applyMigrateInit(flags, deps, ecosystem, selected);
+  await applyMigrateInit(flags, deps, selected);
   const dialect: Dialect = ecosystem === "ts" ? "typescript" : ecosystem;
   await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
   if (!answers.scaffold) return;
@@ -133,7 +133,7 @@ const applyAddRemove = async (
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
   await applyPackages(flags, deps, ecosystem, entries, add, remove, remaining);
-  await applyMigrateInit(flags, deps, ecosystem, remaining);
+  await applyMigrateInit(flags, deps, remaining);
 };
 
 const applyPackages = async (
@@ -169,10 +169,8 @@ const applyPackages = async (
 const applyMigrateInit = async (
   flags: Flags,
   deps: Deps,
-  ecosystem: Ecosystem,
   remaining: Provider[],
 ): Promise<void> => {
-  if (ecosystem !== "ts") return;
   for (const proc of migrateInitCommands(sqlMigrateProviders(remaining))) {
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
     if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);

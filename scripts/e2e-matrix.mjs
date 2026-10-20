@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dialectTranscript } from "./e2e-matrix-normalize.mjs";
@@ -76,46 +76,65 @@ const isolate = (provider) => {
 
 const specOf = (sample) => join(root, `samples/${sample}-shared/deterministic`);
 
-const generate = (kind, dialect, out, sample) => {
-  mkdirSync(out, { recursive: true });
+const cli = join(root, "cli/bin/datasources.mjs");
+const ecosystemOf = { typescript: "ts", rust: "rust", csharp: "csharp" };
+
+const datasources = (cwd, args, env) =>
   requireOk(
-    spawnSync(
-      process.execPath,
-      [
-        "--import",
-        "tsx",
-        join(root, "cli/src/main.ts"),
-        "generate",
-        kind,
-        "--dialect",
-        dialect,
-        "--input",
-        specOf(sample),
-        "--output",
-        out,
-      ],
-      { cwd: join(root, "cli"), encoding: "utf8" },
-    ),
-    `generate ${kind} ${dialect}`,
+    spawnSync(process.execPath, [cli, ...args], {
+      cwd,
+      env: { ...process.env, ...env },
+      stdio: "inherit",
+    }),
+    `datasources ${args.join(" ")}`,
   );
-  return out;
+
+const projectFile = (dialect, dir) => {
+  if (dialect === "typescript") {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "app", private: true, type: "module" }));
+    return;
+  }
+  if (dialect === "csharp") {
+    writeFileSync(
+      join(dir, "App.csproj"),
+      `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>
+`,
+    );
+    return;
+  }
+  writeFileSync(
+    join(dir, "Cargo.toml"),
+    `[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+`,
+  );
+};
+
+const consumer = (sample, dialect, env) => {
+  const dir = join(artifacts, "consumers", sample, dialect, env.PROVIDER);
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  cpSync(specOf(sample), join(dir, "deterministic"), { recursive: true });
+  projectFile(dialect, dir);
+  const ecosystem = ecosystemOf[dialect];
+  datasources(dir, ["setup", "--yes", "--ecosystem", ecosystem], env);
+  datasources(dir, ["add", ...providers, "--ecosystem", ecosystem], env);
+  datasources(dir, ["generate", "all", "--dialect", dialect], env);
+  return dir;
 };
 
 const hasUps = (dir) =>
   existsSync(dir) &&
   readdirSync(dir).some((name) => /^\d{4}_up\.sql$/.test(name) || name === "0001_initial_up.sql");
-
-const generateSql = (sample) => {
-  const out = generate("datasource", "typescript", join(artifacts, "generated", sample), sample);
-  for (const provider of providers) {
-    const dir = join(out, "sql", provider, "migrations");
-    if (!hasUps(dir)) throw new Error(`missing generated sql ${dir}`);
-  }
-  return (provider) => join(out, "sql", provider, "migrations");
-};
-
-const generateCsharp = (sample) =>
-  generate("all", "csharp", join(artifacts, "generated-csharp", sample), sample);
 
 const harness = (sample, dialect) => {
   if (dialect === "typescript")
@@ -376,29 +395,28 @@ try {
     down();
     up();
   }
-  const sqlFor = Object.fromEntries(
-    samples.filter((sample) => sample.sql).map((sample) => [sample.name, generateSql(sample.name)]),
-  );
-  const csharpOut = Object.fromEntries(samples.map((sample) => [sample.name, generateCsharp(sample.name)]));
   for (const sample of samples) {
     for (const dialect of dialects) {
       for (const provider of providers) {
         process.stderr.write(`${sample.name} ${dialect} ${provider}\n`);
+        const migrated = provider === "sqlite" ? null : isolate(provider);
         try {
+          const dir = consumer(sample.name, dialect, {
+            PROVIDER: provider,
+            DATASOURCE_URL: provider === "sqlite" ? "sqlite:///./app.sqlite" : migrated.url,
+          });
+          const sql = sample.sql ? join(dir, "sql", provider, "migrations") : undefined;
+          if (sql && !hasUps(sql)) throw new Error(`missing generated sql ${sql}`);
           cells.push(
-            runCell(
-              sample,
-              dialect,
-              provider,
-              sample.sql ? sqlFor[sample.name](provider) : undefined,
-              dialect === "csharp" ? csharpOut[sample.name] : undefined,
-            ),
+            runCell(sample, dialect, provider, sql, dialect === "csharp" ? join(dir, "generated") : undefined),
           );
         } catch (error) {
           const log = join(artifacts, "logs", sample.name, dialect, `${provider}.log`);
           mkdirSync(dirname(log), { recursive: true });
           writeFileSync(join(artifacts, "logs", sample.name, dialect, `${provider}.stderr.txt`), `${error instanceof Error ? error.stack : error}\n`);
           cells.push({ sample: sample.name, dialect, provider, ok: false, ms: 0, log });
+        } finally {
+          migrated?.drop();
         }
       }
     }
