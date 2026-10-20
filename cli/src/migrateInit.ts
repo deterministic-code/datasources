@@ -11,5 +11,14 @@ export const migrateInitCommands = (dialects: Provider[]): Proc[] =>
     ? []
     : [
         { command: "npm", args: ["install", "@deterministic-code/migraters"] },
-        { command: "npx", args: ["migrate-init", ...dialects.flatMap((name) => ["--dialect", name])] },
+        {
+          command: "npx",
+          args: [
+            "--yes",
+            "--package",
+            "@deterministic-code/migraters",
+            "migrate-init",
+            ...dialects.flatMap((name) => ["--dialect", name]),
+          ],
+        },
       ];

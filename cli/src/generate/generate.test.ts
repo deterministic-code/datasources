@@ -750,7 +750,9 @@ types: []
     try {
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
-      expect(ran).toEqual(["npx migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql"]);
+      expect(ran).toEqual([
+        "npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql",
+      ]);
       const dry = mem(seeded);
       const dryRan: string[] = [];
       const dryIo = deps(dry.fs);

@@ -151,8 +151,8 @@ See [Migrations](docs/cli.md#migrations).
 
 ```sh
 npx @deterministic-code/datasources-cli migrations create
-npx migrate-up --provider sqlite --connection ./app.sqlite
-npx migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
+npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection ./app.sqlite
+npx --yes --package @deterministic-code/migraters migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
 
 Add a migration that generate keeps. Put an up file and a down file under `deterministic/custom/<dialect>/`. The file name is `<order>_<name>_<up|down>.sql`. `order` is 1–999. `name` starts with a letter or digit. The next `generate all` copies the pair into `sql/<dialect>/migrations` and runs migrate-up.
@@ -165,7 +165,7 @@ deterministic/custom/sqlite/0001_add_notes_down.sql
 Scaffold an empty pair in the migrations directory with migraters:
 
 ```sh
-npx migrate-create --provider sqlite --name add_notes
+npx --yes --package @deterministic-code/migraters migrate-create --provider sqlite --name add_notes
 ```
 
 ### Using the generated code

@@ -95,7 +95,7 @@ describe("applyMigrateUp", () => {
     );
     await applyMigrateUp(command(), flags(), fromUrl, {});
     expect(fromUrl.ran[0]).toBe(
-      "npx migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
+      "npx --yes --package @deterministic-code/migraters migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
     );
     const aliased = deps(
       mem({
@@ -108,7 +108,7 @@ describe("applyMigrateUp", () => {
       DATASOURCE_URL: "postgresql://localhost/db",
     });
     expect(aliased.ran[0]).toBe(
-      "npx migrate-up --provider postgres --connection postgresql://localhost/db --migrations-path db/changes",
+      "npx --yes --package @deterministic-code/migraters migrate-up --provider postgres --connection postgresql://localhost/db --migrations-path db/changes",
     );
     const absolute = deps(
       mem({
@@ -165,6 +165,8 @@ types:
       else process.env.DATASOURCE_URL = previous.DATASOURCE_URL;
     }
     expect(store.files[join(cwd, "db/changes/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
-    expect(io.ran[0]).toBe("npx migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-path db/changes");
+    expect(io.ran[0]).toBe(
+      "npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-path db/changes",
+    );
   });
 });
