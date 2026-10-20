@@ -7,8 +7,8 @@ pub fn contact_preferences_repository(connection: Arc<dyn Connection>) -> Result
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
         ("ContactPreferences".into(), "contact_preferences".into()),
     ])));
-    options.ids = vec![];
-    options.read_properties = vec!["contact_id".into(), "key".into(), "locale".into(), "timezone".into()];
+    options.ids = vec!["id".into()];
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "key".into(), "locale".into(), "timezone".into()];
     CRUDRepository::new(connection, options)
 }
 
@@ -18,7 +18,7 @@ pub fn contact_preferences_readonly_repository(connection: Arc<dyn Connection>) 
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
         ("ContactPreferences".into(), "contact_preferences".into()),
     ])));
-    options.read_properties = vec!["contact_id".into(), "key".into(), "locale".into(), "timezone".into()];
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_id".into(), "key".into(), "locale".into(), "timezone".into()];
         let repo = ReadonlyRepository::new(connection, options)?;
         Ok(repo)
 }

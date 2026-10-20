@@ -89,20 +89,31 @@ public static class SpecTables
             : [];
     }
 
-    public static IReadOnlyList<SpecTypeField> PersistedColumnFields(SpecType type, IReadOnlyDictionary<string, SpecType> byName)
+    public static IReadOnlyList<SpecTypeField> PersistedColumnFields(SpecType type, IReadOnlyDictionary<string, SpecType>? byName = null) =>
+        ColumnFields(type.Fields);
+
+    static string RoleColumn(SpecType dict, string role, string tableName)
     {
-        if (!IsDictionaryType(type)) return ColumnFields(type.Fields);
-        var value = type.Fields.FirstOrDefault(f => f.Name == "value");
-        if (value is null || value.Kind != "type" || value.IsArray || value.IsMap)
-            return ColumnFields(type.Fields);
-        if (!byName.TryGetValue(value.Base, out var nested)) return ColumnFields(type.Fields);
-        return [.. ColumnFields(type.Fields.Where(f => f.Name != "value")), .. ColumnFields(nested.Fields)];
+        var field = dict.Fields.FirstOrDefault(item => item.Name == role);
+        if (field?.References is { } references && SplitDot(references) is { } split && split.Left == tableName)
+            return split.Right;
+        return role;
     }
 
     public static IReadOnlyList<string> DictionaryUniqueColumns(SpecType type, IReadOnlyDictionary<string, SpecType> byName)
     {
-        if (!IsDictionaryType(type)) return [];
-        var owners = type.Fields.Where(f => IsOwnerIdentityRef(f, type.Name, byName)).Select(f => f.Name).ToList();
-        return type.Fields.Any(f => f.Name == "key") ? [.. owners, "key"] : owners;
+        foreach (var candidate in byName.Values)
+        {
+            foreach (var field in candidate.Fields)
+            {
+                if (!field.IsMap) continue;
+                if (!byName.TryGetValue(field.Base, out var dict) || !IsDictionaryType(dict)) continue;
+                if (field.References is not { } references) continue;
+                var split = SplitDot(references);
+                if (split is null || split.Value.Left != type.Name) continue;
+                return [split.Value.Right, RoleColumn(dict, "key", type.Name)];
+            }
+        }
+        return [];
     }
 }
