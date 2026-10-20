@@ -61,6 +61,6 @@ let view = |login: &str| {
         .unwrap()
         .clone()
 };
-let mut ada = view("ada");
+let ada = view("ada");
 let grace = view("grace");
 let lin = view("lin");

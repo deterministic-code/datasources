@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Globalization;
 using System.Reflection;
 
 namespace Datasources;
@@ -97,10 +98,24 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
     TypeConverter<Value, Value>? Converter(string key) =>
         Fields.TryGetValue(key, out var field) ? field : null;
 
-    object? Coerced(object? raw, Type type) =>
-        ShouldCoerceId && raw is not null && Integral(raw.GetType()) && Integral(type)
-            ? System.Convert.ChangeType(raw, type)
-            : null;
+    object? Coerced(object? raw, Type type)
+    {
+        if (raw is null) return null;
+        if (ShouldCoerceId && Integral(raw.GetType()) && Integral(type))
+            return System.Convert.ChangeType(raw, type);
+        if (type == typeof(System.Guid) && raw is string guidText && System.Guid.TryParse(guidText, out var guid))
+            return guid;
+        if (type == typeof(System.DateTime) && raw is string dateText
+            && System.DateTime.TryParse(
+                dateText,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
+                out var date))
+            return System.DateTime.SpecifyKind(date, DateTimeKind.Utc);
+        if (type == typeof(decimal) && raw is IConvertible)
+            return System.Convert.ToDecimal(raw, CultureInfo.InvariantCulture);
+        return null;
+    }
 
     static bool Integral(Type type) => !type.IsEnum && Type.GetTypeCode(type) is
         TypeCode.Byte or TypeCode.SByte or TypeCode.Int16 or TypeCode.UInt16

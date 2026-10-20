@@ -17,7 +17,6 @@ mod stored_procedure_statement_renderer;
 mod transaction;
 
 pub use driver::PostgresDriver;
-pub use sql_generate::{DEFAULTS, QUOTE_LEFT, QUOTE_RIGHT, TYPES};
 
 #[cfg(test)]
 #[path = "../tests/contacts.rs"]

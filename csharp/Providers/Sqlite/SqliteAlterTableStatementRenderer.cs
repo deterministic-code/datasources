@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteAlterTableStatementRenderer : AlterTableStatementTextRenderer
+internal sealed class SqliteAlterTableStatementRenderer : AlterTableStatementTextRenderer
 {
     protected override string Type(Column column) =>
         SqliteDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;

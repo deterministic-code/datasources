@@ -4,9 +4,9 @@ use crate::statement_renderer::SqliteStatementRenderer;
 use crate::transaction::SqliteTransaction;
 use crate::sql_generate;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter, Driver,
-    Information, IsolationLevel, Mapping, Result, StatementTextRenderer, Transaction, TypeConverter,
-    Value,
+    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter,
+    DeterministicTypeConverter, Driver, Information, IsolationLevel, Mapping, Result,
+    StatementTextRenderer, Transaction, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -20,6 +20,14 @@ impl SqliteDriver {
     pub fn statement_text_renderer() -> &'static StatementTextRenderer {
         static DRIVER: SqliteDriver = SqliteDriver;
         Driver::statement_renderer(&DRIVER).expect("sqlite")
+    }
+
+    pub fn types() -> &'static DeterministicTypeConverter {
+        &*sql_generate::TYPES
+    }
+
+    pub fn defaults() -> &'static DefaultValueConverter {
+        &sql_generate::DEFAULTS
     }
 }
 

@@ -162,8 +162,8 @@ public class BulkWriteStrategyTests
             new Family { id = 2, label = "b", children = [new Child { id = 11, label = "y" }] }
         ]);
         Assert.Equal(2, command.ExecuteCalls.Count);
-        Assert.Equal("CALL bulk_create_parent($payload)", command.ExecuteCalls[0].Text);
-        Assert.Equal("CALL bulk_create_child($payload)", command.ExecuteCalls[1].Text);
+        Assert.Equal("CALL bulk_create_parent($payload, $ids)", command.ExecuteCalls[0].Text);
+        Assert.Equal("CALL bulk_create_child($payload, $ids)", command.ExecuteCalls[1].Text);
     }
 
     [Fact]

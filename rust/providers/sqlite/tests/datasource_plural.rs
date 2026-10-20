@@ -152,7 +152,7 @@ async fn reads_through_access_create_readonly() {
     let mut created = datasources::Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let mut created = ds.as_ref().users().create(&mut created).await.unwrap();
+    let created = ds.as_ref().users().create(&mut created).await.unwrap();
     let users_repo = ds
         .as_ref()
         .access("users", None)

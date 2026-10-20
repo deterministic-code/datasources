@@ -6,42 +6,42 @@ pub fn register_sql() {
     ONCE.call_once(|| {
         bind(
             "sqlite",
-            datasources_sqlite::QUOTE_LEFT,
-            datasources_sqlite::QUOTE_RIGHT,
-            &*datasources_sqlite::TYPES,
-            &*datasources_sqlite::DEFAULTS,
+            datasources_sqlite::SqliteDriver::QUOTE_LEFT,
+            datasources_sqlite::SqliteDriver::QUOTE_RIGHT,
+            datasources_sqlite::SqliteDriver::types(),
+            datasources_sqlite::SqliteDriver::defaults(),
             datasources_sqlite::SqliteDriver::statement_text_renderer(),
         );
         bind(
             "mysql",
-            datasources_mysql::QUOTE_LEFT,
-            datasources_mysql::QUOTE_RIGHT,
-            &*datasources_mysql::TYPES,
-            &*datasources_mysql::DEFAULTS,
+            datasources_mysql::MysqlDriver::QUOTE_LEFT,
+            datasources_mysql::MysqlDriver::QUOTE_RIGHT,
+            datasources_mysql::MysqlDriver::types(),
+            datasources_mysql::MysqlDriver::defaults(),
             datasources_mysql::MysqlDriver::statement_text_renderer(),
         );
         bind(
             "postgres",
-            datasources_postgres::QUOTE_LEFT,
-            datasources_postgres::QUOTE_RIGHT,
-            &*datasources_postgres::TYPES,
-            &*datasources_postgres::DEFAULTS,
+            datasources_postgres::PostgresDriver::QUOTE_LEFT,
+            datasources_postgres::PostgresDriver::QUOTE_RIGHT,
+            datasources_postgres::PostgresDriver::types(),
+            datasources_postgres::PostgresDriver::defaults(),
             datasources_postgres::PostgresDriver::statement_text_renderer(),
         );
         bind(
             "sqlserver",
-            datasources_sqlserver::QUOTE_LEFT,
-            datasources_sqlserver::QUOTE_RIGHT,
-            &*datasources_sqlserver::TYPES,
-            &*datasources_sqlserver::DEFAULTS,
+            datasources_sqlserver::SqlServerDriver::QUOTE_LEFT,
+            datasources_sqlserver::SqlServerDriver::QUOTE_RIGHT,
+            datasources_sqlserver::SqlServerDriver::types(),
+            datasources_sqlserver::SqlServerDriver::defaults(),
             datasources_sqlserver::SqlServerDriver::statement_text_renderer(),
         );
         bind(
             "oracle",
-            datasources_oracle::QUOTE_LEFT,
-            datasources_oracle::QUOTE_RIGHT,
-            &*datasources_oracle::TYPES,
-            &*datasources_oracle::DEFAULTS,
+            datasources_oracle::OracleDriver::QUOTE_LEFT,
+            datasources_oracle::OracleDriver::QUOTE_RIGHT,
+            datasources_oracle::OracleDriver::types(),
+            datasources_oracle::OracleDriver::defaults(),
             datasources_oracle::OracleDriver::statement_text_renderer(),
         );
     });

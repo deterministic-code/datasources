@@ -233,25 +233,10 @@ fn domain_record(
     map: &BTreeMap<String, serde_yaml::Value>,
     mappings: &BTreeMap<String, BTreeMap<String, String>>,
 ) -> Row {
-    let mut row = Row::new();
-    for (name, value) in map {
-        match value {
-            serde_yaml::Value::Mapping(nest) => {
-                if let Some(cols) = mappings.get(name) {
-                    if cols.len() == 1 {
-                        let field = cols.keys().next().expect("mapping field");
-                        if let Some(inner) = nest.get(&serde_yaml::Value::String(field.clone())) {
-                            row.insert(name.clone(), yaml_value(inner));
-                        }
-                    }
-                }
-            }
-            _ => {
-                row.insert(name.clone(), yaml_value(value));
-            }
-        }
-    }
-    row
+    flatten_yaml(map, mappings)
+        .into_iter()
+        .map(|(name, value)| (name, yaml_value(&value)))
+        .collect()
 }
 
 fn decimal_text(text: &str) -> Option<String> {
@@ -295,14 +280,27 @@ fn expect_cell(value: &serde_yaml::Value) -> String {
     }
 }
 
-fn assert_row(name: &str, actual: Option<&Row>, expect: &serde_yaml::Value) {
+fn assert_row(
+    name: &str,
+    actual: Option<&Row>,
+    expect: &serde_yaml::Value,
+    mappings: &BTreeMap<String, BTreeMap<String, String>>,
+) {
     match (actual, expect) {
         (None, serde_yaml::Value::Null) => {}
         (Some(row), serde_yaml::Value::Mapping(map)) => {
-            for (key, wanted) in map {
-                let key = key.as_str().expect("expect key");
-                let got = cell_of(row.get(key).unwrap_or(&Value::Null));
-                let expected = expect_cell(wanted);
+            let nested = map
+                .iter()
+                .map(|(key, value)| {
+                    (
+                        key.as_str().expect("expect key").to_string(),
+                        value.clone(),
+                    )
+                })
+                .collect();
+            for (key, wanted) in flatten_yaml(&nested, mappings) {
+                let got = cell_of(row.get(&key).unwrap_or(&Value::Null));
+                let expected = expect_cell(&wanted);
                 if got != expected {
                     panic!("{name}: {key}: expected {expected} got {got}");
                 }
@@ -327,7 +325,12 @@ fn assert_affected(name: &str, actual: i64, expect: Option<&serde_yaml::Value>) 
     }
 }
 
-fn assert_rows(name: &str, actual: &[Row], expect: &[BTreeMap<String, serde_yaml::Value>]) {
+fn assert_rows(
+    name: &str,
+    actual: &[Row],
+    expect: &[BTreeMap<String, serde_yaml::Value>],
+    mappings: &BTreeMap<String, BTreeMap<String, String>>,
+) {
     if actual.len() != expect.len() {
         panic!(
             "{name}: expected {} rows got {}",
@@ -342,7 +345,7 @@ fn assert_rows(name: &str, actual: &[Row], expect: &[BTreeMap<String, serde_yaml
                 .map(|(key, value)| (serde_yaml::Value::String(key.clone()), value.clone()))
                 .collect(),
         );
-        assert_row(&format!("{name}[{index}]"), Some(row), &mapping);
+        assert_row(&format!("{name}[{index}]"), Some(row), &mapping, mappings);
     }
 }
 
@@ -641,7 +644,12 @@ pub async fn run(
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
                 let row = repo.read_single(Some(&where_clause), None, None).await.unwrap();
                 if let Some(expect) = &read.expect {
-                    assert_row(&format!("{} READ", spec.name), row.as_ref(), expect);
+                    assert_row(
+                        &format!("{} READ", spec.name),
+                        row.as_ref(),
+                        expect,
+                        &spec.type_spec.mappings,
+                    );
                 }
             }
             Step {
@@ -655,7 +663,12 @@ pub async fn run(
                     repo.read(None, None, None).try_collect::<Vec<_>>().await.unwrap()
                 };
                 if let Some(expect) = &query.expect {
-                    assert_rows(&format!("{} QUERY", spec.name), &rows, expect);
+                    assert_rows(
+                        &format!("{} QUERY", spec.name),
+                        &rows,
+                        expect,
+                        &spec.type_spec.mappings,
+                    );
                 }
             }
             Step {
@@ -667,7 +680,12 @@ pub async fn run(
                     .await
                     .unwrap();
                 if let Some(expect) = &read_by.expect {
-                    assert_row(&format!("{} READBY", spec.name), row.as_ref(), expect);
+                    assert_row(
+                        &format!("{} READBY", spec.name),
+                        row.as_ref(),
+                        expect,
+                        &spec.type_spec.mappings,
+                    );
                 }
             }
             Step {

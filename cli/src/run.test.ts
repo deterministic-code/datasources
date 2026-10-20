@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
-import { run, type Deps } from "./run.ts";
+import { pluginFileName, run, type Deps } from "./run.ts";
 import { starterTypesYaml, type Prompter } from "./setup.ts";
 
 const cwd = "app";
@@ -59,6 +59,12 @@ const deps = (
 };
 
 describe("run", () => {
+  it("names rust plugins per platform", () => {
+    expect(pluginFileName("datasources-sqlite", "win32")).toBe("datasources_sqlite.dll");
+    expect(pluginFileName("datasources-sqlite", "darwin")).toBe("libdatasources_sqlite.dylib");
+    expect(pluginFileName("datasources-sqlite", "linux")).toBe("libdatasources_sqlite.so");
+  });
+
   it("prints help", async () => {
     const io = deps(mem([]).fs);
     expect(await run(["--help"], io, cwd)).toBe(0);

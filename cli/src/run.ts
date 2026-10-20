@@ -222,11 +222,11 @@ const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
   }
 };
 
-const pluginFileName = (cargoName: string): string => {
+export const pluginFileName = (cargoName: string, platform = process.platform): string => {
   const stem = cargoName.replaceAll("-", "_");
-  return process.platform === "win32"
+  return platform === "win32"
     ? `${stem}.dll`
-    : process.platform === "darwin"
+    : platform === "darwin"
       ? `lib${stem}.dylib`
       : `lib${stem}.so`;
 };

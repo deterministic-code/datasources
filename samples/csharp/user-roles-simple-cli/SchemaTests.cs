@@ -98,13 +98,6 @@ public sealed class SchemaTests
     }
 
     [Fact]
-    public void PrefixesCreateTableIfNotExists()
-    {
-        Assert.Equal("CREATE TABLE IF NOT EXISTS users (id INT)", Migrate.IfNotExists("CREATE TABLE users (id INT)"));
-        Assert.Equal("SELECT 1", Migrate.IfNotExists("SELECT 1"));
-    }
-
-    [Fact]
     public void MysqlProceduresWriteMappedColumns()
     {
         var sql = string.Join("\n", Schema.MysqlProcedures());

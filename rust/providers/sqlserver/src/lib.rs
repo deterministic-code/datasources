@@ -12,7 +12,6 @@ mod statement_renderer;
 mod stored_procedure_statement_renderer;
 
 pub use driver::SqlServerDriver;
-pub use sql_generate::{DEFAULTS, QUOTE_LEFT, QUOTE_RIGHT, TYPES};
 
 #[cfg(test)]
 mod tests {
