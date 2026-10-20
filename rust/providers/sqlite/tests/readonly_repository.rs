@@ -362,6 +362,7 @@ mod user_view {
 
 mod users_view_roles {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
+    use futures_util::TryStreamExt;
     use datasources::{
         create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
@@ -600,7 +601,7 @@ mod users_view_roles {
                 .unwrap()
                 .clone()
         };
-        let mut ada = view("ada");
+        let ada = view("ada");
         let grace = view("grace");
         let lin = view("lin");
         assert_eq!(items.len(), 3);
@@ -648,6 +649,7 @@ mod users_view_roles {
 
 mod user_crud {
     use super::{apply_schema, datasource, execute_sql, open, User};
+    use futures_util::TryStreamExt;
     use datasources::{
         create_crud_repository_options, default, eq, CRUDRepository, Casing,
         ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository,
@@ -710,6 +712,7 @@ mod user_crud {
 
     mod enriched {
         use super::super::{apply_schema, open};
+        use futures_util::TryStreamExt;
         use datasources::{
             create_crud_repository_options, default, encode_rows, eq, CRUDRepository, Casing,
             ChangeCasingMapper, ConvertSchema, DictionaryMapper, ICRUDRepository,

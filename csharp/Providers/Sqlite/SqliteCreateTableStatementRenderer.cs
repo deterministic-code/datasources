@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteCreateTableStatementRenderer : CreateTableStatementTextRenderer
+internal sealed class SqliteCreateTableStatementRenderer : CreateTableStatementTextRenderer
 {
     public override string Render(CreateTableStatement statement)
     {

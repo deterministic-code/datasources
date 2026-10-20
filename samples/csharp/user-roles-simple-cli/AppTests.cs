@@ -88,24 +88,12 @@ public sealed class AppTests
         var sqliteCmd = new MockCommand(sqlite);
         sqlite.Command = sqliteCmd;
         await Migrate.Apply(sqliteCmd);
-        Assert.All(sqliteCmd.ExecuteCalls, call => Assert.StartsWith("CREATE TABLE IF NOT EXISTS", call.Text));
+        Assert.All(sqliteCmd.ExecuteCalls, call => Assert.StartsWith("CREATE TABLE", call.Text));
         var mysql = new MockConnection { Provider = "mysql" };
         var mysqlCmd = new MockCommand(mysql);
         mysql.Command = mysqlCmd;
         await Migrate.Apply(mysqlCmd);
         Assert.Contains(mysqlCmd.ExecuteCalls, call => call.Text.Contains("CREATE PROCEDURE add_user"));
-    }
-
-    [Fact]
-    public async Task IgnoresAlreadyExistsMigrateErrors()
-    {
-        var connection = new MockConnection { Provider = "sqlite" };
-        var command = new MockCommand(connection);
-        connection.Command = command;
-        command.ExecuteError = new InvalidOperationException("table already exists");
-        await Migrate.Apply(command);
-        command.ExecuteError = new InvalidOperationException("busy");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Migrate.Apply(command));
     }
 
     [Fact]

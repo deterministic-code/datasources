@@ -2,7 +2,7 @@ using Datasources;
 
 namespace Datasources.Sqlite;
 
-public sealed class SqliteCreateTriggerStatementRenderer : CreateTriggerStatementTextRenderer
+internal sealed class SqliteCreateTriggerStatementRenderer : CreateTriggerStatementTextRenderer
 {
     public override string Render(CreateTriggerStatement statement) =>
         $"""

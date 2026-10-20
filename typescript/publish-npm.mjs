@@ -69,6 +69,7 @@ const published = (name, version) => {
 };
 
 const assertVendoredOnMain = async () => {
+  run("npm", ["update"], cliRoot);
   const lock = JSON.parse(await readFile(join(cliRoot, "package-lock.json"), "utf8"));
   const stale = [];
   for (const [path, meta] of Object.entries(lock.packages ?? {})) {
@@ -94,7 +95,7 @@ const assertVendoredOnMain = async () => {
   if (stale.length === 0) return;
   console.error("bundled generator commits are behind GitHub main:");
   for (const line of stale) console.error(`  ${line}`);
-  console.error("run npm update in cli/, commit package-lock.json, and publish a new CLI version");
+  console.error("npm update in cli/ still resolved commits behind main");
   process.exit(1);
 };
 

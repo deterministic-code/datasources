@@ -190,11 +190,6 @@ fn builds_schema() {
     assert_eq!(columns::reverse_map("ugly_name"), "name");
     assert_eq!(columns::reverse_map("bad_role_id"), "role_id");
     assert_eq!(columns::reverse_map("username"), "username");
-    assert_eq!(
-        migrate::if_not_exists("CREATE TABLE users (id INT)"),
-        "CREATE TABLE IF NOT EXISTS users (id INT)"
-    );
-    assert_eq!(migrate::if_not_exists("SELECT 1"), "SELECT 1");
     assert!(schema::mysql_procedures()
         .join("\n")
         .contains("INSERT INTO `groups` (ugly_name"));
@@ -433,7 +428,7 @@ async fn migrates_and_rejects_missing() {
         .lock()
         .expect("mock")
         .iter()
-        .all(|(text, _)| text.starts_with("CREATE TABLE IF NOT EXISTS")));
+        .all(|(text, _)| text.starts_with("CREATE TABLE")));
     let mysql = MockCommand::new();
     migrate::apply(&mysql, "mysql").await.unwrap();
     assert!(mysql

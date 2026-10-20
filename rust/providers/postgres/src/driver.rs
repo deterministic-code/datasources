@@ -4,9 +4,9 @@ use crate::sql_generate;
 use crate::statement_renderer::PostgresStatementRenderer;
 use crate::transaction::PostgresTransaction;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter, Driver,
-    Information, IsolationLevel, Mapping, Result, StatementTextRenderer, Transaction, TypeConverter,
-    Value,
+    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter,
+    DeterministicTypeConverter, Driver, Information, IsolationLevel, Mapping, Result,
+    StatementTextRenderer, Transaction, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -20,6 +20,14 @@ impl PostgresDriver {
     pub fn statement_text_renderer() -> &'static StatementTextRenderer {
         static DRIVER: PostgresDriver = PostgresDriver;
         Driver::statement_renderer(&DRIVER).expect("postgres")
+    }
+
+    pub fn types() -> &'static DeterministicTypeConverter {
+        &*sql_generate::TYPES
+    }
+
+    pub fn defaults() -> &'static DefaultValueConverter {
+        &sql_generate::DEFAULTS
     }
 }
 

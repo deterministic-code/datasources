@@ -1,5 +1,6 @@
 .env
 .env.local
+deterministic-generators-common/
 node_modules/
 dist/
 docs/.vitepress/cache

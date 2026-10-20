@@ -11,6 +11,10 @@ public sealed record Parameter(
     ParameterDirection Direction = ParameterDirection.Input)
     : Parameter<Value>(Name, Value, Direction)
 {
+    public Parameter(string name, int value) : this(name, (Value)value) { }
+    public Parameter(string name, long value) : this(name, (Value)value) { }
+    public Parameter(string name, bool value) : this(name, (Value)value) { }
+
     public Parameter(string name, ParameterDirection direction)
         : this(name, Value.Null.Instance, direction) { }
 }

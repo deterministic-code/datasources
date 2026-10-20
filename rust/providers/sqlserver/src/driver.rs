@@ -2,8 +2,9 @@ use crate::connection::SqlServerConnection;
 use crate::sql_generate;
 use crate::statement_renderer::SqlServerStatementRenderer;
 use datasources::{
-    Command, Connection, DefaultValueConverter, Driver, Information, IsolationLevel, Mapping, StatementTextRenderer,
-    StubTransaction, Transaction, TypeConverter, Value,
+    Command, Connection, DefaultValueConverter, DeterministicTypeConverter, Driver, Information,
+    IsolationLevel, Mapping, StatementTextRenderer, StubTransaction, Transaction, TypeConverter,
+    Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -17,6 +18,14 @@ impl SqlServerDriver {
     pub fn statement_text_renderer() -> &'static StatementTextRenderer {
         static DRIVER: SqlServerDriver = SqlServerDriver;
         Driver::statement_renderer(&DRIVER).expect("sqlserver")
+    }
+
+    pub fn types() -> &'static DeterministicTypeConverter {
+        &*sql_generate::TYPES
+    }
+
+    pub fn defaults() -> &'static DefaultValueConverter {
+        &sql_generate::DEFAULTS
     }
 }
 

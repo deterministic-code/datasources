@@ -33,7 +33,7 @@ services:
     build: .
     working_dir: /work
     volumes:
-      - ../..:/work
+      - ${WORK}:/work
     environment:
       E2E_MATRIX_IN_DOCKER: "1"
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources

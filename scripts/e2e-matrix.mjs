@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dialectTranscript } from "./e2e-matrix-normalize.mjs";
 
@@ -11,6 +13,19 @@ const project = "datasources-e2e-matrix";
 const dialects = ["typescript", "rust", "csharp"];
 const providers = ["sqlite", "mysql", "postgres"];
 const inDocker = process.env.E2E_MATRIX_IN_DOCKER === "1";
+if (!inDocker && !process.env.WORK) {
+  const dest = mkdtempSync(join(tmpdir(), "datasources-ci-"));
+  cpSync(root, dest, {
+    recursive: true,
+    filter: (src) => {
+      const rel = relative(root, src);
+      if (rel.split("/").includes("node_modules")) return false;
+      if (rel === "typescript/package-lock.json" || rel === "cli/package-lock.json") return false;
+      return true;
+    },
+  });
+  process.env.WORK = dest;
+}
 const samples = [
   { name: "user-roles-simple-cli", sql: false },
   { name: "contacts-crud-enriched-medium-rest", sql: true },
@@ -23,7 +38,12 @@ const postgresUrl = () =>
   (inDocker ? "postgres://ds:ds@postgres:5432/datasources" : "postgres://ds:ds@127.0.0.1:15432/datasources");
 
 const compose = (...args) =>
-  spawnSync("docker", ["compose", "-p", project, "-f", composeFile, ...args], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  spawnSync("docker", ["compose", "-p", project, "-f", composeFile, ...args], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env,
+  });
 
 const requireOk = (result, label) => {
   if ((result.status ?? 1) !== 0)
