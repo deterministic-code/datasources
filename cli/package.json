@@ -1,6 +1,6 @@
 {
   "name": "@deterministic-code/datasources-cli",
-  "version": "0.1.2",
+  "version": "0.1.8",
   "type": "module",
   "bin": {
     "datasources": "./bin/datasources.mjs"
