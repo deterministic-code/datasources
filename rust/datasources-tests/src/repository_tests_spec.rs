@@ -368,21 +368,17 @@ fn convert_params(
     type_spec: &TypeSpec,
     fields: Vec<Parameter>,
 ) -> Vec<Parameter> {
+    let overlay = fields_overlay(type_spec, dialect.field);
     fields
         .into_iter()
-        .map(|parameter| {
-            let Some(canonical) = type_spec.fields.get(&parameter.name) else {
-                return parameter;
-            };
-            match (dialect.field)(canonical) {
-                Some(converter) => Parameter::new(
-                    parameter.name,
-                    converter
-                        .convert(&parameter.value)
-                        .unwrap_or(parameter.value),
-                ),
-                None => parameter,
-            }
+        .map(|parameter| match overlay.get(&parameter.name) {
+            Some(converter) => Parameter::new(
+                parameter.name,
+                converter
+                    .reverse_convert(&parameter.value)
+                    .unwrap_or(parameter.value),
+            ),
+            None => parameter,
         })
         .collect()
 }
