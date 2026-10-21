@@ -6,7 +6,8 @@ use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
-    SelectStatementOptions, DefaultStatementTextRenderer, TransformMapper, TypeConverter, UpdateStatement, Value, Where,
+    SelectStatementOptions, DefaultStatementTextRenderer, Statement, TransformMapper, TypeConverter,
+    UpdateStatement, Value, Where,
 };
 use rust_decimal::Decimal;
 use serde::Deserialize;
@@ -25,6 +26,7 @@ pub struct RepositoryDialect {
     pub quote: fn(&str) -> String,
     pub field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     pub types: fn() -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    pub render: Option<fn(&dyn Statement) -> String>,
 }
 
 #[derive(Deserialize)]
@@ -149,10 +151,22 @@ fn and_all(parts: Vec<Expression>) -> Expression {
         })
 }
 
-fn where_sql(map: &BTreeMap<String, serde_yaml::Value>) -> Where {
+fn where_sql(
+    dialect: &RepositoryDialect,
+    type_spec: &TypeSpec,
+    map: &BTreeMap<String, serde_yaml::Value>,
+) -> Where {
+    let overlay = fields_overlay(type_spec, dialect.field);
     Where::new(and_all(
         map.iter()
-            .map(|(name, value)| Operator::equals(name.clone(), yaml_value(value)).into())
+            .map(|(name, value)| {
+                let raw = yaml_value(value);
+                let converted = overlay
+                    .get(name)
+                    .and_then(|converter| converter.reverse_convert(&raw).ok())
+                    .unwrap_or(raw);
+                Operator::equals(name.clone(), converted).into()
+            })
             .collect(),
     ))
 }
@@ -349,6 +363,26 @@ fn assert_rows(
     }
 }
 
+fn convert_params(
+    dialect: &RepositoryDialect,
+    type_spec: &TypeSpec,
+    fields: Vec<Parameter>,
+) -> Vec<Parameter> {
+    let overlay = fields_overlay(type_spec, dialect.field);
+    fields
+        .into_iter()
+        .map(|parameter| match overlay.get(&parameter.name) {
+            Some(converter) => Parameter::new(
+                parameter.name,
+                converter
+                    .reverse_convert(&parameter.value)
+                    .unwrap_or(parameter.value),
+            ),
+            None => parameter,
+        })
+        .collect()
+}
+
 fn fields_of(
     row: &BTreeMap<String, serde_yaml::Value>,
     include: impl Fn(&str) -> bool,
@@ -383,6 +417,13 @@ fn with_statement_sql(sql: String, _write: bool, _type_spec: &TypeSpec) -> Strin
     sql
 }
 
+fn statement_sql(dialect: &RepositoryDialect, statement: &dyn Statement) -> String {
+    match dialect.render {
+        Some(render) => render(statement),
+        None => DefaultStatementTextRenderer::instance().render(statement),
+    }
+}
+
 fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &RepositoryDialect) {
     let quote = dialect.quote;
     let Some(cfg) = &spec.type_spec.crud_mapper else {
@@ -406,7 +447,7 @@ fn apply_mappers(options: &mut CRUDRepositoryOptions, spec: &Spec, dialect: &Rep
     }
 }
 
-fn queries(spec: &Spec, provider: &str) -> Vec<String> {
+fn queries(spec: &Spec, dialect: &RepositoryDialect) -> Vec<String> {
     let columns = columns_of(&spec.type_spec);
     let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
     let ids: HashSet<&str> = spec.type_spec.ids.iter().map(String::as_str).collect();
@@ -417,94 +458,116 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
             let sql = if let Some(create) = &step.create {
                 let flat = flatten_yaml(&create.row, &spec.type_spec.mappings);
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&InsertStatement::new(
-                        &table,
-                        &fields_of(&flat, |col| !ids.contains(col) || assigned_yaml(flat.get(col))),
-                    )),
+                    statement_sql(
+                        dialect,
+                        &InsertStatement::new(
+                            &table,
+                            &convert_params(
+                                dialect,
+                                &spec.type_spec,
+                                fields_of(
+                                    &flat,
+                                    |col| !ids.contains(col) || assigned_yaml(flat.get(col)),
+                                ),
+                            ),
+                        ),
+                    ),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(read) = &step.read {
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&SelectStatement::new(
-                        SelectStatementOptions {
+                    statement_sql(
+                        dialect,
+                        &SelectStatement::new(SelectStatementOptions {
                             where_clause: Some(&where_clause),
                             ..SelectStatementOptions::new(&table, &refs)
-                        },
-                    )),
+                        }),
+                    ),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(query) = &step.query {
-                let where_clause = query.where_clause.as_ref().map(where_sql);
+                let where_clause = query
+                    .where_clause
+                    .as_ref()
+                    .map(|map| where_sql(dialect, &spec.type_spec, map));
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&SelectStatement::new(
-                        SelectStatementOptions {
+                    statement_sql(
+                        dialect,
+                        &SelectStatement::new(SelectStatementOptions {
                             where_clause: where_clause.as_ref().map(|w| w as &dyn datasources::IWhere),
                             ..SelectStatementOptions::new(&table, &refs)
-                        },
-                    )),
+                        }),
+                    ),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(read_by) = &step.read_by {
-                let where_clause = where_sql(&read_by.where_clause);
+                let where_clause = where_sql(dialect, &spec.type_spec, &read_by.where_clause);
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&SelectStatement::new(
-                        SelectStatementOptions {
+                    statement_sql(
+                        dialect,
+                        &SelectStatement::new(SelectStatementOptions {
                             where_clause: Some(&where_clause),
                             ..SelectStatementOptions::new(&table, &refs)
-                        },
-                    )),
+                        }),
+                    ),
                     false,
                     &spec.type_spec,
                 )
             } else if let Some(update) = &step.update {
                 let flat = flatten_yaml(&update.row, &spec.type_spec.mappings);
-                let fields = fields_of(&flat, |col| !ids.contains(col));
+                let fields = convert_params(
+                    dialect,
+                    &spec.type_spec,
+                    fields_of(&flat, |col| !ids.contains(col)),
+                );
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&flat["id"])));
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&UpdateStatement::new(
-                        &table,
-                        &fields,
-                        Some(&where_clause),
-                    )),
+                    statement_sql(
+                        dialect,
+                        &UpdateStatement::new(&table, &fields, Some(&where_clause)),
+                    ),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(update_by) = &step.update_by {
-                let fields = fields_of(
-                    &flatten_yaml(&update_by.row, &spec.type_spec.mappings),
-                    |col| !ids.contains(col),
+                let fields = convert_params(
+                    dialect,
+                    &spec.type_spec,
+                    fields_of(
+                        &flatten_yaml(&update_by.row, &spec.type_spec.mappings),
+                        |col| !ids.contains(col),
+                    ),
                 );
-                let where_clause = where_sql(&update_by.where_clause);
+                let where_clause = where_sql(dialect, &spec.type_spec, &update_by.where_clause);
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&UpdateStatement::new(
-                        &table,
-                        &fields,
-                        Some(&where_clause),
-                    )),
+                    statement_sql(
+                        dialect,
+                        &UpdateStatement::new(&table, &fields, Some(&where_clause)),
+                    ),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(delete) = &step.delete {
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&delete.id)));
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&DeleteStatement::new(
-                        &table,
-                        Some(&where_clause),
-                    )),
+                    statement_sql(
+                        dialect,
+                        &DeleteStatement::new(&table, Some(&where_clause)),
+                    ),
                     true,
                     &spec.type_spec,
                 )
             } else if let Some(delete_by) = &step.delete_by {
-                let where_clause = where_sql(&delete_by.where_clause);
+                let where_clause = where_sql(dialect, &spec.type_spec, &delete_by.where_clause);
                 with_statement_sql(
-                    DefaultStatementTextRenderer::instance().render(&DeleteStatement::new(
-                        &table,
-                        Some(&where_clause),
-                    )),
+                    statement_sql(
+                        dialect,
+                        &DeleteStatement::new(&table, Some(&where_clause)),
+                    ),
                     true,
                     &spec.type_spec,
                 )
@@ -517,7 +580,7 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
                     if let Some(column) = spec.type_spec.ids.first() {
                         let flat = flatten_yaml(&create.row, &spec.type_spec.mappings);
                         if !assigned_yaml(flat.get(column)) {
-                            let inserted = inserted_id_sql(provider, column);
+                            let inserted = inserted_id_sql(dialect.provider, &table, column);
                             if !inserted.is_empty() {
                                 out.push(inserted);
                             }
@@ -530,11 +593,13 @@ fn queries(spec: &Spec, provider: &str) -> Vec<String> {
         .collect()
 }
 
-fn inserted_id_sql(provider: &str, column: &str) -> String {
+fn inserted_id_sql(provider: &str, table: &str, column: &str) -> String {
     match provider {
         "sqlite" => format!("SELECT last_insert_rowid() AS {column}"),
         "mysql" => format!("SELECT LAST_INSERT_ID() AS {column}"),
-        "postgres" => format!("SELECT lastval() AS {column}"),
+        "postgres" => format!(
+            "SELECT setval(pg_get_serial_sequence('{table}', '{column}'), COALESCE((SELECT MAX(\"{column}\") FROM {table}), 1)) AS {column}"
+        ),
         _ => String::new(),
     }
 }
@@ -750,7 +815,7 @@ pub async fn run(
             _ => panic!("{}: empty step", spec.name),
         }
     }
-    let expected: Vec<String> = queries(&spec, dialect.provider)
+    let expected: Vec<String> = queries(&spec, dialect)
         .into_iter()
         .flat_map(|query| {
             [

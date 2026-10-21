@@ -1,4 +1,3 @@
-use crate::bind::isolation_sql;
 use crate::command::PostgresCommand;
 use crate::transaction::PostgresTransaction;
 use async_trait::async_trait;
@@ -8,6 +7,15 @@ use datasources::{
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_postgres::NoTls;
+
+pub(crate) fn isolation_sql(isolation: IsolationLevel) -> &'static str {
+    match isolation {
+        IsolationLevel::ReadUncommitted => "READ UNCOMMITTED",
+        IsolationLevel::ReadCommitted => "READ COMMITTED",
+        IsolationLevel::RepeatableRead => "REPEATABLE READ",
+        IsolationLevel::Serializable => "SERIALIZABLE",
+    }
+}
 
 pub(crate) fn map_err(error: tokio_postgres::Error) -> DatasourceError {
     let mut text = error.to_string();

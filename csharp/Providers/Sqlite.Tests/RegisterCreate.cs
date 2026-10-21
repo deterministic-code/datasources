@@ -1,6 +1,7 @@
 using Datasources;
 using Datasources.Sqlite;
 
+[Collection("DatasourceFactory")]
 public partial class RegisterCreateTests
 {
     const string Provider = "sqlite";

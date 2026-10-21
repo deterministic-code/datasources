@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 datasources = { workspace = true }
-deterministic_generators_common = { path = "../../deterministic-generators-common/rust" }
+deterministic_generators_common = { git = "https://github.com/deterministic-code/deterministic-generators-common", branch = "main" }
 indexmap = "2"
 regex = "1"
 serde_yaml = "0.9"

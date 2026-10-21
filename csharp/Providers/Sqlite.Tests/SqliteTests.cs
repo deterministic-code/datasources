@@ -3,6 +3,7 @@ using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
 
+[Collection("DatasourceFactory")]
 public class SqliteTests
 {
     public SqliteTests()

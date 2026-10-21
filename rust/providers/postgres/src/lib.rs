@@ -19,6 +19,9 @@ mod transaction;
 pub use driver::PostgresDriver;
 
 #[cfg(test)]
+#[path = "../tests/isolate.rs"]
+mod isolate;
+#[cfg(test)]
 #[path = "../tests/contacts.rs"]
 mod contacts;
 #[cfg(test)]
@@ -30,14 +33,16 @@ mod repository_spec;
 
 #[cfg(test)]
 mod tests {
-    use crate::bind::{isolation_sql, param_type, to_postgres};
+    use crate::bind::{param_type, to_postgres};
+    use crate::connection::isolation_sql;
+    use crate::converters::BinaryConverter;
     use tokio_postgres::types::Type;
     use crate::command::PostgresCommand;
     use crate::connection::PostgresConnection;
     use crate::transaction::PostgresTransaction;
     use datasources::{
         converters::Cells, create, downcast_connection, register, reset, Command, Connection,
-        Driver, IsolationLevel, Transaction, Value,
+        Driver, IsolationLevel, Transaction, TypeConverter, Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -94,7 +99,7 @@ mod tests {
         let (_, missing) = to_postgres("SELECT $missing", &HashMap::new());
         assert_eq!(missing, vec![Value::Null]);
         let stamp = Value::from("2020-01-02T03:04:05.000Z");
-        assert_eq!(param_type(&stamp), Type::TIMESTAMPTZ);
+        assert_eq!(param_type(&stamp), Type::UNKNOWN);
         assert_eq!(
             param_type(&Value::DateTime(
                 chrono::DateTime::parse_from_rfc3339("2020-01-02T03:04:05.000Z")
@@ -104,10 +109,14 @@ mod tests {
             Type::TIMESTAMPTZ
         );
         assert_eq!(param_type(&Value::from("ada")), Type::UNKNOWN);
-        assert!(crate::bind::is_base64("AQ=="));
-        assert_eq!(param_type(&Value::from("AA==")), Type::BYTEA);
-        assert_eq!(param_type(&Value::from("AQ==")), Type::BYTEA);
-        assert_eq!(param_type(&Value::Int(1)), Type::INT8);
+        assert!(matches!(
+            BinaryConverter.convert(&Value::from("AQ==")).unwrap(),
+            Value::Binary(_)
+        ));
+        assert_eq!(param_type(&Value::from("AA==")), Type::UNKNOWN);
+        assert_eq!(param_type(&Value::Binary(vec![0])), Type::BYTEA);
+        assert_eq!(param_type(&Value::Int(1)), Type::INT4);
+        assert_eq!(param_type(&Value::Int(i64::MAX)), Type::INT8);
         assert_eq!(
             isolation_sql(IsolationLevel::ReadUncommitted),
             "READ UNCOMMITTED"

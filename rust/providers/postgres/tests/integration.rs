@@ -1,5 +1,6 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
+use super::isolate;
 use datasources::{
     utc_iso_millis, Command, CommandMiddleware, Connection, ConsoleCommandMiddleware, Native,
     IsolationLevel, Parameter, Reader, Transaction, Value,
@@ -10,7 +11,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-use tokio_postgres::NoTls;
 
 #[derive(Deserialize)]
 struct Spec {
@@ -150,13 +150,32 @@ fn params(map: &Option<BTreeMap<String, serde_yaml::Value>>) -> Vec<Parameter> {
         .unwrap_or_default()
 }
 
+fn iso_z(text: &str) -> Option<String> {
+    match super::converters::field("datetime")
+        .and_then(|converter| converter.convert(&Value::Text(text.into())).ok())
+    {
+        Some(Value::DateTime(date)) => {
+            let iso = Value::iso_datetime(date);
+            Some(
+                iso.strip_suffix(".000Z")
+                    .map(|prefix| format!("{prefix}Z"))
+                    .unwrap_or(iso),
+            )
+        }
+        _ => None,
+    }
+}
+
 fn norm(value: &Value) -> serde_yaml::Value {
     match value {
         Value::Null => serde_yaml::Value::Null,
         Value::Bool(flag) => serde_yaml::Value::Bool(*flag),
         Value::Int(number) => serde_yaml::Value::Number((*number).into()),
         Value::Float(number) => serde_yaml::Value::Number(serde_yaml::Number::from(*number)),
-        Value::Text(text) => serde_yaml::Value::String(text.clone()),
+        Value::Text(text) => serde_yaml::Value::String(iso_z(text).unwrap_or_else(|| text.clone())),
+        Value::DateTime(date) => serde_yaml::Value::String(
+            iso_z(&Value::iso_datetime(*date)).unwrap_or_else(|| value.wire_text()),
+        ),
         other => serde_yaml::Value::String(other.wire_text()),
     }
 }
@@ -174,7 +193,7 @@ struct Session {
     command: PostgresCommand,
 }
 
-async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &str) {
+async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
     let spec: Spec = serde_yaml::from_str(&fs::read_to_string(path).unwrap()).unwrap();
     let names = spec
         .connections
@@ -195,10 +214,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
     };
     let mut sessions = HashMap::new();
     for name in &names {
-        let conn = Arc::new(PostgresConnection::new(
-            Some(url.to_string()),
-            Some(schema.to_string()),
-        ));
+        let conn = Arc::new(PostgresConnection::new(Some(url.to_string()), None));
         conn.open().await.unwrap();
         sessions.insert(
             name.clone(),
@@ -292,13 +308,13 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str, schema: &
             }
         }
     }
+    for session in sessions.values() {
+        session.conn.close().await.ok();
+    }
 }
 
 #[tokio::test]
 async fn shared_specs() {
-    let Ok(url) = std::env::var("POSTGRES_URL") else {
-        return;
-    };
     let dialect = load_dialect();
     for entry in fs::read_dir(repo_root().join("specs")).unwrap() {
         let path = entry.unwrap().path();
@@ -307,26 +323,9 @@ async fn shared_specs() {
         {
             continue;
         }
-        let schema = format!(
-            "ds_{:x}",
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|d| d.as_nanos())
-                .unwrap_or(0)
-        );
-        let (client, connection) = tokio_postgres::connect(&url, NoTls).await.unwrap();
-        tokio::spawn(async move {
-            let _ = connection.await;
-        });
-        client
-            .batch_execute(&format!("CREATE SCHEMA {schema}"))
-            .await
-            .unwrap();
-        run(&path, &dialect, &url, &schema).await;
-        client
-            .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
-            .await
-            .ok();
+        let isolated = isolate::create().await;
+        run(&path, &dialect, &isolated.url).await;
+        isolated.drop().await;
     }
 }
 
@@ -353,30 +352,10 @@ async fn read_return_value(command: &dyn Command) {
 #[tokio::test]
 async fn return_and_output_parameters() {
     use datasources::{ExecuteStoredProcedureStatement, ParameterDirection};
-    let Ok(url) = std::env::var("POSTGRES_URL") else {
-        return;
-    };
-    let schema = format!(
-        "ds_{:x}",
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0)
-    );
-    let (client, connection) = tokio_postgres::connect(&url, NoTls).await.unwrap();
-    tokio::spawn(async move {
-        let _ = connection.await;
-    });
-    client
-        .batch_execute(&format!("CREATE SCHEMA {schema}"))
-        .await
-        .unwrap();
-    let conn = Arc::new(PostgresConnection::new(
-        Some(url.clone()),
-        Some(schema.clone()),
-    ));
+    let isolated = isolate::create().await;
+    let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
     conn.open().await.unwrap();
-    let command = PostgresCommand::new(conn);
+    let command = PostgresCommand::new(conn.clone());
     command
         .execute_native(
             &Native::new("CREATE PROCEDURE bump(INOUT result INT) LANGUAGE plpgsql AS $$ BEGIN result := result + 1; END; $$"),
@@ -398,8 +377,6 @@ async fn return_and_output_parameters() {
         .unwrap();
     assert_eq!(call.parameters.as_ref().unwrap()[0].value, Value::Int(5));
     read_return_value(&command).await;
-    client
-        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
-        .await
-        .ok();
+    conn.close().await.unwrap();
+    isolated.drop().await;
 }

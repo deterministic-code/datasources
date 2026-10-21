@@ -113,11 +113,11 @@ export const physicalTableOf = (type: RepositoryTypeSpec): string =>
 
 const withStatementSql = (sql: string, _write: boolean, _type: RepositoryTypeSpec): string => sql;
 
-const insertedIdSql = (provider: string, column: string): string =>
+const insertedIdSql = (provider: string, table: string, column: string): string =>
   ({
     sqlite: `SELECT last_insert_rowid() AS ${column}`,
     mysql: `SELECT LAST_INSERT_ID() AS ${column}`,
-    postgres: `SELECT lastval() AS ${column}`,
+    postgres: `SELECT setval(pg_get_serial_sequence('${table}', '${column}'), COALESCE((SELECT MAX("${column}") FROM ${table}), 1)) AS ${column}`,
   })[provider] ?? "";
 
 export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[] => {
@@ -194,7 +194,7 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
     const inserted =
       step?.CREATE && spec.type.ids.length === 1
       && !assigned(flattenRepositoryRow(step.CREATE.row, type.mappings)[id])
-        ? insertedIdSql(provider, id)
+        ? insertedIdSql(provider, table, id)
         : "";
     return inserted ? [sql, inserted] : [sql];
   });

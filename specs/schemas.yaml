@@ -180,7 +180,7 @@ schemas:
         - { name: username, type: string }
         - { name: usertypename, type: string }
         - { name: decimal_text, type: string }
-        - { name: create_string, type: string }
+        - { name: create_string, type: datetime }
         - { name: version, type: binary }
 
   contacts:

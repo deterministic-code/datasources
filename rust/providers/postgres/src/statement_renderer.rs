@@ -13,7 +13,7 @@ use datasources::{
     CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, DropRoutineStatement,
     DropTriggerStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
-    StatementTextRenderer, StatementVisitor, Value,
+    StatementTextRenderer, StatementVisitor, TypeConverter, Value,
 };
 
 pub struct PostgresStatementRenderer;
@@ -80,7 +80,7 @@ impl StatementVisitor for PostgresStatementRenderer {
     }
 
     fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {
-        format!(
+        let insert = format!(
             "INSERT INTO {} ({}) VALUES ({})",
             statement.table(),
             statement
@@ -95,6 +95,18 @@ impl StatementVisitor for PostgresStatementRenderer {
                 .map(|field| pg_named(&field.name, &field.value))
                 .collect::<Vec<_>>()
                 .join(", ")
+        );
+        if statement
+            .fields()
+            .iter()
+            .any(|field| field.name == "id" || field.name == "Id")
+        {
+            return insert;
+        }
+        format!(
+            "{};\n{insert}",
+            PostgresSelectInsertedIdStatementTextRenderer
+                .render(&SelectInsertedIdStatement::new(statement.table(), "id"))
         )
     }
 
@@ -164,6 +176,60 @@ impl StatementVisitor for PostgresStatementRenderer {
     }
 }
 
+pub(crate) fn quote_identifiers(sql: &str) -> String {
+    let chars: Vec<char> = sql.chars().collect();
+    let mut out = String::with_capacity(sql.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '$'
+            && i + 1 < chars.len()
+            && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_')
+        {
+            out.push('$');
+            i += 1;
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                out.push(chars[i]);
+                i += 1;
+            }
+            continue;
+        }
+        if chars[i] == '"' || chars[i] == '\'' || chars[i] == '`' {
+            let quote = chars[i];
+            out.push(quote);
+            i += 1;
+            while i < chars.len() {
+                out.push(chars[i]);
+                if chars[i] == quote {
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if chars[i].is_ascii_alphabetic() || chars[i] == '_' {
+            let start = i;
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                i += 1;
+            }
+            let token: String = chars[start..i].iter().collect();
+            if token.chars().any(|ch| ch.is_ascii_uppercase())
+                && token.chars().any(|ch| ch.is_ascii_lowercase())
+            {
+                out.push('"');
+                out.push_str(&token);
+                out.push('"');
+            } else {
+                out.push_str(&token);
+            }
+            continue;
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
 fn pg_named(column: &str, value: &Value) -> String {
     match crate::driver::column_sql(logical(value).unwrap_or_default()) {
         Some(sql) => format!("${column}::{sql}"),
@@ -183,18 +249,28 @@ fn pg_cell(column: &str, index: usize, value: &Value) -> String {
 }
 
 fn logical(value: &Value) -> Option<&'static str> {
+    if matches!(
+        crate::converters::DateTimeConverter.convert(value),
+        Ok(Value::DateTime(_))
+    ) {
+        return Some("datetime");
+    }
+    if matches!(
+        crate::converters::BinaryConverter.convert(value),
+        Ok(Value::Binary(_))
+    ) {
+        return Some("binary");
+    }
     match value {
         Value::Null => None,
         Value::Bool(_) => Some("bool"),
         Value::Int(_) => Some("int"),
         Value::Float(_) => Some("float"),
-        Value::Text(text) if crate::bind::is_rfc3339(text) => Some("datetime"),
-        Value::Text(text) if crate::bind::is_base64(text) => Some("binary"),
         Value::Text(_) => Some("string"),
-        Value::DateTime(_) => Some("datetime"),
         Value::Uuid(_) => Some("uuid"),
         Value::Decimal(_) => Some("decimal"),
         Value::Binary(_) => Some("binary"),
+        Value::DateTime(_) => Some("datetime"),
     }
 }
 
@@ -217,7 +293,7 @@ mod tests {
     fn renders_inserted_id_and_create_table() {
         assert_eq!(
             renderer().render(&SelectInsertedIdStatement::new("users", "id")),
-            "SELECT lastval() AS id"
+            "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(\"id\") FROM users), 1)) AS id"
         );
         let create = CreateTableStatement::new(
             "orders",
@@ -289,7 +365,14 @@ mod tests {
             &["created".into()],
             &["id".into()],
             vec![BulkUpdateRow {
-                fields: vec![Parameter::new("created", "2020-01-02T03:04:05.000Z")],
+                fields: vec![Parameter::new(
+                    "created",
+                    Value::DateTime(
+                        chrono::DateTime::parse_from_rfc3339("2020-01-02T03:04:05.000Z")
+                            .unwrap()
+                            .with_timezone(&chrono::Utc),
+                    ),
+                )],
                 ids: vec![Parameter::new("id", 1_i64)],
             }],
         );

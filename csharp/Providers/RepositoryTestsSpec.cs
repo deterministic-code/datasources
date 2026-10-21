@@ -53,14 +53,14 @@ public static class RepositoryTestsSpec
         foreach (var step in spec.Steps)
             await (step switch
             {
-                { Create: { } create } => repo.Create(ToEntity(create.Row, spec.Type, mapping)),
-                { Read: { } read } => AssertRead(spec.Name, read, repo.ReadSingle(new Where(new Operator.Equals("id", IdValue(read.Id, spec.Type))))),
-                { Query: { } query } => AssertQuery(spec.Name, query, query.Where is { } where ? repo.Read(Where(mapping, where, spec.Type)) : repo.Read()),
-                { ReadBy: { } readBy } => AssertRead(spec.Name, readBy, repo.ReadSingle(Where(mapping, readBy.Where, spec.Type))),
+                { Create: { } create } => repo.Create(ToEntity(Flatten(create.Row, spec.Type), spec.Type, mapping)),
+                { Read: { } read } => AssertRead(spec.Name, spec.Type, read, repo.ReadSingle(new Where(new Operator.Equals("id", IdValue(read.Id, spec.Type))))),
+                { Query: { } query } => AssertQuery(spec.Name, spec.Type, query, query.Where is { } where ? repo.Read(Where(mapping, where, spec.Type)) : repo.Read()),
+                { ReadBy: { } readBy } => AssertRead(spec.Name, spec.Type, readBy, repo.ReadSingle(Where(mapping, readBy.Where, spec.Type))),
                 { Update: { } update } => AssertAffected($"{spec.Name} UPDATE", update.HasExpect, update.Expect,
-                    repo.Update(ToEntity(update.Row, spec.Type, mapping))),
+                    repo.Update(ToEntity(Flatten(update.Row, spec.Type), spec.Type, mapping))),
                 { UpdateBy: { } updateBy } => AssertAffected($"{spec.Name} UPDATEBY", updateBy.HasExpect, updateBy.Expect,
-                    repo.Update(ToEntity(updateBy.Row, spec.Type, mapping), Where(mapping, updateBy.Where, spec.Type))),
+                    repo.Update(ToEntity(Flatten(updateBy.Row, spec.Type), spec.Type, mapping), Where(mapping, updateBy.Where, spec.Type))),
                 { Delete: { } delete } => AssertAffected($"{spec.Name} DELETE", delete.HasExpect, delete.Expect,
                     repo.Delete(ToEntity(new() { ["id"] = delete.Id }, spec.Type, mapping))),
                 { DeleteBy: { } deleteBy } => AssertAffected($"{spec.Name} DELETEBY", deleteBy.HasExpect, deleteBy.Expect,
@@ -69,16 +69,16 @@ public static class RepositoryTestsSpec
             });
     }
 
-    static async Task AssertRead<T>(string name, IdOp read, Task<T?> task)
+    static async Task AssertRead<T>(string name, TypeSpec type, IdOp read, Task<T?> task)
     {
         var actual = await task;
-        if (read.HasExpect) AssertRow($"{name} READ", actual, read.Expect);
+        if (read.HasExpect) AssertRow($"{name} READ", actual, FlattenExpect(read.Expect, type));
     }
 
-    static async Task AssertRead<T>(string name, WhereOp readBy, Task<T?> task)
+    static async Task AssertRead<T>(string name, TypeSpec type, WhereOp readBy, Task<T?> task)
     {
         var actual = await task;
-        if (readBy.HasExpect) AssertRow($"{name} READBY", actual, readBy.Expect);
+        if (readBy.HasExpect) AssertRow($"{name} READBY", actual, FlattenExpect(readBy.Expect, type));
     }
 
     static async Task AssertAffected(string name, bool hasExpect, object? expect, Task<Response> task)
@@ -98,7 +98,7 @@ public static class RepositoryTestsSpec
             : throw new InvalidOperationException("expect.rowsAffected required");
     }
 
-    static async Task AssertQuery<T>(string name, QueryOp query, IAsyncEnumerable<T> items)
+    static async Task AssertQuery<T>(string name, TypeSpec type, QueryOp query, IAsyncEnumerable<T> items)
     {
         var actual = new List<T>();
         await foreach (var item in items) actual.Add(item);
@@ -107,7 +107,7 @@ public static class RepositoryTestsSpec
         if (actual.Count != expect.Count)
             throw new InvalidOperationException($"{name} QUERY: expected {expect.Count} rows got {actual.Count}");
         for (var index = 0; index < actual.Count; index++)
-            AssertRow($"{name} QUERY[{index}]", actual[index], expect[index]);
+            AssertRow($"{name} QUERY[{index}]", actual[index], FlattenExpect(expect[index], type));
     }
 
     static void AssertRow(string name, object? actual, object? expect)
@@ -215,16 +215,16 @@ public static class RepositoryTestsSpec
             if (step.Create is { } created
                 && spec.Type.Ids.Count == 1
                 && !Assigned(Flatten(created.Row, spec.Type).GetValueOrDefault(spec.Type.Ids[0]))
-                && InsertedIdSql(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
+                && InsertedIdSql(provider, table, spec.Type.Ids[0]) is { Length: > 0 } inserted)
                 yield return inserted;
         }
     }
 
-    static string InsertedIdSql(string provider, string column) => provider switch
+    static string InsertedIdSql(string provider, string table, string column) => provider switch
     {
         "sqlite" => $"SELECT last_insert_rowid() AS {column}",
         "mysql" => $"SELECT LAST_INSERT_ID() AS {column}",
-        "postgres" => $"SELECT lastval() AS {column}",
+        "postgres" => $"SELECT setval(pg_get_serial_sequence('{table}', '{column}'), COALESCE((SELECT MAX(\"{column}\") FROM {table}), 1)) AS {column}",
         _ => ""
     };
 
@@ -242,6 +242,9 @@ public static class RepositoryTestsSpec
         }
         return dest;
     }
+
+    static object? FlattenExpect(object? expect, TypeSpec type) =>
+        expect is null ? null : Flatten(AsRow(expect), type);
 
     static string InsertSql(string table, Dictionary<string, object?> flat, HashSet<string> ids) =>
         DefaultStatementTextRenderer.Instance.Render(new InsertStatement(table, Fields(flat, col => !ids.Contains(col) || Assigned(flat.GetValueOrDefault(col)))));
