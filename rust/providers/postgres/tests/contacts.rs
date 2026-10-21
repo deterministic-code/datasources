@@ -1,14 +1,13 @@
 use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
+use super::isolate;
 use datasources::Connection;
 use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
-    contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
+    contact_with, contacts_parity, contacts_service_of, expect_contacts_view,     seed_contacts_sql,
     statements_of, SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
-use std::time::SystemTime;
-use tokio_postgres::NoTls;
 
 fn verbose() -> bool {
     matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
@@ -24,25 +23,8 @@ fn render(statement: &datasources::CreateTableStatement) -> String {
 
 #[tokio::test]
 async fn matches_enriched_contacts_service_to_flat_mapper() {
-    let Ok(url) = std::env::var("POSTGRES_URL") else {
-        return;
-    };
-    let schema = format!(
-        "ds_{:x}",
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0)
-    );
-    let (client, connection) = tokio_postgres::connect(&url, NoTls).await.unwrap();
-    tokio::spawn(async move {
-        let _ = connection.await;
-    });
-    client
-        .batch_execute(&format!("CREATE SCHEMA {schema}"))
-        .await
-        .unwrap();
-    let conn = Arc::new(PostgresConnection::new(Some(url), Some(schema.clone())));
+    let isolated = isolate::create().await;
+    let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn.clone());
     let mut sql = statements_of(&contact_schema("postgres", render));
@@ -62,7 +44,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
 
     let ids = contact_lookup_ids(conn.clone()).await.unwrap();
     let extra = add_extra_contact(
-        &contacts_service_of(conn, None, super::converters::field),
+        &contacts_service_of(conn.clone(), None, super::converters::field),
         &ids,
     )
     .await
@@ -78,8 +60,6 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     assert!(extra["Phones"].wire_text().contains("Name=Mobile")
         || extra["Phones"].wire_text().contains("Name%3DMobile"));
 
-    client
-        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
-        .await
-        .ok();
+    conn.close().await.ok();
+    isolated.drop().await;
 }

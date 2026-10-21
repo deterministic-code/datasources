@@ -34,7 +34,7 @@ describe("PostgresStatementRenderer", () => {
 
   it("renders inserted id and create table", () => {
     expect(renderer.render(new SelectInsertedIdStatement("users", "id"))).toBe(
-      "SELECT lastval() AS id",
+      "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(\"id\") FROM users), 1)) AS id",
     );
 
     const create = new CreateTableStatement(

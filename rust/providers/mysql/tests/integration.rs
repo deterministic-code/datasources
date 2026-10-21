@@ -151,13 +151,32 @@ fn params(map: &Option<BTreeMap<String, serde_yaml::Value>>) -> Vec<Parameter> {
         .unwrap_or_default()
 }
 
+fn iso_z(text: &str) -> Option<String> {
+    match super::converters::field("datetime")
+        .and_then(|converter| converter.convert(&Value::Text(text.into())).ok())
+    {
+        Some(Value::DateTime(date)) => {
+            let iso = Value::iso_datetime(date);
+            Some(
+                iso.strip_suffix(".000Z")
+                    .map(|prefix| format!("{prefix}Z"))
+                    .unwrap_or(iso),
+            )
+        }
+        _ => None,
+    }
+}
+
 fn norm(value: &Value) -> serde_yaml::Value {
     match value {
         Value::Null => serde_yaml::Value::Null,
         Value::Bool(flag) => serde_yaml::Value::Bool(*flag),
         Value::Int(number) => serde_yaml::Value::Number((*number).into()),
         Value::Float(number) => serde_yaml::Value::Number(serde_yaml::Number::from(*number)),
-        Value::Text(text) => serde_yaml::Value::String(text.clone()),
+        Value::Text(text) => serde_yaml::Value::String(iso_z(text).unwrap_or_else(|| text.clone())),
+        Value::DateTime(date) => serde_yaml::Value::String(
+            iso_z(&Value::iso_datetime(*date)).unwrap_or_else(|| value.wire_text()),
+        ),
         other => serde_yaml::Value::String(other.wire_text()),
     }
 }
@@ -305,9 +324,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
 
 #[tokio::test]
 async fn shared_specs() {
-    let Ok(base) = std::env::var("MYSQL_URL") else {
-        return;
-    };
+    let base = std::env::var("MYSQL_URL").expect("MYSQL_URL");
     let dialect = load_dialect();
     for entry in fs::read_dir(repo_root().join("specs")).unwrap() {
         let path = entry.unwrap().path();
@@ -400,9 +417,7 @@ async fn call_procedure_returns_two_results(command: &dyn Command) {
 
 #[tokio::test]
 async fn call_procedure_returns_two_results_from_mysql() {
-    let Ok(base) = std::env::var("MYSQL_URL") else {
-        return;
-    };
+    let base = std::env::var("MYSQL_URL").expect("MYSQL_URL");
     let name = format!("ds_{}", uuid_name());
     let mut admin = Conn::from_url(base.clone()).await.unwrap();
     admin
@@ -424,9 +439,7 @@ async fn call_procedure_returns_two_results_from_mysql() {
 
 #[tokio::test]
 async fn output_parameter() {
-    let Ok(base) = std::env::var("MYSQL_URL") else {
-        return;
-    };
+    let base = std::env::var("MYSQL_URL").expect("MYSQL_URL");
     let name = format!("ds_{}", uuid_name());
     let mut admin = Conn::from_url(base.clone()).await.unwrap();
     admin
@@ -449,9 +462,7 @@ async fn output_parameter() {
 #[tokio::test]
 async fn return_statement_selects_scalar() {
     use datasources::ReturnStatement;
-    let Ok(base) = std::env::var("MYSQL_URL") else {
-        return;
-    };
+    let base = std::env::var("MYSQL_URL").expect("MYSQL_URL");
     let name = format!("ds_{}", uuid_name());
     let mut admin = Conn::from_url(base.clone()).await.unwrap();
     admin

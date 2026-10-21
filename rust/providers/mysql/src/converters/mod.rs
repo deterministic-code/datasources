@@ -38,6 +38,16 @@ pub fn field(canonical: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Se
         .map(|(_, converter)| converter)
 }
 
+pub fn convert(value: &Value) -> Value {
+    match value {
+        Value::Text(_) => field("datetime")
+            .and_then(|converter| converter.convert(value).ok())
+            .filter(|converted| matches!(converted, Value::DateTime(_)))
+            .unwrap_or_else(|| value.clone()),
+        _ => value.clone(),
+    }
+}
+
 pub fn reverse(value: &Value) -> Value {
     let key = match value {
         Value::Bool(_) => "bool",

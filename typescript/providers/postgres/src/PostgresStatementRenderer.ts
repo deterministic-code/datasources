@@ -29,7 +29,8 @@ import { PostgresIdentityInsertStatementRenderer } from "./PostgresIdentityInser
 
 class PostgresSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
   override render(statement: SelectInsertedIdStatement): string {
-    return `SELECT lastval() AS ${statement.column}`;
+    const { table, column } = statement;
+    return `SELECT setval(pg_get_serial_sequence('${table}', '${column}'), COALESCE((SELECT MAX("${column}") FROM ${table}), 1)) AS ${column}`;
   }
 }
 

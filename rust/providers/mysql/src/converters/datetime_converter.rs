@@ -7,6 +7,27 @@ fn stamp(date: DateTime<Utc>) -> String {
 
 pub struct DateTimeConverter;
 
+impl DateTimeConverter {
+    pub fn from_ymd_hms_micro(
+        year: u16,
+        month: u8,
+        day: u8,
+        hour: u8,
+        min: u8,
+        sec: u8,
+        micros: u32,
+    ) -> Value {
+        let text = format!(
+            "{year:04}-{month:02}-{day:02} {hour:02}:{min:02}:{sec:02}.{:03}",
+            micros / 1000
+        );
+        match DateTimeConverter.convert(&Value::Text(text.clone())) {
+            Ok(Value::DateTime(date)) => Value::DateTime(date),
+            _ => Value::Text(text),
+        }
+    }
+}
+
 impl TypeConverter<Value, Value> for DateTimeConverter {
     fn convert(&self, from: &Value) -> Result<Value> {
         Ok(match from {
@@ -63,6 +84,10 @@ mod tests {
         assert_eq!(
             converter.reverse_convert(&Value::Int(1)).unwrap(),
             Value::Int(1)
+        );
+        assert_eq!(
+            DateTimeConverter::from_ymd_hms_micro(2020, 1, 2, 3, 4, 5, 0),
+            native
         );
     }
 }

@@ -17,6 +17,7 @@ fn dialect() -> RepositoryDialect {
         quote,
         field: super::converters::field,
         types: super::converters::row_type_converters,
+        render: None,
     }
 }
 
@@ -35,9 +36,7 @@ fn replace_db(url: &str, name: &str) -> String {
 
 #[tokio::test]
 async fn user_crud() {
-    let Ok(base) = std::env::var("MYSQL_URL") else {
-        return;
-    };
+    let base = std::env::var("MYSQL_URL").expect("MYSQL_URL");
     for path in datasources_tests::files() {
         let name = format!(
             "ds_{:x}",

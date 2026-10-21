@@ -215,16 +215,16 @@ public static class RepositoryTestsSpec
             if (step.Create is { } created
                 && spec.Type.Ids.Count == 1
                 && !Assigned(Flatten(created.Row, spec.Type).GetValueOrDefault(spec.Type.Ids[0]))
-                && InsertedIdSql(provider, spec.Type.Ids[0]) is { Length: > 0 } inserted)
+                && InsertedIdSql(provider, table, spec.Type.Ids[0]) is { Length: > 0 } inserted)
                 yield return inserted;
         }
     }
 
-    static string InsertedIdSql(string provider, string column) => provider switch
+    static string InsertedIdSql(string provider, string table, string column) => provider switch
     {
         "sqlite" => $"SELECT last_insert_rowid() AS {column}",
         "mysql" => $"SELECT LAST_INSERT_ID() AS {column}",
-        "postgres" => $"SELECT lastval() AS {column}",
+        "postgres" => $"SELECT setval(pg_get_serial_sequence('{table}', '{column}'), COALESCE((SELECT MAX(\"{column}\") FROM {table}), 1)) AS {column}",
         _ => ""
     };
 

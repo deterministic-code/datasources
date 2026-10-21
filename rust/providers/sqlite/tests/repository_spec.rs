@@ -14,6 +14,7 @@ fn dialect() -> RepositoryDialect {
         quote,
         field: super::converters::field,
         types: super::converters::row_type_converters,
+        render: None,
     }
 }
 

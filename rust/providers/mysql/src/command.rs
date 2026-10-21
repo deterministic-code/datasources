@@ -278,7 +278,7 @@ impl MysqlCommand {
                         .cloned()
                         .unwrap_or(Value::Null);
                     Parameter {
-                        value,
+                        value: output_value(value),
                         ..parameter.clone()
                     }
                 }
@@ -357,6 +357,13 @@ fn to_mysql_value(value: &Value) -> MysqlValue {
     }
 }
 
+fn output_value(value: Value) -> Value {
+    match &value {
+        Value::Text(text) => text.parse::<i64>().map(Value::Int).unwrap_or(value),
+        _ => value,
+    }
+}
+
 fn from_mysql_value(value: MysqlValue) -> Value {
     match value {
         MysqlValue::NULL => Value::Null,
@@ -364,15 +371,14 @@ fn from_mysql_value(value: MysqlValue) -> Value {
         MysqlValue::UInt(value) => Value::Int(value as i64),
         MysqlValue::Float(value) => Value::Float(value as f64),
         MysqlValue::Double(value) => Value::Float(value),
-        MysqlValue::Bytes(bytes) => Value::Text(String::from_utf8_lossy(&bytes).into_owned()),
-        MysqlValue::Date(year, month, day, hour, min, sec, micros) => chrono::NaiveDate::from_ymd_opt(
-            year as i32,
-            month as u32,
-            day as u32,
-        )
-        .and_then(|date| date.and_hms_micro_opt(hour as u32, min as u32, sec as u32, micros))
-        .map(|naive| Value::DateTime(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive, chrono::Utc)))
-        .unwrap_or_else(|| Value::Text(format!("{value:?}"))),
+        MysqlValue::Bytes(bytes) => converters::convert(&Value::Text(
+            String::from_utf8_lossy(&bytes).into_owned(),
+        )),
+        MysqlValue::Date(year, month, day, hour, min, sec, micros) => {
+            converters::DateTimeConverter::from_ymd_hms_micro(
+                year, month, day, hour, min, sec, micros,
+            )
+        }
         MysqlValue::Time(..) => Value::Text(format!("{value:?}")),
     }
 }

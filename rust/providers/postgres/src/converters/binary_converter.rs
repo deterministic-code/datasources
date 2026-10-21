@@ -3,23 +3,31 @@ use datasources::{Result, TypeConverter, Value};
 
 pub struct BinaryConverter;
 
-fn bytes(value: &Value) -> Value {
-    match value {
-        Value::Text(text) => STANDARD
-            .decode(text)
-            .map(Value::Binary)
-            .unwrap_or_else(|_| Value::Binary(text.as_bytes().to_vec())),
-        other => other.clone(),
-    }
+fn decode(text: &str) -> Option<Vec<u8>> {
+    let text = text.trim();
+    (text.len() >= 4
+        && text.len() % 4 == 0
+        && text.contains('=')
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'+' || b == b'/' || b == b'=')
+        && STANDARD.decode(text).is_ok())
+    .then(|| STANDARD.decode(text).ok())
+    .flatten()
 }
 
 impl TypeConverter<Value, Value> for BinaryConverter {
     fn convert(&self, from: &Value) -> Result<Value> {
-        Ok(bytes(from))
+        Ok(match from {
+            Value::Text(text) => decode(text)
+                .map(Value::Binary)
+                .unwrap_or_else(|| from.clone()),
+            other => other.clone(),
+        })
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        Ok(bytes(to))
+        self.convert(to)
     }
 }
 
@@ -38,9 +46,10 @@ mod tests {
             converter.reverse_convert(&Value::from("AQIDBA==")).unwrap(),
             raw
         );
-        assert_eq!(
-            converter.convert(&Value::from("x")).unwrap(),
-            Value::Binary(vec![b'x'])
-        );
+        assert_eq!(converter.convert(&Value::from("x")).unwrap(), Value::from("x"));
+        assert!(matches!(
+            converter.convert(&Value::from("AA==")).unwrap(),
+            Value::Binary(_)
+        ));
     }
 }

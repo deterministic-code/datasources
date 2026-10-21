@@ -12,7 +12,7 @@ public class PostgresStatementRendererTests
     public void RendersInsertedIdAndCreateTable()
     {
         Assert.Equal(
-            "SELECT lastval() AS id",
+            "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(\"id\") FROM users), 1)) AS id",
             Renderer.Render(new SelectInsertedIdStatement("users", "id")));
 
         var create = new CreateTableStatement(
