@@ -4,6 +4,7 @@ using Datasources.SqlSpecs;
 
 namespace Datasources.Sqlite.Tests;
 
+[Collection("DatasourceFactory")]
 public class SqliteCommandIntegrationTests
 {
     public SqliteCommandIntegrationTests()

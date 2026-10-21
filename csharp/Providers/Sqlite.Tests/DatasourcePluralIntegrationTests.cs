@@ -4,6 +4,7 @@ using static Datasources.Cmp;
 
 namespace Datasources.Sqlite.Tests;
 
+[Collection("DatasourceFactory")]
 public class DatasourcePluralIntegrationTests
 {
     public DatasourcePluralIntegrationTests()

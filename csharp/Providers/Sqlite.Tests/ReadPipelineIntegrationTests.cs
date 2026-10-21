@@ -4,6 +4,7 @@ using Datasources.SqlSpecs;
 
 namespace Datasources.Sqlite.Tests;
 
+[Collection("DatasourceFactory")]
 public class ReadPipelineIntegrationTests
 {
     public ReadPipelineIntegrationTests()

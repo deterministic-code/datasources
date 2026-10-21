@@ -3,6 +3,7 @@ using Datasources.SqlSpecs;
 
 namespace Datasources.Sqlite.Tests;
 
+[Collection("DatasourceFactory")]
 public class UserViewCRUDRepositoryTests
 {
     public UserViewCRUDRepositoryTests()

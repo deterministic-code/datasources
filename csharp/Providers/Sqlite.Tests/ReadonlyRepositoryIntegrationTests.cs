@@ -5,6 +5,7 @@ using static Datasources.Cmp;
 
 namespace Datasources.Sqlite.Tests;
 
+[Collection("DatasourceFactory")]
 public class ReadonlyRepositoryIntegrationTests
 {
     public ReadonlyRepositoryIntegrationTests()
@@ -170,6 +171,7 @@ public class ReadonlyRepositoryIntegrationTests
     }
 }
 
+[Collection("DatasourceFactory")]
 public class UsersViewCrudTests
 {
     public UsersViewCrudTests()
@@ -601,6 +603,7 @@ public class UsersViewRoleTests
     }
 }
 
+[Collection("DatasourceFactory")]
 public class UserCrudTests
 {
     public UserCrudTests()
