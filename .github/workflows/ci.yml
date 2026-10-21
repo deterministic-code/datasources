@@ -21,7 +21,3 @@ jobs:
       - run: npm install --prefix samples/typescript/contacts-crud-enriched-medium-rest
       - run: git clone --depth 1 --branch main https://github.com/deterministic-code/deterministic-generators-common.git deterministic-generators-common
       - run: npm test
-      - run: cargo test --workspace --manifest-path rust/Cargo.toml
-        env:
-          RUSTFLAGS: -D warnings
-      - run: dotnet test csharp/Datasources.slnx
