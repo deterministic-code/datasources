@@ -19,5 +19,4 @@ jobs:
       - run: npm install --prefix cli
       - run: npm install --prefix samples/typescript/user-roles-simple-cli
       - run: npm install --prefix samples/typescript/contacts-crud-enriched-medium-rest
-      - run: git clone --depth 1 --branch main https://github.com/deterministic-code/deterministic-generators-common.git deterministic-generators-common
       - run: npm test
