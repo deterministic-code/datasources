@@ -99,6 +99,6 @@ public class MysqlTests
         Assert.Equal(new Value.Text(id.ToString()), stored["Key"]);
         Assert.Equal(new Value.Int(1), stored["Active"]);
         Assert.Equal(new Value.Text("ada"), stored["Login"]);
-        Assert.Equal(new Value.Text("2020-01-02T03:04:05.000Z"), stored["Created"]);
+        Assert.Equal(new Value.Text("2020-01-02 03:04:05.000"), stored["Created"]);
     }
 }

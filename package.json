@@ -2,7 +2,7 @@
   "name": "datasources",
   "private": true,
   "scripts": {
-    "test": "node --experimental-strip-types --test scripts/sync-examples.test.mjs scripts/dialects.test.mjs scripts/view-source.test.mjs scripts/generate-skill.test.mjs && npm test --prefix typescript && npm test --prefix cli && npm run test:samples",
+    "test": "node --experimental-strip-types --test scripts/sync-examples.test.mjs scripts/dialects.test.mjs scripts/view-source.test.mjs scripts/generate-skill.test.mjs && npm test --prefix typescript && npm test --prefix cli && npm run test:samples && RUSTFLAGS='-D warnings' cargo test --workspace --manifest-path rust/Cargo.toml && dotnet test csharp/Datasources.slnx",
     "test:e2e": "npm run test:e2e --prefix typescript --",
     "test:e2e:verbose": "npm run test:e2e:verbose --prefix typescript",
     "test:e2e:ci": "npm run test:e2e:ci --prefix typescript --",
