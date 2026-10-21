@@ -86,7 +86,7 @@ describe("run", () => {
     expect(io.ran[0]).not.toMatch(/better-sqlite3/);
     expect(io.ran).toContain("npm install @deterministic-code/migraters");
     expect(io.ran).toContain(
-      "npx --yes --package @deterministic-code/migraters migrate-init --dialect sqlite",
+      "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     );
     expect(files[join(cwd, "deterministic", "types.yaml")]).toBeUndefined();
   });
@@ -100,7 +100,7 @@ describe("run", () => {
     expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], sqlIo)).toBe(0);
     expect(sqlIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(sqlIo.ran).toContain(
-      "npx --yes --package @deterministic-code/migraters migrate-init --dialect sqlite --dialect postgres",
+      "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite --dialect postgres",
     );
     const json = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-json": "*" } }),
@@ -116,35 +116,44 @@ describe("run", () => {
     const dryIo = deps(dry.fs);
     expect(await run(["setup", "--yes", "--cwd", cwd, "--dry-run"], dryIo)).toBe(0);
     expect(dryIo.ran).toEqual([]);
-    expect(dryIo.logs.some((line) => line.includes("migrate-init --dialect sqlite"))).toBe(true);
+    expect(dryIo.logs.some((line) => line.includes("migrate-init --language typescript --dialect sqlite"))).toBe(true);
     const addIo = deps(mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-sqlite": "*" } }),
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     }).fs);
     expect(await run(["add", "postgres", "--cwd", cwd, "--ecosystem", "ts"], addIo)).toBe(0);
     expect(addIo.ran).toContain(
-      "npx --yes --package @deterministic-code/migraters migrate-init --dialect sqlite --dialect postgres",
+      "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite --dialect postgres",
     );
   });
 
   it("inits migraters when csharp or rust adds SQL dialects", async () => {
-    const init = "npx --yes --package @deterministic-code/migraters migrate-init --dialect sqlite --dialect postgres";
+    const init = (language: string) =>
+      `npx --yes --package @deterministic-code/migraters migrate-init --language ${language} --dialect sqlite --dialect postgres`;
     const csharp = mem(["App.csproj"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const csharpIo = deps(csharp.fs);
     expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--ecosystem", "csharp"], csharpIo)).toBe(0);
     expect(csharpIo.ran).toContain("npm install @deterministic-code/migraters");
-    expect(csharpIo.ran).toContain(init);
+    expect(csharpIo.ran).toContain(init("csharp"));
     const rust = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const rustIo = deps(rust.fs);
     expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--ecosystem", "rust"], rustIo)).toBe(0);
     expect(rustIo.ran).toContain("npm install @deterministic-code/migraters");
-    expect(rustIo.ran).toContain(init);
+    expect(rustIo.ran).toContain(init("rust"));
     const json = mem(["App.csproj"], {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
     });
     const jsonIo = deps(json.fs);
     expect(await run(["add", "json", "--cwd", cwd, "--ecosystem", "csharp"], jsonIo)).toBe(0);
     expect(jsonIo.ran.some((line) => line.includes("migraters") || line.includes("migrate-init"))).toBe(false);
+    const setup = mem(["App.csproj"], {
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
+    });
+    const setupIo = deps(setup.fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "csharp"], setupIo)).toBe(0);
+    expect(setupIo.ran).toContain(
+      "npx --yes --package @deterministic-code/migraters migrate-init --language csharp --dialect sqlite",
+    );
   });
 
   it("runs interactive setup and diffs add/remove", async () => {
@@ -283,7 +292,7 @@ describe("run", () => {
     expect(await run(["setup", "--yes", "--cwd", cwd], io)).toBe(0);
     expect(io.ran).toEqual([
       "npm install @deterministic-code/migraters",
-      "npx --yes --package @deterministic-code/migraters migrate-init --dialect sqlite",
+      "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     ]);
   });
 

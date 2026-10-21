@@ -51,7 +51,7 @@ npx @deterministic-code/datasources-cli migrations create --migrations-path ./db
 
 `--migrations-path` wins over `--migrations-root`. Re-running overwrites the same files.
 
-Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init` for every ecosystem. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
+Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init --language` for the ecosystem and its SQL dialects. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
 
 ```sh
 npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection ./app.sqlite

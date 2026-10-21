@@ -21,7 +21,7 @@ import {
 import { applyGenerate } from "./generate/applyGenerate.ts";
 import { applyMigrations } from "./generate/applyMigrations.ts";
 import { applyMigrateUp } from "./generate/migrateUp.ts";
-import { migrateInitCommands, sqlMigrateProviders } from "./migrateInit.ts";
+import { migrateInitCommands, migrateLanguage, sqlMigrateProviders } from "./migrateInit.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { applyVersion } from "./version/applyVersion.ts";
 import { envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
@@ -102,8 +102,8 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
     installed.filter((name) => !selected.includes(name)),
     selected,
   );
-  await applyMigrateInit(flags, deps, selected);
-  const dialect: Dialect = ecosystem === "ts" ? "typescript" : ecosystem;
+  await applyMigrateInit(flags, deps, ecosystem, selected);
+  const dialect: Dialect = migrateLanguage(ecosystem);
   await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
   if (!answers.scaffold) return;
   if (flags.dryRun) {
@@ -133,7 +133,7 @@ const applyAddRemove = async (
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
   await applyPackages(flags, deps, ecosystem, entries, add, remove, remaining);
-  await applyMigrateInit(flags, deps, remaining);
+  await applyMigrateInit(flags, deps, ecosystem, remaining);
 };
 
 const applyPackages = async (
@@ -169,9 +169,10 @@ const applyPackages = async (
 const applyMigrateInit = async (
   flags: Flags,
   deps: Deps,
+  ecosystem: Ecosystem,
   remaining: Provider[],
 ): Promise<void> => {
-  for (const proc of migrateInitCommands(sqlMigrateProviders(remaining))) {
+  for (const proc of migrateInitCommands(sqlMigrateProviders(remaining), migrateLanguage(ecosystem))) {
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
     if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
   }
