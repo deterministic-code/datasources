@@ -14,7 +14,7 @@ Pass `--ecosystem ts|rust|csharp` when the directory has more than one project t
 
 ## Setup
 
-Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate). Checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init` for that set, for every ecosystem. `add` and `remove` re-run init with the remaining SQL dialects.
+Interactive `.env` and provider install. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses defaults / existing `.env`; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate). Checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init --language <typescript|csharp|rust>` with those dialects. `ts` maps to `typescript`. `add` and `remove` re-run init with the same language and the remaining SQL dialects.
 
 ```sh
 npx @deterministic-code/datasources-cli setup
@@ -105,7 +105,7 @@ npx @deterministic-code/datasources-cli migrations create --migrations-path ./db
 
 `--migrations-path` wins over `--migrations-root`. Re-running overwrites the same files.
 
-Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init` for every ecosystem. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
+Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init --language` for the ecosystem and its SQL dialects. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
 
 ```sh
 npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection ./app.sqlite
