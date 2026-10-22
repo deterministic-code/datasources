@@ -13,3 +13,19 @@ pub struct ContactsBase {
     pub email: Option<String>,
     pub notes: Option<String>,
 }
+impl Default for ContactsBase {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            uuid: uuid::Uuid::new_v4().to_string(),
+            created: chrono::Utc::now(),
+            updated: chrono::Utc::now(),
+            version: vec![0],
+            contact_source_id: 0,
+            first_name: String::new(),
+            last_name: String::new(),
+            email: None,
+            notes: None,
+        }
+    }
+}

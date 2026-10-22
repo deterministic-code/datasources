@@ -22,7 +22,18 @@ type TypeScript = {
 };
 
 const require = createRequire(import.meta.url);
-const appRequire = () => createRequire(join(process.cwd(), "package.json"));
+const requirers = () => [
+  createRequire(join(process.cwd(), "package.json")),
+  ...(process.argv[1] ? [createRequire(process.argv[1])] : []),
+  require,
+];
+
+const missingModule = (error: unknown): boolean =>
+  error instanceof Error &&
+  "code" in error &&
+  (error.code === "MODULE_NOT_FOUND" ||
+    error.code === "ERR_MODULE_NOT_FOUND" ||
+    error.code === "ERR_PACKAGE_PATH_NOT_EXPORTED");
 const virtual = new Map<string, string>();
 const virtualBySource = new Map<string, string>();
 let typeScriptHook = false;
@@ -86,12 +97,20 @@ const instantiate = (catalog: ProviderCatalog): IDriver => {
 };
 
 const instantiateLoaded = (catalog: ProviderCatalog): IDriver => {
-  const req = appRequire();
-  compilingRoot = dirname(req.resolve(`${catalog.location}/package.json`));
-  const loaded = req(catalog.location) as DriverModule;
-  const Type = loaded[catalog.module];
-  if (typeof Type !== "function") throw new ProviderNotInstalledError(catalog.name);
-  return new Type();
+  let last: unknown;
+  for (const req of requirers()) {
+    try {
+      compilingRoot = dirname(req.resolve(catalog.location));
+      const loaded = req(catalog.location) as DriverModule;
+      const Type = loaded[catalog.module];
+      if (typeof Type !== "function") throw new ProviderNotInstalledError(catalog.name);
+      return new Type();
+    } catch (error) {
+      last = error;
+      if (error instanceof ProviderNotInstalledError || !missingModule(error)) throw error;
+    }
+  }
+  throw last instanceof ProviderNotInstalledError ? last : new ProviderNotInstalledError(catalog.name);
 };
 
 export class DriverLoader {

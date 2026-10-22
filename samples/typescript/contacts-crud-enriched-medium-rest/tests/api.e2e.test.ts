@@ -1,5 +1,6 @@
 import { ConsoleCommandMiddleware, ExpectConsoleMiddleware, type ICommandMiddleware } from "@deterministic-code/datasources";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,7 +11,6 @@ import { Api } from "../src/api.ts";
 import { clock } from "../src/clock.ts";
 import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
 import { ContactRepository } from "../generated/typescript/repositories/contact-repository.ts";
-import { migrateUp } from "../../../../scripts/migraters.mjs";
 
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const shared = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared");
@@ -18,8 +18,14 @@ const logFile = join(shared, "sqlite.log");
 
 const open = async (middleware?: ICommandMiddleware) => {
   const dir = mkdtempSync(join(tmpdir(), "contacts-api-"));
-  const url = `sqlite:///${join(dir, "app.sqlite")}`;
-  migrateUp({ provider: "sqlite", connection: url, migrationsRoot: join(sample, "generated/sql") });
+  const db = join(dir, "app.sqlite");
+  const url = `sqlite:///${db}`;
+  execFileSync("npx", ["migrate-setup", "--provider", "sqlite", "--connection", db], { encoding: "utf8", cwd: sample });
+  execFileSync(
+    "npx",
+    ["migrate-up", "--provider", "sqlite", "--connection", db, "--migrations-root", "sql"],
+    { encoding: "utf8", cwd: sample },
+  );
   const connection = new SqliteDriver().connection({ DATASOURCE_URL: url });
   await connection.open();
   const contacts = new ContactRepository(connection);

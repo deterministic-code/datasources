@@ -12,3 +12,18 @@ pub struct PhoneBase {
     pub number: String,
     pub label: Option<String>,
 }
+impl Default for PhoneBase {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            uuid: uuid::Uuid::new_v4().to_string(),
+            created: chrono::Utc::now(),
+            updated: chrono::Utc::now(),
+            version: vec![0],
+            contact_id: 0,
+            phone_type_id: 0,
+            number: String::new(),
+            label: None,
+        }
+    }
+}

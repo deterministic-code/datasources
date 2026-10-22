@@ -35,10 +35,6 @@ fn sample() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-fn repo() -> PathBuf {
-    sample().join("../../..").canonicalize().expect("repo")
-}
-
 fn spec() -> CliSpec {
     serde_yaml::from_str(
         &fs::read_to_string(sample().join("../../user-roles-simple-cli-shared/cli.yaml"))
@@ -58,27 +54,31 @@ fn with_schema(url: &str, schema: &str) -> String {
 }
 
 fn migrations_root() -> PathBuf {
-    let root = sample().join("sql");
-    let status = Command::new("node")
-        .args([
-            "--import",
-            "tsx",
-            repo().join("cli/src/main.ts").to_str().expect("cli"),
-            "migrations",
-            "create",
-            "--input",
-            repo()
-                .join("samples/user-roles-simple-cli-shared/deterministic")
-                .to_str()
-                .expect("spec"),
-            "--migrations-root",
-            root.to_str().expect("root"),
-        ])
-        .current_dir(repo().join("cli"))
+    sample().join("sql")
+}
+
+fn migrate_connection(provider: &str, url: &str) -> String {
+    url.strip_prefix("sqlite:///")
+        .filter(|_| provider == "sqlite")
+        .unwrap_or(url)
+        .to_string()
+}
+
+fn migrate_up(provider: &str, url: &str, root: &Path) {
+    let connection = migrate_connection(provider, url);
+    let setup = Command::new("npx")
+        .args(["migrate-setup", "--provider", provider, "--connection", &connection])
+        .current_dir(sample())
         .status()
-        .expect("migrations create");
-    assert!(status.success(), "migrations create");
-    root
+        .expect("migrate-setup");
+    assert!(setup.success(), "migrate-setup");
+    let status = Command::new("npx")
+        .args(["migrate-up", "--provider", provider, "--connection", &connection, "--migrations-root"])
+        .arg(root)
+        .current_dir(sample())
+        .status()
+        .expect("migrate-up");
+    assert!(status.success(), "migrate-up");
 }
 
 fn write_env(url: &str, schema: &str, provider: &str) {
@@ -101,99 +101,12 @@ fn env_or(key: &str, default: &str) -> String {
         .unwrap_or_else(|| default.to_string())
 }
 
-fn skip_docker() -> bool {
-    std::env::var("SKIP_DOCKER")
-        .ok()
-        .filter(|value| !value.is_empty())
-        .is_some()
-}
-
-fn docker(args: &[&str]) {
-    if skip_docker() {
-        return;
-    }
-    let status = Command::new("docker")
-        .args(args)
-        .current_dir(repo())
-        .status()
-        .expect("docker");
-    assert!(status.success(), "docker {}", args.join(" "));
-}
-
-fn docker_ok(args: &[&str]) {
-    if skip_docker() {
-        return;
-    }
-    let _ = Command::new("docker")
-        .args(args)
-        .current_dir(repo())
-        .status();
-}
-
-fn compose_args<'a>(args: &'a [&str]) -> Vec<&'a str> {
-    let mut out = vec!["compose", "-p", "datasources", "-f", "docker/compose.yml"];
-    out.extend(args.iter().copied());
-    out
-}
-
-fn remove_compose(service: &str) {
-    docker_ok(&compose_args(&["rm", "-sf", "-v", service]));
-    docker_ok(&["rm", "-f", &format!("datasources-{service}-1")]);
-}
-
-fn fresh_compose(service: &str) {
-    remove_compose(service);
-    docker(&compose_args(&["up", "-d", "--wait", service]));
-    if service == "mysql" {
-        docker(&compose_args(&[
-            "exec",
-            "-T",
-            "mysql",
-            "mysql",
-            "-uroot",
-            "-proot",
-            "-e",
-            "GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;",
-        ]));
-    }
-}
-
-fn stop_compose(service: &str) {
-    remove_compose(service);
-}
-
-struct StopCompose(&'static str);
-
-impl Drop for StopCompose {
-    fn drop(&mut self) {
-        stop_compose(self.0);
-    }
-}
-
 struct TempDir(PathBuf);
 
 impl Drop for TempDir {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
-}
-
-fn setup() {
-    let status = Command::new("npm")
-        .args([
-            "run",
-            "setup",
-            "--",
-            "--cwd",
-            sample().to_str().expect("cwd"),
-            "--ecosystem",
-            "rust",
-            "--yes",
-        ])
-        .current_dir(repo())
-        .status()
-        .expect("setup");
-    assert!(status.success());
 }
 
 fn build() -> PathBuf {
@@ -365,7 +278,6 @@ fn sqlite() {
     fs::create_dir_all(&dir.0).expect("tmp");
     let url = format!("sqlite:///{}", dir.0.join("app.db").display());
     write_env(&url, "", "sqlite");
-    setup();
     script(&url, "", "sqlite");
 }
 
@@ -390,8 +302,6 @@ async fn console_transcript_sqlite() {
 #[tokio::test]
 async fn mysql() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    fresh_compose("mysql");
-    let _stop = StopCompose("mysql");
     let url = env_or("MYSQL_URL", "mysql://ds:ds@127.0.0.1:3306/datasources");
     let name = format!("ds_{}", &uuid()[..16]);
     let pool = mysql_async::Pool::new(url.as_str());
@@ -403,7 +313,6 @@ async fn mysql() {
     }
     let isolated = replace_mysql_db(&url, &name);
     write_env(&isolated, "", "mysql");
-    setup();
     script(&isolated, "", "mysql");
     let mut conn = pool.get_conn().await.expect("mysql");
     mysql_async::prelude::Queryable::query_drop(&mut conn, format!("DROP DATABASE `{name}`"))
@@ -414,8 +323,6 @@ async fn mysql() {
 #[tokio::test]
 async fn postgres() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    fresh_compose("postgres");
-    let _stop = StopCompose("postgres");
     let url = env_or(
         "POSTGRES_URL",
         "postgres://ds:ds@127.0.0.1:5432/datasources",
@@ -432,7 +339,6 @@ async fn postgres() {
         .await
         .expect("schema");
     write_env(&url, &schema, "postgres");
-    setup();
     script(&url, &schema, "postgres");
     client
         .execute(&format!("DROP SCHEMA {schema} CASCADE"), &[])
@@ -467,21 +373,7 @@ async fn console_transcript(
         .filter(|line| !line.is_empty())
         .map(user_roles_simple_cli::console_log::normalize_console_line)
         .collect();
-    let root = migrations_root();
-    let status = Command::new("node")
-        .arg(repo().join("scripts/migraters.mjs"))
-        .args([
-            "up",
-            "--provider",
-            connection.provider(),
-            "--connection",
-            url,
-            "--migrations-root",
-        ])
-        .arg(&root)
-        .status()
-        .expect("migrate-up");
-    assert!(status.success(), "migrate-up");
+    migrate_up(connection.provider(), url, &migrations_root());
     connection.open().await.expect("open");
     let command = connection.create_command();
     let clock = spec.now.clone();
@@ -511,8 +403,6 @@ async fn console_transcript(
 async fn console_transcript_mysql() {
     use datasources::Driver;
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    fresh_compose("mysql");
-    let _stop = StopCompose("mysql");
     let url = env_or("MYSQL_URL", "mysql://ds:ds@127.0.0.1:3306/datasources");
     let name = format!("ds_{}", &uuid()[..16]);
     let procedures = format!("ds_{}", &uuid()[..16]);
@@ -560,8 +450,6 @@ async fn console_transcript_mysql() {
 async fn console_transcript_postgres() {
     use datasources::Driver;
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
-    fresh_compose("postgres");
-    let _stop = StopCompose("postgres");
     let url = env_or(
         "POSTGRES_URL",
         "postgres://ds:ds@127.0.0.1:5432/datasources",

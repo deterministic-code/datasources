@@ -16,3 +16,22 @@ pub struct AddressBase {
     pub postal_code: Option<String>,
     pub country: Option<String>,
 }
+impl Default for AddressBase {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            uuid: uuid::Uuid::new_v4().to_string(),
+            created: chrono::Utc::now(),
+            updated: chrono::Utc::now(),
+            version: vec![0],
+            contact_id: 0,
+            address_type_id: 0,
+            line1: String::new(),
+            line2: None,
+            city: String::new(),
+            region: None,
+            postal_code: None,
+            country: None,
+        }
+    }
+}

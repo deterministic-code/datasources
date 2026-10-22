@@ -10,35 +10,26 @@ public sealed class GenerateE2ETests
     {
         var repo = RepoRoot();
         var sample = SampleDir();
+        var ts = Path.GetFullPath(Path.Combine(sample, "../../typescript/contacts-crud-enriched-medium-rest"));
         var tmp = Path.Combine(Path.GetTempPath(), $"contacts-gen-cs-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tmp);
         try
         {
-            var url = $"sqlite:///{Path.Combine(tmp, "app.sqlite")}";
+            var db = Path.Combine(tmp, "app.sqlite");
+            var url = $"sqlite:///{db}";
+            var env = new Dictionary<string, string> { ["PROVIDER"] = "sqlite", ["DATASOURCE_URL"] = url };
+            var cli = Path.Combine(repo, "cli", "bin", "datasources.mjs");
+            var spec = Path.Combine(repo, "samples", "contacts-crud-enriched-medium-rest-shared", "deterministic");
             Require(Exec(
                 Which("node"),
-                [
-                    "--import",
-                    "tsx",
-                    Path.Combine(repo, "cli", "src", "main.ts"),
-                    "generate",
-                    "all",
-                    "--dialect",
-                    "csharp",
-                    "--input",
-                    Path.Combine(repo, "samples", "contacts-crud-enriched-medium-rest-shared", "deterministic"),
-                    "--output",
-                    "generated",
-                    "--cwd",
-                    tmp,
-                    "--no-migrate",
-                ],
-                Path.Combine(repo, "cli"),
-                new Dictionary<string, string> { ["PROVIDER"] = "sqlite", ["DATASOURCE_URL"] = url }));
+                [cli, "generate", "all", "--dialect", "csharp", "--cwd", sample, "--input", spec, "--output", "generated", "--no-migrate"],
+                ts,
+                env));
+            Require(Exec(Which("npx"), ["migrate-setup", "--provider", "sqlite", "--connection", db], ts));
             Require(Exec(
-                Which("node"),
-                [Path.Combine(repo, "scripts", "migraters.mjs"), "up", "--provider", "sqlite", "--connection", url, "--migrations-root", Path.Combine(tmp, "sql"), "--cwd", sample],
-                repo));
+                Which("npx"),
+                ["migrate-up", "--provider", "sqlite", "--connection", db, "--migrations-root", Path.Combine(sample, "sql")],
+                ts));
             var run = Path.Combine(tmp, "run");
             Directory.CreateDirectory(run);
             File.Copy(Path.Combine(sample, "Program.cs"), Path.Combine(run, "Program.cs"));
@@ -53,7 +44,7 @@ public sealed class GenerateE2ETests
                     <NoWarn>CS8618</NoWarn>
                   </PropertyGroup>
                   <ItemGroup>
-                    <Compile Include="..\generated\**\*.cs" />
+                    <Compile Include="{Path.Combine(sample, "generated", "**", "*.cs")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Datasources", "Datasources.csproj")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Providers", "Sqlite", "Datasources.Sqlite.csproj")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Providers", "Sqlite.Microsoft", "Datasources.Sqlite.Microsoft.csproj")}" />
@@ -62,11 +53,7 @@ public sealed class GenerateE2ETests
                 """);
             Require(Exec(
                 Which("dotnet"),
-                [
-                    "run",
-                    "--project",
-                    Path.Combine(run, "Run.csproj"),
-                ],
+                ["run", "--project", Path.Combine(run, "Run.csproj")],
                 run,
                 new Dictionary<string, string> { ["MSBUILDDISABLENODEREUSE"] = "1", ["DATASOURCE_URL"] = url }));
         }
@@ -105,8 +92,9 @@ public sealed class GenerateE2ETests
         process.StandardInput.Close();
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
+        Task.WaitAll(output, error);
         process.WaitForExit();
-        return (process.ExitCode, output.GetAwaiter().GetResult(), error.GetAwaiter().GetResult());
+        return (process.ExitCode, output.Result, error.Result);
     }
 
     static string Which(string name)

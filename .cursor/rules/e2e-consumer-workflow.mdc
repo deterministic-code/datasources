@@ -1,0 +1,21 @@
+---
+description: E2E tests run the consumer CLI workflow, including setup
+alwaysApply: true
+---
+
+# E2E is the consumer workflow
+
+An e2e test is the consumer experience. It calls the same commands, in the same order, from the consumer project. `setup` or `add` installs each provider and writes `.env`. Later commands run in that project.
+
+Do not point the CLI working directory at `cli/` so a CLI devDependency stands in for setup. Do not call an internal helper when the docs give the consumer command. Do not add a provider package to the CLI or the test to skip setup.
+
+```typescript
+// ❌ BAD — CLI cwd, no setup, internal migrater helper
+execFileSync(process.execPath, ["--import", "tsx", join(repo, "cli/src/main.ts"), "migrations", "create"], { cwd: join(repo, "cli") });
+migrateUp({ provider: "sqlite" });
+
+// ✅ GOOD — setup, then the documented commands, in the consumer project
+execFileSync("npm", ["run", "cli", "--", "setup", "--yes", "--cwd", project, "--ecosystem", "ts"]);
+execFileSync("npm", ["run", "cli", "--", "migrations", "create", "--cwd", project, "--input", spec, "--migrations-root", "sql"]);
+execFileSync("npx", ["migrate-up", "--provider", "sqlite", "--connection", db, "--migrations-root", "sql"], { cwd: project });
+```

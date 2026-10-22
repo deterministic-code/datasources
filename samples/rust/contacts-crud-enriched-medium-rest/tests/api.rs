@@ -103,11 +103,17 @@ fn iso_at(text: &str, i: usize) -> bool {
 }
 
 fn migrate_up(url: &str) {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("generated/sql");
-    let status = std::process::Command::new("node")
-        .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").join("scripts/migraters.mjs"))
-        .args(["up", "--provider", "sqlite", "--connection", url, "--migrations-root"])
-        .arg(root)
+    let cwd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let connection = url.strip_prefix("sqlite:///").unwrap_or(url);
+    let setup = std::process::Command::new("npx")
+        .args(["migrate-setup", "--provider", "sqlite", "--connection", connection])
+        .current_dir(&cwd)
+        .status()
+        .expect("migrate-setup");
+    assert!(setup.success(), "migrate-setup");
+    let status = std::process::Command::new("npx")
+        .args(["migrate-up", "--provider", "sqlite", "--connection", connection, "--migrations-root", "sql"])
+        .current_dir(&cwd)
         .status()
         .expect("migrate-up");
     assert!(status.success(), "migrate-up");
