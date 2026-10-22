@@ -98,9 +98,10 @@ describe("applyMigrateUp", () => {
       }).fs,
     );
     await applyMigrateUp(command(), flags(), fromUrl, {});
-    expect(fromUrl.ran[0]).toBe(
+    expect(fromUrl.ran).toEqual([
+      "npx --yes --package @deterministic-code/migraters migrate-setup --provider postgres --connection postgres://localhost/db",
       "npx --yes --package @deterministic-code/migraters migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
-    );
+    ]);
     const aliased = deps(
       mem({
         ...spec("settings:\n  backend:\n    datasources: postgres\n"),
@@ -111,9 +112,10 @@ describe("applyMigrateUp", () => {
       PROVIDER: "PostgreSQL",
       DATASOURCE_URL: "postgresql://localhost/db",
     });
-    expect(aliased.ran[0]).toBe(
+    expect(aliased.ran).toEqual([
+      "npx --yes --package @deterministic-code/migraters migrate-setup --provider postgres --connection postgresql://localhost/db",
       "npx --yes --package @deterministic-code/migraters migrate-up --provider postgres --connection postgresql://localhost/db --migrations-path db/changes",
-    );
+    ]);
     const absolute = deps(
       mem({
         [join("/tmp/spec", "types.yaml")]: "version: 1.0.0\ntypes: []\n",
@@ -124,7 +126,7 @@ describe("applyMigrateUp", () => {
       PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///./app.sqlite",
     });
-    expect(absolute.ran[0]).toContain("--migrations-root sql");
+    expect(absolute.ran[1]).toContain("--migrations-root sql");
   });
 
   it("rejects a provider the spec does not list", async () => {
@@ -169,8 +171,9 @@ types:
       else process.env.DATASOURCE_URL = previous.DATASOURCE_URL;
     }
     expect(store.files[join(cwd, "db/changes/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
-    expect(io.ran[0]).toBe(
+    expect(io.ran).toEqual([
+      "npx --yes --package @deterministic-code/migraters migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
       "npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-path db/changes",
-    );
+    ]);
   });
 });
