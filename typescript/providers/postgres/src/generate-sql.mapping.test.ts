@@ -7,6 +7,7 @@ import {
 } from "@deterministic-code/generators-common/spec-types";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { generate } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
+import "./register-sql-generate.ts";
 
 const TYPES = `types:
   - users_base:

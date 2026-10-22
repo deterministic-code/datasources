@@ -1,6 +1,13 @@
+import { JsonDriver } from "@deterministic-code/datasources-json";
+import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DriverLoader } from "./DriverLoader.ts";
 import { Datasource, DatasourceError, DatasourceFactory, ProviderCatalog, ProviderNotInstalledError } from "./index.ts";
+
+const installed = (): void => {
+  DatasourceFactory.register("json", new JsonDriver());
+  DatasourceFactory.register("memory", new MemoryDriver());
+};
 
 const envKeys = ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] as const;
 const savedEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
@@ -53,6 +60,7 @@ describe("ProviderCatalog", () => {
   });
 
   it("defaults registers installed providers", () => {
+    installed();
     DatasourceFactory.defaults({
       INSTALLED_PROVIDERS: "json,memory",
       DATASOURCE_URL: "memory://",
@@ -64,6 +72,7 @@ describe("ProviderCatalog", () => {
   });
 
   it("create does not take installed providers", () => {
+    installed();
     DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json,memory" });
     expect(Datasource.create({ PROVIDER: "json", DATASOURCE_URL: "json://" }).provider).toBe(
       "json",
@@ -72,6 +81,7 @@ describe("ProviderCatalog", () => {
   });
 
   it("create reads connection from the environment", () => {
+    installed();
     process.env.INSTALLED_PROVIDERS = "json,memory";
     process.env.DATASOURCE_URL = "memory://";
     process.env.PROVIDER = "memory";
@@ -96,6 +106,7 @@ describe("ProviderCatalog", () => {
   });
 
   it("default overrides env", () => {
+    installed();
     process.env.INSTALLED_PROVIDERS = "json,memory";
     process.env.PROVIDER = "json";
     process.env.DATASOURCE_URL = "json://";

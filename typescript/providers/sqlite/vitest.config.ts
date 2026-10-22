@@ -6,7 +6,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["src/**/*.ts"],
-      exclude: ["src/index.ts", "src/**/*test.ts", "src/i-sqlite-driver.ts", "src/connection-options.ts"],
+      exclude: ["src/index.ts", "src/register-sql-generate.ts", "src/**/*test.ts", "src/i-sqlite-driver.ts", "src/connection-options.ts"],
       thresholds: {
         lines: 100,
         branches: 100,

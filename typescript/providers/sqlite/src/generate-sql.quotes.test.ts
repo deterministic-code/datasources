@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { generate } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
+import "./register-sql-generate.ts";
 
 const TYPES = `types:
   - user:

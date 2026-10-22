@@ -15,6 +15,10 @@ import { pluralCamel, pluralPascal, pluralSnake } from "./RepositoryModel.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
+import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
+
+register("sqlite", new SqliteDriver());
 
 const specDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/contacts-crud-enriched-medium-rest-shared/deterministic");
 const userRolesDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/user-roles-simple-cli-shared/deterministic");

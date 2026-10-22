@@ -5,6 +5,10 @@ import type { Flags, GenerateCommand } from "../parse.ts";
 import { run, type Deps } from "../run.ts";
 import type { Prompter } from "../setup.ts";
 import { applyMigrateUp } from "./migrateUp.ts";
+import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
+
+register("sqlite", new SqliteDriver());
 
 const silent: Prompter = {
   select: async ({ default: def }) => def,

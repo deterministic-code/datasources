@@ -1,3 +1,5 @@
+import { JsonDriver } from "@deterministic-code/datasources-json";
+import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CRUDRepository,
@@ -55,6 +57,7 @@ describe("DatasourceFactory", () => {
   });
 
   it("skips a repeated installed provider", () => {
+    DatasourceFactory.register("memory", new MemoryDriver());
     DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "memory,memory" });
     expect(DatasourceFactory.registered()).toEqual(["memory"]);
   });
@@ -139,6 +142,7 @@ describe("Datasource registry", () => {
     expect(() => Datasource.create()).toThrow(DatasourceError);
     process.env.DATASOURCE_URL = "sqlite:///:memory:";
     expect(() => Datasource.create()).toThrow("Datasource defaults are not specified");
+    DatasourceFactory.register("json", new JsonDriver());
     DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
     expect(DatasourceFactory.registered()).toEqual(["json", "sqlite"]);
     DatasourceFactory.reset();
