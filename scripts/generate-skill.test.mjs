@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { renderSkill, skillRouter, SKILL_REPO } from "./generate-skill.mjs";
+import { renderSkill, skillRouter, SKILL_ONLY, SKILL_REPO } from "./generate-skill.mjs";
+import { MESSAGE } from "./hooks/block-generated.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const slug = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -51,6 +52,20 @@ test("skill query headings match evals.json", () => {
   const ids = evals.map((item) => item.id);
   for (const heading of headings) assert.ok(ids.includes(heading), `missing eval ${heading}`);
   assert.equal(ids.length, headings.length);
+});
+
+test("skill-only text is appended outside the docs", () => {
+  assert.match(files["SKILL.md"], /run `version`, then `generate all`/);
+  assert.match(files["generation.md"], /## After the spec changes/);
+  assert.match(files["generation.md"], /datasources-cli version/);
+  assert.ok(SKILL_ONLY.rules.length > 0);
+});
+
+test("the skill offers the generated-directory hook", () => {
+  assert.match(files["SKILL.md"], /offer to install that hook/);
+  assert.match(files["generation.md"], /## Generated directory hook/);
+  assert.ok(files["generation.md"].includes(MESSAGE));
+  assert.equal(files["hooks/block-generated.mjs"], readFileSync(join(root, "scripts/hooks/block-generated.mjs"), "utf8"));
 });
 
 test("generated skill omits example queries", () => {

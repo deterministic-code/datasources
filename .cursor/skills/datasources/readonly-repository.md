@@ -640,7 +640,7 @@ Repository read is convert, then map. See [Type Converters](type-converters.md) 
 
 ### Simple readonly
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L49-L72)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L50-L73)
 
 ```csharp
 var ds = Datasource.Default;
@@ -788,7 +788,7 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 A handwritten object converter assigns each column. `ObjectConverter` / `objectConverter` / `object_converter` replaces [MetaDataRowTypeConverter](type-converters.md), so the read does not reflect.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L74-L89) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L91-L115)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L75-L90) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L92-L116)
 
 ```csharp
 sealed class UserConverter : TypeConverter<User, Row>
@@ -948,7 +948,7 @@ CREATE TABLE users (id int, username string NOT NULL, is_enabled bool NOT NULL, 
 
 `UsersView` maps onto `user`. `UserType` stays on the row as `user_type_id` until enrichment replaces it with the type name. The lookup repository's entity is `UserType`, and [ChangeCasingMapper](mappings.md) maps that name, plus `Id` and `Name`, to `user_type`, `id`, and `name`.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L331-L374)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L333-L376)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -1125,7 +1125,7 @@ CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, 
 
 ### Read a user by guid, username, and created
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L117-L156)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L118-L157)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -1530,7 +1530,7 @@ const items = await collectAsync(parentsRepo.read());
 
 The repository type is `UsersView`. The select reads `User`, joined to `UserType`, `UserRole`, and `Role`. Nested enrichment groups each user's `Roles`.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L463-L545)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L465-L547)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -1649,7 +1649,7 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L534-L646)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L535-L647)
 
 ```rust
 let built = datasource();
@@ -1715,7 +1715,7 @@ let view = |login: &str| {
         .unwrap()
         .clone()
 };
-let mut ada = view("ada");
+let ada = view("ada");
 let grace = view("grace");
 let lin = view("lin");
 ```
@@ -1857,7 +1857,7 @@ Schema: [user-roles-read](docs/examples.md#user-roles-read)
 CREATE TABLE user_type (id int, name string NOT NULL, CONSTRAINT pk_user_type PRIMARY KEY (id));
 CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, created datetime NOT NULL, user_type_id int NOT NULL, CONSTRAINT pk_user PRIMARY KEY (id));
 CREATE TABLE roles (id int, name string NOT NULL, CONSTRAINT pk_roles PRIMARY KEY (id));
-CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL)
+CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL, name string NOT NULL)
 ```
 
 ### Read with where clause and custom flat to nested custom object mapping options

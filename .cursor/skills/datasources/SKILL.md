@@ -25,6 +25,8 @@ Read one file below. Do not load the rest.
 - Read is convert, then map. Do not fold mapping into the converter.
 - When writing code, find the closest row in [examples.md](examples.md), open that language's snippet, and use the same objects the sample uses (connection, repository, enrichment). Include every type the sample defines.
 - `AddEnriched` is a read fill. A `List` on a CRUD repository is also written with the parent. `AddLinked` reads the related repository and writes the association through the link repository. Register a child repository's own fills on that child, then register the child on the parent. Read [enrichment.md](enrichment.md) before either call.
+- After you change `types.yaml` or `datasource.yaml`, run `version`, then `generate all` for the project's dialect (`csharp`, `typescript`, or `rust`). `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop.
+- Do not create, edit, or delete a file under a directory named `generated`. Edit `types.yaml` or `datasource.yaml` and run `generate all`. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.
 
 ## Open one file
 
