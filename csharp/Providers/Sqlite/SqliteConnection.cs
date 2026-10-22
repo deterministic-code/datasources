@@ -26,7 +26,11 @@ internal sealed class SqliteConnection : IConnection
     {
         options ??= new SqliteConnectionOptions();
         Filename = options.Filename ?? SqlitePath.FromUrl(options.Url) ?? ":memory:";
-        (_session, _commands, _transactions) = SqliteSessions.New();
+        var session = new SqliteConnectionDriver();
+        var commands = new SqliteCommandDriver(session);
+        _session = session;
+        _commands = commands;
+        _transactions = new SqliteTransactionDriver(commands);
     }
 
     public async Task Open()

@@ -47,7 +47,6 @@ public sealed class GenerateE2ETests
                     <Compile Include="{Path.Combine(sample, "generated", "**", "*.cs")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Datasources", "Datasources.csproj")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Providers", "Sqlite", "Datasources.Sqlite.csproj")}" />
-                    <ProjectReference Include="{Path.Combine(repo, "csharp", "Providers", "Sqlite.Microsoft", "Datasources.Sqlite.Microsoft.csproj")}" />
                   </ItemGroup>
                 </Project>
                 """);

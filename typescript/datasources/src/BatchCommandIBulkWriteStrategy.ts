@@ -199,9 +199,21 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     return this.options.rowConverter ? this.options.rowConverter.reverseConvert(row) : row;
   };
 
+  private writable = (key: string): boolean => {
+    const columns = this.statements().readColumns;
+    const map = this.options.propertyMappings;
+    return (
+      columns.length === 0 ||
+      columns.includes(key) ||
+      (map !== undefined && columns.some((name) => map.map(name) === key))
+    );
+  };
+
   private fields = (record: Cells, include: (col: string) => boolean): Field[] =>
     Object.entries(record)
-      .filter(([key, value]) => include(key) && value !== null && value !== undefined)
+      .filter(
+        ([key, value]) => include(key) && this.writable(key) && value !== null && value !== undefined,
+      )
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => ({ name, value: this.cell(name, value, true) as Scalar }));
 

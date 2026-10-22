@@ -155,9 +155,17 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     }
 
     IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include) =>
-        [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null)
+        [.. record.Where(pair => include(pair.Key) && Writable(pair.Key) && pair.Value is not Value.Null)
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
+
+    bool Writable(string col)
+    {
+        var columns = Statements().ReadColumns;
+        return columns.Count == 0
+            || columns.Contains(col)
+            || Options.PropertyMappings is { } map && columns.Any(name => map.Map(name) == col);
+    }
 
     Value Cell(string property, Value value, bool fieldsApplied) =>
         fieldsApplied ? value

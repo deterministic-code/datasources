@@ -40,6 +40,13 @@ class Composite {
   name = "";
 }
 
+class Stamp {
+  id = 0;
+  name = "";
+  created: Date | null = null;
+  version: Uint8Array | null = null;
+}
+
 const asType = <T>(type: new () => T) => type as Constructable<Cells>;
 
 const create = (overrides: Partial<CRUDRepositoryOptions<Cells>> = {}) => {
@@ -205,7 +212,7 @@ describe("CRUDRepository", () => {
   });
 
   it("omits null datetime and version on create and update", async () => {
-    const { repo, command } = create();
+    const { repo, command } = create({ type: asType(Stamp) });
     command.response = { result: undefined, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 7 }, { id: 7 }]);
     const created = await repo.create({ id: 0, name: "ada", created: null, version: undefined });
@@ -221,6 +228,22 @@ describe("CRUDRepository", () => {
     expect(grace.id).toBe(7);
     expect(command.executeCalls[2]?.text).toBe(
       "INSERT INTO users (created, name, version) VALUES ($created, $name, $version)",
+    );
+  });
+
+  it("writes only readProperties on create and update", async () => {
+    const { repo, command } = create({
+      entity: "addresses",
+      ids: ["Id"],
+      readProperties: ["Id", "Line1"],
+    });
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ Id: 1 }]);
+    await repo.create({ Id: 0, Line1: "1 Main", Description: "Home" });
+    expect(command.executeCalls[0]?.text).toBe("INSERT INTO addresses (Line1) VALUES ($Line1)");
+    await repo.update({ Id: 1, Line1: "2 Main", Description: "Work" });
+    expect(command.executeCalls[1]?.text).toBe(
+      "UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id",
     );
   });
 

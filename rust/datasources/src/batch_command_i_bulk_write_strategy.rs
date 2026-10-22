@@ -7,6 +7,7 @@ use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
 use crate::i_where::IWhere;
+use crate::mappers::Mapper;
 use crate::native::Native;
 use crate::parameter::Parameter;
 use crate::response::Response;
@@ -116,9 +117,20 @@ impl BatchCommandIBulkWriteStrategy {
     }
 
     fn fields(&self, record: &Row, include: impl Fn(&str, &Value) -> bool) -> Result<Vec<Parameter>> {
+        let columns = self.statements()?.read_columns().to_vec();
+        let mapped: Vec<String> = match &self.options()?.property_mappings {
+            Some(map) => columns.iter().map(|name| map.map(name.clone())).collect(),
+            None => Vec::new(),
+        };
         let mut pairs: Vec<_> = record
             .iter()
-            .filter(|(key, value)| include(key, value) && !matches!(value, Value::Null))
+            .filter(|(key, value)| {
+                include(key, value)
+                    && (columns.is_empty()
+                        || columns.iter().any(|name| name == *key)
+                        || mapped.iter().any(|name| name == *key))
+                    && !matches!(value, Value::Null)
+            })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
         pairs.sort_by(|left, right| left.0.cmp(&right.0));

@@ -33,14 +33,30 @@ type Props = Record<string, Scalar | object>;
 const assigned = (value: Cell): boolean =>
   value !== null && value !== "" && value !== 0 && value !== 0n;
 
+const writable = (
+  key: string,
+  columns: readonly string[],
+  column: (property: string) => string,
+): boolean =>
+  columns.length === 0 || columns.includes(key) || columns.some((name) => column(name) === key);
+
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
   enrichmentInto: (name: string) => boolean,
+  columns: readonly string[],
+  column: (property: string) => string,
 ): Field[] =>
   Object.entries(record)
-    .filter(([key, value]) => include(key) && !enrichmentInto(key) && value !== null && value !== undefined)
+    .filter(
+      ([key, value]) =>
+        include(key) &&
+        writable(key, columns, column) &&
+        !enrichmentInto(key) &&
+        value !== null &&
+        value !== undefined,
+    )
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name, value: cell(name, value, true) as Scalar }));
 
@@ -166,6 +182,8 @@ export class CRUDRepository<T = Cells>
       (col) => !this.ids.includes(col) || assigned(record[col] ?? null),
       this.cell,
       this.enrichmentInto,
+      this.crudStatements.readColumns,
+      this.column,
     );
     const statement = this.crudStatements.insert(fields);
     const response = await execute(this.command(), statement, statement.fields);
@@ -201,7 +219,14 @@ export class CRUDRepository<T = Cells>
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const record = this.reverseConvert(item);
-    const fields = fieldsOf(record, (col) => !this.ids.includes(col), this.cell, this.enrichmentInto);
+    const fields = fieldsOf(
+      record,
+      (col) => !this.ids.includes(col),
+      this.cell,
+      this.enrichmentInto,
+      this.crudStatements.readColumns,
+      this.column,
+    );
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.crudStatements.update(
       fields,
@@ -221,7 +246,7 @@ export class CRUDRepository<T = Cells>
     const parameters = listed.length
       ? listed
       : DefaultStatementTextRenderer.instance.render(statement).includes("$")
-        ? fieldsOf(record, () => true, this.cell, this.enrichmentInto)
+        ? fieldsOf(record, () => true, this.cell, this.enrichmentInto, this.crudStatements.readColumns, this.column)
         : [];
     return execute(this.command(), statement, parameters);
   };
