@@ -11,10 +11,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CodeGenerators\Datasources.CodeGenerators.csproj" />
-    <ProjectReference Include="..\Providers\Sqlite\Datasources.Sqlite.csproj" />
-    <ProjectReference Include="..\Providers\Mysql\Datasources.Mysql.csproj" />
-    <ProjectReference Include="..\Providers\Postgres\Datasources.Postgres.csproj" />
-    <ProjectReference Include="..\Providers\SqlServer\Datasources.SqlServer.csproj" />
-    <ProjectReference Include="..\Providers\Oracle\Datasources.Oracle.csproj" />
   </ItemGroup>
 </Project>

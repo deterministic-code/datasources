@@ -1,6 +1,6 @@
 using Datasources.CodeGenerators;
 
-namespace Datasources.CodeGenerators.Tests;
+namespace Datasources.Postgres.Tests;
 
 public class GenerateSqlMappingTests
 {

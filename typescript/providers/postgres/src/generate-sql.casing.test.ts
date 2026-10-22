@@ -6,7 +6,7 @@ import {
   TYPES_YAML,
 } from "@deterministic-code/generators-common/spec-types";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { generate } from "./generate-sql.ts";
+import { generate } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
 
 type Format = "Camel" | "Pascal" | "Snake" | "Kebab";
 type Pluralize = "on" | "off";
@@ -428,10 +428,6 @@ describe("generate-sql casing", () => {
 
   const DIALECT_QUOTES = {
     postgres: ['"', '"'],
-    sqlite: ['"', '"'],
-    mysql: ["`", "`"],
-    sqlserver: ["[", "]"],
-    oracle: ['"', '"'],
   } as const;
 
   for (const [dialect, [left, right]] of Object.entries(DIALECT_QUOTES)) {

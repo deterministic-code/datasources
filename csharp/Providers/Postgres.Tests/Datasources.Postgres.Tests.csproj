@@ -19,5 +19,6 @@
     <Compile Include="..\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <Compile Include="..\RepositoryTestsSpec.cs" Link="RepositoryTestsSpec.cs" />
     <ProjectReference Include="..\Postgres\Datasources.Postgres.csproj" />
+    <ProjectReference Include="..\..\CodeGenerators\Datasources.CodeGenerators.csproj" />
   </ItemGroup>
 </Project>
