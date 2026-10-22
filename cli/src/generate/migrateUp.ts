@@ -77,19 +77,26 @@ export const applyMigrateUp = async (
     throw new Error(
       `migrate-up: provider ${provider} is not in backend.datasources (${dialects.join(", ") || "none"})`,
     );
-  const args = [
+  const npx = (verb: string, extra: string[] = []) => [
     "--yes",
     "--package",
     "@deterministic-code/migraters",
-    "migrate-up",
+    verb,
     "--provider",
     provider,
     "--connection",
     connection,
-    ...(command.migrationsPath
-      ? ["--migrations-path", command.migrationsPath]
-      : ["--migrations-root", command.migrationsRoot]),
+    ...extra,
   ];
-  deps.log(`$ npx ${args.join(" ")}`);
-  if (!flags.dryRun) await deps.run("npx", args, flags.cwd);
+  const setup = npx("migrate-setup");
+  const up = npx(
+    "migrate-up",
+    command.migrationsPath
+      ? ["--migrations-path", command.migrationsPath]
+      : ["--migrations-root", command.migrationsRoot],
+  );
+  deps.log(`$ npx ${setup.join(" ")}`);
+  if (!flags.dryRun) await deps.run("npx", setup, flags.cwd);
+  deps.log(`$ npx ${up.join(" ")}`);
+  if (!flags.dryRun) await deps.run("npx", up, flags.cwd);
 };

@@ -755,6 +755,7 @@ types: []
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
       expect(ran).toEqual([
+        "npx --yes --package @deterministic-code/migraters migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
         "npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql",
       ]);
       const dry = mem(seeded);
@@ -765,6 +766,7 @@ types: []
       };
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
       expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
+      expect(dryIo.logs.some((line) => line.includes("migrate-setup --provider sqlite"))).toBe(true);
       expect(dryIo.logs.some((line) => line.includes("migrate-up --provider sqlite"))).toBe(true);
       expect(dryRan).toEqual([]);
       const skipped = mem(seeded);
