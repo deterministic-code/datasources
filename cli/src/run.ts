@@ -3,13 +3,7 @@ import { join } from "node:path";
 import { catalog, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
 import { csharpTarget, detect, resolveEcosystem } from "./detect.ts";
-import {
-  answersFromEnv,
-  parseEnv,
-  serializeEnv,
-  updateEnvProviders,
-  type EnvMap,
-} from "./env.ts";
+import { parseEnv, serializeEnv, updateEnvProviders, type EnvMap } from "./env.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Fs, Runner } from "./io.ts";
 import {
@@ -24,7 +18,7 @@ import { applyMigrateUp } from "./generate/migrateUp.ts";
 import { migrateInitCommands, migrateLanguage, sqlMigrateProviders } from "./migrateInit.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { applyVersion } from "./version/applyVersion.ts";
-import { envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
+import { answersForSetup, envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
 import { wireRegister } from "./wireRegister.ts";
 import type { Dialect } from "./generate/GenerateRequest.ts";
 
@@ -49,7 +43,7 @@ export const run = async (argv: string[], deps: Deps, cwd = "."): Promise<number
 
 const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<void> => {
   if (command.kind === "help") return deps.log(help.trimEnd());
-  if (command.kind === "setup") return applySetup(flags, deps);
+  if (command.kind === "setup") return applySetup(flags, deps, command.providers);
   if (command.kind === "add") return applyAddRemove(flags, deps, requireProviders(needNames(command.providers, "add")), []);
   if (command.kind === "remove") return applyAddRemove(flags, deps, [], requireProviders(needNames(command.providers, "remove")));
   if (command.kind === "version") return applyVersion(command, flags, deps);
@@ -78,7 +72,7 @@ const needNames = (names: string[], verb: string): string[] =>
         throw new Error(`Usage: datasources ${verb} <provider...>`);
       })();
 
-const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
+const applySetup = async (flags: Flags, deps: Deps, requested: string[]): Promise<void> => {
   const entries = await deps.fs.readdir(flags.cwd);
   const found = detect(entries);
   const existing = await readEnv(deps.fs, flags.cwd);
@@ -87,8 +81,8 @@ const applySetup = async (flags: Flags, deps: Deps): Promise<void> => {
   const datasourcePath = join(specDir, "datasource.yaml");
   const missingSpec = (await optional(deps.fs, typesPath)) === undefined;
   const answers: SetupAnswers = flags.yes
-    ? { ...answersFromEnv(existing), ecosystem: flags.ecosystem, scaffold: false }
-    : await promptSetup(deps.prompt, existing, found, flags.ecosystem, missingSpec);
+    ? { ...answersForSetup(existing, requested), ecosystem: flags.ecosystem, scaffold: false }
+    : await promptSetup(deps.prompt, existing, found, flags.ecosystem, missingSpec, requested);
   const ecosystem = resolveEcosystem(found, answers.ecosystem ?? flags.ecosystem);
   const selected = requireProviders(answers.providers);
   const installed = await readInstalled(deps.fs, flags.cwd, ecosystem, entries);

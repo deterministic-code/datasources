@@ -1359,7 +1359,7 @@ CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, 
 
 ### Call a stored procedure
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L107-L116)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L114-L123)
 
 ```csharp
 Parameter[] parameters = [new("id", 9)];
@@ -1394,7 +1394,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L100-L107)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L107-L114)
 
 ```typescript
 command.reader = new MockReader([{ id: 1, name: "a" }]);
@@ -1414,7 +1414,7 @@ for await (const row of repo.read(call, parameters)) rows.push(row);
 
 ### Read and read single
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L69-L76)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L76-L83)
 
 ```csharp
 await foreach (var row in repo.Read())
@@ -1456,7 +1456,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L61-L71)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L68-L78)
 
 ```typescript
 const { repo, command } = create();
