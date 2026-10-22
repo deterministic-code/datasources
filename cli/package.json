@@ -26,6 +26,7 @@
     "yaml": "^2.6.0"
   },
   "devDependencies": {
+    "@deterministic-code/datasources-sqlite": "file:../typescript/providers/sqlite",
     "@types/node": "^22.15.3",
     "@vitest/coverage-v8": "^3.1.2",
     "esbuild": "^0.25.12",
