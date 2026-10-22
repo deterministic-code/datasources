@@ -37,7 +37,6 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     [Trait("Category", "e2e")]
     public async Task Mysql()
     {
-        FreshCompose("mysql");
         var url = Environment.GetEnvironmentVariable("MYSQL_URL");
         if (string.IsNullOrEmpty(url)) url = "mysql://ds:ds@127.0.0.1:3306/datasources";
         var name = $"ds_{Guid.NewGuid():N}"[..18];
@@ -54,18 +53,11 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         }
         finally
         {
-            try
-            {
-                await using var admin = new MySqlConnection(ToMysql(url));
-                await admin.OpenAsync();
-                await using var drop = admin.CreateCommand();
-                drop.CommandText = $"DROP DATABASE `{name}`";
-                await drop.ExecuteNonQueryAsync();
-            }
-            finally
-            {
-                StopCompose("mysql");
-            }
+            await using var admin = new MySqlConnection(ToMysql(url));
+            await admin.OpenAsync();
+            await using var drop = admin.CreateCommand();
+            drop.CommandText = $"DROP DATABASE `{name}`";
+            await drop.ExecuteNonQueryAsync();
         }
     }
 
@@ -73,7 +65,6 @@ public sealed class CliE2ETests(ITestOutputHelper output)
     [Trait("Category", "e2e")]
     public async Task Postgres()
     {
-        FreshCompose("postgres");
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL");
         if (string.IsNullOrEmpty(url)) url = "postgres://ds:ds@127.0.0.1:5432/datasources";
         var schema = $"ds_{Guid.NewGuid():N}"[..18];
@@ -90,18 +81,11 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         }
         finally
         {
-            try
-            {
-                await using var admin = new NpgsqlConnection(ToPostgres(url));
-                await admin.OpenAsync();
-                await using var drop = admin.CreateCommand();
-                drop.CommandText = $"DROP SCHEMA {schema} CASCADE";
-                await drop.ExecuteNonQueryAsync();
-            }
-            finally
-            {
-                StopCompose("postgres");
-            }
+            await using var admin = new NpgsqlConnection(ToPostgres(url));
+            await admin.OpenAsync();
+            await using var drop = admin.CreateCommand();
+            drop.CommandText = $"DROP SCHEMA {schema} CASCADE";
+            await drop.ExecuteNonQueryAsync();
         }
     }
 
@@ -112,7 +96,7 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         var datasourceUrl = string.IsNullOrEmpty(schema)
             ? url
             : url.Contains('?') ? $"{url}&schema={schema}" : $"{url}?schema={schema}";
-        var root = Migraters.Create(Path.Combine(Path.GetTempPath(), $"user-roles-sql-{Guid.NewGuid():N}"));
+        var root = Path.Combine(sample, "sql");
         await File.WriteAllTextAsync(Path.Combine(sample, ".env"), $"""
             INSTALLED_PROVIDERS=sqlite,mysql,postgres
             PROVIDER={provider}
@@ -126,7 +110,6 @@ public sealed class CliE2ETests(ITestOutputHelper output)
             ["CLI_NOW"] = spec.Now,
             ["MIGRATIONS_ROOT"] = root
         };
-        Require(Exec("npm", $"run setup -- --cwd {sample} --ecosystem csharp --yes", RepoRoot()));
         foreach (var step in spec.Steps)
         {
             var got = Cli(sample, env, [.. step.Argv]);
@@ -173,30 +156,6 @@ public sealed class CliE2ETests(ITestOutputHelper output)
 
     static bool Verbose() =>
         Environment.GetEnvironmentVariable("VERBOSE") is "1" or "true";
-
-    static void FreshCompose(string service)
-    {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        RemoveCompose(service);
-        Require(Exec("docker", $"compose -p datasources -f docker/compose.yml up -d --wait {service}", RepoRoot()));
-        if (service == "mysql")
-            Require(Exec(
-                "docker",
-                "compose -p datasources -f docker/compose.yml exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\"",
-                RepoRoot()));
-    }
-
-    static void StopCompose(string service)
-    {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        RemoveCompose(service);
-    }
-
-    static void RemoveCompose(string service)
-    {
-        Exec("docker", $"compose -p datasources -f docker/compose.yml rm -sf -v {service}", RepoRoot());
-        Exec("docker", $"rm -f datasources-{service}-1", RepoRoot());
-    }
 
     static (string Leftover, List<string> Sql) Commands(string stderr)
     {
@@ -269,15 +228,6 @@ public sealed class CliE2ETests(ITestOutputHelper output)
             if (File.Exists(Path.Combine(dir.FullName, "UserRolesSimpleCli.csproj")))
                 return dir.FullName;
         throw new InvalidOperationException("sample not found");
-    }
-
-    static string RepoRoot()
-    {
-        for (var dir = new DirectoryInfo(SampleDir()); dir is not null; dir = dir.Parent)
-            if (File.Exists(Path.Combine(dir.FullName, "package.json")) &&
-                File.ReadAllText(Path.Combine(dir.FullName, "package.json")).Contains("\"setup\""))
-                return dir.FullName;
-        throw new InvalidOperationException("repo root not found");
     }
 
     static string ToPostgres(string url)

@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+#[path = "../src/datasources_register.rs"]
 mod datasources_register;
 use datasources_register::Repositories;
 

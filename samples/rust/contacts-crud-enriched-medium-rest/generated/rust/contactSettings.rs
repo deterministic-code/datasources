@@ -11,3 +11,17 @@ pub struct ContactSettings {
     pub key: String,
     pub value: String,
 }
+impl Default for ContactSettings {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            uuid: uuid::Uuid::new_v4().to_string(),
+            created: chrono::Utc::now(),
+            updated: chrono::Utc::now(),
+            version: vec![0],
+            contact_id: 0,
+            key: String::new(),
+            value: String::new(),
+        }
+    }
+}

@@ -78,7 +78,6 @@ public sealed class ConsoleTranscriptTests
     [Trait("Category", "e2e")]
     public async Task Mysql()
     {
-        FreshCompose("mysql");
         var url = Environment.GetEnvironmentVariable("MYSQL_URL") ?? "mysql://ds:ds@127.0.0.1:3306/datasources";
         var name = $"ds_{Guid.NewGuid():N}"[..18];
         var procedures = $"ds_{Guid.NewGuid():N}"[..18];
@@ -103,21 +102,14 @@ public sealed class ConsoleTranscriptTests
         }
         finally
         {
-            try
-            {
-                await using var admin = new MySqlConnection(ToMysql(url));
-                await admin.OpenAsync();
-                await using var drop = admin.CreateCommand();
-                drop.CommandText = $"DROP DATABASE `{name}`";
-                await drop.ExecuteNonQueryAsync();
-                await using var dropProcedures = admin.CreateCommand();
-                dropProcedures.CommandText = $"DROP DATABASE `{procedures}`";
-                await dropProcedures.ExecuteNonQueryAsync();
-            }
-            finally
-            {
-                StopCompose("mysql");
-            }
+            await using var admin = new MySqlConnection(ToMysql(url));
+            await admin.OpenAsync();
+            await using var drop = admin.CreateCommand();
+            drop.CommandText = $"DROP DATABASE `{name}`";
+            await drop.ExecuteNonQueryAsync();
+            await using var dropProcedures = admin.CreateCommand();
+            dropProcedures.CommandText = $"DROP DATABASE `{procedures}`";
+            await dropProcedures.ExecuteNonQueryAsync();
         }
     }
 
@@ -125,7 +117,6 @@ public sealed class ConsoleTranscriptTests
     [Trait("Category", "e2e")]
     public async Task Postgres()
     {
-        FreshCompose("postgres");
         var url = Environment.GetEnvironmentVariable("POSTGRES_URL") ?? "postgres://ds:ds@127.0.0.1:5432/datasources";
         var schema = $"ds_{Guid.NewGuid():N}"[..18];
         try
@@ -142,18 +133,11 @@ public sealed class ConsoleTranscriptTests
         }
         finally
         {
-            try
-            {
-                await using var admin = new NpgsqlConnection(ToPostgres(url));
-                await admin.OpenAsync();
-                await using var drop = admin.CreateCommand();
-                drop.CommandText = $"DROP SCHEMA IF EXISTS {schema} CASCADE";
-                await drop.ExecuteNonQueryAsync();
-            }
-            finally
-            {
-                StopCompose("postgres");
-            }
+            await using var admin = new NpgsqlConnection(ToPostgres(url));
+            await admin.OpenAsync();
+            await using var drop = admin.CreateCommand();
+            drop.CommandText = $"DROP SCHEMA IF EXISTS {schema} CASCADE";
+            await drop.ExecuteNonQueryAsync();
         }
     }
 
@@ -177,7 +161,13 @@ public sealed class ConsoleTranscriptTests
     static async Task Run(IConnection connection, string url, string provider, ICommandMiddleware middleware, bool procedures)
     {
         var spec = Spec();
-        Migraters.CreateAndUp(provider, url);
+        var db = provider == "sqlite" && url.StartsWith("sqlite:///") ? url["sqlite:///".Length..] : url;
+        var ts = Path.GetFullPath(Path.Combine(Shared(), "../typescript/user-roles-simple-cli"));
+        Require(Exec("npx", ["migrate-setup", "--provider", provider, "--connection", db], ts));
+        Require(Exec(
+            "npx",
+            ["migrate-up", "--provider", provider, "--connection", db, "--migrations-root", Path.Combine(SampleDir(), "sql")],
+            ts));
         await connection.Open();
         var command = connection.CreateCommand();
         var now = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
@@ -238,52 +228,30 @@ public sealed class ConsoleTranscriptTests
             .Build()
             .Deserialize<CliSpec>(File.ReadAllText(Path.Combine(Shared(), "cli.yaml")));
 
-    static void FreshCompose(string service)
-    {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Exec("docker", $"compose -p datasources -f docker/compose.yml rm -sf -v {service}");
-        Exec("docker", $"rm -f datasources-{service}-1");
-        Require(Exec("docker", $"compose -p datasources -f docker/compose.yml up -d --wait {service}"));
-        if (service == "mysql")
-            Require(Exec("docker", "compose -p datasources -f docker/compose.yml exec -T mysql mysql -uroot -proot -e \"GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;\""));
-    }
-
-    static void StopCompose(string service)
-    {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
-        Exec("docker", $"compose -p datasources -f docker/compose.yml rm -sf -v {service}");
-        Exec("docker", $"rm -f datasources-{service}-1");
-    }
-
     static void Require((int Exit, string Stdout, string Stderr) result)
     {
         if (result.Exit != 0)
             throw new InvalidOperationException($"{result.Stderr}\n{result.Stdout}");
     }
 
-    static (int Exit, string Stdout, string Stderr) Exec(string file, string arguments)
+    static (int Exit, string Stdout, string Stderr) Exec(string file, IEnumerable<string> args, string cwd)
     {
-        var start = new ProcessStartInfo(file, arguments)
+        var start = new ProcessStartInfo(file)
         {
-            WorkingDirectory = RepoRoot(),
+            WorkingDirectory = cwd,
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+        foreach (var arg in args) start.ArgumentList.Add(arg);
         var process = Process.Start(start) ?? throw new InvalidOperationException($"failed {file}");
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
+        Task.WaitAll(output, error);
         process.WaitForExit();
         return (process.ExitCode, output.Result, error.Result);
     }
 
-    static string RepoRoot()
-    {
-        for (var dir = new DirectoryInfo(Shared()); dir is not null; dir = dir.Parent)
-            if (File.Exists(Path.Combine(dir.FullName, "package.json")) &&
-                File.ReadAllText(Path.Combine(dir.FullName, "package.json")).Contains("\"setup\""))
-                return dir.FullName;
-        throw new InvalidOperationException("repo root not found");
-    }
+    static string SampleDir() => Path.GetFullPath(Path.Combine(Shared(), "../csharp/user-roles-simple-cli"));
 
     static string ToPostgres(string url)
     {

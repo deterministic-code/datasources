@@ -13,18 +13,22 @@ import {
   snapshotsEqual,
   type Json,
 } from "../../../../typescript/code-generators/src/sql/common/version-apply.ts";
-import { migrateDown, migrateUp } from "../../../../scripts/migraters.mjs";
-
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const repo = resolve(sample, "../../..");
 const spec = resolve(sample, "../../user-roles-simple-cli-shared/deterministic");
 
-const create = (root: string) =>
+const file = (provider: string, connection: string) =>
+  provider === "sqlite" && connection.startsWith("sqlite:///") ? connection.slice("sqlite:///".length) : connection;
+
+const migrate = (command: string, provider: string, connection: string, root: string, extra: string[] = []) => {
+  const path = file(provider, connection);
+  if (command === "migrate-up")
+    execFileSync("npx", ["migrate-setup", "--provider", provider, "--connection", path], { encoding: "utf8", cwd: sample });
   execFileSync(
-    process.execPath,
-    ["--import", "tsx", join(repo, "cli/src/main.ts"), "migrations", "create", "--input", spec, "--migrations-root", join(root, "sql")],
-    { encoding: "utf8", cwd: join(repo, "cli") },
+    "npx",
+    [command, "--provider", provider, "--connection", path, "--migrations-root", root, ...extra],
+    { encoding: "utf8", cwd: sample },
   );
+};
 
 const stage = (from: string, to: string, n: number) => {
   mkdirSync(to, { recursive: true });
@@ -99,13 +103,12 @@ describe("versioned migrations", () => {
     const out = mkdtempSync(join(tmpdir(), `user-roles-mig-${provider}-`));
     const isolated = await isolate(provider, out);
     try {
-      create(out);
-      const source = join(out, "sql", provider, "migrations");
+      const source = join(sample, "sql", provider, "migrations");
       expect(readdirSync(source).filter((name) => /^\d{4}_up\.sql$/.test(name)).sort()).toEqual(["0001_up.sql", "0002_up.sql", "0003_up.sql"]);
       const staged = join(out, "staged");
       const apply = (n: number) => {
         stage(source, join(staged, provider, "migrations"), n);
-        migrateUp({ provider, connection: isolated.url, migrationsRoot: staged });
+        migrate("migrate-up", provider, isolated.url, staged);
       };
       apply(1);
       const first = await catalog(provider, isolated.url);
@@ -125,7 +128,7 @@ describe("versioned migrations", () => {
       expect(await third.columns("roles")).not.toContain("description");
       expect(third.tables).toEqual(expect.arrayContaining(["users", "roles", "groups"]));
       await third.close();
-      migrateDown({ provider, connection: isolated.url, migrationsRoot: staged });
+      migrate("migrate-down", provider, isolated.url, staged, ["--confirm"]);
       const rolled = await catalog(provider, isolated.url);
       expect(rolled.tables).not.toContain("sessions");
       expect(await rolled.columns("users")).not.toContain("nickname");

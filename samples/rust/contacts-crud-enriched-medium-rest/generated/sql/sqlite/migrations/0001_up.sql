@@ -98,7 +98,7 @@ BEGIN
   UPDATE "contact_group_members" SET "updated" = (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) WHERE "id" = OLD."id";
 END;
 CREATE TABLE "OldContactsTbl" ("CntID" VARCHAR(64) NOT NULL, "FirstNm" VARCHAR(128) NOT NULL, "LastNm" VARCHAR(128) NOT NULL, "EmailAddr" VARCHAR(256), "ImpDate" TEXT, CONSTRAINT "OldContactsTbl_primary_key" PRIMARY KEY ("CntID"), CONSTRAINT "OldContactsTbl_CntID_unique_constraint" UNIQUE ("CntID"));
-CREATE TABLE "contact_change_logs" ("id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "occurred_at" TEXT NOT NULL, "contact_id" INTEGER NOT NULL, "changed_by" VARCHAR(128) NOT NULL, "change_summary" TEXT NOT NULL);
+CREATE TABLE "contact_change_logs" ("id" INTEGER NOT NULL, "occurred_at" TEXT NOT NULL, "contact_id" INTEGER NOT NULL, "changed_by" VARCHAR(128) NOT NULL, "change_summary" TEXT NOT NULL, CONSTRAINT "contact_change_logs_primary_key" PRIMARY KEY ("id"));
 -- Seed data
 -- Seeds: contact_sources
 INSERT INTO "contact_sources" ("id", "uuid", "name") VALUES (1, '1d3e841c-6a99-5e61-8283-879f22e8d932', 'Manual');

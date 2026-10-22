@@ -14,11 +14,21 @@ import { parse as parseYaml } from "yaml";
 import { App } from "../src/app.ts";
 import { normalizeConsoleLine } from "../src/console-log.ts";
 import { parse } from "../src/parse.ts";
-import { freshCompose, stopCompose } from "../../../../typescript/ensure-compose.ts";
-import { migrateUp } from "../../../../scripts/migraters.mjs";
-
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const repo = resolve(sample, "../../..");
+const sqlRoot = join(sample, "sql");
+
+const file = (provider: string, connection: string) =>
+  provider === "sqlite" && connection.startsWith("sqlite:///") ? connection.slice("sqlite:///".length) : connection;
+
+const migrateUp = (provider: string, connection: string) => {
+  const path = file(provider, connection);
+  execFileSync("npx", ["migrate-setup", "--provider", provider, "--connection", path], { encoding: "utf8", cwd: sample });
+  execFileSync(
+    "npx",
+    ["migrate-up", "--provider", provider, "--connection", path, "--migrations-root", "sql"],
+    { encoding: "utf8", cwd: sample },
+  );
+};
 type Expect = {
   exit: number;
   stdout: string;
@@ -78,37 +88,12 @@ const cli = (url: string, schema: string, provider: string, args: string[], root
   return { exit: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 };
 
-const migrationsRoot = () => {
-  const root = join(sample, "sql");
-  execFileSync(
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(repo, "cli/src/main.ts"),
-      "migrations",
-      "create",
-      "--input",
-      resolve(sample, "../../user-roles-simple-cli-shared/deterministic"),
-      "--migrations-root",
-      root,
-    ],
-    { encoding: "utf8", cwd: join(repo, "cli") },
-  );
-  return root;
-};
-
 const setup = (url: string, schema = "", provider = "sqlite") => {
-  const root = migrationsRoot();
   writeFileSync(
     join(sample, ".env"),
-    `INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER=${provider}\nDATASOURCE_URL=${withSchema(url, schema)}\nMIGRATIONS_ROOT=${root}\n`,
+    `INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER=${provider}\nDATASOURCE_URL=${withSchema(url, schema)}\nMIGRATIONS_ROOT=${sqlRoot}\n`,
   );
-  execFileSync("npm", ["run", "setup", "--", "--cwd", sample, "--ecosystem", "ts", "--yes"], {
-    cwd: repo,
-    encoding: "utf8",
-  });
-  return { url, schema, root };
+  return { url, schema, root: sqlRoot };
 };
 
 const verbose = () =>
@@ -161,7 +146,6 @@ describe.sequential("cli e2e", () => {
   }, 180_000);
 
   it.skipIf(!process.env.MYSQL_URL)("mysql", async () => {
-    freshCompose("mysql");
     const url = process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:3306/datasources";
     const name = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const admin = await createConnection(url);
@@ -173,12 +157,10 @@ describe.sequential("cli e2e", () => {
     } finally {
       await admin.query(`DROP DATABASE \`${name}\``);
       await admin.end();
-      stopCompose("mysql");
     }
   }, 180_000);
 
   it.skipIf(!process.env.POSTGRES_URL)("postgres", async () => {
-    freshCompose("postgres");
     const url = process.env.POSTGRES_URL || "postgres://ds:ds@127.0.0.1:5432/datasources";
     const schema = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const admin = new pg.Client({ connectionString: url });
@@ -189,7 +171,6 @@ describe.sequential("cli e2e", () => {
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();
-      stopCompose("postgres");
     }
   }, 180_000);
 
@@ -198,7 +179,7 @@ describe.sequential("cli e2e", () => {
       .split("\n")
       .filter((line) => line.length > 0)
       .map(normalizeConsoleLine);
-    migrateUp({ provider, connection: url, migrationsRoot: migrationsRoot() });
+    migrateUp(provider, url);
     await connection.open();
     try {
       const command = connection.createCommand();
@@ -214,7 +195,6 @@ describe.sequential("cli e2e", () => {
   };
 
   it.skipIf(!process.env.MYSQL_URL)("mysql console transcript", async () => {
-    freshCompose("mysql");
     const url = process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:3306/datasources";
     const name = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const procedures = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
@@ -232,12 +212,10 @@ describe.sequential("cli e2e", () => {
       await admin.query(`DROP DATABASE \`${name}\``);
       await admin.query(`DROP DATABASE \`${procedures}\``);
       await admin.end();
-      stopCompose("mysql");
     }
   }, 180_000);
 
   it.skipIf(!process.env.POSTGRES_URL)("postgres console transcript", async () => {
-    freshCompose("postgres");
     const url = process.env.POSTGRES_URL || "postgres://ds:ds@127.0.0.1:5432/datasources";
     const schema = `ds_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
     const admin = new pg.Client({ connectionString: url });
@@ -248,7 +226,6 @@ describe.sequential("cli e2e", () => {
     } finally {
       await admin.query(`DROP SCHEMA ${schema} CASCADE`);
       await admin.end();
-      stopCompose("postgres");
     }
   }, 180_000);
 });

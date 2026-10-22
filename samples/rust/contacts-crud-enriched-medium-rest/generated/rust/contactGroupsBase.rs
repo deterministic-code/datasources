@@ -10,3 +10,16 @@ pub struct ContactGroupsBase {
     pub name: String,
     pub description: Option<String>,
 }
+impl Default for ContactGroupsBase {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            uuid: uuid::Uuid::new_v4().to_string(),
+            created: chrono::Utc::now(),
+            updated: chrono::Utc::now(),
+            version: vec![0],
+            name: String::new(),
+            description: None,
+        }
+    }
+}
