@@ -8,3 +8,12 @@
 **/coverage.cobertura.xml
 **/target
 **/.env.example
+app.sqlite
+app.sqlite-wal
+app.sqlite-shm
+app.sqlite-journal
+app.db
+app.db-wal
+app.db-shm
+app.db-journal
+var/folders/

@@ -27,4 +27,5 @@ coverage.info
 .deterministic-cache/
 file:*
 scripts/artifacts/
+csharp/artifacts/
 docs/evals/workspace/
