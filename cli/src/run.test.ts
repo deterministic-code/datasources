@@ -154,6 +154,20 @@ describe("run", () => {
     expect(setupIo.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language csharp --dialect sqlite",
     );
+    const csharpSetup = mem(["App.csproj"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
+    const csharpSetupIo = deps(csharpSetup.fs);
+    expect(
+      await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "csharp", "sqlite", "postgres"], csharpSetupIo),
+    ).toBe(0);
+    expect(csharpSetup.files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite,postgres/);
+    expect(csharpSetupIo.ran).toContain(init("csharp"));
+    const rustSetup = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
+    const rustSetupIo = deps(rustSetup.fs);
+    expect(
+      await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "rust", "sqlite", "postgres"], rustSetupIo),
+    ).toBe(0);
+    expect(rustSetup.files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite,postgres/);
+    expect(rustSetupIo.ran).toContain(init("rust"));
   });
 
   it("runs interactive setup and diffs add/remove", async () => {

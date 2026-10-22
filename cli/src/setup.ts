@@ -38,14 +38,18 @@ types:
             size: 128
 `;
 
+export const answersForSetup = (env: EnvMap, requested: string[] = []) =>
+  requested.length ? answersFromEnv({ ...env, INSTALLED_PROVIDERS: requested.join(",") }) : answersFromEnv(env);
+
 export const promptSetup = async (
   prompt: Prompter,
   env: EnvMap,
   found: Ecosystem[],
   explicit?: Ecosystem,
   askScaffold = false,
+  requested: string[] = [],
 ): Promise<SetupAnswers> => {
-  const defaults = answersFromEnv(env);
+  const defaults = answersForSetup(env, requested);
   const ecosystem =
     explicit ??
     (found.length === 1

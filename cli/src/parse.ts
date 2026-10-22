@@ -40,7 +40,7 @@ export type VersionCommand = {
 };
 
 export type Command =
-  | { kind: "setup" }
+  | { kind: "setup"; providers: string[] }
   | { kind: "add"; providers: string[] }
   | { kind: "remove"; providers: string[] }
   | { kind: "help" }
@@ -50,7 +50,7 @@ export type Command =
 
 export const help = `Usage: datasources <command> [options]
 
-setup                 Interactive .env, provider install, and optional deterministic/
+setup [provider...]   Interactive .env, provider install, and optional deterministic/
   --cwd <dir>                 Consumer project directory (default: .)
   --ecosystem ts|rust|csharp  Required when more than one project type exists
   --dry-run                   Print package-manager commands without running them
@@ -150,7 +150,7 @@ const commandOf = (
   },
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
-  if (verb === "setup") return { kind: "setup" };
+  if (verb === "setup") return { kind: "setup", providers: names };
   if (verb === "add") return { kind: "add", providers: names };
   if (verb === "remove") return { kind: "remove", providers: names };
   if (verb === "generate") return generateCommand(names, generate);

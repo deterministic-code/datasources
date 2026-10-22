@@ -4,8 +4,12 @@ import { help, parseArgs } from "./parse.ts";
 describe("parseArgs", () => {
   it("parses commands and flags", () => {
     expect(parseArgs(["setup", "--yes", "--cwd", "app"], ".")).toEqual({
-      command: { kind: "setup" },
+      command: { kind: "setup", providers: [] },
       flags: { cwd: "app", dryRun: false, yes: true },
+    });
+    expect(parseArgs(["setup", "--yes", "--ecosystem", "csharp", "sqlite", "postgres"]).command).toEqual({
+      kind: "setup",
+      providers: ["sqlite", "postgres"],
     });
     expect(parseArgs(["add", "sqlite", "--cwd=app", "--dry-run"])).toEqual({
       command: { kind: "add", providers: ["sqlite"] },

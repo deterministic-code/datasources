@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { envFromAnswers, promptSetup, type Prompter } from "./setup.ts";
+import { answersForSetup, envFromAnswers, promptSetup, type Prompter } from "./setup.ts";
 
 const script = (answers: (string | string[] | boolean)[]): Prompter => {
   const values = [...answers];
@@ -69,6 +69,30 @@ describe("setup", () => {
     expect(
       (await promptSetup(script([["json"]]), { INSTALLED_PROVIDERS: "mysql" }, ["ts"])).url,
     ).toBe("");
+  });
+
+  it("uses requested providers for --yes and pre-checks them interactively", async () => {
+    expect(answersForSetup({ INSTALLED_PROVIDERS: "mysql", DATASOURCE_URL: "mysql://db" })).toEqual({
+      providers: ["mysql"],
+      url: "mysql://db",
+      schema: "",
+    });
+    expect(
+      answersForSetup({ INSTALLED_PROVIDERS: "mysql", DATASOURCE_URL: "mysql://db" }, ["sqlite", "postgres"]),
+    ).toEqual({
+      providers: ["sqlite", "postgres"],
+      url: "mysql://db",
+      schema: "",
+    });
+    const answers = await promptSetup(
+      silent,
+      { INSTALLED_PROVIDERS: "mysql" },
+      ["ts"],
+      undefined,
+      false,
+      ["sqlite", "postgres"],
+    );
+    expect(answers.providers).toEqual(["sqlite", "postgres"]);
   });
 
   it("writes env keys from answers", () => {
