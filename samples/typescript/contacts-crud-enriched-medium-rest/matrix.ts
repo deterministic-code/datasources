@@ -1,4 +1,4 @@
-import { ConsoleCommandMiddleware, Native, type ICommandMiddleware } from "@deterministic-code/datasources";
+import { ConsoleCommandMiddleware, type ICommandMiddleware } from "@deterministic-code/datasources";
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
@@ -10,7 +10,6 @@ import { Api } from "./src/api.ts";
 import { clock } from "./src/clock.ts";
 import { LegacyContactRepository } from "./generated/typescript/repositories/legacy-contact-repository.ts";
 import { ContactRepository } from "./generated/typescript/repositories/contact-repository.ts";
-import { statements, upSqlFrom } from "./src/schema.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
 type Scalar = string | number | boolean | null;
@@ -67,15 +66,10 @@ const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, mi
 const provider = process.env.PROVIDER ?? "sqlite";
 const url = process.env.DATASOURCE_URL ?? "sqlite:///:memory:";
 const log = process.env.E2E_MATRIX_LOG ?? "";
-const sqlFile = process.env.E2E_MATRIX_SQL;
 const connection = driver(provider).connection({ DATASOURCE_URL: url });
 const lines: string[] = [];
 try {
   await connection.open();
-  const command = connection.createCommand();
-  if (provider === "sqlite") await command.executeNative(new Native("PRAGMA foreign_keys = ON"));
-  for (const sql of sqlFile ? statements(upSqlFrom(sqlFile)) : statements())
-    await command.executeNative(new Native(sql));
   const stamp = new Date(spec.now);
   let n = 0;
   clock.now = () => stamp;

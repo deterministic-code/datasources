@@ -1,5 +1,4 @@
 DROP PROCEDURE IF EXISTS bulk_create_contact(jsonb, jsonb)
----
 CREATE PROCEDURE bulk_create_contact(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -15,9 +14,7 @@ BEGIN
   SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_update_contact(jsonb)
----
 CREATE PROCEDURE bulk_update_contact(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -32,18 +29,14 @@ BEGIN
   WHERE c.id = x.id;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_delete_contact(jsonb)
----
 CREATE PROCEDURE bulk_delete_contact(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
   DELETE FROM contacts WHERE id IN (SELECT id FROM jsonb_to_recordset(payload) AS x(id int));
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_create_address(jsonb, jsonb)
----
 CREATE PROCEDURE bulk_create_address(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -59,9 +52,7 @@ BEGIN
   SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_update_address(jsonb)
----
 CREATE PROCEDURE bulk_update_address(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -70,18 +61,14 @@ BEGIN
   WHERE a.id = x.id;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_delete_address(jsonb)
----
 CREATE PROCEDURE bulk_delete_address(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
   DELETE FROM addresses WHERE id IN (SELECT id FROM jsonb_to_recordset(payload) AS x(id int));
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_create_phone(jsonb, jsonb)
----
 CREATE PROCEDURE bulk_create_phone(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -97,9 +84,7 @@ BEGIN
   SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_update_phone(jsonb)
----
 CREATE PROCEDURE bulk_update_phone(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -108,18 +93,14 @@ BEGIN
   WHERE p.id = x.id;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_delete_phone(jsonb)
----
 CREATE PROCEDURE bulk_delete_phone(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
   DELETE FROM phones WHERE id IN (SELECT id FROM jsonb_to_recordset(payload) AS x(id int));
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_create_setting(jsonb)
----
 CREATE PROCEDURE bulk_create_setting(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -128,9 +109,7 @@ BEGIN
   FROM jsonb_to_recordset(payload) AS x(contact_id int, key text, value text);
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_update_setting(jsonb)
----
 CREATE PROCEDURE bulk_update_setting(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -139,9 +118,7 @@ BEGIN
   WHERE s.contact_id = x.contact_id AND s.key = x.key;
 END;
 $$
----
 DROP PROCEDURE IF EXISTS bulk_delete_setting(jsonb)
----
 CREATE PROCEDURE bulk_delete_setting(payload jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN

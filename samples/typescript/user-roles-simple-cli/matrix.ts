@@ -7,7 +7,6 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { App } from "./src/app.ts";
-import { migrate } from "./src/migrate.ts";
 import { parse } from "./src/parse.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
@@ -30,7 +29,6 @@ const lines: string[] = [];
 try {
   await connection.open();
   const command = connection.createCommand();
-  await migrate(command);
   const now = () => new Date(spec.now);
   command.addMiddleware(
     new ConsoleCommandMiddleware((line) => lines.push(line), now, { isVerbose: "true" }),

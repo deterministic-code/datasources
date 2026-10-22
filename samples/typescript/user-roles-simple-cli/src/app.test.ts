@@ -8,7 +8,6 @@ import { describe, expect, it } from "vitest";
 import { App } from "./app.ts";
 import { asUserView } from "./as-user-view.ts";
 import { columns } from "./columns.ts";
-import { migrate } from "./migrate.ts";
 import { parse, usage } from "./parse.ts";
 import { passwordHash } from "./password-hash.ts";
 import { ident, mysqlProcedures, qualified, schema } from "./schema.ts";
@@ -260,17 +259,7 @@ describe("app", () => {
     expect(command.executeCalls.some((call) => call.text.includes("INSERT INTO") && call.text.includes("users"))).toBe(true);
   });
 
-  it("migrates and rejects missing rows", async () => {
-    const sqlite = new MockConnection(undefined, "sqlite");
-    const sqliteCmd = new MockCommand(sqlite);
-    sqlite.command = sqliteCmd;
-    await migrate(sqliteCmd);
-    expect(sqliteCmd.executeCalls.every((call) => call.text.startsWith("CREATE TABLE"))).toBe(true);
-    const mysql = new MockConnection(undefined, "mysql");
-    const mysqlCmd = new MockCommand(mysql);
-    mysql.command = mysqlCmd;
-    await migrate(mysqlCmd);
-    expect(mysqlCmd.executeCalls.some((call) => call.text.includes("CREATE PROCEDURE add_user"))).toBe(true);
+  it("rejects missing rows", async () => {
     const { app, command } = create("sqlite");
     command.reader = new MockReader([]);
     await expect(app.run({ kind: "enable-user", username: "missing" })).rejects.toThrow("not found");

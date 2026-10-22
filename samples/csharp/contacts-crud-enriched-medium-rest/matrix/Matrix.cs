@@ -26,10 +26,6 @@ var lines = new List<string>();
 try
 {
     await connection.Open();
-    var command = connection.CreateCommand();
-    if (provider == "sqlite") await command.Execute(new Native("PRAGMA foreign_keys = ON"));
-    foreach (var sql in Statements(UpSql(Environment.GetEnvironmentVariable("E2E_MATRIX_SQL") ?? throw new InvalidOperationException("E2E_MATRIX_SQL"))))
-        await command.Execute(new Native(sql));
     var stamp = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
     var n = 0;
     Clock.Now = () => stamp.UtcDateTime;
@@ -107,70 +103,6 @@ static string At(JsonElement root, string pointer)
         JsonValueKind.String => current.GetString() ?? "",
         _ => current.GetRawText()
     };
-}
-
-static string UpSql(string path) =>
-    Directory.Exists(path)
-        ? string.Join('\n', Directory.GetFiles(path)
-            .Select(Path.GetFileName)
-            .Where(name => name is not null
-                && System.Text.RegularExpressions.Regex.IsMatch(name, @"^\d{4}_up\.sql$")
-                && !name.EndsWith("_stored_procedures_up.sql", StringComparison.Ordinal))
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .Select(name => File.ReadAllText(Path.Combine(path, name!))))
-        : File.ReadAllText(path);
-
-static IEnumerable<string> Statements(string sql)
-{
-    var cleaned = string.Join('\n', sql.Split('\n').Where(line => !line.TrimStart().StartsWith("--", StringComparison.Ordinal)));
-    var depth = 0;
-    var start = 0;
-    var dollar = false;
-    for (var i = 0; i < cleaned.Length; i++)
-    {
-        if (i + 1 < cleaned.Length && cleaned[i] == '$' && cleaned[i + 1] == '$')
-        {
-            dollar = !dollar;
-            i++;
-            continue;
-        }
-        if (dollar) continue;
-        if (Word(cleaned, i, "BEGIN")) depth++;
-        if (cleaned[i] != ';') continue;
-        if (EndsWithWord(cleaned, start, i, "END") && depth > 0) depth--;
-        if (depth != 0) continue;
-        var text = WithSeedVersion(cleaned[start..(i + 1)].Trim());
-        if (text.Length > 0) yield return text;
-        start = i + 1;
-    }
-}
-
-static string WithSeedVersion(string sql)
-{
-    if (!sql.StartsWith("INSERT INTO", StringComparison.Ordinal) || sql.Contains("\"version\"") || sql.Contains("`version`"))
-        return sql;
-    var values = sql.IndexOf(") VALUES (", StringComparison.Ordinal);
-    if (values < 0) return sql;
-    var quote = sql.Contains('`') ? "`" : "\"";
-    return $"{sql[..values]}, {quote}version{quote}) VALUES ({sql[(values + ") VALUES (".Length)..^2]}, X'00');";
-}
-
-static bool Word(string sql, int i, string token)
-{
-    if (!sql.AsSpan(i).StartsWith(token, StringComparison.Ordinal)) return false;
-    if (i > 0 && char.IsLetterOrDigit(sql[i - 1])) return false;
-    var end = i + token.Length;
-    return end == sql.Length || !char.IsLetterOrDigit(sql[end]);
-}
-
-static bool EndsWithWord(string sql, int start, int semicolon, string token)
-{
-    var i = semicolon - 1;
-    while (i >= start && char.IsWhiteSpace(sql[i])) i--;
-    if (i < start + token.Length - 1 || sql.AsSpan(i - token.Length + 1, token.Length).ToString() != token)
-        return false;
-    var before = i - token.Length;
-    return before < start || !char.IsLetterOrDigit(sql[before]);
 }
 
 sealed class RoundTrip

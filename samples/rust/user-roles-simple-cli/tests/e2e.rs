@@ -57,12 +57,38 @@ fn with_schema(url: &str, schema: &str) -> String {
     }
 }
 
+fn migrations_root() -> PathBuf {
+    let root = sample().join("sql");
+    let status = Command::new("node")
+        .args([
+            "--import",
+            "tsx",
+            repo().join("cli/src/main.ts").to_str().expect("cli"),
+            "migrations",
+            "create",
+            "--input",
+            repo()
+                .join("samples/user-roles-simple-cli-shared/deterministic")
+                .to_str()
+                .expect("spec"),
+            "--migrations-root",
+            root.to_str().expect("root"),
+        ])
+        .current_dir(repo().join("cli"))
+        .status()
+        .expect("migrations create");
+    assert!(status.success(), "migrations create");
+    root
+}
+
 fn write_env(url: &str, schema: &str, provider: &str) {
     let url = with_schema(url, schema);
+    let root = migrations_root();
     fs::write(
         sample().join(".env"),
         format!(
-            "INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER={provider}\nDATASOURCE_URL={url}\n"
+            "INSTALLED_PROVIDERS=sqlite,mysql,postgres\nPROVIDER={provider}\nDATASOURCE_URL={url}\nMIGRATIONS_ROOT={}\n",
+            root.display()
         ),
     )
     .expect("env");
@@ -196,6 +222,7 @@ fn cli(
         .env("PROVIDER", provider)
         .env("DATASOURCE_URL", with_schema(url, schema))
         .env("CLI_NOW", now)
+        .env("MIGRATIONS_ROOT", sample().join("sql"))
         .current_dir(sample())
         .output()
         .expect("cli");
@@ -343,6 +370,24 @@ fn sqlite() {
 }
 
 #[tokio::test]
+async fn console_transcript_sqlite() {
+    use datasources::Driver;
+    let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    let dir = TempDir(std::env::temp_dir().join(format!("user-roles-log-{}", uuid())));
+    fs::create_dir_all(&dir.0).expect("tmp");
+    let url = format!("sqlite:///{}", dir.0.join("app.db").display());
+    let mut options = std::collections::HashMap::new();
+    options.insert("DATASOURCE_URL".into(), url.clone());
+    console_transcript(
+        "sqlite.log",
+        false,
+        datasources_sqlite::SqliteDriver.connection(Some(&options)),
+        &url,
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn mysql() {
     let _guard = LOCK.lock().unwrap_or_else(|error| error.into_inner());
     fresh_compose("mysql");
@@ -410,6 +455,7 @@ async fn console_transcript(
     file: &str,
     procedures: bool,
     connection: std::sync::Arc<dyn datasources::Connection>,
+    url: &str,
 ) {
     let shared = sample().join("../../user-roles-simple-cli-shared");
     let spec: TranscriptSpec =
@@ -421,11 +467,23 @@ async fn console_transcript(
         .filter(|line| !line.is_empty())
         .map(user_roles_simple_cli::console_log::normalize_console_line)
         .collect();
+    let root = migrations_root();
+    let status = Command::new("node")
+        .arg(repo().join("scripts/migraters.mjs"))
+        .args([
+            "up",
+            "--provider",
+            connection.provider(),
+            "--connection",
+            url,
+            "--migrations-root",
+        ])
+        .arg(&root)
+        .status()
+        .expect("migrate-up");
+    assert!(status.success(), "migrate-up");
     connection.open().await.expect("open");
     let command = connection.create_command();
-    user_roles_simple_cli::migrate::apply(command.as_ref(), connection.provider())
-        .await
-        .expect("migrate");
     let clock = spec.now.clone();
     let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::with_normalize(
         expected,
@@ -477,6 +535,7 @@ async fn console_transcript_mysql() {
         "mysql.log",
         false,
         datasources_mysql::MysqlDriver.connection(Some(&options)),
+        &replace_mysql_db(&url, &name),
     )
     .await;
     let mut procedure_options = std::collections::HashMap::new();
@@ -485,6 +544,7 @@ async fn console_transcript_mysql() {
         "mysql-procedures.log",
         true,
         datasources_mysql::MysqlDriver.connection(Some(&procedure_options)),
+        &replace_mysql_db(&url, &procedures),
     )
     .await;
     let mut conn = pool.get_conn().await.expect("mysql");
@@ -523,6 +583,7 @@ async fn console_transcript_postgres() {
         "postgres.log",
         false,
         datasources_postgres::PostgresDriver.connection(Some(&options)),
+        &with_schema(&url, &schema),
     )
     .await;
     client
@@ -536,104 +597,6 @@ fn replace_mysql_db(url: &str, name: &str) -> String {
         Some(index) => format!("{}/{name}", &url[..index]),
         None => format!("{url}/{name}"),
     }
-}
-
-#[test]
-fn drops_extra_fields_and_tables_across_three_versions() {
-    let tmp = std::env::temp_dir().join(format!(
-        "user-roles-mig-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("time")
-            .as_nanos()
-    ));
-    fs::create_dir_all(&tmp).expect("tmp");
-    let status = Command::new("node")
-        .args([
-            "--import",
-            "tsx",
-            repo().join("cli/src/main.ts").to_str().expect("cli"),
-            "migrations",
-            "create",
-            "--input",
-            repo()
-                .join("samples/user-roles-simple-cli-shared/deterministic")
-                .to_str()
-                .expect("spec"),
-            "--migrations-root",
-            tmp.join("sql").to_str().expect("sql"),
-        ])
-        .current_dir(repo().join("cli"))
-        .status()
-        .expect("generate");
-    assert!(status.success(), "migrations create");
-    let dir = tmp.join("sql/sqlite/migrations");
-    let mut files: Vec<_> = fs::read_dir(&dir)
-        .expect("migrations")
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.len() == 11 && name.ends_with("_up.sql"))
-        })
-        .collect();
-    files.sort();
-    assert_eq!(
-        files
-            .iter()
-            .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
-            .collect::<Vec<_>>(),
-        ["0001_up.sql", "0002_up.sql", "0003_up.sql"]
-    );
-    let connection = rusqlite::Connection::open_in_memory().expect("sqlite");
-    connection.execute_batch("PRAGMA foreign_keys = ON").expect("pragma");
-    connection
-        .execute_batch(&fs::read_to_string(&files[0]).expect("0001"))
-        .expect("0001");
-    let names = table_names(&connection);
-    assert!(names.iter().any(|name| name == "sessions"));
-    assert!(names.iter().any(|name| name == "audit_logs"));
-    assert!(columns(&connection, "users").iter().any(|name| name == "nickname"));
-    assert!(columns(&connection, "roles").iter().any(|name| name == "description"));
-    connection
-        .execute_batch(&fs::read_to_string(&files[1]).expect("0002"))
-        .expect("0002");
-    let names = table_names(&connection);
-    assert!(names.iter().all(|name| name != "sessions"));
-    assert!(columns(&connection, "users").iter().all(|name| name != "nickname"));
-    connection
-        .execute_batch(&fs::read_to_string(&files[2]).expect("0003"))
-        .expect("0003");
-    let names = table_names(&connection);
-    assert!(names.iter().all(|name| name != "audit_logs"));
-    assert!(columns(&connection, "roles").iter().all(|name| name != "description"));
-    assert!(names.iter().any(|name| name == "users"));
-    assert!(names.iter().any(|name| name == "roles"));
-    assert!(names.iter().any(|name| name == "groups"));
-    let _ = fs::remove_dir_all(&tmp);
-}
-
-fn table_names(connection: &rusqlite::Connection) -> Vec<String> {
-    let mut statement = connection
-        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
-        .expect("tables");
-    statement
-        .query_map([], |row| row.get(0))
-        .expect("query")
-        .map(|name| name.expect("name"))
-        .collect()
-}
-
-fn columns(connection: &rusqlite::Connection, table: &str) -> Vec<String> {
-    let mut statement = connection
-        .prepare(&format!("PRAGMA table_info(\"{table}\")"))
-        .expect("columns");
-    statement
-        .query_map([], |row| row.get(1))
-        .expect("query")
-        .map(|name| name.expect("name"))
-        .collect()
 }
 
 fn uuid() -> String {

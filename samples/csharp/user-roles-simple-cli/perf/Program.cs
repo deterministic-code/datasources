@@ -12,8 +12,9 @@ var provider = Environment.GetEnvironmentVariable("PROVIDER") ?? "sqlite";
 var strategyName = Environment.GetEnvironmentVariable("PERF_STRATEGY") ?? "batch";
 var rows = int.Parse(Environment.GetEnvironmentVariable("PERF_ROWS") ?? "1000");
 var chunk = int.Parse(Environment.GetEnvironmentVariable("PERF_CHUNK") ?? "500");
-var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? "sqlite:///:memory:";
+var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? $"sqlite:///{Path.Combine(Path.GetTempPath(), "user-roles-perf.sqlite")}";
 var batched = strategyName == "batch" || strategyName == "procedure" && provider == "sqlite";
+Migraters.CreateAndUp(provider, url);
 var connection = provider switch
 {
     "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
@@ -24,12 +25,6 @@ var connection = provider switch
 await connection.Open();
 try
 {
-    var command = connection.CreateCommand();
-    await Migrate.Apply(command);
-    if (provider is "mysql" or "postgres")
-        foreach (var sql in File.ReadAllText(Path.Combine(Shared("user-roles-simple-cli-shared"), $"bulk-{provider}.sql"))
-            .Split("---", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(Native.N(sql));
     IBulkWriteStrategy<User>? strategy = strategyName switch
     {
         "single" => null,
@@ -109,16 +104,6 @@ static async Task<int> Count(IConnection connection, string table)
     {
         if (reader is IAsyncDisposable disposable) await disposable.DisposeAsync();
     }
-}
-
-static string Shared(string name)
-{
-    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-    {
-        var path = Path.Combine(dir.FullName, "samples", name);
-        if (Directory.Exists(path)) return path;
-    }
-    throw new InvalidOperationException(name);
 }
 
 sealed class BytesFromArray : JsonConverter<byte[]>

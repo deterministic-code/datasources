@@ -10,10 +10,10 @@ var provider = Environment.GetEnvironmentVariable("PROVIDER") ?? "sqlite";
 var strategyName = Environment.GetEnvironmentVariable("PERF_STRATEGY") ?? "batch";
 var rows = int.Parse(Environment.GetEnvironmentVariable("PERF_ROWS") ?? "1000");
 var chunk = int.Parse(Environment.GetEnvironmentVariable("PERF_CHUNK") ?? "500");
-var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? "sqlite:///:memory:";
+var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? $"sqlite:///{Path.Combine(Path.GetTempPath(), "contacts-perf.sqlite")}";
 var reading = (Environment.GetEnvironmentVariable("PERF_PHASE") ?? "write") == "read";
 var batched = strategyName == "batch" || strategyName == "procedure" && provider == "sqlite";
-var shared = Shared("contacts-crud-enriched-medium-rest-shared");
+MigrateUp(provider, url);
 var connection = provider switch
 {
     "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
@@ -24,20 +24,6 @@ var connection = provider switch
 await connection.Open();
 try
 {
-    var command = connection.CreateCommand();
-    foreach (var sql in File.ReadAllText(Path.Combine(shared, $"schema-{provider}.sql")).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        await command.Execute(Native.N(sql));
-    if (provider is "mysql" or "postgres")
-        foreach (var sql in File.ReadAllText(Path.Combine(shared, $"bulk-{provider}.sql")).Split("---", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            await command.Execute(Native.N(sql));
-    if (!reading)
-    {
-        var now = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var stamp = provider == "mysql" ? "2024-01-01 00:00:00" : now.ToString("o");
-        var blob = provider == "mysql" ? "0x01" : provider == "postgres" ? "'\\x01'" : "x'01'";
-        foreach (var table in new[] { "contact_sources", "address_types", "phone_types" })
-            await command.Execute(Native.N($"INSERT INTO {table} (id, uuid, created, updated, version, name) VALUES (1, '00000000-0000-0000-0000-000000000001', '{stamp}', '{stamp}', {blob}, 'seed')"));
-    }
     var settingsRepo = Repo<Setting>(connection, new()
     {
         Entity = "ContactSettings",
@@ -389,6 +375,44 @@ static double Median(List<double> values)
     var sorted = values.OrderBy(value => value).ToArray();
     var mid = sorted.Length / 2;
     return sorted.Length % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+static void MigrateUp(string provider, string url)
+{
+    var repo = RepoRoot();
+    var sql = Path.Combine(Path.GetTempPath(), $"contacts-perf-sql-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(sql);
+    var create = Exec("node", [
+        "--import", "tsx", Path.Combine(repo, "cli", "src", "main.ts"),
+        "migrations", "create",
+        "--input", Path.Combine(repo, "samples", "contacts-crud-enriched-medium-rest-shared", "deterministic"),
+        "--migrations-root", Path.Combine(sql, "sql"),
+    ], Path.Combine(repo, "cli"));
+    if (create.Exit != 0) throw new InvalidOperationException($"{create.Stderr}\n{create.Stdout}");
+    var up = Exec("node", [
+        Path.Combine(repo, "scripts", "migraters.mjs"),
+        "up", "--provider", provider, "--connection", url, "--migrations-root", Path.Combine(sql, "sql"),
+    ], repo);
+    if (up.Exit != 0) throw new InvalidOperationException($"{up.Stderr}\n{up.Stdout}");
+}
+
+static (int Exit, string Stdout, string Stderr) Exec(string file, IEnumerable<string> args, string cwd)
+{
+    var start = new ProcessStartInfo(file) { WorkingDirectory = cwd, RedirectStandardOutput = true, RedirectStandardError = true };
+    foreach (var arg in args) start.ArgumentList.Add(arg);
+    var process = Process.Start(start) ?? throw new InvalidOperationException(file);
+    var output = process.StandardOutput.ReadToEndAsync();
+    var error = process.StandardError.ReadToEndAsync();
+    process.WaitForExit();
+    return (process.ExitCode, output.Result, error.Result);
+}
+
+static string RepoRoot()
+{
+    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        if (File.Exists(Path.Combine(dir.FullName, "package.json")) && File.ReadAllText(Path.Combine(dir.FullName, "package.json")).Contains("\"setup\""))
+            return dir.FullName;
+    throw new InvalidOperationException("repo");
 }
 
 static string Shared(string name)

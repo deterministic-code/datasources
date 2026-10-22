@@ -5,7 +5,6 @@ use crate::commands::{
     AddGroup, AddRole, AddUser, AddUserGroup, AddUserRole, CliCommand, DisableUser, EnableUser,
     ListUsersRolesGroups,
 };
-use crate::migrate;
 use crate::parse;
 use crate::password_hash;
 use crate::schema;
@@ -420,23 +419,7 @@ async fn mysql_sql_path_inserts_and_updates() {
 }
 
 #[tokio::test]
-async fn migrates_and_rejects_missing() {
-    let sqlite = MockCommand::new();
-    migrate::apply(&sqlite, "sqlite").await.unwrap();
-    assert!(sqlite
-        .execute_logs
-        .lock()
-        .expect("mock")
-        .iter()
-        .all(|(text, _)| text.starts_with("CREATE TABLE")));
-    let mysql = MockCommand::new();
-    migrate::apply(&mysql, "mysql").await.unwrap();
-    assert!(mysql
-        .execute_logs
-        .lock()
-        .expect("mock")
-        .iter()
-        .any(|(text, _)| text.contains("CREATE PROCEDURE add_user")));
+async fn rejects_missing() {
     let command = MockCommand::new();
     *command.reader_rows.lock().expect("mock") = vec![];
     let app = App::new(&command, "sqlite");
@@ -453,17 +436,6 @@ async fn migrates_and_rejects_missing() {
         }))
         .await
         .is_err());
-}
-
-#[derive(serde::Deserialize)]
-struct TranscriptSpec {
-    now: String,
-    steps: Vec<TranscriptStep>,
-}
-
-#[derive(serde::Deserialize)]
-struct TranscriptStep {
-    argv: Vec<String>,
 }
 
 #[test]
@@ -530,48 +502,6 @@ fn normalizes_dialect_noise_and_matches_sql_text() {
         crate::console_log::dialect_transcript(&lines("postgres.log")),
         transcript
     );
-}
-
-#[tokio::test]
-async fn console_transcript_matches_sqlite() {
-    use datasources::Driver;
-    let shared =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../user-roles-simple-cli-shared");
-    let spec: TranscriptSpec =
-        serde_yaml::from_str(&std::fs::read_to_string(shared.join("cli.yaml")).unwrap()).unwrap();
-    let expected = std::fs::read_to_string(shared.join("sqlite.log"))
-        .unwrap()
-        .lines()
-        .filter(|line| !line.is_empty())
-        .map(crate::console_log::normalize_console_line)
-        .collect();
-    let mut options = std::collections::HashMap::new();
-    options.insert("DATASOURCE_URL".into(), "sqlite:///:memory:".into());
-    let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
-    connection.open().await.unwrap();
-    let command = connection.create_command();
-    migrate::apply(command.as_ref(), connection.provider())
-        .await
-        .unwrap();
-    let clock = spec.now.clone();
-    let middleware = std::sync::Arc::new(datasources::ExpectConsoleMiddleware::with_normalize(
-        expected,
-        move || clock.clone(),
-        crate::console_log::normalize_console_line,
-    ));
-    command.add_middleware(middleware.clone());
-    let stamp = spec.now.clone();
-    let app = App::new(command.as_ref(), connection.provider())
-        .procedures(false)
-        .with_clock(
-            move || stamp.clone(),
-            |_| Ok("hash".into()),
-            || vec![1, 2, 3],
-        );
-    for step in spec.steps {
-        app.run(parse::args(&step.argv).unwrap()).await.unwrap();
-    }
-    middleware.complete().unwrap();
 }
 
 #[tokio::test]

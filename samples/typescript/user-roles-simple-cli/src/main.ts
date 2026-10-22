@@ -7,8 +7,8 @@ DatasourceFactory.register("sqlite", new SqliteDriver());
 DatasourceFactory.register("mysql", new MysqlDriver());
 DatasourceFactory.register("postgres", new PostgresDriver());
 import { existsSync, readFileSync } from "node:fs";
+import { migrateUp } from "../../../../scripts/migraters.mjs";
 import { App } from "./app.ts";
-import { migrate } from "./migrate.ts";
 import { parse } from "./parse.ts";
 
 const env = (key: string): string => {
@@ -25,11 +25,13 @@ const env = (key: string): string => {
 const run = async (args: string[]): Promise<number> => {
   try {
     const parsed = parse(args);
+    const provider = env("PROVIDER");
+    const url = env("DATASOURCE_URL");
+    migrateUp({ provider, connection: url, migrationsRoot: env("MIGRATIONS_ROOT") || "sql" });
     const ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();
     const command = await ds.createCommand(connection);
-    await migrate(command);
     const frozen = env("CLI_NOW");
     const now = frozen ? () => new Date(frozen) : () => new Date();
     command.addMiddleware(new ConsoleCommandMiddleware((line) => console.error(line), now));

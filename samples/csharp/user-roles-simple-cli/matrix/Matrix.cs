@@ -26,7 +26,6 @@ try
 {
     await connection.Open();
     var command = connection.CreateCommand();
-    await Migrate.Apply(command);
     var now = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
     command.AddMiddleware(new ConsoleCommandMiddleware(lines.Add, () => now, new Dictionary<string, string> { ["isVerbose"] = "true" }));
     var app = new App(command, () => now.UtcDateTime, _ => "hash", () => [1, 2, 3], false);

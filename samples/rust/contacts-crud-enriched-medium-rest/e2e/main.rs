@@ -1,13 +1,10 @@
 #![allow(unused)]
 
-#[allow(dead_code)]
-mod schema;
 mod datasources_register;
 use datasources_register::Repositories;
 
 use datasources::{
-    n, BuiltDatasource, Datasource, ICRUDRepository, IReadonlyRepository, Operator, Row, Value,
-    Where,
+    BuiltDatasource, Datasource, ICRUDRepository, IReadonlyRepository, Operator, Row, Value, Where,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,24 +12,18 @@ use std::sync::Arc;
 #[tokio::main]
 async fn main() {
     let mut options = HashMap::new();
-    options.insert("DATASOURCE_URL".into(), "sqlite:///:memory:".into());
+    options.insert(
+        "DATASOURCE_URL".into(),
+        std::env::var("DATASOURCE_URL").expect("DATASOURCE_URL"),
+    );
     let ds = BuiltDatasource::new(
         "sqlite",
         Arc::new(datasources_sqlite::SqliteDriver),
         Some(options),
     );
-    let command = ds.create_command(None).await.expect("command");
-    command
-        .execute_native(&n("PRAGMA foreign_keys = ON"), None)
-        .await
-        .expect("pragma");
-    for sql in schema::load_statements() {
-        command
-            .execute_native(&n(sql), None)
-            .await
-            .expect("migrate");
-    }
     let ds: &dyn Datasource = &ds;
+    let connection = ds.create_connection().await.expect("connection");
+    connection.open().await.expect("open");
     let contacts = ds.contacts();
     let mut row = Row::new();
     row.insert("first_name".into(), Value::from("Ada"));

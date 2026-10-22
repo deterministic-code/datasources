@@ -3,7 +3,6 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use user_roles_simple_cli::app::App;
-use user_roles_simple_cli::migrate;
 use user_roles_simple_cli::parse;
 
 #[derive(Deserialize)]
@@ -40,9 +39,6 @@ async fn main() {
     let connection = driver.connection(Some(&options));
     connection.open().await.expect("open");
     let command = connection.create_command();
-    migrate::apply(command.as_ref(), connection.provider())
-        .await
-        .expect("migrate");
     let lines = Arc::new(Mutex::new(Vec::<String>::new()));
     let stamp = spec.now.clone();
     command.add_middleware(Arc::new(

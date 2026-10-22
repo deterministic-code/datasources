@@ -6,7 +6,7 @@ use datasources::{
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-use user_roles_simple_cli::{migrate, schema};
+use user_roles_simple_cli::schema;
 
 #[tokio::main]
 async fn main() {
@@ -21,7 +21,16 @@ async fn run() -> datasources::Result<()> {
     let strategy_name = env("PERF_STRATEGY", "batch");
     let rows = env("PERF_ROWS", "1000").parse::<usize>().expect("PERF_ROWS");
     let chunk = env("PERF_CHUNK", "500").parse::<usize>().expect("PERF_CHUNK");
-    let url = env("DATASOURCE_URL", "sqlite:///:memory:");
+    let url = env(
+        "DATASOURCE_URL",
+        &format!(
+            "sqlite:///{}",
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("perf.sqlite")
+                .display()
+        ),
+    );
+    migrate_up(&provider, &url);
     let mut options = HashMap::new();
     options.insert("DATASOURCE_URL".into(), url);
     let connection = driver(&provider).connection(Some(&options));
@@ -46,18 +55,6 @@ async fn work(
     chunk: usize,
 ) -> datasources::Result<()> {
     let command = connection.create_command();
-    migrate::apply(command.as_ref(), provider).await?;
-    if provider == "mysql" || provider == "postgres" {
-        let shared = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../user-roles-simple-cli-shared");
-        let sql = std::fs::read_to_string(shared.join(format!("bulk-{provider}.sql")))
-            .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
-        for part in sql.split("---").map(str::trim).filter(|part| !part.is_empty()) {
-            command
-                .execute_native(&Native::new(part), None)
-                .await?;
-        }
-    }
     let batched = batched(provider, strategy_name);
     let strategy: Arc<dyn BulkWriteStrategy> = match (strategy_name, batched) {
         ("single", _) => Arc::new(datasources::SingleCommandIBulkWriteStrategy::new()),
@@ -229,4 +226,41 @@ fn row(pairs: &[(&str, Value)]) -> Row {
 
 fn env(name: &str, default: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| default.into())
+}
+
+fn migrate_up(provider: &str, url: &str) {
+    let repo = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let sql = std::env::temp_dir().join(format!(
+        "user-roles-perf-sql-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("time")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&sql).expect("sql");
+    let status = std::process::Command::new("node")
+        .args([
+            "--import",
+            "tsx",
+            repo.join("cli/src/main.ts").to_str().expect("cli"),
+            "migrations",
+            "create",
+            "--input",
+            repo.join("samples/user-roles-simple-cli-shared/deterministic")
+                .to_str()
+                .expect("spec"),
+            "--migrations-root",
+            sql.join("sql").to_str().expect("root"),
+        ])
+        .current_dir(repo.join("cli"))
+        .status()
+        .expect("migrations create");
+    assert!(status.success(), "migrations create");
+    let status = std::process::Command::new("node")
+        .arg(repo.join("scripts/migraters.mjs"))
+        .args(["up", "--provider", provider, "--connection", url, "--migrations-root"])
+        .arg(sql.join("sql"))
+        .status()
+        .expect("migrate-up");
+    assert!(status.success(), "migrate-up");
 }

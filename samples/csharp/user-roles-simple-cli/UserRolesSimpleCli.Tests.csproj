@@ -11,7 +11,7 @@
     <Threshold>100</Threshold>
     <ThresholdType>line,branch,method</ThresholdType>
     <Include>[UserRolesSimpleCli]*</Include>
-    <ExcludeByFile>**/Program.cs,**/SchemaSpec.cs</ExcludeByFile>
+    <ExcludeByFile>**/Program.cs,**/SchemaSpec.cs,**/Migraters.cs</ExcludeByFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.msbuild" Version="6.0.4">

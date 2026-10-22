@@ -82,21 +82,6 @@ public sealed class AppTests
     }
 
     [Fact]
-    public async Task MigratesSqliteAndMysql()
-    {
-        var sqlite = new MockConnection { Provider = "sqlite" };
-        var sqliteCmd = new MockCommand(sqlite);
-        sqlite.Command = sqliteCmd;
-        await Migrate.Apply(sqliteCmd);
-        Assert.All(sqliteCmd.ExecuteCalls, call => Assert.StartsWith("CREATE TABLE", call.Text));
-        var mysql = new MockConnection { Provider = "mysql" };
-        var mysqlCmd = new MockCommand(mysql);
-        mysql.Command = mysqlCmd;
-        await Migrate.Apply(mysqlCmd);
-        Assert.Contains(mysqlCmd.ExecuteCalls, call => call.Text.Contains("CREATE PROCEDURE add_user"));
-    }
-
-    [Fact]
     public async Task UsesDefaultClockAndHash()
     {
         var connection = new MockConnection { Provider = "sqlite" };
