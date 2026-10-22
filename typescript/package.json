@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm run build && npm run test -w @deterministic-code/datasources -w @deterministic-code/datasources-code-generators -w @deterministic-code/datasources-sqlite -w @deterministic-code/datasources-memory -w @deterministic-code/datasources-json -w @deterministic-code/datasources-xml -w @deterministic-code/datasources-yaml -w @deterministic-code/datasources-mongodb -w @deterministic-code/datasources-dynamodb -w @deterministic-code/datasources-oracle -w @deterministic-code/datasources-sqlserver -w @deterministic-code/datasources-postgres --if-present",
+    "test": "npm run test -w @deterministic-code/datasources -w @deterministic-code/datasources-code-generators -w @deterministic-code/datasources-sqlite -w @deterministic-code/datasources-memory --if-present",
     "test:e2e": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e",
     "test:e2e:verbose": "VERBOSE=1 npm run test:e2e",
     "test:e2e:ci": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e:ci",

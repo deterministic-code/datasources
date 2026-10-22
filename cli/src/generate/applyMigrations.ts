@@ -1,7 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import { generate as generateSql } from "@deterministic-code/datasources-code-generators/generate-sql";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
-import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import type { Flags, MigrationsCreateCommand } from "../parse.ts";
 import type { Deps } from "../run.ts";
 import { loadSpec } from "./loadSpec.ts";
@@ -12,10 +11,6 @@ const at = (root: string, path: string): string => (isAbsolute(path) ? path : jo
 
 const afterMigrations = (filename: string): string => filename.replace(/^[^/]+\/migrations\//, "");
 
-const dialectsOf = (entries: GenerateEntry[]): string[] => [
-  ...new Set(entries.map((entry) => entry.filename.split("/")[0]!)),
-];
-
 export const applyMigrations = async (
   command: MigrationsCreateCommand,
   flags: Flags,
@@ -23,9 +18,17 @@ export const applyMigrations = async (
 ): Promise<void> => {
   providerByName(command.provider);
   const loaded = await loadSpec(deps.fs, at(flags.cwd, command.input));
-  const entries = await generateSql({ reader: memoryReader(loaded.files), settings: loaded.settings });
-  if (command.migrationsPath !== undefined && dialectsOf(entries).length > 1)
+  const listed = [
+    ...new Set(
+      loaded.settings["backend.datasources"]
+        .split(",")
+        .map((name) => name.trim())
+        .filter((name) => name !== ""),
+    ),
+  ];
+  if (command.migrationsPath !== undefined && listed.length > 1)
     throw new Error("--migrations-path requires a single SQL dialect in backend.datasources");
+  const entries = await generateSql({ reader: memoryReader(loaded.files), settings: loaded.settings });
   const remapped =
     command.migrationsPath === undefined
       ? entries
