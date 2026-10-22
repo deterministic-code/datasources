@@ -1,0 +1,6 @@
+language: csharp
+dialects:
+  - sqlite
+  - postgres
+  - mysql
+binDir: csharp/bin/Debug/net9.0

@@ -1,0 +1,12 @@
+DROP PROCEDURE IF EXISTS bulk_create_contact;
+DROP PROCEDURE IF EXISTS bulk_update_contact;
+DROP PROCEDURE IF EXISTS bulk_delete_contact;
+DROP PROCEDURE IF EXISTS bulk_create_address;
+DROP PROCEDURE IF EXISTS bulk_update_address;
+DROP PROCEDURE IF EXISTS bulk_delete_address;
+DROP PROCEDURE IF EXISTS bulk_create_phone;
+DROP PROCEDURE IF EXISTS bulk_update_phone;
+DROP PROCEDURE IF EXISTS bulk_delete_phone;
+DROP PROCEDURE IF EXISTS bulk_create_setting;
+DROP PROCEDURE IF EXISTS bulk_update_setting;
+DROP PROCEDURE IF EXISTS bulk_delete_setting;
