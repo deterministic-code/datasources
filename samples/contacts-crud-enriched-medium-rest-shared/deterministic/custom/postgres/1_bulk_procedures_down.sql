@@ -1,0 +1,12 @@
+DROP PROCEDURE IF EXISTS bulk_create_contact(jsonb, jsonb);
+DROP PROCEDURE IF EXISTS bulk_update_contact(jsonb);
+DROP PROCEDURE IF EXISTS bulk_delete_contact(jsonb);
+DROP PROCEDURE IF EXISTS bulk_create_address(jsonb, jsonb);
+DROP PROCEDURE IF EXISTS bulk_update_address(jsonb);
+DROP PROCEDURE IF EXISTS bulk_delete_address(jsonb);
+DROP PROCEDURE IF EXISTS bulk_create_phone(jsonb, jsonb);
+DROP PROCEDURE IF EXISTS bulk_update_phone(jsonb);
+DROP PROCEDURE IF EXISTS bulk_delete_phone(jsonb);
+DROP PROCEDURE IF EXISTS bulk_create_setting(jsonb);
+DROP PROCEDURE IF EXISTS bulk_update_setting(jsonb);
+DROP PROCEDURE IF EXISTS bulk_delete_setting(jsonb);

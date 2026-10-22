@@ -1,0 +1,6 @@
+language: typescript
+dialects:
+  - sqlite
+  - postgres
+  - mysql
+binDir: typescript/dist/src/bin

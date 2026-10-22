@@ -5,10 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
-import { App } from "./app.ts";
 import { dialectTranscript, normalizeConsoleLine, sqlText } from "./console-log.ts";
-import { migrate } from "./migrate.ts";
-import { parse } from "./parse.ts";
 
 const shared = resolve(dirname(fileURLToPath(import.meta.url)), "../../../user-roles-simple-cli-shared");
 
@@ -46,21 +43,4 @@ describe("console transcript", () => {
     expect(full[2]).toEqual(full[0]);
   });
 
-  it("matches the sqlite console transcript", async () => {
-    const spec = parseYaml(readFileSync(join(shared, "cli.yaml"), "utf8")) as {
-      now: string;
-      steps: { argv: string[] }[];
-    };
-    const expected = readFileSync(join(shared, "sqlite.log"), "utf8").split("\n").filter((line) => line.length > 0).map(normalizeConsoleLine);
-    const connection = new SqliteDriver().connection({ DATASOURCE_URL: "sqlite:///:memory:" });
-    await connection.open();
-    const command = connection.createCommand();
-    await migrate(command);
-    const now = () => new Date(spec.now);
-    const middleware = new ExpectConsoleMiddleware(expected, now, normalizeConsoleLine);
-    command.addMiddleware(middleware);
-    const app = new App(command, now, () => "hash", () => new Uint8Array([1, 2, 3]), false);
-    for (const step of spec.steps) await app.run(parse(step.argv));
-    middleware.complete();
-  });
 });

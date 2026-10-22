@@ -351,32 +351,26 @@ if (process.argv.includes("--report-only")) {
   process.exit(0);
 }
 
-const runCell = (sample, dialect, provider, sql, csharpOut) => {
+const runCell = (sample, dialect, provider, url, csharpOut) => {
   const log = join(artifacts, "logs", sample.name, dialect, `${provider}.log`);
   mkdirSync(dirname(log), { recursive: true });
-  const db = isolate(provider);
   const started = Date.now();
-  try {
-    const { command, args, cwd } = harness(sample.name, dialect);
-    if (csharpOut) args.push(`-p:E2E_MATRIX_GENERATED=${csharpOut}`);
-    const env = {
-      ...process.env,
-      PROVIDER: provider,
-      DATASOURCE_URL: db.url,
-      E2E_MATRIX_LOG: log,
-      MSBUILDDISABLENODEREUSE: "1",
-    };
-    if (sql) env.E2E_MATRIX_SQL = sql;
-    if (csharpOut) env.E2E_MATRIX_GENERATED = csharpOut;
-    const result = spawnSync(command, args, { cwd, env, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
-    const ok = (result.status ?? 1) === 0;
-    const stderr = join(artifacts, "logs", sample.name, dialect, `${provider}.stderr.txt`);
-    if (ok) rmSync(stderr, { force: true });
-    else writeFileSync(stderr, `${result.stdout}\n${result.stderr}`);
-    return { sample: sample.name, dialect, provider, ok, ms: Date.now() - started, log };
-  } finally {
-    db.drop();
-  }
+  const { command, args, cwd } = harness(sample.name, dialect);
+  if (csharpOut) args.push(`-p:E2E_MATRIX_GENERATED=${csharpOut}`);
+  const env = {
+    ...process.env,
+    PROVIDER: provider,
+    DATASOURCE_URL: url,
+    E2E_MATRIX_LOG: log,
+    MSBUILDDISABLENODEREUSE: "1",
+  };
+  if (csharpOut) env.E2E_MATRIX_GENERATED = csharpOut;
+  const result = spawnSync(command, args, { cwd, env, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
+  const ok = (result.status ?? 1) === 0;
+  const stderr = join(artifacts, "logs", sample.name, dialect, `${provider}.stderr.txt`);
+  if (ok) rmSync(stderr, { force: true });
+  else writeFileSync(stderr, `${result.stdout}\n${result.stderr}`);
+  return { sample: sample.name, dialect, provider, ok, ms: Date.now() - started, log };
 };
 
 const compare = (cells) => {
@@ -419,16 +413,18 @@ try {
     for (const dialect of dialects) {
       for (const provider of providers) {
         process.stderr.write(`${sample.name} ${dialect} ${provider}\n`);
-        const migrated = provider === "sqlite" ? null : isolate(provider);
+        const migrated = isolate(provider);
         try {
+          const url =
+            provider === "sqlite" ? `sqlite:///${join(artifacts, "consumers", sample.name, dialect, provider, "app.sqlite")}` : migrated.url;
           const dir = consumer(sample.name, dialect, {
             PROVIDER: provider,
-            DATASOURCE_URL: provider === "sqlite" ? "sqlite:///./app.sqlite" : migrated.url,
+            DATASOURCE_URL: url,
           });
-          const sql = sample.sql ? join(dir, "sql", provider, "migrations") : undefined;
-          if (sql && !hasUps(sql)) throw new Error(`missing generated sql ${sql}`);
+          if (sample.sql && !hasUps(join(dir, "sql", provider, "migrations")))
+            throw new Error(`missing generated sql ${join(dir, "sql", provider, "migrations")}`);
           cells.push(
-            runCell(sample, dialect, provider, sql, dialect === "csharp" ? join(dir, "generated") : undefined),
+            runCell(sample, dialect, provider, url, dialect === "csharp" ? join(dir, "generated") : undefined),
           );
         } catch (error) {
           const log = join(artifacts, "logs", sample.name, dialect, `${provider}.log`);
@@ -436,7 +432,7 @@ try {
           writeFileSync(join(artifacts, "logs", sample.name, dialect, `${provider}.stderr.txt`), `${error instanceof Error ? error.stack : error}\n`);
           cells.push({ sample: sample.name, dialect, provider, ok: false, ms: 0, log });
         } finally {
-          migrated?.drop();
+          migrated.drop();
         }
       }
     }

@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Schema.cs" />
-    <Compile Include="..\Migrate.cs" />
+    <Compile Include="..\Migraters.cs" />
     <Compile Include="..\..\..\..\csharp\Providers\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <EmbeddedResource Include="..\..\..\user-roles-simple-cli-shared\mysql-procedures.sql" Link="mysql-procedures.sql">
       <LogicalName>mysql-procedures.sql</LogicalName>

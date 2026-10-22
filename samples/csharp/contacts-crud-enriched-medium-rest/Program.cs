@@ -2,14 +2,13 @@ using Backend.Types.View;
 using Datasources;
 using Datasources.Sqlite;
 
+var url = Environment.GetEnvironmentVariable("DATASOURCE_URL")
+    ?? throw new InvalidOperationException("DATASOURCE_URL");
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?>
 {
-    ["DATASOURCE_URL"] = "sqlite:///:memory:",
+    ["DATASOURCE_URL"] = url,
 });
-var command = await ds.CreateCommand();
-await command.Execute(Native.N("PRAGMA foreign_keys = ON"));
-foreach (var sql in Statements.Of(Statements.UpSql(args[0])))
-    await command.Execute(Native.N(sql));
+await (await ds.CreateConnection()).Open();
 var contacts = ds.CreateRepository<Contact>("Contacts");
 var created = await contacts.Create(new Contact
 {
@@ -28,64 +27,3 @@ if (created.FirstName != "Ada")
 var loaded = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", created.Id)));
 if (loaded?.FirstName != "Ada")
     throw new InvalidOperationException("read");
-
-static class Statements
-{
-    public static string UpSql(string path) =>
-        Directory.Exists(path)
-            ? string.Join('\n', Directory.GetFiles(path)
-                .Select(Path.GetFileName)
-                .Where(name => name is not null
-                    && System.Text.RegularExpressions.Regex.IsMatch(name, @"^\d{4}_up\.sql$")
-                    && !name.EndsWith("_stored_procedures_up.sql", StringComparison.Ordinal))
-                .OrderBy(name => name, StringComparer.Ordinal)
-                .Select(name => File.ReadAllText(Path.Combine(path, name!))))
-            : File.ReadAllText(path);
-
-    public static IEnumerable<string> Of(string sql)
-    {
-        var cleaned = string.Join('\n', sql.Split('\n').Where(line => !line.TrimStart().StartsWith("--", StringComparison.Ordinal)));
-        var outList = new List<string>();
-        var depth = 0;
-        var start = 0;
-        for (var i = 0; i < cleaned.Length; i++)
-        {
-            if (Word(cleaned, i, "BEGIN")) depth++;
-            if (cleaned[i] != ';') continue;
-            if (EndsWithWord(cleaned, start, i, "END") && depth > 0) depth--;
-            if (depth != 0) continue;
-            var text = WithSeedVersion(cleaned[start..(i + 1)].Trim());
-            if (text.Length > 0) outList.Add(text);
-            start = i + 1;
-        }
-        return outList;
-    }
-
-    static string WithSeedVersion(string sql)
-    {
-        if (!sql.StartsWith("INSERT INTO", StringComparison.Ordinal) || sql.Contains("\"version\"", StringComparison.Ordinal))
-            return sql;
-        var values = sql.IndexOf(") VALUES (", StringComparison.Ordinal);
-        return values < 0
-            ? sql
-            : $"{sql[..values]}, \"version\") VALUES ({sql[(values + ") VALUES (".Length)..^2]}, X'00');";
-    }
-
-    static bool Word(string sql, int i, string token)
-    {
-        if (!sql.AsSpan(i).StartsWith(token, StringComparison.Ordinal)) return false;
-        if (i > 0 && char.IsLetterOrDigit(sql[i - 1])) return false;
-        var end = i + token.Length;
-        return end == sql.Length || !char.IsLetterOrDigit(sql[end]);
-    }
-
-    static bool EndsWithWord(string sql, int start, int semicolon, string token)
-    {
-        var i = semicolon - 1;
-        while (i >= start && char.IsWhiteSpace(sql[i])) i--;
-        if (i < start + token.Length - 1 || sql.AsSpan(i - token.Length + 1, token.Length).ToString() != token)
-            return false;
-        var before = i - token.Length;
-        return before < start || !char.IsLetterOrDigit(sql[before]);
-    }
-}

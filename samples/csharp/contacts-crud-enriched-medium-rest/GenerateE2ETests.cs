@@ -14,6 +14,7 @@ public sealed class GenerateE2ETests
         Directory.CreateDirectory(tmp);
         try
         {
+            var url = $"sqlite:///{Path.Combine(tmp, "app.sqlite")}";
             Require(Exec(
                 Which("node"),
                 [
@@ -27,9 +28,17 @@ public sealed class GenerateE2ETests
                     "--input",
                     Path.Combine(repo, "samples", "contacts-crud-enriched-medium-rest-shared", "deterministic"),
                     "--output",
+                    "generated",
+                    "--cwd",
                     tmp,
+                    "--no-migrate",
                 ],
-                Path.Combine(repo, "cli")));
+                Path.Combine(repo, "cli"),
+                new Dictionary<string, string> { ["PROVIDER"] = "sqlite", ["DATASOURCE_URL"] = url }));
+            Require(Exec(
+                Which("node"),
+                [Path.Combine(repo, "scripts", "migraters.mjs"), "up", "--provider", "sqlite", "--connection", url, "--migrations-root", Path.Combine(tmp, "sql"), "--cwd", sample],
+                repo));
             var run = Path.Combine(tmp, "run");
             Directory.CreateDirectory(run);
             File.Copy(Path.Combine(sample, "Program.cs"), Path.Combine(run, "Program.cs"));
@@ -44,7 +53,7 @@ public sealed class GenerateE2ETests
                     <NoWarn>CS8618</NoWarn>
                   </PropertyGroup>
                   <ItemGroup>
-                    <Compile Include="..\csharp\**\*.cs" />
+                    <Compile Include="..\generated\**\*.cs" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Datasources", "Datasources.csproj")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Providers", "Sqlite", "Datasources.Sqlite.csproj")}" />
                     <ProjectReference Include="{Path.Combine(repo, "csharp", "Providers", "Sqlite.Microsoft", "Datasources.Sqlite.Microsoft.csproj")}" />
@@ -57,11 +66,9 @@ public sealed class GenerateE2ETests
                     "run",
                     "--project",
                     Path.Combine(run, "Run.csproj"),
-                    "--",
-                    Path.Combine(tmp, "sql", "sqlite", "migrations"),
                 ],
                 run,
-                new Dictionary<string, string> { ["MSBUILDDISABLENODEREUSE"] = "1" }));
+                new Dictionary<string, string> { ["MSBUILDDISABLENODEREUSE"] = "1", ["DATASOURCE_URL"] = url }));
         }
         finally
         {

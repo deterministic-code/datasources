@@ -15,7 +15,21 @@ namespace UserRolesSimpleCli.Tests;
 public sealed class ConsoleTranscriptTests
 {
     [Fact]
-    public Task Sqlite() => Match(() => Connection("sqlite"), false, "sqlite.log");
+    [Trait("Category", "e2e")]
+    public async Task Sqlite()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"user-roles-{Guid.NewGuid():N}.db");
+        var url = $"sqlite:///{path}";
+        try
+        {
+            await Match(() => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }), url, "sqlite", false, "sqlite.log");
+        }
+        finally
+        {
+            foreach (var leftover in new[] { path, $"{path}-wal", $"{path}-shm" })
+                File.Delete(leftover);
+        }
+    }
 
     [Fact]
     public void SqlLogsMatch()
@@ -84,8 +98,8 @@ public sealed class ConsoleTranscriptTests
                 create.CommandText = $"CREATE DATABASE `{procedures}`";
                 await create.ExecuteNonQueryAsync();
             }
-            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = ReplaceMysqlDb(url, name) }), false, "mysql.log");
-            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = ReplaceMysqlDb(url, procedures) }), true, "mysql-procedures.log");
+            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = ReplaceMysqlDb(url, name) }), ReplaceMysqlDb(url, name), "mysql", false, "mysql.log");
+            await Match(() => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = ReplaceMysqlDb(url, procedures) }), ReplaceMysqlDb(url, procedures), "mysql", true, "mysql-procedures.log");
         }
         finally
         {
@@ -123,7 +137,8 @@ public sealed class ConsoleTranscriptTests
                 create.CommandText = $"CREATE SCHEMA {schema}";
                 await create.ExecuteNonQueryAsync();
             }
-            await Match(() => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url.Contains('?') ? $"{url}&schema={schema}" : $"{url}?schema={schema}" }), false, "postgres.log");
+            var isolated = url.Contains('?') ? $"{url}&schema={schema}" : $"{url}?schema={schema}";
+            await Match(() => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = isolated }), isolated, "postgres", false, "postgres.log");
         }
         finally
         {
@@ -142,38 +157,35 @@ public sealed class ConsoleTranscriptTests
         }
     }
 
-    static async Task Match(Func<IConnection> connect, bool procedures, string file)
+    static async Task Match(Func<IConnection> connect, string url, string provider, bool procedures, string file)
     {
         var path = Path.Combine(Shared(), file);
         if (Environment.GetEnvironmentVariable("RECORD_CONSOLE") == "1")
         {
             var lines = new List<string>();
-            await Run(connect(), line => lines.Add(ExpectConsoleMiddleware.Signature(line)), procedures);
+            await Run(connect(), url, provider, new ConsoleCommandMiddleware(line => lines.Add(ExpectConsoleMiddleware.Signature(line)), () => DateTimeOffset.Parse(Spec().Now, null, System.Globalization.DateTimeStyles.RoundtripKind), new Dictionary<string, string> { ["isVerbose"] = "true" }), procedures);
             await File.WriteAllLinesAsync(path, lines);
             return;
         }
         var expected = (await File.ReadAllLinesAsync(path)).Where(line => line.Length > 0).Select(Normalize).ToArray();
         var specNow = DateTimeOffset.Parse(Spec().Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
         var middleware = new ExpectConsoleMiddleware(expected, () => specNow, Normalize);
-        await Run(connect(), middleware, procedures);
+        await Run(connect(), url, provider, middleware, procedures);
         middleware.Complete();
     }
 
-    static async Task Run(IConnection connection, ICommandMiddleware middleware, bool procedures)
+    static async Task Run(IConnection connection, string url, string provider, ICommandMiddleware middleware, bool procedures)
     {
         var spec = Spec();
+        Migraters.CreateAndUp(provider, url);
         await connection.Open();
         var command = connection.CreateCommand();
-        await Migrate.Apply(command);
         var now = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
         command.AddMiddleware(middleware);
         var app = new App(command, () => now.UtcDateTime, _ => "hash", () => [1, 2, 3], procedures);
         foreach (var step in spec.Steps)
             await app.Run(Parse.Args([.. step.Argv]));
     }
-
-    static async Task Run(IConnection connection, Action<string> write, bool procedures) =>
-        await Run(connection, new ConsoleCommandMiddleware(write, () => DateTimeOffset.Parse(Spec().Now, null, System.Globalization.DateTimeStyles.RoundtripKind), new Dictionary<string, string> { ["isVerbose"] = "true" }), procedures);
 
     static string[] SqlText(string provider) =>
         File.ReadAllLines(Path.Combine(Shared(), $"{provider}.log"))
@@ -226,19 +238,6 @@ public sealed class ConsoleTranscriptTests
             .Build()
             .Deserialize<CliSpec>(File.ReadAllText(Path.Combine(Shared(), "cli.yaml")));
 
-    static IConnection Connection(string provider) => provider switch
-    {
-        "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" }),
-        "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = Environment.GetEnvironmentVariable("MYSQL_URL") ?? "mysql://ds:ds@127.0.0.1:3306/datasources" }),
-        "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?>
-        {
-            ["DATASOURCE_URL"] = Environment.GetEnvironmentVariable("DATASOURCE_URL")
-                ?? Environment.GetEnvironmentVariable("POSTGRES_URL")
-                ?? "postgres://ds:ds@127.0.0.1:5432/datasources"
-        }),
-        _ => throw new InvalidOperationException(provider)
-    };
-
     static void FreshCompose(string service)
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_DOCKER"))) return;
@@ -271,10 +270,10 @@ public sealed class ConsoleTranscriptTests
             RedirectStandardError = true
         };
         var process = Process.Start(start) ?? throw new InvalidOperationException($"failed {file}");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
-        return (process.ExitCode, output, error);
+        return (process.ExitCode, output.Result, error.Result);
     }
 
     static string RepoRoot()

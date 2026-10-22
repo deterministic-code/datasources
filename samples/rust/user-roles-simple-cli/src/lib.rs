@@ -4,7 +4,6 @@ pub mod columns;
 pub mod commands;
 pub mod console_log;
 pub mod group_view;
-pub mod migrate;
 pub mod parse;
 pub mod password_hash;
 pub mod role_view;

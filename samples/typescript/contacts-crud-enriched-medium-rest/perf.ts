@@ -20,10 +20,13 @@ import {
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { contacts as seedContacts } from "../../../scripts/perf-data.mjs";
+import { migrateUp } from "../../../scripts/migraters.mjs";
 
 type SeedStamp = {
   id: number;
@@ -91,12 +94,12 @@ class Setting {
 }
 
 const sample = dirname(fileURLToPath(import.meta.url));
-const shared = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared");
+const spec = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/deterministic");
 const provider = process.env.PROVIDER ?? "sqlite";
 const strategyName = process.env.PERF_STRATEGY ?? "batch";
 const rows = Number(process.env.PERF_ROWS ?? 1000);
 const chunk = Number(process.env.PERF_CHUNK ?? 500);
-const url = process.env.DATASOURCE_URL ?? "sqlite:///:memory:";
+const url = process.env.DATASOURCE_URL ?? `sqlite:///${resolve(sample, "perf.sqlite")}`;
 const reading = process.env.PERF_PHASE === "read";
 
 const driver = () =>
@@ -104,18 +107,6 @@ const driver = () =>
   (() => {
     throw new Error(provider);
   })();
-
-const splitDash = (sql: string) =>
-  sql
-    .split(/^---\s*$/m)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-const splitSemi = (sql: string) =>
-  sql
-    .split(";")
-    .map((part) => part.trim())
-    .filter(Boolean);
 
 const batched = strategyName === "batch" || (strategyName === "procedure" && provider === "sqlite");
 
@@ -138,26 +129,16 @@ const count = async (connection: IConnection, table: string) => {
   return typeof n === "number" ? n : Number(n);
 };
 
+const sqlRoot = mkdtempSync(join(tmpdir(), "contacts-perf-sql-"));
+execFileSync(
+  process.execPath,
+  ["--import", "tsx", resolve(sample, "../../../cli/src/main.ts"), "migrations", "create", "--input", spec, "--migrations-root", join(sqlRoot, "sql")],
+  { encoding: "utf8", cwd: resolve(sample, "../../../cli") },
+);
+migrateUp({ provider, connection: url, migrationsRoot: join(sqlRoot, "sql") });
 const connection = driver().connection({ DATASOURCE_URL: url });
 await connection.open();
 try {
-  const command = connection.createCommand();
-  for (const sql of splitSemi(readFileSync(resolve(shared, `schema-${provider}.sql`), "utf8")))
-    await command.executeNative(new Native(sql));
-  if (provider === "mysql" || provider === "postgres")
-    for (const sql of splitDash(readFileSync(resolve(shared, `bulk-${provider}.sql`), "utf8")))
-      await command.executeNative(new Native(sql));
-  if (!reading) {
-    const now = new Date("2024-01-01T00:00:00.000Z");
-    const stamp = provider === "mysql" ? "2024-01-01 00:00:00" : now.toISOString();
-    const blob = provider === "mysql" ? "0x01" : provider === "postgres" ? "'\\x01'" : "x'01'";
-    for (const table of ["contact_sources", "address_types", "phone_types"])
-      await command.executeNative(
-        new Native(
-          `INSERT INTO ${table} (id, uuid, created, updated, version, name) VALUES (1, '00000000-0000-0000-0000-000000000001', '${stamp}', '${stamp}', ${blob}, 'seed')`,
-        ),
-      );
-  }
   const settingsRepo = new BulkCRUDRepository(connection, {
     type: Setting,
     entity: "ContactSettings",

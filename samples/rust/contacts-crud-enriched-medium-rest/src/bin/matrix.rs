@@ -1,8 +1,7 @@
 use contacts_crud_enriched_medium_rest::api::Api;
 use contacts_crud_enriched_medium_rest::clock::Clock;
 use contacts_crud_enriched_medium_rest::repos;
-use contacts_crud_enriched_medium_rest::schema;
-use datasources::{ConsoleCommandMiddleware, Driver, Native};
+use datasources::{ConsoleCommandMiddleware, Driver};
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -48,23 +47,6 @@ async fn main() {
     };
     let connection = driver.connection(Some(&options));
     connection.open().await.expect("open");
-    let command = connection.create_command();
-    if provider == "sqlite" {
-        command
-            .execute_native(&Native::new("PRAGMA foreign_keys = ON"), None)
-            .await
-            .expect("pragma");
-    }
-    let sql = std::env::var("E2E_MATRIX_SQL")
-        .ok()
-        .and_then(|path| schema::up_sql_from(path).ok())
-        .unwrap_or_else(|| schema::GENERATED_SQL.to_string());
-    for statement in schema::statements(&sql) {
-        command
-            .execute_native(&Native::new(statement), None)
-            .await
-            .expect("migrate");
-    }
     let n = Arc::new(Mutex::new(0u32));
     let clock = Clock::new();
     let stamp = spec.now.clone();

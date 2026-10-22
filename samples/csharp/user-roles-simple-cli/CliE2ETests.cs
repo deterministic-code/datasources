@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using UserRolesSimpleCli;
 using System.Text.RegularExpressions;
 using MySqlConnector;
 using Npgsql;
@@ -111,16 +112,19 @@ public sealed class CliE2ETests(ITestOutputHelper output)
         var datasourceUrl = string.IsNullOrEmpty(schema)
             ? url
             : url.Contains('?') ? $"{url}&schema={schema}" : $"{url}?schema={schema}";
+        var root = Migraters.Create(Path.Combine(Path.GetTempPath(), $"user-roles-sql-{Guid.NewGuid():N}"));
         await File.WriteAllTextAsync(Path.Combine(sample, ".env"), $"""
             INSTALLED_PROVIDERS=sqlite,mysql,postgres
             PROVIDER={provider}
             DATASOURCE_URL={datasourceUrl}
+            MIGRATIONS_ROOT={root}
             """);
         var env = new Dictionary<string, string>
         {
             ["PROVIDER"] = provider,
             ["DATASOURCE_URL"] = datasourceUrl,
-            ["CLI_NOW"] = spec.Now
+            ["CLI_NOW"] = spec.Now,
+            ["MIGRATIONS_ROOT"] = root
         };
         Require(Exec("npm", $"run setup -- --cwd {sample} --ecosystem csharp --yes", RepoRoot()));
         foreach (var step in spec.Steps)
@@ -253,10 +257,10 @@ public sealed class CliE2ETests(ITestOutputHelper output)
             foreach (var pair in env)
                 start.Environment[pair.Key] = pair.Value;
         var process = Process.Start(start) ?? throw new InvalidOperationException($"failed {file}");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
-        return (process.ExitCode, output, error);
+        return (process.ExitCode, output.Result, error.Result);
     }
 
     static string SampleDir()

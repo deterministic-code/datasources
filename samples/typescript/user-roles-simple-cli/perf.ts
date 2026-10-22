@@ -2,11 +2,13 @@ import { BatchCommandIBulkWriteStrategy, BulkCRUDRepository, Native, StoredProce
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { users as seedUsers } from "../../../scripts/perf-data.mjs";
-import { migrate } from "./src/migrate.ts";
+import { migrateUp } from "../../../scripts/migraters.mjs";
 
 type SeedUser = {
   id: number;
@@ -32,19 +34,13 @@ const provider = process.env.PROVIDER ?? "sqlite";
 const strategyName = process.env.PERF_STRATEGY ?? "batch";
 const rows = Number(process.env.PERF_ROWS ?? 1000);
 const chunk = Number(process.env.PERF_CHUNK ?? 500);
-const url = process.env.DATASOURCE_URL ?? "sqlite:///:memory:";
+const url = process.env.DATASOURCE_URL ?? `sqlite:///${resolve(sample, "perf.sqlite")}`;
 
 const driver = () =>
   ({ sqlite: () => new SqliteDriver(), mysql: () => new MysqlDriver(), postgres: () => new PostgresDriver() })[provider]?.() ??
   (() => {
     throw new Error(provider);
   })();
-
-const split = (sql: string) =>
-  sql
-    .split(/^---\s*$/m)
-    .map((part) => part.trim())
-    .filter(Boolean);
 
 const batched = strategyName === "batch" || (strategyName === "procedure" && provider === "sqlite");
 
@@ -68,14 +64,16 @@ const count = async (connection: IConnection, table: string) => {
   return typeof n === "number" ? n : Number(n);
 };
 
+const sqlRoot = mkdtempSync(join(tmpdir(), "user-roles-perf-sql-"));
+execFileSync(
+  process.execPath,
+  ["--import", "tsx", resolve(sample, "../../../cli/src/main.ts"), "migrations", "create", "--input", resolve(shared, "deterministic"), "--migrations-root", join(sqlRoot, "sql")],
+  { encoding: "utf8", cwd: resolve(sample, "../../../cli") },
+);
+migrateUp({ provider, connection: url, migrationsRoot: join(sqlRoot, "sql") });
 const connection = driver().connection({ DATASOURCE_URL: url });
 await connection.open();
 try {
-  const command = connection.createCommand();
-  await migrate(command);
-  if (provider === "mysql" || provider === "postgres")
-    for (const sql of split(readFileSync(resolve(shared, `bulk-${provider}.sql`), "utf8")))
-      await command.executeNative(new Native(sql));
   const usersRepo = new BulkCRUDRepository(connection, { type: User, entity: "users" }, strategy());
   const seed = (process.env.PERF_DATA
     ? JSON.parse(readFileSync(process.env.PERF_DATA, "utf8"))

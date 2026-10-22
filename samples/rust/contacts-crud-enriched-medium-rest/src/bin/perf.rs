@@ -6,6 +6,7 @@ use datasources::{
     MappedValue, Mapper, Native, Result, Row, RowTypeConverter, SelectStatement,
     SelectStatementOptions,     StoredProcedureBulkWriteStrategy, TypeMap, TypeMapField, TypeMapGroup, Value, WhereText,
 };
+use futures_util::TryStreamExt;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -65,10 +66,16 @@ async fn main() -> Result<()> {
     let strategy_name = env("PERF_STRATEGY", "batch");
     let rows = env("PERF_ROWS", "1000").parse::<i64>().expect("rows");
     let chunk = env("PERF_CHUNK", "500").parse::<usize>().expect("chunk");
-    let url = env("DATASOURCE_URL", "sqlite:///:memory:");
+    let url = env(
+        "DATASOURCE_URL",
+        &format!(
+            "sqlite:///{}",
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("perf.sqlite").display()
+        ),
+    );
     let reading = env("PERF_PHASE", "write") == "read";
     let batched = strategy_name == "batch" || strategy_name == "procedure" && provider == "sqlite";
-    let shared = shared();
+    migrate_up(&provider, &url);
     let mut options = HashMap::new();
     options.insert("DATASOURCE_URL".into(), url);
     let driver: Arc<dyn Driver> = match provider.as_str() {
@@ -79,41 +86,6 @@ async fn main() -> Result<()> {
     };
     let connection = driver.connection(Some(&options));
     connection.open().await?;
-    let command = connection.create_command();
-    for sql in split_semi(&std::fs::read_to_string(shared.join(format!("schema-{provider}.sql"))).expect("schema"))
-    {
-        command.execute_native(&Native::new(sql), None).await?;
-    }
-    if provider == "mysql" || provider == "postgres" {
-        for sql in split_dash(&std::fs::read_to_string(shared.join(format!("bulk-{provider}.sql"))).expect("bulk"))
-        {
-            command.execute_native(&Native::new(sql), None).await?;
-        }
-    }
-    if !reading {
-        let stamp = if provider == "mysql" {
-            "2024-01-01 00:00:00".into()
-        } else {
-            DateTime::parse_from_rfc3339("2024-01-01T00:00:00.000Z")
-                .expect("stamp")
-                .to_rfc3339()
-        };
-        let blob = match provider.as_str() {
-            "mysql" => "0x01",
-            "postgres" => "'\\x01'",
-            _ => "x'01'",
-        };
-        for table in ["contact_sources", "address_types", "phone_types"] {
-            command
-                .execute_native(
-                    &Native::new(format!(
-                        "INSERT INTO {table} (id, uuid, created, updated, version, name) VALUES (1, '00000000-0000-0000-0000-000000000001', '{stamp}', '{stamp}', {blob}, 'seed')"
-                    )),
-                    None,
-                )
-                .await?;
-        }
-    }
     let settings_repo = Arc::new(repo(
         Arc::clone(&connection),
         &strategy_name,
@@ -829,14 +801,39 @@ fn env(name: &str, fallback: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| fallback.into())
 }
 
-fn shared() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../contacts-crud-enriched-medium-rest-shared")
-}
-
-fn split_semi(sql: &str) -> Vec<&str> {
-    sql.split(';').map(str::trim).filter(|part| !part.is_empty()).collect()
-}
-
-fn split_dash(sql: &str) -> Vec<&str> {
-    sql.split("---").map(str::trim).filter(|part| !part.is_empty()).collect()
+fn migrate_up(provider: &str, url: &str) {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let sql = std::env::temp_dir().join(format!(
+        "contacts-perf-sql-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("time")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&sql).expect("sql");
+    let status = std::process::Command::new("node")
+        .args([
+            "--import",
+            "tsx",
+            repo.join("cli/src/main.ts").to_str().expect("cli"),
+            "migrations",
+            "create",
+            "--input",
+            repo.join("samples/contacts-crud-enriched-medium-rest-shared/deterministic")
+                .to_str()
+                .expect("spec"),
+            "--migrations-root",
+            sql.join("sql").to_str().expect("root"),
+        ])
+        .current_dir(repo.join("cli"))
+        .status()
+        .expect("migrations create");
+    assert!(status.success(), "migrations create");
+    let status = std::process::Command::new("node")
+        .arg(repo.join("scripts/migraters.mjs"))
+        .args(["up", "--provider", provider, "--connection", url, "--migrations-root"])
+        .arg(sql.join("sql"))
+        .status()
+        .expect("migrate-up");
+    assert!(status.success(), "migrate-up");
 }

@@ -11,6 +11,9 @@ static async Task<int> Run(string[] args)
     try
     {
         var parsed = Parse.Args(args);
+        var provider = Env("PROVIDER") ?? "sqlite";
+        var url = Env("DATASOURCE_URL") ?? "sqlite:///./app.sqlite";
+        Migraters.Up(provider, url, Env("MIGRATIONS_ROOT") ?? "sql");
         DatasourceFactory.Register("sqlite", new SqliteDriver());
         DatasourceFactory.Register("mysql", new MysqlDriver());
         DatasourceFactory.Register("postgres", new PostgresDriver());
@@ -18,7 +21,6 @@ static async Task<int> Run(string[] args)
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = await ds.CreateCommand(connection);
-        await Migrate.Apply(command);
         var stamp = Env("CLI_NOW");
         command.AddMiddleware(new ConsoleCommandMiddleware(
             Console.Error.WriteLine,
