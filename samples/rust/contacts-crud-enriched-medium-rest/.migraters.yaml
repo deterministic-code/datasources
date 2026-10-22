@@ -1,0 +1,6 @@
+language: rust
+dialects:
+  - sqlite
+  - postgres
+  - mysql
+binDir: rust/target/debug
