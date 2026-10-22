@@ -41,6 +41,13 @@ public class RepositoryTests
         public byte[]? version { get; set; }
     }
 
+    sealed class AddressView
+    {
+        public int Id { get; set; }
+        public string Line1 { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+
     static (CRUDRepository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null)
         where T : new()
@@ -220,6 +227,26 @@ public class RepositoryTests
         });
         Assert.Equal(1, updatedRow.RowsAffected);
         Assert.Equal("UPDATE users SET name = $name WHERE id = $id", rowCommand.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
+    public async Task CreateAndUpdateWriteReadPropertiesOnly()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new CRUDRepository<AddressView>(connection, new CRUDRepositoryOptions<AddressView>
+        {
+            Ids = ["Id"],
+            Entity = "addresses",
+            ReadProperties = ["Id", "Line1"]
+        });
+        command.Response = new Response(new Value.Int(1), 1);
+        command.Reader = new MockReader<Row>([new Row { ["Id"] = 1 }]);
+        await repo.Create(new AddressView { Line1 = "1 Main", Description = "Home" });
+        Assert.Equal("INSERT INTO addresses (Line1) VALUES ($Line1)", command.ExecuteCalls[0].Text);
+        await repo.Update(new AddressView { Id = 1, Line1 = "2 Main", Description = "Work" });
+        Assert.Equal("UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id", command.ExecuteCalls[1].Text);
     }
 
     [Fact]

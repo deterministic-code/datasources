@@ -1794,7 +1794,52 @@ async fn table_repository() {
         command.execute_logs.lock().unwrap()[2].0,
         "DELETE FROM users WHERE id = $id"
     );
+}
 
+#[tokio::test]
+async fn create_and_update_write_read_properties_only() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = vec!["Id".into()];
+    options.entity = "addresses".into();
+    options.read_properties = vec!["Id".into(), "Line1".into()];
+    let repo = CRUDRepository::new(connection, options).unwrap();
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("Id", Value::Int(1))]));
+    repo.create(&mut record(&[
+        ("Id", Value::Int(0)),
+        ("Line1", Value::from("1 Main")),
+        ("Description", Value::from("Home")),
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO addresses (Line1) VALUES ($Line1)"
+    );
+    repo.update(
+        &mut record(&[
+            ("Id", Value::Int(1)),
+            ("Line1", Value::from("2 Main")),
+            ("Description", Value::from("Work")),
+        ]),
+        None,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[1].0,
+        "UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id"
+    );
+}
+
+#[tokio::test]
+async fn table_repository_assigned_id() {
     let assigned = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(assigned.clone(), "memory");
     let mut assigned_options = CRUDRepositoryOptions::default();

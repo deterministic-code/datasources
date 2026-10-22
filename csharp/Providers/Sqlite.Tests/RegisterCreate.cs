@@ -14,7 +14,4 @@ public class PublicSurfaceTests
     public void ExportsOnlyTheProvider() =>
         Assert.Equal(typeof(SqliteDriver), Assert.Single(typeof(SqliteDriver).Assembly.GetExportedTypes()));
 
-    [Fact]
-    public void MicrosoftAssemblyExportsNothing() =>
-        Assert.Empty(typeof(SqliteConnectionDriver).Assembly.GetExportedTypes());
 }

@@ -262,10 +262,15 @@ impl CRUDRepository {
         include: impl Fn(&str, &Value) -> bool,
     ) -> Result<Vec<Parameter>> {
         let entries = self.readonly.enrichments.lock().expect("enrichments");
+        let columns = self.crud_statements.read_columns();
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, value)| {
                 include(key, value)
+                    && (columns.is_empty()
+                        || columns.iter().any(|name| {
+                            name == *key || self.readonly.column(name) == **key
+                        }))
                     && !entries
                         .iter()
                         .any(|entry| entry.enrichment.destination_property == **key)
