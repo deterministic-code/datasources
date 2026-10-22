@@ -56,6 +56,7 @@ export default defineConfig({
         "src/builders/index.ts",
         "src/builders/Field.ts",
         "src/builders/Scalar.ts",
+        "src/DriverLoader.ts",
         "src/IDatasourceFactory.ts",
         "src/DatasourceOptions.ts",
         "src/Parameter.ts",

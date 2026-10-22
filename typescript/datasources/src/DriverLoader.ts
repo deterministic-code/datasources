@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire, registerHooks } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { IDriver } from "./IDriver.ts";
 import type { ProviderCatalog } from "./ProviderCatalog.ts";
@@ -27,7 +27,16 @@ const virtual = new Map<string, string>();
 const virtualBySource = new Map<string, string>();
 let typeScriptHook = false;
 let compiling = false;
+let compilingRoot = "";
 let nextVirtual = 0;
+
+/* v8 ignore start */
+const underRoot = (url: string): boolean => {
+  if (!url.startsWith("file:")) return false;
+  const path = fileURLToPath(url);
+  return path === compilingRoot || path.startsWith(`${compilingRoot}/`);
+};
+/* v8 ignore stop */
 
 const installTypeScriptHook = (): void => {
   if (typeScriptHook) return;
@@ -38,7 +47,7 @@ const installTypeScriptHook = (): void => {
       const parentURL = context.parentURL ? virtual.get(context.parentURL) ?? context.parentURL : undefined;
       const resolved = nextResolve(specifier, parentURL ? { ...context, parentURL } : context);
       /* v8 ignore next */
-      if (!compiling || !resolved.url.endsWith(".ts")) return resolved;
+      if (!compiling || !resolved.url.endsWith(".ts") || !underRoot(resolved.url)) return resolved;
       const existing = virtualBySource.get(resolved.url);
       /* v8 ignore next */
       if (existing) return { url: existing, shortCircuit: true };
@@ -48,7 +57,7 @@ const installTypeScriptHook = (): void => {
       return { url, shortCircuit: true };
     },
     load: (url, context, nextLoad) => {
-      const original = virtual.get(url) ?? (compiling && url.endsWith(".ts") ? url : undefined);
+      const original = virtual.get(url) ?? (compiling && url.endsWith(".ts") && underRoot(url) ? url : undefined);
       /* v8 ignore next */
       if (!original) return nextLoad(url, context);
       const filename = fileURLToPath(original);
@@ -72,11 +81,14 @@ const instantiate = (catalog: ProviderCatalog): IDriver => {
     return instantiateLoaded(catalog);
   } finally {
     compiling = false;
+    compilingRoot = "";
   }
 };
 
 const instantiateLoaded = (catalog: ProviderCatalog): IDriver => {
-  const loaded = appRequire()(catalog.location) as DriverModule;
+  const req = appRequire();
+  compilingRoot = dirname(req.resolve(`${catalog.location}/package.json`));
+  const loaded = req(catalog.location) as DriverModule;
   const Type = loaded[catalog.module];
   if (typeof Type !== "function") throw new ProviderNotInstalledError(catalog.name);
   return new Type();

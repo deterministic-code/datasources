@@ -19,18 +19,36 @@ export type SqlGenerateDriver = IDriver & {
   statementRenderer: StatementTextRenderer;
 };
 
+const loaded = new Map<string, SqlGenerateDriver>();
+
+const named = (dialect: string): string =>
+  ProviderCatalog.default[dialect] === undefined
+    ? (() => {
+        throw new Error(`Unknown SQL dialect "${dialect}".`);
+      })()
+    : dialect;
+
+const asGenerate = (dialect: string, driver: IDriver): SqlGenerateDriver =>
+  driver.typeConverter == null ||
+  driver.defaultValueConverter == null ||
+  driver.statementRenderer == null
+    ? (() => {
+        throw new Error(`"${dialect}" is not a SQL dialect.`);
+      })()
+    : (driver as SqlGenerateDriver);
+
+export const register = (dialect: string, driver: IDriver): void => {
+  loaded.set(named(dialect), asGenerate(dialect, driver));
+};
+
 export const dialectDriver = (dialect: string): SqlGenerateDriver => {
-  const catalog = ProviderCatalog.default[dialect];
-  if (catalog === undefined) throw new Error(`Unknown SQL dialect "${dialect}".`);
-  const driver = DriverLoader.load(catalog);
-  if (
-    driver.typeConverter == null ||
-    driver.defaultValueConverter == null ||
-    driver.statementRenderer == null
-  ) {
-    throw new Error(`"${dialect}" is not a SQL dialect.`);
-  }
-  return driver as SqlGenerateDriver;
+  const key = named(dialect);
+  const hit = loaded.get(key);
+  if (hit !== undefined) return hit;
+  const catalog = ProviderCatalog.default[key];
+  const driver = asGenerate(key, DriverLoader.load(catalog));
+  loaded.set(key, driver);
+  return driver;
 };
 
 export const renderSql = (dialect: string, statement: IStatement): string => {

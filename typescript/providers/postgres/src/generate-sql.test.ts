@@ -4,6 +4,7 @@ import { parse, stringify } from "yaml";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { generate as generateSql } from "@deterministic-code/datasources-code-generators/sql/generate-sql";
 import { generate as generateStoredProcedures } from "@deterministic-code/datasources-code-generators/sql/generate-stored-procedures";
+import "./register-sql-generate.ts";
 
 const TYPES_YAML = `types:
   - user:

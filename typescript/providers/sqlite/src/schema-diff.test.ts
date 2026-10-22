@@ -6,6 +6,7 @@ import { SqlMapping } from "../../../code-generators/src/sql/common/sql-mapping.
 import { buildLiveTables, type LiveTable, type SqlTable } from "../../../code-generators/src/sql/common/sql-schema.ts";
 import { renderSql } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
 import { schemaDiff } from "../../../code-generators/src/sql/common/schema-diff.ts";
+import "./register-sql-generate.ts";
 
 const field = (name: string, extra: Partial<TypeField> = {}): TypeField => ({
   name,
