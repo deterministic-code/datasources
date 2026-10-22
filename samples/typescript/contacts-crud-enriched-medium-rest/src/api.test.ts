@@ -16,8 +16,10 @@ const contacts = (opts?: {
   source?: number;
   address?: number;
   phone?: number;
-}) =>
-  ({
+}) => {
+  const id = (key: "source" | "address" | "phone") =>
+    opts != null && Object.hasOwn(opts, key) ? opts[key] : 1;
+  return {
     read: async function* () {
       for (const row of opts?.read ?? []) yield row;
     },
@@ -25,10 +27,11 @@ const contacts = (opts?: {
     create: async (row: object) => opts?.create ?? { ...row, id: 1 },
     update: async () => undefined,
     delete: async () => undefined,
-    contactSource: lookup(opts?.source ?? 1),
-    address: { addressType: lookup(opts?.address ?? 1) },
-    phone: { phoneType: lookup(opts?.phone ?? 1) },
-  }) as never;
+    contactSource: lookup(id("source")),
+    address: { addressType: lookup(id("address")) },
+    phone: { phoneType: lookup(id("phone")) },
+  } as never;
+};
 
 const legacy = (opts?: { read?: object[]; single?: object | undefined; create?: object }) =>
   ({
@@ -64,7 +67,9 @@ describe("api", () => {
     expect((await api.handle("POST", "/contacts/", " ")).status).toBe(400);
     expect((await api.handle("POST", "/contacts/", "null")).status).toBe(400);
     expect((await api.handle("POST", "/contacts/", "{")).status).toBe(400);
-    expect((await api.handle("POST", "/contacts/", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Nope" }))).status).toBe(400);
+    const unknown = await api.handle("POST", "/contacts/", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Nope" }));
+    expect(unknown.status).toBe(400);
+    expect(unknown.body).toBe('Unknown contact_source "Nope"');
     expect((await api.handle("POST", "/contacts/", JSON.stringify({ firstName: "Ada", lastName: "Lovelace" }))).status).toBe(400);
     expect((await api.handle("PUT", "/contacts/?id=abc", "{}")).status).toBe(400);
     expect((await api.handle("PUT", "/contacts/?id=99", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Manual" }))).status).toBe(404);
@@ -75,6 +80,7 @@ describe("api", () => {
     expect((await api.handle("DELETE", "/legacy_contacts/?key=missing", undefined)).status).toBe(404);
     expect((await api.handle("DELETE", "/legacy_contacts/?key=", undefined)).status).toBe(400);
     expect((await api.handle("GET", "/contacts/?id=&lonely&firstName=Ada%20Lovelace", undefined)).status).toBe(200);
+    expect((await api.handle("GET", "/contacts/?id=1&firstName=Ada", undefined)).status).toBe(200);
   });
 
   it("writes and reads contacts and legacy contacts", async () => {
