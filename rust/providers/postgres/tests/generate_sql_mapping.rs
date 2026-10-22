@@ -1,6 +1,22 @@
-mod helpers;
+use datasources_code_generators::{generate_sql, SqlGenerateDriver};
+use std::sync::Once;
 
-use datasources_code_generators::generate_sql;
+fn register_sql() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        datasources_code_generators::register_dialect(
+            "postgres",
+            SqlGenerateDriver {
+                quote_left: crate::PostgresDriver::QUOTE_LEFT,
+                quote_right: crate::PostgresDriver::QUOTE_RIGHT,
+                type_converter: crate::PostgresDriver::types(),
+                default_value_converter: crate::PostgresDriver::defaults(),
+                statement_renderer: crate::PostgresDriver::statement_text_renderer(),
+            },
+        )
+        .unwrap();
+    });
+}
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -73,7 +89,7 @@ seeds:
 "#;
 
 fn up_sql(settings: &HashMap<String, String>) -> String {
-    helpers::register_sql();
+    register_sql();
     generate_sql(
         &HashMap::from([
             ("types.yaml".into(), TYPES.into()),

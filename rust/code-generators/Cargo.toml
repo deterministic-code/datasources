@@ -16,13 +16,5 @@ regex = "1"
 serde_yaml = "0.9"
 sha1 = "0.10"
 
-[dev-dependencies]
-datasources-mysql = { path = "../providers/mysql" }
-datasources-oracle = { path = "../providers/oracle" }
-datasources-postgres = { path = "../providers/postgres" }
-datasources-sqlite = { path = "../providers/sqlite" }
-datasources-sqlserver = { path = "../providers/sqlserver" }
-regex = "1"
-
 [lints]
 workspace = true

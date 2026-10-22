@@ -1,6 +1,22 @@
-mod helpers;
+use datasources_code_generators::{generate_sql, SqlGenerateDriver};
+use std::sync::Once;
 
-use datasources_code_generators::generate_sql;
+fn register_sql() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        datasources_code_generators::register_dialect(
+            "postgres",
+            SqlGenerateDriver {
+                quote_left: crate::PostgresDriver::QUOTE_LEFT,
+                quote_right: crate::PostgresDriver::QUOTE_RIGHT,
+                type_converter: crate::PostgresDriver::types(),
+                default_value_converter: crate::PostgresDriver::defaults(),
+                statement_renderer: crate::PostgresDriver::statement_text_renderer(),
+            },
+        )
+        .unwrap();
+    });
+}
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -41,7 +57,7 @@ seeds:
 "#;
 
 fn files(with_seeds: bool) -> HashMap<String, String> {
-    helpers::register_sql();
+    register_sql();
     let mut files = HashMap::from([("types.yaml".into(), FIXTURE.to_string())]);
     if with_seeds {
         files.insert("datasource_seeds.yaml".into(), SEEDS.into());
@@ -250,10 +266,6 @@ fn leaves_seed_string_literals_when_keywords_are_lower() {
 fn keywords_lower_keeps_quoted_object_names() {
     for (dialect, left, right) in [
         ("postgres", "\"", "\""),
-        ("sqlite", "\"", "\""),
-        ("mysql", "`", "`"),
-        ("sqlserver", "[", "]"),
-        ("oracle", "\"", "\""),
     ] {
         let body = file_sql(
             &format!("{dialect}/migrations/0001_initial_up.sql"),

@@ -23,6 +23,7 @@ tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
+datasources-code-generators = { path = "../../code-generators" }
 datasources-tests = { path = "../../datasources-tests" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"

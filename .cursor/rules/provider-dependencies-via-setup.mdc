@@ -1,0 +1,42 @@
+---
+description: Provider packages are installed only by CLI setup or add
+alwaysApply: true
+---
+
+# Provider dependencies via CLI setup
+
+A library, generator, sample, or test does not gain a provider package to paper over a missing dialect, a compile error, or a failing test. `sqlite`, `mysql`, `postgres`, `sqlserver`, `oracle`, and every other catalog provider are installed by `npx @deterministic-code/datasources-cli setup` or `add`. The manifest lists only the providers that command wrote, matching `INSTALLED_PROVIDERS`.
+
+Listing every provider in one package inflates the published bundle and makes CI compile every driver (`mysql_async`, `tokio-postgres`, bundled `rusqlite`) when the job never runs those engines.
+
+Generators resolve a dialect from the provider catalog for a package the project already has. They do not depend on every driver.
+
+```json
+// ❌ BAD — every SQL provider added to fix a dialect lookup
+{
+  "dependencies": {
+    "@deterministic-code/datasources-sqlite": "*",
+    "@deterministic-code/datasources-mysql": "*",
+    "@deterministic-code/datasources-postgres": "*",
+    "@deterministic-code/datasources-sqlserver": "*",
+    "@deterministic-code/datasources-oracle": "*"
+  }
+}
+
+// ✅ GOOD — only the provider setup added
+{
+  "dependencies": {
+    "@deterministic-code/datasources-sqlite": "*"
+  }
+}
+```
+
+```toml
+# ❌ BAD
+datasources-mysql = { path = "../providers/mysql" }
+datasources-postgres = { path = "../providers/postgres" }
+datasources-sqlite = { path = "../providers/sqlite" }
+
+# ✅ GOOD
+datasources-sqlite = { path = "../providers/sqlite" }
+```

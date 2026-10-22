@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import {
   DriverLoader,
   ProviderCatalog,
@@ -9,8 +8,6 @@ import {
   type SpecField,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
-
-const require = createRequire(import.meta.url);
 
 export type SqlDialect = string;
 
@@ -25,9 +22,7 @@ export type SqlGenerateDriver = IDriver & {
 export const dialectDriver = (dialect: string): SqlGenerateDriver => {
   const catalog = ProviderCatalog.default[dialect];
   if (catalog === undefined) throw new Error(`Unknown SQL dialect "${dialect}".`);
-  const driver = DriverLoader.load(
-    new ProviderCatalog(catalog.name, require.resolve(catalog.location), catalog.module),
-  );
+  const driver = DriverLoader.load(catalog);
   if (
     driver.typeConverter == null ||
     driver.defaultValueConverter == null ||
