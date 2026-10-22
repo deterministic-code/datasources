@@ -1130,7 +1130,7 @@ See [Bulk repository](bulk-repository.md) for list writes.
 
 The table, columns, and id come from `User`. Create omits `id`. The repository reads the inserted id and writes it onto `user.id`.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L621-L653)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L624-L656)
 
 ```csharp
 var ds = Datasource.Default;
@@ -1186,7 +1186,7 @@ ada-v2
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L657-L709)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L659-L711)
 
 ```rust
 let ds = default().unwrap();
@@ -1328,7 +1328,7 @@ CREATE TABLE User (id int, is_enabled bool NOT NULL, username string NOT NULL, C
 
 `AddLinked` reads roles and groups. Create, update, and delete write `user_roles` and `user_groups`. The related rows stay. Update drops the admin role and adds ops. A null or empty list would clear that association.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L135-L210)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/UserViewCRUDRepositoryTests.cs#L136-L211)
 
 ```csharp
 var ds = Datasource.Default;
@@ -1548,7 +1548,7 @@ CREATE TABLE user_groups (user_id int NOT NULL, group_id int NOT NULL, CONSTRAIN
 
 `account` is identified by `tenant_id` and `id`. The same `id` in another tenant is a different row. `ReadSingleById` / `readSingleById` / `read_single_by_id`, update, and delete take both keys. Create omits every configured id column, so this sample seeds the rows.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L679-L712)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L682-L715)
 
 ```csharp
 var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
@@ -1585,7 +1585,7 @@ ada-v2
 grace
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L932-L978)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L935-L981)
 
 ```rust
 let built = datasource();
@@ -1945,7 +1945,7 @@ CREATE TABLE contact_change_log (id int, uuid uuid NOT NULL, created datetime NO
 
 `UsersView` maps onto `user`. `Key` is `id`, `Login` is `username`, and `UserTypeId` is `user_type_id`. `UserType` is the enriched name and is not a column. Create writes the generated id back onto `Key`.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L206-L293)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#L208-L295)
 
 ```csharp
 var ds = Datasource.Default;
@@ -2076,7 +2076,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L764-L917)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L920)
 
 ```rust
 let ds = default().unwrap();

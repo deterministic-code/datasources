@@ -382,3 +382,58 @@ created.username = "ada-v2";
 const updated = await ds.users.update(created);
 const deleted = await ds.users.delete(created);
 ```
+
+## After the spec changes
+
+After you change `types.yaml` or `datasource.yaml`, snapshot the next version, then run `generate all`.
+
+```sh
+npx @deterministic-code/datasources-cli version
+npx @deterministic-code/datasources-cli generate all --dialect typescript
+```
+
+`version` writes `deterministic/version-<stamp>-<seq>/diff.yaml` from the top-level YAML. `--input` selects the deterministic project (default `./deterministic`). An unchanged spec prints `unchanged` and writes nothing; stop there. `generate all` then reads those snapshots and writes the next migration. Pass `--dialect csharp`, `typescript`, or `rust`. Run it once per dialect when the project has more than one.
+
+## Generated directory hook
+
+Do not create, edit, or delete a file under a directory named `generated`. The hook replies with `edit types.yaml or datasource.yaml and run generate all`.
+
+In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install the hook before editing and wait for a yes. Skip the offer when the project root contains `scripts/generate-skill.mjs`.
+
+Copy `hooks/block-generated.mjs` from the same directory as this file to `.cursor/hooks/block-generated.mjs`. `datasources-cli generate` and `npm run cli` may still write there. Merge the entries below and keep every hook the project already has. Add a command only when that command is not already listed.
+
+`.cursor/hooks.json`:
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "command": "node .cursor/hooks/block-generated.mjs", "failClosed": true }
+    ],
+    "beforeShellExecution": [
+      { "command": "node .cursor/hooks/block-generated.mjs", "failClosed": true }
+    ]
+  }
+}
+```
+
+`.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.cursor/hooks/block-generated.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```

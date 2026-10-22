@@ -997,7 +997,7 @@ Use `AddMiddleware` / `addMiddleware` / `add_middleware` to add low-level diagno
 
 ### Run executeReader on a simple list
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L72-L90)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L73-L91)
 
 ```csharp
 var ds = Datasource.Default;
@@ -1083,7 +1083,7 @@ CREATE TABLE items (id int, name string, CONSTRAINT pk_items PRIMARY KEY (id))
 
 ### Run ExecuteReader and return NameValues
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L17-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L138-L158)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L18-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L139-L159)
 
 ```csharp
 sealed class NameValue
@@ -1209,7 +1209,7 @@ CREATE TABLE settings (name string, value string)
 
 ### Execute, Insert, Read, Update, and Delete
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L23-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L160-L194)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L24-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L161-L195)
 
 ```csharp
 sealed class Item
@@ -1450,7 +1450,7 @@ CREATE TABLE items (id int, name string, CONSTRAINT pk_items PRIMARY KEY (id))
 
 ### Map flat contacts
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L29-L42) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L196-L229)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L30-L43) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#L197-L230)
 
 ```csharp
 record User
@@ -1706,7 +1706,7 @@ var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [st
 result: 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L346-L370)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L363-L387)
 
 ```rust
 async fn fill_output_parameter(command: &dyn Command) {
@@ -1781,7 +1781,7 @@ var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L333-L351)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L332-L350)
 
 ```rust
 async fn read_return_value(command: &dyn Command) {

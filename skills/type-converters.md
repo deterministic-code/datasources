@@ -586,7 +586,7 @@ var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dict
 var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L151-L169)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L145-L163)
 
 ```rust
 let converter =

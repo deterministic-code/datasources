@@ -3,6 +3,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { catalog, providers } from "../cli/src/catalog.ts";
 import { transformDialects } from "./dialects.mjs";
+import { MESSAGE } from "./hooks/block-generated.mjs";
 import { parsePointer, slug, snippetFile } from "./sync-examples.mjs";
 import { parseToc, uniquePages } from "./toc.mjs";
 
@@ -90,6 +91,72 @@ const HASH_ROUTES = [
   { path: "quickstart.md", hash: "installation-from-source", file: "downloading.md" },
 ];
 
+// Skill text that is not in docs/. `rules` are always-on bullets on SKILL.md.
+// `sections` are markdown appended to a topic file.
+export const SKILL_ONLY = {
+  rules: [
+    "After you change `types.yaml` or `datasource.yaml`, run `version`, then `generate all` for the project's dialect (`csharp`, `typescript`, or `rust`). `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop.",
+    "Do not create, edit, or delete a file under a directory named `generated`. Edit `types.yaml` or `datasource.yaml` and run `generate all`. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.",
+  ],
+  sections: {
+    "generation.md": `## After the spec changes
+
+After you change \`types.yaml\` or \`datasource.yaml\`, snapshot the next version, then run \`generate all\`.
+
+\`\`\`sh
+npx @deterministic-code/datasources-cli version
+npx @deterministic-code/datasources-cli generate all --dialect typescript
+\`\`\`
+
+\`version\` writes \`deterministic/version-<stamp>-<seq>/diff.yaml\` from the top-level YAML. \`--input\` selects the deterministic project (default \`./deterministic\`). An unchanged spec prints \`unchanged\` and writes nothing; stop there. \`generate all\` then reads those snapshots and writes the next migration. Pass \`--dialect csharp\`, \`typescript\`, or \`rust\`. Run it once per dialect when the project has more than one.
+
+## Generated directory hook
+
+Do not create, edit, or delete a file under a directory named \`generated\`. The hook replies with \`${MESSAGE}\`.
+
+In a consumer project, if \`.cursor/hooks/block-generated.mjs\` is missing, offer to install the hook before editing and wait for a yes. Skip the offer when the project root contains \`scripts/generate-skill.mjs\`.
+
+Copy \`hooks/block-generated.mjs\` from the same directory as this file to \`.cursor/hooks/block-generated.mjs\`. \`datasources-cli generate\` and \`npm run cli\` may still write there. Merge the entries below and keep every hook the project already has. Add a command only when that command is not already listed.
+
+\`.cursor/hooks.json\`:
+
+\`\`\`json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      { "command": "node .cursor/hooks/block-generated.mjs", "failClosed": true }
+    ],
+    "beforeShellExecution": [
+      { "command": "node .cursor/hooks/block-generated.mjs", "failClosed": true }
+    ]
+  }
+}
+\`\`\`
+
+\`.claude/settings.json\`:
+
+\`\`\`json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \\"\${CLAUDE_PROJECT_DIR}/.cursor/hooks/block-generated.mjs\\""
+          }
+        ]
+      }
+    ]
+  }
+}
+\`\`\`
+`,
+  },
+};
+
 const TOPICS_LINKS = [
   ["Install packages", "downloading.md"],
   ["setup / add / remove / .env", "setup.md"],
@@ -142,6 +209,7 @@ Read one file below. Do not load the rest.
 - Read is convert, then map. Do not fold mapping into the converter.
 - When writing code, find the closest row in [examples.md](${href("examples.md")}), open that language's snippet, and use the same objects the sample uses (connection, repository, enrichment). Include every type the sample defines.
 - \`AddEnriched\` is a read fill. A \`List\` on a CRUD repository is also written with the parent. \`AddLinked\` reads the related repository and writes the association through the link repository. Register a child repository's own fills on that child, then register the child on the parent. Read [enrichment.md](${href("enrichment.md")}) before either call.
+${SKILL_ONLY.rules.map((rule) => `- ${rule}`).join("\n")}
 
 ## Open one file
 
@@ -256,6 +324,8 @@ const renderTopic = (topic, base, routes, pages) => {
     transformDialects(extractSource(readDoc(base, source.path), source), "readme"),
   );
   if (topic.extra === "packages") parts.push(packagesTable());
+  const only = SKILL_ONLY.sections[topic.file];
+  if (only) parts.push(only.trim());
   const nest = (part, index) => (index === 0 && !topic.title ? part : demoteHeadings(part));
   const body = topic.title
     ? `# ${topic.title}\n\n${parts.map((part) => (part.startsWith("##") ? part : demoteHeadings(part))).join("\n\n")}`
@@ -352,6 +422,7 @@ export const renderSkill = (base = root) => {
   const files = { "SKILL.md": skillRouter() };
   for (const topic of TOPICS) files[topic.file] = renderTopic(topic, base, routes, pages);
   files["examples.md"] = renderExamples(base, pages);
+  files["hooks/block-generated.mjs"] = readFileSync(join(base, "scripts/hooks/block-generated.mjs"), "utf8");
   return files;
 };
 
@@ -375,7 +446,11 @@ const pruneEmpty = (dir) => {
 
 const writeTree = (dir, files) => {
   mkdirSync(dir, { recursive: true });
-  for (const [name, body] of Object.entries(files)) writeFileSync(join(dir, name), body);
+  for (const [name, body] of Object.entries(files)) {
+    const path = join(dir, name);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, body);
+  }
   for (const path of listFiles(dir)) {
     const name = relative(dir, path).split("\\").join("/");
     if (!(name in files)) rmSync(path);

@@ -49,7 +49,7 @@ Since the datasource type often can be mapped to multiple object types (string f
 
 One walkthrough: seed users, read the raw rows, rename columns, convert cell types, then build entities with `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` / `MetaDataRowTypeConverter` or a manual map.
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L17-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L26-L123)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L18-L25) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#L27-L124)
 
 ```csharp
 public class User
