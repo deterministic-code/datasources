@@ -1,7 +1,7 @@
 using Datasources;
 using Datasources.CodeGenerators;
 
-namespace Datasources.CodeGenerators.Tests;
+namespace Datasources.Sqlite.Tests;
 
 public class SchemaDiffTests
 {

@@ -1,6 +1,6 @@
 using Datasources.CodeGenerators;
 
-namespace Datasources.CodeGenerators.Tests;
+namespace Datasources.Postgres.Tests;
 
 public class GenerateSqlCasingTests
 {
@@ -218,10 +218,6 @@ public class GenerateSqlCasingTests
 
     [Theory]
     [InlineData("postgres", "\"", "\"")]
-    [InlineData("sqlite", "\"", "\"")]
-    [InlineData("mysql", "`", "`")]
-    [InlineData("sqlserver", "[", "]")]
-    [InlineData("oracle", "\"", "\"")]
     public void KeywordsLowerKeepsQuotedObjectNames(string dialect, string left, string right)
     {
         var body = FileSql(

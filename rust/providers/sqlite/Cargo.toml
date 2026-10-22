@@ -18,6 +18,7 @@ rust_decimal = "1"
 uuid = "1"
 
 [dev-dependencies]
+datasources-code-generators = { path = "../../code-generators" }
 datasources-tests = { path = "../../datasources-tests" }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 serde = { version = "1", features = ["derive"] }

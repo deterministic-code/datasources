@@ -19,6 +19,7 @@
     <Compile Include="..\SchemaSpec.cs" Link="SchemaSpec.cs" />
     <Compile Include="..\RepositoryTestsSpec.cs" Link="RepositoryTestsSpec.cs" />
     <ProjectReference Include="..\Sqlite.Microsoft\Datasources.Sqlite.Microsoft.csproj" />
+    <ProjectReference Include="..\..\CodeGenerators\Datasources.CodeGenerators.csproj" />
     <ProjectReference Include="..\..\Datasources.Tests\Datasources.Tests.csproj" />
   </ItemGroup>
 </Project>

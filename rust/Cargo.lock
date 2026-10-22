@@ -627,11 +627,6 @@ name = "datasources-code-generators"
 version = "0.1.5"
 dependencies = [
  "datasources",
- "datasources-mysql",
- "datasources-oracle",
- "datasources-postgres",
- "datasources-sqlite",
- "datasources-sqlserver",
  "deterministic_generators_common",
  "indexmap",
  "regex",
@@ -717,6 +712,7 @@ dependencies = [
  "bytes",
  "chrono",
  "datasources",
+ "datasources-code-generators",
  "datasources-tests",
  "futures-core",
  "regex",
@@ -736,6 +732,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "datasources",
+ "datasources-code-generators",
  "datasources-tests",
  "futures-util",
  "regex",

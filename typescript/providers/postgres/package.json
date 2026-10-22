@@ -33,6 +33,8 @@
     "pg-query-stream": "^4.17.0"
   },
   "devDependencies": {
+    "@deterministic-code/datasources-code-generators": "*",
+    "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
     "yaml": "^2.8.0"
   }
 }

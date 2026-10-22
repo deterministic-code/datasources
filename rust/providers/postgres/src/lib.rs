@@ -30,6 +30,15 @@ mod integration;
 #[cfg(test)]
 #[path = "../tests/repository_spec.rs"]
 mod repository_spec;
+#[cfg(test)]
+#[path = "../tests/generate_sql.rs"]
+mod generate_sql;
+#[cfg(test)]
+#[path = "../tests/generate_sql_casing.rs"]
+mod generate_sql_casing;
+#[cfg(test)]
+#[path = "../tests/generate_sql_mapping.rs"]
+mod generate_sql_mapping;
 
 #[cfg(test)]
 mod tests {

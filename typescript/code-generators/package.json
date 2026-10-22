@@ -5,9 +5,10 @@
   "exports": {
     ".": "./src/generateSql.ts",
     "./generate-sql": "./src/generate-sql.ts",
+    "./sql/generate-sql": "./src/sql/generate-sql.ts",
     "./generate-stored-procedures": "./src/generate-stored-procedures.ts",
-    "./common/sql-dialect": "./src/sql/common/sql-dialect.ts",
-    "./sql/dialect-converters": "./src/sql/dialect-converters.ts"
+    "./sql/generate-stored-procedures": "./src/sql/generate-stored-procedures.ts",
+    "./common/sql-dialect": "./src/sql/common/sql-dialect.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../rewrite-declaration-extensions.mjs dist && rm -rf dist/sql/templates && cp -R src/sql/templates dist/sql/templates",
@@ -17,11 +18,6 @@
   },
   "dependencies": {
     "@deterministic-code/datasources": "*",
-    "@deterministic-code/datasources-mysql": "*",
-    "@deterministic-code/datasources-oracle": "*",
-    "@deterministic-code/datasources-postgres": "*",
-    "@deterministic-code/datasources-sqlite": "*",
-    "@deterministic-code/datasources-sqlserver": "*",
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
     "pluralize": "^8.0.0",

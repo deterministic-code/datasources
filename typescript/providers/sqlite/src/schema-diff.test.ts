@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import type { TypeField } from "@deterministic-code/deterministic-generators-common/parser";
-import { createCasing } from "./default-casing.ts";
-import { SqlMapping } from "./sql-mapping.ts";
-import { buildLiveTables, type LiveTable, type SqlTable } from "./sql-schema.ts";
-import { renderSql } from "./sql-dialect.ts";
-import { schemaDiff } from "./schema-diff.ts";
+import { createCasing } from "../../../code-generators/src/sql/common/default-casing.ts";
+import { SqlMapping } from "../../../code-generators/src/sql/common/sql-mapping.ts";
+import { buildLiveTables, type LiveTable, type SqlTable } from "../../../code-generators/src/sql/common/sql-schema.ts";
+import { renderSql } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
+import { schemaDiff } from "../../../code-generators/src/sql/common/schema-diff.ts";
 
 const field = (name: string, extra: Partial<TypeField> = {}): TypeField => ({
   name,
