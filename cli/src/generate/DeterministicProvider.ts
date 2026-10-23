@@ -15,6 +15,7 @@ import { csharpRepositories } from "./CSharpRepositories.ts";
 import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
+import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./datasourceYaml.ts";
 
 const place = (dir: string, entries: GenerateEntry[]): GenerateEntry[] =>
   entries.map((entry) => ({ ...entry, filename: `${dir}/${entry.filename}` }));
@@ -32,6 +33,36 @@ const repositoryPacks: Record<Dialect, (models: RepositoryModel[], settings: Rec
 };
 
 const context = (request: GenerateRequest): GenerateContext => ({ reader: request.reader, settings: request.settings });
+
+const withProviderWrites = async (request: GenerateRequest, models: RepositoryModel[]): Promise<RepositoryModel[]> => {
+  const byProvider: Record<string, RepositoryModel[]> = {};
+  for (const engine of await datasourceEnginesOf(request.reader, request.settings)) {
+    const yaml = await engineDatasourceOf(request.reader, engine);
+    if (yaml === undefined) continue;
+    byProvider[engine] = planRepositories(
+      await DeterministicParser(overlayDatasource(request.reader, yaml)).parse(request.settings),
+      request.dialect,
+      request.settings,
+    );
+  }
+  return Object.keys(byProvider).length === 0
+    ? models
+    : models.map((model) => ({
+        ...model,
+        writesByProvider: Object.fromEntries(
+          Object.entries(byProvider).map(([engine, planned]) => {
+            const found = planned.find((item) => item.specName === model.specName);
+            return [
+              engine,
+              {
+                create: found?.createProperties ?? model.createProperties,
+                update: found?.updateProperties ?? model.updateProperties,
+              },
+            ];
+          }),
+        ),
+      }));
+};
 
 const dialectsOf = (settings: Record<string, string>): string[] => {
   const out: string[] = [];
@@ -58,7 +89,11 @@ export const deterministic: CodeGenerationProvider = {
   },
   generateRepositories: async (request) => {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
-    return place(`${request.dialect}/repositories`, repositoryPacks[request.dialect](planRepositories(spec, request.dialect, request.settings), request.settings));
+    const models = planRepositories(spec, request.dialect, request.settings);
+    return place(
+      `${request.dialect}/repositories`,
+      repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
+    );
   },
   generateDatasource: async (request) =>
     place("sql", await generateSql(context(request), dialectsOf(request.settings))),

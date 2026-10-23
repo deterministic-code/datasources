@@ -20,5 +20,6 @@
     <Compile Include="..\RepositoryTestsSpec.cs" Link="RepositoryTestsSpec.cs" />
     <ProjectReference Include="..\Postgres\Datasources.Postgres.csproj" />
     <ProjectReference Include="..\..\CodeGenerators\Datasources.CodeGenerators.csproj" />
+    <ProjectReference Include="..\..\Datasources.Tests\Datasources.Tests.csproj" />
   </ItemGroup>
 </Project>

@@ -34,3 +34,22 @@ pub fn seed_contacts_sql(count: usize, version: &str) -> Vec<String> {
     }
     statements
 }
+
+pub fn seed_identity_sql(engine: &str) -> Vec<String> {
+    let tables = ["contacts_base", "address", "phone"];
+    match engine {
+        "postgres" => tables
+            .iter()
+            .map(|table| {
+                format!(
+                    "SELECT setval(pg_get_serial_sequence('{table}', 'id'), COALESCE((SELECT MAX(id) FROM \"{table}\"), 1))"
+                )
+            })
+            .collect(),
+        "mysql" => tables
+            .iter()
+            .map(|table| format!("ALTER TABLE {table} AUTO_INCREMENT = {}", SEED_CONTACT_COUNT + 1))
+            .collect(),
+        _ => vec![],
+    }
+}

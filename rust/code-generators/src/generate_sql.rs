@@ -32,12 +32,13 @@ fn for_dialect(
     settings: &HashMap<String, String>,
 ) -> Result<Vec<GenerateEntry>> {
     let key = sql_dialect::require(dialect)?;
+    let scoped = spec::files_for(files, &key);
     let casing = PackCasing::of(settings)?;
-    let schema = schema_files(&key, files, settings, &casing)?;
+    let schema = schema_files(&key, &scoped, settings, &casing)?;
     let dir = settings.get("paths.deterministic").map(String::as_str);
     let mut entries = schema.0;
     entries.extend(custom_migrations::of(files, &key, dir)?);
-    entries.extend(generate_procedures::for_dialect(dialect, files, settings, schema.1 + 1)?);
+    entries.extend(generate_procedures::for_dialect(dialect, &scoped, settings, schema.1 + 1)?);
     Ok(entries)
 }
 
