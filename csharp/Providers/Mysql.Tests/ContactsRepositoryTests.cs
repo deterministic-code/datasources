@@ -1,5 +1,4 @@
 using Datasources;
-using Datasources.CodeGenerators;
 using Datasources.Mysql;
 using Datasources.SqlSpecs;
 using Datasources.Tests.Contact;

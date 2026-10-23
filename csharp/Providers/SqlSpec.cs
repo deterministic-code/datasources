@@ -7,13 +7,7 @@ namespace Datasources.SqlSpecs;
 
 public static class SqlSpec
 {
-    public static string SpecsDir()
-    {
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-            if (File.Exists(Path.Combine(dir.FullName, "specs", "command-crud.yaml")))
-                return Path.Combine(dir.FullName, "specs");
-        throw new DirectoryNotFoundException("specs");
-    }
+    public static string SpecsDir() => Datasources.CodeGenerators.SpecParser.SpecsDir();
 
     public static async Task Run(
         string path,

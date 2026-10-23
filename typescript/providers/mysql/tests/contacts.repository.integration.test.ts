@@ -10,7 +10,7 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql, seedIdentitySql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
-import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
+import { specsDir, specVerbose } from "../../../sql-spec-runner.ts";
 import { Native } from "@deterministic-code/datasources";
 import { applyContacts } from "../../../contacts-spec.ts";
 import { MysqlCommand } from "../src/command.ts";
@@ -21,7 +21,7 @@ import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 const url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 
-const seedPath = join(repoRoot(), "specs/contacts/mysql.sql");
+const seedPath = join(specsDir(), "contacts/mysql.sql");
 
 const statementsOf = (sql: string) =>
   sql

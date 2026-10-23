@@ -30,16 +30,16 @@ import {
 } from "../specs/expected-repository-console.ts";
 import { consoleSignature } from "../specs/expected-console-output.ts";
 import { tables } from "./schema-spec.ts";
-import { repoRoot, specVerbose } from "./sql-spec-runner.ts";
+import { specsDir, specVerbose } from "./sql-spec-runner.ts";
 
 export type RepositoryDialect = {
   quote: (id: string) => string;
 };
 
-export const repositorySpecFiles = (root = repoRoot()): string[] =>
-  readdirSync(join(root, "specs", "repositories"))
+export const repositorySpecFiles = (root = specsDir()): string[] =>
+  readdirSync(join(root, "repositories"))
     .filter((name) => name.endsWith(".yaml"))
-    .map((name) => join(root, "specs", "repositories", name));
+    .map((name) => join(root, "repositories", name));
 
 const defaultOf = (canonical: CanonicalType): Cell =>
   ({

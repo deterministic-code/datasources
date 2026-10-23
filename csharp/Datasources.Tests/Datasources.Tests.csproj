@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Datasources\Datasources.csproj" />
+    <ProjectReference Include="..\CodeGenerators\Datasources.CodeGenerators.csproj" />
     <ProjectReference Include="..\Providers\Json\Datasources.Json.csproj" />
     <ProjectReference Include="..\Providers\Memory\Datasources.Memory.csproj" />
   </ItemGroup>

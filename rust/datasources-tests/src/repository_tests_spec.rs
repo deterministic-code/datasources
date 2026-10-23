@@ -18,7 +18,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use crate::repo_root;
+use crate::specs_dir;
 use crate::schema_spec::tables as schema_tables;
 
 pub struct RepositoryDialect {
@@ -843,7 +843,7 @@ pub async fn run(
 }
 
 pub fn files() -> Vec<std::path::PathBuf> {
-    fs::read_dir(repo_root().join("specs/repositories"))
+    fs::read_dir(specs_dir().join("repositories"))
         .unwrap()
         .map(|entry| entry.unwrap().path())
         .filter(|path| path.extension().and_then(|e| e.to_str()) == Some("yaml"))

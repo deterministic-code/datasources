@@ -8,6 +8,14 @@ public static class SpecParser
     public const string DatasourceYaml = "datasource.yaml";
     public const string SeedsYaml = "datasource_seeds.yaml";
 
+    public static string SpecsDir()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+            if (File.Exists(Path.Combine(dir.FullName, "specs", "command-crud.yaml")))
+                return Path.Combine(dir.FullName, "specs");
+        throw new DirectoryNotFoundException("specs");
+    }
+
     public static ParsedSpec Parse(IReadOnlyDictionary<string, string> files)
     {
         var spec = new DeterministicParser(new MemoryReader(files))

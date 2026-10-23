@@ -7,4 +7,4 @@ pub use contact::*;
 pub use repository_tests_spec::{files, run, RepositoryDialect};
 pub use schema_spec::apply_schema;
 pub use schema_spec::tables as schema_tables;
-pub use sql_spec::repo_root;
+pub use sql_spec::specs_dir;

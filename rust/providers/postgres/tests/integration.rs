@@ -6,9 +6,9 @@ use datasources::{
     IsolationLevel, Parameter, Reader, Transaction, Value,
 };
 use serde::Deserialize;
+use datasources_tests::specs_dir;
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -72,18 +72,9 @@ struct DialectFile {
     dirty_read_rows: serde_yaml::Value,
 }
 
-fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|p| p.parent())
-        .and_then(|p| p.parent())
-        .expect("repo root")
-        .to_path_buf()
-}
-
 fn load_dialect() -> DialectFile {
     serde_yaml::from_str(
-        &fs::read_to_string(repo_root().join("specs/dialects/postgres.yaml")).unwrap(),
+        &fs::read_to_string(specs_dir().join("dialects/postgres.yaml")).unwrap(),
     )
     .unwrap()
 }
@@ -316,7 +307,7 @@ async fn run(path: &std::path::Path, dialect: &DialectFile, url: &str) {
 #[tokio::test]
 async fn shared_specs() {
     let dialect = load_dialect();
-    for entry in fs::read_dir(repo_root().join("specs")).unwrap() {
+    for entry in fs::read_dir(specs_dir()).unwrap() {
         let path = entry.unwrap().path();
         if path.extension().and_then(|e| e.to_str()) != Some("yaml")
             || path.file_name().and_then(|name| name.to_str()) == Some("schemas.yaml")

@@ -7,7 +7,7 @@ use datasources::{
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::path::PathBuf;
+use datasources_tests::specs_dir;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -94,21 +94,8 @@ fn shared(filename: &str, connections: usize) -> String {
     path.to_string_lossy().into_owned()
 }
 
-fn repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|p| p.parent())
-        .and_then(|p| p.parent())
-        .expect("repo root")
-        .to_path_buf()
-}
-
-fn specs_dir() -> PathBuf {
-    repo_root().join("specs")
-}
-
 fn load_dialect(engine: &str) -> DialectFile {
-    let path = repo_root().join(format!("specs/dialects/{engine}.yaml"));
+    let path = specs_dir().join(format!("dialects/{engine}.yaml"));
     serde_yaml::from_str(&fs::read_to_string(path).unwrap()).unwrap()
 }
 

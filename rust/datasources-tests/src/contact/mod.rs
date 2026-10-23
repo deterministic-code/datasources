@@ -20,7 +20,9 @@ pub use contact_lookup_ids::contact_lookup_ids;
 pub use contact_lookups::ContactLookups;
 pub use contact_view::{AddressView, ContactView, PhoneView};
 pub use contacts_join_query::contacts_join_query;
-pub use contacts_parity::{apply_sql, contact_schema, contact_seed, contacts_parity, statements_of};
+pub use contacts_parity::{
+    apply_sql, contact_schema, contact_seed, contacts_parity, register_contact_dialect, statements_of,
+};
 pub use contacts_service_of::contacts_service_of;
 pub use contacts_view::contacts_view;
 pub use expect_contacts_view::{contact_with, expect_contacts_view};

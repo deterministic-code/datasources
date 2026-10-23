@@ -7,11 +7,11 @@ import {
   repositoryQueries,
   type RepositorySpec,
 } from "../../../specs/expected-repository-console.ts";
-import { repoRoot } from "../../../sql-spec-runner.ts";
+import { specsDir } from "../../../sql-spec-runner.ts";
 
 describe("expected repository console", () => {
   const spec = parse(
-    readFileSync(join(repoRoot(), "specs", "repositories", "user-crud.yaml"), "utf8"),
+    readFileSync(join(specsDir(), "repositories", "user-crud.yaml"), "utf8"),
   ) as RepositorySpec;
 
   it("expands user-crud into statement SQL", () => {
@@ -36,7 +36,7 @@ describe("expected repository console", () => {
 
   it("expands complex-crud-mappings into flattened statement SQL", () => {
     const mapped = parse(
-      readFileSync(join(repoRoot(), "specs", "repositories", "complex-crud-mappings.yaml"), "utf8"),
+      readFileSync(join(specsDir(), "repositories", "complex-crud-mappings.yaml"), "utf8"),
     ) as RepositorySpec;
     expect(repositoryQueries(mapped)).toEqual([
       "INSERT INTO users (create_string, decimal_text, id, username, usertypename, uuid, version) VALUES ($create_string, $decimal_text, $id, $username, $usertypename, $uuid, $version)",
@@ -59,7 +59,7 @@ describe("expected repository console", () => {
 
   it("expands crud-mapper into remapped statement SQL", () => {
     const mapped = parse(
-      readFileSync(join(repoRoot(), "specs", "repositories", "crud-mapper.yaml"), "utf8"),
+      readFileSync(join(specsDir(), "repositories", "crud-mapper.yaml"), "utf8"),
     ) as RepositorySpec;
     const select =
       "SELECT balance, created, id, is_enabled, location, username, uuid, version FROM people";
