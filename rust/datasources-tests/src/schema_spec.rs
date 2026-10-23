@@ -7,7 +7,7 @@ use datasources::{
 };
 use serde::Deserialize;
 
-use crate::repo_root;
+use crate::specs_dir;
 
 #[derive(Debug, Deserialize, Clone)]
 struct ColumnSpec {
@@ -52,7 +52,7 @@ struct CatalogFile {
 
 fn catalog() -> CatalogFile {
     serde_yaml::from_str(
-        &fs::read_to_string(repo_root().join("specs/schemas.yaml")).expect("schemas.yaml"),
+        &fs::read_to_string(specs_dir().join("schemas.yaml")).expect("schemas.yaml"),
     )
     .expect("schemas.yaml")
 }

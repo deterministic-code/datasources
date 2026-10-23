@@ -45,9 +45,9 @@ type CatalogFile = {
   schemas: Record<string, TableSpec[]>;
 };
 
-export const repoRoot = (from = fileURLToPath(import.meta.url)): string => {
+export const specsDir = (from = fileURLToPath(import.meta.url)): string => {
   for (let dir = dirname(from); ; dir = dirname(dir)) {
-    if (existsSync(join(dir, "specs", "command-crud.yaml"))) return dir;
+    if (existsSync(join(dir, "specs", "command-crud.yaml"))) return join(dir, "specs");
     if (dir === dirname(dir)) throw new Error("specs not found");
   }
 };
@@ -55,7 +55,7 @@ export const repoRoot = (from = fileURLToPath(import.meta.url)): string => {
 let cache: CatalogFile | undefined;
 
 const file = (): CatalogFile =>
-  (cache ??= parse(readFileSync(join(repoRoot(), "specs", "schemas.yaml"), "utf8")) as CatalogFile);
+  (cache ??= parse(readFileSync(join(specsDir(), "schemas.yaml"), "utf8")) as CatalogFile);
 
 const physical = (logical: string, rename?: Readonly<Record<string, string>>): string =>
   rename?.[logical] ?? logical;

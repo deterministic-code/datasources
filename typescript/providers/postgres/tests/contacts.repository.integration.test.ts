@@ -10,7 +10,7 @@ import { addExtraContact } from "../../../datasources/src/tests/contact/extraCon
 import { contactsServiceOf } from "../../../datasources/src/tests/contact/contactsServiceOf.ts";
 import { seedContactCount, seedContactsSql, seedIdentitySql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
-import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
+import { specsDir, specVerbose } from "../../../sql-spec-runner.ts";
 import { Native } from "@deterministic-code/datasources";
 import { applyContacts } from "../../../contacts-spec.ts";
 import { PostgresCommand } from "../src/command.ts";
@@ -21,7 +21,7 @@ import type { PgModule } from "../src/i-postgres-driver.ts";
 const url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 
-const seedPath = join(repoRoot(), "specs/contacts/postgres.sql");
+const seedPath = join(specsDir(), "contacts/postgres.sql");
 
 const statementsOf = (sql: string) =>
   sql

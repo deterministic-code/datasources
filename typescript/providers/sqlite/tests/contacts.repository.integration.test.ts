@@ -21,7 +21,7 @@ import { PhoneType } from "../../../datasources/src/tests/contact/PhoneType.ts";
 import { columns, contactEntity, joinEntity, snake } from "../../../datasources/src/tests/contact/contactColumns.ts";
 import { Operator, Where } from "@deterministic-code/datasources";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
-import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
+import { specsDir, specVerbose } from "../../../sql-spec-runner.ts";
 import { Native } from "@deterministic-code/datasources";
 import { applyContacts } from "../../../contacts-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
@@ -30,7 +30,7 @@ import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";
 
-const seedPath = join(repoRoot(), "specs/contacts/sqlite.sql");
+const seedPath = join(specsDir(), "contacts/sqlite.sql");
 
 const statementsOf = (sql: string) =>
   sql

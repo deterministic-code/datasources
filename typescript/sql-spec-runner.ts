@@ -1,7 +1,6 @@
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { parse } from "yaml";
 import { expect } from "vitest";
 import {
@@ -21,7 +20,9 @@ import {
   consoleSignature,
   expectedConsoleSignatures,
 } from "../specs/expected-console-output.ts";
-import { tables } from "./schema-spec.ts";
+import { specsDir, tables } from "./schema-spec.ts";
+
+export { specsDir };
 
 export type Scalar = string | number | boolean | bigint | null;
 export type Cells = Record<string, Scalar>;
@@ -74,13 +75,6 @@ type SqlFragment = (typeof sqlFragments)[number];
 const isSqlFragment = (name: string): name is SqlFragment =>
   (sqlFragments as readonly string[]).includes(name);
 
-export const repoRoot = (from = fileURLToPath(import.meta.url)): string => {
-  for (let dir = dirname(from); ; dir = dirname(dir)) {
-    if (existsSync(join(dir, "specs", "command-crud.yaml"))) return dir;
-    if (dir === dirname(dir)) throw new Error("specs not found");
-  }
-};
-
 export const specVerbose = (): boolean =>
   process.env.VERBOSE === "1"
   || process.env.VERBOSE === "true"
@@ -91,13 +85,13 @@ const capture = (logs: string[]) => (line: string) => {
   if (specVerbose()) console.log(line);
 };
 
-export const specFiles = (root = repoRoot()): string[] =>
-  readdirSync(join(root, "specs"))
+export const specFiles = (root = specsDir()): string[] =>
+  readdirSync(root)
     .filter((name) => name.endsWith(".yaml") && name !== "schemas.yaml")
-    .map((name) => join(root, "specs", name));
+    .map((name) => join(root, name));
 
-export const loadDialect = (engine: string, render: (statement: CreateTableStatement) => string, root = repoRoot()): Dialect => ({
-  ...(parse(readFileSync(join(root, "specs", "dialects", `${engine}.yaml`), "utf8")) as Omit<Dialect, "provider" | "render">),
+export const loadDialect = (engine: string, render: (statement: CreateTableStatement) => string, root = specsDir()): Dialect => ({
+  ...(parse(readFileSync(join(root, "dialects", `${engine}.yaml`), "utf8")) as Omit<Dialect, "provider" | "render">),
   provider: engine,
   render,
 });

@@ -1,4 +1,7 @@
 version: 1.0.0
+settings:
+  datasource:
+    pluralize_datatable_names: false
 includes:
   - types:
       filter: tag == "datasource_type"

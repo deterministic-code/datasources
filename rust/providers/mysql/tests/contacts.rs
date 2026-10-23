@@ -8,27 +8,23 @@ use datasources_tests::{
     contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
     seed_identity_sql, statements_of, SEED_CONTACT_COUNT,
 };
-use std::sync::{Arc, Once};
+use std::sync::Arc;
 
 fn verbose() -> bool {
     matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
 }
 
 fn register_sql() {
-    static ONCE: Once = Once::new();
-    ONCE.call_once(|| {
-        datasources_code_generators::register_dialect(
-            "mysql",
-            SqlGenerateDriver {
-                quote_left: crate::MysqlDriver::QUOTE_LEFT,
-                quote_right: crate::MysqlDriver::QUOTE_RIGHT,
-                type_converter: crate::MysqlDriver::types(),
-                default_value_converter: crate::MysqlDriver::defaults(),
-                statement_renderer: crate::MysqlDriver::statement_text_renderer(),
-            },
-        )
-        .unwrap();
-    });
+    datasources_tests::register_contact_dialect(
+        "mysql",
+        SqlGenerateDriver {
+            quote_left: crate::MysqlDriver::QUOTE_LEFT,
+            quote_right: crate::MysqlDriver::QUOTE_RIGHT,
+            type_converter: crate::MysqlDriver::types(),
+            default_value_converter: crate::MysqlDriver::defaults(),
+            statement_renderer: crate::MysqlDriver::statement_text_renderer(),
+        },
+    );
 }
 
 #[tokio::test]

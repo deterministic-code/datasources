@@ -13,23 +13,19 @@ use datasources_tests::{
     contacts_service_of, contacts_view, expect_contacts_view, from_mapped_contacts, references,
     seed_contacts_sql, snake, statements_of, SEED_CONTACT_COUNT,
 };
-use std::sync::{Arc, Once};
+use std::sync::Arc;
 
 fn register_sql() {
-    static ONCE: Once = Once::new();
-    ONCE.call_once(|| {
-        datasources_code_generators::register_dialect(
-            "sqlite",
-            SqlGenerateDriver {
-                quote_left: crate::SqliteDriver::QUOTE_LEFT,
-                quote_right: crate::SqliteDriver::QUOTE_RIGHT,
-                type_converter: crate::SqliteDriver::types(),
-                default_value_converter: crate::SqliteDriver::defaults(),
-                statement_renderer: crate::SqliteDriver::statement_text_renderer(),
-            },
-        )
-        .unwrap();
-    });
+    datasources_tests::register_contact_dialect(
+        "sqlite",
+        SqlGenerateDriver {
+            quote_left: crate::SqliteDriver::QUOTE_LEFT,
+            quote_right: crate::SqliteDriver::QUOTE_RIGHT,
+            type_converter: crate::SqliteDriver::types(),
+            default_value_converter: crate::SqliteDriver::defaults(),
+            statement_renderer: crate::SqliteDriver::statement_text_renderer(),
+        },
+    );
 }
 
 fn verbose() -> bool {
