@@ -23,11 +23,12 @@ import { Operator, Where } from "@deterministic-code/datasources";
 import { seedContactCount, seedContactsSql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
 import { Native } from "@deterministic-code/datasources";
-import { applySchema } from "../../../schema-spec.ts";
+import { applyContacts } from "../../../contacts-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
 import type { Cells } from "../../../datasources/src/converters/Cell.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
+import { SqliteDriver } from "../src/SqliteDriver.ts";
 
 const seedPath = join(repoRoot(), "specs/contacts/sqlite.sql");
 
@@ -42,7 +43,7 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    await applySchema(connection, "contacts");
+    await applyContacts(connection, "sqlite", new SqliteDriver());
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.executeNative(new Native(sql));
 
@@ -75,7 +76,7 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    await applySchema(connection, "contacts");
+    await applyContacts(connection, "sqlite", new SqliteDriver());
     for (const sql of [...statementsOf(readFileSync(seedPath, "utf8")), ...seedContactsSql()])
       await command.executeNative(new Native(sql));
 
@@ -95,7 +96,7 @@ describe("contacts readonly repository", () => {
     const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
     const command = new SqliteCommand(connection);
-    await applySchema(connection, "contacts");
+    await applyContacts(connection, "sqlite", new SqliteDriver());
     for (const sql of statementsOf(readFileSync(seedPath, "utf8")))
       await command.executeNative(new Native(sql));
 

@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.CodeGenerators;
 using Datasources.SqlSpecs;
 using Datasources.Sqlite;
 using Datasources.Tests.Contact;
@@ -17,7 +18,7 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        await SchemaSpec.Apply(conn, "contacts");
+        await ContactSchema.Apply(conn, "sqlite", new SqliteDriver());
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(new Native(sql));
 
@@ -54,7 +55,7 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        await SchemaSpec.Apply(conn, "contacts");
+        await ContactSchema.Apply(conn, "sqlite", new SqliteDriver());
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())).Concat(SeedContacts.Sql()))
             await command.Execute(new Native(sql));
 
@@ -80,7 +81,7 @@ public class ContactsRepositoryTests
         });
         await conn.Open();
         var command = new SqliteCommand(conn);
-        await SchemaSpec.Apply(conn, "contacts");
+        await ContactSchema.Apply(conn, "sqlite", new SqliteDriver());
         foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
             await command.Execute(new Native(sql));
 

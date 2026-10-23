@@ -12,6 +12,7 @@ description = "Shared SQL spec runner and contact fixtures for provider tests"
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 datasources = { workspace = true }
+datasources-code-generators = { path = "../code-generators" }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 rust_decimal = "1"
 serde = { version = "1", features = ["derive"] }

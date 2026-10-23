@@ -11,16 +11,16 @@ import { contactsServiceOf } from "../../../datasources/src/tests/contact/contac
 import { seedContactCount, seedContactsSql, seedIdentitySql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { execute, Native } from "@deterministic-code/datasources";
-import { tables } from "../../../schema-spec.ts";
+import { Native } from "@deterministic-code/datasources";
+import { applyContacts } from "../../../contacts-spec.ts";
 import { MysqlCommand } from "../src/command.ts";
 import { MysqlConnection } from "../src/connection.ts";
+import { MysqlDriver } from "../src/MysqlDriver.ts";
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
 const url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 
-const quote = (id: string): string => `\`${id.replaceAll("`", "``")}\``;
 const seedPath = join(repoRoot(), "specs/contacts/mysql.sql");
 
 const statementsOf = (sql: string) =>
@@ -66,8 +66,7 @@ describe("contacts readonly repository", () => {
       const connection = MysqlConnection.from({ DATASOURCE_URL: isolated.url });
       await connection.open();
       const command = new MysqlCommand(connection);
-      for (const statement of tables("contacts", quote))
-        await execute(command, statement);
+      await applyContacts(connection, "mysql", new MysqlDriver());
       for (const sql of [
         ...statementsOf(readFileSync(seedPath, "utf8")),
         ...seedContactsSql(seedContactCount, "X''"),
