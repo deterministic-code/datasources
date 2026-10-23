@@ -13,14 +13,12 @@ import {
   hasAuditColumns,
   overlayOf,
   sqlTablesFrom,
+  tableIdentity,
   type LiveTable,
 } from "./sql-schema.ts";
 import { procedureSpecs } from "./procedures/driver.ts";
-import {
-  createParamFields,
-  pkFieldOf,
-  writableNonAuditFields,
-} from "./procedures/helpers.ts";
+import { createParamFields, pkFieldOf, updateParamFields } from "./procedures/helpers.ts";
+import { writeInclusionOf } from "./write-inclusion.ts";
 import {
   createBulkCreateStoredProcedureOf,
   createBulkDeleteStoredProcedureOf,
@@ -55,16 +53,25 @@ export const procedureStatementsForTable = (
   casing: PackCasing,
   groups: string[][],
 ): { statements: IStatement[]; names: string[] } => {
+  const overlay = overlayOf(t);
+  const ids = tableIdentity(t);
   const table = {
     name: t.tableName,
     entityName: t.name,
-    fields: t.fields.map((f) => ({ name: f.name, type: f.type })),
-    pkName: pkName(t, overlayOf(t)),
+    fields: t.fields.map((f) => {
+      const flags = writeInclusionOf(
+        f,
+        ids,
+        overlay.fields.find((item) => item.name === f.name),
+      );
+      return { name: f.name, type: f.type, ...flags };
+    }),
+    pkName: pkName(t, overlay),
   };
   const pk = pkFieldOf(table);
   const columnName = (logical: string): string => mapping.columnName(t, logical);
   const columns = table.fields.map((f) => columnName(f.name));
-  const writable = writableNonAuditFields(table).map((f) => columnName(f.name));
+  const writable = updateParamFields(table).map((f) => columnName(f.name));
   const paramType = (field: { type: string; name: string }): string =>
     mapColumnType(dialect, field);
   const createdParams = createParamFields(table).map((f) => ({
@@ -72,10 +79,17 @@ export const procedureStatementsForTable = (
     type: paramType(f),
   }));
   const typedColumns = table.fields.map((f) => ({ name: columnName(f.name), type: paramType(f) }));
+  const createColumns = createParamFields(table).map((f) => ({ name: columnName(f.name), type: paramType(f) }));
+  const updateColumns = [
+    { name: columnName(pk.name), type: paramType(pk) },
+    ...updateParamFields(table)
+      .filter((f) => f.name !== pk.name)
+      .map((f) => ({ name: columnName(f.name), type: paramType(f) })),
+  ];
   const payload = { name: "payload", type: payloadType(dialect) };
   const key = columnName(pk.name);
   const keyType = paramType(pk);
-  const audit = table.fields.some((f) => f.name === "updated") ? columnName("updated") : undefined;
+  const audit = table.fields.some((f) => f.name === "updated" && f.includeInUpdate) ? columnName("updated") : undefined;
   const generatedKey = pk.type === "uuid";
   const quoted = q(dialect, t.tableName);
   const statements: IStatement[] = [];
@@ -89,10 +103,9 @@ export const procedureStatementsForTable = (
     });
     const updateParams = [
       ...byParams,
-      ...writableNonAuditFields(table)
+      ...updateParamFields(table)
         .filter((f) => !proc.byProperties.includes(f.name))
         .map((f) => ({ name: columnName(f.name), type: paramType(f) })),
-      ...(audit === undefined ? [] : [{ name: columnName("new_updated"), type: paramType(table.fields.find((f) => f.name === "updated")!) }]),
     ];
     statements.push(
       ({
@@ -105,9 +118,9 @@ export const procedureStatementsForTable = (
         delete: () =>
           createDeleteStoredProcedureOf(proc.name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
         bulkCreate: () =>
-          createBulkCreateStoredProcedureOf(proc.name, quoted, typedColumns, payload, key, keyType),
+          createBulkCreateStoredProcedureOf(proc.name, quoted, createColumns, payload, key, keyType),
         bulkUpdate: () =>
-          createBulkUpdateStoredProcedureOf(proc.name, quoted, typedColumns, payload, key, keyType),
+          createBulkUpdateStoredProcedureOf(proc.name, quoted, updateColumns, payload, key, keyType),
         bulkDelete: () =>
           createBulkDeleteStoredProcedureOf(proc.name, quoted, typedColumns, payload, key, keyType),
       }[proc.op])(),

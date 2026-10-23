@@ -41,6 +41,8 @@ use std::sync::Arc;
 pub struct CRUDRepository {
     readonly: ReadonlyRepository,
     ids: Vec<String>,
+    create_properties: Option<Vec<String>>,
+    update_properties: Option<Vec<String>>,
     crud_statements: CRUDRepositoryStatements,
     tree: RepositoryTree,
     write: Arc<dyn WriteEnrichmentStrategy>,
@@ -65,9 +67,11 @@ impl CRUDRepository {
 
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
         let write = options.write.clone();
+        let create_properties = options.create_properties.clone();
+        let update_properties = options.update_properties.clone();
         let built = CRUDRepositoryBuilder::parts(connection, options)?;
         let crud_statements = write_statements(&built.statements);
-        let mut repo = Self::from_built(built, crud_statements)?;
+        let mut repo = Self::from_built(built, crud_statements, create_properties, update_properties)?;
         if let Some(write) = write {
             repo.write = write;
         }
@@ -77,6 +81,8 @@ impl CRUDRepository {
     fn from_built(
         built: BuiltRepository,
         crud_statements: CRUDRepositoryStatements,
+        create_properties: Option<Vec<String>>,
+        update_properties: Option<Vec<String>>,
     ) -> Result<Self> {
         let id = built.ids.clone();
         let readonly = ReadonlyRepository::from_built(built);
@@ -85,6 +91,8 @@ impl CRUDRepository {
             readonly,
             crud_statements,
             ids: id,
+            create_properties,
+            update_properties,
             tree,
             write: Arc::new(DefaultWriteEnrichmentStrategy::default()),
         })
@@ -104,6 +112,8 @@ impl CRUDRepository {
             readonly,
             crud_statements: CRUDRepositoryStatements::empty(),
             ids,
+            create_properties: None,
+            update_properties: None,
             tree,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
         }
@@ -247,12 +257,23 @@ impl CRUDRepository {
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
-        self.fields(record, |key, _| include_ids || !self.ids.iter().any(|id| id == key))
+        self.fields(record, |key, _| {
+            let fallback = include_ids || !self.ids.iter().any(|id| id == key);
+            if include_ids {
+                fallback
+            } else {
+                listed(&self.update_properties, key, fallback)
+            }
+        })
     }
 
     fn insert_params(&self, record: &Row) -> Result<Vec<Parameter>> {
         self.fields(record, |key, value| {
-            !self.ids.iter().any(|id| id == key) || assigned(value)
+            listed(
+                &self.create_properties,
+                key,
+                !self.ids.iter().any(|id| id == key) || assigned(value),
+            )
         })
     }
 
@@ -599,6 +620,13 @@ fn identified(row: Row, column: &str) -> Row {
     let mut named = Row::new();
     named.insert(column.to_string(), value);
     named
+}
+
+fn listed(list: &Option<Vec<String>>, key: &str, fallback: bool) -> bool {
+    match list {
+        Some(names) => names.iter().any(|name| name == key),
+        None => fallback,
+    }
 }
 
 fn assigned(value: &Value) -> bool {

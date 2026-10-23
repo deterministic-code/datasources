@@ -1,12 +1,14 @@
 /** Helpers shared by stored-procedure generation. */
 
-interface ProcField {
+export interface ProcField {
   name: string;
   type: string;
   size?: number;
+  includeInCreate?: boolean;
+  includeInUpdate?: boolean;
 }
 
-interface ProcTable {
+export interface ProcTable {
   fields: ProcField[];
   pkName?: string;
 }
@@ -18,40 +20,11 @@ export const pkFieldOf = (table: ProcTable): ProcField =>
     : undefined) ??
   table.fields.find((f) => f.name === "id") ?? { name: "id", type: "integer" };
 
-/** The writable, non-audit columns: everything but the pk, the system `uuid`, and `created`/`updated`. */
-export const writableNonAuditFields = (table: ProcTable): ProcField[] => {
-  const pk = pkFieldOf(table);
-  return table.fields.filter(
-    (f) =>
-      f.name !== pk.name &&
-      f.name !== "uuid" &&
-      f.name !== "created" &&
-      f.name !== "updated",
-  );
-};
+export const createParamFields = (table: ProcTable): ProcField[] =>
+  table.fields.filter((f) => f.includeInCreate !== false);
 
-/** CREATE IN-params from expanded columns, in the stored-procedure call order: `uuid` (if present), writable fields, `created`, `updated`. */
-export const createParamFields = (table: ProcTable): ProcField[] => {
-  const field = (name: string): ProcField[] => {
-    const found = table.fields.find((f) => f.name === name);
-    return found ? [found] : [];
-  };
-  return [
-    ...field("uuid"),
-    ...writableNonAuditFields(table),
-    ...field("created"),
-    ...field("updated"),
-  ];
-};
-
-/** The expanded `updated` column — present on every table that gets procedures. */
-export const updatedFieldOf = (table: ProcTable): ProcField => {
-  const field = table.fields.find((f) => f.name === "updated");
-  if (!field) {
-    throw new Error("procedure table is missing expanded `updated` column");
-  }
-  return field;
-};
+export const updateParamFields = (table: ProcTable): ProcField[] =>
+  table.fields.filter((f) => f.includeInUpdate === true);
 
 /** Expanded columns qualified with a table alias (default `t`). */
 export const aliasedColumns = (

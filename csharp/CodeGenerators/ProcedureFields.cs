@@ -10,15 +10,17 @@ public static class ProcedureFields
             ?? new SpecTypeField { Name = "id", Type = "integer", Kind = "primitive", Base = "integer", IsArray = false, IsNullable = false };
     }
 
-    public static IReadOnlyList<SpecTypeField> WritableNonAudit(SqlTable table)
-    {
-        var pk = PkOf(table);
-        return table.Fields.Where(f => f.Name != pk.Name && f.Name is not "uuid" and not "created" and not "updated").ToList();
-    }
-
     public static IReadOnlyList<SpecTypeField> CreateParams(SqlTable table)
     {
-        SpecTypeField[] Field(string name) => table.Fields.FirstOrDefault(f => f.Name == name) is { } found ? [found] : [];
-        return [.. Field("uuid"), .. WritableNonAudit(table), .. Field("created"), .. Field("updated")];
+        var type = table.AsType();
+        var overlay = SqlSchema.OverlayOf(table);
+        return table.Fields.Where(f => WriteInclusion.Create(f, type, overlay)).ToList();
+    }
+
+    public static IReadOnlyList<SpecTypeField> UpdateParams(SqlTable table)
+    {
+        var type = table.AsType();
+        var overlay = SqlSchema.OverlayOf(table);
+        return table.Fields.Where(f => WriteInclusion.Update(f, type, overlay)).ToList();
     }
 }

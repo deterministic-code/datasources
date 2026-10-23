@@ -796,7 +796,7 @@ checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 [[package]]
 name = "deterministic_generators_common"
 version = "0.1.0"
-source = "git+https://github.com/deterministic-code/deterministic-generators-common?branch=main#8a3ecced8fab144191bffb7d7fdd98bf62af7308"
+source = "git+https://github.com/deterministic-code/deterministic-generators-common?branch=main#031d065761440c778bd0deba6f7265c948fde8c1"
 dependencies = [
  "indexmap",
  "jsonschema",

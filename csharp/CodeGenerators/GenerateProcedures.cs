@@ -43,14 +43,23 @@ public static class GenerateProcedures
         var pk = ProcedureFields.PkOf(t);
         string Column(string logical) => mapping.ColumnName(t, logical);
         var columns = t.Fields.Select(f => Column(f.Name)).ToList();
-        var writable = ProcedureFields.WritableNonAudit(t).Select(f => Column(f.Name)).ToList();
+        var writable = ProcedureFields.UpdateParams(t).Select(f => Column(f.Name)).ToList();
         string ParamType(SpecTypeField field) => SqlDialect.MapColumnType(dialect, field.ConverterField());
         var createdParams = ProcedureFields.CreateParams(t).Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
         var typedColumns = t.Fields.Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
+        var createColumns = ProcedureFields.CreateParams(t).Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
+        var updateColumns = ProcedureFields.UpdateParams(t)
+            .Where(f => f.Name != pk.Name)
+            .Select(f => new RoutineParameter(Column(f.Name), ParamType(f)))
+            .Prepend(new RoutineParameter(Column(pk.Name), ParamType(pk)))
+            .ToList();
         var payload = new RoutineParameter("payload", PayloadType(dialect));
         var key = Column(pk.Name);
         var keyType = ParamType(pk);
-        var audit = t.Fields.Any(f => f.Name == "updated") ? Column("updated") : null;
+        var overlay = SqlSchema.OverlayOf(t);
+        var audit = t.Fields.FirstOrDefault(f => f.Name == "updated") is { } updated && WriteInclusion.Update(updated, t.AsType(), overlay)
+            ? Column("updated")
+            : null;
         var generatedKey = pk.Type == "uuid";
         var quoted = SqlDialect.Q(dialect, t.TableName);
         var statements = new List<IStatement>();
@@ -65,10 +74,9 @@ public static class GenerateProcedures
                 return new RoutineParameter(Column(field.Name), ParamType(field));
             }).ToList();
             var updateParams = byParams
-                .Concat(ProcedureFields.WritableNonAudit(t)
+                .Concat(ProcedureFields.UpdateParams(t)
                     .Where(f => !proc.ByProperties.Contains(f.Name))
                     .Select(f => new RoutineParameter(Column(f.Name), ParamType(f))))
-                .Concat(audit is null ? [] : [new RoutineParameter(Column("new_updated"), ParamType(t.Fields.First(f => f.Name == "updated")))])
                 .ToList();
             statements.Add(proc.Op switch
             {
@@ -76,8 +84,8 @@ public static class GenerateProcedures
                 "read" => TableStatements.CreateReadStoredProcedure(proc.Name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
                 "update" => TableStatements.CreateUpdateStoredProcedure(proc.Name, quoted, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
                 "delete" => TableStatements.CreateDeleteStoredProcedure(proc.Name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
-                "bulkCreate" => TableStatements.CreateBulkCreateStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
-                "bulkUpdate" => TableStatements.CreateBulkUpdateStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
+                "bulkCreate" => TableStatements.CreateBulkCreateStoredProcedure(proc.Name, quoted, createColumns, payload, key, keyType),
+                "bulkUpdate" => TableStatements.CreateBulkUpdateStoredProcedure(proc.Name, quoted, updateColumns, payload, key, keyType),
                 "bulkDelete" => TableStatements.CreateBulkDeleteStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
                 _ => throw new InvalidOperationException($"{proc.Op}: empty step"),
             });

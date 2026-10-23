@@ -76,11 +76,13 @@ export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] =
       : `    public ${model.typeName}Repository(IConnection connection) : base(connection, Options())\n    {\n${lines.join("\n")}\n    }`;
     const ids = model.ids.map((name) => `"${quote(name)}"`).join(", ");
     const read = model.readProperties.map((name) => `"${quote(name)}"`).join(", ");
+    const create = model.createProperties.map((name) => `"${quote(name)}"`).join(", ");
+    const update = model.updateProperties.map((name) => `"${quote(name)}"`).join(", ");
     const implementsOcc = model.optimisticConcurrency === undefined ? "" : `, ICRUDRepository<${type}>`;
     const usings = model.optimisticConcurrency === undefined ? "using Datasources;\n" : "using Datasources;\nusing static Datasources.Cmp;\n";
     return content(
       repositoryFile("csharp", model),
-      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n${occMethods(model, type)}\n    static CRUDRepositoryOptions<${type}> Options() => new()\n    {\n        Entity = "${quote(model.entity)}",\n        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),\n${mapping}        Ids = [${ids}],\n        ReadProperties = [${read}],\n    };\n}\n`,
+      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n${occMethods(model, type)}\n    static CRUDRepositoryOptions<${type}> Options() => new()\n    {\n        Entity = "${quote(model.entity)}",\n        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),\n${mapping}        Ids = [${ids}],\n        ReadProperties = [${read}],\n        CreateProperties = [${create}],\n        UpdateProperties = [${update}],\n    };\n}\n`,
     );
   });
   const register = models.map((model) => {

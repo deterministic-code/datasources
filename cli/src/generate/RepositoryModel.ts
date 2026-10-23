@@ -28,6 +28,8 @@ export type RepositoryModel = {
   propertyMappings: Pair[];
   ids: string[];
   readProperties: string[];
+  createProperties: string[];
+  updateProperties: string[];
   optimisticConcurrency?: OptimisticConcurrency;
   enrichments: PlannedEnrichment[];
 };

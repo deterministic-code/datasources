@@ -157,8 +157,13 @@ impl BatchCommandIBulkWriteStrategy {
     fn mapped_insert(&self, item: &Row) -> Result<Inserted> {
         let record = self.reverse(item)?;
         let ids = self.ids()?.to_vec();
+        let create = self.options()?.create_properties.clone();
         let fields = self.fields(&record, |key, value| {
-            !ids.iter().any(|id| id == key) || assigned(value)
+            listed(
+                &create,
+                key,
+                !ids.iter().any(|id| id == key) || assigned(value),
+            )
         })?;
         let statement = self.statements()?.insert(&fields);
         Ok(Inserted {
@@ -170,7 +175,10 @@ impl BatchCommandIBulkWriteStrategy {
     fn mapped_update(&self, item: &Row) -> Result<Updated> {
         let record = self.reverse(item)?;
         let ids = self.ids()?.to_vec();
-        let fields = self.fields(&record, |key, _| !ids.iter().any(|id| id == key))?;
+        let update = self.options()?.update_properties.clone();
+        let fields = self.fields(&record, |key, _| {
+            listed(&update, key, !ids.iter().any(|id| id == key))
+        })?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",
@@ -208,7 +216,10 @@ impl BatchCommandIBulkWriteStrategy {
     fn update_command(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<BulkCommand> {
         let record = self.reverse(item)?;
         let ids = self.ids()?.to_vec();
-        let fields = self.fields(&record, |key, _| !ids.iter().any(|id| id == key))?;
+        let update = self.options()?.update_properties.clone();
+        let fields = self.fields(&record, |key, _| {
+            listed(&update, key, !ids.iter().any(|id| id == key))
+        })?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",
@@ -416,6 +427,13 @@ impl BulkWriteStrategy for BatchCommandIBulkWriteStrategy {
             }
             None => self.write_deletes(items).await,
         }
+    }
+}
+
+fn listed(list: &Option<Vec<String>>, key: &str, fallback: bool) -> bool {
+    match list {
+        Some(names) => names.iter().any(|name| name == key),
+        None => fallback,
     }
 }
 

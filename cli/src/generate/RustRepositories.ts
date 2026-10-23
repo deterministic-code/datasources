@@ -9,7 +9,7 @@ const crudOptions = (model: RepositoryModel): string => {
   const mapping = model.propertyMappings.length === 0
     ? ""
     : `    options.property_mappings = Some(Arc::new(DictionaryMapper::new([\n${model.propertyMappings.map((pair) => `        (${rustString(pair.from)}.into(), ${rustString(pair.to)}.into()),`).join("\n")}\n    ])));\n`;
-  return `    let mut options = CRUDRepositoryOptions::default();\n    options.entity = ${rustString(model.entity)}.into();\n    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([\n        (${rustString(model.entity)}.into(), ${rustString(model.table)}.into()),\n    ])));\n${mapping}    options.ids = vec![${model.ids.map((id) => `${rustString(id)}.into()`).join(", ")}];\n    options.read_properties = vec![${model.readProperties.map((name) => `${rustString(name)}.into()`).join(", ")}];`;
+  return `    let mut options = CRUDRepositoryOptions::default();\n    options.entity = ${rustString(model.entity)}.into();\n    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([\n        (${rustString(model.entity)}.into(), ${rustString(model.table)}.into()),\n    ])));\n${mapping}    options.ids = vec![${model.ids.map((id) => `${rustString(id)}.into()`).join(", ")}];\n    options.read_properties = vec![${model.readProperties.map((name) => `${rustString(name)}.into()`).join(", ")}];\n    options.create_properties = Some(vec![${model.createProperties.map((name) => `${rustString(name)}.into()`).join(", ")}]);\n    options.update_properties = Some(vec![${model.updateProperties.map((name) => `${rustString(name)}.into()`).join(", ")}]);`;
 };
 
 const readonlyOptions = (model: RepositoryModel): string => {
