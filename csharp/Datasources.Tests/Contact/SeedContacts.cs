@@ -6,7 +6,7 @@ internal static class SeedContacts
 
     public static IReadOnlyList<string> Sql(int count = Count, string version = "X''")
     {
-        const string stamp = "2024-01-01T00:00:00Z";
+        const string stamp = "2024-01-01 00:00:00";
         static string Uuid(int n) => $"00000000-0000-4000-8000-{n.ToString().PadLeft(12, '0')}";
         var statements = new List<string>();
         var addressId = 1;

@@ -2,32 +2,43 @@ use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
 use super::isolate;
 use datasources::Connection;
+use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
     contact_with, contacts_parity, contacts_service_of, expect_contacts_view,     seed_contacts_sql,
     statements_of, SEED_CONTACT_COUNT,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 fn verbose() -> bool {
     matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
 }
 
-fn render(statement: &datasources::CreateTableStatement) -> String {
-    datasources::StatementTextRenderer::new(
-        Some(Box::new(crate::statement_renderer::PostgresStatementRenderer)),
-        None,
-    )
-    .render(statement)
+fn register_sql() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        datasources_code_generators::register_dialect(
+            "postgres",
+            SqlGenerateDriver {
+                quote_left: crate::PostgresDriver::QUOTE_LEFT,
+                quote_right: crate::PostgresDriver::QUOTE_RIGHT,
+                type_converter: crate::PostgresDriver::types(),
+                default_value_converter: crate::PostgresDriver::defaults(),
+                statement_renderer: crate::PostgresDriver::statement_text_renderer(),
+            },
+        )
+        .unwrap();
+    });
 }
 
 #[tokio::test]
 async fn matches_enriched_contacts_service_to_flat_mapper() {
+    register_sql();
     let isolated = isolate::create().await;
     let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("postgres", render));
+    let mut sql = statements_of(&contact_schema("postgres"));
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, r#"'\x'"#));
     apply_sql(&command, &sql).await.unwrap();
 

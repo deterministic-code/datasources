@@ -4,6 +4,7 @@ var conn = new SqliteConnection(new SqliteConnectionOptions
 });
 await conn.Open();
 var command = new SqliteCommand(conn);
+await ContactSchema.Apply(conn, "sqlite", new SqliteDriver());
 foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
     await command.Execute(new Native(sql));
 

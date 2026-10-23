@@ -1,0 +1,15 @@
+version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - contact_group_member:
+      indexes:
+        - contact_group:
+            fields: [contact_id, contact_group_id]
+            is_unique: true
+  - legacy_contact:
+      fields:
+        - key:
+            is_fixed_id: true
+            is_unique: true

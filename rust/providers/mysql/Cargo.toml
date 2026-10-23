@@ -21,6 +21,7 @@ tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "
 uuid = "1"
 
 [dev-dependencies]
+datasources-code-generators = { path = "../../code-generators" }
 datasources-tests = { path = "../../datasources-tests" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"

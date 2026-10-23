@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@deterministic-code/datasources-code-generators": "*",
+    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
     "yaml": "^2.8.0"
   }

@@ -1,7 +1,7 @@
 pub const SEED_CONTACT_COUNT: usize = 250;
 
 pub fn seed_contacts_sql(count: usize, version: &str) -> Vec<String> {
-    let stamp = "2024-01-01T00:00:00Z";
+    let stamp = "2024-01-01 00:00:00";
     let uuid = |n: usize| format!("00000000-0000-4000-8000-{:012}", n);
     let mut statements = Vec::new();
     let mut address_id = 1usize;

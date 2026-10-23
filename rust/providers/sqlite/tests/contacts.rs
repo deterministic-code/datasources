@@ -6,13 +6,31 @@ use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
     ICRUDRepository, IReadonlyRepository, Mapper, Operator, TypeConverter, Value, Where,
 };
+use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
-    add_extra_contact, apply_schema, apply_sql, as_contacts_view, columns, contact_entity,
-    contact_lookup_ids, contact_seed, contact_with, contacts_join_query, contacts_parity, join_entity,
+    add_extra_contact, apply_sql, as_contacts_view, columns, contact_entity, contact_lookup_ids,
+    contact_schema, contact_with, contacts_join_query, contacts_parity, join_entity,
     contacts_service_of, contacts_view, expect_contacts_view, from_mapped_contacts, references,
     seed_contacts_sql, snake, statements_of, SEED_CONTACT_COUNT,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Once};
+
+fn register_sql() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        datasources_code_generators::register_dialect(
+            "sqlite",
+            SqlGenerateDriver {
+                quote_left: crate::SqliteDriver::QUOTE_LEFT,
+                quote_right: crate::SqliteDriver::QUOTE_RIGHT,
+                type_converter: crate::SqliteDriver::types(),
+                default_value_converter: crate::SqliteDriver::defaults(),
+                statement_renderer: crate::SqliteDriver::statement_text_renderer(),
+            },
+        )
+        .unwrap();
+    });
+}
 
 fn verbose() -> bool {
     matches!(std::env::var("VERBOSE").as_deref(), Ok("1") | Ok("true"))
@@ -22,9 +40,9 @@ fn verbose() -> bool {
 async fn matches_enriched_contacts_service_to_flat_mapper() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
-    apply_schema(conn.as_ref(), "contacts").await.unwrap();
+    register_sql();
     let command = SqliteCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_seed("sqlite"));
+    let mut sql = statements_of(&contact_schema("sqlite"));
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
@@ -62,9 +80,9 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
 async fn maps_join_rows_to_nested_contacts() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
-    apply_schema(conn.as_ref(), "contacts").await.unwrap();
+    register_sql();
     let command = SqliteCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_seed("sqlite"));
+    let mut sql = statements_of(&contact_schema("sqlite"));
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
@@ -132,10 +150,9 @@ fn contact_row(pairs: &[(&str, Value)]) -> datasources::Row {
 async fn writes_enriched_contact() {
     let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
     conn.open().await.unwrap();
-    apply_schema(conn.as_ref(), "contacts").await.unwrap();
+    register_sql();
     let command = SqliteCommand::new(conn.clone());
-    let sql = statements_of(&contact_seed("sqlite"));
-    apply_sql(&command, &sql).await.unwrap();
+    apply_sql(&command, &statements_of(&contact_schema("sqlite"))).await.unwrap();
 
     let field = super::converters::field;
     let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];

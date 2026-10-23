@@ -1,6 +1,7 @@
 const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
 await connection.open();
 const command = new SqliteCommand(connection);
+await applyContacts(connection, "sqlite", new SqliteDriver());
 for (const sql of statementsOf(readFileSync(seedPath, "utf8")))
   await command.executeNative(new Native(sql));
 

@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.CodeGenerators;
 using Datasources.Postgres;
 using Datasources.SqlSpecs;
 using Datasources.Tests.Contact;
@@ -27,8 +28,7 @@ public class ContactsRepositoryTests
             var conn = new PostgresConnection(new PostgresConnectionOptions { Url = url, Schema = schema });
             await conn.Open();
             var command = new PostgresCommand(conn);
-            foreach (var statement in SchemaSpec.Tables("contacts", Quote))
-                await command.Execute(statement);
+            await ContactSchema.Apply(conn, "postgres", new PostgresDriver());
             foreach (var sql in StatementsOf(File.ReadAllText(SeedPath()))
                 .Concat(SeedContacts.Sql(version: "'\\x'"))
                 .Concat(SeedContacts.IdentitySql("postgres")))
@@ -66,8 +66,6 @@ public class ContactsRepositoryTests
             await cmd.ExecuteNonQueryAsync();
         }
     }
-
-    static string Quote(string id) => $"\"{id.Replace("\"", "\"\"")}\"";
 
     static string SeedPath() => Path.Combine(SqlSpec.SpecsDir(), "contacts", "postgres.sql");
 

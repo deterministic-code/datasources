@@ -11,16 +11,16 @@ import { contactsServiceOf } from "../../../datasources/src/tests/contact/contac
 import { seedContactCount, seedContactsSql, seedIdentitySql } from "../../../datasources/src/tests/contact/seedContacts.ts";
 import { ensureCompose } from "../../../ensure-compose.ts";
 import { repoRoot, specVerbose } from "../../../sql-spec-runner.ts";
-import { execute, Native } from "@deterministic-code/datasources";
-import { tables } from "../../../schema-spec.ts";
+import { Native } from "@deterministic-code/datasources";
+import { applyContacts } from "../../../contacts-spec.ts";
 import { PostgresCommand } from "../src/command.ts";
 import { PostgresConnection } from "../src/connection.ts";
+import { PostgresDriver } from "../src/PostgresDriver.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
 const url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 
-const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
 const seedPath = join(repoRoot(), "specs/contacts/postgres.sql");
 
 const statementsOf = (sql: string) =>
@@ -57,8 +57,7 @@ describe("contacts readonly repository", () => {
       const connection = PostgresConnection.from({ DATASOURCE_URL: `${url}${url.includes("?") ? "&" : "?"}schema=${isolated.schema}` });
       await connection.open();
       const command = new PostgresCommand(connection);
-      for (const statement of tables("contacts", quote))
-        await execute(command, statement);
+      await applyContacts(connection, "postgres", new PostgresDriver());
       for (const sql of [
         ...statementsOf(readFileSync(seedPath, "utf8")),
         ...seedContactsSql(seedContactCount, "'\\x'"),

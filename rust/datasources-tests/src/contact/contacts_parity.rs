@@ -10,28 +10,36 @@ use crate::repo_root;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ConsoleCommandMiddleware,
-    CreateTableStatement, FlatToNestedMapper, IReadonlyRepository, Mapper, Native, TypeConverter, Value,
+    FlatToNestedMapper, IReadonlyRepository, Mapper, Native, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
-
-fn quote_ident(id: &str) -> String {
-    format!("\"{}\"", id.replace('"', "\"\""))
-}
 
 pub fn contact_seed(dialect: &str) -> String {
     fs::read_to_string(repo_root().join(format!("specs/contacts/{dialect}.sql")))
         .unwrap_or_else(|err| panic!("contact seed {dialect}: {err}"))
 }
 
-pub fn contact_schema(dialect: &str, render: impl Fn(&CreateTableStatement) -> String) -> String {
-    let ddl = crate::schema_tables("contacts", quote_ident, None)
-        .iter()
-        .map(render)
-        .collect::<Vec<_>>()
-        .join(";\n");
-    format!("{ddl};\n{}", contact_seed(dialect))
+pub fn contact_schema(dialect: &str) -> String {
+    let dir = repo_root().join("specs/contacts");
+    let files = HashMap::from([
+        (
+            "types.yaml".into(),
+            fs::read_to_string(dir.join("types.yaml")).expect("types.yaml"),
+        ),
+        (
+            "datasource.yaml".into(),
+            fs::read_to_string(dir.join("datasource.yaml")).expect("datasource.yaml"),
+        ),
+    ]);
+    let settings = HashMap::from([(
+        "datasource.pluralize_datatable_names".into(),
+        "false".into(),
+    )]);
+    let ddl = datasources_code_generators::schema_sql(dialect, &files, &settings)
+        .unwrap_or_else(|err| panic!("contact schema {dialect}: {err}"));
+    format!("{ddl}{}", contact_seed(dialect))
 }
 
 pub fn statements_of(sql: &str) -> Vec<String> {

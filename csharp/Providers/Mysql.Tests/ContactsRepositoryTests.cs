@@ -1,4 +1,5 @@
 using Datasources;
+using Datasources.CodeGenerators;
 using Datasources.Mysql;
 using Datasources.SqlSpecs;
 using Datasources.Tests.Contact;
@@ -20,8 +21,7 @@ public class ContactsRepositoryTests
             var conn = new MysqlConnection(new MysqlConnectionOptions { Url = isolated.Url });
             await conn.Open();
             var command = new MysqlCommand(conn);
-            foreach (var statement in SchemaSpec.Tables("contacts", Quote))
-                await command.Execute(statement);
+            await ContactSchema.Apply(conn, "mysql", new MysqlDriver());
             foreach (var sql in StatementsOf(File.ReadAllText(SeedPath()))
                 .Concat(SeedContacts.Sql())
                 .Concat(SeedContacts.IdentitySql("mysql")))
@@ -55,8 +55,6 @@ public class ContactsRepositoryTests
             await isolated.Cleanup();
         }
     }
-
-    static string Quote(string id) => $"`{id.Replace("`", "``")}`";
 
     static string SeedPath() => Path.Combine(SqlSpec.SpecsDir(), "contacts", "mysql.sql");
 
