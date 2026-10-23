@@ -2,7 +2,8 @@
   "name": "datasources",
   "private": true,
   "scripts": {
-    "test": "node --experimental-strip-types --test scripts/unit-test-scope.test.mjs scripts/sync-examples.test.mjs scripts/dialects.test.mjs scripts/view-source.test.mjs scripts/generate-skill.test.mjs scripts/hooks/block-generated.test.mjs && npm test --prefix typescript && npm test --prefix cli && env -u CARGO_TARGET_DIR RUSTFLAGS='-D warnings' cargo test -p datasources -p datasources-tests -p datasources-code-generators -p datasources-sqlite -p datasources-memory --manifest-path rust/Cargo.toml && dotnet test csharp/Datasources.Tests/Datasources.Tests.csproj && dotnet test csharp/CodeGenerators.Tests/Datasources.CodeGenerators.Tests.csproj && dotnet test csharp/Providers/Sqlite.Tests/Datasources.Sqlite.Tests.csproj && dotnet test csharp/Providers/Memory.Tests/Datasources.Memory.Tests.csproj",
+    "test": "node --experimental-strip-types --test scripts/unit-test-scope.test.mjs scripts/sync-examples.test.mjs scripts/dialects.test.mjs scripts/view-source.test.mjs scripts/generate-skill.test.mjs scripts/hooks/block-generated.test.mjs scripts/clean-worktree.test.mjs && npm test --prefix typescript && npm test --prefix cli && env -u CARGO_TARGET_DIR RUSTFLAGS='-D warnings' cargo test -p datasources -p datasources-tests -p datasources-code-generators -p datasources-sqlite -p datasources-memory --manifest-path rust/Cargo.toml && dotnet test csharp/Datasources.Tests/Datasources.Tests.csproj && dotnet test csharp/CodeGenerators.Tests/Datasources.CodeGenerators.Tests.csproj && dotnet test csharp/Providers/Sqlite.Tests/Datasources.Sqlite.Tests.csproj && dotnet test csharp/Providers/Memory.Tests/Datasources.Memory.Tests.csproj",
+    "clean": "node scripts/clean-worktree.mjs",
     "test:e2e": "npm run test:e2e --prefix typescript --",
     "test:e2e:verbose": "npm run test:e2e:verbose --prefix typescript",
     "test:e2e:ci": "npm run test:e2e:ci --prefix typescript --",
