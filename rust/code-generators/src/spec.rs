@@ -108,6 +108,17 @@ pub const TYPES_YAML: &str = "types.yaml";
 pub const DATASOURCE_YAML: &str = "datasource.yaml";
 pub const SEEDS_YAML: &str = "datasource_seeds.yaml";
 
+pub fn files_for(files: &HashMap<String, String>, dialect: &str) -> HashMap<String, String> {
+    match files.get(&format!("datasource.{dialect}.yaml")) {
+        Some(yaml) => {
+            let mut scoped = files.clone();
+            scoped.insert(DATASOURCE_YAML.into(), yaml.clone());
+            scoped
+        }
+        None => files.clone(),
+    }
+}
+
 const PRIMITIVES: &[&str] = &[
     "string",
     "character",

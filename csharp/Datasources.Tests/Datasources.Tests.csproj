@@ -20,5 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Datasources.Sqlite.Tests" />
+    <InternalsVisibleTo Include="Datasources.Mysql.Tests" />
+    <InternalsVisibleTo Include="Datasources.Postgres.Tests" />
   </ItemGroup>
 </Project>

@@ -17,6 +17,12 @@ mod transaction;
 pub use driver::MysqlDriver;
 
 #[cfg(test)]
+#[path = "../tests/isolate.rs"]
+mod isolate;
+#[cfg(test)]
+#[path = "../tests/contacts.rs"]
+mod contacts;
+#[cfg(test)]
 #[path = "../tests/integration.rs"]
 mod integration;
 #[cfg(test)]

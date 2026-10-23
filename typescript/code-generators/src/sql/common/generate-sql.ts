@@ -129,18 +129,32 @@ const loadSchema = async (
 };
 
 /** DDL initial migration (+ optional custom migrations and stored procedures) for one SQL dialect. */
+const readerFor = async (dialect: string, ctx: GenerateContext): Promise<GenerateContext> => {
+  const named = `datasource.${dialect}.yaml`;
+  if (!(await ctx.reader.exists(named))) return ctx;
+  const yaml = await ctx.reader.read(named);
+  return {
+    ...ctx,
+    reader: {
+      read: (name) => (name === "datasource.yaml" ? Promise.resolve(yaml) : ctx.reader.read(name)),
+      exists: (name) => (name === "datasource.yaml" ? Promise.resolve(true) : ctx.reader.exists(name)),
+    },
+  };
+};
+
 export const generateSqlFor = async (
   dialect: SqlDialect,
   ctx: GenerateContext,
 ): Promise<GenerateEntry[]> => {
   const key = requireDialect(dialect);
-  const casing = createCasing(ctx.settings);
-  const dir = ctx.settings["paths.deterministic"];
-  const schema = await schemaFiles(key, ctx, casing);
+  const scoped = await readerFor(key, ctx);
+  const casing = createCasing(scoped.settings);
+  const dir = scoped.settings["paths.deterministic"];
+  const schema = await schemaFiles(key, scoped, casing);
   return [
     ...schema.entries,
     ...(await customEntries(key, dir)),
-    ...(await generateProceduresForDialect(dialect, ctx, schema.count + 1)),
+    ...(await generateProceduresForDialect(dialect, scoped, schema.count + 1)),
   ];
 };
 

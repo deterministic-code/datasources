@@ -1,6 +1,7 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, childField, children as childModels, isLinked, pluralCamel, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
+import { writeList } from "./writeLists.ts";
 
 const quote = (value: string): string => value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
 
@@ -50,7 +51,7 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
       ? ""
       : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
     const head = `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}`;
-    const writes = `createProperties: [${model.createProperties.map((name) => `"${quote(name)}"`).join(", ")}], updateProperties: [${model.updateProperties.map((name) => `"${quote(name)}"`).join(", ")}]`;
+    const writes = `createProperties: ${writeList("typescript", model, "create")}, updateProperties: ${writeList("typescript", model, "update")}`;
     const read = `readProperties: [${model.readProperties.map((name) => `"${quote(name)}"`).join(", ")}] }`;
     const crudOptions = `${head}ids: [${model.ids.map((id) => `"${quote(id)}"`).join(", ")}], ${writes}, ${read}`;
     const readonlyOptions = `${head}${read}`;

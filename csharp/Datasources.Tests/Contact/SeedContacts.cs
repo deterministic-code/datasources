@@ -34,4 +34,13 @@ internal static class SeedContacts
         }
         return statements;
     }
+
+    public static IEnumerable<string> IdentitySql(string engine) => engine switch
+    {
+        "postgres" => new[] { "contacts_base", "address", "phone" }.Select(table =>
+            $"SELECT setval(pg_get_serial_sequence('{table}', 'id'), COALESCE((SELECT MAX(id) FROM \"{table}\"), 1))"),
+        "mysql" => new[] { "contacts_base", "address", "phone" }.Select(table =>
+            $"ALTER TABLE {table} AUTO_INCREMENT = {Count + 1}"),
+        _ => [],
+    };
 }

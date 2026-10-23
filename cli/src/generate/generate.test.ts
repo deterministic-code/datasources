@@ -23,12 +23,20 @@ register("sqlite", new SqliteDriver());
 const specDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/contacts-crud-enriched-medium-rest-shared/deterministic");
 const userRolesDir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/user-roles-simple-cli-shared/deterministic");
 const typesYaml = readFileSync(join(specDir, "types.yaml"), "utf8");
-const datasourceYaml = readFileSync(join(specDir, "datasource.yaml"), "utf8");
+const sqliteDatasourceYaml = readFileSync(join(specDir, "datasource.sqlite.yaml"), "utf8");
+const mysqlDatasourceYaml = readFileSync(join(specDir, "datasource.mysql.yaml"), "utf8");
+const postgresDatasourceYaml = readFileSync(join(specDir, "datasource.postgres.yaml"), "utf8");
 const userRolesFiles = (): Record<string, string> => ({
   "types.yaml": readFileSync(join(userRolesDir, "types.yaml"), "utf8"),
   "datasource.yaml": readFileSync(join(userRolesDir, "datasource.yaml"), "utf8"),
 });
-const contactsFiles = (): Record<string, string> => ({ "types.yaml": typesYaml, "datasource.yaml": datasourceYaml });
+const contactsFiles = (): Record<string, string> => ({
+  "types.yaml": typesYaml,
+  "datasource.yaml": sqliteDatasourceYaml,
+  "datasource.sqlite.yaml": sqliteDatasourceYaml,
+  "datasource.mysql.yaml": mysqlDatasourceYaml,
+  "datasource.postgres.yaml": postgresDatasourceYaml,
+});
 
 const request = (
   dialect: Dialect,
@@ -167,7 +175,10 @@ describe("generate", () => {
     expect(contactCs).toContain("AddEnriched");
     expect(contactCs).toContain('"Addresses"');
     expect(contactCs).toContain('"Phones"');
-    expect(contactCs).toContain("CreateProperties = [\"Uuid\", \"Version\", \"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
+    expect(contactCs).toContain("CreateProperties = connection.Provider switch");
+    expect(contactCs).toContain("\"mysql\" => [\"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
+    expect(contactCs).toContain("\"postgres\" => [\"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
+    expect(contactCs).toContain("_ => [\"Uuid\", \"Version\", \"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
     expect(contactCs).toContain("UpdateProperties = [\"Uuid\", \"Version\", \"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
     expect(contactCs).toContain("EnrichmentPropertyType.List");
     expect(contactCs).toContain('"Version"');
@@ -179,7 +190,7 @@ describe("generate", () => {
     expect(contactCs).toContain('"Settings"');
     expect(contactCs).toContain('"Prefs"');
     expect(legacyTs).toContain('["LegacyContact", "OldContactsTbl"]');
-    expect(contactTs).toContain('createProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"]');
+    expect(contactTs).toContain('createProperties: ({ mysql: ["contactSourceId", "firstName", "lastName", "email", "notes"], postgres: ["contactSourceId", "firstName", "lastName", "email", "notes"] }[connection.provider] ?? ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"])');
     expect(contactTs).toContain('entity: "Contact"');
     expect(contactTs).toContain('["Contact", "contacts"]');
     expect(legacyTs).toContain('["key", "CntID"]');
@@ -204,6 +215,8 @@ describe("generate", () => {
     expect(contactRs).toContain('"addresses"');
     expect(contactRs).toContain('"settings"');
     expect(contactRs).toContain('"prefs"');
+    expect(contactRs).toContain("match connection.provider()");
+    expect(contactRs).toContain('"mysql" => vec!["contact_source_id".into()');
     expect(contactRs).toContain("pub struct ContactRepository");
     expect(contactRs).toContain("pub address: Arc<super::address_repository::AddressRepository>");
     expect(contactRs).toContain("pub phone: Arc<super::phone_repository::PhoneRepository>");
@@ -236,6 +249,51 @@ describe("generate", () => {
     expect(textOf(rust, "repository_registry.rs")).toContain("fn contacts(&self)");
     expect(textOf(rust, "repository_registry.rs")).toContain("fn contact_groups(&self)");
     expect(textOf(rust, "mod.rs")).toContain("pub mod repository_registry;");
+  });
+
+  it("keeps default write lists when an engine file omits a type", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - item:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - body:
+            type: string
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+      "datasource.mysql.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: type == "item"
+types: []
+`,
+    };
+    const csharp = textOf(
+      await deterministic.generateRepositories({
+        dialect: "csharp",
+        reader: memoryReader(files),
+        settings: { "backend.datasources": "sqlite,mysql" },
+      }),
+      "NoteRepository.cs",
+    );
+    expect(csharp).toContain('CreateProperties = ["Body"]');
   });
 
   it("generates update and delete overrides for optimistic concurrency", async () => {
@@ -667,7 +725,7 @@ types:
     expect(rustIo.logs.length).toBeGreaterThan(0);
     const absolute = mem({
       [join("/tmp/spec", "types.yaml")]: typesYaml,
-      [join("/tmp/spec", "datasource.yaml")]: datasourceYaml,
+      [join("/tmp/spec", "datasource.yaml")]: sqliteDatasourceYaml,
     });
     const io = deps(absolute.fs);
     expect(await run(["generate", "repositories", "--dialect", "rust", "--input", "/tmp/spec", "--output", "/tmp/out"], io, cwd)).toBe(0);
@@ -825,7 +883,7 @@ types: []
     expect(await run(["migrations", "create", "--cwd", cwd, "--migrations-path", "db/changes"], deps(dual.fs), cwd)).toBe(1);
     const absolute = mem({
       [join("/tmp/spec", "types.yaml")]: typesYaml,
-      [join("/tmp/spec", "datasource.yaml")]: datasourceYaml,
+      [join("/tmp/spec", "datasource.yaml")]: sqliteDatasourceYaml,
     });
     expect(
       await run(

@@ -28,6 +28,23 @@ describe("loadSpec", () => {
     expect(loaded.settings["version.diffs"]).toBe(path);
   });
 
+  it("loads engine datasource files and defaults datasource.yaml from sqlite", async () => {
+    const dir = "app";
+    const sqlite = "version: 1.0.0\ntypes: []\n";
+    const mysql = "version: 1.0.0\ntypes:\n  - base:\n      fields: []\n";
+    const loaded = await loadSpec(
+      mem(["types.yaml", "datasource.sqlite.yaml", "datasource.mysql.yaml"], {
+        [join(dir, "types.yaml")]: "types: []\n",
+        [join(dir, "datasource.sqlite.yaml")]: sqlite,
+        [join(dir, "datasource.mysql.yaml")]: mysql,
+      }),
+      dir,
+    );
+    expect(loaded.files["datasource.sqlite.yaml"]).toBe(sqlite);
+    expect(loaded.files["datasource.mysql.yaml"]).toBe(mysql);
+    expect(loaded.files["datasource.yaml"]).toBe(sqlite);
+  });
+
   it("skips a version directory without a diff", async () => {
     const dir = "app";
     const loaded = await loadSpec(

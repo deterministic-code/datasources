@@ -23,14 +23,15 @@ public static class GenerateSql
         IReadOnlyDictionary<string, string> settings)
     {
         var key = SqlDialect.Require(dialect);
+        var scoped = DatasourceYaml.For(files, key);
         var casing = PackCasing.Of(settings);
-        var schema = SchemaFiles(key, files, settings, casing);
+        var schema = SchemaFiles(key, scoped, settings, casing);
         settings.TryGetValue("paths.deterministic", out var dir);
         return
         [
             .. schema.Entries,
             .. CustomMigrations.Of(files, key, dir),
-            .. GenerateProcedures.ForDialect(dialect, files, settings, schema.Count + 1),
+            .. GenerateProcedures.ForDialect(dialect, scoped, settings, schema.Count + 1),
         ];
     }
 

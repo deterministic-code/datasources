@@ -31,8 +31,13 @@ export const loadSpec = async (
     if (text !== undefined) files[name] = text;
   }
   if (files["types.yaml"] === undefined) throw new Error(`missing types.yaml in ${dir}`);
-  files["datasource.yaml"] ??= defaultDatasourceYaml;
   const names = await fs.readdir(dir).catch(() => [] as string[]);
+  for (const name of names) {
+    if (!/^datasource\.[a-z0-9]+\.yaml$/.test(name)) continue;
+    const text = await readOptional(fs, join(dir, name));
+    if (text !== undefined) files[name] = text;
+  }
+  files["datasource.yaml"] ??= files["datasource.sqlite.yaml"] ?? defaultDatasourceYaml;
   const diffs = names.filter((name) => versionDir.test(name)).sort();
   const versionFiles: string[] = [];
   for (const name of diffs) {

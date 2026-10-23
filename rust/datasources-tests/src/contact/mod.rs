@@ -25,4 +25,4 @@ pub use contacts_service_of::contacts_service_of;
 pub use contacts_view::contacts_view;
 pub use expect_contacts_view::{contact_with, expect_contacts_view};
 pub use from_mapped_contacts::from_mapped_contacts;
-pub use seed_contacts::{seed_contacts_sql, SEED_CONTACT_COUNT};
+pub use seed_contacts::{seed_contacts_sql, seed_identity_sql, SEED_CONTACT_COUNT};
