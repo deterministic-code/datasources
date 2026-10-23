@@ -1,7 +1,7 @@
 use crate::sql_keywords;
-use datasources::{DatasourceError, Result};
+use datasources::{DatasourceError, PluralizerConverter, Result};
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::OnceLock;
 
 #[derive(Clone)]
@@ -109,63 +109,9 @@ fn cap(word: &str) -> String {
 }
 
 pub fn last_token_pluralize(name: &str) -> String {
-    if name.is_empty() {
-        return name.into();
-    }
-    static LAST: OnceLock<Regex> = OnceLock::new();
-    LAST.get_or_init(|| Regex::new(r"[^_]+$").expect("last"))
-        .replace(name, |caps: &regex::Captures| token(caps.get(0).unwrap().as_str()))
-        .into_owned()
-}
-
-fn token(token: &str) -> String {
-    let irregular: HashMap<&str, &str> = [
-        ("person", "people"),
-        ("child", "children"),
-        ("man", "men"),
-        ("woman", "women"),
-        ("mouse", "mice"),
-        ("goose", "geese"),
-        ("foot", "feet"),
-        ("tooth", "teeth"),
-    ]
-    .into_iter()
-    .collect();
-    let uncountable: HashSet<&str> = [
-        "settings", "preferences", "news", "information", "series", "species", "equipment",
-    ]
-    .into_iter()
-    .collect();
-    let lower = token.to_ascii_lowercase();
-    if uncountable.contains(lower.as_str()) || irregular.values().any(|v| v.eq_ignore_ascii_case(token)) {
-        return token.into();
-    }
-    if let Some(plural) = irregular.get(lower.as_str()) {
-        return match_case(token, plural);
-    }
-    let chars: Vec<char> = token.chars().collect();
-    if chars.len() > 1 && chars.last() == Some(&'y') {
-        let prev = chars[chars.len() - 2].to_ascii_lowercase();
-        if !"aeiou".contains(prev) {
-            return format!("{}ies", token[..token.len() - 1].to_string());
-        }
-    }
-    if ends(token, &["s", "x", "z", "ch", "sh"]) {
-        return format!("{token}es");
-    }
-    format!("{token}s")
-}
-
-fn ends(token: &str, suffixes: &[&str]) -> bool {
-    suffixes.iter().any(|s| token.to_ascii_lowercase().ends_with(s))
-}
-
-fn match_case(source: &str, plural: &str) -> String {
-    if source.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
-        let mut chars = plural.chars();
-        chars.next().unwrap().to_uppercase().collect::<String>() + chars.as_str()
-    } else {
-        plural.into()
+    match name.rfind('_') {
+        None => PluralizerConverter.convert(name),
+        Some(at) => format!("{}{}", &name[..=at], PluralizerConverter.convert(&name[at + 1..])),
     }
 }
 
