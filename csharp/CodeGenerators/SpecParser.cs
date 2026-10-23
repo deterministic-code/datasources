@@ -14,7 +14,7 @@ public static class SpecParser
             .Parse(new Dictionary<string, string>())
             .GetAwaiter()
             .GetResult();
-        return new ParsedSpec
+        var parsed = new ParsedSpec
         {
             Types = spec.Types.Select(MapType).ToList(),
             ExpandedTypes = spec.ExpandedTypes.Select(MapType).ToList(),
@@ -24,6 +24,7 @@ public static class SpecParser
                 pair => (IReadOnlyList<SeedRow>)pair.Value.Select(MapSeed).ToList(),
                 StringComparer.Ordinal),
         };
+        return parsed;
     }
 
     static SpecType MapType(TypeModel type) => new()
@@ -83,6 +84,8 @@ public static class SpecParser
         IsUnique = field.IsUnique,
         Mapping = field.Mapping,
         IsFixedId = field.IsFixedId,
+        IncludeInCreate = field.IncludeInCreate,
+        IncludeInUpdate = field.IncludeInUpdate,
         IsOptimisticConcurrency = field.IsOptimisticConcurrency,
         UseNativeRowVersion = field.UseNativeRowVersion,
     };

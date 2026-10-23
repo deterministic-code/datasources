@@ -67,6 +67,8 @@ pub struct DatasourceFieldOverlay {
     pub is_unique: Option<bool>,
     pub mapping: Option<String>,
     pub is_fixed_id: Option<bool>,
+    pub include_in_create: Option<bool>,
+    pub include_in_update: Option<bool>,
     pub is_optimistic_concurrency: Option<bool>,
     pub use_native_row_version: Option<bool>,
 }
@@ -235,6 +237,8 @@ fn map_table(table: &deterministic_generators_common::DatasourceTable) -> Dataso
                 is_unique: field.is_unique,
                 mapping: field.mapping.clone(),
                 is_fixed_id: field.is_fixed_id,
+                include_in_create: field.include_in_create,
+                include_in_update: field.include_in_update,
                 is_optimistic_concurrency: field.is_optimistic_concurrency,
                 use_native_row_version: field.use_native_row_version,
             })
@@ -387,6 +391,8 @@ fn parse_datasource(yaml: &str, types: &[SpecType]) -> Result<Vec<DatasourceTabl
                     is_unique: field.has("is_unique").then(|| field.bool("is_unique")),
                     mapping: field.str("mapping"),
                     is_fixed_id: field.has("is_fixed_id").then(|| field.bool("is_fixed_id")),
+                    include_in_create: field.has("include_in_create").then(|| field.bool("include_in_create")),
+                    include_in_update: field.has("include_in_update").then(|| field.bool("include_in_update")),
                     is_optimistic_concurrency: field
                         .has("is_optimistic_concurrency")
                         .then(|| field.bool("is_optimistic_concurrency")),

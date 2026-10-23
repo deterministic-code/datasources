@@ -23,6 +23,7 @@ mod sql_keywords;
 mod table_statements;
 mod version_delta;
 mod version_migrations;
+mod write_inclusion;
 mod yaml_cursor;
 
 pub use generate_entry::GenerateEntry;

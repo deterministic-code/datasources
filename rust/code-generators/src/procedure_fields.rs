@@ -1,5 +1,6 @@
 use crate::schema::{self, SqlTable};
 use crate::spec::{self, SpecTypeField};
+use crate::write_inclusion;
 
 pub fn pk_of(table: &SqlTable) -> SpecTypeField {
     let overlay = schema::overlay_of(table);
@@ -29,28 +30,24 @@ pub fn pk_of(table: &SqlTable) -> SpecTypeField {
         })
 }
 
-pub fn writable_non_audit(table: &SqlTable) -> Vec<SpecTypeField> {
-    let pk = pk_of(table);
+pub fn create_params(table: &SqlTable) -> Vec<SpecTypeField> {
+    let type_ = table.as_type();
+    let overlay = schema::overlay_of(table);
     table
         .fields
         .iter()
-        .filter(|f| f.name != pk.name && f.name != "uuid" && f.name != "created" && f.name != "updated")
+        .filter(|f| write_inclusion::include_in_create(f, &type_, Some(&overlay)))
         .cloned()
         .collect()
 }
 
-pub fn create_params(table: &SqlTable) -> Vec<SpecTypeField> {
-    let field = |name: &str| table.fields.iter().find(|f| f.name == name).cloned();
-    let mut out = Vec::new();
-    if let Some(uuid) = field("uuid") {
-        out.push(uuid);
-    }
-    out.extend(writable_non_audit(table));
-    if let Some(created) = field("created") {
-        out.push(created);
-    }
-    if let Some(updated) = field("updated") {
-        out.push(updated);
-    }
-    out
+pub fn update_params(table: &SqlTable) -> Vec<SpecTypeField> {
+    let type_ = table.as_type();
+    let overlay = schema::overlay_of(table);
+    table
+        .fields
+        .iter()
+        .filter(|f| write_inclusion::include_in_update(f, &type_, Some(&overlay)))
+        .cloned()
+        .collect()
 }

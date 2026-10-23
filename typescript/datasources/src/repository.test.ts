@@ -231,6 +231,24 @@ describe("CRUDRepository", () => {
     );
   });
 
+  it("writes only createProperties and updateProperties", async () => {
+    const { repo, command } = create({
+      entity: "addresses",
+      ids: ["Id"],
+      readProperties: ["Id", "Line1", "Description"],
+      createProperties: ["Line1"],
+      updateProperties: ["Line1"],
+    });
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ Id: 1 }]);
+    await repo.create({ Id: 0, Line1: "1 Main", Description: "Home" });
+    expect(command.executeCalls[0]?.text).toBe("INSERT INTO addresses (Line1) VALUES ($Line1)");
+    await repo.update({ Id: 1, Line1: "2 Main", Description: "Work" });
+    expect(command.executeCalls[1]?.text).toBe(
+      "UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id",
+    );
+  });
+
   it("writes only readProperties on create and update", async () => {
     const { repo, command } = create({
       entity: "addresses",

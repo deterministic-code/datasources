@@ -250,6 +250,28 @@ public class RepositoryTests
     }
 
     [Fact]
+    public async Task CreateAndUpdateHonorWriteProperties()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new CRUDRepository<AddressView>(connection, new CRUDRepositoryOptions<AddressView>
+        {
+            Ids = ["Id"],
+            Entity = "addresses",
+            ReadProperties = ["Id", "Line1", "Description"],
+            CreateProperties = ["Line1"],
+            UpdateProperties = ["Line1"],
+        });
+        command.Response = new Response(new Value.Int(1), 1);
+        command.Reader = new MockReader<Row>([new Row { ["Id"] = 1 }]);
+        await repo.Create(new AddressView { Line1 = "1 Main", Description = "Home" });
+        Assert.Equal("INSERT INTO addresses (Line1) VALUES ($Line1)", command.ExecuteCalls[0].Text);
+        await repo.Update(new AddressView { Id = 1, Line1 = "2 Main", Description = "Work" });
+        Assert.Equal("UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id", command.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
     public async Task ReadSingleByIdUsesIdColumns()
     {
         var (repo, command) = Create();

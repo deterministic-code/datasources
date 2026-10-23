@@ -7,6 +7,7 @@ use crate::procedure_specs;
 use crate::schema::{self, SqlTable};
 use crate::spec;
 use crate::sql_dialect;
+use crate::write_inclusion;
 use crate::table_statements;
 use datasources::{DatasourceError, Result, RoutineParameter, Statement};
 use std::collections::HashMap;
@@ -78,7 +79,7 @@ pub fn for_table(
 ) -> Result<(Vec<Box<dyn Statement>>, Vec<String>)> {
     let pk = procedure_fields::pk_of(t);
     let columns: Vec<String> = t.fields.iter().map(|f| mapping.column_name(t, &f.name)).collect();
-    let writable: Vec<String> = procedure_fields::writable_non_audit(t)
+    let writable: Vec<String> = procedure_fields::update_params(t)
         .iter()
         .map(|f| mapping.column_name(t, &f.name))
         .collect();
@@ -107,11 +108,35 @@ pub fn for_table(
     };
     let key = mapping.column_name(t, &pk.name);
     let key_type = sql_dialect::map_column_type(dialect, &pk.converter_field())?;
+    let create_columns = procedure_fields::create_params(t)
+        .into_iter()
+        .map(|f| {
+            Ok(RoutineParameter {
+                name: mapping.column_name(t, &f.name),
+                r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let mut update_columns = vec![RoutineParameter {
+        name: key.clone(),
+        r#type: key_type.clone(),
+    }];
+    for f in procedure_fields::update_params(t) {
+        if f.name != pk.name {
+            update_columns.push(RoutineParameter {
+                name: mapping.column_name(t, &f.name),
+                r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
+            });
+        }
+    }
+    let type_ = t.as_type();
+    let overlay = schema::overlay_of(t);
     let audit = t
         .fields
         .iter()
-        .any(|f| f.name == "updated")
-        .then(|| mapping.column_name(t, "updated"));
+        .find(|f| f.name == "updated")
+        .filter(|f| write_inclusion::include_in_update(f, &type_, Some(&overlay)))
+        .map(|_| mapping.column_name(t, "updated"));
     let generated_key = pk.type_name == "uuid";
     let quoted = sql_dialect::q(dialect, &t.table_name)?;
     let mut statements: Vec<Box<dyn Statement>> = Vec::new();
@@ -136,20 +161,13 @@ pub fn for_table(
             })
             .collect::<Result<Vec<_>>>()?;
         let mut update_params = by_params.clone();
-        for f in procedure_fields::writable_non_audit(t) {
+        for f in procedure_fields::update_params(t) {
             if !proc.by_properties.iter().any(|name| name == &f.name) {
                 update_params.push(RoutineParameter {
                     name: mapping.column_name(t, &f.name),
                     r#type: sql_dialect::map_column_type(dialect, &f.converter_field())?,
                 });
             }
-        }
-        if audit.is_some() {
-            let updated = t.fields.iter().find(|f| f.name == "updated").expect("updated");
-            update_params.push(RoutineParameter {
-                name: mapping.column_name(t, "new_updated"),
-                r#type: sql_dialect::map_column_type(dialect, &updated.converter_field())?,
-            });
         }
         let boxed: Box<dyn Statement> = match proc.op.as_str() {
             "create" => Box::new(table_statements::create_create_stored_procedure(
@@ -165,10 +183,10 @@ pub fn for_table(
                 &proc.name, &quoted, columns.clone(), by_params.clone(), &key, &key_type, writable.clone(), by, generated_key, audit.clone(),
             )),
             "bulkCreate" => Box::new(table_statements::create_bulk_create_stored_procedure(
-                &proc.name, &quoted, typed_columns.clone(), payload.clone(), &key, &key_type,
+                &proc.name, &quoted, create_columns.clone(), payload.clone(), &key, &key_type,
             )),
             "bulkUpdate" => Box::new(table_statements::create_bulk_update_stored_procedure(
-                &proc.name, &quoted, typed_columns.clone(), payload.clone(), &key, &key_type,
+                &proc.name, &quoted, update_columns.clone(), payload.clone(), &key, &key_type,
             )),
             "bulkDelete" => Box::new(table_statements::create_bulk_delete_stored_procedure(
                 &proc.name, &quoted, typed_columns.clone(), payload.clone(), &key, &key_type,

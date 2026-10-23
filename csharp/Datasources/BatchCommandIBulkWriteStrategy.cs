@@ -95,14 +95,14 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     (string Table, IReadOnlyList<Parameter> Fields) MappedInsert(T item)
     {
         var record = Reverse(item);
-        var statement = Statements().Insert(Fields(record, col => !Ids.Contains(col) || Assigned(record, col)));
+        var statement = Statements().Insert(Fields(record, col => Listed(Options.CreateProperties, col, !Ids.Contains(col) || Assigned(record, col))));
         return (statement.Table, statement.Fields);
     }
 
     (string Table, IReadOnlyList<Parameter> Fields, IReadOnlyList<Parameter> Ids) MappedUpdate(T item)
     {
         var record = Reverse(item);
-        var fields = Fields(record, col => !Ids.Contains(col));
+        var fields = Fields(record, col => Listed(Options.UpdateProperties, col, !Ids.Contains(col)));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = Statements().Update(fields, IdWhere(record), (name, value) => Cell(name, value, true));
@@ -119,7 +119,7 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     BulkCommand UpdateCommand(T item, IWhere? byWhere)
     {
         var record = Reverse(item);
-        var fields = Fields(record, col => !Ids.Contains(col));
+        var fields = Fields(record, col => Listed(Options.UpdateProperties, col, !Ids.Contains(col)));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = Statements().Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
@@ -146,6 +146,9 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     }
 
     IReadOnlyList<string> Ids => Options.Ids;
+
+    static bool Listed(IReadOnlyList<string>? list, string col, bool fallback) =>
+        list is null ? fallback : list.Contains(col);
 
     Row Reverse(T item)
     {

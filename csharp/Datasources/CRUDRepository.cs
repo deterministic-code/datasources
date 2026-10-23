@@ -7,6 +7,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 {
     readonly IWriteEnrichmentStrategy<T> write;
     readonly IReadOnlyList<string> ids;
+    readonly IReadOnlyList<string>? createProperties;
+    readonly IReadOnlyList<string>? updateProperties;
     readonly CRUDRepositoryStatements crudStatements;
     readonly IRepositoryTree tree;
 
@@ -16,7 +18,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(Compose(connection, options)) { }
 
-    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write) Compose(
+    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update) Compose(
         IConnection connection,
         CRUDRepositoryOptions<T> options)
     {
@@ -24,13 +26,17 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return (
             builder.Parts(connection, options),
             builder.CRUDStatements ?? throw new DatasourceException("Statements required"),
-            options.Write);
+            options.Write,
+            options.CreateProperties,
+            options.UpdateProperties);
     }
 
-    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write) composed) :
+    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update) composed) :
         base(composed.Built)
     {
         ids = composed.Built.Ids;
+        createProperties = composed.Create;
+        updateProperties = composed.Update;
         crudStatements = composed.Statements;
         write = composed.Write ?? new DefaultWriteEnrichmentStrategy<T>();
         tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
@@ -141,7 +147,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Insert(T item)
     {
         var record = ReverseConvert(item);
-        var fields = Params(record, col => !ids.Contains(col) || Assigned(record, col));
+        var fields = Params(record, col => Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)));
         var statement = CRUDStatements.Insert(fields);
         var response = await Command().Execute(statement, statement.Fields);
         if (ids.Count == 1 && fields.All(field => field.Name != ids[0]))
@@ -189,7 +195,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var fields = Params(record, col => !ids.Contains(col));
+        var fields = Params(record, col => Listed(updateProperties, col, !ids.Contains(col)));
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = CRUDStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
@@ -221,6 +227,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
                 : throw new DatasourceException($"Missing Id value \"{col}\"")
         ).DefaultIfEmpty(new Operator.Equals(new Literal(1), new Literal(1)))
          .Aggregate((left, right) => new Operator.And(left, right)));
+
+    static bool Listed(IReadOnlyList<string>? list, string col, bool fallback) =>
+        list is null ? fallback : list.Contains(col);
 
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include) =>
         [.. record.Where(pair => include(pair.Key) && Writable(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)

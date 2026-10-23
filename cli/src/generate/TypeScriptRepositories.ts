@@ -50,8 +50,9 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
       ? ""
       : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
     const head = `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}`;
+    const writes = `createProperties: [${model.createProperties.map((name) => `"${quote(name)}"`).join(", ")}], updateProperties: [${model.updateProperties.map((name) => `"${quote(name)}"`).join(", ")}]`;
     const read = `readProperties: [${model.readProperties.map((name) => `"${quote(name)}"`).join(", ")}] }`;
-    const crudOptions = `${head}ids: [${model.ids.map((id) => `"${quote(id)}"`).join(", ")}], ${read}`;
+    const crudOptions = `${head}ids: [${model.ids.map((id) => `"${quote(id)}"`).join(", ")}], ${writes}, ${read}`;
     const readonlyOptions = `${head}${read}`;
     const fields = children.map((child) => `  readonly ${childField("typescript", child.specName, child.typeName)}: ${childClass(child.typeName)};`);
     const wrap = occWrap(model);

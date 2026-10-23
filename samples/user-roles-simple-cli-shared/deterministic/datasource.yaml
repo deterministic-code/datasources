@@ -7,7 +7,43 @@ types:
       fields:
         - name:
             mapping: ugly_name
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
   - user_role:
       fields:
         - role_id:
             mapping: bad_role_id
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
+  - user:
+      fields:
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
+  - role:
+      fields:
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
+  - user_group:
+      fields:
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false

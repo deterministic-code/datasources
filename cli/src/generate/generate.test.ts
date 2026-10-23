@@ -167,6 +167,8 @@ describe("generate", () => {
     expect(contactCs).toContain("AddEnriched");
     expect(contactCs).toContain('"Addresses"');
     expect(contactCs).toContain('"Phones"');
+    expect(contactCs).toContain("CreateProperties = [\"Uuid\", \"Version\", \"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
+    expect(contactCs).toContain("UpdateProperties = [\"Uuid\", \"Version\", \"ContactSourceId\", \"FirstName\", \"LastName\", \"Email\", \"Notes\"]");
     expect(contactCs).toContain("EnrichmentPropertyType.List");
     expect(contactCs).toContain('"Version"');
     expect(textOf(csharp, "ContactGroupRepository.cs")).toContain("AddLinked");
@@ -177,6 +179,7 @@ describe("generate", () => {
     expect(contactCs).toContain('"Settings"');
     expect(contactCs).toContain('"Prefs"');
     expect(legacyTs).toContain('["LegacyContact", "OldContactsTbl"]');
+    expect(contactTs).toContain('createProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"]');
     expect(contactTs).toContain('entity: "Contact"');
     expect(contactTs).toContain('["Contact", "contacts"]');
     expect(legacyTs).toContain('["key", "CntID"]');

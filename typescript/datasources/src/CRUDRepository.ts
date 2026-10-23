@@ -33,6 +33,9 @@ type Props = Record<string, Scalar | object>;
 const assigned = (value: Cell): boolean =>
   value !== null && value !== "" && value !== 0 && value !== 0n;
 
+const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
+  list === undefined ? fallback : list.includes(col);
+
 const writable = (
   key: string,
   columns: readonly string[],
@@ -82,6 +85,8 @@ export class CRUDRepository<T = Cells>
   implements ICRUDRepository<T>
 {
   readonly ids: readonly string[];
+  private readonly createProperties?: readonly string[];
+  private readonly updateProperties?: readonly string[];
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
@@ -99,6 +104,8 @@ export class CRUDRepository<T = Cells>
     const opened = repositoryParts(typeOrConnection, options);
     super(opened.built);
     this.ids = opened.built.ids;
+    this.createProperties = (options as CRUDRepositoryOptions<T>).createProperties;
+    this.updateProperties = (options as CRUDRepositoryOptions<T>).updateProperties;
     this.crudStatements = opened.statements;
     this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
@@ -179,7 +186,7 @@ export class CRUDRepository<T = Cells>
     const record = this.reverseConvert(item);
     const fields = fieldsOf(
       record,
-      (col) => !this.ids.includes(col) || assigned(record[col] ?? null),
+      (col) => listed(this.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null)),
       this.cell,
       this.enrichmentInto,
       this.crudStatements.readColumns,
@@ -221,7 +228,7 @@ export class CRUDRepository<T = Cells>
     const record = this.reverseConvert(item);
     const fields = fieldsOf(
       record,
-      (col) => !this.ids.includes(col),
+      (col) => listed(this.updateProperties, col, !this.ids.includes(col)),
       this.cell,
       this.enrichmentInto,
       this.crudStatements.readColumns,

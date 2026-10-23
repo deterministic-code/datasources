@@ -3,6 +3,14 @@ includes:
   - types:
       filter: tag == "datasource_type"
 types:
+  - base:
+      fields:
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
   - contact_source:
       fields:
         - name:

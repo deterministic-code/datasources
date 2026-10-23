@@ -32,6 +32,9 @@ const maxRows = 250;
 const assigned = (value: Cell): boolean =>
   value !== null && value !== "" && value !== 0 && value !== 0n;
 
+const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
+  list === undefined ? fallback : list.includes(col);
+
 const columnsOf = (rows: readonly { name: string }[][]): string[] => {
   const seen = new Set<string>();
   const columns: string[] = [];
@@ -141,14 +144,14 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
   private mappedInsert = (item: T): Inserted => {
     const record = this.reverse(item);
     const statement = this.statements().insert(
-      this.fields(record, (col) => !this.ids.includes(col) || assigned(record[col] ?? null)),
+      this.fields(record, (col) => listed(this.options.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null))),
     );
     return { table: statement.table, fields: statement.fields };
   };
 
   private mappedUpdate = (item: T): Updated => {
     const record = this.reverse(item);
-    const fields = this.fields(record, (col) => !this.ids.includes(col));
+    const fields = this.fields(record, (col) => listed(this.options.updateProperties, col, !this.ids.includes(col)));
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements().update(fields, this.idsWhere(record), (name, value) =>
       this.cell(name, value, true),
@@ -164,7 +167,7 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const fields = this.fields(record, (col) => !this.ids.includes(col));
+    const fields = this.fields(record, (col) => listed(this.options.updateProperties, col, !this.ids.includes(col)));
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements().update(fields, byWhere ?? this.idsWhere(record), (name, value) =>
       this.cell(name, value, byWhere === undefined),

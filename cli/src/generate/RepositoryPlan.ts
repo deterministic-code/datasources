@@ -1,6 +1,7 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
 import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
+import { writeInclusionOf } from "../../../typescript/code-generators/src/sql/common/write-inclusion.ts";
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
@@ -82,6 +83,16 @@ export const planRepositories = (
         }),
         ids: identityColumns(tableType, table).map(property),
         readProperties: columns.map((field) => property(field.name)),
+        createProperties: columns
+          .filter((field) =>
+            writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInCreate,
+          )
+          .map((field) => property(field.name)),
+        updateProperties: columns
+          .filter((field) =>
+            writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInUpdate,
+          )
+          .map((field) => property(field.name)),
         optimisticConcurrency: concurrencyToken(table, tableType, property),
         enrichments: relations(authored, full, casing, types, expanded, repoName, identity),
       },
