@@ -1,16 +1,16 @@
 import { RepositoryFactory } from "@deterministic-code/datasources";
-import { AddressRepository } from "./address-repository.ts";
-import { AddressTypeRepository } from "./address-type-repository.ts";
-import { ContactRepository } from "./contact-repository.ts";
-import { ContactChangeLogRepository } from "./contact-change-log-repository.ts";
-import { ContactGroupRepository } from "./contact-group-repository.ts";
-import { ContactGroupMemberRepository } from "./contact-group-member-repository.ts";
-import { ContactPreferencesRepository } from "./contact-preferences-repository.ts";
-import { ContactSettingsRepository } from "./contact-settings-repository.ts";
-import { ContactSourceRepository } from "./contact-source-repository.ts";
-import { LegacyContactRepository } from "./legacy-contact-repository.ts";
-import { PhoneRepository } from "./phone-repository.ts";
-import { PhoneTypeRepository } from "./phone-type-repository.ts";
+import { AddressRepository } from "./address-repository";
+import { AddressTypeRepository } from "./address-type-repository";
+import { ContactRepository } from "./contact-repository";
+import { ContactChangeLogRepository } from "./contact-change-log-repository";
+import { ContactGroupRepository } from "./contact-group-repository";
+import { ContactGroupMemberRepository } from "./contact-group-member-repository";
+import { ContactPreferencesRepository } from "./contact-preferences-repository";
+import { ContactSettingsRepository } from "./contact-settings-repository";
+import { ContactSourceRepository } from "./contact-source-repository";
+import { LegacyContactRepository } from "./legacy-contact-repository";
+import { PhoneRepository } from "./phone-repository";
+import { PhoneTypeRepository } from "./phone-type-repository";
 
 export const register = (factory: RepositoryFactory): void => {
   factory.register("Address", "addresses", (connection) => new AddressRepository(connection), (connection) => AddressRepository.createReadonly(connection));

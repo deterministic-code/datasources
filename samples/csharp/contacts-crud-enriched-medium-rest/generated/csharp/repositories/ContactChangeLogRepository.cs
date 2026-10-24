@@ -21,5 +21,7 @@ public sealed class ContactChangeLogRepository : CRUDRepository<Backend.Types.Vi
         }),
         Ids = ["Id"],
         ReadProperties = ["Id", "OccurredAt", "ContactId", "ChangedBy", "ChangeSummary"],
+        CreateProperties = ["OccurredAt", "ContactId", "ChangedBy", "ChangeSummary"],
+        UpdateProperties = ["OccurredAt", "ContactId", "ChangedBy", "ChangeSummary"],
     };
 }

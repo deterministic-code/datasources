@@ -88,6 +88,7 @@ export { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 export { CRUDRepository } from "./CRUDRepository.ts";
 export { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 export { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
+export { RepositoryBuilderOptionsFactory } from "./RepositoryBuilderOptionsFactory.ts";
 export { StatementMappers } from "./StatementMappers.ts";
 export { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 export { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";

@@ -8,6 +8,7 @@ import type { Constructable } from "./converters/Constructable.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
+import { RepositoryBuilderOptionsFactory } from "./RepositoryBuilderOptionsFactory.ts";
 
 const isCrud = <T>(options: ReadonlyRepositoryMappingOptions<T>): options is CRUDRepositoryOptions<T> =>
   "ids" in options || "write" in options;
@@ -36,7 +37,19 @@ export const repositoryParts = <T>(
 };
 
 export class CRUDRepositoryBuilder<T = object> extends ReadonlyRepositoryBuilder<T> {
+  private readonly factory = new RepositoryBuilderOptionsFactory<T>();
   crudStatements?: CRUDRepositoryStatements;
+
+  add(options: CRUDRepositoryOptions<T>): this;
+  add(dialect: string, options: CRUDRepositoryOptions<T>): this;
+  add(dialectOrOptions: string | CRUDRepositoryOptions<T>, options?: CRUDRepositoryOptions<T>): this {
+    typeof dialectOrOptions === "string"
+      ? this.factory.add(dialectOrOptions, options as CRUDRepositoryOptions<T>)
+      : this.factory.add(dialectOrOptions);
+    return this;
+  }
+
+  for = (connection: IConnection): CRUDRepositoryOptions<T> => this.factory.for(connection.provider);
 
   protected override ids = (options: ReadonlyRepositoryMappingOptions<T>): string[] =>
     isCrud(options)

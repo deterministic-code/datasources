@@ -49,17 +49,11 @@ const withProviderWrites = async (request: GenerateRequest, models: RepositoryMo
     ? models
     : models.map((model) => ({
         ...model,
-        writesByProvider: Object.fromEntries(
-          Object.entries(byProvider).map(([engine, planned]) => {
-            const found = planned.find((item) => item.specName === model.specName);
-            return [
-              engine,
-              {
-                create: found?.createProperties ?? model.createProperties,
-                update: found?.updateProperties ?? model.updateProperties,
-              },
-            ];
-          }),
+        optionsByProvider: Object.fromEntries(
+          Object.entries(byProvider).map(([engine, planned]) => [
+            engine,
+            planned.find((item) => item.specName === model.specName) ?? model,
+          ]),
         ),
       }));
 };

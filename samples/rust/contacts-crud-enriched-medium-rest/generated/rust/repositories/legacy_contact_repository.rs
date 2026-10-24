@@ -16,6 +16,8 @@ pub fn legacy_contact_repository(connection: Arc<dyn Connection>) -> Result<CRUD
     ])));
     options.ids = vec!["key".into()];
     options.read_properties = vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()];
+    options.create_properties = Some(vec!["key".into(), "first_name".into(), "last_name".into(), "email".into(), "imported_at".into()]);
+    options.update_properties = Some(vec!["first_name".into(), "last_name".into(), "email".into(), "imported_at".into()]);
     CRUDRepository::new(connection, options)
 }
 

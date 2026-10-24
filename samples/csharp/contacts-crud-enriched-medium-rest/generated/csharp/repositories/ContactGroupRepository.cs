@@ -5,7 +5,7 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
     public ContactRepository Contact { get; }
     public ContactGroupMemberRepository ContactGroupMember { get; }
 
-    public ContactGroupRepository(IConnection connection) : base(connection, Options())
+    public ContactGroupRepository(IConnection connection) : base(connection, Options(connection))
     {
         Contact = new ContactRepository(connection);
         ContactGroupMember = new ContactGroupMemberRepository(connection);
@@ -14,28 +14,71 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
 
     public static IReadonlyRepository<Backend.Types.View.ContactGroup> CreateReadonly(IConnection connection)
     {
-        var repo = new ReadonlyRepository<Backend.Types.View.ContactGroup>(connection, Options());
+        var repo = new ReadonlyRepository<Backend.Types.View.ContactGroup>(connection, Options(connection));
         var Contact = new ContactRepository(connection);
         var ContactGroupMember = new ContactGroupMemberRepository(connection);
         repo.AddEnriched(new("Members", "Id", "Id", Type: EnrichmentPropertyType.List), Contact);
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.ContactGroup> Options() => new()
-    {
-        Entity = "ContactGroup",
-        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactGroup"] = "contact_groups" }),
-        PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-        {
-            ["Id"] = "id",
-            ["Uuid"] = "uuid",
-            ["Created"] = "created",
-            ["Updated"] = "updated",
-            ["Version"] = "version",
-            ["Name"] = "name",
-            ["Description"] = "description",
-        }),
-        Ids = ["Id"],
-        ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
-    };
+    static CRUDRepositoryOptions<Backend.Types.View.ContactGroup> Options(IConnection connection) =>
+        new CRUDRepositoryBuilder<Backend.Types.View.ContactGroup>()
+            .Add(new()
+            {
+                Entity = "ContactGroup",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactGroup"] = "contact_groups" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["Name"] = "name",
+                    ["Description"] = "description",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
+                CreateProperties = ["Uuid", "Version", "Name", "Description"],
+                UpdateProperties = ["Uuid", "Version", "Name", "Description"],
+            })
+            .Add("mysql", new()
+            {
+                Entity = "ContactGroup",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactGroup"] = "contact_groups" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["Name"] = "name",
+                    ["Description"] = "description",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
+                CreateProperties = ["Name", "Description"],
+                UpdateProperties = ["Uuid", "Version", "Name", "Description"],
+            })
+            .Add("postgres", new()
+            {
+                Entity = "ContactGroup",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactGroup"] = "contact_groups" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["Name"] = "name",
+                    ["Description"] = "description",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
+                CreateProperties = ["Name", "Description"],
+                UpdateProperties = ["Uuid", "Version", "Name", "Description"],
+            })
+            .For(connection);
 }

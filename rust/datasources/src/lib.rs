@@ -94,6 +94,7 @@ mod stored_procedure_bulk_write_strategy;
 pub mod stubs;
 mod crud_repository_builder;
 mod crud_repository_statements;
+mod repository_builder_options_factory;
 mod readonly_repository_builder;
 mod readonly_repository_statements;
 mod statement_mappers;
@@ -229,6 +230,7 @@ pub use stubs::{
     StubRepository, StubTransaction,
 };
 pub use crud_repository_builder::CRUDRepositoryBuilder;
+pub use repository_builder_options_factory::RepositoryBuilderOptionsFactory;
 pub use crud_repository_statements::CRUDRepositoryStatements;
 pub use readonly_repository_builder::ReadonlyRepositoryBuilder;
 pub use readonly_repository_statements::ReadonlyRepositoryStatements;

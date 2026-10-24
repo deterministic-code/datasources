@@ -1,4 +1,4 @@
-use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};
+use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};
 use std::sync::Arc;
 use std::ops::Deref;
 
@@ -13,13 +13,44 @@ pub struct ContactRepository {
 
 impl ContactRepository {
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "Contact".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("Contact".into(), "contacts".into()),
-        ])));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()];
+        let options = CRUDRepositoryBuilder::new()
+            .add({
+                let mut options = CRUDRepositoryOptions::default();
+                options.entity = "Contact".into();
+                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+                    ("Contact".into(), "contacts".into()),
+                ])));
+                options.ids = vec!["id".into()];
+                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()];
+                options.create_properties = Some(vec!["uuid".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()]);
+                options.update_properties = Some(vec!["uuid".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()]);
+                options
+            })
+            .add_for("mysql", {
+                let mut options = CRUDRepositoryOptions::default();
+                options.entity = "Contact".into();
+                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+                    ("Contact".into(), "contacts".into()),
+                ])));
+                options.ids = vec!["id".into()];
+                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()];
+                options.create_properties = Some(vec!["contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()]);
+                options.update_properties = Some(vec!["uuid".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()]);
+                options
+            })
+            .add_for("postgres", {
+                let mut options = CRUDRepositoryOptions::default();
+                options.entity = "Contact".into();
+                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+                    ("Contact".into(), "contacts".into()),
+                ])));
+                options.ids = vec!["id".into()];
+                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()];
+                options.create_properties = Some(vec!["contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()]);
+                options.update_properties = Some(vec!["uuid".into(), "version".into(), "contact_source_id".into(), "first_name".into(), "last_name".into(), "email".into(), "notes".into()]);
+                options
+            })
+            .for_connection(connection.as_ref())?;
         let address = Arc::new(super::address_repository::AddressRepository::new(Arc::clone(&connection))?);
         let phone = Arc::new(super::phone_repository::PhoneRepository::new(Arc::clone(&connection))?);
         let contact_settings = Arc::new(super::contact_settings_repository::contact_settings_repository(Arc::clone(&connection))?);

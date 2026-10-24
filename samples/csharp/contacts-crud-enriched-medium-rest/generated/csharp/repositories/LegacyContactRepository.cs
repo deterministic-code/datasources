@@ -21,5 +21,7 @@ public sealed class LegacyContactRepository : CRUDRepository<Backend.Types.View.
         }),
         Ids = ["Key"],
         ReadProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
+        CreateProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
+        UpdateProperties = ["FirstName", "LastName", "Email", "ImportedAt"],
     };
 }
