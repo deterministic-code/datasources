@@ -28,7 +28,7 @@ public class StatementMappersTests
         });
         var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
         Assert.Equal("people", mapped.Table);
-        Assert.Equal(["full_name", "book.title", "book.title", "alias.other", "\"schema.name\".user_id"], mapped.Fields);
+        Assert.Equal(["full_name", "book.title", "book.title AS title", "alias.other AS other", "\"schema.name\".user_id AS id"], mapped.Fields);
         Assert.True(mapped.Distinct);
         Assert.Equal(5, mapped.Limit);
         Assert.Equal(1, mapped.Offset);
@@ -113,7 +113,7 @@ public class StatementMappersTests
         var select = new SelectStatement(new SelectStatementOptions
         {
             Table = "Contact",
-            Fields = ["Contact.Id AS Id", "Contact.FirstName AS FirstName", "Address.Id AS AddressId"],
+            Fields = ["Contact.Id", "Contact.FirstName", "Address.Id"],
             Joins = [Join.Left("Address", "Contact.Id", "Address.ContactId")],
         });
         var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
@@ -190,10 +190,76 @@ public class StatementMappersTests
 
         var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, Mapper));
         Assert.Equal(
-            "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1",
+            "SELECT DISTINCT contacts_base.first_name AS FirstName, contacts_base.last_name AS LastName, contacts_base.email AS Email, contact_source.name AS Name, address.line1 AS Line1, address.city AS City, phone.number AS Number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1",
             DefaultStatementTextRenderer.Instance.Render(mapped));
         Assert.Equal(new Value.Text("Contact.Email:ADA@EX.COM"), mapped.Where!.Parameters[0].Value);
         Assert.Equal(new Value.Text("Address.City:A"), mapped.Where.Parameters[1].Value);
         Assert.Equal(new Value.Text("ContactType.Name:PERSON"), Assert.Single(mapped.Having!.Parameters).Value);
+    }
+
+    [Fact]
+    public void RejectsSelectFieldAlias()
+    {
+        var mappings = new StatementMappers(
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts_base" }),
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Id"] = "id" }));
+        var select = new SelectStatement(new SelectStatementOptions
+        {
+            Table = "Contact",
+            Fields = ["Contact.Id AS Id"],
+        });
+        var error = Assert.Throws<DatasourceException>(() => mappings.Apply(select, (_, value) => value));
+        Assert.Equal("Select field \"Contact.Id AS Id\" must be a path", error.Message);
+    }
+
+    [Fact]
+    public void MapsAggregateAliasFromLookup()
+    {
+        var mappings = new StatementMappers(
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts_base" }),
+            new DictionaryMapper<string>(new Dictionary<string, string> { ["Id"] = "id" }));
+        var select = new SelectStatement(new SelectStatementOptions
+        {
+            Table = "Contact",
+            Fields = [Aggregate.Count("Contact.Id")],
+            Aliases = ["n"],
+        });
+        var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, (_, value) => value));
+        Assert.Equal(["COUNT(contacts_base.id) AS n"], mapped.Fields);
+    }
+
+    [Fact]
+    public void MapsNestedPathAlias()
+    {
+        var mappings = new StatementMappers(
+            new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Contact"] = "contacts_base",
+                ["Address"] = "address",
+                ["AddressType"] = "address_type",
+                ["ContactSource"] = "contact_source",
+            }),
+            new DictionaryMapper<string>(new Dictionary<string, string>
+            {
+                ["Id"] = "id",
+                ["City"] = "city",
+                ["Name"] = "name",
+            }));
+        var select = new SelectStatement(new SelectStatementOptions
+        {
+            Table = "Contact",
+            Fields =
+            [
+                "Contact.Id",
+                "Contact.Address.Id",
+                "Contact.Address.City",
+                "Contact.ContactSource.Name",
+                "Contact.Address.AddressType.Name",
+            ],
+        });
+        var mapped = Assert.IsType<SelectStatement>(mappings.Apply(select, (_, value) => value));
+        Assert.Equal(
+            ["contacts_base.id AS Id", "address.id AS AddressId", "address.city AS City", "contact_source.name AS Name", "address_type.name AS AddressTypeName"],
+            mapped.Fields);
     }
 }

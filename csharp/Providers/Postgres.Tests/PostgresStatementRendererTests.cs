@@ -103,6 +103,17 @@ public class PostgresStatementRendererTests
             new CreateCreateStoredProcedureStatement("CreateUsers", "users", ["id", "name"], [new RoutineParameter("name", "TEXT")], "id", "INT", ["name"])));
         Assert.Contains("ORDER BY t.id", Renderer.Render(
             new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], [])));
+        var nested = new NestedSelectBuilder().Build(new NestedSelectType
+        {
+            Name = "Contact",
+            Key = "Id",
+            Properties = ["Id", "Email"],
+        });
+        Assert.Contains("RETURNS SETOF RECORD", Renderer.Render(
+            new CreateNestedReadStoredProcedureStatement(
+                "ReadContactsByEmail",
+                nested,
+                [new NestedWhereArgument("Contact.Email", new RoutineParameter("email", "varchar"))])));
         Assert.Contains("jsonb_to_recordset", Renderer.Render(
             new CreateBulkDeleteStoredProcedureStatement(
                 "BulkDeleteUsers",

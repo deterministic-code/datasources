@@ -1,5 +1,7 @@
 import type { Cell } from "./converters/Cell.ts";
+import { DatasourceError } from "./DatasourceError.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
+import { applySelectFieldAlias, asIndexOf, functionOf, segments, selectFieldAliases } from "./SelectFieldAliases.ts";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import type { IStatement } from "./statements/IStatement.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -16,22 +18,22 @@ export class StatementMappers implements IMapper<string, string> {
   ) {}
 
   map = (property: string): string => {
-    const dot = lastDot(property);
-    if (dot < 0) return this.propertyMappers.map(property);
-    const qualifier = property.slice(0, dot);
-    const name = property.slice(dot + 1);
+    const parts = segments(property);
+    if (parts.length < 2) return this.propertyMappers.map(property);
+    const qualifier = parts[parts.length - 2];
+    const name = parts[parts.length - 1];
     const mapped = this.propertyMappers.map(name);
     if (mapped !== name && mapped.includes(".")) return mapped;
     const table = this.entityMappers.map(qualifier);
-    return table === qualifier && mapped === name ? property : `${table}.${mapped}`;
+    return table === qualifier && mapped === name ? `${qualifier}.${name}` : `${table}.${mapped}`;
   };
 
   reverseMap = (key: string): string => {
     const reversed = this.propertyMappers.reverseMap(key);
     if (reversed !== key && this.propertyMappers.map(reversed) === key) return reversed;
-    const dot = lastDot(key);
-    if (dot < 0) return reversed;
-    const column = key.slice(dot + 1);
+    const parts = segments(key);
+    if (parts.length < 2) return reversed;
+    const column = parts[parts.length - 1];
     const name = this.propertyMappers.reverseMap(column);
     return name !== column && this.propertyMappers.map(name) === column ? name : reversed;
   };
@@ -48,7 +50,7 @@ export class StatementMappers implements IMapper<string, string> {
       return new SelectStatement({
         distinct: query.distinct,
         table: this.entityMappers.map(query.table),
-        fields: query.fields.map(this.mapSelectField),
+        fields: this.mapSelectFields(query.table, query.fields, query.aliases),
         where: query.where instanceof Where ? this.applyWhere(query.where, cell) : query.where,
         joins: query.joins.map((join) => ({
           kind: join.kind,
@@ -88,23 +90,19 @@ export class StatementMappers implements IMapper<string, string> {
   ): IWhere | undefined =>
     where instanceof Where ? where.map(this.column, cell) : where;
 
-  private mapSelectField = (field: string): string => {
-    const asIndex = field.toUpperCase().indexOf(" AS ");
-    if (asIndex >= 0) {
-      const expression = field.slice(0, asIndex).trim();
-      const alias = field.slice(asIndex + 4).trim();
-      return `${this.map(expression)} AS ${alias}`;
-    }
-    return this.map(field);
+  private mapSelectFields = (
+    table: string,
+    fields: readonly string[],
+    aliases: readonly (string | undefined)[],
+  ): string[] => {
+    const lookup = selectFieldAliases(table, fields, aliases);
+    return fields.map((field, i) => this.mapSelectField(field, lookup[i]));
+  };
+
+  private mapSelectField = (field: string, alias?: string): string => {
+    if (asIndexOf(field) >= 0) throw new DatasourceError(`Select field "${field}" must be a path`);
+    const functionCall = functionOf(field);
+    const mapped = functionCall === undefined ? this.map(field) : `${functionCall.name}(${this.map(functionCall.inner)})`;
+    return applySelectFieldAlias(mapped, alias);
   };
 }
-
-const lastDot = (name: string): number => {
-  let quoted = false;
-  let dot = -1;
-  for (let i = 0; i < name.length; i++) {
-    if (name[i] === '"') quoted = !quoted;
-    if (name[i] === "." && !quoted) dot = i;
-  }
-  return dot;
-};

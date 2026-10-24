@@ -10,7 +10,7 @@ use datasources::{
     BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
-    CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
+    CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, DropRoutineStatement,
     DropTriggerStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
     StatementTextRenderer, StatementVisitor, TypeConverter, Value,
@@ -158,6 +158,9 @@ impl StatementVisitor for PostgresStatementRenderer {
     }
     fn visit_create_read_stored_procedure(&self, statement: &CreateReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         PostgresStoredProcedureStatementRenderer.render_read(statement)
+    }
+    fn visit_create_nested_read_stored_procedure(&self, statement: &CreateNestedReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        PostgresStoredProcedureStatementRenderer.render_nested_read(statement)
     }
     fn visit_create_update_stored_procedure(&self, statement: &CreateUpdateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         PostgresStoredProcedureStatementRenderer.render_update(statement)

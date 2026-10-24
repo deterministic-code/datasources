@@ -10,6 +10,7 @@ export class SelectStatement implements ISelectStatement {
   readonly distinct: boolean;
   readonly table?: string;
   readonly fields: string[];
+  readonly aliases: (string | undefined)[];
   readonly joins: Join[];
   readonly groupBy: string[];
   readonly having?: IWhere;
@@ -22,6 +23,7 @@ export class SelectStatement implements ISelectStatement {
     this.distinct = options.distinct ?? false;
     this.table = options.table;
     this.fields = options.fields ?? [];
+    this.aliases = options.aliases ?? [];
     this.joins = options.joins ?? [];
     this.groupBy = options.groupBy ?? [];
     this.having = options.having;

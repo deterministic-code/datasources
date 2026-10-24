@@ -6,6 +6,7 @@ import {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
@@ -77,6 +78,10 @@ export class PostgresStatementRenderer extends StatementRenderer {
 
   protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
     return new PostgresStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateNestedReadStoredProcedureStatement(statement: CreateNestedReadStoredProcedureStatement): string {
+    return new PostgresStoredProcedureStatementRenderer().renderNestedRead(statement);
   }
 
   protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {

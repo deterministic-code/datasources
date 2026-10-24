@@ -8,7 +8,7 @@ use datasources::{
     AlterTableStatement, CreateBulkCreateStoredProcedureStatement,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
-    CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
+    CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
     DropIndexStatement, DropRoutineStatement, IdentityInsertStatement, StatementTextRenderer,
     StatementVisitor,
@@ -70,6 +70,9 @@ impl StatementVisitor for SqlServerStatementRenderer {
     }
     fn visit_create_read_stored_procedure(&self, statement: &CreateReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         SqlServerStoredProcedureStatementRenderer.render_read(statement)
+    }
+    fn visit_create_nested_read_stored_procedure(&self, statement: &CreateNestedReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        SqlServerStoredProcedureStatementRenderer.render_nested_read(statement)
     }
     fn visit_create_update_stored_procedure(&self, statement: &CreateUpdateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         SqlServerStoredProcedureStatementRenderer.render_update(statement)

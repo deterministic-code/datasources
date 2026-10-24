@@ -105,10 +105,10 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
     const join = new SelectStatement({
       table: "Parent",
       fields: [
-        "Parent.Id AS Id",
-        "Parent.TypeName AS TypeName",
-        "Child.Id AS ChildId",
-        "Child.Label AS Label",
+        "Parent.Id",
+        "Parent.TypeName",
+        "Child.Id",
+        "Child.Label",
       ],
       joins: [Join.left("Child", "Parent.Id", "Child.ParentId")],
       where: new Where(new Operator.Equals("Parent.Id", 1)),

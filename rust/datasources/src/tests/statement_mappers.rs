@@ -63,9 +63,9 @@ fn maps_select() {
         [
             "full_name",
             "book.title",
-            "book.title",
-            "alias.other",
-            "\"schema.name\".user_id"
+            "book.title AS title",
+            "alias.other AS other",
+            "\"schema.name\".user_id AS id"
         ]
     );
     assert!(mapped.distinct);
@@ -174,9 +174,9 @@ fn maps_select_field_alias() {
         ]));
     let mappings = StatementMappers::new(entities, properties);
     let fields = [
-        "Contact.Id AS Id",
-        "Contact.FirstName AS FirstName",
-        "Address.Id AS AddressId",
+        "Contact.Id",
+        "Contact.FirstName",
+        "Address.Id",
     ];
     let joins = [Join::left("Address", "Contact.Id", "Address.ContactId")];
     let select = SelectStatement::new(SelectStatementOptions {
@@ -262,7 +262,7 @@ fn maps_contacts_select() {
     let mapped = mappings.apply_select(&select, &mapper).unwrap();
     assert_eq!(
         stmt_text(&mapped),
-        "SELECT DISTINCT contacts_base.first_name, contacts_base.last_name, contacts_base.email, contact_source.name, address.line1, address.city, phone.number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1"
+        "SELECT DISTINCT contacts_base.first_name AS FirstName, contacts_base.last_name AS LastName, contacts_base.email AS Email, contact_source.name AS Name, address.line1 AS Line1, address.city AS City, phone.number AS Number FROM contacts_base INNER JOIN contact_source ON contacts_base.contact_source_id = contact_source.id INNER JOIN contact_type ON contacts_base.contact_type_id = contact_type.id LEFT JOIN address ON contacts_base.id = address.contact_id LEFT JOIN address_type ON address.address_type_id = address_type.id LEFT JOIN phone ON contacts_base.id = phone.contact_id LEFT JOIN phone_type ON phone.phone_type_id = phone_type.id WHERE contacts_base.email = $contacts_base.email AND address.city > $address.city GROUP BY contacts_base.last_name HAVING contact_type.name = $contact_type.name ORDER BY contacts_base.last_name ASC, contacts_base.first_name DESC LIMIT 20 OFFSET 1"
     );
     let parameters = mapped.predicate().unwrap().parameters();
     assert_eq!(
@@ -270,4 +270,78 @@ fn maps_contacts_select() {
         Value::Text("Contact.Email:ADA@EX.COM".into())
     );
     assert_eq!(parameters[1].value, Value::Text("Address.City:A".into()));
+}
+
+#[test]
+fn rejects_select_field_alias() {
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
+        ("Contact".to_string(), "contacts_base".to_string()),
+    ]));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([("Id".to_string(), "id".to_string())]));
+    let mappings = StatementMappers::new(entities, properties);
+    let fields = ["Contact.Id AS Id"];
+    let select = SelectStatement::new(SelectStatementOptions::new("Contact", &fields));
+    let error = match mappings.apply_select(&select, &mapper) {
+        Err(error) => error,
+        Ok(_) => panic!("expected a path field error"),
+    };
+    assert_eq!(
+        error.to_string(),
+        "Select field \"Contact.Id AS Id\" must be a path"
+    );
+}
+
+#[test]
+fn maps_aggregate_alias_from_lookup() {
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
+        ("Contact".to_string(), "contacts_base".to_string()),
+    ]));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([("Id".to_string(), "id".to_string())]));
+    let mappings = StatementMappers::new(entities, properties);
+    let count = Aggregate::count("Contact.Id");
+    let fields = [count.as_str()];
+    let select = SelectStatement::new(SelectStatementOptions {
+        aliases: &[Some("n")],
+        ..SelectStatementOptions::new("Contact", &fields)
+    });
+    let mapped = mappings.apply_select(&select, &mapper).unwrap();
+    assert_eq!(mapped.fields, ["COUNT(contacts_base.id) AS n"]);
+}
+
+#[test]
+fn maps_nested_path_alias() {
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
+        ("Contact".to_string(), "contacts_base".to_string()),
+        ("Address".to_string(), "address".to_string()),
+        ("AddressType".to_string(), "address_type".to_string()),
+        ("ContactSource".to_string(), "contact_source".to_string()),
+    ]));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("Id".to_string(), "id".to_string()),
+            ("City".to_string(), "city".to_string()),
+            ("Name".to_string(), "name".to_string()),
+        ]));
+    let mappings = StatementMappers::new(entities, properties);
+    let fields = [
+        "Contact.Id",
+        "Contact.Address.Id",
+        "Contact.Address.City",
+        "Contact.ContactSource.Name",
+        "Contact.Address.AddressType.Name",
+    ];
+    let select = SelectStatement::new(SelectStatementOptions::new("Contact", &fields));
+    let mapped = mappings.apply_select(&select, &mapper).unwrap();
+    assert_eq!(
+        mapped.fields,
+        [
+            "contacts_base.id AS Id",
+            "address.id AS AddressId",
+            "address.city AS City",
+            "contact_source.name AS Name",
+            "address_type.name AS AddressTypeName"
+        ]
+    );
 }

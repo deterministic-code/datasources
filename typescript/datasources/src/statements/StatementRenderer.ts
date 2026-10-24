@@ -23,6 +23,8 @@ import { CreateCreateStoredProcedureStatement } from "./CreateCreateStoredProced
 import { CreateCreateStoredProcedureStatementTextRenderer } from "./CreateCreateStoredProcedureStatementTextRenderer.ts";
 import { CreateReadStoredProcedureStatement } from "./CreateReadStoredProcedureStatement.ts";
 import { CreateReadStoredProcedureStatementTextRenderer } from "./CreateReadStoredProcedureStatementTextRenderer.ts";
+import { CreateNestedReadStoredProcedureStatement } from "./CreateNestedReadStoredProcedureStatement.ts";
+import { CreateNestedReadStoredProcedureStatementTextRenderer } from "./CreateNestedReadStoredProcedureStatementTextRenderer.ts";
 import { CreateUpdateStoredProcedureStatement } from "./CreateUpdateStoredProcedureStatement.ts";
 import { CreateUpdateStoredProcedureStatementTextRenderer } from "./CreateUpdateStoredProcedureStatementTextRenderer.ts";
 import { CreateDeleteStoredProcedureStatement } from "./CreateDeleteStoredProcedureStatement.ts";
@@ -75,6 +77,7 @@ type AnyStatement =
   | DropRoutineStatement
   | CreateCreateStoredProcedureStatement
   | CreateReadStoredProcedureStatement
+  | CreateNestedReadStoredProcedureStatement
   | CreateUpdateStoredProcedureStatement
   | CreateDeleteStoredProcedureStatement
   | CreateBulkCreateStoredProcedureStatement
@@ -105,6 +108,7 @@ export class StatementRenderer implements IStatementVisitor {
   visit(statement: DropRoutineStatement): string;
   visit(statement: CreateCreateStoredProcedureStatement): string;
   visit(statement: CreateReadStoredProcedureStatement): string;
+  visit(statement: CreateNestedReadStoredProcedureStatement): string;
   visit(statement: CreateUpdateStoredProcedureStatement): string;
   visit(statement: CreateDeleteStoredProcedureStatement): string;
   visit(statement: CreateBulkCreateStoredProcedureStatement): string;
@@ -133,6 +137,7 @@ export class StatementRenderer implements IStatementVisitor {
       DropRoutineStatement: () => this.visitDropRoutine(statement as DropRoutineStatement),
       CreateCreateStoredProcedureStatement: () => this.visitCreateCreateStoredProcedureStatement(statement as CreateCreateStoredProcedureStatement),
       CreateReadStoredProcedureStatement: () => this.visitCreateReadStoredProcedureStatement(statement as CreateReadStoredProcedureStatement),
+      CreateNestedReadStoredProcedureStatement: () => this.visitCreateNestedReadStoredProcedureStatement(statement as CreateNestedReadStoredProcedureStatement),
       CreateUpdateStoredProcedureStatement: () => this.visitCreateUpdateStoredProcedureStatement(statement as CreateUpdateStoredProcedureStatement),
       CreateDeleteStoredProcedureStatement: () => this.visitCreateDeleteStoredProcedureStatement(statement as CreateDeleteStoredProcedureStatement),
       CreateBulkCreateStoredProcedureStatement: () => this.visitCreateBulkCreateStoredProcedureStatement(statement as CreateBulkCreateStoredProcedureStatement),
@@ -225,6 +230,10 @@ export class StatementRenderer implements IStatementVisitor {
 
   protected visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
     return new CreateReadStoredProcedureStatementTextRenderer().render(statement);
+  }
+
+  protected visitCreateNestedReadStoredProcedureStatement(statement: CreateNestedReadStoredProcedureStatement): string {
+    return new CreateNestedReadStoredProcedureStatementTextRenderer().render(statement);
   }
 
   protected visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {

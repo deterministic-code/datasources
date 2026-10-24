@@ -1377,7 +1377,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1528-L1544)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1529-L1545)
 
 ```rust
         &row
@@ -1436,7 +1436,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1565-L1571)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1566-L1572)
 
 ```rust
 

@@ -6,6 +6,7 @@ import {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
@@ -70,6 +71,10 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
     return new MysqlStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateNestedReadStoredProcedureStatement(statement: CreateNestedReadStoredProcedureStatement): string {
+    return new MysqlStoredProcedureStatementRenderer().renderNestedRead(statement);
   }
 
   protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {

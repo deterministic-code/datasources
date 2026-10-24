@@ -3,7 +3,13 @@ namespace Datasources;
 public class SelectStatementTextRenderer(StatementTextRenderer text)
 {
     public virtual string Render(SelectStatement statement) =>
-        $"SELECT {(statement.Distinct ? "DISTINCT " : "")}{(statement.Fields.Count == 0 ? "*" : string.Join(", ", statement.Fields))} FROM {statement.Table}{JoinSql(statement.Joins)}{WhereSql(statement.Where)}{GroupSql(statement.GroupBy)}{HavingSql(statement.Having)}{OrderSql(statement.OrderBy)}{Limit(statement.Limit)}{Offset(statement.Offset)}";
+        $"SELECT {(statement.Distinct ? "DISTINCT " : "")}{FieldsSql(statement)} FROM {statement.Table}{JoinSql(statement.Joins)}{WhereSql(statement.Where)}{GroupSql(statement.GroupBy)}{HavingSql(statement.Having)}{OrderSql(statement.OrderBy)}{Limit(statement.Limit)}{Offset(statement.Offset)}";
+
+    static string FieldsSql(SelectStatement statement) =>
+        statement.Fields.Count == 0
+            ? "*"
+            : string.Join(", ", statement.Fields.Select((field, i) =>
+                SelectFieldAliases.Apply(field, i < statement.Aliases.Count ? statement.Aliases[i] : null)));
 
     protected virtual string WhereSql(IWhere? where) =>
         where is null ? "" : $" WHERE {text.Render(where)}";

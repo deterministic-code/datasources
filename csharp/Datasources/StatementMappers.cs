@@ -10,23 +10,23 @@ public sealed class StatementMappers : IMapper<string, string>
 
     public string Map(string property)
     {
-        var dot = LastDot(property);
-        if (dot < 0) return propertyMappers.Map(property);
-        var qualifier = property[..dot];
-        var name = property[(dot + 1)..];
+        var parts = SelectFieldAliases.Segments(property);
+        if (parts.Count < 2) return propertyMappers.Map(property);
+        var qualifier = parts[^2];
+        var name = parts[^1];
         var mapped = propertyMappers.Map(name);
         if (mapped != name && mapped.Contains('.')) return mapped;
         var table = entityMappers.Map(qualifier);
-        return table == qualifier && mapped == name ? property : $"{table}.{mapped}";
+        return table == qualifier && mapped == name ? $"{qualifier}.{name}" : $"{table}.{mapped}";
     }
 
     public string ReverseMap(string key)
     {
         var reversed = propertyMappers.ReverseMap(key);
         if (reversed != key && propertyMappers.Map(reversed) == key) return reversed;
-        var dot = LastDot(key);
-        if (dot < 0) return reversed;
-        var column = key[(dot + 1)..];
+        var parts = SelectFieldAliases.Segments(key);
+        if (parts.Count < 2) return reversed;
+        var column = parts[^1];
         var name = propertyMappers.ReverseMap(column);
         return name != column && propertyMappers.Map(name) == column ? name : reversed;
     }
@@ -41,7 +41,7 @@ public sealed class StatementMappers : IMapper<string, string>
         {
             Distinct = select.Distinct,
             Table = entityMappers.Map(table),
-            Fields = [.. select.Fields.Select(MapSelectField)],
+            Fields = [.. MapSelectFields(table, select.Fields, select.Aliases)],
             Where = Apply(select.Where, cell),
             Joins = [.. select.Joins.Select(join => Apply(join, cell))],
             GroupBy = [.. select.GroupBy.Select(Column)],
@@ -74,23 +74,19 @@ public sealed class StatementMappers : IMapper<string, string>
             ? join with { Table = entityMappers.Map(join.Table), On = new Where(on).Map(Column, cell).Condition }
             : join with { Table = entityMappers.Map(join.Table) };
 
-    string MapSelectField(string field)
+    IReadOnlyList<string> MapSelectFields(string table, IReadOnlyList<string> fields, IReadOnlyList<string?> aliases)
     {
-        var asIndex = field.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
-        return asIndex >= 0
-            ? $"{Map(field[..asIndex].Trim())} AS {field[(asIndex + 4)..].Trim()}"
-            : Map(field);
+        var lookup = SelectFieldAliases.Of(table, fields, aliases);
+        return [.. fields.Select((field, i) => MapSelectField(field, lookup[i]))];
     }
 
-    static int LastDot(string name)
+    string MapSelectField(string field, string? alias)
     {
-        var quoted = false;
-        var dot = -1;
-        for (var i = 0; i < name.Length; i++)
-        {
-            if (name[i] == '"') quoted = !quoted;
-            if (name[i] == '.' && !quoted) dot = i;
-        }
-        return dot;
+        if (SelectFieldAliases.AsIndex(field) >= 0)
+            throw new DatasourceException($"Select field \"{field}\" must be a path");
+        var mapped = SelectFieldAliases.FunctionOf(field) is { } function
+            ? $"{function.Name}({Map(function.Inner)})"
+            : Map(field);
+        return SelectFieldAliases.Apply(mapped, alias);
     }
 }

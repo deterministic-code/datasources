@@ -5,6 +5,7 @@ import {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
@@ -58,6 +59,10 @@ export class OracleStatementRenderer extends StatementRenderer {
 
   protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
     return new OracleStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateNestedReadStoredProcedureStatement(statement: CreateNestedReadStoredProcedureStatement): string {
+    return new OracleStoredProcedureStatementRenderer().renderNestedRead(statement);
   }
 
   protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {

@@ -83,7 +83,14 @@ mod reset;
 mod response;
 mod result;
 mod row;
+mod select_field_aliases;
 mod select_statement;
+mod nested_select_builder;
+mod nested_select_builder_options;
+mod nested_select_relation;
+mod nested_select_relation_kind;
+mod nested_select_statement;
+mod nested_select_type;
 mod shared_items;
 mod single_command_i_bulk_write_strategy;
 mod split_statements;
@@ -206,7 +213,7 @@ pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, AlterAction, AlterTableStatement, ArrayExpression, CheckConstraint, ColumnDefault, Condition,
     ConditionRenderer, ConditionVisitor, CreateIndexStatement,
     CreateTableStatement, CreateTriggerStatement, RoutineParameter,
-    AlterTableStatementTextRenderer, CreateIndexStatementTextRenderer, CreateCreateStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement, CreateDeleteStoredProcedureStatement, CreateBulkCreateStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement, CreateCreateStoredProcedureStatementTextRenderer, CreateReadStoredProcedureStatementTextRenderer, CreateUpdateStoredProcedureStatementTextRenderer, CreateDeleteStoredProcedureStatementTextRenderer, CreateBulkCreateStoredProcedureStatementTextRenderer, CreateBulkUpdateStoredProcedureStatementTextRenderer, CreateBulkDeleteStoredProcedureStatementTextRenderer,
+    AlterTableStatementTextRenderer, CreateIndexStatementTextRenderer, CreateCreateStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateNestedReadStoredProcedureStatement, NestedWhereArgument, CreateUpdateStoredProcedureStatement, CreateDeleteStoredProcedureStatement, CreateBulkCreateStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement, CreateCreateStoredProcedureStatementTextRenderer, CreateReadStoredProcedureStatementTextRenderer, CreateNestedReadStoredProcedureStatementTextRenderer, CreateUpdateStoredProcedureStatementTextRenderer, CreateDeleteStoredProcedureStatementTextRenderer, CreateBulkCreateStoredProcedureStatementTextRenderer, CreateBulkUpdateStoredProcedureStatementTextRenderer, CreateBulkDeleteStoredProcedureStatementTextRenderer,
     CreateTableStatementTextRenderer, CreateTriggerStatementTextRenderer,
     DropIndexStatement, DropIndexStatementTextRenderer, DropRoutineStatement,
     DropRoutineStatementTextRenderer, DropTableStatement, DropTableStatementTextRenderer,
@@ -235,6 +242,12 @@ pub use crud_repository_statements::CRUDRepositoryStatements;
 pub use readonly_repository_builder::ReadonlyRepositoryBuilder;
 pub use readonly_repository_statements::ReadonlyRepositoryStatements;
 pub use statement_mappers::StatementMappers;
+pub use nested_select_builder::NestedSelectBuilder;
+pub use nested_select_builder_options::NestedSelectBuilderOptions;
+pub use nested_select_relation::NestedSelectRelation;
+pub use nested_select_relation_kind::NestedSelectRelationKind;
+pub use nested_select_statement::NestedSelectStatement;
+pub use nested_select_type::NestedSelectType;
 pub use transaction::Transaction;
 pub use unit_of_work_transaction::UnitOfWorkTransaction;
 pub use update_enrichment_strategy::UpdateEnrichmentStrategy;

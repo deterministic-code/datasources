@@ -49,6 +49,14 @@ internal sealed class MysqlStoredProcedureStatementRenderer
         return Procedure(statement.Name, $"\n{Params(statement.Parameters)}\n", body);
     }
 
+    public string Render(CreateNestedReadStoredProcedureStatement statement)
+    {
+        var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
+        var signature = string.Join(", ", statement.Arguments.Select(argument =>
+            $"IN {argument.Parameter.Name} {argument.Parameter.Type}"));
+        return Procedure(statement.Name, signature, $"  {select};");
+    }
+
     public string Render(CreateReadStoredProcedureStatement statement)
     {
         var aliased = string.Join(", ", statement.Columns.Select(column => $"t.{column}"));

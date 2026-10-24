@@ -58,8 +58,8 @@ fn joins_tables() {
 
 #[test]
 fn groups_aggregates_orders_and_limits() {
-    let count = Aggregate::count("*", Some("n"));
-    let total = Aggregate::sum("amount", Some("total"));
+    let count = Aggregate::count("*");
+    let total = Aggregate::sum("amount");
     let grouped_fields = ["status", count.as_str(), total.as_str()];
     let where_clause = Where::new(Operator::equals("status", "open"));
     let grouped = SelectStatement::new(SelectStatementOptions {
@@ -72,6 +72,7 @@ fn groups_aggregates_orders_and_limits() {
         group_by: &["status"],
         order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
         limit: Some(10),
+        aliases: &[None, Some("n"), Some("total")],
         ..SelectStatementOptions::new("orders", &grouped_fields)
     });
     assert_eq!(
@@ -91,8 +92,8 @@ fn groups_rows() {
 
 #[test]
 fn aggregates_without_grouping() {
-    let min_n = Aggregate::min("n", None);
-    let max_n = Aggregate::max("n", None);
+    let min_n = Aggregate::min("n");
+    let max_n = Aggregate::max("n");
     let bound_fields = [min_n.as_str(), max_n.as_str()];
     let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
     assert_eq!(stmt_text(&bounds), "SELECT MIN(n), MAX(n) FROM users");

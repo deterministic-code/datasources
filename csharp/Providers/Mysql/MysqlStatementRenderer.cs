@@ -31,6 +31,9 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
     public override string Visit(CreateReadStoredProcedureStatement statement) =>
         new MysqlStoredProcedureStatementRenderer().Render(statement);
 
+    public override string Visit(CreateNestedReadStoredProcedureStatement statement) =>
+        new MysqlStoredProcedureStatementRenderer().Render(statement);
+
     public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
         new MysqlStoredProcedureStatementRenderer().Render(statement);
 

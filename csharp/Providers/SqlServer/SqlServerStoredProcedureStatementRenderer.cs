@@ -23,6 +23,22 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
         GO
         """;
 
+    public string Render(CreateNestedReadStoredProcedureStatement statement)
+    {
+        var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
+        var signature = string.Join(",\n", statement.Arguments.Select(argument =>
+            $"  @{argument.Parameter.Name} {argument.Parameter.Type}"));
+        return $"""
+            CREATE OR ALTER PROCEDURE {statement.Name}
+            {signature}
+            AS
+            BEGIN
+              {select};
+            END;
+            GO
+            """;
+    }
+
     public string Render(CreateReadStoredProcedureStatement statement)
     {
         var cols = string.Join(", ", statement.Columns);

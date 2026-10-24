@@ -22,6 +22,8 @@ export type {
   IIdentityInsertStatement,
   ICreateCreateStoredProcedureStatement,
   ICreateReadStoredProcedureStatement,
+  ICreateNestedReadStoredProcedureStatement,
+  NestedWhereArgument,
   ICreateUpdateStoredProcedureStatement,
   ICreateDeleteStoredProcedureStatement,
   ICreateBulkCreateStoredProcedureStatement,
@@ -90,6 +92,12 @@ export { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 export { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
 export { RepositoryBuilderOptionsFactory } from "./RepositoryBuilderOptionsFactory.ts";
 export { StatementMappers } from "./StatementMappers.ts";
+export { NestedSelectBuilder } from "./NestedSelectBuilder.ts";
+export type { NestedSelectBuilderOptions } from "./NestedSelectBuilderOptions.ts";
+export type { NestedSelectRelation } from "./NestedSelectRelation.ts";
+export type { NestedSelectRelationKind } from "./NestedSelectRelationKind.ts";
+export type { NestedSelectStatement } from "./NestedSelectStatement.ts";
+export type { NestedSelectType } from "./NestedSelectType.ts";
 export { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 export { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
@@ -129,6 +137,7 @@ export {
   IdentityInsertStatementTextRenderer,
   CreateCreateStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateUpdateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
   CreateBulkCreateStoredProcedureStatement,
@@ -136,6 +145,7 @@ export {
   CreateBulkDeleteStoredProcedureStatement,
   CreateCreateStoredProcedureStatementTextRenderer,
   CreateReadStoredProcedureStatementTextRenderer,
+  CreateNestedReadStoredProcedureStatementTextRenderer,
   CreateUpdateStoredProcedureStatementTextRenderer,
   CreateDeleteStoredProcedureStatementTextRenderer,
   CreateBulkCreateStoredProcedureStatementTextRenderer,

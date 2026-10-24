@@ -1,7 +1,8 @@
 var grouped = new SelectStatement(new()
 {
     Table = "orders",
-    Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
+    Fields = ["status", Aggregate.Count("*"), Aggregate.Sum("amount")],
+    Aliases = [null, "n", "total"],
     Where = new Where(new Operator.Equals("status", "open")),
     Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
     GroupBy = ["status"],

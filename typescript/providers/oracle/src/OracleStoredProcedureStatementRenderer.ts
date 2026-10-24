@@ -4,10 +4,12 @@ import type {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateUpdateStoredProcedureStatement,
   RoutineParameter,
 } from "@deterministic-code/datasources";
+import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  ${p.name} IN ${p.type}`).join(",\n");
@@ -23,6 +25,17 @@ ${params(statement.parameters)}
 BEGIN
   INSERT INTO ${statement.table} (${statement.parameters.map((p) => p.name).join(", ")})
   VALUES (${statement.parameters.map((p) => p.name).join(", ")});
+END;`;
+  }
+
+  renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
+    const select = DefaultStatementTextRenderer.instance.render(statement.select);
+    const signature = statement.arguments
+      .map((argument) => `${argument.parameter.name} IN ${argument.parameter.type}`)
+      .join(", ");
+    return `CREATE OR REPLACE PROCEDURE ${statement.name}(${signature}) AS
+BEGIN
+  ${select};
 END;`;
   }
 

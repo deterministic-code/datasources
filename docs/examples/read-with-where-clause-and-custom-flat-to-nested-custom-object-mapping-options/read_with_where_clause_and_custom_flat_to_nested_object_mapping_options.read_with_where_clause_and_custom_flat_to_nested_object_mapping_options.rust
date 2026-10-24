@@ -86,10 +86,10 @@ let join = SelectStatement::new(SelectStatementOptions {
     ..SelectStatementOptions::new(
         "Parent",
         &[
-            "Parent.Id AS Id",
-            "Parent.TypeName AS TypeName",
-            "Child.Id AS ChildId",
-            "Child.Label AS Label",
+            "Parent.Id",
+            "Parent.TypeName",
+            "Child.Id",
+            "Child.Label",
         ],
     )
 });

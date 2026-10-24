@@ -125,6 +125,7 @@ public sealed record Where(IExpression Condition) : IWhere
                 Distinct = query.Distinct,
                 Table = query.Table,
                 Fields = query.Fields,
+                Aliases = query.Aliases,
                 Where = RewriteWhere(query.Where, column, value),
                 Joins = query.Joins.Select(join => join.On is null
                     ? join

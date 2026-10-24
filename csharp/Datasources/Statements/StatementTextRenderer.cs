@@ -38,6 +38,7 @@ public class StatementTextRenderer
         DropRoutineStatement s => s.Accept(Statements),
         CreateCreateStoredProcedureStatement s => s.Accept(Statements),
         CreateReadStoredProcedureStatement s => s.Accept(Statements),
+        CreateNestedReadStoredProcedureStatement s => s.Accept(Statements),
         CreateUpdateStoredProcedureStatement s => s.Accept(Statements),
         CreateDeleteStoredProcedureStatement s => s.Accept(Statements),
         CreateBulkCreateStoredProcedureStatement s => s.Accept(Statements),

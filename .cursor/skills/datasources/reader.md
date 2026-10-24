@@ -953,7 +953,7 @@ var again = await reader.NextResult();
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L389-L416)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L380-L407)
 
 ```rust
 async fn call_procedure_returns_two_results(command: &dyn Command) {

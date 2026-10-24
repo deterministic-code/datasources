@@ -1,4 +1,7 @@
 use crate::builders::Join;
+use crate::select_field_aliases::{
+    apply_select_field_alias, as_index, function_of, select_field_aliases, segments,
+};
 use crate::i_where::IWhere;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
@@ -34,13 +37,31 @@ impl StatementMappers {
         Mapper::reverse_map(self, key.to_string())
     }
 
-    fn map_select_field(&self, field: &str) -> String {
-        if let Some(as_index) = field.to_uppercase().find(" AS ") {
-            let expression = field[..as_index].trim();
-            let alias = field[as_index + 4..].trim();
-            return format!("{} AS {alias}", self.column(expression));
+    fn map_select_fields(
+        &self,
+        table: &str,
+        fields: &[String],
+        aliases: &[Option<String>],
+    ) -> Result<Vec<String>> {
+        let lookup = select_field_aliases(table, fields, aliases);
+        fields
+            .iter()
+            .enumerate()
+            .map(|(index, field)| self.map_select_field(field, lookup[index].as_deref()))
+            .collect()
+    }
+
+    fn map_select_field(&self, field: &str, alias: Option<&str>) -> Result<String> {
+        if as_index(field).is_some() {
+            return Err(crate::DatasourceError::message(format!(
+                "Select field \"{field}\" must be a path"
+            )));
         }
-        self.column(field)
+        let mapped = match function_of(field) {
+            Some((name, inner)) => format!("{name}({})", self.column(inner)),
+            None => self.column(field),
+        };
+        Ok(apply_select_field_alias(&mapped, alias))
     }
 
     pub fn apply_select(
@@ -49,11 +70,7 @@ impl StatementMappers {
         cell: &dyn Fn(&str, &Value) -> Result<Value>,
     ) -> Result<SelectStatement> {
         let table = self.entity(&select.table);
-        let fields: Vec<String> = select
-            .fields
-            .iter()
-            .map(|field| self.map_select_field(field))
-            .collect();
+        let fields = self.map_select_fields(&select.table, &select.fields, &select.aliases)?;
         let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
         let group: Vec<String> = select.group_by.iter().map(|column| self.column(column)).collect();
         let group_refs: Vec<&str> = group.iter().map(String::as_str).collect();
@@ -87,6 +104,7 @@ impl StatementMappers {
         Ok(SelectStatement::new(SelectStatementOptions {
             table: &table,
             fields: &field_refs,
+            aliases: &[],
             where_clause,
             joins: &joins,
             group_by: &group_refs,
@@ -176,18 +194,19 @@ impl StatementMappers {
 
 impl Mapper<String, String> for StatementMappers {
     fn map(&self, property: String) -> String {
-        let Some(dot) = last_dot(&property) else {
+        let parts = segments(&property);
+        if parts.len() < 2 {
             return Mapper::map(&self.property_mappers, property);
-        };
-        let qualifier = &property[..dot];
-        let name = &property[dot + 1..];
+        }
+        let qualifier = parts[parts.len() - 2];
+        let name = parts[parts.len() - 1];
         let mapped = Mapper::map(&self.property_mappers, name.to_string());
         if mapped != name && mapped.contains('.') {
             return mapped;
         }
         let table = self.entity(qualifier);
         if table == qualifier && mapped == name {
-            property
+            format!("{qualifier}.{name}")
         } else {
             format!("{table}.{mapped}")
         }
@@ -198,10 +217,11 @@ impl Mapper<String, String> for StatementMappers {
         if reversed != key && Mapper::map(&self.property_mappers, reversed.clone()) == key {
             return reversed;
         }
-        let Some(dot) = last_dot(&key) else {
+        let parts = segments(&key);
+        if parts.len() < 2 {
             return reversed;
-        };
-        let column = &key[dot + 1..];
+        }
+        let column = parts[parts.len() - 1];
         let name = Mapper::reverse_map(&self.property_mappers, column.to_string());
         if name != column && Mapper::map(&self.property_mappers, name.clone()) == column {
             name
@@ -220,16 +240,3 @@ fn map_on(on: &str, column: impl Fn(&str) -> String) -> String {
     }
 }
 
-fn last_dot(name: &str) -> Option<usize> {
-    let mut quoted = false;
-    let mut dot = None;
-    for (index, ch) in name.char_indices() {
-        if ch == '"' {
-            quoted = !quoted;
-        }
-        if ch == '.' && !quoted {
-            dot = Some(index);
-        }
-    }
-    dot
-}

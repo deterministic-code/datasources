@@ -1,8 +1,9 @@
 use datasources::{
     CreateBulkCreateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement,
     CreateBulkUpdateStoredProcedureStatement, CreateCreateStoredProcedureStatement,
-    CreateDeleteStoredProcedureStatement, CreateReadStoredProcedureStatement,
-    CreateUpdateStoredProcedureStatement, RoutineParameter,
+    CreateDeleteStoredProcedureStatement, CreateNestedReadStoredProcedureStatement,
+    CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
+    DefaultStatementTextRenderer, RoutineParameter,
 };
 
 pub struct SqlServerStoredProcedureStatementRenderer;
@@ -29,6 +30,22 @@ impl SqlServerStoredProcedureStatementRenderer {
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
             statement.parameters().iter().map(|p| format!("@{}", p.name)).collect::<Vec<_>>().join(", "),
             statement.key(),
+        )
+    }
+
+    pub fn render_nested_read(&self, statement: &CreateNestedReadStoredProcedureStatement) -> String {
+        let select = DefaultStatementTextRenderer::instance().render(&statement.select());
+        let signature = statement
+            .arguments()
+            .iter()
+            .map(|argument| format!("  @{} {}", argument.parameter.name, argument.parameter.r#type))
+            .collect::<Vec<_>>()
+            .join(",\n");
+        format!(
+            "CREATE OR ALTER PROCEDURE {}\n{}\nAS\nBEGIN\n  {};\nEND;\nGO",
+            statement.name(),
+            signature,
+            select
         )
     }
 

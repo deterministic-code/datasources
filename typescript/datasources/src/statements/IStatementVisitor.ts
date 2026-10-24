@@ -10,6 +10,7 @@ import type { DropIndexStatement } from "./DropIndexStatement.ts";
 import type { DropRoutineStatement } from "./DropRoutineStatement.ts";
 import type { CreateCreateStoredProcedureStatement } from "./CreateCreateStoredProcedureStatement.ts";
 import type { CreateReadStoredProcedureStatement } from "./CreateReadStoredProcedureStatement.ts";
+import type { CreateNestedReadStoredProcedureStatement } from "./CreateNestedReadStoredProcedureStatement.ts";
 import type { CreateUpdateStoredProcedureStatement } from "./CreateUpdateStoredProcedureStatement.ts";
 import type { CreateDeleteStoredProcedureStatement } from "./CreateDeleteStoredProcedureStatement.ts";
 import type { CreateBulkCreateStoredProcedureStatement } from "./CreateBulkCreateStoredProcedureStatement.ts";
@@ -47,6 +48,7 @@ export interface IStatementVisitor {
   visit(statement: DropRoutineStatement): string;
   visit(statement: CreateCreateStoredProcedureStatement): string;
   visit(statement: CreateReadStoredProcedureStatement): string;
+  visit(statement: CreateNestedReadStoredProcedureStatement): string;
   visit(statement: CreateUpdateStoredProcedureStatement): string;
   visit(statement: CreateDeleteStoredProcedureStatement): string;
   visit(statement: CreateBulkCreateStoredProcedureStatement): string;
