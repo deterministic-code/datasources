@@ -62,6 +62,7 @@ const command = (extra: Partial<GenerateCommand> = {}): GenerateCommand => ({
   output: "generated",
   migrations: true,
   migrate: true,
+  storedProcedures: false,
   migrationsRoot: "sql",
   ...extra,
 });

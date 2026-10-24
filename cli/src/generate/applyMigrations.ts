@@ -5,6 +5,7 @@ import type { Flags, MigrationsCreateCommand } from "../parse.ts";
 import type { Deps } from "../run.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
+import { withStoredProcedures } from "./storedProcedures.ts";
 import { writeEntries } from "./writeEntries.ts";
 
 const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
@@ -28,7 +29,10 @@ export const applyMigrations = async (
   ];
   if (command.migrationsPath !== undefined && listed.length > 1)
     throw new Error("--migrations-path requires a single SQL dialect in backend.datasources");
-  const entries = await generateSql({ reader: memoryReader(loaded.files), settings: loaded.settings });
+  const entries = await generateSql({
+    reader: memoryReader(loaded.files),
+    settings: withStoredProcedures(loaded.settings, command.storedProcedures),
+  });
   const remapped =
     command.migrationsPath === undefined
       ? entries

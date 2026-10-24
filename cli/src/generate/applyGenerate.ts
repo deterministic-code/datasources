@@ -4,6 +4,7 @@ import type { Flags, GenerateCommand } from "../parse.ts";
 import type { Deps } from "../run.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
+import { withStoredProcedures } from "./storedProcedures.ts";
 import { writeEntries } from "./writeEntries.ts";
 import { wireRegister } from "../wireRegister.ts";
 
@@ -12,7 +13,11 @@ const at = (root: string, path: string): string => (isAbsolute(path) ? path : jo
 export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps: Deps): Promise<void> => {
   const provider = providerByName(command.provider);
   const loaded = await loadSpec(deps.fs, at(flags.cwd, command.input));
-  const request = { dialect: command.dialect, reader: memoryReader(loaded.files), settings: loaded.settings };
+  const request = {
+    dialect: command.dialect,
+    reader: memoryReader(loaded.files),
+    settings: withStoredProcedures(loaded.settings, command.storedProcedures),
+  };
   const entries = await {
     all: async () => [
       ...(await provider.generateTypes(request)),
