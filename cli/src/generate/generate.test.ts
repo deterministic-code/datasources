@@ -904,4 +904,25 @@ types: []
     ).toBe(0);
     expect(absolute.files[join("/tmp/mig", "0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });
+
+  it("accepts --stored-procedures on generate all and migrations create", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    const generate = mem(seeded);
+    expect(
+      await run(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--stored-procedures", "--no-migrate"],
+        deps(generate.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(generate.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+    expect(Object.keys(generate.files).some((path) => path.includes("stored_procedures"))).toBe(false);
+    const create = mem(seeded);
+    expect(await run(["migrations", "create", "--cwd", cwd, "--stored-procedures"], deps(create.fs), cwd)).toBe(0);
+    expect(create.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+    expect(Object.keys(create.files).some((path) => path.includes("stored_procedures"))).toBe(false);
+  });
 });

@@ -46,6 +46,7 @@ describe("parseArgs", () => {
       output: "out",
       migrations: true,
       migrate: true,
+      storedProcedures: false,
       migrationsRoot: "sql",
     });
     expect(
@@ -82,12 +83,16 @@ describe("parseArgs", () => {
       output: "generated",
     });
     expect(parseArgs(["generate", "datasource", "--dialect", "typescript"]).command).toMatchObject({ target: "datasource" });
+    expect(parseArgs(["generate", "all", "--dialect", "typescript", "--stored-procedures"]).command).toMatchObject({
+      storedProcedures: true,
+    });
     expect(() => parseArgs(["generate"])).toThrow(/Usage: datasources generate/);
     expect(() => parseArgs(["generate", "nope", "--dialect", "typescript"])).toThrow(/Usage: datasources generate/);
     expect(() => parseArgs(["generate", "all", "extra", "--dialect", "typescript"])).toThrow(/Usage: datasources generate/);
     expect(() => parseArgs(["generate", "all"])).toThrow(/--dialect is required/);
     expect(() => parseArgs(["generate", "all", "--dialect"])).toThrow(/Missing value for --dialect/);
     expect(help).toMatch(/generate <all\|types\|repositories\|datasource>/);
+    expect(help).toMatch(/--stored-procedures/);
   });
 
   it("parses migrations create", () => {
@@ -95,6 +100,7 @@ describe("parseArgs", () => {
       kind: "migrations-create",
       provider: "deterministic",
       input: "deterministic",
+      storedProcedures: false,
       migrationsRoot: "sql",
     });
     expect(
@@ -114,8 +120,12 @@ describe("parseArgs", () => {
       kind: "migrations-create",
       provider: "deterministic",
       input: "in",
+      storedProcedures: false,
       migrationsRoot: "db",
       migrationsPath: "./sql/sqlite/migrations",
+    });
+    expect(parseArgs(["migrations", "create", "--stored-procedures"]).command).toMatchObject({
+      storedProcedures: true,
     });
     expect(parseArgs(["migrations", "create", "--migrations-root=out", "--migrations-path=here"]).command).toMatchObject({
       migrationsRoot: "out",

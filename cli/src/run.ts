@@ -56,6 +56,7 @@ const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<voi
         kind: "migrations-create",
         provider: command.provider,
         input: command.input,
+        storedProcedures: command.storedProcedures,
         migrationsRoot: command.migrationsRoot,
         ...(command.migrationsPath === undefined ? {} : { migrationsPath: command.migrationsPath }),
       },
