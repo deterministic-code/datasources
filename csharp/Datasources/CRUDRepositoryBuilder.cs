@@ -2,7 +2,22 @@ namespace Datasources;
 
 public sealed class CRUDRepositoryBuilder<T> : ReadonlyRepositoryBuilder<T> where T : new()
 {
+    readonly RepositoryBuilderOptionsFactory<T> factory = new();
     public CRUDRepositoryStatements? CRUDStatements { get; private set; }
+
+    public CRUDRepositoryBuilder<T> Add(CRUDRepositoryOptions<T> options)
+    {
+        factory.Add(options);
+        return this;
+    }
+
+    public CRUDRepositoryBuilder<T> Add(string dialect, CRUDRepositoryOptions<T> options)
+    {
+        factory.Add(dialect, options);
+        return this;
+    }
+
+    public CRUDRepositoryOptions<T> For(IConnection connection) => factory.For(connection.Provider);
 
     protected override IReadOnlyList<string> Ids(ReadonlyRepositoryMappingOptions<T> options) =>
         options is CRUDRepositoryOptions<T> crud ? crud.Ids : [];

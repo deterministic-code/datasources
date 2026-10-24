@@ -30,7 +30,7 @@ export type RepositoryModel = {
   readProperties: string[];
   createProperties: string[];
   updateProperties: string[];
-  writesByProvider?: Record<string, { create: string[]; update: string[] }>;
+  optionsByProvider?: Record<string, RepositoryModel>;
   optimisticConcurrency?: OptimisticConcurrency;
   enrichments: PlannedEnrichment[];
 };

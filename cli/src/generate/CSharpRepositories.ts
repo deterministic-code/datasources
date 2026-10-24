@@ -10,9 +10,36 @@ import {
   type PlannedEnrichment,
   type RepositoryModel,
 } from "./RepositoryModel.ts";
-import { writeList } from "./writeLists.ts";
+import { dialectsOf, quote, writeList } from "./writeLists.ts";
 
-const quote = (value: string): string => value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
+const pad = (text: string, spaces: number): string => {
+  const prefix = " ".repeat(spaces);
+  return text.split("\n").map((line) => `${prefix}${line}`).join("\n");
+};
+
+const csharpOptionsBody = (model: RepositoryModel): string =>
+  `Entity = "${quote(model.entity)}",
+EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),
+PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+{
+${model.propertyMappings.map((pair) => `    ["${quote(pair.from)}"] = "${quote(pair.to)}",`).join("\n")}
+}),
+Ids = ${writeList("csharp", model.ids)},
+ReadProperties = ${writeList("csharp", model.readProperties)},
+CreateProperties = ${writeList("csharp", model.createProperties)},
+UpdateProperties = ${writeList("csharp", model.updateProperties)},`;
+
+const csharpOptions = (model: RepositoryModel, indent: number): string =>
+  `new()\n${" ".repeat(indent)}{\n${pad(csharpOptionsBody(model), indent + 4)}\n${" ".repeat(indent)}}`;
+
+const optionsMethod = (model: RepositoryModel, type: string): string => {
+  const dialects = dialectsOf(model);
+  return dialects.length === 0
+    ? `    static CRUDRepositoryOptions<${type}> Options() => ${csharpOptions(model, 4)};`
+    : `    static CRUDRepositoryOptions<${type}> Options(IConnection connection) =>\n        new CRUDRepositoryBuilder<${type}>()\n            .Add(${csharpOptions(model, 12)})${dialects
+        .map(([engine, planned]) => `\n            .Add("${quote(engine)}", ${csharpOptions(planned, 12)})`)
+        .join("")}\n            .For(connection);`;
+};
 
 const enrichment = (item: PlannedEnrichment, host: "ctor" | "readonly" = "ctor"): string => {
   const via = childField("csharp", item.via, item.viaType);
@@ -53,13 +80,16 @@ const occMethods = (model: RepositoryModel, type: string): string => {
 `;
 };
 
+const optionsCall = (model: RepositoryModel): string =>
+  dialectsOf(model).length === 0 ? "Options()" : "Options(connection)";
+
 const createReadonly = (model: RepositoryModel, type: string): string => {
   const children = childModels(model);
   if (children.length === 0 && model.enrichments.length === 0)
-    return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection) =>\n        new ReadonlyRepository<${type}>(connection, Options(connection));`;
+    return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection) =>\n        new ReadonlyRepository<${type}>(connection, ${optionsCall(model)});`;
   const locals = children.map((child) => `        var ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`);
   const enrich = model.enrichments.map((item) => `        ${enrichment(item, "readonly")}`);
-  return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection)\n    {\n        var repo = new ReadonlyRepository<${type}>(connection, Options(connection));\n${locals.join("\n")}\n${enrich.join("\n")}\n        return repo;\n    }`;
+  return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection)\n    {\n        var repo = new ReadonlyRepository<${type}>(connection, ${optionsCall(model)});\n${locals.join("\n")}\n${enrich.join("\n")}\n        return repo;\n    }`;
 };
 
 export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] => {
@@ -71,19 +101,14 @@ export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] =
       ...children.map((child) => `        ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`),
       ...model.enrichments.map((item) => `        ${enrichment(item)}`),
     ];
-    const mapping = `        PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>\n        {\n${model.propertyMappings.map((pair) => `            ["${quote(pair.from)}"] = "${quote(pair.to)}",`).join("\n")}\n        }),\n`;
     const constructor = lines.length === 0
-      ? `    public ${model.typeName}Repository(IConnection connection) : base(connection, Options(connection)) { }`
-      : `    public ${model.typeName}Repository(IConnection connection) : base(connection, Options(connection))\n    {\n${lines.join("\n")}\n    }`;
-    const ids = model.ids.map((name) => `"${quote(name)}"`).join(", ");
-    const read = model.readProperties.map((name) => `"${quote(name)}"`).join(", ");
-    const create = writeList("csharp", model, "create");
-    const update = writeList("csharp", model, "update");
+      ? `    public ${model.typeName}Repository(IConnection connection) : base(connection, ${optionsCall(model)}) { }`
+      : `    public ${model.typeName}Repository(IConnection connection) : base(connection, ${optionsCall(model)})\n    {\n${lines.join("\n")}\n    }`;
     const implementsOcc = model.optimisticConcurrency === undefined ? "" : `, ICRUDRepository<${type}>`;
     const usings = model.optimisticConcurrency === undefined ? "using Datasources;\n" : "using Datasources;\nusing static Datasources.Cmp;\n";
     return content(
       repositoryFile("csharp", model),
-      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n${occMethods(model, type)}\n    static CRUDRepositoryOptions<${type}> Options(IConnection connection) => new()\n    {\n        Entity = "${quote(model.entity)}",\n        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),\n${mapping}        Ids = [${ids}],\n        ReadProperties = [${read}],\n        CreateProperties = ${create},\n        UpdateProperties = ${update},\n    };\n}\n`,
+      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n${occMethods(model, type)}\n${optionsMethod(model, type)}\n}\n`,
     );
   });
   const register = models.map((model) => {

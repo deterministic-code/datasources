@@ -1,7 +1,7 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
 import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
-import { writeInclusionOf } from "../../../typescript/code-generators/src/sql/common/write-inclusion.ts";
+import { writeInclusionOf } from "@deterministic-code/datasources-code-generators/sql/common/write-inclusion";
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";

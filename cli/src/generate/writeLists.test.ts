@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RepositoryModel } from "./RepositoryModel.ts";
-import { writeList } from "./writeLists.ts";
+import { dialectsOf, writeList } from "./writeLists.ts";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { datasourceEnginesOf } from "./datasourceYaml.ts";
 
-const model = (writesByProvider?: RepositoryModel["writesByProvider"]): RepositoryModel => ({
+const model = (optionsByProvider?: RepositoryModel["optionsByProvider"]): RepositoryModel => ({
   specName: "item",
   typeName: "Item",
   typeHome: "datasource",
@@ -15,28 +15,32 @@ const model = (writesByProvider?: RepositoryModel["writesByProvider"]): Reposito
   readProperties: ["Id", "Name"],
   createProperties: ["Name"],
   updateProperties: ["Name"],
-  writesByProvider,
+  optionsByProvider,
   enrichments: [],
 });
 
-describe("writeList", () => {
-  it("emits rust match arms for engines other than mysql and postgres", () => {
-    const rust = writeList(
-      "rust",
-      model({
-        sqlserver: { create: ["Name"], update: ["Name"] },
-        mysql: { create: [], update: ["Name"] },
-      }),
-      "create",
-    );
-    expect(rust).toContain('"sqlserver" => vec!["Name".into()]');
-    expect(writeList("rust", model(), "update")).toContain('vec!["Name".into()]');
-  });
+const dialect = (create: string[]): RepositoryModel => ({
+  ...model(),
+  createProperties: create,
+});
 
-  it("falls back to the model list when sqlite is absent", () => {
-    expect(
-      writeList("csharp", model({ mysql: { create: [], update: ["Name"] } }), "create"),
-    ).toContain('_ => ["Name"]');
+describe("writeList", () => {
+  it("quotes a rust vec", () => {
+    expect(writeList("rust", ["Name"])).toBe('vec!["Name".into()]');
+    expect(writeList("csharp", ["Name"])).toBe('["Name"]');
+  });
+});
+
+describe("dialectsOf", () => {
+  it("keeps engines whose options differ from the default", () => {
+    const dialects = dialectsOf(
+      model({
+        sqlite: model(),
+        mysql: dialect([]),
+        postgres: dialect(["Id", "Name"]),
+      }),
+    );
+    expect(dialects.map(([engine]) => engine)).toEqual(["mysql", "postgres"]);
   });
 });
 

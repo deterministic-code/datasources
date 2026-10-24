@@ -8,6 +8,7 @@ fn where_sql(clause: &dyn crate::IWhere) -> String {
 
 #[allow(dead_code)]
 mod bulk_write_strategy;
+mod repository_builder_options_factory;
 mod command;
 mod connection;
 mod contact;

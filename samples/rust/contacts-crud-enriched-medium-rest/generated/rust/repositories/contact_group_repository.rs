@@ -1,4 +1,4 @@
-use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};
+use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};
 use std::sync::Arc;
 use std::ops::Deref;
 
@@ -10,13 +10,44 @@ pub struct ContactGroupRepository {
 
 impl ContactGroupRepository {
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = CRUDRepositoryOptions::default();
-        options.entity = "ContactGroup".into();
-        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("ContactGroup".into(), "contact_groups".into()),
-        ])));
-        options.ids = vec!["id".into()];
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into()];
+        let options = CRUDRepositoryBuilder::new()
+            .add({
+                let mut options = CRUDRepositoryOptions::default();
+                options.entity = "ContactGroup".into();
+                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+                    ("ContactGroup".into(), "contact_groups".into()),
+                ])));
+                options.ids = vec!["id".into()];
+                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into()];
+                options.create_properties = Some(vec!["uuid".into(), "version".into(), "name".into(), "description".into()]);
+                options.update_properties = Some(vec!["uuid".into(), "version".into(), "name".into(), "description".into()]);
+                options
+            })
+            .add_for("mysql", {
+                let mut options = CRUDRepositoryOptions::default();
+                options.entity = "ContactGroup".into();
+                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+                    ("ContactGroup".into(), "contact_groups".into()),
+                ])));
+                options.ids = vec!["id".into()];
+                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into()];
+                options.create_properties = Some(vec!["name".into(), "description".into()]);
+                options.update_properties = Some(vec!["uuid".into(), "version".into(), "name".into(), "description".into()]);
+                options
+            })
+            .add_for("postgres", {
+                let mut options = CRUDRepositoryOptions::default();
+                options.entity = "ContactGroup".into();
+                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+                    ("ContactGroup".into(), "contact_groups".into()),
+                ])));
+                options.ids = vec!["id".into()];
+                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "name".into(), "description".into()];
+                options.create_properties = Some(vec!["name".into(), "description".into()]);
+                options.update_properties = Some(vec!["uuid".into(), "version".into(), "name".into(), "description".into()]);
+                options
+            })
+            .for_connection(connection.as_ref())?;
         let contact = Arc::new(super::contact_repository::ContactRepository::new(Arc::clone(&connection))?);
         let contact_group_member = Arc::new(super::contact_group_member_repository::contact_group_member_repository(Arc::clone(&connection))?);
         let mut repo = CRUDRepository::new(Arc::clone(&connection), options)?;

@@ -1,12 +1,23 @@
 import type { RepositoryModel } from "./RepositoryModel.ts";
 
-const quote = (value: string): string => value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
-
-const namesOf = (model: RepositoryModel, kind: "create" | "update"): string[] =>
-  kind === "create" ? model.createProperties : model.updateProperties;
-
 const same = (left: string[], right: string[]): boolean =>
   left.length === right.length && left.every((name, index) => name === right[index]);
+
+const samePairs = (left: RepositoryModel["propertyMappings"], right: RepositoryModel["propertyMappings"]): boolean =>
+  left.length === right.length && left.every((pair, index) => pair.from === right[index]?.from && pair.to === right[index]?.to);
+
+export const sameOptions = (left: RepositoryModel, right: RepositoryModel): boolean =>
+  left.table === right.table &&
+  same(left.ids, right.ids) &&
+  same(left.readProperties, right.readProperties) &&
+  same(left.createProperties, right.createProperties) &&
+  same(left.updateProperties, right.updateProperties) &&
+  samePairs(left.propertyMappings, right.propertyMappings);
+
+export const dialectsOf = (model: RepositoryModel): Array<[string, RepositoryModel]> =>
+  Object.entries(model.optionsByProvider ?? {}).filter(([, planned]) => !sameOptions(model, planned));
+
+export const quote = (value: string): string => value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
 
 const csharpList = (names: string[]): string =>
   `[${names.map((name) => `"${quote(name)}"`).join(", ")}]`;
@@ -17,27 +28,5 @@ const tsList = (names: string[]): string =>
 const rustList = (names: string[]): string =>
   `vec![${names.map((name) => `"${quote(name)}".into()`).join(", ")}]`;
 
-const fallback = (model: RepositoryModel, kind: "create" | "update"): string[] =>
-  model.writesByProvider?.sqlite?.[kind] ?? namesOf(model, kind);
-
-export const writeList = (dialect: "csharp" | "typescript" | "rust", model: RepositoryModel, kind: "create" | "update"): string => {
-  const by = model.writesByProvider;
-  const listed = namesOf(model, kind);
-  if (by === undefined || Object.values(by).every((item) => same(item[kind], listed)))
-    return dialect === "csharp" ? csharpList(listed) : dialect === "typescript" ? tsList(listed) : rustList(listed);
-  const fallbackList = fallback(model, kind);
-  return dialect === "csharp"
-    ? `connection.Provider switch\n        {\n${Object.entries(by)
-        .filter(([engine]) => engine !== "sqlite")
-        .map(([engine, item]) => `            "${quote(engine)}" => ${csharpList(item[kind])},`)
-        .join("\n")}\n            _ => ${csharpList(fallbackList)},\n        }`
-    : dialect === "typescript"
-      ? `({ ${Object.entries(by)
-          .filter(([engine]) => engine !== "sqlite")
-          .map(([engine, item]) => `${engine}: ${tsList(item[kind])}`)
-          .join(", ")} }[connection.provider] ?? ${tsList(fallbackList)})`
-      : `match connection.provider() {\n        ${Object.entries(by)
-          .filter(([engine]) => engine !== "sqlite")
-          .map(([engine, item]) => `${engine === "mysql" || engine === "postgres" ? `"${engine}"` : `"${quote(engine)}"`} => ${rustList(item[kind])},`)
-          .join("\n        ")}\n        _ => ${rustList(fallbackList)},\n    }`;
-};
+export const writeList = (dialect: "csharp" | "typescript" | "rust", names: string[]): string =>
+  dialect === "csharp" ? csharpList(names) : dialect === "typescript" ? tsList(names) : rustList(names);

@@ -9,6 +9,8 @@ pub fn contact_change_log_repository(connection: Arc<dyn Connection>) -> Result<
     ])));
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()];
+    options.create_properties = Some(vec!["occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()]);
+    options.update_properties = Some(vec!["occurred_at".into(), "contact_id".into(), "changed_by".into(), "change_summary".into()]);
     CRUDRepository::new(connection, options)
 }
 

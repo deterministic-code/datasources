@@ -1,9 +1,33 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, childField, children as childModels, isLinked, pluralCamel, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
-import { writeList } from "./writeLists.ts";
+import { dialectsOf, quote, writeList } from "./writeLists.ts";
 
-const quote = (value: string): string => value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
+const tsOptions = (model: RepositoryModel): string => {
+  const mapping = model.propertyMappings.length === 0
+    ? ""
+    : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
+  return `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}ids: ${writeList("typescript", model.ids)}, createProperties: ${writeList("typescript", model.createProperties)}, updateProperties: ${writeList("typescript", model.updateProperties)}, readProperties: ${writeList("typescript", model.readProperties)} }`;
+};
+
+const tsReadonly = (model: RepositoryModel): string => {
+  const mapping = model.propertyMappings.length === 0
+    ? ""
+    : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
+  return `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}readProperties: ${writeList("typescript", model.readProperties)} }`;
+};
+
+const tsOptionsExpr = (model: RepositoryModel): string =>
+  dialectsOf(model).length === 0 ? tsOptions(model) : "options(connection)";
+
+const tsOptionsFn = (model: RepositoryModel): string => {
+  const dialects = dialectsOf(model);
+  return dialects.length === 0
+    ? ""
+    : `const options = (connection: IConnection) =>\n  new CRUDRepositoryBuilder<${model.typeName}>()\n    .add(${tsOptions(model)})${dialects
+      .map(([engine, planned]) => `\n    .add("${quote(engine)}", ${tsOptions(planned)})`)
+      .join("")}\n    .for(connection);\n\n`;
+};
 
 const enrichment = (item: PlannedEnrichment, host: "this" | "repo"): string => {
   const via = host === "this"
@@ -18,7 +42,8 @@ const enrichment = (item: PlannedEnrichment, host: "this" | "repo"): string => {
   return `${host}.addEnriched({ destinationProperty: "${quote(item.destination)}", sourceProperty: "${quote(item.source)}", relatedKey: "${quote(item.relatedKey)}"${related}, type: "${type}" }, ${via});`;
 };
 
-const createReadonly = (model: RepositoryModel, options: string): string => {
+const createReadonly = (model: RepositoryModel): string => {
+  const options = dialectsOf(model).length === 0 ? tsReadonly(model) : "options(connection)";
   const children = childModels(model);
   if (children.length === 0 && model.enrichments.length === 0)
     return `  static createReadonly = (connection: IConnection) => new ReadonlyRepository<${model.typeName}>(connection, ${options});`;
@@ -47,14 +72,6 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
   const files = models.map((model) => {
     const folder = model.typeHome === "view" ? "views" : "datasource";
     const children = childModels(model);
-    const mapping = model.propertyMappings.length === 0
-      ? ""
-      : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
-    const head = `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}`;
-    const writes = `createProperties: ${writeList("typescript", model, "create")}, updateProperties: ${writeList("typescript", model, "update")}`;
-    const read = `readProperties: [${model.readProperties.map((name) => `"${quote(name)}"`).join(", ")}] }`;
-    const crudOptions = `${head}ids: [${model.ids.map((id) => `"${quote(id)}"`).join(", ")}], ${writes}, ${read}`;
-    const readonlyOptions = `${head}${read}`;
     const fields = children.map((child) => `  readonly ${childField("typescript", child.specName, child.typeName)}: ${childClass(child.typeName)};`);
     const wrap = occWrap(model);
     const lines = [
@@ -62,12 +79,13 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
       ...model.enrichments.map((item) => `    ${enrichment(item, "this")}`),
     ];
     const imports = children.map((child) => `import { ${childClass(child.typeName)} } from "${repoImport(child.specName)}";`);
+    const builder = dialectsOf(model).length === 0 ? "" : "CRUDRepositoryBuilder, ";
     const core = model.optimisticConcurrency === undefined
-      ? `import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";`
-      : `import { CRUDRepository, DatasourceError, DictionaryMapper, eq, ReadonlyRepository, Where, type IConnection } from "@deterministic-code/datasources";`;
+      ? `import { CRUDRepository, ${builder}DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";`
+      : `import { CRUDRepository, ${builder}DatasourceError, DictionaryMapper, eq, ReadonlyRepository, Where, type IConnection } from "@deterministic-code/datasources";`;
     return content(
       repositoryFile("typescript", model),
-      `import type { ${model.typeName} } from "../types/generated/${folder}/${casing.convertFileName(model.specName)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\nexport class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${crudOptions});\n${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model, readonlyOptions)}\n}\n`,
+      `import type { ${model.typeName} } from "../types/generated/${folder}/${casing.convertFileName(model.specName)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\n${tsOptionsFn(model)}export class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${tsOptionsExpr(model)});\n${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model)}\n}\n`,
     );
   });
   const registerImports = models.map((model) => `import { ${childClass(model.typeName)} } from "${repoImport(model.specName)}";`);

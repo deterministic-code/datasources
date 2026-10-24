@@ -1,10 +1,17 @@
-import type { Contact } from "../types/generated/views/contact.ts";
-import { CRUDRepository, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
-import { AddressRepository } from "./address-repository.ts";
-import { PhoneRepository } from "./phone-repository.ts";
-import { ContactSettingsRepository } from "./contact-settings-repository.ts";
-import { ContactPreferencesRepository } from "./contact-preferences-repository.ts";
-import { ContactSourceRepository } from "./contact-source-repository.ts";
+import type { Contact } from "../types/generated/views/contact";
+import { CRUDRepository, CRUDRepositoryBuilder, DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";
+import { AddressRepository } from "./address-repository";
+import { PhoneRepository } from "./phone-repository";
+import { ContactSettingsRepository } from "./contact-settings-repository";
+import { ContactPreferencesRepository } from "./contact-preferences-repository";
+import { ContactSourceRepository } from "./contact-source-repository";
+
+const options = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<Contact>()
+    .add({ entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), ids: ["id"], createProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"], updateProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"], readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
+    .add("mysql", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), ids: ["id"], createProperties: ["contactSourceId", "firstName", "lastName", "email", "notes"], updateProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"], readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
+    .add("postgres", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), ids: ["id"], createProperties: ["contactSourceId", "firstName", "lastName", "email", "notes"], updateProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"], readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
+    .for(connection);
 
 export class ContactRepository extends CRUDRepository<Contact> {
   readonly address: AddressRepository;
@@ -13,7 +20,7 @@ export class ContactRepository extends CRUDRepository<Contact> {
   readonly contactPreferences: ContactPreferencesRepository;
   readonly contactSource: ContactSourceRepository;
   constructor(connection: IConnection) {
-    super(connection, { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), ids: ["id"], readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] });
+    super(connection, options(connection));
     this.address = new AddressRepository(connection);
     this.phone = new PhoneRepository(connection);
     this.contactSettings = new ContactSettingsRepository(connection);
@@ -26,7 +33,7 @@ export class ContactRepository extends CRUDRepository<Contact> {
     this.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, this.contactSource);
   }
   static createReadonly(connection: IConnection) {
-    const repo = new ReadonlyRepository<Contact>(connection, { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), ids: ["id"], readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] });
+    const repo = new ReadonlyRepository<Contact>(connection, options(connection));
     const address = new AddressRepository(connection);
     const phone = new PhoneRepository(connection);
     const contactSettings = new ContactSettingsRepository(connection);

@@ -5,10 +5,14 @@ use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::readonly_repository_builder::assemble;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
+use crate::repository_builder_options_factory::RepositoryBuilderOptionsFactory;
 use crate::result::Result;
 use std::sync::Arc;
 
-pub struct CRUDRepositoryBuilder;
+#[derive(Default)]
+pub struct CRUDRepositoryBuilder {
+    factory: RepositoryBuilderOptionsFactory,
+}
 
 pub(crate) fn write_statements(read: &ReadonlyRepositoryStatements) -> CRUDRepositoryStatements {
     CRUDRepositoryStatements::new(
@@ -19,6 +23,24 @@ pub(crate) fn write_statements(read: &ReadonlyRepositoryStatements) -> CRUDRepos
 }
 
 impl CRUDRepositoryBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add(mut self, options: CRUDRepositoryOptions) -> Self {
+        self.factory.add(options);
+        self
+    }
+
+    pub fn add_for(mut self, dialect: impl Into<String>, options: CRUDRepositoryOptions) -> Self {
+        self.factory.add_for(dialect, options);
+        self
+    }
+
+    pub fn for_connection(&self, connection: &dyn Connection) -> Result<CRUDRepositoryOptions> {
+        self.factory.for_provider(connection.provider())
+    }
+
     pub fn parts(
         connection: Arc<dyn Connection>,
         options: CRUDRepositoryOptions,

@@ -8,7 +8,7 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
     public ContactPreferencesRepository ContactPreferences { get; }
     public ContactSourceRepository ContactSource { get; }
 
-    public ContactRepository(IConnection connection) : base(connection, Options())
+    public ContactRepository(IConnection connection) : base(connection, Options(connection))
     {
         Address = new AddressRepository(connection);
         Phone = new PhoneRepository(connection);
@@ -24,7 +24,7 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
 
     public static IReadonlyRepository<Backend.Types.View.Contact> CreateReadonly(IConnection connection)
     {
-        var repo = new ReadonlyRepository<Backend.Types.View.Contact>(connection, Options());
+        var repo = new ReadonlyRepository<Backend.Types.View.Contact>(connection, Options(connection));
         var Address = new AddressRepository(connection);
         var Phone = new PhoneRepository(connection);
         var ContactSettings = new ContactSettingsRepository(connection);
@@ -38,24 +38,73 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
         return repo;
     }
 
-    static CRUDRepositoryOptions<Backend.Types.View.Contact> Options() => new()
-    {
-        Entity = "Contact",
-        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
-        PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
-        {
-            ["Id"] = "id",
-            ["Uuid"] = "uuid",
-            ["Created"] = "created",
-            ["Updated"] = "updated",
-            ["Version"] = "version",
-            ["ContactSourceId"] = "contact_source_id",
-            ["FirstName"] = "first_name",
-            ["LastName"] = "last_name",
-            ["Email"] = "email",
-            ["Notes"] = "notes",
-        }),
-        Ids = ["Id"],
-        ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
-    };
+    static CRUDRepositoryOptions<Backend.Types.View.Contact> Options(IConnection connection) =>
+        new CRUDRepositoryBuilder<Backend.Types.View.Contact>()
+            .Add(new()
+            {
+                Entity = "Contact",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["ContactSourceId"] = "contact_source_id",
+                    ["FirstName"] = "first_name",
+                    ["LastName"] = "last_name",
+                    ["Email"] = "email",
+                    ["Notes"] = "notes",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                CreateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+            })
+            .Add("mysql", new()
+            {
+                Entity = "Contact",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["ContactSourceId"] = "contact_source_id",
+                    ["FirstName"] = "first_name",
+                    ["LastName"] = "last_name",
+                    ["Email"] = "email",
+                    ["Notes"] = "notes",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                CreateProperties = ["ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+            })
+            .Add("postgres", new()
+            {
+                Entity = "Contact",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["ContactSourceId"] = "contact_source_id",
+                    ["FirstName"] = "first_name",
+                    ["LastName"] = "last_name",
+                    ["Email"] = "email",
+                    ["Notes"] = "notes",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                CreateProperties = ["ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+            })
+            .For(connection);
 }
