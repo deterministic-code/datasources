@@ -10,7 +10,7 @@ pub fn contacts_view() -> TypeMap {
             ("email".into(), TypeMapField::column("Email")),
             (
                 "contact_source_name".into(),
-                TypeMapField::column("ContactSourceName"),
+                TypeMapField::column("Name"),
             ),
             (
                 "contact_type_name".into(),

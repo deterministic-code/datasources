@@ -20,6 +20,8 @@ use super::create_create_stored_procedure_statement::CreateCreateStoredProcedure
 use super::create_create_stored_procedure_statement_text_renderer::CreateCreateStoredProcedureStatementTextRenderer;
 use super::create_read_stored_procedure_statement::CreateReadStoredProcedureStatement;
 use super::create_read_stored_procedure_statement_text_renderer::CreateReadStoredProcedureStatementTextRenderer;
+use super::create_nested_read_stored_procedure_statement::CreateNestedReadStoredProcedureStatement;
+use super::create_nested_read_stored_procedure_statement_text_renderer::CreateNestedReadStoredProcedureStatementTextRenderer;
 use super::create_update_stored_procedure_statement::CreateUpdateStoredProcedureStatement;
 use super::create_update_stored_procedure_statement_text_renderer::CreateUpdateStoredProcedureStatementTextRenderer;
 use super::create_delete_stored_procedure_statement::CreateDeleteStoredProcedureStatement;
@@ -197,6 +199,13 @@ pub trait StatementVisitor: Send + Sync {
         _text: &StatementTextRenderer,
     ) -> String {
         CreateReadStoredProcedureStatementTextRenderer.render(statement)
+    }
+    fn visit_create_nested_read_stored_procedure(
+        &self,
+        statement: &CreateNestedReadStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        CreateNestedReadStoredProcedureStatementTextRenderer.render(statement)
     }
     fn visit_create_update_stored_procedure(
         &self,

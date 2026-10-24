@@ -1,5 +1,6 @@
 use crate::builders::{Join, JoinKind};
 use crate::i_where::IWhere;
+use crate::select_field_aliases::apply_select_field_alias;
 use crate::select_statement::SelectStatement;
 use crate::where_text::WhereText;
 use super::order_by::OrderBy;
@@ -18,7 +19,15 @@ impl<'a> SelectStatementTextRenderer<'a> {
         let fields = if statement.fields.is_empty() {
             "*".to_string()
         } else {
-            statement.fields.join(", ")
+            statement
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(index, field)| {
+                    apply_select_field_alias(field, statement.aliases.get(index).and_then(|item| item.as_deref()))
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
         };
         let distinct = if statement.distinct { "DISTINCT " } else { "" };
         format!(

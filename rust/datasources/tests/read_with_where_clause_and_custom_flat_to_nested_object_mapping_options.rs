@@ -148,10 +148,10 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
         ..SelectStatementOptions::new(
             "Parent",
             &[
-                "Parent.Id AS Id",
-                "Parent.TypeName AS TypeName",
-                "Child.Id AS ChildId",
-                "Child.Label AS Label",
+                "Parent.Id",
+                "Parent.TypeName",
+                "Child.Id",
+                "Child.Label",
             ],
         )
     });

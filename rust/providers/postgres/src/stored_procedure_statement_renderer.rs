@@ -1,8 +1,9 @@
 use datasources::{
     CreateBulkCreateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement,
     CreateBulkUpdateStoredProcedureStatement, CreateCreateStoredProcedureStatement,
-    CreateDeleteStoredProcedureStatement, CreateReadStoredProcedureStatement,
-    CreateUpdateStoredProcedureStatement, RoutineParameter,
+    CreateDeleteStoredProcedureStatement, CreateNestedReadStoredProcedureStatement,
+    CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
+    DefaultStatementTextRenderer, RoutineParameter,
 };
 
 pub struct PostgresStoredProcedureStatementRenderer;
@@ -42,6 +43,22 @@ impl PostgresStoredProcedureStatementRenderer {
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
             statement.key(),
+        )
+    }
+
+    pub fn render_nested_read(&self, statement: &CreateNestedReadStoredProcedureStatement) -> String {
+        let select = DefaultStatementTextRenderer::instance().render(&statement.select());
+        let signature = statement
+            .arguments()
+            .iter()
+            .map(|argument| format!("{} {}", argument.parameter.name, argument.parameter.r#type))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "CREATE OR REPLACE FUNCTION {}({}) RETURNS SETOF RECORD\nLANGUAGE sql AS $$ {}; $$",
+            statement.name(),
+            signature,
+            select
         )
     }
 
@@ -175,5 +192,40 @@ impl PostgresStoredProcedureStatementRenderer {
             statement.key(),
             statement.key_type(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datasources::{
+        NestedSelectBuilder, NestedSelectBuilderOptions, NestedSelectType, NestedWhereArgument,
+    };
+
+    #[test]
+    fn renders_nested_read() {
+        let nested = NestedSelectBuilder::build(
+            &NestedSelectType::new(
+                "Contact",
+                "Id",
+                vec!["Id".into(), "Email".into()],
+                vec![],
+            ),
+            NestedSelectBuilderOptions::default(),
+        );
+        let sql = PostgresStoredProcedureStatementRenderer.render_nested_read(
+            &CreateNestedReadStoredProcedureStatement::new(
+                "ReadContactsByEmail",
+                nested,
+                vec![NestedWhereArgument::new(
+                    "Contact.Email",
+                    RoutineParameter {
+                        name: "email".into(),
+                        r#type: "varchar".into(),
+                    },
+                )],
+            ),
+        );
+        assert!(sql.contains("RETURNS SETOF RECORD"));
     }
 }

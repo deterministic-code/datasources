@@ -1693,6 +1693,7 @@ var conn = new SqliteConnection(new SqliteConnectionOptions
 });
 await conn.Open();
 var command = new SqliteCommand(conn);
+await ContactSchema.Apply(conn, "sqlite", new SqliteDriver());
 foreach (var sql in StatementsOf(File.ReadAllText(SeedPath())))
     await command.Execute(new Native(sql));
 
@@ -1760,14 +1761,14 @@ var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/contacts.rs#L130-L274)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/contacts.rs#L145-L288)
 
 ```rust
 let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
 conn.open().await.unwrap();
+register_sql();
 let command = SqliteCommand::new(conn.clone());
-let sql = statements_of(&contact_seed("sqlite"));
-apply_sql(&command, &sql).await.unwrap();
+apply_sql(&command, &statements_of(&contact_schema("sqlite"))).await.unwrap();
 
 let field = super::converters::field;
 let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];
@@ -1882,12 +1883,13 @@ let loaded = contacts_repo
 }
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/contacts.repository.integration.test.ts#L94-L135)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/sqlite/tests/contacts.repository.integration.test.ts#L95-L136)
 
 ```typescript
 const connection = SqliteConnection.from({ DATASOURCE_URL: "sqlite:///:memory:" });
 await connection.open();
 const command = new SqliteCommand(connection);
+await applyContacts(connection, "sqlite", new SqliteDriver());
 for (const sql of statementsOf(readFileSync(seedPath, "utf8")))
   await command.executeNative(new Native(sql));
 
@@ -1923,22 +1925,6 @@ const loaded = await contactsRepo.readSingle(new Where(new Operator.Equals("Id",
   addresses: ['9 Extra'],
   phones: ['555-extra']
 }
-```
-
-Schema: [contacts](docs/examples.md#contacts)
-
-```sql
-CREATE TABLE contact_source (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, name string NOT NULL, description string, CONSTRAINT pk_contact_source PRIMARY KEY (id));
-CREATE TABLE contact_type (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, name string NOT NULL, description string, CONSTRAINT pk_contact_type PRIMARY KEY (id));
-CREATE TABLE contacts_base (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, contact_source_id int NOT NULL, contact_type_id int NOT NULL, first_name string NOT NULL, last_name string NOT NULL, email string, notes string, CONSTRAINT pk_contacts_base PRIMARY KEY (id), CONSTRAINT fk_contacts_source FOREIGN KEY (contact_source_id) REFERENCES contact_source (id), CONSTRAINT fk_contacts_type FOREIGN KEY (contact_type_id) REFERENCES contact_type (id));
-CREATE TABLE address_type (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, name string NOT NULL, description string, CONSTRAINT pk_address_type PRIMARY KEY (id));
-CREATE TABLE phone_type (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, name string NOT NULL, description string, CONSTRAINT pk_phone_type PRIMARY KEY (id));
-CREATE TABLE address (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, contact_id int NOT NULL, address_type_id int NOT NULL, line1 string NOT NULL, line2 string, city string NOT NULL, region string, postal_code string, country string, CONSTRAINT pk_address PRIMARY KEY (id), CONSTRAINT fk_address_contact FOREIGN KEY (contact_id) REFERENCES contacts_base (id), CONSTRAINT fk_address_type FOREIGN KEY (address_type_id) REFERENCES address_type (id));
-CREATE TABLE phone (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, contact_id int NOT NULL, phone_type_id int NOT NULL, number string NOT NULL, CONSTRAINT pk_phone PRIMARY KEY (id), CONSTRAINT fk_phone_contact FOREIGN KEY (contact_id) REFERENCES contacts_base (id), CONSTRAINT fk_phone_type FOREIGN KEY (phone_type_id) REFERENCES phone_type (id));
-CREATE TABLE contact_groups_base (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, name string NOT NULL, description string, CONSTRAINT pk_contact_groups_base PRIMARY KEY (id));
-CREATE TABLE contact_group_member (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, contact_id int NOT NULL, contact_group_id int NOT NULL, CONSTRAINT pk_contact_group_member PRIMARY KEY (id), CONSTRAINT fk_member_contact FOREIGN KEY (contact_id) REFERENCES contacts_base (id), CONSTRAINT fk_member_group FOREIGN KEY (contact_group_id) REFERENCES contact_groups_base (id), CONSTRAINT uq_contact_group_member UNIQUE (contact_id, contact_group_id));
-CREATE TABLE legacy_contact (key string, first_name string NOT NULL, last_name string NOT NULL, email string, imported_at datetime, CONSTRAINT pk_legacy_contact PRIMARY KEY (key));
-CREATE TABLE contact_change_log (id int, uuid uuid NOT NULL, created datetime NOT NULL, updated datetime NOT NULL, version binary NOT NULL, occurred_at datetime NOT NULL, contact_id int NOT NULL, changed_by string NOT NULL, change_summary string NOT NULL, CONSTRAINT pk_contact_change_log PRIMARY KEY (id))
 ```
 
 ### Type mapping

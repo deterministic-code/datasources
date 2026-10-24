@@ -7,7 +7,7 @@ use datasources::{
     AlterTableStatement, CreateBulkCreateStoredProcedureStatement,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
-    CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
+    CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
     DropTableStatement, DropTriggerStatement, StatementTextRenderer, StatementVisitor,
 };
@@ -68,6 +68,9 @@ impl StatementVisitor for OracleStatementRenderer {
     }
     fn visit_create_read_stored_procedure(&self, statement: &CreateReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         OracleStoredProcedureStatementRenderer.render_read(statement)
+    }
+    fn visit_create_nested_read_stored_procedure(&self, statement: &CreateNestedReadStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
+        OracleStoredProcedureStatementRenderer.render_nested_read(statement)
     }
     fn visit_create_update_stored_procedure(&self, statement: &CreateUpdateStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         OracleStoredProcedureStatementRenderer.render_update(statement)

@@ -1,26 +1,23 @@
 pub struct Aggregate;
 
 impl Aggregate {
-    pub fn count(column: &str, alias: Option<&str>) -> String {
-        sql("COUNT", column, alias)
+    pub fn count(column: &str) -> String {
+        sql("COUNT", column)
     }
 
-    pub fn sum(column: &str, alias: Option<&str>) -> String {
-        sql("SUM", column, alias)
+    pub fn sum(column: &str) -> String {
+        sql("SUM", column)
     }
 
-    pub fn min(column: &str, alias: Option<&str>) -> String {
-        sql("MIN", column, alias)
+    pub fn min(column: &str) -> String {
+        sql("MIN", column)
     }
 
-    pub fn max(column: &str, alias: Option<&str>) -> String {
-        sql("MAX", column, alias)
+    pub fn max(column: &str) -> String {
+        sql("MAX", column)
     }
 }
 
-fn sql(op: &str, column: &str, alias: Option<&str>) -> String {
-    match alias {
-        Some(name) => format!("{op}({column}) AS {name}"),
-        None => format!("{op}({column})"),
-    }
+fn sql(op: &str, column: &str) -> String {
+    format!("{op}({column})")
 }

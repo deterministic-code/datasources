@@ -34,6 +34,9 @@ internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : St
     public override string Visit(CreateReadStoredProcedureStatement statement) =>
         new PostgresStoredProcedureStatementRenderer().Render(statement);
 
+    public override string Visit(CreateNestedReadStoredProcedureStatement statement) =>
+        new PostgresStoredProcedureStatementRenderer().Render(statement);
+
     public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
         new PostgresStoredProcedureStatementRenderer().Render(statement);
 

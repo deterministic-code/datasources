@@ -10,6 +10,7 @@ pub struct SelectStatement {
     pub distinct: bool,
     pub table: String,
     pub fields: Vec<String>,
+    pub aliases: Vec<Option<String>>,
     pub joins: Vec<Join>,
     pub group_by: Vec<String>,
     pub having: Option<Box<dyn IWhere>>,
@@ -28,6 +29,11 @@ impl SelectStatement {
                 .fields
                 .iter()
                 .map(|field| (*field).to_string())
+                .collect(),
+            aliases: options
+                .aliases
+                .iter()
+                .map(|alias| alias.map(str::to_string))
                 .collect(),
             joins: options.joins.to_vec(),
             group_by: options

@@ -16,6 +16,7 @@ mod datasource;
 mod datasource_factory;
 mod datasource_url_parser;
 mod statement_compile;
+mod nested_select_builder;
 mod statement_mappers;
 mod statement_parser;
 mod transaction;
@@ -1163,8 +1164,8 @@ fn statements_and_builders() {
         })),
         "SELECT id FROM users"
     );
-    let count = Aggregate::count("*", Some("n"));
-    let total = Aggregate::sum("amount", Some("total"));
+    let count = Aggregate::count("*");
+    let total = Aggregate::sum("amount");
     let grouped_fields = ["status", count.as_str(), total.as_str()];
     let grouped = SelectStatement::new(SelectStatementOptions {
         where_clause: Some(&Where::new(Operator::equals("status", "open"))),
@@ -1176,6 +1177,7 @@ fn statements_and_builders() {
         group_by: &["status"],
         order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
         limit: Some(10),
+        aliases: &[None, Some("n"), Some("total")],
         ..SelectStatementOptions::new("orders", &grouped_fields)
     });
     assert_eq!(
@@ -1187,8 +1189,8 @@ fn statements_and_builders() {
         ..SelectStatementOptions::new("users", &["id"])
     });
     assert_eq!(stmt_text(&by_status), "SELECT id FROM users GROUP BY id");
-    let min_n = Aggregate::min("n", None);
-    let max_n = Aggregate::max("n", None);
+    let min_n = Aggregate::min("n");
+    let max_n = Aggregate::max("n");
     let bound_fields = [min_n.as_str(), max_n.as_str()];
     let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
     assert_eq!(stmt_text(&bounds), "SELECT MIN(n), MAX(n) FROM users");

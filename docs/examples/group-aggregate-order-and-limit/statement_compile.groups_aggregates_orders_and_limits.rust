@@ -1,5 +1,5 @@
-let count = Aggregate::count("*", Some("n"));
-let total = Aggregate::sum("amount", Some("total"));
+let count = Aggregate::count("*");
+let total = Aggregate::sum("amount");
 let grouped_fields = ["status", count.as_str(), total.as_str()];
 let where_clause = Where::new(Operator::equals("status", "open"));
 let grouped = SelectStatement::new(SelectStatementOptions {
@@ -12,5 +12,6 @@ let grouped = SelectStatement::new(SelectStatementOptions {
     group_by: &["status"],
     order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
     limit: Some(10),
+    aliases: &[None, Some("n"), Some("total")],
     ..SelectStatementOptions::new("orders", &grouped_fields)
 });

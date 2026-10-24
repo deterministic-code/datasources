@@ -10,6 +10,7 @@ mod generate_procedures;
 mod generate_sql;
 mod generate_stored_procedures;
 mod mapping;
+mod nested_select_types;
 mod procedure_fields;
 mod procedure_spec;
 mod procedure_specs;
@@ -28,6 +29,7 @@ mod yaml_cursor;
 
 pub use generate_entry::GenerateEntry;
 pub use generate_sql::generate_sql;
+pub use nested_select_types::from_spec as nested_select_from_spec;
 pub use generate_stored_procedures::generate_stored_procedures;
 pub use sql_dialect::register_dialect;
 pub use sql_generate_driver::SqlGenerateDriver;

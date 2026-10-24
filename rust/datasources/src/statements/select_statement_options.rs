@@ -5,6 +5,7 @@ use crate::statements::OrderBy;
 pub struct SelectStatementOptions<'a> {
     pub table: &'a str,
     pub fields: &'a [&'a str],
+    pub aliases: &'a [Option<&'a str>],
     pub where_clause: Option<&'a dyn IWhere>,
     pub joins: &'a [Join],
     pub group_by: &'a [&'a str],
@@ -20,6 +21,7 @@ impl<'a> SelectStatementOptions<'a> {
         Self {
             table,
             fields,
+            aliases: &[],
             where_clause: None,
             joins: &[],
             group_by: &[],

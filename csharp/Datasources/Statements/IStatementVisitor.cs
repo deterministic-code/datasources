@@ -23,6 +23,7 @@ public interface IStatementVisitor
     string Visit(DropRoutineStatement statement);
     string Visit(CreateCreateStoredProcedureStatement statement);
     string Visit(CreateReadStoredProcedureStatement statement);
+    string Visit(CreateNestedReadStoredProcedureStatement statement);
     string Visit(CreateUpdateStoredProcedureStatement statement);
     string Visit(CreateDeleteStoredProcedureStatement statement);
     string Visit(CreateBulkCreateStoredProcedureStatement statement);

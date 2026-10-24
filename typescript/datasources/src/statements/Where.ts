@@ -106,6 +106,7 @@ const rewriteQuery = (
         distinct: query.distinct,
         table: query.table,
         fields: query.fields,
+        aliases: query.aliases,
         where: rewriteWhere(query.where, column, value),
         joins: query.joins.map((join) =>
           join.on ? { ...join, on: rewrite(join.on, column, value) } : join,

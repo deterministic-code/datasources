@@ -1,6 +1,7 @@
 import type { IWhere } from "./IWhere.ts";
 import type { Join, JoinKind } from "./Join.ts";
 import { orderText, type OrderBy } from "./OrderBy.ts";
+import { applySelectFieldAlias } from "../SelectFieldAliases.ts";
 import type { SelectStatement } from "./SelectStatement.ts";
 import type { StatementTextRenderer } from "./StatementTextRenderer.ts";
 import { Where } from "./Where.ts";
@@ -10,7 +11,11 @@ export class SelectStatementTextRenderer {
 
   render(statement: SelectStatement): string {
     return `SELECT ${statement.distinct ? "DISTINCT " : ""}${
-      statement.fields.length === 0 ? "*" : statement.fields.join(", ")
+      statement.fields.length === 0
+        ? "*"
+        : statement.fields
+            .map((field, i) => applySelectFieldAlias(field, statement.aliases[i]))
+            .join(", ")
     } FROM ${statement.table}${this.joinSql(statement.joins)}${this.whereSql(statement.where)}${this.groupSql(statement.groupBy)}${this.havingSql(statement.having)}${this.orderSql(statement.orderBy)}${this.limit(statement.limit)}${this.offset(statement.offset)}`;
   }
 

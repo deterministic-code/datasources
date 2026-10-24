@@ -1,8 +1,9 @@
 use datasources::{
     CreateBulkCreateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement,
     CreateBulkUpdateStoredProcedureStatement, CreateCreateStoredProcedureStatement,
-    CreateDeleteStoredProcedureStatement, CreateReadStoredProcedureStatement,
-    CreateUpdateStoredProcedureStatement, RoutineParameter,
+    CreateDeleteStoredProcedureStatement, CreateNestedReadStoredProcedureStatement,
+    CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
+    DefaultStatementTextRenderer, RoutineParameter,
 };
 
 pub struct OracleStoredProcedureStatementRenderer;
@@ -28,6 +29,22 @@ impl OracleStoredProcedureStatementRenderer {
             statement.table(),
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
             statement.parameters().iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "),
+        )
+    }
+
+    pub fn render_nested_read(&self, statement: &CreateNestedReadStoredProcedureStatement) -> String {
+        let select = DefaultStatementTextRenderer::instance().render(&statement.select());
+        let signature = statement
+            .arguments()
+            .iter()
+            .map(|argument| format!("{} IN {}", argument.parameter.name, argument.parameter.r#type))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "CREATE OR REPLACE PROCEDURE {}({}) AS\nBEGIN\n  {};\nEND;",
+            statement.name(),
+            signature,
+            select
         )
     }
 

@@ -23,6 +23,8 @@ export type { IIdentityInsertStatement } from "./IIdentityInsertStatement.ts";
 export type { IDropRoutineStatement } from "./IDropRoutineStatement.ts";
 export type { ICreateCreateStoredProcedureStatement } from "./ICreateCreateStoredProcedureStatement.ts";
 export type { ICreateReadStoredProcedureStatement } from "./ICreateReadStoredProcedureStatement.ts";
+export type { ICreateNestedReadStoredProcedureStatement } from "./ICreateNestedReadStoredProcedureStatement.ts";
+export type { NestedWhereArgument } from "./NestedWhereArgument.ts";
 export type { ICreateUpdateStoredProcedureStatement } from "./ICreateUpdateStoredProcedureStatement.ts";
 export type { ICreateDeleteStoredProcedureStatement } from "./ICreateDeleteStoredProcedureStatement.ts";
 export type { ICreateBulkCreateStoredProcedureStatement } from "./ICreateBulkCreateStoredProcedureStatement.ts";
@@ -90,6 +92,8 @@ export { CreateCreateStoredProcedureStatement } from "./CreateCreateStoredProced
 export { CreateCreateStoredProcedureStatementTextRenderer } from "./CreateCreateStoredProcedureStatementTextRenderer.ts";
 export { CreateReadStoredProcedureStatement } from "./CreateReadStoredProcedureStatement.ts";
 export { CreateReadStoredProcedureStatementTextRenderer } from "./CreateReadStoredProcedureStatementTextRenderer.ts";
+export { CreateNestedReadStoredProcedureStatement } from "./CreateNestedReadStoredProcedureStatement.ts";
+export { CreateNestedReadStoredProcedureStatementTextRenderer } from "./CreateNestedReadStoredProcedureStatementTextRenderer.ts";
 export { CreateUpdateStoredProcedureStatement } from "./CreateUpdateStoredProcedureStatement.ts";
 export { CreateUpdateStoredProcedureStatementTextRenderer } from "./CreateUpdateStoredProcedureStatementTextRenderer.ts";
 export { CreateDeleteStoredProcedureStatement } from "./CreateDeleteStoredProcedureStatement.ts";

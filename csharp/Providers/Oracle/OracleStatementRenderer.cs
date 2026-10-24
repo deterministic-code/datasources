@@ -28,6 +28,9 @@ internal sealed class OracleStatementRenderer(StatementTextRenderer text) : Stat
     public override string Visit(CreateReadStoredProcedureStatement statement) =>
         new OracleStoredProcedureStatementRenderer().Render(statement);
 
+    public override string Visit(CreateNestedReadStoredProcedureStatement statement) =>
+        new OracleStoredProcedureStatementRenderer().Render(statement);
+
     public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
         new OracleStoredProcedureStatementRenderer().Render(statement);
 

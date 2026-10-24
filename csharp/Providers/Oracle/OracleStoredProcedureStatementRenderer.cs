@@ -21,6 +21,19 @@ internal sealed class OracleStoredProcedureStatementRenderer
         END;
         """;
 
+    public string Render(CreateNestedReadStoredProcedureStatement statement)
+    {
+        var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
+        var signature = string.Join(", ", statement.Arguments.Select(argument =>
+            $"{argument.Parameter.Name} IN {argument.Parameter.Type}"));
+        return $"""
+            CREATE OR REPLACE PROCEDURE {statement.Name}({signature}) AS
+            BEGIN
+              {select};
+            END;
+            """;
+    }
+
     public string Render(CreateReadStoredProcedureStatement statement)
     {
         var aliased = string.Join(", ", statement.Columns.Select(column => $"t.{column}"));

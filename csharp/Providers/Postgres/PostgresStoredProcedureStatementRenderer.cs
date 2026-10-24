@@ -26,6 +26,17 @@ internal sealed class PostgresStoredProcedureStatementRenderer
         $$
         """;
 
+    public string Render(CreateNestedReadStoredProcedureStatement statement)
+    {
+        var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
+        var signature = string.Join(", ", statement.Arguments.Select(argument =>
+            $"{argument.Parameter.Name} {argument.Parameter.Type}"));
+        return $"""
+            CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS SETOF RECORD
+            LANGUAGE sql AS $$ {select}; $$
+            """;
+    }
+
     public string Render(CreateReadStoredProcedureStatement statement)
     {
         var aliased = string.Join(", ", statement.Columns.Select(column => $"t.{column}"));

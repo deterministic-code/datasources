@@ -5,6 +5,7 @@ import type { OrderBy } from "./OrderBy.ts";
 export type SelectStatementOptions = {
   table?: string;
   fields?: string[];
+  aliases?: (string | undefined)[];
   distinct?: boolean;
   where?: IWhere;
   joins?: Join[];

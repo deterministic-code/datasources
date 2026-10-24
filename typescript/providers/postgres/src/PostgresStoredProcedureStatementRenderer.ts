@@ -4,10 +4,12 @@ import type {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateUpdateStoredProcedureStatement,
   RoutineParameter,
 } from "@deterministic-code/datasources";
+import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  ${p.name} ${p.type}`).join(",\n");
@@ -29,6 +31,15 @@ BEGIN
   RETURN new_id;
 END;
 $$`;
+  }
+
+  renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
+    const select = DefaultStatementTextRenderer.instance.render(statement.select);
+    const signature = statement.arguments
+      .map((argument) => `${argument.parameter.name} ${argument.parameter.type}`)
+      .join(", ");
+    return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS SETOF RECORD
+LANGUAGE sql AS $$ ${select}; $$`;
   }
 
   renderRead(statement: CreateReadStoredProcedureStatement): string {

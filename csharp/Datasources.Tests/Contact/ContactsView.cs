@@ -13,7 +13,7 @@ internal static class ContactsView
             ["first_name"] = "FirstName",
             ["last_name"] = "LastName",
             ["email"] = "Email",
-            ["contact_source_name"] = "ContactSourceName",
+            ["contact_source_name"] = "Name",
             ["contact_type_name"] = "ContactTypeName",
             ["addresses"] = new TypeMapGroup
             {

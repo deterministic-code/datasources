@@ -5,6 +5,7 @@ import {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateTableStatement,
   CreateTriggerStatement,
@@ -58,6 +59,10 @@ export class SqlServerStatementRenderer extends StatementRenderer {
 
   protected override visitCreateReadStoredProcedureStatement(statement: CreateReadStoredProcedureStatement): string {
     return new SqlServerStoredProcedureStatementRenderer().renderRead(statement);
+  }
+
+  protected override visitCreateNestedReadStoredProcedureStatement(statement: CreateNestedReadStoredProcedureStatement): string {
+    return new SqlServerStoredProcedureStatementRenderer().renderNestedRead(statement);
   }
 
   protected override visitCreateUpdateStoredProcedureStatement(statement: CreateUpdateStoredProcedureStatement): string {

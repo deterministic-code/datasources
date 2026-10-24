@@ -239,7 +239,8 @@ describe("statements", () => {
     );
     const grouped = new SelectStatement({
       table: "orders",
-      fields: ["status", Aggregate.count("*", "n"), Aggregate.sum("amount", "total")],
+      fields: ["status", Aggregate.count("*"), Aggregate.sum("amount")],
+      aliases: [undefined, "n", "total"],
       where: new Where(new Operator.Equals("status", "open")),
       joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
       groupBy: ["status"],

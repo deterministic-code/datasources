@@ -1706,7 +1706,7 @@ var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [st
 result: 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L363-L387)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L354-L378)
 
 ```rust
 async fn fill_output_parameter(command: &dyn Command) {
@@ -1781,7 +1781,7 @@ var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L332-L350)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L323-L341)
 
 ```rust
 async fn read_return_value(command: &dyn Command) {

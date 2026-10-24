@@ -4,10 +4,12 @@ import type {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateUpdateStoredProcedureStatement,
   RoutineParameter,
 } from "@deterministic-code/datasources";
+import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  IN ${p.name} ${p.type}`).join(",\n");
@@ -44,6 +46,14 @@ export class MysqlStoredProcedureStatementRenderer {
   VALUES (${vals.join(", ")});
   SELECT LAST_INSERT_ID() AS ${statement.key};`;
     return procedure(statement.name, `\n${params(statement.parameters)}\n`, body);
+  }
+
+  renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
+    const select = DefaultStatementTextRenderer.instance.render(statement.select);
+    const signature = statement.arguments
+      .map((argument) => `IN ${argument.parameter.name} ${argument.parameter.type}`)
+      .join(", ");
+    return procedure(statement.name, signature, `  ${select};`);
   }
 
   renderRead(statement: CreateReadStoredProcedureStatement): string {

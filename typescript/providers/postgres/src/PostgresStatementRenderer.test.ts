@@ -8,7 +8,9 @@ import {
   CreateBulkUpdateStoredProcedureStatement,
   CreateCreateStoredProcedureStatement,
   CreateDeleteStoredProcedureStatement,
+  CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
+  NestedSelectBuilder,
   CreateTableStatement,
   CreateUpdateStoredProcedureStatement,
   CreateTriggerStatement,
@@ -171,6 +173,20 @@ SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX("id") FROM user
         new CreateReadStoredProcedureStatement("ReadUsers", "users", ["id", "name"], [], "id", "INT", [], []),
       ),
     ).toContain("ORDER BY t.id");
+    expect(
+      renderer.render(
+        new CreateNestedReadStoredProcedureStatement(
+          "ReadContactsByEmail",
+          new NestedSelectBuilder().build({
+            name: "Contact",
+            key: "Id",
+            properties: ["Id", "Email"],
+            relations: [],
+          }),
+          [{ path: "Contact.Email", parameter: { name: "email", type: "varchar" } }],
+        ),
+      ),
+    ).toContain("RETURNS SETOF RECORD");
     expect(
       renderer.render(
         new CreateReadStoredProcedureStatement(

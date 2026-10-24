@@ -67,6 +67,9 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
     public virtual string Visit(CreateReadStoredProcedureStatement statement) =>
         new CreateReadStoredProcedureStatementTextRenderer().Render(statement);
 
+    public virtual string Visit(CreateNestedReadStoredProcedureStatement statement) =>
+        new CreateNestedReadStoredProcedureStatementTextRenderer().Render(statement);
+
     public virtual string Visit(CreateUpdateStoredProcedureStatement statement) =>
         new CreateUpdateStoredProcedureStatementTextRenderer().Render(statement);
 

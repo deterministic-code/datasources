@@ -522,7 +522,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2200-L2206)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2245-L2251)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -697,7 +697,7 @@ var evaluator = new ExpressionEvaluator();
 IReadOnlyDictionary<string, Value> row = new Dictionary<string, Value> { ["id"] = 1, ["age"] = 21, ["name"] = "a" };
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1414-L1599)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1415-L1600)
 
 ```rust
 let evaluator = ExpressionEvaluator;

@@ -28,6 +28,9 @@ internal sealed class SqlServerStatementRenderer(StatementTextRenderer text) : S
     public override string Visit(CreateReadStoredProcedureStatement statement) =>
         new SqlServerStoredProcedureStatementRenderer().Render(statement);
 
+    public override string Visit(CreateNestedReadStoredProcedureStatement statement) =>
+        new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
     public override string Visit(CreateUpdateStoredProcedureStatement statement) =>
         new SqlServerStoredProcedureStatementRenderer().Render(statement);
 

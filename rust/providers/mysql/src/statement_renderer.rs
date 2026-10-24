@@ -9,7 +9,7 @@ use datasources::{
     BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
-    CreateReadStoredProcedureStatement, CreateTableStatement,
+    CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, CreateUpdateStoredProcedureStatement,
     DropIndexStatement, DropRoutineStatement, SelectInsertedIdStatement, StatementTextRenderer,
     StatementVisitor,
@@ -88,6 +88,14 @@ impl StatementVisitor for MysqlStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         MysqlStoredProcedureStatementRenderer.render_read(statement)
+    }
+
+    fn visit_create_nested_read_stored_procedure(
+        &self,
+        statement: &CreateNestedReadStoredProcedureStatement,
+        _text: &StatementTextRenderer,
+    ) -> String {
+        MysqlStoredProcedureStatementRenderer.render_nested_read(statement)
     }
 
     fn visit_create_update_stored_procedure(

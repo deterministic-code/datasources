@@ -1,8 +1,9 @@
 use datasources::{
     CreateBulkCreateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement,
     CreateBulkUpdateStoredProcedureStatement, CreateCreateStoredProcedureStatement,
-    CreateDeleteStoredProcedureStatement, CreateReadStoredProcedureStatement,
-    CreateUpdateStoredProcedureStatement, RoutineParameter,
+    CreateDeleteStoredProcedureStatement, CreateNestedReadStoredProcedureStatement,
+    CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
+    DefaultStatementTextRenderer, RoutineParameter,
 };
 
 pub struct MysqlStoredProcedureStatementRenderer;
@@ -98,6 +99,17 @@ impl MysqlStoredProcedureStatementRenderer {
             &format!("\n{}\n", params(statement.parameters())),
             &body,
         )
+    }
+
+    pub fn render_nested_read(&self, statement: &CreateNestedReadStoredProcedureStatement) -> String {
+        let select = DefaultStatementTextRenderer::instance().render(&statement.select());
+        let signature = statement
+            .arguments()
+            .iter()
+            .map(|argument| format!("IN {} {}", argument.parameter.name, argument.parameter.r#type))
+            .collect::<Vec<_>>()
+            .join(", ");
+        procedure(statement.name(), &signature, &format!("  {select};"))
     }
 
     pub fn render_read(&self, statement: &CreateReadStoredProcedureStatement) -> String {

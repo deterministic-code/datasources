@@ -87,10 +87,10 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
             Table = "Parent",
             Fields =
             [
-                "Parent.Id AS Id",
-                "Parent.TypeName AS TypeName",
-                "Child.Id AS ChildId",
-                "Child.Label AS Label",
+                "Parent.Id",
+                "Parent.TypeName",
+                "Child.Id",
+                "Child.Label",
             ],
             Joins = [Join.Left("Child", "Parent.Id", "Child.ParentId")],
             Where = new Where(new Operator.Equals("Parent.Id", 1)),
