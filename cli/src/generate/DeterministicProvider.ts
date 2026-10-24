@@ -10,7 +10,7 @@ import { generate as typescriptViewTypes } from "@deterministic-code/typescript-
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
-import type { RepositoryModel } from "./RepositoryModel.ts";
+import type { RepositoryModel, RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { csharpRepositories } from "./CSharpRepositories.ts";
 import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
@@ -34,6 +34,15 @@ const repositoryPacks: Record<Dialect, (models: RepositoryModel[], settings: Rec
 
 const context = (request: GenerateRequest): GenerateContext => ({ reader: request.reader, settings: request.settings });
 
+const optionsOf = (model: RepositoryModel): RepositoryOptionsModel => ({
+  table: model.table,
+  ids: model.ids,
+  readProperties: model.readProperties,
+  createProperties: model.createProperties,
+  updateProperties: model.updateProperties,
+  propertyMappings: model.propertyMappings,
+});
+
 const withProviderWrites = async (request: GenerateRequest, models: RepositoryModel[]): Promise<RepositoryModel[]> => {
   const byProvider: Record<string, RepositoryModel[]> = {};
   for (const engine of await datasourceEnginesOf(request.reader, request.settings)) {
@@ -52,7 +61,7 @@ const withProviderWrites = async (request: GenerateRequest, models: RepositoryMo
         optionsByProvider: Object.fromEntries(
           Object.entries(byProvider).map(([engine, planned]) => [
             engine,
-            planned.find((item) => item.specName === model.specName) ?? model,
+            optionsOf(planned.find((item) => item.specName === model.specName) ?? model),
           ]),
         ),
       }));

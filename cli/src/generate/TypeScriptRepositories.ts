@@ -1,33 +1,36 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, childField, children as childModels, isLinked, pluralCamel, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel } from "./RepositoryModel.ts";
+import { childClass, childField, children as childModels, isLinked, pluralCamel, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { dialectsOf, quote, writeList } from "./writeLists.ts";
 
-const tsOptions = (model: RepositoryModel): string => {
+type Options = RepositoryOptionsModel & { entity: string };
+
+const withEntity = (model: RepositoryModel, planned: RepositoryOptionsModel): Options =>
+  ({ entity: model.entity, ...planned });
+
+const entityAndMapping = (model: Options): string => {
   const mapping = model.propertyMappings.length === 0
     ? ""
     : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
-  return `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}ids: ${writeList("typescript", model.ids)}, createProperties: ${writeList("typescript", model.createProperties)}, updateProperties: ${writeList("typescript", model.updateProperties)}, readProperties: ${writeList("typescript", model.readProperties)} }`;
+  return `entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}`;
 };
 
-const tsReadonly = (model: RepositoryModel): string => {
-  const mapping = model.propertyMappings.length === 0
-    ? ""
-    : `propertyMappings: new DictionaryMapper([${model.propertyMappings.map((pair) => `["${quote(pair.from)}", "${quote(pair.to)}"]`).join(", ")}]), `;
-  return `{ entity: "${quote(model.entity)}", entityMapper: new DictionaryMapper([["${quote(model.entity)}", "${quote(model.table)}"]]), ${mapping}readProperties: ${writeList("typescript", model.readProperties)} }`;
-};
+const tsOptions = (model: Options): string =>
+  `{ ${entityAndMapping(model)}ids: ${writeList("typescript", model.ids)}, createProperties: ${writeList("typescript", model.createProperties)}, updateProperties: ${writeList("typescript", model.updateProperties)}, readProperties: ${writeList("typescript", model.readProperties)} }`;
+
+const tsReadonly = (model: Options): string =>
+  `{ ${entityAndMapping(model)}readProperties: ${writeList("typescript", model.readProperties)} }`;
 
 const tsOptionsExpr = (model: RepositoryModel): string =>
   dialectsOf(model).length === 0 ? tsOptions(model) : "options(connection)";
 
-const tsOptionsFn = (model: RepositoryModel): string => {
-  const dialects = dialectsOf(model);
-  return dialects.length === 0
-    ? ""
-    : `const options = (connection: IConnection) =>\n  new CRUDRepositoryBuilder<${model.typeName}>()\n    .add(${tsOptions(model)})${dialects
-      .map(([engine, planned]) => `\n    .add("${quote(engine)}", ${tsOptions(planned)})`)
-      .join("")}\n    .for(connection);\n\n`;
-};
+const tsBuilder = (name: string, model: RepositoryModel, write: (options: Options) => string): string =>
+  `const ${name} = (connection: IConnection) =>\n  new CRUDRepositoryBuilder<${model.typeName}>()\n    .add(${write(model)})${dialectsOf(model)
+    .map(([engine, planned]) => `\n    .add("${quote(engine)}", ${write(withEntity(model, planned))})`)
+    .join("")}\n    .for(connection);\n\n`;
+
+const tsOptionsFn = (model: RepositoryModel): string =>
+  dialectsOf(model).length === 0 ? "" : `${tsBuilder("options", model, tsOptions)}${tsBuilder("readonlyOptions", model, tsReadonly)}`;
 
 const enrichment = (item: PlannedEnrichment, host: "this" | "repo"): string => {
   const via = host === "this"
@@ -43,7 +46,7 @@ const enrichment = (item: PlannedEnrichment, host: "this" | "repo"): string => {
 };
 
 const createReadonly = (model: RepositoryModel): string => {
-  const options = dialectsOf(model).length === 0 ? tsReadonly(model) : "options(connection)";
+  const options = dialectsOf(model).length === 0 ? tsReadonly(model) : "readonlyOptions(connection)";
   const children = childModels(model);
   if (children.length === 0 && model.enrichments.length === 0)
     return `  static createReadonly = (connection: IConnection) => new ReadonlyRepository<${model.typeName}>(connection, ${options});`;

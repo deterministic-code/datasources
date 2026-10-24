@@ -9,15 +9,13 @@ import {
   type OptimisticConcurrency,
   type PlannedEnrichment,
   type RepositoryModel,
+  type RepositoryOptionsModel,
 } from "./RepositoryModel.ts";
-import { dialectsOf, quote, writeList } from "./writeLists.ts";
+import { dialectsOf, pad, quote, writeList } from "./writeLists.ts";
 
-const pad = (text: string, spaces: number): string => {
-  const prefix = " ".repeat(spaces);
-  return text.split("\n").map((line) => `${prefix}${line}`).join("\n");
-};
+type Options = RepositoryOptionsModel & { entity: string };
 
-const csharpOptionsBody = (model: RepositoryModel): string =>
+const csharpOptionsBody = (model: Options): string =>
   `Entity = "${quote(model.entity)}",
 EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["${quote(model.entity)}"] = "${quote(model.table)}" }),
 PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
@@ -29,7 +27,7 @@ ReadProperties = ${writeList("csharp", model.readProperties)},
 CreateProperties = ${writeList("csharp", model.createProperties)},
 UpdateProperties = ${writeList("csharp", model.updateProperties)},`;
 
-const csharpOptions = (model: RepositoryModel, indent: number): string =>
+const csharpOptions = (model: Options, indent: number): string =>
   `new()\n${" ".repeat(indent)}{\n${pad(csharpOptionsBody(model), indent + 4)}\n${" ".repeat(indent)}}`;
 
 const optionsMethod = (model: RepositoryModel, type: string): string => {
@@ -37,7 +35,7 @@ const optionsMethod = (model: RepositoryModel, type: string): string => {
   return dialects.length === 0
     ? `    static CRUDRepositoryOptions<${type}> Options() => ${csharpOptions(model, 4)};`
     : `    static CRUDRepositoryOptions<${type}> Options(IConnection connection) =>\n        new CRUDRepositoryBuilder<${type}>()\n            .Add(${csharpOptions(model, 12)})${dialects
-        .map(([engine, planned]) => `\n            .Add("${quote(engine)}", ${csharpOptions(planned, 12)})`)
+        .map(([engine, planned]) => `\n            .Add("${quote(engine)}", ${csharpOptions({ entity: model.entity, ...planned }, 12)})`)
         .join("")}\n            .For(connection);`;
 };
 

@@ -10,6 +10,13 @@ const options = (connection: IConnection) =>
     .add("postgres", { entity: "ContactGroup", entityMapper: new DictionaryMapper([["ContactGroup", "contact_groups"]]), ids: ["id"], createProperties: ["name", "description"], updateProperties: ["uuid", "version", "name", "description"], readProperties: ["id", "uuid", "created", "updated", "version", "name", "description"] })
     .for(connection);
 
+const readonlyOptions = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<ContactGroup>()
+    .add({ entity: "ContactGroup", entityMapper: new DictionaryMapper([["ContactGroup", "contact_groups"]]), readProperties: ["id", "uuid", "created", "updated", "version", "name", "description"] })
+    .add("mysql", { entity: "ContactGroup", entityMapper: new DictionaryMapper([["ContactGroup", "contact_groups"]]), readProperties: ["id", "uuid", "created", "updated", "version", "name", "description"] })
+    .add("postgres", { entity: "ContactGroup", entityMapper: new DictionaryMapper([["ContactGroup", "contact_groups"]]), readProperties: ["id", "uuid", "created", "updated", "version", "name", "description"] })
+    .for(connection);
+
 export class ContactGroupRepository extends CRUDRepository<ContactGroup> {
   readonly contact: ContactRepository;
   readonly contactGroupMember: ContactGroupMemberRepository;
@@ -20,7 +27,7 @@ export class ContactGroupRepository extends CRUDRepository<ContactGroup> {
     this.addLinked({ destinationProperty: "members", sourceProperty: "id", relatedKey: "id", association: { parent: "contactGroupId", related: "contactId" }, type: "list" }, this.contact, this.contactGroupMember);
   }
   static createReadonly(connection: IConnection) {
-    const repo = new ReadonlyRepository<ContactGroup>(connection, options(connection));
+    const repo = new ReadonlyRepository<ContactGroup>(connection, readonlyOptions(connection));
     const contact = new ContactRepository(connection);
     const contactGroupMember = new ContactGroupMemberRepository(connection);
     repo.addEnriched({ destinationProperty: "members", sourceProperty: "id", relatedKey: "id", type: "list" }, contact);

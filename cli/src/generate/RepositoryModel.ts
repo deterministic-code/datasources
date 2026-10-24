@@ -30,10 +30,15 @@ export type RepositoryModel = {
   readProperties: string[];
   createProperties: string[];
   updateProperties: string[];
-  optionsByProvider?: Record<string, RepositoryModel>;
+  optionsByProvider?: Record<string, RepositoryOptionsModel>;
   optimisticConcurrency?: OptimisticConcurrency;
   enrichments: PlannedEnrichment[];
 };
+
+export type RepositoryOptionsModel = Pick<
+  RepositoryModel,
+  "table" | "ids" | "readProperties" | "createProperties" | "updateProperties" | "propertyMappings"
+>;
 
 export const repositoryFile = (dialect: "csharp" | "typescript" | "rust", model: RepositoryModel): string =>
   dialect === "csharp"

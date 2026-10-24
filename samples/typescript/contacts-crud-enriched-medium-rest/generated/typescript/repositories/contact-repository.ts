@@ -13,6 +13,13 @@ const options = (connection: IConnection) =>
     .add("postgres", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), ids: ["id"], createProperties: ["contactSourceId", "firstName", "lastName", "email", "notes"], updateProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"], readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
     .for(connection);
 
+const readonlyOptions = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<Contact>()
+    .add({ entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
+    .add("mysql", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
+    .add("postgres", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts"]]), propertyMappings: new DictionaryMapper([["contactSourceId", "contact_source_id"], ["firstName", "first_name"], ["lastName", "last_name"]]), readProperties: ["id", "uuid", "created", "updated", "version", "contactSourceId", "firstName", "lastName", "email", "notes"] })
+    .for(connection);
+
 export class ContactRepository extends CRUDRepository<Contact> {
   readonly address: AddressRepository;
   readonly phone: PhoneRepository;
@@ -33,7 +40,7 @@ export class ContactRepository extends CRUDRepository<Contact> {
     this.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, this.contactSource);
   }
   static createReadonly(connection: IConnection) {
-    const repo = new ReadonlyRepository<Contact>(connection, options(connection));
+    const repo = new ReadonlyRepository<Contact>(connection, readonlyOptions(connection));
     const address = new AddressRepository(connection);
     const phone = new PhoneRepository(connection);
     const contactSettings = new ContactSettingsRepository(connection);
