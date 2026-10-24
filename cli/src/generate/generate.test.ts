@@ -246,6 +246,11 @@ describe("generate", () => {
     expect(contactTs).toContain("createReadonly");
     expect(contactTs.slice(contactTs.indexOf("createReadonly"))).not.toContain("ids:");
     expect(legacyTs.slice(legacyTs.indexOf("createReadonly"))).not.toContain("ids:");
+    expect(contactTs).toContain("new ReadonlyRepository<Contact>(connection, readonlyOptions(connection))");
+    const readonlyFn = contactTs.slice(contactTs.indexOf("const readonlyOptions"), contactTs.indexOf("export class"));
+    expect(readonlyFn).toContain("readProperties:");
+    expect(readonlyFn).not.toContain("createProperties:");
+    expect(readonlyFn).not.toContain("updateProperties:");
     expect(contactTs).not.toMatch(/from "[^"]+\.ts"/);
     expect(legacyTs).not.toMatch(/from "[^"]+\.ts"/);
     expect(textOf(typescript, "repository-registry.ts")).not.toMatch(/from "[^"]+\.ts"/);

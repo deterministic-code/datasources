@@ -1,12 +1,12 @@
-import type { RepositoryModel } from "./RepositoryModel.ts";
+import type { RepositoryModel, RepositoryOptionsModel } from "./RepositoryModel.ts";
 
 const same = (left: string[], right: string[]): boolean =>
   left.length === right.length && left.every((name, index) => name === right[index]);
 
-const samePairs = (left: RepositoryModel["propertyMappings"], right: RepositoryModel["propertyMappings"]): boolean =>
+const samePairs = (left: RepositoryOptionsModel["propertyMappings"], right: RepositoryOptionsModel["propertyMappings"]): boolean =>
   left.length === right.length && left.every((pair, index) => pair.from === right[index]?.from && pair.to === right[index]?.to);
 
-export const sameOptions = (left: RepositoryModel, right: RepositoryModel): boolean =>
+const sameOptions = (left: RepositoryOptionsModel, right: RepositoryOptionsModel): boolean =>
   left.table === right.table &&
   same(left.ids, right.ids) &&
   same(left.readProperties, right.readProperties) &&
@@ -14,10 +14,15 @@ export const sameOptions = (left: RepositoryModel, right: RepositoryModel): bool
   same(left.updateProperties, right.updateProperties) &&
   samePairs(left.propertyMappings, right.propertyMappings);
 
-export const dialectsOf = (model: RepositoryModel): Array<[string, RepositoryModel]> =>
+export const dialectsOf = (model: RepositoryModel): Array<[string, RepositoryOptionsModel]> =>
   Object.entries(model.optionsByProvider ?? {}).filter(([, planned]) => !sameOptions(model, planned));
 
 export const quote = (value: string): string => value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
+
+export const pad = (text: string, spaces: number): string => {
+  const prefix = " ".repeat(spaces);
+  return text.split("\n").map((line) => `${prefix}${line}`).join("\n");
+};
 
 const csharpList = (names: string[]): string =>
   `[${names.map((name) => `"${quote(name)}"`).join(", ")}]`;
