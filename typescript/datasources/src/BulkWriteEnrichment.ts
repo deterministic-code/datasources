@@ -13,7 +13,7 @@ export const afterBulkWrite = async <T extends object>(
   mode: WriteMode,
 ): Promise<void> => {
   if (items.length === 0 || !enrichmentsOf(repo)?.length) return;
-  const write = options.write ?? new DefaultWriteEnrichmentStrategy<T>();
+  const write = options.writeEnrichment ?? new DefaultWriteEnrichmentStrategy<T>();
   const tree = new RepositoryTree(new RepositoryTreeNode(repo, ""));
   await (write.persistBulk ?? write.persist)(tree, items, mode);
 };

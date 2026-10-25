@@ -49,7 +49,7 @@ impl BulkCRUDRepository {
         strategy: Arc<dyn BulkWriteStrategy>,
     ) -> Result<Self> {
         let write = options
-            .write
+            .write_enrichment
             .clone()
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
         let use_transaction = write.use_transaction();
@@ -272,15 +272,15 @@ impl ICRUDRepository for BulkCRUDRepository {
     }
 
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        self.crud.create(item).await
+        self.crud.create(item, None).await
     }
 
     async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.crud.update(item, by_where).await
+        self.crud.update(item, by_where, None).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.crud.delete(item, by_where).await
+        self.crud.delete(item, by_where, None).await
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {

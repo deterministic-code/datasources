@@ -2,7 +2,11 @@ namespace Datasources;
 
 internal abstract class ReadEnrichment<T>
 {
-    internal abstract Task Apply(Enrichment enrichment, IList<T> parents, IReadOnlyList<Row?>? sources);
+    internal abstract Task Apply(
+        Enrichment enrichment,
+        IList<T> parents,
+        IReadOnlyList<Row?>? sources,
+        IReadonlyEnrichmentStrategy<T>? strategy = null);
 }
 
 internal sealed class ReadEnrichment<T, TRelated> : ReadEnrichment<T>
@@ -16,6 +20,10 @@ internal sealed class ReadEnrichment<T, TRelated> : ReadEnrichment<T>
         this.strategy = strategy;
     }
 
-    internal override Task Apply(Enrichment enrichment, IList<T> parents, IReadOnlyList<Row?>? sources) =>
-        strategy.Apply(via, enrichment, parents, sources);
+    internal override Task Apply(
+        Enrichment enrichment,
+        IList<T> parents,
+        IReadOnlyList<Row?>? sources,
+        IReadonlyEnrichmentStrategy<T>? strategy = null) =>
+        (strategy ?? this.strategy).Apply(via, enrichment, parents, sources);
 }

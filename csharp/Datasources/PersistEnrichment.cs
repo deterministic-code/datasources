@@ -57,7 +57,7 @@ internal sealed class PersistEnrichment<T, TChild> : PersistEnrichment<T> where 
             }
             : mode switch
             {
-                WriteMode.Create => Each(children, repository.Create),
+                WriteMode.Create => Each(children, child => repository.Create(child)),
                 WriteMode.Update => Each(children, child => repository.Update(child)),
                 _ => throw new DatasourceException("Unknown persist mode")
             });

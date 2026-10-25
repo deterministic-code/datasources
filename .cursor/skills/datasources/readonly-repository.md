@@ -178,6 +178,7 @@ type ReadonlyRepositoryMappingOptions<T = Cells>
 | type | Item constructor. Supplies the default entity name and column list. |
 | rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | readColumns | SELECT column names. When omitted, public fields of `type` are used. |
+| readEnrichment | Read enrichment strategy for this call. Omitted uses the strategy stored by [addEnriched](enrichment.md). |
 
 #### IRepositoryTree {#typescript-irepositorytree}
 
@@ -409,6 +410,7 @@ public class ReadonlyRepositoryMappingOptions<T> where T : new()
 | ObjectConverter | `Row` to `T`, after `RowConverter`. Omitted assigns public properties. A handwritten converter assigns each column and does not reflect. |
 | RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`. The driver applies its converters when it binds a parameter. A field converter on the object converter reverse-converts that property in the repository. |
 | ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
+| ReadEnrichment | Read enrichment strategy for this call. Omitted uses the strategy stored by [AddEnriched](enrichment.md). |
 
 #### IRepositoryTree {#csharp-irepositorytree}
 
@@ -562,6 +564,7 @@ pub struct ReadonlyRepositoryMappingOptions
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](type-converters.md). |
 | object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. A handwritten converter assigns each column. |
 | row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
+| read_enrichment | Read enrichment strategy for this call. Omitted uses the strategy stored by [add_enriched](enrichment.md). |
 
 #### RepositoryTree {#rust-repositorytree}
 
@@ -623,7 +626,7 @@ pub fn include(&mut self, via: impl EnrichmentVia, destination_property: impl In
 
 ## Remarks
 
-`AddEnriched` / `addEnriched` / `add_enriched` on [IEnriched](enrichment.md) registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. Writes, including `List` children and associations, are [CRUDRepository](crud-repository.md).
+`AddEnriched` / `addEnriched` / `add_enriched` on [IEnriched](enrichment.md) registers a read fill. With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. `ReadEnrichment` / `readEnrichment` / `read_enrichment` on the mapping options for that call uses one strategy for every registered edge. Omitted keeps the strategy stored by `AddEnriched` / `addEnriched` / `add_enriched`. Writes, including `List` children and associations, are [CRUDRepository](crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 
@@ -1377,7 +1380,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1529-L1545)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1531-L1547)
 
 ```rust
         &row
@@ -1436,7 +1439,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1566-L1572)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1568-L1574)
 
 ```rust
 
@@ -1500,7 +1503,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L151-L157)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L153-L159)
 
 ```rust
 let mut parents_repo = mapped(connection, "Parent");
@@ -1512,7 +1515,7 @@ parents_repo.add_enriched(
 );
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L95-L107)
 
 ```typescript
 const person: Seed = { name: "person" };
@@ -1908,10 +1911,10 @@ var join = new SelectStatement(new()
     Table = "Parent",
     Fields =
     [
-        "Parent.Id AS Id",
-        "Parent.TypeName AS TypeName",
-        "Child.Id AS ChildId",
-        "Child.Label AS Label",
+        "Parent.Id",
+        "Parent.TypeName",
+        "Child.Id",
+        "Child.Label",
     ],
     Joins = [Join.Left("Child", "Parent.Id", "Child.ParentId")],
     Where = new Where(new Operator.Equals("Parent.Id", 1)),
@@ -1938,7 +1941,7 @@ var items = await joinRepo.Read(
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L60-L170)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L174)
 
 ```rust
 let connection = MemoryDriver.connection(None);
@@ -2029,10 +2032,10 @@ let join = SelectStatement::new(SelectStatementOptions {
     ..SelectStatementOptions::new(
         "Parent",
         &[
-            "Parent.Id AS Id",
-            "Parent.TypeName AS TypeName",
-            "Child.Id AS ChildId",
-            "Child.Label AS Label",
+            "Parent.Id",
+            "Parent.TypeName",
+            "Child.Id",
+            "Child.Label",
         ],
     )
 });
@@ -2151,10 +2154,10 @@ joinParents.addEnriched(
 const join = new SelectStatement({
   table: "Parent",
   fields: [
-    "Parent.Id AS Id",
-    "Parent.TypeName AS TypeName",
-    "Child.Id AS ChildId",
-    "Child.Label AS Label",
+    "Parent.Id",
+    "Parent.TypeName",
+    "Child.Id",
+    "Child.Label",
   ],
   joins: [Join.left("Child", "Parent.Id", "Child.ParentId")],
   where: new Where(new Operator.Equals("Parent.Id", 1)),

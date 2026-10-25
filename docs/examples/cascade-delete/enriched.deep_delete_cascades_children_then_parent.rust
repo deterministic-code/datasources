@@ -3,7 +3,7 @@ let parents = mapped_crud(connection.clone(), "Parent");
 let mut children_repo = mapped_crud(connection.clone(), "Child");
 let notes = Arc::new(mapped_crud(connection, "Note"));
 let parent = parents
-    .create(&mut record(&[("Label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]), None)
     .await
     .unwrap();
 assert!(num(&parent, "Id") > 0);
@@ -12,7 +12,7 @@ let child = children_repo
     .create(&mut record(&[
         ("ParentId", parent_id.clone()),
         ("Label", Value::from("a")),
-    ]))
+    ]), None)
     .await
     .unwrap();
 assert!(num(&child, "Id") > 0);
@@ -21,7 +21,7 @@ let note = notes
     .create(&mut record(&[
         ("ChildId", child_id),
         ("Text", Value::from("n")),
-    ]))
+    ]), None)
     .await
     .unwrap();
 assert!(num(&note, "Id") > 0);
@@ -29,7 +29,7 @@ let other = notes
     .create(&mut record(&[
         ("Text", Value::from("other")),
         ("Label", Value::from("keep")),
-    ]))
+    ]), None)
     .await
     .unwrap();
 assert!(num(&other, "Id") > 0);
@@ -46,6 +46,6 @@ parents.add_enriched(
     None,
 );
 let removed = parents
-    .delete(&record(&[("Id", parent_id)]), None)
+    .delete(&record(&[("Id", parent_id)]), None, None)
     .await
     .unwrap();

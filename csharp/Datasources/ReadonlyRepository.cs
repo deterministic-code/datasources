@@ -78,7 +78,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             parameters,
             mappers,
             Rows(options),
-            objects));
+            objects,
+            options?.ReadEnrichment));
     }
 
     public virtual async Task<T?> ReadSingle(
@@ -131,11 +132,14 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         IReadOnlyList<Parameter>? parameters,
         StatementMappers mappers,
         TypeConverter<Row, Row>? rows,
-        TypeConverter<T, Row> objects) =>
-        Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters, mappers, rows, objects));
+        TypeConverter<T, Row> objects,
+        IReadonlyEnrichmentStrategy<T>? strategy) =>
+        Apply(ReadItems(query, parameters ?? (query as ISelectStatement)?.Where?.Parameters, mappers, rows, objects), strategy);
 
-    private IAsyncEnumerable<(T Item, Row? Source)> Apply(IAsyncEnumerable<(T Item, Row? Source)> pairs) =>
-        Enriched ? Sourced(pairs) : pairs;
+    private IAsyncEnumerable<(T Item, Row? Source)> Apply(
+        IAsyncEnumerable<(T Item, Row? Source)> pairs,
+        IReadonlyEnrichmentStrategy<T>? strategy) =>
+        Enriched ? Sourced(pairs, strategy) : pairs;
 
     private async IAsyncEnumerable<(T Item, Row? Source)> ReadItems(
         IStatement? query,
@@ -166,7 +170,9 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         }
     }
 
-    private async IAsyncEnumerable<(T Item, Row? Source)> Sourced(IAsyncEnumerable<(T Item, Row? Source)> pairs)
+    private async IAsyncEnumerable<(T Item, Row? Source)> Sourced(
+        IAsyncEnumerable<(T Item, Row? Source)> pairs,
+        IReadonlyEnrichmentStrategy<T>? strategy)
     {
         var items = new List<T>();
         var sources = new List<Row?>();
@@ -175,16 +181,19 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
             items.Add(item);
             sources.Add(source);
         }
-        await Enrich(items, sources);
+        await Enrich(items, sources, strategy);
         var paired = items.Count == sources.Count;
         for (var i = 0; i < items.Count; i++)
             yield return (items[i], paired ? sources[i] : null);
     }
 
-    private async Task Enrich(IList<T> parents, IReadOnlyList<Row?>? sources)
+    private async Task Enrich(
+        IList<T> parents,
+        IReadOnlyList<Row?>? sources,
+        IReadonlyEnrichmentStrategy<T>? strategy)
     {
         foreach (var entry in enrichments)
-            await entry.Read.Apply(entry.Enrichment, parents, sources);
+            await entry.Read.Apply(entry.Enrichment, parents, sources, strategy);
     }
 
     private static async IAsyncEnumerable<T> Items(IAsyncEnumerable<(T Item, Row? Source)> pairs)

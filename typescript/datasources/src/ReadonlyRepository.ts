@@ -115,7 +115,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     this.entries().push(
       new StoredEnrichment<T & object>(
         enrichment,
-        (parents, sources) => chosen.apply(via, enrichment, parents, sources),
+        (parents, sources, strategy) => (strategy ?? chosen).apply(via, enrichment, parents, sources),
       ),
     );
     return this;
@@ -196,15 +196,21 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     const listed =
       parameters ??
       (statement instanceof SelectStatement ? statement.where?.parameters : undefined);
-    yield* this.apply(this.readItems(statement, listed, mappers, this.rowConverterOf(options), this.objects(options)));
+    yield* this.apply(
+      this.readItems(statement, listed, mappers, this.rowConverterOf(options), this.objects(options)),
+      options?.readEnrichment,
+    );
   }
 
-  private async *apply(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
+  private async *apply(
+    pairs: AsyncIterable<Sourced<T>>,
+    strategy?: IReadonlyEnrichmentStrategy<T & object>,
+  ): AsyncIterable<Sourced<T>> {
     if (!this.enriched) {
       yield* pairs;
       return;
     }
-    yield* this.sourced(pairs);
+    yield* this.sourced(pairs, strategy);
   }
 
   private convertObject = (row: Cells, objects: TypeConverter<T, Cells>): T =>
@@ -240,20 +246,27 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     }
   }
 
-  private async *sourced(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
+  private async *sourced(
+    pairs: AsyncIterable<Sourced<T>>,
+    strategy?: IReadonlyEnrichmentStrategy<T & object>,
+  ): AsyncIterable<Sourced<T>> {
     const items: T[] = [];
     const sources: (Row | undefined)[] = [];
     for await (const sourced of pairs) {
       items.push(sourced.item);
       sources.push(sourced.source);
     }
-    await this.fill(items as (T & object)[], sources);
+    await this.fill(items as (T & object)[], sources, strategy);
     for (let index = 0; index < items.length; index++)
       yield { item: items[index]!, source: sources[index] };
   }
 
-  private fill = async (parents: (T & object)[], sources?: (Row | undefined)[]): Promise<void> => {
-    for (const entry of this.entries()) await entry.apply(parents, sources);
+  private fill = async (
+    parents: (T & object)[],
+    sources?: (Row | undefined)[],
+    strategy?: IReadonlyEnrichmentStrategy<T & object>,
+  ): Promise<void> => {
+    for (const entry of this.entries()) await entry.apply(parents, sources, strategy);
   };
 
   private columnToPropertyName = (row: Cells, mappers: StatementMappers): Cells =>

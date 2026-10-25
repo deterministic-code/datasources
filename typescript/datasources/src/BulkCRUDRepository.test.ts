@@ -104,7 +104,7 @@ describe("BulkCRUDRepository", () => {
   it("rolls back a bulk update when useTransaction is on", async () => {
     const parentsRepo = new BulkCRUDRepository<Parent>(await setup(), {
       type: Parent,
-      write: new DefaultWriteEnrichmentStrategy(undefined, undefined, undefined, true),
+      writeEnrichment: new DefaultWriteEnrichmentStrategy(undefined, undefined, undefined, true),
     });
     const first = await parentsRepo.create(Object.assign(new Parent(), { label: "a" }));
     expect(first.id).toBeGreaterThan(0);

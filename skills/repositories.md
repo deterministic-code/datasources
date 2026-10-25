@@ -338,7 +338,7 @@ let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
-let mut created = users_repo.create(&mut created).await.unwrap();
+let mut created = users_repo.create(&mut created, None).await.unwrap();
 let by_id = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -356,13 +356,13 @@ let matches = users_repo
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
-let updated = users_repo.update(&mut created, None).await.unwrap();
+let updated = users_repo.update(&mut created, None, None).await.unwrap();
 let renamed = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let removed = users_repo.delete(&created, None).await.unwrap();
+let removed = users_repo.delete(&created, None, None).await.unwrap();
 let gone = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -579,7 +579,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L725-L736) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L740-L744) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L748-L752) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L920)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L725-L736) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L740-L744) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L748-L752) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L922)
 
 ```rust
 impl ConvertSchema for User {
@@ -668,7 +668,7 @@ users_repo.add_enriched(
 );
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
-let admin = user_types_repo.create(&mut admin).await.unwrap();
+let admin = user_types_repo.create(&mut admin, None).await.unwrap();
 let mut admin_role = datasources::Row::new();
 admin_role.insert("Name".into(), Value::from("admin"));
 let mut editor_role = datasources::Row::new();
@@ -680,7 +680,7 @@ user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
 user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 user.insert("Version".into(), Value::Int(1));
 user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-let user = users_repo.create(&mut user).await.unwrap();
+let user = users_repo.create(&mut user, None).await.unwrap();
 let mut viewer_role = datasources::Row::new();
 viewer_role.insert("Name".into(), Value::from("viewer"));
 let mut grace = datasources::Row::new();
@@ -690,7 +690,7 @@ grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
 grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 grace.insert("Version".into(), Value::Int(1));
 grace.insert("Roles".into(), encode_rows(&[viewer_role]));
-let grace = users_repo.create(&mut grace).await.unwrap();
+let grace = users_repo.create(&mut grace, None).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
     .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
@@ -700,7 +700,7 @@ let mut loaded = users_repo
 let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
-let member = user_types_repo.create(&mut member).await.unwrap();
+let member = user_types_repo.create(&mut member, None).await.unwrap();
 let mut owner_role = datasources::Row::new();
 owner_role.insert("Name".into(), Value::from("owner"));
 let mut kept_admin = datasources::Row::new();
@@ -718,6 +718,7 @@ let updated = users_repo
     .update(
         &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+        None,
     )
     .await
     .unwrap();
@@ -730,10 +731,11 @@ let stale = users_repo
     .update(
         &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+        None,
     )
     .await
     .unwrap();
-let removed = users_repo.delete(&loaded, None).await.unwrap();
+let removed = users_repo.delete(&loaded, None, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 
@@ -973,7 +975,7 @@ var parents = await parentsRepo.Read().ToListAsync();
 var children = await childrenRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L904-L942)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1002-L1040)
 
 ```rust
 let connection = setup(&mut []).await;

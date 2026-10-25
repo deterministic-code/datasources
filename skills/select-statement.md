@@ -1187,7 +1187,7 @@ let with_where = SelectStatement::new(SelectStatementOptions {
 });
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L49-L57)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L48-L56)
 
 ```typescript
 const select = new SelectStatement({ table: "dual", fields: ["1"] });
@@ -1231,7 +1231,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L59-L68)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L58-L67)
 
 ```typescript
 const where = new Where(
@@ -1292,7 +1292,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT JOIN payments ON orders.id = payments.order_id RIGHT JOIN profiles ON users.id = profiles.user_id WHERE users.id = $users.id
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L70-L84)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L69-L83)
 
 ```typescript
 const query = new SelectStatement({
@@ -1315,13 +1315,14 @@ SELECT users.id FROM users INNER JOIN orders ON users.id = orders.user_id LEFT J
 
 ### Group, aggregate, order, and limit
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L50-L66)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L50-L67)
 
 ```csharp
 var grouped = new SelectStatement(new()
 {
     Table = "orders",
-    Fields = ["status", Aggregate.Count("*", "n"), Aggregate.Sum("amount", "total")],
+    Fields = ["status", Aggregate.Count("*"), Aggregate.Sum("amount")],
+    Aliases = [null, "n", "total"],
     Where = new Where(new Operator.Equals("status", "open")),
     Joins = [Join.Inner("customers", "orders.customer_id", "customers.id")],
     GroupBy = ["status"],
@@ -1336,11 +1337,11 @@ var grouped = new SelectStatement(new()
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L59-L81)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L59-L82)
 
 ```rust
-let count = Aggregate::count("*", Some("n"));
-let total = Aggregate::sum("amount", Some("total"));
+let count = Aggregate::count("*");
+let total = Aggregate::sum("amount");
 let grouped_fields = ["status", count.as_str(), total.as_str()];
 let where_clause = Where::new(Operator::equals("status", "open"));
 let grouped = SelectStatement::new(SelectStatementOptions {
@@ -1353,6 +1354,7 @@ let grouped = SelectStatement::new(SelectStatementOptions {
     group_by: &["status"],
     order_by: &[OrderBy::desc("total"), OrderBy::asc("status")],
     limit: Some(10),
+    aliases: &[None, Some("n"), Some("total")],
     ..SelectStatementOptions::new("orders", &grouped_fields)
 });
 ```
@@ -1363,12 +1365,13 @@ let grouped = SelectStatement::new(SelectStatementOptions {
 SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN customers ON orders.customer_id = customers.id WHERE status = $status GROUP BY status ORDER BY total DESC, status ASC LIMIT 10
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L86-L99)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L85-L99)
 
 ```typescript
 const grouped = new SelectStatement({
   table: "orders",
-  fields: ["status", Aggregate.count("*", "n"), Aggregate.sum("amount", "total")],
+  fields: ["status", Aggregate.count("*"), Aggregate.sum("amount")],
+  aliases: [undefined, "n", "total"],
   where: new Where(new Operator.Equals("status", "open")),
   joins: [Join.inner("customers", "orders.customer_id", "customers.id")],
   groupBy: ["status"],
@@ -1385,7 +1388,7 @@ SELECT status, COUNT(*) AS n, SUM(amount) AS total FROM orders INNER JOIN custom
 
 ### Group rows
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L68-L73)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L69-L74)
 
 ```csharp
 var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], GroupBy = ["id"] });
@@ -1397,7 +1400,7 @@ var byStatus = new SelectStatement(new() { Table = "users", Fields = ["id"], Gro
 SELECT id FROM users GROUP BY id
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L83-L90)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L84-L91)
 
 ```rust
 let by_status = SelectStatement::new(SelectStatementOptions {
@@ -1426,7 +1429,7 @@ SELECT id FROM users GROUP BY id
 
 ### Aggregate without grouping
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L75-L80)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L76-L81)
 
 ```csharp
 var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Min("n"), Aggregate.Max("n")] });
@@ -1438,11 +1441,11 @@ var bounds = new SelectStatement(new() { Table = "users", Fields = [Aggregate.Mi
 SELECT MIN(n), MAX(n) FROM users
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L92-L99)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L93-L100)
 
 ```rust
-let min_n = Aggregate::min("n", None);
-let max_n = Aggregate::max("n", None);
+let min_n = Aggregate::min("n");
+let max_n = Aggregate::max("n");
 let bound_fields = [min_n.as_str(), max_n.as_str()];
 let bounds = SelectStatement::new(SelectStatementOptions::new("users", &bound_fields));
 ```
@@ -1467,7 +1470,7 @@ SELECT MIN(n), MAX(n) FROM users
 
 ### Order rows
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L82-L87)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L83-L88)
 
 ```csharp
 var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], OrderBy = [OrderBy.Asc("id"), OrderBy.Desc("name")] });
@@ -1479,7 +1482,7 @@ var ordered = new SelectStatement(new() { Table = "users", Fields = ["id"], Orde
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L101-L111)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L102-L112)
 
 ```rust
 let ordered = SelectStatement::new(SelectStatementOptions {
@@ -1512,7 +1515,7 @@ SELECT id FROM users ORDER BY id ASC, name DESC
 
 ### Limit rows
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L89-L94)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L90-L95)
 
 ```csharp
 var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limit = 10 });
@@ -1524,7 +1527,7 @@ var limited = new SelectStatement(new() { Table = "users", Fields = ["id"], Limi
 SELECT id FROM users LIMIT 10
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L113-L120)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L114-L121)
 
 ```rust
 let limited = SelectStatement::new(SelectStatementOptions {

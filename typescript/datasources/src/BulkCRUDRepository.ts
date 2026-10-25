@@ -21,7 +21,9 @@ const isBulkStrategy = <T extends object>(value: object): value is IBulkWriteStr
 const transactionOf = <T extends object>(
   options: IConnection | CRUDRepositoryOptions<T> | IBulkWriteStrategy<T> | undefined,
 ): boolean =>
-  options !== undefined && "write" in options ? options.write?.useTransaction ?? false : false;
+  options !== undefined && "writeEnrichment" in options
+    ? options.writeEnrichment?.useTransaction ?? false
+    : false;
 
 const inTransaction = async <TResult>(
   transactional: boolean,

@@ -20,19 +20,19 @@ interface ICRUDRepository<T = unknown> extends IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [create(item)](#typescript-icrudrepository-create-item) | Inserts one item. |
-| [update(item, byWhere?)](#typescript-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
-| [delete(item, byWhere?)](#typescript-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
+| [create(item, writeEnrichment?)](#typescript-icrudrepository-create-item-writeenrichment) | Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [update(item, byWhere?, writeEnrichment?)](#typescript-icrudrepository-update-item-bywhere-writeenrichment) | Updates one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [delete(item, byWhere?, writeEnrichment?)](#typescript-icrudrepository-delete-item-bywhere-writeenrichment) | Deletes one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment. |
 | [readSingleById(id)](#typescript-icrudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. A value requires exactly one configured id column. A row must include every configured id column. No match returns `undefined`. |
 
-##### create(item) {#typescript-icrudrepository-create-item}
+##### create(item, writeEnrichment?) {#typescript-icrudrepository-create-item-writeenrichment}
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```typescript
-create(item: T): Promise<Response>
+create(item: T, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T>
 ```
 
 **Parameters**
@@ -40,19 +40,20 @@ create(item: T): Promise<Response>
 | Name | Description |
 | --- | --- |
 | `item` | row to insert |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
-`Promise<Response>`
+`Promise<T>`
 
-##### update(item, byWhere?) {#typescript-icrudrepository-update-item-bywhere}
+##### update(item, byWhere?, writeEnrichment?) {#typescript-icrudrepository-update-item-bywhere-writeenrichment}
 
-Updates one item. Omitted `byWhere` uses id columns.
+Updates one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
+update(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 **Parameters**
@@ -61,19 +62,20 @@ update(item: T, byWhere?: IWhere): Promise<Response>
 | --- | --- |
 | `item` | row to update |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
 `Promise<Response>`
 
-##### delete(item, byWhere?) {#typescript-icrudrepository-delete-item-bywhere}
+##### delete(item, byWhere?, writeEnrichment?) {#typescript-icrudrepository-delete-item-bywhere-writeenrichment}
 
-Deletes one item. Omitted `byWhere` uses id columns.
+Deletes one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
+delete(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 **Parameters**
@@ -82,6 +84,7 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 | --- | --- |
 | `item` | row to delete |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
@@ -133,9 +136,9 @@ class CRUDRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRe
 | --- | --- |
 | [addMiddleware(middleware)](#typescript-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
 | [read(query?)](#typescript-crudrepository-read-query) | Reads rows. Convert the database row, then map it. |
-| [create(item)](#typescript-crudrepository-create-item) | Inserts one item. |
-| [update(item, byWhere?)](#typescript-crudrepository-update-item-bywhere) | Updates one item. |
-| [delete(item, byWhere?)](#typescript-crudrepository-delete-item-bywhere) | Deletes one item. |
+| [create(item, writeEnrichment?)](#typescript-crudrepository-create-item-writeenrichment) | Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [update(item, byWhere?, writeEnrichment?)](#typescript-crudrepository-update-item-bywhere-writeenrichment) | Updates one item. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [delete(item, byWhere?, writeEnrichment?)](#typescript-crudrepository-delete-item-bywhere-writeenrichment) | Deletes one item. Omitted `writeEnrichment` uses the repository write enrichment. |
 | [readSingleById(id)](#typescript-crudrepository-readsinglebyid-id) | Returns the row for one id column, or for a composite key. |
 | [addEnriched(enrichment, via, strategy?)](#typescript-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](readonly-repository.md#typescript-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent. |
 | [addLinked(enrichment, via, link, strategy?)](#typescript-crudrepository-addlinked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
@@ -231,14 +234,14 @@ read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Asyn
 
 `AsyncIterable<T>`
 
-##### create(item) {#typescript-crudrepository-create-item}
+##### create(item, writeEnrichment?) {#typescript-crudrepository-create-item-writeenrichment}
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```typescript
-create(item: T): Promise<Response>
+create(item: T, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T>
 ```
 
 **Parameters**
@@ -246,19 +249,20 @@ create(item: T): Promise<Response>
 | Name | Description |
 | --- | --- |
 | `item` | row to insert |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
-`Promise<Response>`
+`Promise<T>`
 
-##### update(item, byWhere?) {#typescript-crudrepository-update-item-bywhere}
+##### update(item, byWhere?, writeEnrichment?) {#typescript-crudrepository-update-item-bywhere-writeenrichment}
 
-Updates one item.
+Updates one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
+update(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 **Parameters**
@@ -267,19 +271,20 @@ update(item: T, byWhere?: IWhere): Promise<Response>
 | --- | --- |
 | `item` | row to update |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
 `Promise<Response>`
 
-##### delete(item, byWhere?) {#typescript-crudrepository-delete-item-bywhere}
+##### delete(item, byWhere?, writeEnrichment?) {#typescript-crudrepository-delete-item-bywhere-writeenrichment}
 
-Deletes one item.
+Deletes one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
+delete(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 **Parameters**
@@ -288,6 +293,7 @@ delete(item: T, byWhere?: IWhere): Promise<Response>
 | --- | --- |
 | `item` | row to delete |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
@@ -369,7 +375,7 @@ type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryMappingOptions<T> & { 
 | Name | Description |
 | --- | --- |
 | ids | Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field and no `id`. |
-| write | Write enrichment strategy. Omitted uses the default strategy. |
+| writeEnrichment | Write enrichment strategy. Omitted uses the default strategy. |
 
 #### BuiltRepository {#typescript-builtrepository}
 
@@ -402,20 +408,20 @@ public interface ICRUDRepository<T> : IReadonlyRepository<T>
 
 | Name | Description |
 | --- | --- |
-| [Create(item)](#csharp-icrudrepository-create-item) | Inserts one item. |
-| [Update(item, byWhere)](#csharp-icrudrepository-update-item-bywhere) | Updates one item. Omitted `byWhere` uses id columns. |
-| [Delete(item, byWhere)](#csharp-icrudrepository-delete-item-bywhere) | Deletes one item. Omitted `byWhere` uses id columns. |
+| [Create(item, writeEnrichment)](#csharp-icrudrepository-create-item-writeenrichment) | Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [Update(item, byWhere, writeEnrichment)](#csharp-icrudrepository-update-item-bywhere-writeenrichment) | Updates one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [Delete(item, byWhere, writeEnrichment)](#csharp-icrudrepository-delete-item-bywhere-writeenrichment) | Deletes one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment. |
 | [ReadSingleById(id)](#csharp-icrudrepository-readsinglebyid-id) | Returns the row for the single configured id column. Zero id columns, or more than one, throw. |
 | [ReadSingleById(ids)](#csharp-icrudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. A missing id column throws. No match returns `null`. |
 
-##### Create(item) {#csharp-icrudrepository-create-item}
+##### Create(item, writeEnrichment) {#csharp-icrudrepository-create-item-writeenrichment}
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```csharp
-Task<Response> Create(T item)
+Task<T> Create(T item, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 **Parameters**
@@ -423,19 +429,20 @@ Task<Response> Create(T item)
 | Name | Description |
 | --- | --- |
 | `item` | row to insert |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
-`Task<Response>`
+`Task<T>`
 
-##### Update(item, byWhere) {#csharp-icrudrepository-update-item-bywhere}
+##### Update(item, byWhere, writeEnrichment) {#csharp-icrudrepository-update-item-bywhere-writeenrichment}
 
-Updates one item. Omitted `byWhere` uses id columns.
+Updates one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```csharp
-Task<Response> Update(T item, IWhere? byWhere = null)
+Task<Response> Update(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 **Parameters**
@@ -444,19 +451,20 @@ Task<Response> Update(T item, IWhere? byWhere = null)
 | --- | --- |
 | `item` | row to update |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
 `Task<Response>`
 
-##### Delete(item, byWhere) {#csharp-icrudrepository-delete-item-bywhere}
+##### Delete(item, byWhere, writeEnrichment) {#csharp-icrudrepository-delete-item-bywhere-writeenrichment}
 
-Deletes one item. Omitted `byWhere` uses id columns.
+Deletes one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```csharp
-Task<Response> Delete(T item, IWhere? byWhere = null)
+Task<Response> Delete(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 **Parameters**
@@ -465,6 +473,7 @@ Task<Response> Delete(T item, IWhere? byWhere = null)
 | --- | --- |
 | `item` | row to delete |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
@@ -536,9 +545,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T>, IEnr
 | --- | --- |
 | [AddMiddleware(middleware)](#csharp-crudrepository-addmiddleware-middleware) | Adds command middleware. Returns this repository. |
 | [Read(query)](#csharp-crudrepository-read-query) | Reads rows. Convert the database row, then map it. |
-| [Create(item)](#csharp-crudrepository-create-item) | Inserts one item. |
-| [Update(item, byWhere)](#csharp-crudrepository-update-item-bywhere) | Updates one item. |
-| [Delete(item, byWhere)](#csharp-crudrepository-delete-item-bywhere) | Deletes one item. |
+| [Create(item, writeEnrichment)](#csharp-crudrepository-create-item-writeenrichment) | Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [Update(item, byWhere, writeEnrichment)](#csharp-crudrepository-update-item-bywhere-writeenrichment) | Updates one item. Omitted `writeEnrichment` uses the repository write enrichment. |
+| [Delete(item, byWhere, writeEnrichment)](#csharp-crudrepository-delete-item-bywhere-writeenrichment) | Deletes one item. Omitted `writeEnrichment` uses the repository write enrichment. |
 | [ReadSingleById(id)](#csharp-crudrepository-readsinglebyid-id) | Returns the row for the single configured id column. |
 | [ReadSingleById(ids)](#csharp-crudrepository-readsinglebyid-ids) | Returns the row whose configured id columns match `ids`. |
 | [AddEnriched(enrichment, via, strategy)](#csharp-crudrepository-addenriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](readonly-repository.md#csharp-addenrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent. |
@@ -634,14 +643,14 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 `IAsyncEnumerable<T>`
 
-##### Create(item) {#csharp-crudrepository-create-item}
+##### Create(item, writeEnrichment) {#csharp-crudrepository-create-item-writeenrichment}
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```csharp
-public Task<Response> Create(T item)
+public Task<T> Create(T item, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 **Parameters**
@@ -649,19 +658,20 @@ public Task<Response> Create(T item)
 | Name | Description |
 | --- | --- |
 | `item` | row to insert |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
-`Task<Response>`
+`Task<T>`
 
-##### Update(item, byWhere) {#csharp-crudrepository-update-item-bywhere}
+##### Update(item, byWhere, writeEnrichment) {#csharp-crudrepository-update-item-bywhere-writeenrichment}
 
-Updates one item.
+Updates one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```csharp
-public Task<Response> Update(T item, IWhere? byWhere = null)
+public Task<Response> Update(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 **Parameters**
@@ -670,19 +680,20 @@ public Task<Response> Update(T item, IWhere? byWhere = null)
 | --- | --- |
 | `item` | row to update |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
 `Task<Response>`
 
-##### Delete(item, byWhere) {#csharp-crudrepository-delete-item-bywhere}
+##### Delete(item, byWhere, writeEnrichment) {#csharp-crudrepository-delete-item-bywhere-writeenrichment}
 
-Deletes one item.
+Deletes one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 **Definition**
 
 ```csharp
-public Task<Response> Delete(T item, IWhere? byWhere = null)
+public Task<Response> Delete(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 **Parameters**
@@ -691,6 +702,7 @@ public Task<Response> Delete(T item, IWhere? byWhere = null)
 | --- | --- |
 | `item` | row to delete |
 | `byWhere` | optional predicate; omitted uses id values on `item` |
+| `writeEnrichment` | optional [IWriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
 
 **Returns**
 
@@ -792,7 +804,7 @@ public sealed class CRUDRepositoryOptions<T> : ReadonlyRepositoryMappingOptions<
 | Name | Description |
 | --- | --- |
 | Ids | Id column names. Default `["id"]`. |
-| Write | Write enrichment strategy. Omitted uses the default strategy. |
+| WriteEnrichment | Write enrichment strategy. Omitted uses the default strategy. |
 
 #### BuiltRepository {#csharp-builtrepository}
 
@@ -928,6 +940,9 @@ pub struct CRUDRepository
 
 | Name | Description |
 | --- | --- |
+| [create(item, write_enrichment)](#rust-crudrepository-create-item-write_enrichment) | Inserts one row. `None` `write_enrichment` uses the repository write enrichment. |
+| [update(item, by_where, write_enrichment)](#rust-crudrepository-update-item-by_where-write_enrichment) | Updates one row. `None` `write_enrichment` uses the repository write enrichment. |
+| [delete(item, by_where, write_enrichment)](#rust-crudrepository-delete-item-by_where-write_enrichment) | Deletes one row. `None` `write_enrichment` uses the repository write enrichment. |
 | [add_enriched(enrichment, via, strategy)](#rust-crudrepository-add_enriched-enrichment-via-strategy) | Registers the same read fill as [ReadonlyRepository](readonly-repository.md#rust-add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent. |
 | [add_linked(enrichment, via, link, strategy)](#rust-crudrepository-add_linked-enrichment-via-link-strategy) | Registers an association. `via` is read. `link` is the CRUD writer. |
 | [add_middleware(middleware)](#rust-crudrepository-add_middleware-middleware) | Adds command middleware. |
@@ -993,6 +1008,71 @@ pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
 **Returns**
 
 [CRUDRepository](#rust-crudrepository)
+
+##### create(item, write_enrichment) {#rust-crudrepository-create-item-write_enrichment}
+
+Inserts one row. `None` `write_enrichment` uses the repository write enrichment.
+
+**Definition**
+
+```rust
+pub async fn create(&self, item: &mut Row, write_enrichment: Option<&dyn WriteEnrichmentStrategy>) -> Result<Row>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to insert |
+| `write_enrichment` | optional [WriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
+
+**Returns**
+
+`Result<Row>`
+
+##### update(item, by_where, write_enrichment) {#rust-crudrepository-update-item-by_where-write_enrichment}
+
+Updates one row. `None` `write_enrichment` uses the repository write enrichment.
+
+**Definition**
+
+```rust
+pub async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>, write_enrichment: Option<&dyn WriteEnrichmentStrategy>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to update |
+| `by_where` | optional predicate; omitted uses id values on `item` |
+| `write_enrichment` | optional [WriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
+
+**Returns**
+
+`Result<Response>`
+
+##### delete(item, by_where, write_enrichment) {#rust-crudrepository-delete-item-by_where-write_enrichment}
+
+Deletes one row. `None` `write_enrichment` uses the repository write enrichment.
+
+**Definition**
+
+```rust
+pub async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>, write_enrichment: Option<&dyn WriteEnrichmentStrategy>) -> Result<Response>
+```
+
+**Parameters**
+
+| Name | Description |
+| --- | --- |
+| `item` | row to delete |
+| `by_where` | optional predicate; omitted uses id values on `item` |
+| `write_enrichment` | optional [WriteEnrichmentStrategy](docs/sections/i-write-enrichment-strategy.md) for this call |
+
+**Returns**
+
+`Result<Response>`
 
 ##### add_enriched(enrichment, via, strategy) {#rust-crudrepository-add_enriched-enrichment-via-strategy}
 
@@ -1086,7 +1166,7 @@ pub struct CRUDRepositoryOptions
 | Name | Description |
 | --- | --- |
 | ids | Id column names. Default `["id"]`. |
-| write | Write enrichment strategy. `None` uses the default strategy. |
+| write_enrichment | Write enrichment strategy. `None` uses the default strategy. |
 | read | The embedded [ReadonlyRepositoryMappingOptions](readonly-repository.md#rust-readonlyrepositoryoptions). Field access goes through `Deref`. |
 
 #### BuiltRepository {#rust-builtrepository}
@@ -1115,7 +1195,9 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 [AddEnriched](enrichment.md) registers the same read fill as [ReadonlyRepository](readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `List` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. [LazyWriteEnrichmentStrategy](docs/sections/lazy-write-enrichment-strategy.md) skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
-[DefaultWriteEnrichmentStrategy](docs/sections/default-write-enrichment-strategy.md) takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
+A `Read` / `read` / `read` can set `ReadEnrichment` / `readEnrichment` / `read_enrichment` on the mapping options for that call. `Create` / `create` / `create`, `Update` / `update` / `update`, and `Delete` / `delete` / `delete` can pass a write enrichment as the last argument. Omitted uses the repository default.
+
+[DefaultWriteEnrichmentStrategy](docs/sections/default-write-enrichment-strategy.md) takes `useTransaction`, off by default. The strategy for the call decides that. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
 
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `RelatedKey` from the parent `SourceProperty`, then create children (and nested lists).
 - **Create** — [DefaultCreateEnrichmentStrategy](docs/sections/default-create-enrichment-strategy.md) is the default. Write the parent, stamp each child's related key, then create children and links.
@@ -1197,7 +1279,7 @@ let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
-let mut created = users_repo.create(&mut created).await.unwrap();
+let mut created = users_repo.create(&mut created, None).await.unwrap();
 let by_id = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -1215,13 +1297,13 @@ let matches = users_repo
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
-let updated = users_repo.update(&mut created, None).await.unwrap();
+let updated = users_repo.update(&mut created, None, None).await.unwrap();
 let renamed = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let removed = users_repo.delete(&created, None).await.unwrap();
+let removed = users_repo.delete(&created, None, None).await.unwrap();
 let gone = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -1388,7 +1470,7 @@ no user
 roles and groups remain
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L151-L306)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L152-L307)
 
 ```rust
 let (mut users, seeded) = open(None).await;
@@ -1417,27 +1499,27 @@ let created = users
         &seeded,
         encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
         encode_rows(&[seeded.engineering.clone()]),
-    ))
+    ), None)
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(&next, None).await.unwrap();
+let saved = users.update(&mut next, None, None).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
+let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None, None)
     .await
     .unwrap();
 ```
@@ -1585,7 +1667,7 @@ ada-v2
 grace
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L935-L981)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L937-L983)
 
 ```rust
 let built = datasource();
@@ -1611,9 +1693,9 @@ key.insert("TenantId".into(), Value::Int(1));
 key.insert("Id".into(), Value::Int(1));
 let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 ada.insert("Name".into(), Value::from("ada-v2"));
-let updated = accounts_repo.update(&mut ada, None).await.unwrap();
+let updated = accounts_repo.update(&mut ada, None, None).await.unwrap();
 let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-let removed = accounts_repo.delete(&ada, None).await.unwrap();
+let removed = accounts_repo.delete(&ada, None, None).await.unwrap();
 let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
 let mut other = datasources::Row::new();
 other.insert("TenantId".into(), Value::Int(2));
@@ -2062,7 +2144,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L920)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L922)
 
 ```rust
 let ds = default().unwrap();
@@ -2126,7 +2208,7 @@ users_repo.add_enriched(
 );
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
-let admin = user_types_repo.create(&mut admin).await.unwrap();
+let admin = user_types_repo.create(&mut admin, None).await.unwrap();
 let mut admin_role = datasources::Row::new();
 admin_role.insert("Name".into(), Value::from("admin"));
 let mut editor_role = datasources::Row::new();
@@ -2138,7 +2220,7 @@ user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
 user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 user.insert("Version".into(), Value::Int(1));
 user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-let user = users_repo.create(&mut user).await.unwrap();
+let user = users_repo.create(&mut user, None).await.unwrap();
 let mut viewer_role = datasources::Row::new();
 viewer_role.insert("Name".into(), Value::from("viewer"));
 let mut grace = datasources::Row::new();
@@ -2148,7 +2230,7 @@ grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
 grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 grace.insert("Version".into(), Value::Int(1));
 grace.insert("Roles".into(), encode_rows(&[viewer_role]));
-let grace = users_repo.create(&mut grace).await.unwrap();
+let grace = users_repo.create(&mut grace, None).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
     .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
@@ -2158,7 +2240,7 @@ let mut loaded = users_repo
 let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
-let member = user_types_repo.create(&mut member).await.unwrap();
+let member = user_types_repo.create(&mut member, None).await.unwrap();
 let mut owner_role = datasources::Row::new();
 owner_role.insert("Name".into(), Value::from("owner"));
 let mut kept_admin = datasources::Row::new();
@@ -2176,6 +2258,7 @@ let updated = users_repo
     .update(
         &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+        None,
     )
     .await
     .unwrap();
@@ -2188,10 +2271,11 @@ let stale = users_repo
     .update(
         &mut loaded,
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+        None,
     )
     .await
     .unwrap();
-let removed = users_repo.delete(&loaded, None).await.unwrap();
+let removed = users_repo.delete(&loaded, None, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 

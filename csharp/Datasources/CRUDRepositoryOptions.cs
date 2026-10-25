@@ -5,5 +5,5 @@ public sealed record CRUDRepositoryOptions<T> : ReadonlyRepositoryMappingOptions
     public IReadOnlyList<string> Ids { get; init; } = ["id"];
     public IReadOnlyList<string>? CreateProperties { get; init; }
     public IReadOnlyList<string>? UpdateProperties { get; init; }
-    public IWriteEnrichmentStrategy<T>? Write { get; init; }
+    public IWriteEnrichmentStrategy<T>? WriteEnrichment { get; init; }
 }

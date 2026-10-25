@@ -173,7 +173,7 @@ async fn persist(&self, tree: &RepositoryTree, items: &mut [Row], mode: WriteMod
 
 ## Remarks
 
-Set it on the repository `write` option. Create, update, and delete each delegate to the strategies passed here. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips that null list. Nested writes join the transaction when they use the same connection.
+Set it on the repository {{WriteEnrichment|writeEnrichment|write_enrichment}} option. Create, update, and delete each delegate to the strategies passed here. A call can pass a different strategy as the last argument. A null or empty list clears a link when this strategy is eager. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips that null list. Nested writes join the transaction when they use the same connection.
 
 ## Examples
 

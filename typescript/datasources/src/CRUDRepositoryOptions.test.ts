@@ -32,7 +32,7 @@ describe("CRUDRepositoryOptions", () => {
     expect(new CRUDRepositoryBuilder().parts(new MockConnection(), { entity: "users" }).ids).toEqual([]);
     expect(
       new CRUDRepositoryBuilder().parts(new MockConnection(), {
-        write: new DefaultWriteEnrichmentStrategy(),
+        writeEnrichment: new DefaultWriteEnrichmentStrategy(),
       }).ids,
     ).toEqual(["id"]);
     class Named {
@@ -41,7 +41,7 @@ describe("CRUDRepositoryOptions", () => {
     expect(
       new CRUDRepositoryBuilder<Named>().parts(new MockConnection(), {
         type: Named,
-        write: new DefaultWriteEnrichmentStrategy<Named>(),
+        writeEnrichment: new DefaultWriteEnrichmentStrategy<Named>(),
       }).ids,
     ).toEqual(["id"]);
     expect(

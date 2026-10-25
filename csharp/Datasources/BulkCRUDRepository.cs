@@ -15,7 +15,7 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
         : base(connection, options)
     {
         this.bulk = bulk;
-        useTransaction = options.Write?.UseTransaction ?? false;
+        useTransaction = options.WriteEnrichment?.UseTransaction ?? false;
         bulk.Repo = this;
         bulk.Attach(Command(), options);
     }

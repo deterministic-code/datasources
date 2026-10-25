@@ -4,7 +4,7 @@ use super::connection::SqliteConnection;
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
-    ICRUDRepository, IReadonlyRepository, Mapper, Operator, TypeConverter, Value, Where,
+    IReadonlyRepository, Mapper, Operator, TypeConverter, Value, Where,
 };
 use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
@@ -238,7 +238,7 @@ async fn writes_enriched_contact() {
             ])]),
         ),
     ]);
-    let created = contacts_repo.create(&mut created).await.unwrap();
+    let created = contacts_repo.create(&mut created, None).await.unwrap();
     let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
         panic!("expected insert id");
     };

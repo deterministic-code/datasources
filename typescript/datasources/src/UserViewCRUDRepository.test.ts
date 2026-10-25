@@ -64,7 +64,7 @@ const ids = (values: number[]) => [...values].sort((left, right) => left - right
 
 const graph = async (write?: LazyWriteEnrichmentStrategy<UserView>): Promise<Graph> => {
   const connection = await setup();
-  const usersRepo = new CRUDRepository(connection, { type: UserView, write });
+  const usersRepo = new CRUDRepository(connection, { type: UserView, writeEnrichment: write });
   const userTypesRepo = new CRUDRepository(UserType, connection);
   const rolesRepo = new CRUDRepository(Role, connection);
   const groupsRepo = new CRUDRepository(Group, connection);

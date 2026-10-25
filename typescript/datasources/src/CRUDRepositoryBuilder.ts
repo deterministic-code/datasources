@@ -11,7 +11,7 @@ import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappi
 import { RepositoryBuilderOptionsFactory } from "./RepositoryBuilderOptionsFactory.ts";
 
 const isCrud = <T>(options: ReadonlyRepositoryMappingOptions<T>): options is CRUDRepositoryOptions<T> =>
-  "ids" in options || "write" in options;
+  "ids" in options || "writeEnrichment" in options;
 
 const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T> =>
   "ids" in options

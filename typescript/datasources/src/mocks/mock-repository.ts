@@ -6,6 +6,7 @@ import type { Parameter } from "../Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import type { IWriteEnrichmentStrategy } from "../IWriteEnrichmentStrategy.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { ReadonlyRepositoryMappingOptions } from "../ReadonlyRepositoryMappingOptions.ts";
 import type { Response } from "../Response.ts";
@@ -61,7 +62,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     }
   }
 
-  async create(item: T): Promise<T> {
+  async create(item: T, _writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T> {
     this.addCalls.push(item);
     if (this.addError) {
       throw this.addError;
@@ -71,7 +72,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     return item;
   }
 
-  async update(item: T, byWhere?: IWhere): Promise<Response> {
+  async update(item: T, byWhere?: IWhere, _writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response> {
     this.updateCalls.push({ item, byWhere });
     if (this.updateError) {
       throw this.updateError;
@@ -79,7 +80,7 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
     return this.updateResponse;
   }
 
-  async delete(item: T, byWhere?: IWhere): Promise<Response> {
+  async delete(item: T, byWhere?: IWhere, _writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response> {
     this.deleteCalls.push({ item, byWhere });
     if (this.deleteError) {
       throw this.deleteError;

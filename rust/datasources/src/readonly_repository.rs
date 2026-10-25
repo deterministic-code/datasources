@@ -193,10 +193,11 @@ impl ReadonlyRepository {
         &self,
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
+        strategy: Option<&dyn ReadonlyEnrichmentStrategy>,
     ) -> Result<()> {
         let entries = self.enrichments.lock().expect("enrichments").clone();
         for entry in entries {
-            entry.apply(parents, sources).await?;
+            entry.apply(parents, sources, strategy).await?;
         }
         Ok(())
     }
@@ -269,7 +270,7 @@ impl ReadonlyRepository {
         parameters: Option<&[Parameter]>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
-        self.apply(self.read_items(query, parameters, options).await?)
+        self.apply(self.read_items(query, parameters, options).await?, options)
             .await
     }
 
@@ -425,12 +426,21 @@ impl ReadonlyRepository {
         )))
     }
 
-    async fn apply(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<(Row, Option<Row>)>> {
+    async fn apply(
+        &self,
+        pairs: Vec<(Row, Option<Row>)>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Vec<(Row, Option<Row>)>> {
         if !self.enriched() {
             return Ok(pairs);
         }
         let (mut items, sources): (Vec<Row>, Vec<Option<Row>>) = pairs.into_iter().unzip();
-        self.fill(&mut items, Some(&sources)).await?;
+        self.fill(
+            &mut items,
+            Some(&sources),
+            options.and_then(|opts| opts.read_enrichment.as_deref()),
+        )
+        .await?;
         Ok(match items.len() == sources.len() {
             true => items.into_iter().zip(sources).collect(),
             false => items.into_iter().map(|item| (item, None)).collect(),

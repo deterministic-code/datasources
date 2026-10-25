@@ -830,7 +830,7 @@ mod user_crud {
         );
         let mut admin = datasources::Row::new();
         admin.insert("Name".into(), Value::from("admin"));
-        let admin = user_types_repo.create(&mut admin).await.unwrap();
+        let admin = user_types_repo.create(&mut admin, None).await.unwrap();
         let mut admin_role = datasources::Row::new();
         admin_role.insert("Name".into(), Value::from("admin"));
         let mut editor_role = datasources::Row::new();
@@ -842,7 +842,7 @@ mod user_crud {
         user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
         user.insert("Version".into(), Value::Int(1));
         user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-        let user = users_repo.create(&mut user).await.unwrap();
+        let user = users_repo.create(&mut user, None).await.unwrap();
         let mut viewer_role = datasources::Row::new();
         viewer_role.insert("Name".into(), Value::from("viewer"));
         let mut grace = datasources::Row::new();
@@ -852,7 +852,7 @@ mod user_crud {
         grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
         grace.insert("Version".into(), Value::Int(1));
         grace.insert("Roles".into(), encode_rows(&[viewer_role]));
-        let grace = users_repo.create(&mut grace).await.unwrap();
+        let grace = users_repo.create(&mut grace, None).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
             .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
@@ -862,7 +862,7 @@ mod user_crud {
         let version = loaded.get("Version").cloned().unwrap();
         let mut member = datasources::Row::new();
         member.insert("Name".into(), Value::from("member"));
-        let member = user_types_repo.create(&mut member).await.unwrap();
+        let member = user_types_repo.create(&mut member, None).await.unwrap();
         let mut owner_role = datasources::Row::new();
         owner_role.insert("Name".into(), Value::from("owner"));
         let mut kept_admin = datasources::Row::new();
@@ -880,6 +880,7 @@ mod user_crud {
             .update(
                 &mut loaded,
                 Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
+                None,
             )
             .await
             .unwrap();
@@ -892,10 +893,11 @@ mod user_crud {
             .update(
                 &mut loaded,
                 Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
+                None,
             )
             .await
             .unwrap();
-        let removed = users_repo.delete(&loaded, None).await.unwrap();
+        let removed = users_repo.delete(&loaded, None, None).await.unwrap();
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
         assert_eq!(current.get("Version"), Some(&Value::Int(2)));
         assert_eq!(current.get("Login"), Some(&Value::from("ada-v2")));
@@ -959,9 +961,9 @@ mod user_crud {
         key.insert("Id".into(), Value::Int(1));
         let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
         ada.insert("Name".into(), Value::from("ada-v2"));
-        let updated = accounts_repo.update(&mut ada, None).await.unwrap();
+        let updated = accounts_repo.update(&mut ada, None, None).await.unwrap();
         let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-        let removed = accounts_repo.delete(&ada, None).await.unwrap();
+        let removed = accounts_repo.delete(&ada, None, None).await.unwrap();
         let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
         let mut other = datasources::Row::new();
         other.insert("TenantId".into(), Value::Int(2));

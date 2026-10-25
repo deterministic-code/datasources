@@ -1,10 +1,12 @@
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { Row } from "./Row.ts";
 
 export type ApplyEnrichment<T extends object = object> = (
   parents: T[],
   sources?: (Row | undefined)[],
+  strategy?: IReadonlyEnrichmentStrategy<T>,
 ) => Promise<void>;
 
 export class StoredEnrichment<T extends object = object> {
