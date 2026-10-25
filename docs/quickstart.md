@@ -95,11 +95,11 @@ DATASOURCE_URL=sqlite:///./app.sqlite
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`--no-migrations` skips writing the migration files. `--no-migrate` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
+`--no-migrations` skips writing the migration files. `--no-auto-migrate-up` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
 
 ```sh
 npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrations
-npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrate
+npx @deterministic-code/datasources-cli generate all --dialect typescript --no-auto-migrate-up
 ```
 
 See [Migrations](./cli.md#migrations).

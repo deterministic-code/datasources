@@ -39,7 +39,7 @@ npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 {{Create|create|create}} returns that entity. {{ReadSingle|readSingle|read_single}} returns the same entity. `Update` and `Delete` return `Response`.
 
@@ -137,7 +137,7 @@ npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 Create a role, then a user that lists that role. {{Create|create|create}} writes the junction row. {{ReadSingle|readSingle|read_single}} fills {{Roles|roles|roles}}. Delete removes the user and the junction; the role row stays.
 
@@ -244,7 +244,7 @@ npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 :::
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](./cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 The generated repository maps those stored names. The CRUD call still uses {{Username|username|username}}.
 

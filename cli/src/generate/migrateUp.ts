@@ -62,7 +62,7 @@ export const applyMigrateUp = async (
   const connection = values.DATASOURCE_URL ?? "";
   const provider = canonical(values.PROVIDER || scheme(connection) || "");
   if (!provider || !connection) {
-    deps.log("migrate-up skipped: set PROVIDER and DATASOURCE_URL, or pass --no-migrate");
+    deps.log("migrate-up skipped: set PROVIDER and DATASOURCE_URL, or pass --no-auto-migrate-up");
     return;
   }
   if (inMemory(connection)) {
@@ -89,12 +89,7 @@ export const applyMigrateUp = async (
     ...extra,
   ];
   const setup = npx("migrate-setup");
-  const up = npx(
-    "migrate-up",
-    command.migrationsPath
-      ? ["--migrations-path", command.migrationsPath]
-      : ["--migrations-root", command.migrationsRoot],
-  );
+  const up = npx("migrate-up", ["--migrations-root", command.migrationsRoot]);
   deps.log(`$ npx ${setup.join(" ")}`);
   if (!flags.dryRun) await deps.run("npx", setup, flags.cwd);
   deps.log(`$ npx ${up.join(" ")}`);

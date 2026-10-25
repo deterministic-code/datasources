@@ -18,12 +18,11 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 | `--input <dir>` | Deterministic project (default: `./deterministic`) |
 | `--output <dir>` | Generated files (default: `./generated`) |
 | `--no-migrations` | Skip SQL migrations. `generate all` writes them by default |
-| `--no-migrate` | Skip migrate-up. `generate all` applies them by default |
+| `--no-auto-migrate-up` | Skip migrate-up. `generate all` applies them by default |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` on `generate all` (default: `sql`) |
-| `--migrations-path <dir>` | One migrations directory on `generate all`. The spec must list a single SQL dialect |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
 
-`generate all` writes SQL migrations into the [migraters](https://github.com/deterministic-code/migraters) layout and runs migrate-up. The connection is `PROVIDER` and `DATASOURCE_URL` from `.env`. Process env overrides the file. An in-memory `DATASOURCE_URL` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten. `--migrations-path` wins over `--migrations-root`. `--stored-procedures` and `settings.yaml` `datasource.use_stored_procedures: true` both turn on stored-procedure migrations.
+`generate all` writes SQL migrations into the [migraters](https://github.com/deterministic-code/migraters) layout and runs migrate-up. The connection is `PROVIDER` and `DATASOURCE_URL` from `.env`. Process env overrides the file. An in-memory `DATASOURCE_URL` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten. `--stored-procedures` and `settings.yaml` `datasource.use_stored_procedures: true` both turn on stored-procedure migrations.
 
 When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns. An explicit `datasource.yaml` still wins.
 
@@ -40,7 +39,6 @@ A pair under `deterministic/custom/<dialect>/` named `<order>_<name>_<up|down>.s
 ```sh
 npx @deterministic-code/datasources-cli migrations create
 npx @deterministic-code/datasources-cli migrations create --input ./deterministic --migrations-root sql
-npx @deterministic-code/datasources-cli migrations create --migrations-path ./db/sqlite/migrations
 ```
 
 | Flag | Meaning |
@@ -48,10 +46,9 @@ npx @deterministic-code/datasources-cli migrations create --migrations-path ./db
 | `--provider <name>` | Spec provider (default: `deterministic`) |
 | `--input <dir>` | Deterministic project (default: `./deterministic`) |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` (default: `sql`) |
-| `--migrations-path <dir>` | One migrations directory. The spec must list a single SQL dialect. |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
 
-`--migrations-path` wins over `--migrations-root`. Re-running overwrites the same files.
+Re-running overwrites the same files.
 
 Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init --language` for the ecosystem and its SQL dialects. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
 
@@ -107,7 +104,7 @@ npx @deterministic-code/datasources-cli generate all --dialect rust
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
 
 `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity. `Update` and `Delete` return `Response`.
 
@@ -217,7 +214,7 @@ npx @deterministic-code/datasources-cli generate all --dialect rust
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
 
 Create a role, then a user that lists that role. `Create` / `create` / `create` writes the junction row. `ReadSingle` / `readSingle` / `read_single` fills `Roles` / `roles` / `roles`. Delete removes the user and the junction; the role row stays.
 
@@ -336,7 +333,7 @@ npx @deterministic-code/datasources-cli generate all --dialect rust
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](#migrations) to write, apply, or roll back a migration on its own.
 
 The generated repository maps those stored names. The CRUD call still uses `Username` / `username` / `username`.
 

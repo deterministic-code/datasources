@@ -22,7 +22,7 @@ public sealed class GenerateE2ETests
             var spec = Path.Combine(repo, "samples", "contacts-crud-enriched-medium-rest-shared", "deterministic");
             Require(Exec(
                 Which("node"),
-                [cli, "generate", "all", "--dialect", "csharp", "--cwd", sample, "--input", spec, "--output", "generated", "--no-migrate"],
+                [cli, "generate", "all", "--dialect", "csharp", "--cwd", sample, "--input", spec, "--output", "generated", "--no-auto-migrate-up"],
                 ts,
                 env));
             Require(Exec(Which("npx"), ["migrate-setup", "--provider", "sqlite", "--connection", db], ts));

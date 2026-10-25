@@ -65,7 +65,7 @@ fn generates_and_registers_contacts() {
             spec.to_str().expect("spec"),
             "--output",
             "generated",
-            "--no-migrate",
+            "--no-auto-migrate-up",
         ],
         &url,
     );
