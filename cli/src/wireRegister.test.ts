@@ -173,6 +173,21 @@ describe("wireRegister", () => {
     expect(files[join(cwd, "src", "index.ts")]).toBe(`export const app = 1;\n`);
   });
 
+  it("follows folder and file casing for the typescript registry", async () => {
+    const cwd = "app";
+    const settings = {
+      "languages.typescript.casing.directories": "Pascal",
+      "languages.typescript.casing.file_names": "kebab",
+    };
+    const registry = join(cwd, "generated", "typescript/Repositories/repository-registry.ts");
+    const { files, fs } = mem(["package.json", "src"], {
+      [join(cwd, "src", "index.ts")]: `export const app = 1;\n`,
+      [registry]: "export const register = () => {};\n",
+    });
+    await wireRegister(cwd, "generated", "typescript", false, { fs, log: () => undefined }, settings);
+    expect(files[hookPath(cwd, "typescript", true)]).toContain("Repositories/repository-registry.ts");
+  });
+
   it("is idempotent", async () => {
     const cwd = "app";
     const { files, fs } = mem(["src"], {

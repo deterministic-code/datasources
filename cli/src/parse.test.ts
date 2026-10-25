@@ -136,7 +136,18 @@ describe("parseArgs", () => {
     expect(help).toMatch(/https:\/\/deterministic-code\.github\.io\/datasources\/cli\.html#generate/);
     expect(help).toMatch(/--stored-procedures/);
     expect(help).toMatch(/--file-names/);
-    expect(help).toMatch(/--directories/);
+    expect(help).toMatch(/--type-names\|--types/);
+    expect(help).toMatch(/--field-names\|--fields/);
+    expect(help).toMatch(/--folder-names\|--directories/);
+    expect(parseArgs(["generate", "types", "--dialect", "rust", "--type-names", "snake", "--field-names=kebab", "--folder-names", "pascal"]).command).toMatchObject({
+      types: "Snake",
+      fields: "Kebab",
+      directories: "Pascal",
+    });
+    expect(parseArgs(["generate", "types", "--dialect", "rust", "--type-names=camel", "--folder-names=kebab"]).command).toMatchObject({
+      types: "Camel",
+      directories: "Kebab",
+    });
   });
 
   it("parses migrations create", () => {

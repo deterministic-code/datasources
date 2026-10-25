@@ -76,6 +76,10 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 | `--no-auto-migrate-up` | Skip migrate-up. `generate all` applies them by default |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` on `generate all` (default: `sql`) |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
+| `--file-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated language file names |
+| `--type-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated type identifiers (`--types` is the same flag) |
+| `--field-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated fields (`--fields` is the same flag) |
+| `--folder-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated folders (`--directories` is the same flag) |
 
 `generate all` writes SQL migrations into the [migraters](https://github.com/deterministic-code/migraters) layout and runs migrate-up. The connection is `PROVIDER` and `DATASOURCE_URL` from `.env`. Process env overrides the file. An in-memory `DATASOURCE_URL` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten. `--stored-procedures` and `settings.yaml` `datasource.use_stored_procedures: true` both turn on stored-procedure migrations.
 

@@ -2,6 +2,7 @@ import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { csharpTarget } from "./detect.ts";
 import { repositoriesPrefix } from "./generate/casing.ts";
+import { rustIdent } from "./generate/RepositoryModel.ts";
 import type { Dialect } from "./generate/GenerateRequest.ts";
 import type { Fs } from "./io.ts";
 
@@ -34,7 +35,7 @@ export const hookContents = (
   const casing = createCasingStrategy(dialect, settings);
   return dialect === "typescript"
     ? `import "${specFrom(hook, join(output, registryRel(dialect, settings)))}";\n`
-    : `#[path = "${specFrom(hook, join(output, registryRel(dialect, settings)))}"]\npub mod repositories;\npub use repositories::${casing.convertFileName("repository_registry")}::Repositories;\n`;
+    : `#[path = "${specFrom(hook, join(output, registryRel(dialect, settings)))}"]\npub mod repositories;\npub use repositories::${rustIdent(casing.convertFileName("repository_registry"))}::Repositories;\n`;
 };
 
 export const cargoWithCtor = (cargo: string): string | undefined =>

@@ -48,6 +48,11 @@ export const repositoryFile = (ext: "cs" | "ts" | "rs", specName: string, casing
 export const registryFile = (ext: "cs" | "ts" | "rs", casing: ICasingStrategy): string =>
   `${casing.convertFileName("repository_registry")}.${ext}`;
 
+export const rustIdent = (stem: string): string => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(stem) ? stem : stem.replaceAll("-", "_"));
+
+export const rustModLine = (stem: string): string =>
+  rustIdent(stem) === stem ? `pub mod ${stem};` : `#[path = "${stem}.rs"]\npub mod ${rustIdent(stem)};`;
+
 export const childField = (casing: ICasingStrategy, specName: string): string => casing.convertFields(specName);
 
 export const childClass = (typeName: string): string => `${typeName}Repository`;

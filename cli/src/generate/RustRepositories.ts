@@ -1,6 +1,6 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childField, children as childModels, isLinked, pluralSnake, registryFile, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
+import { childField, children as childModels, isLinked, pluralSnake, registryFile, repositoryFile, rustIdent, rustModLine, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { dialectsOf, pad, quote, writeList } from "./writeLists.ts";
 
 type Options = RepositoryOptionsModel & { entity: string };
@@ -52,8 +52,10 @@ const nestedOf = (models: RepositoryModel[]): Set<string> =>
 const viaClone = (name: string, specName: string, nested: Set<string>): string =>
   nested.has(specName) ? `Arc::clone(&${name}.repo)` : `Arc::clone(&${name})`;
 
-const moduleStem = (specName: string, casing: ICasingStrategy): string =>
+const fileStem = (specName: string, casing: ICasingStrategy): string =>
   casing.convertFileName(`${specName}_repository`);
+
+const moduleStem = (specName: string, casing: ICasingStrategy): string => rustIdent(fileStem(specName, casing));
 
 const repoFn = (specName: string, casing: ICasingStrategy): string =>
   casing.convertFields(`${specName}_repository`);
@@ -218,7 +220,6 @@ const wrapped = (model: RepositoryModel, nested: Set<string>, casing: ICasingStr
 
 export const rustRepositories = (models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] => {
   const casing = createCasingStrategy("rust", settings);
-  const registryStem = casing.convertFileName("repository_registry");
   const nested = nestedOf(models);
   const files = models.map((model) =>
     content(repositoryFile("rs", model.specName, casing), childModels(model).length === 0 ? plain(model, nested, casing) : wrapped(model, nested, casing)),
@@ -243,6 +244,6 @@ export const rustRepositories = (models: RepositoryModel[], settings: Record<str
   return [
     ...files,
     content(registryFile("rs", casing), registry),
-    content("mod.rs", `${models.map((model) => `pub mod ${moduleStem(model.specName, casing)};`).join("\n")}\npub mod ${registryStem};\n`),
+    content("mod.rs", `${models.map((model) => rustModLine(fileStem(model.specName, casing))).join("\n")}\n${rustModLine(casing.convertFileName("repository_registry"))}\n`),
   ];
 };

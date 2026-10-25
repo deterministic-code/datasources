@@ -431,6 +431,39 @@ types:
     expect(addressType.slice(0, addressType.indexOf("createReadonly"))).toContain("ids:");
   });
 
+  it("uses kebab rust files through #[path] and CLI flags override settings.yaml", async () => {
+    const rust = await deterministic.generateRepositories(request("rust", {
+      "backend.datasources": "sqlite",
+      "languages.rust.casing.file_names": "kebab",
+    }));
+    expect(textOf(rust, "contact-repository.rs")).toContain("pub fn contact_repository");
+    expect(textOf(rust, "mod.rs")).toContain('#[path = "contact-repository.rs"]');
+    expect(textOf(rust, "mod.rs")).toContain("pub mod contact_repository;");
+    expect(textOf(rust, "mod.rs")).toContain('#[path = "repository-registry.rs"]');
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n  languages:\n    typescript:\n      casing:\n        file_names: camel\n        fields: camel\n";
+    const store = mem(seeded);
+    expect(
+      await run(
+        ["generate", "repositories", "--dialect", "typescript", "--cwd", cwd, "--file-names", "kebab"],
+        deps(store.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(store.files[join(cwd, "generated/typescript/repositories/contact-repository.ts")]).toContain("export class ContactRepository");
+    expect(store.files[join(cwd, "generated/typescript/repositories/contactRepository.ts")]).toBeUndefined();
+  });
+
+  it("cases child fields from settings", async () => {
+    const csharp = await deterministic.generateRepositories(request("csharp", {
+      "backend.datasources": "sqlite",
+      "languages.csharp.casing.fields": "camel",
+    }));
+    expect(textOf(csharp, "ContactRepository.cs")).toContain("public AddressRepository address { get; }");
+  });
+
   it("cases layout directories from flags", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");

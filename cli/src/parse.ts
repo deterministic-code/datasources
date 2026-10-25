@@ -79,9 +79,9 @@ generate <all|types|repositories|datasource>
   --migrations-root <dir>     Root prefix for generate all (default: sql)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
   --file-names Pascal|Camel|Snake|Kebab|Auto
-  --types Pascal|Camel|Snake|Kebab|Auto
-  --fields Pascal|Camel|Snake|Kebab|Auto
-  --directories Pascal|Camel|Snake|Kebab|Auto
+  --type-names|--types Pascal|Camel|Snake|Kebab|Auto
+  --field-names|--fields Pascal|Camel|Snake|Kebab|Auto
+  --folder-names|--directories Pascal|Camel|Snake|Kebab|Auto
 
 migrations create     SQL migrations from the spec (migraters layout)
   --provider <name>           Spec provider (default: deterministic)
@@ -137,13 +137,15 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg === "--stored-procedures") generate.storedProcedures = true;
     else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
     else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
-    else if (arg === "--file-names") generate.fileNames = parseCaseFlag(take(argv, ++i, "--file-names"), "--file-names");
-    else if (arg.startsWith("--file-names=")) generate.fileNames = parseCaseFlag(arg.slice("--file-names=".length), "--file-names");
-    else if (arg === "--types") generate.types = parseCaseFlag(take(argv, ++i, "--types"), "--types");
+    else if (arg === "--file-names" || arg === "--type-names" || arg === "--types" || arg === "--field-names" || arg === "--fields" || arg === "--folder-names" || arg === "--directories") {
+      const key = arg === "--file-names" ? "fileNames" : arg === "--type-names" || arg === "--types" ? "types" : arg === "--field-names" || arg === "--fields" ? "fields" : "directories";
+      generate[key] = parseCaseFlag(take(argv, ++i, arg), arg);
+    } else if (arg.startsWith("--file-names=")) generate.fileNames = parseCaseFlag(arg.slice("--file-names=".length), "--file-names");
+    else if (arg.startsWith("--type-names=")) generate.types = parseCaseFlag(arg.slice("--type-names=".length), "--type-names");
     else if (arg.startsWith("--types=")) generate.types = parseCaseFlag(arg.slice("--types=".length), "--types");
-    else if (arg === "--fields") generate.fields = parseCaseFlag(take(argv, ++i, "--fields"), "--fields");
+    else if (arg.startsWith("--field-names=")) generate.fields = parseCaseFlag(arg.slice("--field-names=".length), "--field-names");
     else if (arg.startsWith("--fields=")) generate.fields = parseCaseFlag(arg.slice("--fields=".length), "--fields");
-    else if (arg === "--directories") generate.directories = parseCaseFlag(take(argv, ++i, "--directories"), "--directories");
+    else if (arg.startsWith("--folder-names=")) generate.directories = parseCaseFlag(arg.slice("--folder-names=".length), "--folder-names");
     else if (arg.startsWith("--directories=")) generate.directories = parseCaseFlag(arg.slice("--directories=".length), "--directories");
     else if (arg === "--help" || arg === "-h") return { command: { kind: "help" }, flags };
     else rest.push(arg);
