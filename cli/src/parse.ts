@@ -24,7 +24,6 @@ export type GenerateCommand = {
   migrate: boolean;
   storedProcedures: boolean;
   migrationsRoot: string;
-  migrationsPath?: string;
 };
 
 export type MigrationsCreateCommand = {
@@ -33,7 +32,6 @@ export type MigrationsCreateCommand = {
   input: string;
   storedProcedures: boolean;
   migrationsRoot: string;
-  migrationsPath?: string;
 };
 
 export type VersionCommand = {
@@ -70,21 +68,20 @@ remove <provider...>  Remove provider packages
 
 generate <all|types|repositories|datasource>
                       Types, repository classes, and SQL
+                      https://deterministic-code.github.io/datasources/cli.html#generate
   --dialect csharp|typescript|rust
   --provider <name>           Spec provider (default: deterministic)
   --input <dir>               Deterministic project (default: ./deterministic)
   --output <dir>              Generated files (default: ./generated)
   --no-migrations             Skip SQL migrations (generate all writes them)
-  --no-migrate                Skip migrate-up (generate all applies them)
+  --no-auto-migrate-up        Skip migrate-up (generate all applies them)
   --migrations-root <dir>     Root prefix for generate all (default: sql)
-  --migrations-path <dir>     One migrations directory (single SQL dialect)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
 
 migrations create     SQL migrations from the spec (migraters layout)
   --provider <name>           Spec provider (default: deterministic)
   --input <dir>               Deterministic project (default: ./deterministic)
   --migrations-root <dir>     Root prefix (default: sql)
-  --migrations-path <dir>     One migrations directory (single SQL dialect)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
 
 version               Snapshot top-level YAML as the next version-*/diff.yaml
@@ -108,7 +105,6 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     migrate: true,
     storedProcedures: false,
     migrationsRoot: "sql",
-    migrationsPath: "",
   };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
@@ -128,12 +124,10 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg === "--output") generate.output = take(argv, ++i, "--output");
     else if (arg.startsWith("--output=")) generate.output = arg.slice("--output=".length);
     else if (arg === "--no-migrations") generate.migrations = false;
-    else if (arg === "--no-migrate") generate.migrate = false;
+    else if (arg === "--no-auto-migrate-up") generate.migrate = false;
     else if (arg === "--stored-procedures") generate.storedProcedures = true;
     else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
     else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
-    else if (arg === "--migrations-path") generate.migrationsPath = take(argv, ++i, "--migrations-path");
-    else if (arg.startsWith("--migrations-path=")) generate.migrationsPath = arg.slice("--migrations-path=".length);
     else if (arg === "--help" || arg === "-h") return { command: { kind: "help" }, flags };
     else rest.push(arg);
   }
@@ -153,7 +147,6 @@ const commandOf = (
     migrate: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
-    migrationsPath: string;
   },
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
@@ -168,7 +161,7 @@ const commandOf = (
 
 const migrationsCommand = (
   names: string[],
-  generate: { provider: string; input: string; storedProcedures: boolean; migrationsRoot: string; migrationsPath: string },
+  generate: { provider: string; input: string; storedProcedures: boolean; migrationsRoot: string },
 ): MigrationsCreateCommand => {
   if (names.length !== 1 || names[0] !== "create")
     throw new Error(`Usage: datasources migrations create\n${help}`);
@@ -178,7 +171,6 @@ const migrationsCommand = (
     input: generate.input,
     storedProcedures: generate.storedProcedures,
     migrationsRoot: generate.migrationsRoot,
-    ...(generate.migrationsPath === "" ? {} : { migrationsPath: generate.migrationsPath }),
   };
 };
 
@@ -198,7 +190,6 @@ const generateCommand = (
     migrate: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
-    migrationsPath: string;
   },
 ): GenerateCommand => {
   if (names.length !== 1) throw new Error(`Usage: datasources generate <all|types|repositories|datasource>\n${help}`);
@@ -216,7 +207,6 @@ const generateCommand = (
     migrate: generate.migrate,
     storedProcedures: generate.storedProcedures,
     migrationsRoot: generate.migrationsRoot,
-    ...(generate.migrationsPath === "" ? {} : { migrationsPath: generate.migrationsPath }),
   };
 };
 

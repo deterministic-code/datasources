@@ -272,6 +272,14 @@ pages:
     group: Command Line (CLI)
     hash: remove
   - path: cli.md
+    title: Generate
+    group: Command Line (CLI)
+    hash: generate
+  - path: cli.md
+    title: Migrate
+    group: Command Line (CLI)
+    hash: migrations
+  - path: cli.md
     title: .env
     group: Command Line (CLI)
     hash: env

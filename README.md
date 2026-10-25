@@ -135,11 +135,11 @@ DATASOURCE_URL=sqlite:///./app.sqlite
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`--no-migrations` skips writing the migration files. `--no-migrate` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
+`--no-migrations` skips writing the migration files. `--no-auto-migrate-up` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten.
 
 ```sh
 npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrations
-npx @deterministic-code/datasources-cli generate all --dialect typescript --no-migrate
+npx @deterministic-code/datasources-cli generate all --dialect typescript --no-auto-migrate-up
 ```
 
 See [Migrations](docs/cli.md#migrations).
@@ -772,7 +772,7 @@ npx @deterministic-code/datasources-cli generate all --dialect rust
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 `Create` / `create` / `create` returns that entity. `ReadSingle` / `readSingle` / `read_single` returns the same entity. `Update` and `Delete` return `Response`.
 
@@ -882,7 +882,7 @@ npx @deterministic-code/datasources-cli generate all --dialect rust
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 Create a role, then a user that lists that role. `Create` / `create` / `create` writes the junction row. `ReadSingle` / `readSingle` / `read_single` fills `Roles` / `roles` / `roles`. Delete removes the user and the junction; the role row stays.
 
@@ -1001,7 +1001,7 @@ npx @deterministic-code/datasources-cli generate all --dialect rust
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-migrate` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
+`generate all` writes the SQL migrations and runs migrate-up against `DATASOURCE_URL`. `--no-migrations` skips the files. `--no-auto-migrate-up` skips applying them. See [Migrations](docs/cli.md#migrations) to write, apply, or roll back a migration on its own.
 
 The generated repository maps those stored names. The CRUD call still uses `Username` / `username` / `username`.
 
@@ -1455,6 +1455,8 @@ _None._
 - [Setup](docs/cli.md#setup)
 - [Add](docs/cli.md#add)
 - [Remove](docs/cli.md#remove)
+- [Generate](docs/cli.md#generate)
+- [Migrate](docs/cli.md#migrations)
 - [.env](docs/cli.md#env)
 
 ### Writing Providers

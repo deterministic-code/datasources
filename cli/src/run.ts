@@ -58,7 +58,6 @@ const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<voi
         input: command.input,
         storedProcedures: command.storedProcedures,
         migrationsRoot: command.migrationsRoot,
-        ...(command.migrationsPath === undefined ? {} : { migrationsPath: command.migrationsPath }),
       },
       flags,
       deps,

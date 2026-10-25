@@ -727,7 +727,7 @@ types:
       const io = deps(store.fs);
       expect(
         await run(
-          ["generate", target, "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-migrate"],
+          ["generate", target, "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
           io,
           cwd,
         ),
@@ -848,7 +848,7 @@ types: []
       const skipped = mem(seeded);
       const skipIo = deps(skipped.fs);
       expect(
-        await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-migrate"], skipIo, cwd),
+        await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"], skipIo, cwd),
       ).toBe(0);
       expect(skipped.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
       expect(skipIo.logs.some((line) => line.includes("migrate-up"))).toBe(false);
@@ -887,27 +887,18 @@ types: []
     expect(await run(["migrations", "create", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
     expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
     expect(dryIo.logs.some((line) => line.endsWith("sql/sqlite/migrations/0001_initial_up.sql"))).toBe(true);
-    const pathStore = mem(seeded);
-    const pathIo = deps(pathStore.fs);
-    expect(await run(["migrations", "create", "--cwd", cwd, "--migrations-path", "db/changes"], pathIo, cwd)).toBe(0);
-    expect(pathStore.files[join(cwd, "db/changes/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
-    const dual = mem({
-      ...seeded,
-      [join(input, "settings.yaml")]: "settings:\n  backend:\n    datasources: sqlite,postgres\n",
-    });
-    expect(await run(["migrations", "create", "--cwd", cwd, "--migrations-path", "db/changes"], deps(dual.fs), cwd)).toBe(1);
     const absolute = mem({
       [join("/tmp/spec", "types.yaml")]: typesYaml,
       [join("/tmp/spec", "datasource.yaml")]: sqliteDatasourceYaml,
     });
     expect(
       await run(
-        ["migrations", "create", "--input", "/tmp/spec", "--migrations-path", "/tmp/mig"],
+        ["migrations", "create", "--input", "/tmp/spec", "--migrations-root", "/tmp/mig"],
         deps(absolute.fs),
         cwd,
       ),
     ).toBe(0);
-    expect(absolute.files[join("/tmp/mig", "0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+    expect(absolute.files[join("/tmp/mig", "sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });
 
   it("accepts --stored-procedures on generate all and migrations create", async () => {
@@ -918,7 +909,7 @@ types: []
     const generate = mem(seeded);
     expect(
       await run(
-        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--stored-procedures", "--no-migrate"],
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--stored-procedures", "--no-auto-migrate-up"],
         deps(generate.fs),
         cwd,
       ),
