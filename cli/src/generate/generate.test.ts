@@ -163,10 +163,10 @@ describe("generate", () => {
     const rust = await deterministic.generateRepositories(request("rust"));
     const legacyCs = textOf(csharp, "LegacyContactRepository.cs");
     const contactCs = textOf(csharp, "ContactRepository.cs");
-    const legacyTs = textOf(typescript, "legacy-contact-repository.ts");
-    const contactTs = textOf(typescript, "contact-repository.ts");
-    const legacyRs = textOf(rust, "legacy_contact_repository.rs");
-    const contactRs = textOf(rust, "contact_repository.rs");
+    const legacyTs = textOf(typescript, "legacyContactRepository.ts");
+    const contactTs = textOf(typescript, "contactRepository.ts");
+    const legacyRs = textOf(rust, "legacyContactRepository.rs");
+    const contactRs = textOf(rust, "contactRepository.rs");
     expect(legacyCs).toContain('["LegacyContact"] = "OldContactsTbl"');
     expect(legacyCs).toContain('["Key"] = "CntID"');
     expect(legacyCs).toContain('["FirstName"] = "FirstNm"');
@@ -211,7 +211,7 @@ describe("generate", () => {
     expect(contactTs).toContain('destinationProperty: "contactSourceName"');
     expect(contactTs).toContain('type: "list"');
     expect(contactTs).toContain('type: "dictionary"');
-    expect(textOf(typescript, "contact-group-repository.ts")).toContain("addLinked");
+    expect(textOf(typescript, "contactGroupRepository.ts")).toContain("addLinked");
     expect(legacyRs).toContain('"LegacyContact"');
     expect(legacyRs).toContain('"OldContactsTbl"');
     expect(contactRs).toContain('"Contact"');
@@ -228,21 +228,21 @@ describe("generate", () => {
     expect(contactRs).toContain('vec!["contact_source_id".into()');
     expect(contactRs).toContain("for_connection(connection.as_ref())");
     expect(contactRs).toContain("pub struct ContactRepository");
-    expect(contactRs).toContain("pub address: Arc<super::address_repository::AddressRepository>");
-    expect(contactRs).toContain("pub phone: Arc<super::phone_repository::PhoneRepository>");
+    expect(contactRs).toContain("pub address: Arc<super::addressRepository::AddressRepository>");
+    expect(contactRs).toContain("pub phone: Arc<super::phoneRepository::PhoneRepository>");
     expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository>");
     expect(contactRs).toContain("Arc::clone(&address.repo)");
-    expect(textOf(rust, "contact_group_repository.rs")).toContain("add_linked");
-    expect(textOf(rust, "contact_group_repository.rs")).toContain("pub struct ContactGroupRepository");
-    expect(textOf(rust, "mod.rs")).toContain("pub mod contact_repository;");
+    expect(textOf(rust, "contactGroupRepository.rs")).toContain("add_linked");
+    expect(textOf(rust, "contactGroupRepository.rs")).toContain("pub struct ContactGroupRepository");
+    expect(textOf(rust, "mod.rs")).toContain("pub mod contactRepository;");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain("ModuleInitializer");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain("RepositoryFactory.Bind(Register)");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
-    expect(textOf(typescript, "repository-registry.ts")).toContain("RepositoryFactory.bind(register)");
-    expect(textOf(typescript, "repository-registry.ts")).toContain('"Contact", "contacts"');
-    expect(textOf(typescript, "repository-registry.ts")).toContain('"ContactGroup", "contactGroups"');
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
     expect(contactTs).toContain("createReadonly");
     expect(contactTs.slice(contactTs.indexOf("createReadonly"))).not.toContain("ids:");
     expect(legacyTs.slice(legacyTs.indexOf("createReadonly"))).not.toContain("ids:");
@@ -253,17 +253,17 @@ describe("generate", () => {
     expect(readonlyFn).not.toContain("updateProperties:");
     expect(contactTs).not.toMatch(/from "[^"]+\.ts"/);
     expect(legacyTs).not.toMatch(/from "[^"]+\.ts"/);
-    expect(textOf(typescript, "repository-registry.ts")).not.toMatch(/from "[^"]+\.ts"/);
-    expect(textOf(rust, "repository_registry.rs")).toContain("RepositoryFactory::bind(register)");
-    expect(textOf(rust, "repository_registry.rs")).toContain("#[ctor::ctor]");
-    expect(textOf(rust, "repository_registry.rs")).not.toContain("Once");
-    expect(textOf(rust, "repository_registry.rs")).not.toContain("bind();\n");
-    expect(textOf(rust, "repository_registry.rs")).toContain('"Contact"');
-    expect(textOf(rust, "repository_registry.rs")).toContain('"contacts"');
-    expect(textOf(rust, "repository_registry.rs")).toContain('"contact_groups"');
-    expect(textOf(rust, "repository_registry.rs")).toContain("fn contacts(&self)");
-    expect(textOf(rust, "repository_registry.rs")).toContain("fn contact_groups(&self)");
-    expect(textOf(rust, "mod.rs")).toContain("pub mod repository_registry;");
+    expect(textOf(typescript, "repositoryRegistry.ts")).not.toMatch(/from "[^"]+\.ts"/);
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("RepositoryFactory::bind(register)");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("#[ctor::ctor]");
+    expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("Once");
+    expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("bind();\n");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain('"Contact"');
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain('"contacts"');
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain('"contact_groups"');
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self)");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contact_groups(&self)");
+    expect(textOf(rust, "mod.rs")).toContain("pub mod repositoryRegistry;");
   });
 
   it("keeps default write lists when an engine file omits a type", async () => {
@@ -343,9 +343,9 @@ types:
       settings: { "backend.datasources": "sqlite" },
     });
     const csharp = textOf(await deterministic.generateRepositories(occ("csharp")), "AccountRepository.cs");
-    const typescript = textOf(await deterministic.generateRepositories(occ("typescript")), "account-repository.ts");
-    const rust = textOf(await deterministic.generateRepositories(occ("rust")), "account_repository.rs");
-    const registry = textOf(await deterministic.generateRepositories(occ("rust")), "repository_registry.rs");
+    const typescript = textOf(await deterministic.generateRepositories(occ("typescript")), "accountRepository.ts");
+    const rust = textOf(await deterministic.generateRepositories(occ("rust")), "accountRepository.rs");
+    const registry = textOf(await deterministic.generateRepositories(occ("rust")), "repositoryRegistry.rs");
     expect(csharp).toContain("public new async Task<Response> Update");
     expect(csharp).toContain("public new async Task<Response> Delete");
     expect(csharp).toContain("item.Version += 1");
@@ -404,8 +404,8 @@ types:
     };
     const stampReq = { reader: memoryReader(stamp), settings: { "backend.datasources": "sqlite" } };
     const stampCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", ...stampReq }), "StampRepository.cs");
-    const stampTs = textOf(await deterministic.generateRepositories({ dialect: "typescript", ...stampReq }), "stamp-repository.ts");
-    const stampRs = textOf(await deterministic.generateRepositories({ dialect: "rust", ...stampReq }), "stamp_repository.rs");
+    const stampTs = textOf(await deterministic.generateRepositories({ dialect: "typescript", ...stampReq }), "stampRepository.ts");
+    const stampRs = textOf(await deterministic.generateRepositories({ dialect: "rust", ...stampReq }), "stampRepository.rs");
     const skippedCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(skipped), settings: { "backend.datasources": "sqlite" } }), "AccountRepository.cs");
     expect(stampCs).toContain("public new async Task<Response> Update");
     expect(stampCs).not.toContain("item.Version += 1");
@@ -429,6 +429,35 @@ types:
     expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
     expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
     expect(addressType.slice(0, addressType.indexOf("createReadonly"))).toContain("ids:");
+  });
+
+  it("cases layout directories from flags", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    const store = mem(seeded);
+    const io = deps(store.fs);
+    expect(
+      await run(
+        [
+          "generate",
+          "all",
+          "--dialect",
+          "typescript",
+          "--cwd",
+          cwd,
+          "--directories",
+          "Pascal",
+          "--no-migrations",
+          "--no-auto-migrate-up",
+        ],
+        io,
+        cwd,
+      ),
+    ).toBe(0);
+    expect(Object.keys(store.files).some((path) => path.includes("typescript/Types/Generated/Datasource"))).toBe(true);
+    expect(Object.keys(store.files).some((path) => path.includes("typescript/Repositories"))).toBe(true);
   });
 
   it("emits a typescript Contact type and sqlite tables", async () => {
@@ -744,7 +773,7 @@ types:
     });
     const io = deps(absolute.fs);
     expect(await run(["generate", "repositories", "--dialect", "rust", "--input", "/tmp/spec", "--output", "/tmp/out"], io, cwd)).toBe(0);
-    expect(absolute.files[join("/tmp/out", "rust/repositories/legacy_contact_repository.rs")]).toContain("CntID");
+    expect(absolute.files[join("/tmp/out", "rust/repositories/legacyContactRepository.rs")]).toContain("CntID");
     const missing = mem();
     expect(await run(["generate", "types", "--dialect", "csharp", "--cwd", cwd], deps(missing.fs), cwd)).toBe(1);
     expect(await run(["generate", "types", "--dialect", "typescript", "--provider", "missing", "--cwd", cwd], deps(mem(seeded).fs), cwd)).toBe(1);
@@ -772,11 +801,11 @@ types:
     });
     const io = deps(store.fs);
     expect(await run(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
-    const registry = store.files[join(cwd, "generated/typescript/repositories/repository-registry.ts")];
+    const registry = store.files[join(cwd, "generated/typescript/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"NoteCard", "noteCards"');
     expect(registry).not.toContain('"Note"');
-    expect(store.files[join(cwd, "generated/typescript/repositories/note-card-repository.ts")]).toContain('["NoteCard", "notes"]');
-    expect(store.files[join(cwd, "generated/typescript/repositories/note-repository.ts")]).toBeUndefined();
+    expect(store.files[join(cwd, "generated/typescript/repositories/noteCardRepository.ts")]).toContain('["NoteCard", "notes"]');
+    expect(store.files[join(cwd, "generated/typescript/repositories/noteRepository.ts")]).toBeUndefined();
   });
 
   it("keeps an explicit datasource.yaml filter", async () => {
@@ -807,7 +836,7 @@ types: []
     });
     const io = deps(store.fs);
     expect(await run(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
-    const registry = store.files[join(cwd, "generated/typescript/repositories/repository-registry.ts")];
+    const registry = store.files[join(cwd, "generated/typescript/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"Kept", "kepts"');
     expect(registry).not.toContain('"Dropped"');
   });

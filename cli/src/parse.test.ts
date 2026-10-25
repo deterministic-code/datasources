@@ -48,7 +48,48 @@ describe("parseArgs", () => {
       migrate: true,
       storedProcedures: false,
       migrationsRoot: "sql",
+      fileNames: undefined,
+      types: undefined,
+      fields: undefined,
+      directories: undefined,
     });
+    expect(
+      parseArgs([
+        "generate",
+        "types",
+        "--dialect",
+        "typescript",
+        "--file-names",
+        "kebab",
+        "--types=Pascal",
+        "--fields",
+        "camel",
+        "--directories=Snake",
+      ]).command,
+    ).toMatchObject({
+      fileNames: "Kebab",
+      types: "Pascal",
+      fields: "Camel",
+      directories: "Snake",
+    });
+    expect(
+      parseArgs([
+        "generate",
+        "types",
+        "--dialect=typescript",
+        "--file-names=Snake",
+        "--types",
+        "Camel",
+        "--fields=Pascal",
+      ]).command,
+    ).toMatchObject({
+      fileNames: "Snake",
+      types: "Camel",
+      fields: "Pascal",
+    });
+    expect(() => parseArgs(["generate", "types", "--dialect", "typescript", "--file-names", "screaming"])).toThrow(
+      /--file-names must be one of/,
+    );
     expect(
       parseArgs([
         "generate",
@@ -94,6 +135,8 @@ describe("parseArgs", () => {
     expect(help).toMatch(/generate <all\|types\|repositories\|datasource>/);
     expect(help).toMatch(/https:\/\/deterministic-code\.github\.io\/datasources\/cli\.html#generate/);
     expect(help).toMatch(/--stored-procedures/);
+    expect(help).toMatch(/--file-names/);
+    expect(help).toMatch(/--directories/);
   });
 
   it("parses migrations create", () => {

@@ -7,7 +7,9 @@ import { generate as rustDatasourceTypes } from "@deterministic-code/rust-genera
 import { generate as rustViewTypes } from "@deterministic-code/rust-generators/generate-view-types";
 import { generate as typescriptDatasourceTypes } from "@deterministic-code/typescript-generators/generate-datasource-types";
 import { generate as typescriptViewTypes } from "@deterministic-code/typescript-generators/generate-view-types";
+import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
+import { caseDirectories, repositoriesPrefix, typesPrefix } from "./casing.ts";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
 import type { RepositoryModel, RepositoryOptionsModel } from "./RepositoryModel.ts";
@@ -19,6 +21,11 @@ import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./da
 
 const place = (dir: string, entries: GenerateEntry[]): GenerateEntry[] =>
   entries.map((entry) => ({ ...entry, filename: `${dir}/${entry.filename}` }));
+
+const remap = (entries: GenerateEntry[], settings: Record<string, string>, dialect: Dialect): GenerateEntry[] => {
+  const casing = createCasingStrategy(dialect, settings);
+  return entries.map((entry) => ({ ...entry, filename: caseDirectories(entry.filename, casing) }));
+};
 
 const typePacks: Record<Dialect, { datasource: (ctx: GenerateContext) => Promise<GenerateEntry[]>; views: (ctx: GenerateContext) => Promise<GenerateEntry[]> }> = {
   csharp: { datasource: csharpDatasourceTypes, views: csharpViewTypes },
@@ -81,21 +88,31 @@ export const deterministic: CodeGenerationProvider = {
   generateTypes: async (request) => {
     const pack = typePacks[request.dialect];
     const ctx = context(request);
+    const casing = createCasingStrategy(request.dialect, request.settings);
     const datasource = await pack.datasource(ctx);
     const views = await pack.views(ctx);
-    return request.dialect === "typescript"
-      ? [
-          ...place("typescript/types/generated/datasource", datasource),
-          ...place("typescript/types/generated/views", views),
-        ]
-      : place(request.dialect, [...datasource, ...views]);
+    return remap(
+      request.dialect === "typescript"
+        ? [
+            ...place(typesPrefix(request.dialect, casing, "datasource"), datasource),
+            ...place(typesPrefix(request.dialect, casing, "views"), views),
+          ]
+        : place(request.dialect, [...datasource, ...views]),
+      request.settings,
+      request.dialect,
+    );
   },
   generateRepositories: async (request) => {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
     const models = planRepositories(spec, request.dialect, request.settings);
-    return place(
-      `${request.dialect}/repositories`,
-      repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
+    const casing = createCasingStrategy(request.dialect, request.settings);
+    return remap(
+      place(
+        repositoriesPrefix(request.dialect, casing),
+        repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
+      ),
+      request.settings,
+      request.dialect,
     );
   },
   generateDatasource: async (request) =>

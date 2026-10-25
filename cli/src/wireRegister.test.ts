@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
 import { attached, cargoWithCtor, hookContents, hookPath, specFrom, wireRegister } from "./wireRegister.ts";
 
-const tsRegistry = (cwd: string) => join(cwd, "generated", "typescript/repositories/repository-registry.ts");
+const tsRegistry = (cwd: string) => join(cwd, "generated", "typescript/repositories/repositoryRegistry.ts");
 const rustRegistry = (cwd: string) => join(cwd, "generated", "rust/repositories/mod.rs");
 
 const mem = (entries: string[], files: Record<string, string> = {}): { files: Record<string, string>; fs: Fs } => {
@@ -35,9 +35,10 @@ describe("wireRegister", () => {
     const hook = join("app", "src", "datasources-register.ts");
     const rustHook = join("app", "src", "datasources_register.rs");
     const out = join("app", "generated");
-    expect(hookContents("typescript", hook, out)).toContain("repository-registry.ts");
+    expect(hookContents("typescript", hook, out)).toContain("repositoryRegistry.ts");
     expect(hookContents("rust", rustHook, out)).toContain("mod.rs");
-    expect(specFrom(hook, join(out, "typescript/repositories/repository-registry.ts"))).toMatch(/repository-registry/);
+    expect(hookContents("rust", rustHook, out)).toContain("repositoryRegistry::Repositories");
+    expect(specFrom(hook, join(out, "typescript/repositories/repositoryRegistry.ts"))).toMatch(/repositoryRegistry/);
   });
 
   it("skips attach when the hook is already referenced", () => {
@@ -75,7 +76,7 @@ describe("wireRegister", () => {
     });
     const logs: string[] = [];
     await wireRegister(cwd, "generated", "typescript", false, { fs, log: (line) => logs.push(line) });
-    expect(files[hookPath(cwd, "typescript", true)]).toContain("repository-registry.ts");
+    expect(files[hookPath(cwd, "typescript", true)]).toContain("repositoryRegistry.ts");
     expect(files[join(cwd, "src", "index.ts")]).toContain("datasources-register");
     expect(logs.length).toBe(2);
   });

@@ -1,5 +1,7 @@
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { csharpTarget } from "./detect.ts";
+import { repositoriesPrefix } from "./generate/casing.ts";
 import type { Dialect } from "./generate/GenerateRequest.ts";
 import type { Fs } from "./io.ts";
 
@@ -15,10 +17,25 @@ export const specFrom = (from: string, to: string): string => {
 export const hookPath = (cwd: string, dialect: "typescript" | "rust", src: boolean): string =>
   join(cwd, src ? "src" : ".", dialect === "typescript" ? "datasources-register.ts" : "datasources_register.rs");
 
-export const hookContents = (dialect: "typescript" | "rust", hook: string, output: string): string =>
-  dialect === "typescript"
-    ? `import "${specFrom(hook, join(output, "typescript/repositories/repository-registry.ts"))}";\n`
-    : `#[path = "${specFrom(hook, join(output, "rust/repositories/mod.rs"))}"]\npub mod repositories;\npub use repositories::repository_registry::Repositories;\n`;
+const registryRel = (dialect: "typescript" | "rust", settings: Record<string, string>): string => {
+  const casing = createCasingStrategy(dialect, settings);
+  const dir = repositoriesPrefix(dialect, casing);
+  return dialect === "typescript"
+    ? `${dir}/${casing.convertFileName("repository_registry")}.ts`
+    : `${dir}/mod.rs`;
+};
+
+export const hookContents = (
+  dialect: "typescript" | "rust",
+  hook: string,
+  output: string,
+  settings: Record<string, string> = {},
+): string => {
+  const casing = createCasingStrategy(dialect, settings);
+  return dialect === "typescript"
+    ? `import "${specFrom(hook, join(output, registryRel(dialect, settings)))}";\n`
+    : `#[path = "${specFrom(hook, join(output, registryRel(dialect, settings)))}"]\npub mod repositories;\npub use repositories::${casing.convertFileName("repository_registry")}::Repositories;\n`;
+};
 
 export const cargoWithCtor = (cargo: string): string | undefined =>
   /^\s*ctor\s*=/m.test(cargo)
@@ -46,10 +63,8 @@ const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
 
 const outputRoot = (cwd: string, output: string): string => (isAbsolute(output) ? output : join(cwd, output));
 
-const registryPath = (root: string, dialect: "typescript" | "rust"): string =>
-  dialect === "typescript"
-    ? join(root, "typescript/repositories/repository-registry.ts")
-    : join(root, "rust/repositories/mod.rs");
+const registryPath = (root: string, dialect: "typescript" | "rust", settings: Record<string, string>): string =>
+  join(root, registryRel(dialect, settings));
 
 const firstFile = async (fs: Fs, cwd: string, names: string[]): Promise<{ path: string; text: string } | undefined> => {
   for (const name of names) {
@@ -85,14 +100,15 @@ export const wireRegister = async (
   dialect: Dialect,
   dryRun: boolean,
   deps: Log,
+  settings: Record<string, string> = {},
 ): Promise<void> => {
   if (dialect === "csharp") return wireCsharp(cwd, output, dryRun, deps);
   const root = outputRoot(cwd, output);
   if (relative(cwd, root).startsWith("..")) return;
-  if ((await optional(deps.fs, registryPath(root, dialect))) === undefined) return;
+  if ((await optional(deps.fs, registryPath(root, dialect, settings))) === undefined) return;
   const entries = await deps.fs.readdir(cwd).catch(() => []);
   const hook = hookPath(cwd, dialect, entries.includes("src"));
-  const text = hookContents(dialect, hook, root);
+  const text = hookContents(dialect, hook, root, settings);
   if (dryRun) {
     deps.log(hook);
     return;

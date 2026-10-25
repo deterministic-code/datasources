@@ -1,6 +1,6 @@
-import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, childField, children as childModels, isLinked, pluralCamel, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
+import { childClass, childField, children as childModels, isLinked, pluralCamel, registryFile, repositoryFile, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { dialectsOf, quote, writeList } from "./writeLists.ts";
 
 type Options = RepositoryOptionsModel & { entity: string };
@@ -32,26 +32,26 @@ const tsBuilder = (name: string, model: RepositoryModel, write: (options: Option
 const tsOptionsFn = (model: RepositoryModel): string =>
   dialectsOf(model).length === 0 ? "" : `${tsBuilder("options", model, tsOptions)}${tsBuilder("readonlyOptions", model, tsReadonly)}`;
 
-const enrichment = (item: PlannedEnrichment, host: "this" | "repo"): string => {
+const enrichment = (item: PlannedEnrichment, casing: ICasingStrategy, host: "this" | "repo"): string => {
   const via = host === "this"
-    ? `this.${childField("typescript", item.via, item.viaType)}`
-    : childField("typescript", item.via, item.viaType);
+    ? `this.${childField(casing, item.via)}`
+    : childField(casing, item.via);
   const related = item.relatedProperty === undefined ? "" : `, relatedProperty: "${quote(item.relatedProperty)}"`;
   const type = item.kind === "object" ? "object" : item.kind === "dictionary" ? "dictionary" : "list";
   if (host === "this" && isLinked(item)) {
-    const link = `this.${childField("typescript", item.link, item.linkType)}`;
+    const link = `this.${childField(casing, item.link)}`;
     return `this.addLinked({ destinationProperty: "${quote(item.destination)}", sourceProperty: "${quote(item.source)}", relatedKey: "${quote(item.relatedKey)}"${related}, association: { parent: "${quote(item.parentFk)}", related: "${quote(item.relatedFk)}" }, type: "${type}" }, ${via}, ${link});`;
   }
   return `${host}.addEnriched({ destinationProperty: "${quote(item.destination)}", sourceProperty: "${quote(item.source)}", relatedKey: "${quote(item.relatedKey)}"${related}, type: "${type}" }, ${via});`;
 };
 
-const createReadonly = (model: RepositoryModel): string => {
+const createReadonly = (model: RepositoryModel, casing: ICasingStrategy): string => {
   const options = dialectsOf(model).length === 0 ? tsReadonly(model) : "readonlyOptions(connection)";
   const children = childModels(model);
   if (children.length === 0 && model.enrichments.length === 0)
     return `  static createReadonly = (connection: IConnection) => new ReadonlyRepository<${model.typeName}>(connection, ${options});`;
-  const locals = children.map((child) => `    const ${childField("typescript", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`);
-  const enrich = model.enrichments.map((item) => `    ${enrichment(item, "repo")}`);
+  const locals = children.map((child) => `    const ${childField(casing, child.specName)} = new ${childClass(child.typeName)}(connection);`);
+  const enrich = model.enrichments.map((item) => `    ${enrichment(item, casing, "repo")}`);
   return `  static createReadonly(connection: IConnection) {\n    const repo = new ReadonlyRepository<${model.typeName}>(connection, ${options});\n${locals.join("\n")}\n${enrich.join("\n")}\n    return repo;\n  }`;
 };
 
@@ -68,36 +68,42 @@ const occWrap = (model: RepositoryModel): string => {
   return `    const update = this.update;\n    const remove = this.delete;\n    this.update = async (item, byWhere) => {\n      const expected = item.${token.property};\n${bump}      const response = await update(item, byWhere ?? ${tokenWhere(model, token, "expected")});\n      if (response.rowsAffected !== 1) throw new DatasourceError(\`Update affected \${response.rowsAffected} rows\`);\n      return response;\n    };\n    this.delete = async (item, byWhere) => {\n      const response = await remove(item, byWhere ?? ${tokenWhere(model, token, `item.${token.property}`)});\n      if (response.rowsAffected !== 1) throw new DatasourceError(\`Delete affected \${response.rowsAffected} rows\`);\n      return response;\n    };\n`;
 };
 
-const repoImport = (specName: string): string => `./${specName.replaceAll("_", "-")}-repository`;
+const repoImport = (specName: string, casing: ICasingStrategy): string =>
+  `./${casing.convertFileName(`${specName}_repository`)}`;
+
+const typeImport = (model: RepositoryModel, casing: ICasingStrategy): string => {
+  const folder = model.typeHome === "view" ? "views" : "datasource";
+  const dirs = ["types", "generated", folder].map((segment) => casing.convertDirectories(segment)).join("/");
+  return `../${dirs}/${casing.convertFileName(model.specName)}`;
+};
 
 export const typescriptRepositories = (models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] => {
   const casing = createCasingStrategy("typescript", settings);
   const files = models.map((model) => {
-    const folder = model.typeHome === "view" ? "views" : "datasource";
     const children = childModels(model);
-    const fields = children.map((child) => `  readonly ${childField("typescript", child.specName, child.typeName)}: ${childClass(child.typeName)};`);
+    const fields = children.map((child) => `  readonly ${childField(casing, child.specName)}: ${childClass(child.typeName)};`);
     const wrap = occWrap(model);
     const lines = [
-      ...children.map((child) => `    this.${childField("typescript", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`),
-      ...model.enrichments.map((item) => `    ${enrichment(item, "this")}`),
+      ...children.map((child) => `    this.${childField(casing, child.specName)} = new ${childClass(child.typeName)}(connection);`),
+      ...model.enrichments.map((item) => `    ${enrichment(item, casing, "this")}`),
     ];
-    const imports = children.map((child) => `import { ${childClass(child.typeName)} } from "${repoImport(child.specName)}";`);
+    const imports = children.map((child) => `import { ${childClass(child.typeName)} } from "${repoImport(child.specName, casing)}";`);
     const builder = dialectsOf(model).length === 0 ? "" : "CRUDRepositoryBuilder, ";
     const core = model.optimisticConcurrency === undefined
       ? `import { CRUDRepository, ${builder}DictionaryMapper, ReadonlyRepository, type IConnection } from "@deterministic-code/datasources";`
       : `import { CRUDRepository, ${builder}DatasourceError, DictionaryMapper, eq, ReadonlyRepository, Where, type IConnection } from "@deterministic-code/datasources";`;
     return content(
-      repositoryFile("typescript", model),
-      `import type { ${model.typeName} } from "../types/generated/${folder}/${casing.convertFileName(model.specName)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\n${tsOptionsFn(model)}export class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${tsOptionsExpr(model)});\n${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model)}\n}\n`,
+      repositoryFile("ts", model.specName, casing),
+      `import type { ${model.typeName} } from "${typeImport(model, casing)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\n${tsOptionsFn(model)}export class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${tsOptionsExpr(model)});\n${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model, casing)}\n}\n`,
     );
   });
-  const registerImports = models.map((model) => `import { ${childClass(model.typeName)} } from "${repoImport(model.specName)}";`);
+  const registerImports = models.map((model) => `import { ${childClass(model.typeName)} } from "${repoImport(model.specName, casing)}";`);
   const registerCalls = models.map((model) => `  factory.register("${quote(model.entity)}", "${quote(pluralCamel(model.typeName))}", (connection) => new ${childClass(model.typeName)}(connection), (connection) => ${childClass(model.typeName)}.createReadonly(connection));`);
   const props = models.map((model) => `    readonly ${pluralCamel(model.typeName)}: ${childClass(model.typeName)};`);
   return [
     ...files,
     content(
-      "repository-registry.ts",
+      registryFile("ts", casing),
       `import { RepositoryFactory } from "@deterministic-code/datasources";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\nRepositoryFactory.bind(register);\n\ndeclare module "@deterministic-code/datasources" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
     ),
   ];
