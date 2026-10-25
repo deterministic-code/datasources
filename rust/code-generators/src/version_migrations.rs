@@ -8,10 +8,10 @@ use crate::schema_diff::{self, DdlStatement};
 use crate::seed_generator;
 use crate::spec::{self, SeedRow};
 use crate::sql_dialect;
-use crate::version_delta;
 use datasources::{DatasourceError, Result};
+use deterministic_generators_common::{VersionSnapshot, YamlNode, YamlValue};
+use indexmap::IndexMap;
 use regex::Regex;
-use serde_yaml::Value;
 use std::collections::HashMap;
 
 const DEFAULT_DATASOURCE: &str = "version: 1.0.0\nincludes:\n  - types:\n      filter: tag == \"datasource_type\" || tag == \"view_type\"\ntypes: []\n";
@@ -33,35 +33,22 @@ pub fn files(
     if paths.is_empty() {
         return Ok(Vec::new());
     }
-    let mut before = HashMap::new();
+    let mut parsed = Vec::new();
     let mut snapshots = Vec::new();
     for path in &paths {
         let text = files.get(path).map(String::as_str).unwrap_or("");
         if text.is_empty() {
             continue;
         }
-        let parsed = version_delta::parse(text).map_err(|error| DatasourceError::message(error.to_string()))?;
-        let doc = version_delta::as_document(&parsed, path).map_err(DatasourceError::message)?;
-        before = version_delta::apply_document(&before, &doc);
-        snapshots.push(before.clone());
+        parsed.push(parse_diff(text, path)?);
+        snapshots.push(combine(parsed.iter().cloned().map(Some))?);
     }
     if snapshots.is_empty() {
         return Ok(Vec::new());
     }
     let last = snapshots.last().unwrap();
-    let live_types = version_delta::parse(files.get("types.yaml").map(String::as_str).unwrap_or(""))
-        .map_err(|error| DatasourceError::message(error.to_string()))?;
-    let live_datasource = version_delta::parse(
-        files.get("datasource.yaml").map(String::as_str).unwrap_or(DEFAULT_DATASOURCE),
-    )
-    .map_err(|error| DatasourceError::message(error.to_string()))?;
-    let snapshot_types = last.get("types.yaml").cloned().unwrap_or(Value::Null);
-    let snapshot_datasource = last
-        .get("datasource.yaml")
-        .cloned()
-        .unwrap_or(version_delta::parse(DEFAULT_DATASOURCE).map_err(|error| DatasourceError::message(error.to_string()))?);
-    if !version_delta::equal(&snapshot_types, &live_types)
-        || !version_delta::equal(&snapshot_datasource, &live_datasource)
+    if !same(last, "types.yaml", files.get("types.yaml").map(String::as_str), None)?
+        || !same(last, "datasource.yaml", files.get("datasource.yaml").map(String::as_str), Some(DEFAULT_DATASOURCE))?
     {
         return Err(DatasourceError::message(
             "types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first",
@@ -69,7 +56,7 @@ pub fn files(
     }
 
     let mut output = Vec::new();
-    let mut previous = compile(&HashMap::new(), settings)?;
+    let mut previous = compile(&combine(std::iter::empty::<Option<YamlValue>>())?, settings)?;
     let mut number = 0;
     for (index, snapshot) in snapshots.iter().enumerate() {
         let current = compile(snapshot, settings)?;
@@ -123,15 +110,59 @@ pub fn files(
     Ok(output)
 }
 
+fn combine(diffs: impl IntoIterator<Item = Option<YamlValue>>) -> Result<VersionSnapshot> {
+    VersionSnapshot::combine(diffs).map_err(|error| DatasourceError::message(error.to_string()))
+}
+
+fn parse_diff(text: &str, source: &str) -> Result<YamlValue> {
+    let node = YamlNode::from_yaml(text).map_err(|error| DatasourceError::message(format!("{source}: {error}")))?;
+    match node.value().cloned() {
+        Some(value @ YamlValue::Map(_)) => Ok(value),
+        _ => Err(DatasourceError::message(format!("{source}: expected a mapping"))),
+    }
+}
+
+fn fold(path: &str, text: &str) -> Result<String> {
+    let content = YamlNode::from_yaml(text)
+        .map_err(|error| DatasourceError::message(format!("{path}: {error}")))?
+        .value()
+        .cloned()
+        .unwrap_or(YamlValue::Null);
+    let mut envelope = IndexMap::new();
+    envelope.insert("added".into(), YamlValue::Bool(true));
+    envelope.insert("content".into(), content);
+    let mut doc = IndexMap::new();
+    doc.insert(path.to_string(), YamlValue::Map(envelope));
+    combine([Some(YamlValue::Map(doc))])?.yaml(path).map_err(|error| DatasourceError::message(error.to_string()))
+}
+
+fn same(snapshot: &VersionSnapshot, path: &str, live: Option<&str>, missing: Option<&str>) -> Result<bool> {
+    let has = snapshot.documents.contains_key(path);
+    let live_text = live.filter(|text| !text.is_empty()).or(missing);
+    let Some(live_text) = live_text else {
+        return Ok(!has);
+    };
+    let live_yaml = fold(path, live_text)?;
+    let snapshot_yaml = if has {
+        snapshot.yaml(path).map_err(|error| DatasourceError::message(error.to_string()))?
+    } else {
+        match missing {
+            Some(text) => fold(path, text)?,
+            None => return Ok(false),
+        }
+    };
+    Ok(snapshot_yaml == live_yaml)
+}
+
 fn compile(
-    snapshot: &HashMap<String, Value>,
+    snapshot: &VersionSnapshot,
     settings: &HashMap<String, String>,
 ) -> Result<(Vec<SqlTable>, SqlMapping, HashMap<String, Vec<SeedRow>>)> {
     let mut files = HashMap::new();
-    for (path, value) in snapshot {
+    for path in snapshot.documents.keys() {
         files.insert(
             path.clone(),
-            version_delta::yaml(value).map_err(|error| DatasourceError::message(error.to_string()))?,
+            snapshot.yaml(path).map_err(|error| DatasourceError::message(error.to_string()))?,
         );
     }
     files.entry("datasource.yaml".into()).or_insert_with(|| DEFAULT_DATASOURCE.into());

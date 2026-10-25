@@ -1,11 +1,10 @@
-import { parse, stringify } from "yaml";
+import { parse } from "yaml";
 import type { IStatement } from "@deterministic-code/datasources";
 import { CreateTableStatement } from "@deterministic-code/datasources";
 import type { SeedRow } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
-import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
-import { applyDocument, isObject, snapshotsEqual, type Json } from "./version-apply.ts";
+import { DeterministicParser, VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
 import { createCasing, type PackCasing } from "./default-casing.ts";
 import { SqlMapping } from "./sql-mapping.ts";
 import { buildLiveTables, sqlTablesFrom } from "./sql-schema.ts";
@@ -31,18 +30,37 @@ export const versionDiffPaths = (settings: Record<string, string>): string[] =>
     .map((path) => path.trim())
     .filter((path) => versionDiff.test(path));
 
-const asDocument = (value: Json, source: string): { [path: string]: Json } =>
-  isObject(value) ? value : (() => { throw new Error(`${source}: expected a mapping`); })();
+const own = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj, key);
 
-const filesOf = (snapshot: { [path: string]: Json }): Record<string, string> => {
+type Diff = Parameters<typeof VersionSnapshot.combine>[0][number];
+
+const parseDiff = (text: string, source: string): Diff => {
+  const value = parse(text) as Diff;
+  if (value == null || typeof value !== "object" || Array.isArray(value))
+    throw new Error(`${source}: expected a mapping`);
+  return value;
+};
+
+const fold = (path: string, text: string): string =>
+  VersionSnapshot.combine([{ [path]: { added: true, content: parse(text) as Diff } }]).yaml(path);
+
+const matches = (snapshot: VersionSnapshot, path: string, live: string | undefined, whenMissing: string | undefined): boolean => {
+  const has = own(snapshot.documents, path);
+  const text = live === undefined || live === "" ? whenMissing : live;
+  if (text === undefined || text === "") return !has;
+  const snapshotYaml = has ? snapshot.yaml(path) : whenMissing === undefined ? undefined : fold(path, whenMissing);
+  return snapshotYaml !== undefined && snapshotYaml === fold(path, text);
+};
+
+const filesOf = (snapshot: VersionSnapshot): Record<string, string> => {
   const files: Record<string, string> = {};
-  for (const [path, value] of Object.entries(snapshot)) files[path] = stringify(value);
+  for (const path of Object.keys(snapshot.documents)) files[path] = snapshot.yaml(path);
   files["datasource.yaml"] ??= defaultDatasourceYaml;
   return files;
 };
 
 const compile = async (
-  snapshot: { [path: string]: Json },
+  snapshot: VersionSnapshot,
   settings: Record<string, string>,
 ): Promise<SchemaSnapshot & { seeds: Map<string, SeedRow[]> }> => {
   const spec = await DeterministicParser(memoryReader(filesOf(snapshot))).parse(settings);
@@ -52,7 +70,7 @@ const compile = async (
 };
 
 const emptySnapshot = (settings: Record<string, string>): Promise<SchemaSnapshot & { seeds: Map<string, SeedRow[]> }> =>
-  compile({}, settings);
+  compile(VersionSnapshot.combine([]), settings);
 
 const pad = (n: number): string => String(n).padStart(4, "0");
 
@@ -72,21 +90,18 @@ export const versionMigrationFiles = async (
   const paths = versionDiffPaths(ctx.settings);
   if (paths.length === 0) return { files: [], count: 0 };
 
-  let before: { [path: string]: Json } = {};
-  const snapshots: { [path: string]: Json }[] = [];
+  const diffs: Diff[] = [];
+  const snapshots: VersionSnapshot[] = [];
   for (const path of paths) {
     const text = await ctx.reader.read(path);
     if (text === "") continue;
-    before = applyDocument(before, asDocument(parse(text) as Json, path));
-    snapshots.push(before);
+    diffs.push(parseDiff(text, path));
+    snapshots.push(VersionSnapshot.combine(diffs));
   }
   if (snapshots.length === 0) return { files: [], count: 0 };
 
   const last = snapshots[snapshots.length - 1]!;
-  const liveTypes = live.typesYaml === undefined ? undefined : (parse(live.typesYaml) as Json);
-  const liveDatasource = parse(live.datasourceYaml ?? defaultDatasourceYaml) as Json;
-  const snapshotDatasource = last["datasource.yaml"] ?? (parse(defaultDatasourceYaml) as Json);
-  if (!snapshotsEqual(last["types.yaml"], liveTypes) || !snapshotsEqual(snapshotDatasource, liveDatasource)) {
+  if (!matches(last, "types.yaml", live.typesYaml, undefined) || !matches(last, "datasource.yaml", live.datasourceYaml, defaultDatasourceYaml)) {
     throw new Error("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
   }
 

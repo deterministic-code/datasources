@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Deterministic.Generators.Common;
 
 namespace Datasources.CodeGenerators;
 
@@ -26,23 +27,20 @@ public static class VersionMigrations
         var paths = DiffPaths(files);
         if (paths.Count == 0) return [];
 
-        var before = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var snapshots = new List<Dictionary<string, object?>>();
+        var diffs = new List<YamlValue?>();
+        var snapshots = new List<VersionSnapshot>();
         foreach (var path in paths)
         {
             var text = files[path];
             if (text == "") continue;
-            before = VersionDelta.ApplyDocument(before, VersionDelta.AsDocument(VersionDelta.Parse(text), path));
-            snapshots.Add(new Dictionary<string, object?>(before, StringComparer.Ordinal));
+            diffs.Add(ParseDiff(text, path));
+            snapshots.Add(VersionSnapshot.Combine(diffs));
         }
         if (snapshots.Count == 0) return [];
 
         var last = snapshots[^1];
-        var liveTypes = VersionDelta.Parse(files.GetValueOrDefault(SpecParser.TypesYaml) ?? "");
-        var liveDatasource = VersionDelta.Parse(files.GetValueOrDefault(SpecParser.DatasourceYaml) ?? DefaultDatasourceYaml);
-        var snapshotDatasource = last.GetValueOrDefault("datasource.yaml") ?? VersionDelta.Parse(DefaultDatasourceYaml);
-        if (!VersionDelta.Equal(last.GetValueOrDefault("types.yaml"), liveTypes)
-            || !VersionDelta.Equal(snapshotDatasource, liveDatasource))
+        if (!Matches(last, SpecParser.TypesYaml, files.GetValueOrDefault(SpecParser.TypesYaml), null)
+            || !Matches(last, SpecParser.DatasourceYaml, files.GetValueOrDefault(SpecParser.DatasourceYaml), DefaultDatasourceYaml))
             throw new InvalidOperationException("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
 
         var output = new List<GenerateEntry>();
@@ -97,13 +95,41 @@ public static class VersionMigrations
     static string FieldsOf(SqlTable table) =>
         string.Join("|", table.Fields.Select(field => $"{field.Name}:{field.Type}"));
 
-    static Dictionary<string, object?> Empty() => [];
+    static VersionSnapshot Empty() => VersionSnapshot.Combine([]);
+
+    static bool Matches(VersionSnapshot snapshot, string path, string? liveText, string? whenMissing)
+    {
+        var has = snapshot.Documents.ContainsKey(path);
+        var live = string.IsNullOrEmpty(liveText) ? whenMissing : liveText;
+        if (string.IsNullOrEmpty(live)) return !has;
+        var snapshotYaml = has ? snapshot.Yaml(path) : whenMissing is null ? null : Fold(path, whenMissing);
+        return snapshotYaml is not null && snapshotYaml == Fold(path, live);
+    }
+
+    static string Fold(string path, string text)
+    {
+        var (root, errors) = YamlDocuments.Parse(text);
+        if (errors.Count > 0) throw new InvalidOperationException($"{path}: {errors[0].Message}");
+        var envelope = new YamlMap();
+        envelope.Entries.Add(new YamlEntry { Key = "added", Value = new YamlScalar { Value = true } });
+        if (root is not null) envelope.Entries.Add(new YamlEntry { Key = "content", Value = root });
+        var doc = new YamlMap();
+        doc.Entries.Add(new YamlEntry { Key = path, Value = envelope });
+        return VersionSnapshot.Combine([doc]).Yaml(path);
+    }
+
+    static YamlValue ParseDiff(string text, string source)
+    {
+        var (root, errors) = YamlDocuments.Parse(text);
+        if (errors.Count > 0) throw new InvalidOperationException($"{source}: {errors[0].Message}");
+        return root is YamlMap ? root : throw new InvalidOperationException($"{source}: expected a mapping");
+    }
 
     static (IReadOnlyList<SqlTable> Tables, SqlMapping Mapping, IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> Seeds) Compile(
-        Dictionary<string, object?> snapshot,
+        VersionSnapshot snapshot,
         IReadOnlyDictionary<string, string> settings)
     {
-        var files = snapshot.ToDictionary(pair => pair.Key, pair => VersionDelta.Yaml(pair.Value), StringComparer.Ordinal);
+        var files = snapshot.Documents.Keys.ToDictionary(path => path, path => snapshot.Yaml(path), StringComparer.Ordinal);
         files.TryAdd(SpecParser.DatasourceYaml, DefaultDatasourceYaml);
         var spec = SpecParser.Parse(files);
         var types = SqlSchema.From(spec);

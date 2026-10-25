@@ -29,6 +29,14 @@ public class GenerateSqlTests
     static IReadOnlyList<string> Names(IReadOnlyList<GenerateEntry> entries) =>
         entries.Select(e => e.Filename).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
+    static string AddedTypes(string types) => $"types.yaml:\n  added: true\n  content:\n{Indent(types, 4)}";
+
+    static string Indent(string yaml, int spaces)
+    {
+        var pad = new string(' ', spaces);
+        return string.Join('\n', yaml.Trim().Split('\n').Select(line => pad + line)) + "\n";
+    }
+
     [Fact]
     public void OmitsStoredProcedureMigrationsOnSqliteEvenWhenTheFlagIsTrue()
     {
@@ -258,14 +266,7 @@ public class GenerateSqlTests
     {
         const string path = "version-20261016T000000Z-001/diff.yaml";
         var files = Files(TypesYaml);
-        files[path] = VersionDelta.Yaml(new Dictionary<string, object?>
-        {
-            ["types.yaml"] = new Dictionary<string, object?>
-            {
-                ["added"] = true,
-                ["content"] = VersionDelta.Parse(TypesYaml),
-            },
-        });
+        files[path] = AddedTypes(TypesYaml);
         var names = Names(GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
         Assert.Equal(
             ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"],
@@ -277,14 +278,7 @@ public class GenerateSqlTests
     {
         const string path = "version-20261016T000000Z-001/diff.yaml";
         var files = Files(TypesYaml);
-        files[path] = VersionDelta.Yaml(new Dictionary<string, object?>
-        {
-            ["types.yaml"] = new Dictionary<string, object?>
-            {
-                ["added"] = true,
-                ["content"] = VersionDelta.Parse(TypesYaml),
-            },
-        });
+        files[path] = AddedTypes(TypesYaml);
         files["types.yaml"] = """
             types:
               - extra:

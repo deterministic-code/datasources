@@ -1,8 +1,9 @@
 import { isAbsolute, join } from "node:path";
 import type { Flags, VersionCommand } from "../parse.ts";
 import type { Deps } from "../run.ts";
+import { VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Json } from "./delta.ts";
-import { applyDocument, asDocument, parseYaml, render } from "./render.ts";
+import { parseYaml, render } from "./render.ts";
 
 const versionDir = /^version-\d{8}T\d{6}Z-(\d{3})$/;
 
@@ -17,12 +18,17 @@ export const applyVersion = async (
   const root = at(flags.cwd, command.input);
   const names = await deps.fs.readdir(root);
   const versions = names.filter((name) => versionDir.test(name)).sort();
-  let before: { [path: string]: Json } = {};
-  for (const dir of versions) {
-    const text = await optional(deps.fs, join(root, dir, "diff.yaml"));
-    if (text === undefined || text === "") continue;
-    before = applyDocument(before, asDocument(parseYaml(text), `${dir}/diff.yaml`));
-  }
+  const diffs = (
+    await Promise.all(
+      versions.map(async (dir) => {
+        const listed = await deps.fs.readdir(join(root, dir));
+        if (!listed.includes("diff.yaml")) return undefined;
+        const text = await deps.fs.readFile(join(root, dir, "diff.yaml"));
+        return text === "" ? undefined : parseYaml(text);
+      }),
+    )
+  ).filter((diff) => diff !== undefined);
+  const before = VersionSnapshot.combine(diffs).documents as { [path: string]: Json };
   const current = names.filter((name) => name.endsWith(".yaml")).sort();
   const paths = [...new Set([...Object.keys(before), ...current])];
   const yaml = render(
@@ -53,11 +59,3 @@ const pad = (n: number): string => String(n).padStart(3, "0");
 
 const stamp = (date: Date): string =>
   date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-
-const optional = async (fs: Deps["fs"], path: string): Promise<string | undefined> => {
-  try {
-    return await fs.readFile(path);
-  } catch {
-    return undefined;
-  }
-};
