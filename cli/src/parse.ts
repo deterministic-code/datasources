@@ -1,5 +1,6 @@
 import { isEcosystem } from "./detect.ts";
 import type { Ecosystem } from "./catalog.ts";
+import { parseCaseFlag, type CaseFormat, type CasingFlags } from "./generate/casing.ts";
 import { isDialect, type Dialect } from "./generate/GenerateRequest.ts";
 
 export type Flags = {
@@ -24,7 +25,7 @@ export type GenerateCommand = {
   migrate: boolean;
   storedProcedures: boolean;
   migrationsRoot: string;
-};
+} & CasingFlags;
 
 export type MigrationsCreateCommand = {
   kind: "migrations-create";
@@ -77,6 +78,10 @@ generate <all|types|repositories|datasource>
   --no-auto-migrate-up        Skip migrate-up (generate all applies them)
   --migrations-root <dir>     Root prefix for generate all (default: sql)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
+  --file-names Pascal|Camel|Snake|Kebab|Auto
+  --types Pascal|Camel|Snake|Kebab|Auto
+  --fields Pascal|Camel|Snake|Kebab|Auto
+  --directories Pascal|Camel|Snake|Kebab|Auto
 
 migrations create     SQL migrations from the spec (migraters layout)
   --provider <name>           Spec provider (default: deterministic)
@@ -105,6 +110,10 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     migrate: true,
     storedProcedures: false,
     migrationsRoot: "sql",
+    fileNames: undefined as CaseFormat | undefined,
+    types: undefined as CaseFormat | undefined,
+    fields: undefined as CaseFormat | undefined,
+    directories: undefined as CaseFormat | undefined,
   };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
@@ -128,6 +137,14 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg === "--stored-procedures") generate.storedProcedures = true;
     else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
     else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
+    else if (arg === "--file-names") generate.fileNames = parseCaseFlag(take(argv, ++i, "--file-names"), "--file-names");
+    else if (arg.startsWith("--file-names=")) generate.fileNames = parseCaseFlag(arg.slice("--file-names=".length), "--file-names");
+    else if (arg === "--types") generate.types = parseCaseFlag(take(argv, ++i, "--types"), "--types");
+    else if (arg.startsWith("--types=")) generate.types = parseCaseFlag(arg.slice("--types=".length), "--types");
+    else if (arg === "--fields") generate.fields = parseCaseFlag(take(argv, ++i, "--fields"), "--fields");
+    else if (arg.startsWith("--fields=")) generate.fields = parseCaseFlag(arg.slice("--fields=".length), "--fields");
+    else if (arg === "--directories") generate.directories = parseCaseFlag(take(argv, ++i, "--directories"), "--directories");
+    else if (arg.startsWith("--directories=")) generate.directories = parseCaseFlag(arg.slice("--directories=".length), "--directories");
     else if (arg === "--help" || arg === "-h") return { command: { kind: "help" }, flags };
     else rest.push(arg);
   }
@@ -147,7 +164,7 @@ const commandOf = (
     migrate: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
-  },
+  } & CasingFlags,
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
   if (verb === "setup") return { kind: "setup", providers: names };
@@ -190,7 +207,7 @@ const generateCommand = (
     migrate: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
-  },
+  } & CasingFlags,
 ): GenerateCommand => {
   if (names.length !== 1) throw new Error(`Usage: datasources generate <all|types|repositories|datasource>\n${help}`);
   const target = names[0] as string;
@@ -207,6 +224,10 @@ const generateCommand = (
     migrate: generate.migrate,
     storedProcedures: generate.storedProcedures,
     migrationsRoot: generate.migrationsRoot,
+    fileNames: generate.fileNames,
+    types: generate.types,
+    fields: generate.fields,
+    directories: generate.directories,
   };
 };
 

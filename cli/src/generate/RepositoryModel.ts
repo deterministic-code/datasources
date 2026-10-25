@@ -1,3 +1,5 @@
+import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+
 export type Pair = { from: string; to: string };
 
 export type PlannedEnrichment = {
@@ -40,15 +42,13 @@ export type RepositoryOptionsModel = Pick<
   "table" | "ids" | "readProperties" | "createProperties" | "updateProperties" | "propertyMappings"
 >;
 
-export const repositoryFile = (dialect: "csharp" | "typescript" | "rust", model: RepositoryModel): string =>
-  dialect === "csharp"
-    ? `${model.typeName}Repository.cs`
-    : dialect === "typescript"
-      ? `${model.specName.replaceAll("_", "-")}-repository.ts`
-      : `${model.specName}_repository.rs`;
+export const repositoryFile = (ext: "cs" | "ts" | "rs", specName: string, casing: ICasingStrategy): string =>
+  `${casing.convertFileName(`${specName}_repository`)}.${ext}`;
 
-export const childField = (dialect: "csharp" | "typescript" | "rust", specName: string, typeName: string): string =>
-  dialect === "csharp" ? typeName : dialect === "typescript" ? camel(specName) : specName;
+export const registryFile = (ext: "cs" | "ts" | "rs", casing: ICasingStrategy): string =>
+  `${casing.convertFileName("repository_registry")}.${ext}`;
+
+export const childField = (casing: ICasingStrategy, specName: string): string => casing.convertFields(specName);
 
 export const childClass = (typeName: string): string => `${typeName}Repository`;
 
@@ -69,9 +69,6 @@ export const children = (model: RepositoryModel): Array<{ specName: string; type
   }
   return [...rows].map(([specName, typeName]) => ({ specName, typeName }));
 };
-
-const camel = (name: string): string =>
-  name.split("_").map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))).join("");
 
 const uncountable = new Set(["sheep", "fish", "series", "species", "deer", "news"]);
 const irregular: Record<string, string> = {

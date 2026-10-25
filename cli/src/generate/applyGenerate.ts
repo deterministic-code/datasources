@@ -6,6 +6,7 @@ import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
 import { withStoredProcedures } from "./storedProcedures.ts";
 import { writeEntries } from "./writeEntries.ts";
+import { overlayCasingFlags } from "./casing.ts";
 import { wireRegister } from "../wireRegister.ts";
 
 const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
@@ -13,10 +14,15 @@ const at = (root: string, path: string): string => (isAbsolute(path) ? path : jo
 export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps: Deps): Promise<void> => {
   const provider = providerByName(command.provider);
   const loaded = await loadSpec(deps.fs, at(flags.cwd, command.input));
+  const settings = overlayCasingFlags(
+    withStoredProcedures(loaded.settings, command.storedProcedures),
+    command.dialect,
+    command,
+  );
   const request = {
     dialect: command.dialect,
     reader: memoryReader(loaded.files),
-    settings: withStoredProcedures(loaded.settings, command.storedProcedures),
+    settings,
   };
   const entries = await {
     all: async () => [
@@ -30,5 +36,5 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
   }[command.target]();
   for (const path of await writeEntries(deps.fs, at(flags.cwd, command.output), entries)) deps.log(path);
   if (command.target === "all" || command.target === "repositories")
-    await wireRegister(flags.cwd, command.output, command.dialect, flags.dryRun, deps);
+    await wireRegister(flags.cwd, command.output, command.dialect, flags.dryRun, deps, settings);
 };

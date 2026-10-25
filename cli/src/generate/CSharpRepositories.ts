@@ -1,3 +1,4 @@
+import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import {
   childClass,
@@ -5,6 +6,7 @@ import {
   isLinked,
   children as childModels,
   pluralPascal,
+  registryFile,
   repositoryFile,
   type OptimisticConcurrency,
   type PlannedEnrichment,
@@ -39,11 +41,11 @@ const optionsMethod = (model: RepositoryModel, type: string): string => {
         .join("")}\n            .For(connection);`;
 };
 
-const enrichment = (item: PlannedEnrichment, host: "ctor" | "readonly" = "ctor"): string => {
-  const via = childField("csharp", item.via, item.viaType);
+const enrichment = (item: PlannedEnrichment, casing: ICasingStrategy, host: "ctor" | "readonly" = "ctor"): string => {
+  const via = childField(casing, item.via);
   const head = `"${quote(item.destination)}", "${quote(item.source)}", "${quote(item.relatedKey)}"`;
   if (host === "ctor" && isLinked(item)) {
-    const link = childField("csharp", item.link, item.linkType);
+    const link = childField(casing, item.link);
     return `AddLinked(new(${head}, Association: new("${quote(item.parentFk)}", "${quote(item.relatedFk)}")), ${via}, ${link});`;
   }
   const related = item.relatedProperty === undefined ? "" : `, "${quote(item.relatedProperty)}"`;
@@ -81,23 +83,25 @@ const occMethods = (model: RepositoryModel, type: string): string => {
 const optionsCall = (model: RepositoryModel): string =>
   dialectsOf(model).length === 0 ? "Options()" : "Options(connection)";
 
-const createReadonly = (model: RepositoryModel, type: string): string => {
+const createReadonly = (model: RepositoryModel, type: string, casing: ICasingStrategy): string => {
   const children = childModels(model);
   if (children.length === 0 && model.enrichments.length === 0)
     return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection) =>\n        new ReadonlyRepository<${type}>(connection, ${optionsCall(model)});`;
-  const locals = children.map((child) => `        var ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`);
-  const enrich = model.enrichments.map((item) => `        ${enrichment(item, "readonly")}`);
+  const locals = children.map((child) => `        var ${childField(casing, child.specName)} = new ${childClass(child.typeName)}(connection);`);
+  const enrich = model.enrichments.map((item) => `        ${enrichment(item, casing, "readonly")}`);
   return `    public static IReadonlyRepository<${type}> CreateReadonly(IConnection connection)\n    {\n        var repo = new ReadonlyRepository<${type}>(connection, ${optionsCall(model)});\n${locals.join("\n")}\n${enrich.join("\n")}\n        return repo;\n    }`;
 };
 
-export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] => {
+export const csharpRepositories = (models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] => {
+  const casing = createCasingStrategy("csharp", settings);
+  const registryClass = casing.convertTypes("repository_registry");
   const files = models.map((model) => {
     const type = `${model.typeHome === "view" ? "Backend.Types.View" : "Backend.Types.Datasource"}.${model.typeName}`;
     const children = childModels(model);
-    const fields = children.map((child) => `    public ${childClass(child.typeName)} ${childField("csharp", child.specName, child.typeName)} { get; }`);
+    const fields = children.map((child) => `    public ${childClass(child.typeName)} ${childField(casing, child.specName)} { get; }`);
     const lines = [
-      ...children.map((child) => `        ${childField("csharp", child.specName, child.typeName)} = new ${childClass(child.typeName)}(connection);`),
-      ...model.enrichments.map((item) => `        ${enrichment(item)}`),
+      ...children.map((child) => `        ${childField(casing, child.specName)} = new ${childClass(child.typeName)}(connection);`),
+      ...model.enrichments.map((item) => `        ${enrichment(item, casing)}`),
     ];
     const constructor = lines.length === 0
       ? `    public ${model.typeName}Repository(IConnection connection) : base(connection, ${optionsCall(model)}) { }`
@@ -105,8 +109,8 @@ export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] =
     const implementsOcc = model.optimisticConcurrency === undefined ? "" : `, ICRUDRepository<${type}>`;
     const usings = model.optimisticConcurrency === undefined ? "using Datasources;\n" : "using Datasources;\nusing static Datasources.Cmp;\n";
     return content(
-      repositoryFile("csharp", model),
-      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type)}\n${occMethods(model, type)}\n${optionsMethod(model, type)}\n}\n`,
+      repositoryFile("cs", model.specName, casing),
+      `${usings}\npublic sealed class ${model.typeName}Repository : CRUDRepository<${type}>${implementsOcc}\n{\n${fields.length === 0 ? "" : `${fields.join("\n")}\n\n`}${constructor}\n\n${createReadonly(model, type, casing)}\n${occMethods(model, type)}\n${optionsMethod(model, type)}\n}\n`,
     );
   });
   const register = models.map((model) => {
@@ -116,8 +120,8 @@ export const csharpRepositories = (models: RepositoryModel[]): GenerateEntry[] =
   return [
     ...files,
     content(
-      "RepositoryRegistry.cs",
-      `using System.Runtime.CompilerServices;\nusing Datasources;\n\npublic static class RepositoryRegistry\n{\n    [ModuleInitializer]\n    internal static void Bind() => RepositoryFactory.Bind(Register);\n\n    public static void Register(RepositoryFactory factory)\n    {\n${register.join("\n")}\n    }\n}\n`,
+      registryFile("cs", casing),
+      `using System.Runtime.CompilerServices;\nusing Datasources;\n\npublic static class ${registryClass}\n{\n    [ModuleInitializer]\n    internal static void Bind() => RepositoryFactory.Bind(Register);\n\n    public static void Register(RepositoryFactory factory)\n    {\n${register.join("\n")}\n    }\n}\n`,
     ),
   ];
 };
