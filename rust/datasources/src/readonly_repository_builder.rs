@@ -32,6 +32,7 @@ pub(crate) fn assemble(
         row_converter,
         object_converter,
         row_type_converters,
+        read_enrichment: _,
     } = options;
     let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
     let object_converter =

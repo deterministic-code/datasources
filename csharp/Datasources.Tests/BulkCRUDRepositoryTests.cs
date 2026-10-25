@@ -128,7 +128,7 @@ public class BulkCRUDRepositoryTests
         var connection = await Setup();
         var parentsRepo = new BulkCRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
         {
-            Write = new DefaultWriteEnrichmentStrategy<Parent>(useTransaction: true),
+            WriteEnrichment = new DefaultWriteEnrichmentStrategy<Parent>(useTransaction: true),
         });
         var first = await parentsRepo.Create(new Parent { label = "a" });
         Assert.True(first.id > 0);

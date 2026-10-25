@@ -21,6 +21,7 @@ tokio = { workspace = true }
 uuid = "1"
 
 [dev-dependencies]
+async-trait = { workspace = true }
 tokio = { workspace = true }
 datasources-memory = { path = "../providers/memory" }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }

@@ -6,6 +6,7 @@ import type { Parameter } from "../Parameter.ts";
 import type { IExecuteStoredProcedureStatement } from "../statements/IExecuteStoredProcedureStatement.ts";
 import type { ISelectStatement } from "../statements/ISelectStatement.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import type { IWriteEnrichmentStrategy } from "../IWriteEnrichmentStrategy.ts";
 import { ReadonlyRepository, untyped } from "../ReadonlyRepository.ts";
 import type { ReadonlyRepositoryMappingOptions } from "../ReadonlyRepositoryMappingOptions.ts";
 import type { Response } from "../Response.ts";
@@ -30,13 +31,20 @@ export class StubRepository<T = unknown> extends ReadonlyRepository<T> implement
     notImplemented(this.provider);
   }
 
-  create = async (_item: T): Promise<T> => notImplemented(this.provider);
-
-  update = async (_item: T, _byWhere?: IWhere): Promise<Response> =>
+  create = async (_item: T, _writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T> =>
     notImplemented(this.provider);
 
-  delete = async (_item: T, _byWhere?: IWhere): Promise<Response> =>
-    notImplemented(this.provider);
+  update = async (
+    _item: T,
+    _byWhere?: IWhere,
+    _writeEnrichment?: IWriteEnrichmentStrategy<T>,
+  ): Promise<Response> => notImplemented(this.provider);
+
+  delete = async (
+    _item: T,
+    _byWhere?: IWhere,
+    _writeEnrichment?: IWriteEnrichmentStrategy<T>,
+  ): Promise<Response> => notImplemented(this.provider);
 
   readSingleById = (_id: Scalar | Cells): Promise<T | undefined> => notImplemented(this.provider);
 }

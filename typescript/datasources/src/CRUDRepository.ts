@@ -90,9 +90,6 @@ export class CRUDRepository<T = Cells>
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
-  private get useTransaction(): boolean {
-    return this.write.useTransaction;
-  }
 
   constructor(type: Constructable<T>, connection: IConnection);
   constructor(connection: IConnection, options: CRUDRepositoryOptions<T>);
@@ -108,7 +105,7 @@ export class CRUDRepository<T = Cells>
     this.updateProperties = (options as CRUDRepositoryOptions<T>).updateProperties;
     this.crudStatements = opened.statements;
     this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
-    this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
+    this.write = (options as CRUDRepositoryOptions<T>).writeEnrichment ?? new DefaultWriteEnrichmentStrategy<T>();
   }
 
   override addEnriched<TRelated extends object>(
@@ -131,22 +128,29 @@ export class CRUDRepository<T = Cells>
     const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
     super.addEnriched(enrichment, via, strategy);
     const stored = lastEnrichment(this) as StoredEnrichment<T & object>;
-    stored.apply = (parents, sources) =>
-      chosen.applyLinked(via, link, enrichment, parents, sources);
+    stored.apply = (parents, sources, strategy) =>
+      (strategy ?? chosen).applyLinked(via, link, enrichment, parents, sources);
     stored.link = link as ICRUDRepository<object>;
     return this;
   }
 
-  create = (item: T): Promise<T> => this.inTransaction(() => this.createCore(item));
+  create = (item: T, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T> =>
+    this.inTransaction(() => this.createCore(item, this.writer(writeEnrichment)), this.writer(writeEnrichment));
 
-  update = (item: T, byWhere?: IWhere): Promise<Response> =>
-    this.inTransaction(() => this.updateCore(item, byWhere));
+  update = (item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response> =>
+    this.inTransaction(() => this.updateCore(item, byWhere, this.writer(writeEnrichment)), this.writer(writeEnrichment));
 
-  delete = (item: T, byWhere?: IWhere): Promise<Response> =>
-    this.inTransaction(() => this.deleteCore(item, byWhere));
+  delete = (item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response> =>
+    this.inTransaction(() => this.deleteCore(item, byWhere, this.writer(writeEnrichment)), this.writer(writeEnrichment));
 
-  private inTransaction = async <TResult>(write: () => Promise<TResult>): Promise<TResult> => {
-    if (!this.useTransaction) return write();
+  private writer = (writeEnrichment?: IWriteEnrichmentStrategy<T>): IWriteEnrichmentStrategy<T> =>
+    writeEnrichment ?? this.write;
+
+  private inTransaction = async <TResult>(
+    write: () => Promise<TResult>,
+    enrichment: IWriteEnrichmentStrategy<T>,
+  ): Promise<TResult> => {
+    if (!enrichment.useTransaction) return write();
     const work = new UnitOfWorkTransaction(this.command().connection);
     await work.begin();
     try {
@@ -159,23 +163,31 @@ export class CRUDRepository<T = Cells>
     }
   };
 
-  private createCore = async (item: T): Promise<T> => {
+  private createCore = async (item: T, write: IWriteEnrichmentStrategy<T>): Promise<T> => {
     await this.insert(item);
     if (!this.enriched) return item;
-    await this.write.persist(this.tree, [item], "create");
+    await write.persist(this.tree, [item], "create");
     if (this.ids.length !== 1) return item;
     const id = this.idValue(item);
     return id === undefined ? item : (await this.readSingleById(id)) ?? item;
   };
 
-  private updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
+  private updateCore = async (
+    item: T,
+    byWhere: IWhere | undefined,
+    write: IWriteEnrichmentStrategy<T>,
+  ): Promise<Response> => {
     const response = await this.save(item, byWhere);
-    if (this.enriched) await this.write.persist(this.tree, [item], "update");
+    if (this.enriched) await write.persist(this.tree, [item], "update");
     return response;
   };
 
-  private deleteCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    if (this.enriched) await this.write.persist(this.tree, [item], "delete");
+  private deleteCore = async (
+    item: T,
+    byWhere: IWhere | undefined,
+    write: IWriteEnrichmentStrategy<T>,
+  ): Promise<Response> => {
+    if (this.enriched) await write.persist(this.tree, [item], "delete");
     return this.remove(item, byWhere);
   };
 

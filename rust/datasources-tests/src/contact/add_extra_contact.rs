@@ -1,7 +1,7 @@
 use super::contact_lookups::ContactLookups;
 use chrono::{DateTime, Utc};
 use datasources::{
-    encode_rows, CRUDRepository, DatasourceError, ICRUDRepository, IReadonlyRepository, Operator,
+    encode_rows, CRUDRepository, DatasourceError, IReadonlyRepository, Operator,
     Result, Row, Value, Where,
 };
 use uuid::Uuid;
@@ -54,7 +54,7 @@ pub async fn add_extra_contact(service: &CRUDRepository, ids: &ContactLookups) -
                     ("Number", Value::from("555-extra")),
                 ])]),
             ),
-        ]))
+        ]), None)
         .await?;
     let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
         return Err(DatasourceError::message("expected insert id"));

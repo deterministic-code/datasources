@@ -19,6 +19,7 @@ import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
 import { Join, Operator, SelectStatement, Where } from "./statements/index.ts";
 import { WhereText } from "./statements/WhereText.ts";
+import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 
 class UserType {
   Id = 0;
@@ -103,6 +104,25 @@ describe("ReadonlyRepository", () => {
     const items = await collectAsync(parentsRepo.read());
     expect(items[0]?.TypeName).toBe("person");
     expect(items[1]?.TypeName).toBe("");
+  });
+
+  it("uses call read enrichment", async () => {
+    const person: Seed = { name: "person" };
+    const typesConnection = await setup([person]);
+    const connection = await setup([{ type_id: person.id }]);
+    const parentsRepo = repo(Parent, connection);
+    const typesRepo = repo(UserType, typesConnection);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    expect((await parentsRepo.readSingle())?.TypeName).toBe("person");
+    const override: IReadonlyEnrichmentStrategy<Parent> = {
+      apply: async (_via, _enrichment, parents) => {
+        for (const parent of parents) parent.TypeName = "override";
+      },
+      applyLinked: async () => {},
+    };
+    expect(
+      (await parentsRepo.readSingle(undefined, undefined, { readEnrichment: override }))?.TypeName,
+    ).toBe("override");
   });
 
   it("hashset fills lookup select and leaves missing default", async () => {

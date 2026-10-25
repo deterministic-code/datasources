@@ -66,7 +66,7 @@ impl CRUDRepository {
     }
 
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
-        let write = options.write.clone();
+        let write = options.write_enrichment.clone();
         let create_properties = options.create_properties.clone();
         let update_properties = options.update_properties.clone();
         let built = CRUDRepositoryBuilder::parts(connection, options)?;
@@ -119,8 +119,8 @@ impl CRUDRepository {
         }
     }
 
-    pub fn with_write(mut self, write: Arc<dyn WriteEnrichmentStrategy>) -> Self {
-        self.write = write;
+    pub fn with_write_enrichment(mut self, write_enrichment: Arc<dyn WriteEnrichmentStrategy>) -> Self {
+        self.write = write_enrichment;
         self
     }
 
@@ -161,6 +161,53 @@ impl CRUDRepository {
         crate::push_middleware(&self.readonly, middleware);
     }
 
+    pub async fn create(
+        &self,
+        item: &mut Row,
+        write_enrichment: Option<&dyn WriteEnrichmentStrategy>,
+    ) -> Result<Row> {
+        Self::in_transaction(
+            write_enrichment
+                .map(|strategy| strategy.use_transaction())
+                .unwrap_or_else(|| self.use_transaction()),
+            Arc::clone(&self.readonly.connection),
+            || self.create_core(item, write_enrichment),
+        )
+        .await
+    }
+
+    pub async fn update(
+        &self,
+        item: &mut Row,
+        by_where: Option<&dyn IWhere>,
+        write_enrichment: Option<&dyn WriteEnrichmentStrategy>,
+    ) -> Result<Response> {
+        Self::in_transaction(
+            write_enrichment
+                .map(|strategy| strategy.use_transaction())
+                .unwrap_or_else(|| self.use_transaction()),
+            Arc::clone(&self.readonly.connection),
+            || self.update_core(item, by_where, write_enrichment),
+        )
+        .await
+    }
+
+    pub async fn delete(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+        write_enrichment: Option<&dyn WriteEnrichmentStrategy>,
+    ) -> Result<Response> {
+        Self::in_transaction(
+            write_enrichment
+                .map(|strategy| strategy.use_transaction())
+                .unwrap_or_else(|| self.use_transaction()),
+            Arc::clone(&self.readonly.connection),
+            || self.delete_core(item, by_where, write_enrichment),
+        )
+        .await
+    }
+
     fn enriched(&self) -> bool {
         self.readonly.enriched()
     }
@@ -198,7 +245,11 @@ impl CRUDRepository {
         result
     }
 
-    async fn create_core(&self, item: &mut Row) -> Result<Row> {
+    async fn create_core(
+        &self,
+        item: &mut Row,
+        write_enrichment: Option<&dyn WriteEnrichmentStrategy>,
+    ) -> Result<Row> {
         if !self.enriched() {
             return self.inserted(item).await;
         }
@@ -214,7 +265,8 @@ impl CRUDRepository {
             let stored = item.clone();
             self.execute_insert(&stored, item).await?;
         }
-        self.write
+        write_enrichment
+            .unwrap_or(&*self.write)
             .persist(&self.tree, std::slice::from_mut(item), WriteMode::Create)
             .await?;
         let id = self.id_value(item);
@@ -227,11 +279,17 @@ impl CRUDRepository {
             .unwrap_or_else(|| item.clone()))
     }
 
-    async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update_core(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+        write_enrichment: Option<&dyn WriteEnrichmentStrategy>,
+    ) -> Result<Response> {
         let response = self.save(item, by_where).await?;
         if self.enriched() {
             let mut parent = item.clone();
-            self.write
+            write_enrichment
+                .unwrap_or(&*self.write)
                 .persist(
                     &self.tree,
                     std::slice::from_mut(&mut parent),
@@ -242,10 +300,16 @@ impl CRUDRepository {
         Ok(response)
     }
 
-    async fn delete_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete_core(
+        &self,
+        item: &Row,
+        by_where: Option<&dyn IWhere>,
+        write_enrichment: Option<&dyn WriteEnrichmentStrategy>,
+    ) -> Result<Response> {
         if self.enriched() {
             let mut parent = item.clone();
-            self.write
+            write_enrichment
+                .unwrap_or(&*self.write)
                 .persist(
                     &self.tree,
                     std::slice::from_mut(&mut parent),
@@ -550,30 +614,15 @@ impl IReadonlyRepository for CRUDRepository {
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Row> {
-        Self::in_transaction(
-            self.use_transaction(),
-            Arc::clone(&self.readonly.connection),
-            || self.create_core(item),
-        )
-        .await
+        self.create(item, None).await
     }
 
     async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        Self::in_transaction(
-            self.use_transaction(),
-            Arc::clone(&self.readonly.connection),
-            || self.update_core(item, by_where),
-        )
-        .await
+        self.update(item, by_where, None).await
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        Self::in_transaction(
-            self.use_transaction(),
-            Arc::clone(&self.readonly.connection),
-            || self.delete_core(item, by_where),
-        )
-        .await
+        self.delete(item, by_where, None).await
     }
 
     fn id_names(&self) -> Vec<String> {
@@ -590,7 +639,7 @@ impl ICRUDRepository for CRUDRepository {
             if self.enriched() {
                 if let Some(item) = row.take() {
                     let mut rows = vec![item];
-                    self.readonly.fill(&mut rows, None).await?;
+                    self.readonly.fill(&mut rows, None, None).await?;
                     return Ok(rows.into_iter().next());
                 }
             }

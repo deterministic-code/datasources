@@ -122,7 +122,7 @@ describe("Datasource registry", () => {
     expect(enriched).toBeInstanceOf(ReadonlyRepository);
     typed.addLinked({ destinationProperty: "name", sourceProperty: "id", relatedKey: "id", association: { parent: "id", related: "name" } }, typedRead, typed);
     const withWrite = ds.createRepository(Item, connection, {
-      write: { useTransaction: false, persist: async () => {} },
+      writeEnrichment: { useTransaction: false, persist: async () => {} },
       ids: ["id"],
     });
     expect(withWrite).toBeInstanceOf(CRUDRepository);

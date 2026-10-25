@@ -26,7 +26,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return (
             builder.Parts(connection, options),
             builder.CRUDStatements ?? throw new DatasourceException("Statements required"),
-            options.Write,
+            options.WriteEnrichment,
             options.CreateProperties,
             options.UpdateProperties);
     }
@@ -44,7 +44,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     public IReadOnlyList<string> Ids => ids;
 
-    bool UseTransaction => write.UseTransaction;
+    IWriteEnrichmentStrategy<T> Writer(IWriteEnrichmentStrategy<T>? writeEnrichment) =>
+        writeEnrichment ?? write;
 
     public new CRUDRepository<T> AddMiddleware(ICommandMiddleware middleware)
     {
@@ -81,17 +82,18 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     StoredEnrichment<T> Last() => (StoredEnrichment<T>)((IEnrichmentHost)this).Enrichments[^1];
 
-    public Task<T> Create(T item) => InTransaction(() => CreateCore(item));
+    public Task<T> Create(T item, IWriteEnrichmentStrategy<T>? writeEnrichment = null) =>
+        InTransaction(() => CreateCore(item, Writer(writeEnrichment)), Writer(writeEnrichment));
 
-    public Task<Response> Update(T item, IWhere? byWhere = null) =>
-        InTransaction(() => UpdateCore(item, byWhere));
+    public Task<Response> Update(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null) =>
+        InTransaction(() => UpdateCore(item, byWhere, Writer(writeEnrichment)), Writer(writeEnrichment));
 
-    public Task<Response> Delete(T item, IWhere? byWhere = null) =>
-        InTransaction(() => DeleteCore(item, byWhere));
+    public Task<Response> Delete(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null) =>
+        InTransaction(() => DeleteCore(item, byWhere, Writer(writeEnrichment)), Writer(writeEnrichment));
 
-    async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write)
+    async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write, IWriteEnrichmentStrategy<T> enrichment)
     {
-        if (!UseTransaction) return await write();
+        if (!enrichment.UseTransaction) return await write();
         var work = new UnitOfWorkTransaction(Command().Connection);
         await work.Begin();
         try
@@ -107,7 +109,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         }
     }
 
-    async Task<T> CreateCore(T item)
+    async Task<T> CreateCore(T item, IWriteEnrichmentStrategy<T> write)
     {
         await Insert(item);
         if (!Enriched) return item;
@@ -117,7 +119,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return id is Value.Null ? item : await ReadSingleById(id) ?? item;
     }
 
-    async Task<Response> UpdateCore(T item, IWhere? byWhere = null)
+    async Task<Response> UpdateCore(T item, IWhere? byWhere, IWriteEnrichmentStrategy<T> write)
     {
         var response = await Save(item, byWhere);
         if (Enriched)
@@ -125,7 +127,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return response;
     }
 
-    async Task<Response> DeleteCore(T item, IWhere? byWhere = null)
+    async Task<Response> DeleteCore(T item, IWhere? byWhere, IWriteEnrichmentStrategy<T> write)
     {
         if (Enriched)
             await write.Persist(tree, [item!], WriteMode.Delete);

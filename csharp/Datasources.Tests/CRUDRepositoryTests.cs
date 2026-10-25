@@ -373,6 +373,35 @@ public class CRUDRepositoryTests
         Assert.Equal("a", Assert.Single(item.Children).Label);
     }
 
+    sealed class RecordingWrite : IWriteEnrichmentStrategy<Parent>
+    {
+        public int Calls { get; private set; }
+        public Task Persist(IRepositoryTree tree, IList<Parent> items, WriteMode mode)
+        {
+            Calls++;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task CreateAndUpdateUseCallWriteEnrichment()
+    {
+        var connection = await Setup();
+        var recorded = new RecordingWrite();
+        var defaults = new RecordingWrite();
+        var parentsRepo = Open(connection, defaults);
+        var childrenRepo = Open<Child>(connection);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
+        await parentsRepo.Create(new Parent { Children = [new Child { Label = "a" }] });
+        Assert.Equal(1, defaults.Calls);
+        await parentsRepo.Create(new Parent { Children = [new Child { Label = "b" }] }, recorded);
+        Assert.Equal(1, recorded.Calls);
+        Assert.Equal(1, defaults.Calls);
+        await parentsRepo.Update(new Parent { Id = 1, Children = [] }, writeEnrichment: recorded);
+        Assert.Equal(2, recorded.Calls);
+        Assert.Equal(1, defaults.Calls);
+    }
+
     sealed class SkipDelete<T> : DeleteEnrichmentStrategy<T>
     {
         public override Task DeleteChildren<TChild>(
@@ -400,7 +429,7 @@ public class CRUDRepositoryTests
         {
             Ids = ["Id"],
             PropertyMappings = Columns,
-            Write = write,
+            WriteEnrichment = write,
         });
 
     static ReadonlyRepository<T> Read<T>(IConnection connection) where T : new() =>

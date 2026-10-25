@@ -114,7 +114,7 @@ describe("statement and repository edges", () => {
     const strategy = new SingleCommandIBulkWriteStrategy<Item>();
     const transactional = new BulkCRUDRepository<Item>(
       connection,
-      { type: Item, entity: "items", write: { useTransaction: true, persist: async () => {} } },
+      { type: Item, entity: "items", writeEnrichment: { useTransaction: true, persist: async () => {} } },
       strategy,
     );
     const created = await transactional.createBulk([Object.assign(new Item(), { name: "a" })]);
@@ -154,7 +154,7 @@ describe("statement and repository edges", () => {
       entity: "items",
       ids: ["id", "name"],
       rowConverter: new RowTypeConverter({}),
-      write: { persist: async () => {} },
+      writeEnrichment: { persist: async () => {} },
     }, stored);
     command.executeCalls = [];
     await wide.createBulk([new Item()]);

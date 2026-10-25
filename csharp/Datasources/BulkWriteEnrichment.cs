@@ -10,7 +10,7 @@ static class BulkWriteEnrichment
         where T : new() =>
         items.Count == 0 || repo is not IEnrichmentHost host || host.Enrichments.Count == 0
             ? Task.CompletedTask
-            : (options.Write ?? new DefaultWriteEnrichmentStrategy<T>()).PersistBulk(
+            : (options.WriteEnrichment ?? new DefaultWriteEnrichmentStrategy<T>()).PersistBulk(
                 new RepositoryTree(new RepositoryTreeNode(repo, "")),
                 items as IList<T> ?? [.. items],
                 mode);

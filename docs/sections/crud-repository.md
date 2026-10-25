@@ -16,41 +16,44 @@ interface ICRUDRepository<T = unknown> extends IReadonlyRepository<T>
 
 **Methods**
 
-##### create(item)
+##### create(item, writeEnrichment?)
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```typescript
-create(item: T): Promise<Response>
+create(item: T, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T>
 ```
 
 - `item` — row to insert
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
-**Returns** `Promise<Response>`
+**Returns** `Promise<T>`
 
-##### update(item, byWhere?)
+##### update(item, byWhere?, writeEnrichment?)
 
-Updates one item. Omitted `byWhere` uses id columns.
+Updates one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
+update(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 - `item` — row to update
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Promise<Response>`
 
-##### delete(item, byWhere?)
+##### delete(item, byWhere?, writeEnrichment?)
 
-Deletes one item. Omitted `byWhere` uses id columns.
+Deletes one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
+delete(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 - `item` — row to delete
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Promise<Response>`
 
@@ -143,41 +146,44 @@ read(query?: ISelectStatement | IWhere | IExecuteStoredProcedureStatement): Asyn
 
 **Returns** `AsyncIterable<T>`
 
-##### create(item)
+##### create(item, writeEnrichment?)
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```typescript
-create(item: T): Promise<Response>
+create(item: T, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<T>
 ```
 
 - `item` — row to insert
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
-**Returns** `Promise<Response>`
+**Returns** `Promise<T>`
 
-##### update(item, byWhere?)
+##### update(item, byWhere?, writeEnrichment?)
 
-Updates one item.
+Updates one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```typescript
-update(item: T, byWhere?: IWhere): Promise<Response>
+update(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 - `item` — row to update
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Promise<Response>`
 
-##### delete(item, byWhere?)
+##### delete(item, byWhere?, writeEnrichment?)
 
-Deletes one item.
+Deletes one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```typescript
-delete(item: T, byWhere?: IWhere): Promise<Response>
+delete(item: T, byWhere?: IWhere, writeEnrichment?: IWriteEnrichmentStrategy<T>): Promise<Response>
 ```
 
 - `item` — row to delete
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Promise<Response>`
 
@@ -240,12 +246,12 @@ Id column names. When omitted, `["id"]`, or `["Id"]` when `type` has that field 
 ids?: string[]
 ```
 
-##### write
+##### writeEnrichment
 
 Write enrichment strategy. Omitted uses the default strategy.
 
 ```typescript
-write?: IWriteEnrichmentStrategy<T>
+writeEnrichment?: IWriteEnrichmentStrategy<T>
 ```
 
 #### BuiltRepository
@@ -331,41 +337,44 @@ public interface ICRUDRepository<T> : IReadonlyRepository<T>
 
 **Methods**
 
-##### Create(item)
+##### Create(item, writeEnrichment)
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```csharp
-Task<Response> Create(T item)
+Task<T> Create(T item, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 - `item` — row to insert
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
-**Returns** `Task<Response>`
+**Returns** `Task<T>`
 
-##### Update(item, byWhere)
+##### Update(item, byWhere, writeEnrichment)
 
-Updates one item. Omitted `byWhere` uses id columns.
+Updates one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```csharp
-Task<Response> Update(T item, IWhere? byWhere = null)
+Task<Response> Update(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 - `item` — row to update
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Task<Response>`
 
-##### Delete(item, byWhere)
+##### Delete(item, byWhere, writeEnrichment)
 
-Deletes one item. Omitted `byWhere` uses id columns.
+Deletes one item. Omitted `byWhere` uses id columns. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```csharp
-Task<Response> Delete(T item, IWhere? byWhere = null)
+Task<Response> Delete(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 - `item` — row to delete
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Task<Response>`
 
@@ -469,41 +478,44 @@ public override IAsyncEnumerable<T> Read(IStatement? query = null)
 
 **Returns** `IAsyncEnumerable<T>`
 
-##### Create(item)
+##### Create(item, writeEnrichment)
 
-Inserts one item.
+Inserts one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```csharp
-public Task<Response> Create(T item)
+public Task<T> Create(T item, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 - `item` — row to insert
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
-**Returns** `Task<Response>`
+**Returns** `Task<T>`
 
-##### Update(item, byWhere)
+##### Update(item, byWhere, writeEnrichment)
 
-Updates one item.
+Updates one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```csharp
-public Task<Response> Update(T item, IWhere? byWhere = null)
+public Task<Response> Update(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 - `item` — row to update
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Task<Response>`
 
-##### Delete(item, byWhere)
+##### Delete(item, byWhere, writeEnrichment)
 
-Deletes one item.
+Deletes one item. Omitted `writeEnrichment` uses the repository write enrichment.
 
 ```csharp
-public Task<Response> Delete(T item, IWhere? byWhere = null)
+public Task<Response> Delete(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
 ```
 
 - `item` — row to delete
 - `byWhere` — optional predicate; omitted uses id values on `item`
+- `writeEnrichment` — optional [IWriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
 
 **Returns** `Task<Response>`
 
@@ -578,12 +590,12 @@ Id column names. Default `["id"]`.
 IReadOnlyList<string> Ids { get; init; }
 ```
 
-##### Write
+##### WriteEnrichment
 
 Write enrichment strategy. Omitted uses the default strategy.
 
 ```csharp
-IWriteEnrichmentStrategy<T>? Write { get; init; }
+IWriteEnrichmentStrategy<T>? WriteEnrichment { get; init; }
 ```
 
 #### BuiltRepository
@@ -750,6 +762,47 @@ pub fn from_repository(inner: Arc<dyn ICRUDRepository>) -> Self
 
 **Methods**
 
+##### create(item, write_enrichment)
+
+Inserts one row. `None` `write_enrichment` uses the repository write enrichment.
+
+```rust
+pub async fn create(&self, item: &mut Row, write_enrichment: Option<&dyn WriteEnrichmentStrategy>) -> Result<Row>
+```
+
+- `item` — row to insert
+- `write_enrichment` — optional [WriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
+
+**Returns** `Result<Row>`
+
+##### update(item, by_where, write_enrichment)
+
+Updates one row. `None` `write_enrichment` uses the repository write enrichment.
+
+```rust
+pub async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>, write_enrichment: Option<&dyn WriteEnrichmentStrategy>) -> Result<Response>
+```
+
+- `item` — row to update
+- `by_where` — optional predicate; omitted uses id values on `item`
+- `write_enrichment` — optional [WriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
+
+**Returns** `Result<Response>`
+
+##### delete(item, by_where, write_enrichment)
+
+Deletes one row. `None` `write_enrichment` uses the repository write enrichment.
+
+```rust
+pub async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>, write_enrichment: Option<&dyn WriteEnrichmentStrategy>) -> Result<Response>
+```
+
+- `item` — row to delete
+- `by_where` — optional predicate; omitted uses id values on `item`
+- `write_enrichment` — optional [WriteEnrichmentStrategy](./i-write-enrichment-strategy.md) for this call
+
+**Returns** `Result<Response>`
+
 ##### add_enriched(enrichment, via, strategy)
 
 Registers the same read fill as [ReadonlyRepository](./readonly-repository.md#add_enrichedenrichment-via-strategy). When `via` is a CRUD repository, `List` children are written with the parent.
@@ -819,12 +872,12 @@ Id column names. Default `["id"]`.
 pub ids: Vec<String>
 ```
 
-##### write
+##### write_enrichment
 
 Write enrichment strategy. `None` uses the default strategy.
 
 ```rust
-pub write: Option<Arc<dyn WriteEnrichmentStrategy>>
+pub write_enrichment: Option<Arc<dyn WriteEnrichmentStrategy>>
 ```
 
 ##### read
@@ -910,7 +963,9 @@ Update requires at least one non-id field. Missing id values throw. Insert alway
 
 [AddEnriched](./i-enriched.md) registers the same read fill as [ReadonlyRepository](./readonly-repository.md). Lookups are filled on read and are not written. When `via` is a CRUD repository, `List` children are created, replace-synced, and deleted with the parent. `AddLinked` reads `via` and writes the association through `link`. Eager write replaces that junction set. A null or empty list clears the association and leaves the others. Related rows stay. [LazyWriteEnrichmentStrategy](./lazy-write-enrichment-strategy.md) skips a null list on create and update. Delete still removes the junction rows. Passing `byWhere` to `Update` replaces the id predicate, so a version check includes both the id and the version.
 
-[DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) takes `useTransaction`, off by default. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
+A {{Read|read|read}} can set {{ReadEnrichment|readEnrichment|read_enrichment}} on the mapping options for that call. {{Create|create|create}}, {{Update|update|update}}, and {{Delete|delete|delete}} can pass a write enrichment as the last argument. Omitted uses the repository default.
+
+[DefaultWriteEnrichmentStrategy](./default-write-enrichment-strategy.md) takes `useTransaction`, off by default. The strategy for the call decides that. When it is on, `Create`, `Update`, and `Delete` commit the parent write and nested persist together. A bulk list uses one transaction for the whole list. Nested writes join when they use the same connection.
 
 - **Create** — write the parent, write the generated identity onto the parent's id column, stamp each child's `RelatedKey` from the parent `SourceProperty`, then create children (and nested lists).
 - **Create** — [DefaultCreateEnrichmentStrategy](./default-create-enrichment-strategy.md) is the default. Write the parent, stamp each child's related key, then create children and links.

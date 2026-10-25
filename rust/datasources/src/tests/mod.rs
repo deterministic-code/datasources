@@ -1779,19 +1779,19 @@ async fn table_repository() {
         .lock()
         .unwrap()
         .push(record(&[("id", Value::Int(9))]));
-    let created = repo.create(&mut obj).await.unwrap();
+    let created = repo.create(&mut obj, None).await.unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO users (name) VALUES ($name)"
     );
     assert_eq!(created["id"], Value::Int(9));
-    let updated = repo.update(&mut obj, None).await.unwrap();
+    let updated = repo.update(&mut obj, None, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE users SET name = $name WHERE id = $id"
     );
-    let removed = repo.delete(&obj, None).await.unwrap();
+    let removed = repo.delete(&obj, None, None).await.unwrap();
     assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
@@ -1820,7 +1820,7 @@ async fn create_and_update_honor_write_properties() {
         ("Id", Value::Int(0)),
         ("Line1", Value::from("1 Main")),
         ("Description", Value::from("Home")),
-    ]))
+    ]), None)
     .await
     .unwrap();
     assert_eq!(
@@ -1833,6 +1833,7 @@ async fn create_and_update_honor_write_properties() {
             ("Line1", Value::from("2 Main")),
             ("Description", Value::from("Work")),
         ]),
+        None,
         None,
     )
     .await
@@ -1862,7 +1863,7 @@ async fn create_and_update_write_read_properties_only() {
         ("Id", Value::Int(0)),
         ("Line1", Value::from("1 Main")),
         ("Description", Value::from("Home")),
-    ]))
+    ]), None)
     .await
     .unwrap();
     assert_eq!(
@@ -1875,6 +1876,7 @@ async fn create_and_update_write_read_properties_only() {
             ("Line1", Value::from("2 Main")),
             ("Description", Value::from("Work")),
         ]),
+        None,
         None,
     )
     .await
@@ -1898,7 +1900,7 @@ async fn table_repository_assigned_id() {
         .create(&mut record(&[
             ("id", Value::Int(42)),
             ("name", Value::from("ada")),
-        ]))
+        ]), None)
         .await
         .unwrap();
     assert_eq!(
@@ -1921,7 +1923,7 @@ async fn table_repository_assigned_id() {
             ("org_id", Value::Int(1)),
             ("user_id", Value::Int(2)),
             ("name", Value::Int(3)),
-        ]))
+        ]), None)
         .await
         .unwrap();
     assert_eq!(created["org_id"], Value::Int(1));
@@ -1943,6 +1945,7 @@ async fn table_repository_assigned_id() {
         .update(
             &mut updated_row_3,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -1963,16 +1966,16 @@ async fn table_repository_assigned_id() {
     let repo = CRUDRepository::new(connection, options).unwrap();
     let mut updated_row_4 = record(&[("name", Value::from("a"))]);
     assert!(repo
-        .update(&mut updated_row_4, None)
+        .update(&mut updated_row_4, None, None)
         .await
         .is_err());
     assert!(repo
-        .delete(&record(&[("name", Value::from("a"))]), None)
+        .delete(&record(&[("name", Value::from("a"))]), None, None)
         .await
         .is_err());
     let mut updated_row_5 = record(&[("id", Value::Int(1))]);
     assert!(repo
-        .update(&mut updated_row_5, None)
+        .update(&mut updated_row_5, None, None)
         .await
         .is_err());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
@@ -1982,7 +1985,7 @@ async fn table_repository_assigned_id() {
     let repo = CRUDRepository::new(connection, options).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo
-        .create(&mut record(&[("id", Value::Int(1))]))
+        .create(&mut record(&[("id", Value::Int(1))]), None)
         .await
         .unwrap();
     assert_eq!(created["id"], Value::Int(1));
@@ -1990,6 +1993,7 @@ async fn table_repository_assigned_id() {
         .delete(
             &record(&[("name", Value::from("z"))]),
             Some(&Where::new(Operator::equals("name", "z"))),
+            None,
         )
         .await
         .unwrap();
@@ -2052,19 +2056,19 @@ async fn table_repository_crud_mapper() {
     );
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let mut row = record(&[("id", Value::Int(0)), ("name", Value::from("a"))]);
-    let created = repo.create(&mut row).await.unwrap();
+    let created = repo.create(&mut row, None).await.unwrap();
     assert_eq!(created["id"], Value::Int(0));
     assert_eq!(
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO people (full_name) VALUES ($full_name)"
     );
-    let updated = repo.update(&mut row, None).await.unwrap();
+    let updated = repo.update(&mut row, None, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE people SET full_name = $full_name WHERE user_id = $user_id"
     );
-    let removed = repo.delete(&row, None).await.unwrap();
+    let removed = repo.delete(&row, None, None).await.unwrap();
     assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
@@ -2289,7 +2293,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
             ("name", Value::from("ada")),
             ("created", Value::Null),
             ("version", Value::Null),
-        ]))
+        ]), None)
         .await
         .unwrap();
     assert_eq!(created_ada["id"], Value::Int(7));
@@ -2307,6 +2311,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
         .update(
             &mut updated_row_6,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -2321,7 +2326,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
             ("name", Value::from("grace")),
             ("created", Value::DateTime(created)),
             ("version", Value::Binary(vec![9, 9])),
-        ]))
+        ]), None)
         .await
         .unwrap();
     assert_eq!(created_grace["id"], Value::Int(7));

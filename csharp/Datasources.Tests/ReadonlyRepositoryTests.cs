@@ -249,6 +249,46 @@ public class ReadonlyRepositoryTests
         Assert.Equal("admin", item!.UserType);
     }
 
+    sealed class MarkRead : IReadonlyEnrichmentStrategy<Parent>
+    {
+        public Task Apply<TRelated>(
+            IReadonlyRepository<TRelated> via,
+            Enrichment enrichment,
+            IList<Parent> parents,
+            IReadOnlyList<Row?>? sources = null)
+        {
+            foreach (var parent in parents)
+                parent.TypeName = "override";
+            return Task.CompletedTask;
+        }
+
+        public Task ApplyLinked<TRelated, TLink>(
+            IReadonlyRepository<TRelated> via,
+            IReadonlyRepository<TLink> link,
+            Enrichment enrichment,
+            IList<Parent> parents,
+            IReadOnlyList<Row?>? sources = null) =>
+            Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task ReadUsesCallReadEnrichment()
+    {
+        var person = new Row { ["name"] = "person" };
+        var typesConnection = await Setup(person);
+        var connection = await Setup(new Row { ["type_id"] = person["id"] });
+        var parentsRepo = Open<Parent>(connection);
+        var typesRepo = Open<UserType>(typesConnection);
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        Assert.Equal("person", (await parentsRepo.ReadSingle())!.TypeName);
+        Assert.Equal(
+            "override",
+            (await parentsRepo.ReadSingle(options: new ReadonlyRepositoryMappingOptions<Parent>
+            {
+                ReadEnrichment = new MarkRead(),
+            }))!.TypeName);
+    }
+
     [Fact]
     public async Task ReadUsesPerCallObjectAndRowConvertersWhenProvided()
     {

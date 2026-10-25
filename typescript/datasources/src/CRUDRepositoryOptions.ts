@@ -6,5 +6,5 @@ export type CRUDRepositoryOptions<T = Cells> = ReadonlyRepositoryMappingOptions<
   ids?: string[];
   createProperties?: string[];
   updateProperties?: string[];
-  write?: IWriteEnrichmentStrategy<T>;
+  writeEnrichment?: IWriteEnrichmentStrategy<T>;
 };

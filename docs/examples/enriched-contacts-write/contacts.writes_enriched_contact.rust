@@ -92,7 +92,7 @@ let mut created = contact_row(&[
         ])]),
     ),
 ]);
-let created = contacts_repo.create(&mut created).await.unwrap();
+let created = contacts_repo.create(&mut created, None).await.unwrap();
 let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };

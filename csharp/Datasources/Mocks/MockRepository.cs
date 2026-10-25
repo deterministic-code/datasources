@@ -29,17 +29,17 @@ public sealed class MockRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T
     }
 
     public IReadOnlyList<string> Ids { get; } = [];
-    public Task<T> Create(T item)
+    public Task<T> Create(T item, IWriteEnrichmentStrategy<T>? writeEnrichment = null)
     {
         if (CreateError is not null) throw CreateError;
         Items.Add(item);
         return Task.FromResult(item);
     }
 
-    public Task<Response> Update(T item, IWhere? byWhere = null) =>
+    public Task<Response> Update(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null) =>
         UpdateError is not null ? throw UpdateError : Task.FromResult(new Response(Value.Null.Instance, 1));
 
-    public Task<Response> Delete(T item, IWhere? byWhere = null) =>
+    public Task<Response> Delete(T item, IWhere? byWhere = null, IWriteEnrichmentStrategy<T>? writeEnrichment = null) =>
         DeleteError is not null ? throw DeleteError : Task.FromResult(new Response(Value.Null.Instance, 1));
 
     public Task<T?> ReadSingleById(Value id) => ReadSingle();

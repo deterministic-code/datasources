@@ -65,10 +65,12 @@ impl StoredEnrichment {
         &self,
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
+        strategy: Option<&dyn ReadonlyEnrichmentStrategy>,
     ) -> Result<()> {
+        let strategy = strategy.unwrap_or(&*self.strategy);
         match self.linked {
             true => {
-                self.strategy
+                strategy
                     .apply_linked(
                         self.via.clone(),
                         as_readonly(self.link.clone().expect("linked enrichment")),
@@ -79,7 +81,7 @@ impl StoredEnrichment {
                     .await
             }
             false => {
-                self.strategy
+                strategy
                     .apply(self.via.clone(), &self.enrichment, parents, sources)
                     .await
             }

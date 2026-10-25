@@ -115,7 +115,7 @@ const repo = <T extends object>(
   type: new () => T,
   connection: IConnection,
   write?: IWriteEnrichmentStrategy<T>,
-) => new CRUDRepository<T>(connection, { type, propertyMappings: columns, write });
+) => new CRUDRepository<T>(connection, { type, propertyMappings: columns, writeEnrichment: write });
 
 const read = <T extends object>(type: new () => T, connection: IConnection) =>
   new ReadonlyRepository(connection, { type, propertyMappings: columns });
@@ -227,6 +227,26 @@ describe("CRUDRepository", () => {
     const child = await childrenRepo.readSingle();
     expect(parent?.Id).toBe(created.Id);
     expect(child?.ParentId).toBe(parent?.Id);
+  });
+
+  it("create and update use call write enrichment", async () => {
+    const connection = await setup();
+    const recorded = { calls: 0, persist: async () => { recorded.calls += 1; } };
+    const defaults = { calls: 0, persist: async () => { defaults.calls += 1; } };
+    const parentsRepo = repo(Parent, connection, defaults);
+    const childrenRepo = repo(Child, connection);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
+    await parentsRepo.create(Object.assign(new Parent(), { Children: [Object.assign(new Child(), { Label: "a" })] }));
+    expect(defaults.calls).toBe(1);
+    await parentsRepo.create(
+      Object.assign(new Parent(), { Children: [Object.assign(new Child(), { Label: "b" })] }),
+      recorded,
+    );
+    expect(recorded.calls).toBe(1);
+    expect(defaults.calls).toBe(1);
+    await parentsRepo.update(Object.assign(new Parent(), { Id: 1, Children: [] }), undefined, recorded);
+    expect(recorded.calls).toBe(2);
+    expect(defaults.calls).toBe(1);
   });
 
   it("update replace-syncs children", async () => {

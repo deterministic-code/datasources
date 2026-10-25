@@ -16,6 +16,10 @@ internal sealed class LinkedReadEnrichment<T, TRelated, TLink> : ReadEnrichment<
         this.strategy = strategy;
     }
 
-    internal override Task Apply(Enrichment enrichment, IList<T> parents, IReadOnlyList<Row?>? sources) =>
-        strategy.ApplyLinked(via, link, enrichment, parents, sources);
+    internal override Task Apply(
+        Enrichment enrichment,
+        IList<T> parents,
+        IReadOnlyList<Row?>? sources,
+        IReadonlyEnrichmentStrategy<T>? strategy = null) =>
+        (strategy ?? this.strategy).ApplyLinked(via, link, enrichment, parents, sources);
 }

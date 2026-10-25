@@ -177,6 +177,14 @@ SELECT column names. When omitted, public fields of `type` are used.
 readColumns?: string[]
 ```
 
+##### readEnrichment
+
+Read enrichment strategy for this call. Omitted uses the strategy stored by [addEnriched](./i-enriched.md).
+
+```typescript
+readEnrichment?: IReadonlyEnrichmentStrategy<T & object>
+```
+
 #### IRepositoryTree
 
 ```typescript
@@ -424,6 +432,14 @@ SELECT column names. When omitted, public properties of `T` are used.
 IReadOnlyList<string>? ReadColumns { get; init; }
 ```
 
+##### ReadEnrichment
+
+Read enrichment strategy for this call. Omitted uses the strategy stored by [AddEnriched](./i-enriched.md).
+
+```csharp
+IReadonlyEnrichmentStrategy<T>? ReadEnrichment { get; init; }
+```
+
 #### IRepositoryTree
 
 ```csharp
@@ -604,6 +620,14 @@ Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`
 pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
 ```
 
+##### read_enrichment
+
+Read enrichment strategy for this call. Omitted uses the strategy stored by [add_enriched](./i-enriched.md).
+
+```rust
+pub read_enrichment: Option<Arc<dyn ReadonlyEnrichmentStrategy>>
+```
+
 #### RepositoryTree
 
 ```rust
@@ -684,7 +708,7 @@ pub fn include(&mut self, via: impl EnrichmentVia, destination_property: impl In
 
 ## Remarks
 
-{{AddEnriched|addEnriched|add_enriched}} on [IEnriched](./i-enriched.md) registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md).
+{{AddEnriched|addEnriched|add_enriched}} on [IEnriched](./i-enriched.md) registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. {{ReadEnrichment|readEnrichment|read_enrichment}} on the mapping options for that call uses one strategy for every registered edge. Omitted keeps the strategy stored by {{AddEnriched|addEnriched|add_enriched}}. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:
 

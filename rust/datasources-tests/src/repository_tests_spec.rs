@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
-    ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
+    ConsoleCommandMiddleware, DeleteStatement, Expression, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
     SelectStatementOptions, DefaultStatementTextRenderer, Statement, TransformMapper, TypeConverter,
     UpdateStatement, Value, Where,
@@ -699,7 +699,7 @@ pub async fn run(
                 create: Some(create),
                 ..
             } => {
-                repo.create(&mut domain_record(&create.row, &spec.type_spec.mappings))
+                repo.create(&mut domain_record(&create.row, &spec.type_spec.mappings), None)
                     .await
                     .unwrap();
             }
@@ -759,7 +759,7 @@ pub async fn run(
             } => {
                 let mut updated_row_1 = domain_record(&update.row, &spec.type_spec.mappings);
                 let response = repo
-                    .update(&mut updated_row_1, None)
+                    .update(&mut updated_row_1, None, None)
                     .await
                     .unwrap();
                 assert_affected(
@@ -778,6 +778,7 @@ pub async fn run(
                     .update(
                         &mut updated_row_2,
                         Some(&where_clause),
+                        None,
                     )
                     .await
                     .unwrap();
@@ -793,7 +794,7 @@ pub async fn run(
             } => {
                 let mut row = Row::new();
                 row.insert("id".into(), yaml_value(&delete.id));
-                let response = repo.delete(&row, None).await.unwrap();
+                let response = repo.delete(&row, None, None).await.unwrap();
                 assert_affected(
                     &format!("{} DELETE", spec.name),
                     response.rows_affected,
@@ -805,7 +806,7 @@ pub async fn run(
                 ..
             } => {
                 let where_clause = where_of(&mapping, &delete_by.where_clause);
-                let response = repo.delete(&Row::new(), Some(&where_clause)).await.unwrap();
+                let response = repo.delete(&Row::new(), Some(&where_clause), None).await.unwrap();
                 assert_affected(
                     &format!("{} DELETEBY", spec.name),
                     response.rows_affected,

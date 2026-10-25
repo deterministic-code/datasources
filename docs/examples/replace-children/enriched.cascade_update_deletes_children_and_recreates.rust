@@ -1,5 +1,5 @@
 let connection = setup(&mut []).await;
-let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
+let mut parents = mapped_crud(connection.clone(), "Parent").with_write_enrichment(Arc::new(
     DefaultWriteEnrichmentStrategy::new(
         None,
         Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
@@ -10,7 +10,7 @@ let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
 let mut children_repo = mapped_crud(connection.clone(), "Child");
 let notes = Arc::new(mapped_crud(connection, "Note"));
 let parent = parents
-    .create(&mut record(&[("Label", Value::from("p"))]))
+    .create(&mut record(&[("Label", Value::from("p"))]), None)
     .await
     .unwrap();
 assert!(num(&parent, "Id") > 0);
@@ -19,12 +19,12 @@ let child = children_repo
     .create(&mut record(&[
         ("ParentId", parent_id.clone()),
         ("Label", Value::from("a")),
-    ]))
+    ]), None)
     .await
     .unwrap();
 assert!(num(&child, "Id") > 0);
 let other = children_repo
-    .create(&mut record(&[("Label", Value::from("other"))]))
+    .create(&mut record(&[("Label", Value::from("other"))]), None)
     .await
     .unwrap();
 assert!(num(&other, "Id") > 0);
@@ -33,7 +33,7 @@ let note = notes
     .create(&mut record(&[
         ("ChildId", child_id.clone()),
         ("Text", Value::from("n")),
-    ]))
+    ]), None)
     .await
     .unwrap();
 assert!(num(&note, "Id") > 0);
@@ -62,6 +62,7 @@ let mut updated_row_3 = record(&[
 let updated = parents
     .update(
         &mut updated_row_3,
+        None,
         None,
     )
     .await

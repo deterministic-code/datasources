@@ -108,7 +108,7 @@ public class UserViewCRUDRepositoryTests
             ReadProperties = typeof(T) == typeof(UserView)
                 ? ["Id", "Username", "IsEnabled", "UserTypeId"]
                 : null,
-            Write = write,
+            WriteEnrichment = write,
         });
     }
 
