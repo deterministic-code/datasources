@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
     "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
     "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",

@@ -29,6 +29,16 @@ public class GenerateSqlTests
     static IReadOnlyList<string> Names(IReadOnlyList<GenerateEntry> entries) =>
         entries.Select(e => e.Filename).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
+    static string AddedTypes(string types) => $"types.yaml:\n  added: true\n  content:\n{Indent(types, 4)}";
+
+    static string Document(string path, string yaml) => $"{path}:\n{Indent(yaml, 2)}";
+
+    static string Indent(string yaml, int spaces)
+    {
+        var pad = new string(' ', spaces);
+        return string.Join('\n', yaml.Trim().Split('\n').Select(line => pad + line)) + "\n";
+    }
+
     [Fact]
     public void EmitsStoredProcedureMigrationsWhenTheFlagIsTrueOnPostgres()
     {
@@ -152,18 +162,8 @@ public class GenerateSqlTests
                         type: string
             """;
         var files = Files(nextYaml);
-        files[first] = VersionDelta.Yaml(new Dictionary<string, object?>
-        {
-            ["types.yaml"] = new Dictionary<string, object?>
-            {
-                ["added"] = true,
-                ["content"] = VersionDelta.Parse(TypesYaml),
-            },
-        });
-        files[second] = VersionDelta.Yaml(new Dictionary<string, object?>
-        {
-            ["types.yaml"] = VersionDelta.Parse(nextYaml),
-        });
+        files[first] = AddedTypes(TypesYaml);
+        files[second] = Document("types.yaml", nextYaml);
         var entries = GenerateSql.Of(files, new Dictionary<string, string> { ["datasource.use_stored_procedures"] = "true" }, ["postgres"]);
         var up2 = entries.Single(e => e.Filename == "postgres/migrations/0002_up.sql").Content;
         var down2 = entries.Single(e => e.Filename == "postgres/migrations/0002_down.sql").Content;

@@ -8,11 +8,7 @@ import { createConnection } from "mysql2/promise";
 import pg from "pg";
 import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
-import {
-  applyDocument,
-  snapshotsEqual,
-  type Json,
-} from "../../../../typescript/code-generators/src/sql/common/version-apply.ts";
+import { VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const spec = resolve(sample, "../../user-roles-simple-cli-shared/deterministic");
 
@@ -91,12 +87,12 @@ const catalog = async (provider: string, url: string) => {
 };
 
 describe("versioned migrations", () => {
-  it("replays frozen diffs to live types.yaml", () => {
-    let snapshot: { [path: string]: Json } = {};
-    for (const name of readdirSync(spec).filter((name) => /^version-\d{8}T\d{6}Z-\d{3}$/.test(name)).sort()) {
-      snapshot = applyDocument(snapshot, parse(readFileSync(join(spec, name, "diff.yaml"), "utf8")) as { [path: string]: Json });
-    }
-    expect(snapshotsEqual(snapshot["types.yaml"], parse(readFileSync(join(spec, "types.yaml"), "utf8")) as Json)).toBe(true);
+  it("replays frozen diffs to live types.yaml", async () => {
+    const snapshot = await VersionSnapshot.read(spec);
+    const live = VersionSnapshot.combine([
+      { "types.yaml": { added: true, content: parse(readFileSync(join(spec, "types.yaml"), "utf8")) } },
+    ]);
+    expect(snapshot.yaml("types.yaml")).toBe(live.yaml("types.yaml"));
   });
 
   it.each(providers())("drops extra fields and tables across three versions (%s)", async (provider) => {

@@ -1,5 +1,5 @@
 import { parse, stringify } from "yaml";
-import { applyFile, delta, isObject, type Json } from "./delta.ts";
+import { delta, isObject, type Json } from "./delta.ts";
 
 export type FilePair = { path: string; before?: Json; after?: Json };
 
@@ -22,19 +22,6 @@ export const render = (files: FilePair[]): string => {
 };
 
 export const parseYaml = (text: string): Json => parse(text) as Json;
-
-export const applyDocument = (
-  before: { [path: string]: Json },
-  doc: { [path: string]: Json },
-): { [path: string]: Json } => {
-  const out = { ...before };
-  for (const [path, envelope] of Object.entries(doc)) {
-    const next = applyFile(out[path], envelope);
-    if (next === undefined) delete out[path];
-    else out[path] = next;
-  }
-  return out;
-};
 
 export const asDocument = (value: Json, source: string): { [path: string]: Json } =>
   isObject(value) ? value : (() => { throw new Error(`${source}: expected a mapping`); })();

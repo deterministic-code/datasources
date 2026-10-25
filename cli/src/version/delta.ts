@@ -19,22 +19,6 @@ export const delta = (before: Json, after: Json): Json | undefined => {
   return value === unchanged ? undefined : value;
 };
 
-export const apply = (before: Json, next: Json): Json => {
-  if (next == null) return before;
-  if (isKeyedCollection(before) && isKeyedSplit(next)) return applyKeyed(before, next);
-  if (isObject(before) && isObject(next)) return applyObject(before, next);
-  return next;
-};
-
-export const applyFile = (before: Json | undefined, envelope: Json): Json | undefined => {
-  if (envelope == null) return before;
-  if (isObject(envelope)) {
-    if (envelope.removed === true && Object.keys(envelope).length === 1) return undefined;
-    if (envelope.added === true) return envelope.content;
-  }
-  return apply(before ?? null, envelope);
-};
-
 const build = (before: Json, after: Json): MaybeDelta => {
   if (isDeepStrictEqual(before, after)) return unchanged;
   if (isKeyedCollection(before) && isKeyedCollection(after)) return keyedSplit(before, after);
@@ -80,43 +64,6 @@ const objectDelta = (beforeObj: JsonObject, afterObj: JsonObject): MaybeDelta =>
     .sort();
   if (removed.length) result.removed = removed;
   return Object.keys(result).length === 0 ? unchanged : result;
-};
-
-const applyKeyed = (beforeVal: JsonObject[], split: KeyedSplit): Json => {
-  const removed = new Set(split.removed ?? []);
-  const changed = new Map<string, Json>();
-  for (const entry of split.changed ?? []) {
-    const key = Object.keys(entry)[0]!;
-    changed.set(key, entry[key]!);
-  }
-  return [
-    ...beforeVal.flatMap((entry) => {
-      const key = Object.keys(entry)[0]!;
-      if (removed.has(key)) return [];
-      return changed.has(key) ? [{ [key]: apply(entry[key]!, changed.get(key)!) }] : [entry];
-    }),
-    ...(split.added ?? []),
-  ];
-};
-
-const applyObject = (beforeVal: JsonObject, next: JsonObject): Json => {
-  const removed = new Set(Array.isArray(next.removed) ? next.removed : []);
-  const out: JsonObject = {};
-  for (const key of Object.keys(beforeVal)) {
-    if (removed.has(key)) continue;
-    out[key] = key in next ? apply(beforeVal[key]!, next[key]!) : beforeVal[key]!;
-  }
-  for (const key of Object.keys(next)) {
-    if (key === "removed" && Array.isArray(next.removed)) continue;
-    if (!(key in beforeVal)) out[key] = next[key]!;
-  }
-  return out;
-};
-
-const isKeyedSplit = (value: Json): value is KeyedSplit & JsonObject => {
-  if (!isObject(value)) return false;
-  const allowed = new Set(["added", "changed", "removed"]);
-  return Object.keys(value).every((key) => allowed.has(key));
 };
 
 export const isObject = (value: Json | undefined): value is JsonObject =>
