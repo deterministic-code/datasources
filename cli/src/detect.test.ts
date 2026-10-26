@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csharpTarget, detect, isEcosystem, resolveLanguages } from "./detect.ts";
+import { csharpTarget, detect, isEcosystem, missingProject, requireProjects, resolveLanguages } from "./detect.ts";
 
 describe("detect", () => {
   it("finds npm, cargo, and csharp manifests", () => {
@@ -31,6 +31,16 @@ describe("detect", () => {
     expect(csharpTarget(["App.sln"])).toBe("App.sln");
     expect(csharpTarget(["App.slnx"])).toBe("App.slnx");
     expect(csharpTarget([])).toBe(".");
+    expect(() => requireProjects(["csharp", "rust", "ts"], [])).toThrow(
+      [
+        missingProject("csharp"),
+        missingProject("rust"),
+        missingProject("ts"),
+      ].join("\n"),
+    );
+    expect(() => requireProjects(["csharp"], ["App.csproj"])).not.toThrow();
+    expect(() => requireProjects(["rust"], ["Cargo.toml"])).not.toThrow();
+    expect(() => requireProjects(["ts"], ["package.json"])).not.toThrow();
     expect(isEcosystem("ts")).toBe(true);
     expect(isEcosystem("go")).toBe(false);
   });
