@@ -2,7 +2,7 @@ import { access, copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { catalog, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
-import { csharpTarget, detect, resolveEcosystem } from "./detect.ts";
+import { csharpTarget, detect, resolveLanguages } from "./detect.ts";
 import { parseEnv, serializeEnv, updateEnvProviders, type EnvMap } from "./env.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Fs, Runner } from "./io.ts";
@@ -71,7 +71,7 @@ const needNames = (names: string[], verb: string): string[] =>
   names.length
     ? names
     : (() => {
-        throw new Error(`Usage: datasources ${verb} <provider...>`);
+        throw new Error(`Usage: datasources ${verb} --datasources <name...>`);
       })();
 
 const applySetup = async (flags: Flags, deps: Deps, requested: string[]): Promise<void> => {
@@ -83,24 +83,26 @@ const applySetup = async (flags: Flags, deps: Deps, requested: string[]): Promis
   const datasourcePath = join(specDir, "datasource.yaml");
   const missingSpec = (await optional(deps.fs, typesPath)) === undefined;
   const answers: SetupAnswers = flags.yes
-    ? { ...answersForSetup(existing, requested), ecosystem: flags.ecosystem, scaffold: false }
-    : await promptSetup(deps.prompt, existing, found, flags.ecosystem, missingSpec, requested);
-  const ecosystem = resolveEcosystem(found, answers.ecosystem ?? flags.ecosystem);
+    ? { ...answersForSetup(existing, requested), languages: flags.languages, scaffold: false }
+    : await promptSetup(deps.prompt, existing, found, flags.languages, missingSpec, requested);
+  const languages = resolveLanguages(found, answers.languages ?? flags.languages);
   const selected = requireProviders(answers.providers);
-  const installed = await readInstalled(deps.fs, flags.cwd, ecosystem, entries);
   if (!flags.dryRun) await writeEnv(deps.fs, flags.cwd, { ...existing, ...envFromAnswers(answers) });
-  await applyPackages(
-    flags,
-    deps,
-    ecosystem,
-    entries,
-    selected.filter((name) => !installed.includes(name)),
-    installed.filter((name) => !selected.includes(name)),
-    selected,
-  );
-  await applyMigrateInit(flags, deps, ecosystem, selected);
-  const dialect: Dialect = migrateLanguage(ecosystem);
-  await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
+  for (const language of languages) {
+    const installed = await readInstalled(deps.fs, flags.cwd, language, entries);
+    await applyPackages(
+      flags,
+      deps,
+      language,
+      entries,
+      selected.filter((name) => !installed.includes(name)),
+      installed.filter((name) => !selected.includes(name)),
+      selected,
+    );
+    await applyMigrateInit(flags, deps, language, selected);
+    const dialect: Dialect = migrateLanguage(language);
+    await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
+  }
   if (!answers.scaffold) return;
   if (flags.dryRun) {
     deps.log(typesPath);
@@ -120,16 +122,18 @@ const applyAddRemove = async (
 ): Promise<void> => {
   const entries = await deps.fs.readdir(flags.cwd);
   const found = detect(entries);
-  const ecosystem = resolveEcosystem(found, flags.ecosystem);
-  const installed = await readInstalled(deps.fs, flags.cwd, ecosystem, entries);
-  const remaining = [
-    ...installed.filter((name) => !remove.includes(name)),
-    ...add.filter((name) => !installed.includes(name)),
-  ];
+  const languages = resolveLanguages(found, flags.languages);
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
-  await applyPackages(flags, deps, ecosystem, entries, add, remove, remaining);
-  await applyMigrateInit(flags, deps, ecosystem, remaining);
+  for (const language of languages) {
+    const installed = await readInstalled(deps.fs, flags.cwd, language, entries);
+    const remaining = [
+      ...installed.filter((name) => !remove.includes(name)),
+      ...add.filter((name) => !installed.includes(name)),
+    ];
+    await applyPackages(flags, deps, language, entries, add, remove, remaining);
+    await applyMigrateInit(flags, deps, language, remaining);
+  }
 };
 
 const applyPackages = async (

@@ -5,34 +5,52 @@ describe("parseArgs", () => {
   it("parses commands and flags", () => {
     expect(parseArgs(["setup", "--yes", "--cwd", "app"], ".")).toEqual({
       command: { kind: "setup", providers: [] },
-      flags: { cwd: "app", dryRun: false, yes: true },
+      flags: { cwd: "app", languages: [], datasources: [], dryRun: false, yes: true },
     });
-    expect(parseArgs(["setup", "--yes", "--ecosystem", "csharp", "sqlite", "postgres"]).command).toEqual({
+    expect(
+      parseArgs(["setup", "--yes", "--languages", "csharp", "--datasources", "sqlite", "postgres"]).command,
+    ).toEqual({
       kind: "setup",
       providers: ["sqlite", "postgres"],
     });
+    expect(parseArgs(["setup", "--yes", "--languages", "csharp", "rust"]).flags.languages).toEqual(["csharp", "rust"]);
+    expect(parseArgs(["setup", "--yes", "--languages=typescript,csharp"]).flags.languages).toEqual(["ts", "csharp"]);
+    expect(parseArgs(["setup", "--yes", "--datasources=sqlite,postgres"]).command.providers).toEqual([
+      "sqlite",
+      "postgres",
+    ]);
+    expect(() => parseArgs(["setup", "sqlite"])).toThrow(/Usage: datasources setup/);
+    expect(() => parseArgs(["setup", "--yes", "--languages", "csharp", "sqlite"])).toThrow(/Unknown --languages sqlite/);
     expect(parseArgs(["add", "sqlite", "--cwd=app", "--dry-run"])).toEqual({
       command: { kind: "add", providers: ["sqlite"] },
-      flags: { cwd: "app", dryRun: true, yes: false },
+      flags: { cwd: "app", languages: [], datasources: [], dryRun: true, yes: false },
     });
-    expect(parseArgs(["remove", "mysql", "--ecosystem", "rust", "-y"])).toMatchObject({
+    expect(parseArgs(["add", "--datasources", "sqlite", "postgres", "sqlite"]).command.providers).toEqual([
+      "sqlite",
+      "postgres",
+    ]);
+    expect(parseArgs(["remove", "mysql", "--languages", "rust", "-y"])).toMatchObject({
       command: { kind: "remove", providers: ["mysql"] },
-      flags: { ecosystem: "rust", yes: true },
+      flags: { languages: ["rust"], yes: true },
     });
-    expect(parseArgs(["--ecosystem=ts", "add", "json"]).flags.ecosystem).toBe("ts");
+    expect(parseArgs(["--languages=ts", "add", "json"]).flags.languages).toEqual(["ts"]);
     expect(parseArgs(["--help"]).command).toEqual({ kind: "help" });
     expect(parseArgs(["-h"]).command).toEqual({ kind: "help" });
     expect(parseArgs(["help"]).command).toEqual({ kind: "help" });
     expect(parseArgs([]).command).toEqual({ kind: "help" });
     expect(help).toMatch(/datasources <command>/);
     expect(help).toMatch(/setup[\s\S]*--yes/);
+    expect(help).toMatch(/--languages/);
+    expect(help).toMatch(/--datasources/);
     expect(help).not.toMatch(/^Options:/m);
   });
 
   it("keeps cwd when a flag value is missing", () => {
     expect(parseArgs(["--cwd"], "here").flags.cwd).toBe("here");
-    expect(() => parseArgs(["--ecosystem"])).toThrow(/Unknown --ecosystem/);
-    expect(() => parseArgs(["--ecosystem=go"])).toThrow(/Unknown --ecosystem/);
+    expect(() => parseArgs(["--languages"])).toThrow(/Missing value for --languages/);
+    expect(() => parseArgs(["--languages="])).toThrow(/Missing value for --languages/);
+    expect(() => parseArgs(["--datasources="])).toThrow(/Missing value for --datasources/);
+    expect(() => parseArgs(["--languages=go"])).toThrow(/Unknown --languages/);
     expect(() => parseArgs(["wat"])).toThrow(/Unknown command: wat/);
   });
 

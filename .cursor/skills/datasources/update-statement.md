@@ -301,7 +301,7 @@ Compiled form is `UPDATE table SET col = $col` plus `WHERE` when an [IWhere](whe
 
 ### Compile an UPDATE
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L104-L114)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L105-L115)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -317,7 +317,7 @@ var update = new UpdateStatement("users", fields, where);
 UPDATE users SET id = $id, name = $name WHERE id = $id AND age > $age
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L132-L145)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L133-L146)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];

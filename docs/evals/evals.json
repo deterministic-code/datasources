@@ -4,11 +4,10 @@
     {
       "id": "run-setup-and-add-providers",
       "prompt": "Run setup and add sqlite and postgres for csharp and rust",
-      "expected_output": "npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp sqlite postgres; setup --yes --ecosystem rust sqlite postgres. One ecosystem per setup.",
+      "expected_output": "npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --datasources sqlite postgres",
       "files": [],
       "assertions": [
-        { "id": "setup-csharp", "text": "Runs npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp sqlite postgres" },
-        { "id": "setup-rust", "text": "Runs npx @deterministic-code/datasources-cli setup --yes --ecosystem rust sqlite postgres" }
+        { "id": "setup-languages", "text": "Runs npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --datasources sqlite postgres" }
       ]
     },
     {

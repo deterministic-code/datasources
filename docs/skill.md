@@ -9,8 +9,7 @@ Run setup and add sqlite and postgres for csharp and rust
 **Expected**
 
 ```sh
-npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp sqlite postgres
-npx @deterministic-code/datasources-cli setup --yes --ecosystem rust sqlite postgres
+npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --datasources sqlite postgres
 ```
 
 # Example prompts

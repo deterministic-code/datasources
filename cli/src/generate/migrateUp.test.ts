@@ -51,7 +51,7 @@ const deps = (fs: Fs): Deps & { logs: string[]; ran: string[] } => {
   };
 };
 
-const flags = (cwd = "app"): Flags => ({ cwd, dryRun: false, yes: false });
+const flags = (cwd = "app"): Flags => ({ cwd, languages: [], datasources: [], dryRun: false, yes: false });
 
 const command = (extra: Partial<GenerateCommand> = {}): GenerateCommand => ({
   kind: "generate",

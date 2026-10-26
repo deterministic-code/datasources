@@ -269,7 +269,7 @@ Compiled form is `INSERT INTO table (cols) VALUES ($cols)`. [Command](command.md
 
 ### Compile an INSERT
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L96-L102)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L97-L103)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -282,7 +282,7 @@ var insert = new InsertStatement("users", fields);
 INSERT INTO users (id, name) VALUES ($id, $name)
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L122-L130)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L123-L131)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];

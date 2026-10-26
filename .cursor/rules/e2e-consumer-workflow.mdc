@@ -15,7 +15,7 @@ execFileSync(process.execPath, ["--import", "tsx", join(repo, "cli/src/main.ts")
 migrateUp({ provider: "sqlite" });
 
 // ✅ GOOD — setup, then the documented commands, in the consumer project
-execFileSync("npm", ["run", "cli", "--", "setup", "--yes", "--cwd", project, "--ecosystem", "ts"]);
+execFileSync("npm", ["run", "cli", "--", "setup", "--yes", "--cwd", project, "--languages", "ts"]);
 execFileSync("npm", ["run", "cli", "--", "migrations", "create", "--cwd", project, "--input", spec, "--migrations-root", "sql"]);
 execFileSync("npx", ["migrate-up", "--provider", "sqlite", "--connection", db, "--migrations-root", "sql"], { cwd: project });
 ```

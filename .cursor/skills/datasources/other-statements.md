@@ -952,7 +952,7 @@ A compiled statement stores the table, columns, and constraints. `StatementTextR
 
 #### Compile a CREATE TABLE
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L127-L132)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L128-L133)
 
 ```csharp
 var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
@@ -964,7 +964,7 @@ var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER")
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L161-L172)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L162-L173)
 
 ```rust
 let create_table = CreateTableStatement::new(
@@ -997,7 +997,7 @@ CREATE TABLE users (id INTEGER, name TEXT)
 
 #### Compile named constraints
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L134-L154)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L135-L155)
 
 ```csharp
 var namedTable = new CreateTableStatement(
@@ -1022,7 +1022,7 @@ var namedTable = new CreateTableStatement(
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L174-L204)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L175-L205)
 
 ```rust
 let named_table = CreateTableStatement::new(
@@ -1345,7 +1345,7 @@ Compiled form is `CREATE INDEX name ON table (cols)` or `CREATE UNIQUE INDEX nam
 
 #### Compile a CREATE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L156-L161)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L157-L162)
 
 ```csharp
 var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
@@ -1357,7 +1357,7 @@ var createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_i
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L206-L213)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L207-L214)
 
 ```rust
 let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
@@ -1383,7 +1383,7 @@ CREATE INDEX idx_orders_user ON orders (user_id)
 
 #### Compile a CREATE UNIQUE INDEX
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L163-L168)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L164-L169)
 
 ```csharp
 var createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
@@ -1395,7 +1395,7 @@ var createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"],
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L215-L222)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L216-L223)
 
 ```rust
 let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code"], true);
@@ -1675,7 +1675,7 @@ Compiled form is `CALL name($p)` or `CALL name()`. [ReturnValue](command.md#para
 
 #### Compile a CALL
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L253-L259)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L254-L260)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -1688,7 +1688,7 @@ var call = new ExecuteStoredProcedureStatement("save", fields);
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L422-L427)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L423-L428)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
@@ -1973,7 +1973,7 @@ Compiled form is `SELECT name($p)` or `SELECT name()`. [ReturnValue](command.md#
 
 #### Compile a SELECT function call
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L261-L267)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L262-L268)
 
 ```csharp
 var fields = new[] { new Parameter("id", 1), new Parameter("name", "a") };
@@ -1986,7 +1986,7 @@ var ret = new ReturnStatement("add", fields);
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L429-L434)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L430-L435)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];

@@ -306,7 +306,7 @@ Compiled form is `DELETE FROM table` plus `WHERE` when an [IWhere](where.md#iwhe
 
 ### Compile a DELETE
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L116-L125)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L117-L126)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -321,7 +321,7 @@ var delete = new DeleteStatement("users", where);
 DELETE FROM users WHERE id = $id AND age > $age
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L147-L159)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L148-L160)
 
 ```rust
 let where_clause = Where::new(Operator::and(

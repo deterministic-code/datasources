@@ -3,7 +3,7 @@ import { isEcosystem } from "./detect.ts";
 import { answersFromEnv, ensureProviders, scheme, withSchema, type EnvMap } from "./env.ts";
 
 export type SetupAnswers = {
-  ecosystem?: Ecosystem;
+  languages?: Ecosystem[];
   providers: string[];
   url: string;
   schema: string;
@@ -45,25 +45,25 @@ export const promptSetup = async (
   prompt: Prompter,
   env: EnvMap,
   found: Ecosystem[],
-  explicit?: Ecosystem,
+  explicit: Ecosystem[] = [],
   askScaffold = false,
   requested: string[] = [],
 ): Promise<SetupAnswers> => {
   const defaults = answersForSetup(env, requested);
-  const ecosystem =
-    explicit ??
-    (found.length === 1
-      ? found[0]
-      : found.length === 0
-        ? undefined
-        : ecosystemOr(await prompt.select({
-            message: "Project type",
-            choices: found.map((value) => ({ name: value, value })),
-            default: found[0]!,
-          })));
+  const picked =
+    explicit.length
+      ? explicit
+      : found.length === 1
+        ? found
+        : found.length === 0
+          ? []
+          : (await prompt.checkbox({
+              message: "Languages",
+              choices: found.map((value) => ({ name: value, value, checked: true })),
+            })).filter(isEcosystem);
   const fromUrl = scheme(defaults.url);
   const selected = await prompt.checkbox({
-    message: "Providers",
+    message: "Datasources",
     choices: providers.map((value) => ({
       name: value,
       value,
@@ -79,11 +79,8 @@ export const promptSetup = async (
   const scaffold = askScaffold
     ? await prompt.confirm({ message: "Create deterministic directory", default: true })
     : false;
-  return { ecosystem, providers: selected, url, schema, scaffold };
+  return { languages: picked.length ? picked : undefined, providers: selected, url, schema, scaffold };
 };
-
-const ecosystemOr = (value: string): Ecosystem | undefined =>
-  isEcosystem(value) ? value : undefined;
 
 export const envFromAnswers = (answers: SetupAnswers): EnvMap => {
   const provider = scheme(answers.url) ?? answers.providers[0] ?? "sqlite";

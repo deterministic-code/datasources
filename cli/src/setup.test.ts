@@ -33,7 +33,7 @@ describe("setup", () => {
     const answers = await promptSetup(silent, { DATASOURCE_URL: "sqlite:///:memory:" }, ["ts"]);
     expect(answers.providers).toContain("sqlite");
     expect(answers.url).toBe("sqlite:///:memory:");
-    expect(answers.ecosystem).toBe("ts");
+    expect(answers.languages).toEqual(["ts"]);
     expect(answers.scaffold).toBe(false);
   });
 
@@ -44,23 +44,27 @@ describe("setup", () => {
     );
   });
 
-  it("prompts for ecosystem when more than one project type exists", async () => {
+  it("uses explicit languages without prompting", async () => {
+    expect((await promptSetup(silent, {}, ["ts", "rust"], ["csharp"])).languages).toEqual(["csharp"]);
+  });
+
+  it("prompts for languages when more than one project type exists", async () => {
     const answers = await promptSetup(
-      script(["rust", ["json"], "url", "public"]),
+      script([["rust"], ["json"], "url", "public"]),
       {},
       ["ts", "rust"],
     );
-    expect(answers.ecosystem).toBe("rust");
+    expect(answers.languages).toEqual(["rust"]);
     expect(answers.providers).toEqual(["json"]);
     expect(answers.url).toBe("url");
     expect(answers.schema).toBe("public");
   });
 
-  it("ignores an invalid ecosystem choice and leaves found empty unset", async () => {
+  it("ignores an invalid language choice and leaves found empty unset", async () => {
     expect(
-      (await promptSetup(script(["nope", ["memory"]]), {}, ["ts", "csharp"])).ecosystem,
+      (await promptSetup(script(["nope", ["memory"]]), {}, ["ts", "csharp"])).languages,
     ).toBeUndefined();
-    expect((await promptSetup(script([["memory"]]), {}, [])).ecosystem).toBeUndefined();
+    expect((await promptSetup(script([["memory"]]), {}, [])).languages).toBeUndefined();
   });
 
   it("defaults DATASOURCE_URL to sqlite when sqlite is selected", async () => {

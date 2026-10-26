@@ -77,7 +77,7 @@ describe("applyVersion", () => {
     const io = deps(fs);
     const now = () => new Date("2026-10-16T08:34:00.000Z");
     const command = { kind: "version" as const, input: "deterministic" };
-    const flags = { cwd: "app", dryRun: false, yes: false };
+    const flags = { cwd: "app", languages: [], datasources: [], dryRun: false, yes: false };
 
     await applyVersion(command, flags, io, now);
     const first = join(root, "version-20261016T083400Z-001", "diff.yaml");
@@ -133,7 +133,7 @@ describe("applyVersion", () => {
   it("uses an absolute input, records removals, and refuses sequence 1000", async () => {
     const root = "/tmp/deterministic-spec";
     const now = () => new Date("2026-10-16T08:34:00.000Z");
-    const flags = { cwd: "app", dryRun: false, yes: false };
+    const flags = { cwd: "app", languages: [], datasources: [], dryRun: false, yes: false };
     const { files, fs } = tree({ [join(root, "types.yaml")]: types });
     const io = deps(fs);
     await applyVersion({ kind: "version", input: root }, flags, io, now);
