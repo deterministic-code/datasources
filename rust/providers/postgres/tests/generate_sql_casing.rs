@@ -161,6 +161,9 @@ fn fields_casing_columns_only() {
         assert!(Regex::new(&format!(r#"REFERENCES "users"\s*\("{id}"\)"#))
             .unwrap()
             .is_match(&sql));
+        let procs = proc_sql(&HashMap::from([("datasource.casing.fields".into(), format.into())]));
+        assert!(procs.contains(channel));
+        assert!(procs.contains("INSERT INTO \"notification_types\""));
     }
 }
 

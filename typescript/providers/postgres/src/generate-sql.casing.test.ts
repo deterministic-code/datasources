@@ -268,6 +268,9 @@ describe("generate-sql casing", () => {
         sql,
         new RegExp(`REFERENCES "users"\\s*\\("${expected.id}"\\)`),
       );
+      const procs = await procSql({ "datasource.casing.fields": format });
+      assert.match(procs, new RegExp(expected.channel));
+      assert.match(procs, new RegExp(`INSERT INTO "notification_types"`));
     });
   }
 

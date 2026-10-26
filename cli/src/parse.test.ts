@@ -52,6 +52,11 @@ describe("parseArgs", () => {
       types: undefined,
       fields: undefined,
       directories: undefined,
+      pluralizeTableNames: undefined,
+      tableNames: undefined,
+      columnNames: undefined,
+      objectNames: undefined,
+      sqlKeywords: undefined,
     });
     expect(
       parseArgs([
@@ -136,7 +141,74 @@ describe("parseArgs", () => {
     expect(help).toMatch(/https:\/\/deterministic-code\.github\.io\/datasources\/cli\.html#generate/);
     expect(help).toMatch(/--stored-procedures/);
     expect(help).toMatch(/--file-names/);
-    expect(help).toMatch(/--directories/);
+    expect(help).toMatch(/--type-names\|--types/);
+    expect(help).toMatch(/--field-names\|--fields/);
+    expect(help).toMatch(/--folder-names\|--directories/);
+    expect(help).toMatch(/--pluralize-table-names/);
+    expect(help).toMatch(/--no-pluralize-table-names/);
+    expect(help).toMatch(/--table-names/);
+    expect(help).toMatch(/--column-names/);
+    expect(help).toMatch(/--object-names/);
+    expect(help).toMatch(/--sql-keywords/);
+    expect(
+      parseArgs([
+        "generate",
+        "all",
+        "--dialect",
+        "typescript",
+        "--pluralize-table-names",
+        "--table-names",
+        "pascal",
+        "--column-names=Camel",
+        "--object-names",
+        "upper",
+        "--sql-keywords=lower",
+      ]).command,
+    ).toMatchObject({
+      pluralizeTableNames: true,
+      tableNames: "Pascal",
+      columnNames: "Camel",
+      objectNames: "Upper",
+      sqlKeywords: "Lower",
+    });
+    expect(
+      parseArgs([
+        "generate",
+        "all",
+        "--dialect=typescript",
+        "--no-pluralize-table-names",
+        "--table-names=Snake",
+        "--column-names",
+        "kebab",
+        "--object-names=Auto",
+        "--sql-keywords",
+        "auto",
+      ]).command,
+    ).toMatchObject({
+      pluralizeTableNames: false,
+      tableNames: "Snake",
+      columnNames: "Kebab",
+      objectNames: "Auto",
+      sqlKeywords: "Auto",
+    });
+    expect(() => parseArgs(["generate", "all", "--dialect", "typescript", "--table-names", "screaming"])).toThrow(
+      /--table-names must be one of/,
+    );
+    expect(() => parseArgs(["generate", "all", "--dialect", "typescript", "--object-names", "screaming"])).toThrow(
+      /--object-names must be one of/,
+    );
+    expect(() => parseArgs(["generate", "all", "--dialect", "typescript", "--sql-keywords=screaming"])).toThrow(
+      /--sql-keywords must be one of/,
+    );
+    expect(parseArgs(["generate", "types", "--dialect", "rust", "--type-names", "snake", "--field-names=kebab", "--folder-names", "pascal"]).command).toMatchObject({
+      types: "Snake",
+      fields: "Kebab",
+      directories: "Pascal",
+    });
+    expect(parseArgs(["generate", "types", "--dialect", "rust", "--type-names=camel", "--folder-names=kebab"]).command).toMatchObject({
+      types: "Camel",
+      directories: "Kebab",
+    });
   });
 
   it("parses migrations create", () => {
@@ -146,6 +218,11 @@ describe("parseArgs", () => {
       input: "deterministic",
       storedProcedures: false,
       migrationsRoot: "sql",
+      pluralizeTableNames: undefined,
+      tableNames: undefined,
+      columnNames: undefined,
+      objectNames: undefined,
+      sqlKeywords: undefined,
     });
     expect(
       parseArgs([
@@ -164,9 +241,33 @@ describe("parseArgs", () => {
       input: "in",
       storedProcedures: false,
       migrationsRoot: "db",
+      pluralizeTableNames: undefined,
+      tableNames: undefined,
+      columnNames: undefined,
+      objectNames: undefined,
+      sqlKeywords: undefined,
     });
     expect(parseArgs(["migrations", "create", "--stored-procedures"]).command).toMatchObject({
       storedProcedures: true,
+    });
+    expect(
+      parseArgs([
+        "migrations",
+        "create",
+        "--no-pluralize-table-names",
+        "--table-names=Pascal",
+        "--column-names",
+        "camel",
+        "--object-names=upper",
+        "--sql-keywords",
+        "Lower",
+      ]).command,
+    ).toMatchObject({
+      pluralizeTableNames: false,
+      tableNames: "Pascal",
+      columnNames: "Camel",
+      objectNames: "Upper",
+      sqlKeywords: "Lower",
     });
     expect(parseArgs(["migrations", "create", "--migrations-root=out"]).command).toMatchObject({
       migrationsRoot: "out",

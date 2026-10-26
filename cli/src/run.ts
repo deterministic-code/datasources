@@ -17,6 +17,7 @@ import { applyMigrations } from "./generate/applyMigrations.ts";
 import { applyMigrateUp } from "./generate/migrateUp.ts";
 import { migrateInitCommands, migrateLanguage, sqlMigrateProviders } from "./migrateInit.ts";
 import { help, parseArgs, type Command, type Flags } from "./parse.ts";
+import { sqlFlagsOf } from "./generate/sqlFlags.ts";
 import { applyVersion } from "./version/applyVersion.ts";
 import { answersForSetup, envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
 import { wireRegister } from "./wireRegister.ts";
@@ -58,6 +59,7 @@ const dispatch = async (command: Command, flags: Flags, deps: Deps): Promise<voi
         input: command.input,
         storedProcedures: command.storedProcedures,
         migrationsRoot: command.migrationsRoot,
+        ...sqlFlagsOf(command),
       },
       flags,
       deps,

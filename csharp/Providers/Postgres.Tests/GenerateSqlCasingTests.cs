@@ -132,6 +132,9 @@ public class GenerateSqlCasingTests
         Assert.Matches($"\"{channel}\"", sql);
         Assert.Matches($"\"{userId}\"", sql);
         Assert.Matches($@"REFERENCES ""users""\s*\(""{id}""\)", sql);
+        var procs = ProcSql(new Dictionary<string, string> { ["datasource.casing.fields"] = format });
+        Assert.Contains(channel, procs);
+        Assert.Matches("INSERT INTO \"notification_types\"", procs);
     }
 
     [Fact]
