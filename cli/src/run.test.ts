@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import { pluginFileName, run, type Deps } from "./run.ts";
+import { missingProject } from "./detect.ts";
 import { starterTypesYaml, type Prompter } from "./setup.ts";
 
 const cwd = "app";
@@ -228,6 +229,32 @@ describe("run", () => {
     expect(dry.ran).toEqual([]);
     expect(dry.logs.some((line) => line.includes("cargo remove datasources-sqlite"))).toBe(true);
     expect(await run(["add", "json", "--cwd", cwd], deps(mem(["Cargo.toml"]).fs))).toBe(0);
+  });
+
+  it("stops when a requested language has no project", async () => {
+    const empty = mem([]);
+    const csharp = deps(empty.fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "csharp"], csharp)).toBe(1);
+    expect(csharp.errors).toEqual([missingProject("csharp")]);
+    expect(csharp.ran).toEqual([]);
+    expect(empty.files[join(cwd, ".env")]).toBeUndefined();
+    const rust = deps(mem([]).fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "rust"], rust)).toBe(1);
+    expect(rust.errors).toEqual([missingProject("rust")]);
+    const ts = deps(mem([]).fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "ts"], ts)).toBe(1);
+    expect(ts.errors).toEqual([missingProject("ts")]);
+    const both = deps(mem([]).fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "csharp", "rust"], both)).toBe(1);
+    expect(both.errors).toEqual([`${missingProject("csharp")}\n${missingProject("rust")}`]);
+    expect(both.ran).toEqual([]);
+    const dry = deps(mem([]).fs);
+    expect(await run(["setup", "--yes", "--dry-run", "--cwd", cwd, "--languages", "csharp"], dry)).toBe(1);
+    expect(dry.logs.some((line) => line.includes("dotnet add"))).toBe(false);
+    expect(await run(["add", "sqlite", "--cwd", cwd, "--languages", "csharp"], deps(mem([]).fs))).toBe(1);
+    const project = deps(mem(["App.csproj"]).fs);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "csharp"], project)).toBe(0);
+    expect(project.ran).toContain("dotnet add App.csproj package Datasources");
   });
 
   it("dry-runs csharp without writing env", async () => {

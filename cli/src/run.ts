@@ -2,7 +2,7 @@ import { access, copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { catalog, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
-import { csharpTarget, detect, resolveLanguages } from "./detect.ts";
+import { csharpTarget, detect, requireProjects, resolveLanguages } from "./detect.ts";
 import { parseEnv, serializeEnv, updateEnvProviders, type EnvMap } from "./env.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Fs, Runner } from "./io.ts";
@@ -86,6 +86,7 @@ const applySetup = async (flags: Flags, deps: Deps, requested: string[]): Promis
     ? { ...answersForSetup(existing, requested), languages: flags.languages, scaffold: false }
     : await promptSetup(deps.prompt, existing, found, flags.languages, missingSpec, requested);
   const languages = resolveLanguages(found, answers.languages ?? flags.languages);
+  requireProjects(languages, entries);
   const selected = requireProviders(answers.providers);
   if (!flags.dryRun) await writeEnv(deps.fs, flags.cwd, { ...existing, ...envFromAnswers(answers) });
   for (const language of languages) {
@@ -123,6 +124,7 @@ const applyAddRemove = async (
   const entries = await deps.fs.readdir(flags.cwd);
   const found = detect(entries);
   const languages = resolveLanguages(found, flags.languages);
+  requireProjects(languages, entries);
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
   for (const language of languages) {
