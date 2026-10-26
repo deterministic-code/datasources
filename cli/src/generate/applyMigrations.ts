@@ -5,6 +5,7 @@ import type { Flags, MigrationsCreateCommand } from "../parse.ts";
 import type { Deps } from "../run.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
+import { overlaySqlFlags } from "./sqlFlags.ts";
 import { withStoredProcedures } from "./storedProcedures.ts";
 import { writeEntries } from "./writeEntries.ts";
 
@@ -19,7 +20,7 @@ export const applyMigrations = async (
   const loaded = await loadSpec(deps.fs, at(flags.cwd, command.input));
   const entries = await generateSql({
     reader: memoryReader(loaded.files),
-    settings: withStoredProcedures(loaded.settings, command.storedProcedures),
+    settings: overlaySqlFlags(withStoredProcedures(loaded.settings, command.storedProcedures), command),
   });
   const root = at(flags.cwd, command.migrationsRoot);
   if (flags.dryRun) {

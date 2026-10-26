@@ -963,6 +963,139 @@ types: []
     expect(absolute.files[join("/tmp/mig", "sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });
 
+  it("applies SQL casing flags to migrations and repositories", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const spec = {
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - application:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - first_name:
+            type: string
+`,
+      [join(input, "settings.yaml")]: "settings:\n  backend:\n    datasources: sqlite\n",
+    };
+    const generate = mem(spec);
+    expect(
+      await run(
+        [
+          "generate",
+          "all",
+          "--dialect",
+          "typescript",
+          "--cwd",
+          cwd,
+          "--table-names",
+          "Pascal",
+          "--column-names",
+          "Camel",
+          "--field-names",
+          "Pascal",
+          "--object-names",
+          "upper",
+          "--sql-keywords",
+          "lower",
+          "--no-auto-migrate-up",
+        ],
+        deps(generate.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    const up = generate.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")];
+    expect(up).toMatch(/create table "APPLICATIONS"/);
+    expect(up).toMatch(/"firstName"/);
+    expect(up).not.toMatch(/CREATE TABLE/);
+    const repo = generate.files[join(cwd, "generated/typescript/repositories/applicationRepository.ts")];
+    expect(repo).toContain('["Application", "APPLICATIONS"]');
+    expect(repo).toContain('["FirstName", "firstName"]');
+    const create = mem({
+      ...spec,
+      [join(input, "settings.yaml")]: `settings:
+  backend:
+    datasources: sqlite
+  datasource:
+    casing:
+      types: Snake
+      fields: Snake
+      objects: lower
+      keywords: upper
+`,
+    });
+    expect(
+      await run(
+        [
+          "migrations",
+          "create",
+          "--cwd",
+          cwd,
+          "--table-names=Pascal",
+          "--column-names=Camel",
+          "--object-names=upper",
+          "--sql-keywords=lower",
+        ],
+        deps(create.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(create.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/create table "APPLICATIONS"/);
+  });
+
+  it("pluralizes table names from flags and overrides yaml", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const spec = (yaml: string) => ({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - application:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+`,
+      [join(input, "settings.yaml")]: yaml,
+    });
+    const off = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
+    expect(
+      await run(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-pluralize-table-names", "--no-auto-migrate-up"],
+        deps(off.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(off.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "application"/);
+    expect(off.files[join(cwd, "generated/typescript/repositories/applicationRepository.ts")]).toContain(
+      '["Application", "application"]',
+    );
+    const create = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
+    expect(await run(["migrations", "create", "--cwd", cwd, "--no-pluralize-table-names"], deps(create.fs), cwd)).toBe(0);
+    expect(create.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "application"/);
+    const on = mem(
+      spec(`settings:
+  backend:
+    datasources: sqlite
+  datasource:
+    pluralize_datatable_names: false
+`),
+    );
+    expect(
+      await run(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--pluralize-table-names", "--no-auto-migrate-up"],
+        deps(on.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(on.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "applications"/);
+    expect(on.files[join(cwd, "generated/typescript/repositories/applicationRepository.ts")]).toContain(
+      '["Application", "applications"]',
+    );
+  });
+
   it("accepts --stored-procedures on generate all and migrations create", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");

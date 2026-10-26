@@ -1,6 +1,7 @@
 import { isEcosystem } from "./detect.ts";
 import type { Ecosystem } from "./catalog.ts";
 import { parseCaseFlag, type CaseFormat, type CasingFlags } from "./generate/casing.ts";
+import { parseLetterCaseFlag, type LetterCase, type SqlFlags } from "./generate/sqlFlags.ts";
 import { isDialect, type Dialect } from "./generate/GenerateRequest.ts";
 
 export type Flags = {
@@ -25,7 +26,8 @@ export type GenerateCommand = {
   migrate: boolean;
   storedProcedures: boolean;
   migrationsRoot: string;
-} & CasingFlags;
+} & CasingFlags &
+  SqlFlags;
 
 export type MigrationsCreateCommand = {
   kind: "migrations-create";
@@ -33,7 +35,7 @@ export type MigrationsCreateCommand = {
   input: string;
   storedProcedures: boolean;
   migrationsRoot: string;
-};
+} & SqlFlags;
 
 export type VersionCommand = {
   kind: "version";
@@ -78,6 +80,12 @@ generate <all|types|repositories|datasource>
   --no-auto-migrate-up        Skip migrate-up (generate all applies them)
   --migrations-root <dir>     Root prefix for generate all (default: sql)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
+  --pluralize-table-names     Plural table names in SQL and runtime queries (default)
+  --no-pluralize-table-names  Singular table names (procedure names stay plural)
+  --table-names Pascal|Camel|Snake|Kebab|Auto
+  --column-names Pascal|Camel|Snake|Kebab|Auto
+  --object-names Upper|Lower|Auto
+  --sql-keywords Upper|Lower|Auto
   --file-names Pascal|Camel|Snake|Kebab|Auto
   --type-names|--types Pascal|Camel|Snake|Kebab|Auto
   --field-names|--fields Pascal|Camel|Snake|Kebab|Auto
@@ -88,6 +96,12 @@ migrations create     SQL migrations from the spec (migraters layout)
   --input <dir>               Deterministic project (default: ./deterministic)
   --migrations-root <dir>     Root prefix (default: sql)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
+  --pluralize-table-names     Plural table names in SQL (default)
+  --no-pluralize-table-names  Singular table names (procedure names stay plural)
+  --table-names Pascal|Camel|Snake|Kebab|Auto
+  --column-names Pascal|Camel|Snake|Kebab|Auto
+  --object-names Upper|Lower|Auto
+  --sql-keywords Upper|Lower|Auto
 
 version               Snapshot top-level YAML as the next version-*/diff.yaml
   --cwd <dir>                 Consumer project directory (default: .)
@@ -114,6 +128,11 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     types: undefined as CaseFormat | undefined,
     fields: undefined as CaseFormat | undefined,
     directories: undefined as CaseFormat | undefined,
+    pluralizeTableNames: undefined as boolean | undefined,
+    tableNames: undefined as CaseFormat | undefined,
+    columnNames: undefined as CaseFormat | undefined,
+    objectNames: undefined as LetterCase | undefined,
+    sqlKeywords: undefined as LetterCase | undefined,
   };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
@@ -135,6 +154,16 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg === "--no-migrations") generate.migrations = false;
     else if (arg === "--no-auto-migrate-up") generate.migrate = false;
     else if (arg === "--stored-procedures") generate.storedProcedures = true;
+    else if (arg === "--pluralize-table-names") generate.pluralizeTableNames = true;
+    else if (arg === "--no-pluralize-table-names") generate.pluralizeTableNames = false;
+    else if (arg === "--table-names") generate.tableNames = parseCaseFlag(take(argv, ++i, arg), arg);
+    else if (arg.startsWith("--table-names=")) generate.tableNames = parseCaseFlag(arg.slice("--table-names=".length), "--table-names");
+    else if (arg === "--column-names") generate.columnNames = parseCaseFlag(take(argv, ++i, arg), arg);
+    else if (arg.startsWith("--column-names=")) generate.columnNames = parseCaseFlag(arg.slice("--column-names=".length), "--column-names");
+    else if (arg === "--object-names") generate.objectNames = parseLetterCaseFlag(take(argv, ++i, arg), arg);
+    else if (arg.startsWith("--object-names=")) generate.objectNames = parseLetterCaseFlag(arg.slice("--object-names=".length), "--object-names");
+    else if (arg === "--sql-keywords") generate.sqlKeywords = parseLetterCaseFlag(take(argv, ++i, arg), arg);
+    else if (arg.startsWith("--sql-keywords=")) generate.sqlKeywords = parseLetterCaseFlag(arg.slice("--sql-keywords=".length), "--sql-keywords");
     else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
     else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
     else if (arg === "--file-names" || arg === "--type-names" || arg === "--types" || arg === "--field-names" || arg === "--fields" || arg === "--folder-names" || arg === "--directories") {
@@ -166,7 +195,8 @@ const commandOf = (
     migrate: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
-  } & CasingFlags,
+  } & CasingFlags &
+    SqlFlags,
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
   if (verb === "setup") return { kind: "setup", providers: names };
@@ -180,7 +210,7 @@ const commandOf = (
 
 const migrationsCommand = (
   names: string[],
-  generate: { provider: string; input: string; storedProcedures: boolean; migrationsRoot: string },
+  generate: { provider: string; input: string; storedProcedures: boolean; migrationsRoot: string } & SqlFlags,
 ): MigrationsCreateCommand => {
   if (names.length !== 1 || names[0] !== "create")
     throw new Error(`Usage: datasources migrations create\n${help}`);
@@ -190,6 +220,11 @@ const migrationsCommand = (
     input: generate.input,
     storedProcedures: generate.storedProcedures,
     migrationsRoot: generate.migrationsRoot,
+    pluralizeTableNames: generate.pluralizeTableNames,
+    tableNames: generate.tableNames,
+    columnNames: generate.columnNames,
+    objectNames: generate.objectNames,
+    sqlKeywords: generate.sqlKeywords,
   };
 };
 
@@ -209,7 +244,8 @@ const generateCommand = (
     migrate: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
-  } & CasingFlags,
+  } & CasingFlags &
+    SqlFlags,
 ): GenerateCommand => {
   if (names.length !== 1) throw new Error(`Usage: datasources generate <all|types|repositories|datasource>\n${help}`);
   const target = names[0] as string;
@@ -230,6 +266,11 @@ const generateCommand = (
     types: generate.types,
     fields: generate.fields,
     directories: generate.directories,
+    pluralizeTableNames: generate.pluralizeTableNames,
+    tableNames: generate.tableNames,
+    columnNames: generate.columnNames,
+    objectNames: generate.objectNames,
+    sqlKeywords: generate.sqlKeywords,
   };
 };
 
