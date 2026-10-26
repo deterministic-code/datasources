@@ -90,7 +90,7 @@ const setupProject = (cwd, ecosystem) => {
     join(cwd, ".env"),
     `INSTALLED_PROVIDERS=${dialects.join(",")}\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n`,
   );
-  datasources(cwd, ["setup", "--yes", "--ecosystem", ecosystem]);
+  datasources(cwd, ["setup", "--yes", "--languages", ecosystem]);
   const sample = samples.find((item) => cwd.endsWith(item.name));
   if (!sample) throw new Error(`no spec for ${cwd}`);
   const tsHome = sampleDir(sample.name, "ts");

@@ -8,15 +8,14 @@ export const detect = (entries: string[]): Ecosystem[] => [
     : []),
 ];
 
-export const resolveEcosystem = (found: Ecosystem[], explicit?: Ecosystem): Ecosystem => {
-  if (explicit) return explicit;
-  if (found.length === 1) return found[0]!;
-  throw new Error(
-    found.length === 0
-      ? "No package.json, Cargo.toml, or .csproj/.sln in this directory"
-      : "Multiple project types found. Pass --ecosystem ts|rust|csharp",
-  );
-};
+export const resolveLanguages = (found: Ecosystem[], explicit: Ecosystem[] = []): Ecosystem[] =>
+  explicit.length
+    ? explicit
+    : found.length
+      ? found
+      : (() => {
+          throw new Error("No package.json, Cargo.toml, or .csproj/.sln in this directory");
+        })();
 
 export const csharpTarget = (entries: string[]): string => {
   const projects = entries.filter((e) => e.endsWith(".csproj")).sort();

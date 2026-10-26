@@ -146,8 +146,8 @@ const consumer = (sample, dialect, env) => {
   cpSync(specOf(sample), join(dir, "deterministic"), { recursive: true });
   projectFile(dialect, dir);
   const ecosystem = ecosystemOf[dialect];
-  datasources(dir, ["setup", "--yes", "--ecosystem", ecosystem], env);
-  datasources(dir, ["add", ...providers, "--ecosystem", ecosystem], env);
+  datasources(dir, ["setup", "--yes", "--languages", ecosystem], env);
+  datasources(dir, ["add", ...providers, "--languages", ecosystem], env);
   datasources(dir, ["generate", "all", "--dialect", dialect], env);
   return dir;
 };

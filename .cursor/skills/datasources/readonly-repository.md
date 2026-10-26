@@ -1377,7 +1377,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1529-L1545)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1531-L1547)
 
 ```rust
         &row
@@ -1436,7 +1436,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1566-L1572)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1568-L1574)
 
 ```rust
 
@@ -1908,10 +1908,10 @@ var join = new SelectStatement(new()
     Table = "Parent",
     Fields =
     [
-        "Parent.Id AS Id",
-        "Parent.TypeName AS TypeName",
-        "Child.Id AS ChildId",
-        "Child.Label AS Label",
+        "Parent.Id",
+        "Parent.TypeName",
+        "Child.Id",
+        "Child.Label",
     ],
     Joins = [Join.Left("Child", "Parent.Id", "Child.ParentId")],
     Where = new Where(new Operator.Equals("Parent.Id", 1)),
@@ -1938,7 +1938,7 @@ var items = await joinRepo.Read(
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L60-L170)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L174)
 
 ```rust
 let connection = MemoryDriver.connection(None);
@@ -2029,10 +2029,10 @@ let join = SelectStatement::new(SelectStatementOptions {
     ..SelectStatementOptions::new(
         "Parent",
         &[
-            "Parent.Id AS Id",
-            "Parent.TypeName AS TypeName",
-            "Child.Id AS ChildId",
-            "Child.Label AS Label",
+            "Parent.Id",
+            "Parent.TypeName",
+            "Child.Id",
+            "Child.Label",
         ],
     )
 });
@@ -2151,10 +2151,10 @@ joinParents.addEnriched(
 const join = new SelectStatement({
   table: "Parent",
   fields: [
-    "Parent.Id AS Id",
-    "Parent.TypeName AS TypeName",
-    "Child.Id AS ChildId",
-    "Child.Label AS Label",
+    "Parent.Id",
+    "Parent.TypeName",
+    "Child.Id",
+    "Child.Label",
   ],
   joins: [Join.left("Child", "Parent.Id", "Child.ParentId")],
   where: new Where(new Operator.Equals("Parent.Id", 1)),

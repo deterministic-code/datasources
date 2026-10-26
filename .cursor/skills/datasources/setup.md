@@ -12,28 +12,29 @@ npx @deterministic-code/datasources-cli generate all --dialect typescript
 npx @deterministic-code/datasources-cli migrations create
 ```
 
-Pass `--ecosystem ts|rust|csharp` when the directory has more than one project type. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
+Pass `--languages ts|rust|csharp` when the directory has more than one project type, or to install more than one language in one call. From this repo: `npm run setup` or `npm run cli -- add sqlite`.
 
 ## Setup
 
-Interactive `.env` and provider install. Names after `setup` are the dialects to install for `--ecosystem`. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses those names, or defaults / existing `.env` when none are given; it does not scaffold the spec. Setup also writes the generated-registry hook for the detected ecosystem (see Generate). Checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init --language <typescript|csharp|rust>` with those dialects. `ts` maps to `typescript`. `add` and `remove` re-run init with the same language and the remaining SQL dialects.
+Interactive `.env` and datasource install. `--datasources` names the engines to install for `--languages`. A confirm writes `deterministic/types.yaml` (a starter `item` type) and an empty `deterministic/datasource.yaml` when that directory is missing. `--yes` skips prompts and uses those names, or defaults / existing `.env` when none are given; it does not scaffold the spec. Setup also writes the generated-registry hook for each language (see Generate). Checked SQL dialects (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`) install `@deterministic-code/migraters` and run `migrate-init --language <typescript|csharp|rust>` with those dialects. `ts` maps to `typescript`. `add` and `remove` re-run init with the same languages and the remaining SQL dialects.
 
 ```sh
 npx @deterministic-code/datasources-cli setup
 npx @deterministic-code/datasources-cli setup --yes
-npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp sqlite postgres
+npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --datasources sqlite postgres
 ```
 
 | Flag | Meaning |
 | --- | --- |
 | `--cwd <dir>` | Consumer project directory (default: `.`) |
-| `--ecosystem ts\|rust\|csharp` | Required when more than one project type exists |
+| `--languages ts\|rust\|csharp` | Project languages (default: every type found) |
+| `--datasources <name...>` | Datasources to install (default: existing `.env`) |
 | `--dry-run` | Print package-manager commands without running them |
 | `--yes` | Setup without prompts |
 
 ## Add
 
-Add provider packages. Updates `.env` `INSTALLED_PROVIDERS` when a `.env` already exists.
+Add datasource packages. Updates `.env` `INSTALLED_PROVIDERS` when a `.env` already exists.
 
 ```sh
 npx @deterministic-code/datasources-cli add sqlite postgres
@@ -42,12 +43,13 @@ npx @deterministic-code/datasources-cli add sqlite postgres
 | Flag | Meaning |
 | --- | --- |
 | `--cwd <dir>` | Consumer project directory (default: `.`) |
-| `--ecosystem ts\|rust\|csharp` | Required when more than one project type exists |
+| `--languages ts\|rust\|csharp` | Project languages (default: every type found) |
+| `--datasources <name...>` | Datasources to add |
 | `--dry-run` | Print package-manager commands without running them |
 
 ## Remove
 
-Remove provider packages and drop them from `.env`.
+Remove datasource packages and drop them from `.env`.
 
 ```sh
 npx @deterministic-code/datasources-cli remove postgres
@@ -56,7 +58,8 @@ npx @deterministic-code/datasources-cli remove postgres
 | Flag | Meaning |
 | --- | --- |
 | `--cwd <dir>` | Consumer project directory (default: `.`) |
-| `--ecosystem ts\|rust\|csharp` | Required when more than one project type exists |
+| `--languages ts\|rust\|csharp` | Project languages (default: every type found) |
+| `--datasources <name...>` | Datasources to remove |
 | `--dry-run` | Print package-manager commands without running them |
 
 ## .env

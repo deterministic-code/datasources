@@ -6,7 +6,8 @@ import { isDialect, type Dialect } from "./generate/GenerateRequest.ts";
 
 export type Flags = {
   cwd: string;
-  ecosystem?: Ecosystem;
+  languages: Ecosystem[];
+  datasources: string[];
   dryRun: boolean;
   yes: boolean;
 };
@@ -53,20 +54,23 @@ export type Command =
 
 export const help = `Usage: datasources <command> [options]
 
-setup [provider...]   Interactive .env, provider install, and optional deterministic/
+setup                 Interactive .env, datasource install, and optional deterministic/
   --cwd <dir>                 Consumer project directory (default: .)
-  --ecosystem ts|rust|csharp  Required when more than one project type exists
+  --languages ts|rust|csharp  Project languages (default: every type found)
+  --datasources <name...>     Datasources to install (default: existing .env)
   --dry-run                   Print package-manager commands without running them
   --yes                       Setup without prompts (defaults / existing .env)
 
-add <provider...>     Add provider packages
+add [name...]         Add datasource packages
   --cwd <dir>                 Consumer project directory (default: .)
-  --ecosystem ts|rust|csharp  Required when more than one project type exists
+  --languages ts|rust|csharp  Project languages (default: every type found)
+  --datasources <name...>     Datasources to add
   --dry-run                   Print package-manager commands without running them
 
-remove <provider...>  Remove provider packages
+remove [name...]      Remove datasource packages
   --cwd <dir>                 Consumer project directory (default: .)
-  --ecosystem ts|rust|csharp  Required when more than one project type exists
+  --languages ts|rust|csharp  Project languages (default: every type found)
+  --datasources <name...>     Datasources to remove
   --dry-run                   Print package-manager commands without running them
 
 generate <all|types|repositories|datasource>
@@ -114,7 +118,7 @@ const isTarget = (value: string): value is GenerateTarget => (generateTargets as
 const take = (argv: string[], index: number, name: string): string => argv[index] ?? (() => { throw new Error(`Missing value for ${name}`); })();
 
 export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags: Flags } => {
-  const flags: Flags = { cwd, dryRun: false, yes: false };
+  const flags: Flags = { cwd, languages: [], datasources: [], dryRun: false, yes: false };
   const generate = {
     dialect: "",
     provider: "deterministic",
@@ -139,8 +143,14 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     const arg = argv[i]!;
     if (arg === "--cwd") flags.cwd = argv[++i] ?? flags.cwd;
     else if (arg.startsWith("--cwd=")) flags.cwd = arg.slice("--cwd=".length);
-    else if (arg === "--ecosystem") flags.ecosystem = ecosystem(argv[++i]);
-    else if (arg.startsWith("--ecosystem=")) flags.ecosystem = ecosystem(arg.slice("--ecosystem=".length));
+    else if (arg === "--languages") {
+      i = takeList(argv, ++i, "--languages", (value) => flags.languages.push(language(value)));
+    } else if (arg.startsWith("--languages="))
+      splitList(arg.slice("--languages=".length), "--languages").forEach((value) => flags.languages.push(language(value)));
+    else if (arg === "--datasources") {
+      i = takeList(argv, ++i, "--datasources", (value) => flags.datasources.push(value));
+    } else if (arg.startsWith("--datasources="))
+      flags.datasources.push(...splitList(arg.slice("--datasources=".length), "--datasources"));
     else if (arg === "--dry-run") flags.dryRun = true;
     else if (arg === "--yes" || arg === "-y") flags.yes = true;
     else if (arg === "--dialect") generate.dialect = take(argv, ++i, "--dialect");
@@ -180,12 +190,13 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else rest.push(arg);
   }
   const [verb, ...names] = rest;
-  return { command: commandOf(verb, names, generate), flags };
+  return { command: commandOf(verb, names, flags.datasources, generate), flags };
 };
 
 const commandOf = (
   verb: string | undefined,
   names: string[],
+  datasources: string[],
   generate: {
     dialect: string;
     provider: string;
@@ -199,9 +210,12 @@ const commandOf = (
     SqlFlags,
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
-  if (verb === "setup") return { kind: "setup", providers: names };
-  if (verb === "add") return { kind: "add", providers: names };
-  if (verb === "remove") return { kind: "remove", providers: names };
+  if (verb === "setup") {
+    if (names.length) throw new Error(`Usage: datasources setup\n${help}`);
+    return { kind: "setup", providers: unique(datasources) };
+  }
+  if (verb === "add") return { kind: "add", providers: unique([...datasources, ...names]) };
+  if (verb === "remove") return { kind: "remove", providers: unique([...datasources, ...names]) };
   if (verb === "generate") return generateCommand(names, generate);
   if (verb === "migrations") return migrationsCommand(names, generate);
   if (verb === "version") return versionCommand(names, generate.input);
@@ -274,9 +288,25 @@ const generateCommand = (
   };
 };
 
-const ecosystem = (value: string | undefined): Ecosystem =>
-  value && isEcosystem(value)
-    ? value
-    : (() => {
-        throw new Error(`Unknown --ecosystem ${value}. Use ts|rust|csharp`);
-      })();
+const language = (value: string): Ecosystem =>
+  value === "typescript"
+    ? "ts"
+    : isEcosystem(value)
+      ? value
+      : (() => {
+          throw new Error(`Unknown --languages ${value}. Use ts|rust|csharp`);
+        })();
+
+const unique = (names: string[]): string[] => [...new Set(names)];
+
+const splitList = (value: string, name: string): string[] => {
+  const names = value.split(",").map((part) => part.trim()).filter(Boolean);
+  return names.length ? names : (() => { throw new Error(`Missing value for ${name}`); })();
+};
+
+const takeList = (argv: string[], index: number, name: string, push: (value: string) => void): number => {
+  if (index >= argv.length || argv[index]!.startsWith("-")) throw new Error(`Missing value for ${name}`);
+  let i = index;
+  while (i < argv.length && !argv[i]!.startsWith("-")) push(argv[i++]!);
+  return i - 1;
+};

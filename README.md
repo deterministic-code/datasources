@@ -56,11 +56,10 @@ cargo add datasources
 Run setup and add sqlite and postgres for csharp and rust
 ```
 
-The skill runs the CLI. `setup` writes `.env` and installs the requested dialects for that language. `--ecosystem` is one language per call.
+The skill runs the CLI. `setup` writes `.env` and installs the requested datasources for each language.
 
 ```sh
-npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp sqlite postgres
-npx @deterministic-code/datasources-cli setup --yes --ecosystem rust sqlite postgres
+npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --datasources sqlite postgres
 ```
 
 Run interactive setup when you want prompts instead of `--yes`.
@@ -420,8 +419,7 @@ Run setup and add sqlite and postgres for csharp and rust
 **Expected**
 
 ```sh
-npx @deterministic-code/datasources-cli setup --yes --ecosystem csharp sqlite postgres
-npx @deterministic-code/datasources-cli setup --yes --ecosystem rust sqlite postgres
+npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --datasources sqlite postgres
 ```
 
 ## Example prompts

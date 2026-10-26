@@ -25,8 +25,8 @@ describe("generate-and-register", () => {
     const here = cwd();
     try {
       writeFileSync(join(out, "package.json"), JSON.stringify({ name: "app", private: true, type: "module" }));
-      execFileSync(process.execPath, [cli, "setup", "--yes", "--ecosystem", "ts"], { encoding: "utf8", cwd: out });
-      execFileSync(process.execPath, [cli, "add", "sqlite", "mysql", "postgres", "--ecosystem", "ts"], { encoding: "utf8", cwd: out });
+      execFileSync(process.execPath, [cli, "setup", "--yes", "--languages", "ts"], { encoding: "utf8", cwd: out });
+      execFileSync(process.execPath, [cli, "add", "sqlite", "mysql", "postgres", "--languages", "ts"], { encoding: "utf8", cwd: out });
       execFileSync(process.execPath, [cli, "generate", "all", "--dialect", "typescript", "--input", spec, "--output", "generated", "--no-auto-migrate-up"], {
         encoding: "utf8",
         cwd: out,

@@ -77,7 +77,7 @@ describe("run", () => {
       [join(cwd, ".env.example")]: "INSTALLED_PROVIDERS=sqlite\nCUSTOM=keep\n",
     });
     const io = deps(fs);
-    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], io)).toBe(0);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "ts"], io)).toBe(0);
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite/);
     expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_URL=sqlite:\/\/\/:memory:/);
     expect(files[join(cwd, ".env")]).toMatch(/CUSTOM=keep/);
@@ -97,7 +97,7 @@ describe("run", () => {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite,postgres\nDATASOURCE_URL=sqlite:///:memory:\n",
     });
     const sqlIo = deps(sql.fs);
-    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], sqlIo)).toBe(0);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "ts"], sqlIo)).toBe(0);
     expect(sqlIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(sqlIo.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite --dialect postgres",
@@ -107,7 +107,7 @@ describe("run", () => {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
     });
     const jsonIo = deps(json.fs);
-    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "ts"], jsonIo)).toBe(0);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "ts"], jsonIo)).toBe(0);
     expect(jsonIo.ran.some((line) => line.includes("migraters") || line.includes("migrate-init"))).toBe(false);
     const dry = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-sqlite": "*" } }),
@@ -121,7 +121,7 @@ describe("run", () => {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: { "@deterministic-code/datasources-sqlite": "*" } }),
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     }).fs);
-    expect(await run(["add", "postgres", "--cwd", cwd, "--ecosystem", "ts"], addIo)).toBe(0);
+    expect(await run(["add", "postgres", "--cwd", cwd, "--languages", "ts"], addIo)).toBe(0);
     expect(addIo.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite --dialect postgres",
     );
@@ -132,39 +132,45 @@ describe("run", () => {
       `npx --yes --package @deterministic-code/migraters migrate-init --language ${language} --dialect sqlite --dialect postgres`;
     const csharp = mem(["App.csproj"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const csharpIo = deps(csharp.fs);
-    expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--ecosystem", "csharp"], csharpIo)).toBe(0);
+    expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--languages", "csharp"], csharpIo)).toBe(0);
     expect(csharpIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(csharpIo.ran).toContain(init("csharp"));
     const rust = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const rustIo = deps(rust.fs);
-    expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--ecosystem", "rust"], rustIo)).toBe(0);
+    expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--languages", "rust"], rustIo)).toBe(0);
     expect(rustIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(rustIo.ran).toContain(init("rust"));
     const json = mem(["App.csproj"], {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
     });
     const jsonIo = deps(json.fs);
-    expect(await run(["add", "json", "--cwd", cwd, "--ecosystem", "csharp"], jsonIo)).toBe(0);
+    expect(await run(["add", "json", "--cwd", cwd, "--languages", "csharp"], jsonIo)).toBe(0);
     expect(jsonIo.ran.some((line) => line.includes("migraters") || line.includes("migrate-init"))).toBe(false);
     const setup = mem(["App.csproj"], {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
     });
     const setupIo = deps(setup.fs);
-    expect(await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "csharp"], setupIo)).toBe(0);
+    expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "csharp"], setupIo)).toBe(0);
     expect(setupIo.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language csharp --dialect sqlite",
     );
     const csharpSetup = mem(["App.csproj"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const csharpSetupIo = deps(csharpSetup.fs);
     expect(
-      await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "csharp", "sqlite", "postgres"], csharpSetupIo),
+      await run(
+        ["setup", "--yes", "--cwd", cwd, "--languages", "csharp", "--datasources", "sqlite", "postgres"],
+        csharpSetupIo,
+      ),
     ).toBe(0);
     expect(csharpSetup.files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite,postgres/);
     expect(csharpSetupIo.ran).toContain(init("csharp"));
     const rustSetup = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const rustSetupIo = deps(rustSetup.fs);
     expect(
-      await run(["setup", "--yes", "--cwd", cwd, "--ecosystem", "rust", "sqlite", "postgres"], rustSetupIo),
+      await run(
+        ["setup", "--yes", "--cwd", cwd, "--languages", "rust", "--datasources", "sqlite", "postgres"],
+        rustSetupIo,
+      ),
     ).toBe(0);
     expect(rustSetup.files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite,postgres/);
     expect(rustSetupIo.ran).toContain(init("rust"));
@@ -188,6 +194,18 @@ describe("run", () => {
     expect(await run(["setup", "--cwd", cwd], io)).toBe(0);
     expect(io.ran.some((line) => line.includes("uninstall") && line.includes("json"))).toBe(true);
     expect(io.ran.some((line) => line.includes("install") && line.includes("memory"))).toBe(true);
+    let asked = 0;
+    const mixed = deps(mem(["package.json", "Cargo.toml"]).fs, {
+      prompt: {
+        select: async () => "",
+        checkbox: async () => (++asked === 1 ? [] : ["sqlite"]),
+        input: async ({ default: def }) => def,
+        confirm: async () => false,
+      },
+    });
+    expect(await run(["setup", "--cwd", cwd], mixed)).toBe(0);
+    expect(mixed.ran.some((line) => line.includes("npm install"))).toBe(true);
+    expect(mixed.ran.some((line) => line.includes("cargo add"))).toBe(true);
   });
 
   it("adds and removes rust crates and builds the plugin", async () => {
@@ -197,13 +215,13 @@ describe("run", () => {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\n",
     });
     const io = deps(fs);
-    expect(await run(["add", "sqlite", "--cwd", cwd, "--ecosystem", "rust"], io)).toBe(0);
+    expect(await run(["add", "sqlite", "--cwd", cwd, "--languages", "rust"], io)).toBe(0);
     expect(files[join(cwd, "Cargo.toml")]).toBe(toml);
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=json,sqlite/);
     expect(io.ran).toContain("cargo add datasources");
     expect(io.ran).toContain("cargo add datasources-sqlite");
     expect(io.ran).toContain("cargo build -p datasources-sqlite");
-    expect(await run(["remove", "json", "--cwd", cwd, "--ecosystem", "rust"], io)).toBe(0);
+    expect(await run(["remove", "json", "--cwd", cwd, "--languages", "rust"], io)).toBe(0);
     expect(io.ran).toContain("cargo remove datasources-json");
     const dry = deps(fs);
     expect(await run(["remove", "sqlite", "--cwd", cwd, "--dry-run"], dry)).toBe(0);
@@ -317,8 +335,9 @@ describe("run", () => {
     expect(await run(["wat"], io, cwd)).toBe(1);
     expect(await run(["add", "sqlite"], deps(mem([]).fs), cwd)).toBe(1);
     const mixed = deps(mem(["package.json", "Cargo.toml"]).fs);
-    expect(await run(["add", "sqlite"], mixed, cwd)).toBe(1);
-    expect(mixed.errors[0]).toMatch(/Multiple project types/);
+    expect(await run(["add", "sqlite"], mixed, cwd)).toBe(0);
+    expect(mixed.ran.some((line) => line.includes("npm install"))).toBe(true);
+    expect(mixed.ran.some((line) => line.includes("cargo add datasources-sqlite"))).toBe(true);
   });
 
   it("copies a built rust plugin", async () => {
@@ -332,10 +351,10 @@ describe("run", () => {
     try {
       const { fs } = mem(["Cargo.toml"], { [join(app, "Cargo.toml")]: "datasources-json = { version = \"0.1.0\" }\n" });
       const io = deps(fs);
-      expect(await run(["add", "sqlite", "--cwd", app, "--ecosystem", "rust"], io)).toBe(0);
+      expect(await run(["add", "sqlite", "--cwd", app, "--languages", "rust"], io)).toBe(0);
       expect(io.logs.some((line) => line.includes("datasources_sqlite.dll"))).toBe(true);
       Object.defineProperty(process, "platform", { value: "linux" });
-      expect(await run(["add", "sqlite", "--cwd", app, "--ecosystem", "rust"], deps(fs))).toBe(0);
+      expect(await run(["add", "sqlite", "--cwd", app, "--languages", "rust"], deps(fs))).toBe(0);
     } finally {
       if (platform) Object.defineProperty(process, "platform", platform);
       await rm(root, { recursive: true, force: true });

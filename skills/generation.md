@@ -21,10 +21,20 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 | `--no-auto-migrate-up` | Skip migrate-up. `generate all` applies them by default |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` on `generate all` (default: `sql`) |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
+| `--pluralize-table-names` | Plural table names in SQL and runtime queries (default). Procedure names stay plural |
+| `--no-pluralize-table-names` | Singular table names. Procedure names stay plural |
+| `--table-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated SQL table names (`Auto` is Snake) |
+| `--column-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated SQL column names (`Auto` is Snake) |
+| `--object-names Upper\|Lower\|Auto` | Letter case for SQL object names after table-name casing. Columns stay on `--column-names` (`Auto` preserves) |
+| `--sql-keywords Upper\|Lower\|Auto` | Letter case for SQL keywords and native types (`Auto` is Upper) |
+| `--file-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated language file names |
+| `--type-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated type identifiers (`--types` is the same flag) |
+| `--field-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated fields (`--fields` is the same flag) |
+| `--folder-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated folders (`--directories` is the same flag) |
 
 `generate all` writes SQL migrations into the [migraters](https://github.com/deterministic-code/migraters) layout and runs migrate-up. The connection is `PROVIDER` and `DATASOURCE_URL` from `.env`. Process env overrides the file. An in-memory `DATASOURCE_URL` skips migrate-up. `--dry-run` prints the migrate-up command and leaves the migration files unwritten. `--stored-procedures` and `settings.yaml` `datasource.use_stored_procedures: true` both turn on stored-procedure migrations.
 
-When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns. An explicit `datasource.yaml` still wins.
+When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns, unless `--no-pluralize-table-names` or `datasource.pluralize_datatable_names: false`. An explicit `datasource.yaml` still wins. SQL table/column/object/keyword flags overlay `datasource.casing.*` and do not change `--type-names` / `--field-names`.
 
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
@@ -47,10 +57,16 @@ npx @deterministic-code/datasources-cli migrations create --input ./deterministi
 | `--input <dir>` | Deterministic project (default: `./deterministic`) |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` (default: `sql`) |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
+| `--pluralize-table-names` | Plural table names in SQL (default). Procedure names stay plural |
+| `--no-pluralize-table-names` | Singular table names. Procedure names stay plural |
+| `--table-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated SQL table names (`Auto` is Snake) |
+| `--column-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated SQL column names (`Auto` is Snake) |
+| `--object-names Upper\|Lower\|Auto` | Letter case for SQL object names after table-name casing (`Auto` preserves) |
+| `--sql-keywords Upper\|Lower\|Auto` | Letter case for SQL keywords and native types (`Auto` is Upper) |
 
 Re-running overwrites the same files.
 
-Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init --language` for the ecosystem and its SQL dialects. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
+Apply and roll back with migraters. `setup` / `add` installs `@deterministic-code/migraters` and runs `migrate-init --language` for each language and its SQL dialects. `--migrations-root` defaults to `sql`, matching `migrations create`. Omit `--connection` when the dialect env var is set (`SQLITE_PATH` for sqlite). `migrate-down` rolls back one migration and requires the token it prints, passed as `--confirm`.
 
 ```sh
 npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection ./app.sqlite
