@@ -10,7 +10,7 @@ name: example-cli
 language: csharp
 providers: [sqlite, mysql, postgres]
 prepare-copy:
-  - from: ../docker
+  - from: .
     to: .
 prepare-commands:
   - docker compose up -d --wait
@@ -19,10 +19,8 @@ initialize-commands:
   - dotnet add package Datasources
   - npx @deterministic-code/datasources-cli setup --yes --languages csharp --datasources sqlite mysql postgres
 copy:
-  - from: Program.cs
-    to: Program.cs
-  - from: ../../deterministics/example
-    to: deterministic
+  - from: .
+    to: .
 run-commands:
   - npx @deterministic-code/datasources-cli generate all --dialect csharp
 build:
