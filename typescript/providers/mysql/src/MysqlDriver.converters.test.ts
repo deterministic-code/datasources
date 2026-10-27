@@ -14,6 +14,6 @@ describe("MysqlDriver converters", () => {
     expect(driver.typeConverter.convert({ type: "binary", size: 70000 })).toBe("LONGBLOB");
     expect(driver.defaultValueConverter.convert("datetime", "Now")).toBe("(NOW(3))");
     expect(driver.defaultValueConverter.convert("datetime", "UtcNow")).toBe("(UTC_TIMESTAMP(3))");
-    expect(driver.defaultValueConverter.convert("binary", "Hex('ab')")).toBe("X'ab'");
+    expect(driver.defaultValueConverter.convert("binary", "Hex('ab')")).toBe("(X'ab')");
   });
 });

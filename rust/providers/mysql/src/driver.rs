@@ -134,6 +134,13 @@ mod tests {
         assert_eq!(driver.column_type("decimal").unwrap(), "DECIMAL(18,4)");
         assert_eq!(driver.column_type("float").unwrap(), "DOUBLE");
         assert_eq!(driver.column_type("binary").unwrap(), "BLOB");
+        assert_eq!(
+            MysqlDriver::defaults()
+                .convert("binary", "Hex('ab')")
+                .unwrap()
+                .as_deref(),
+            Some("(X'ab')")
+        );
         assert!(driver
             .column_type("xml")
             .unwrap_err()

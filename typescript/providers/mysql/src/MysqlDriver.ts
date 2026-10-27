@@ -83,8 +83,8 @@ export class MysqlDriver implements IDriver {
     utcNow: () => `(UTC_TIMESTAMP(3))`,
     booleanOn: "1",
     booleanOff: "0",
-    hex: (arg) => `X'${arg}'`,
-    hexReverse: /^X'(.*)'$/,
+    hex: (arg) => `(X'${arg}')`,
+    hexReverse: /^\(?X'(.*)'\)?$/,
   });
   columnType = (name: string): string =>
     columnTypes[name] ??

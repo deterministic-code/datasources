@@ -66,7 +66,7 @@ pub static DEFAULTS: LazyLock<DefaultValueConverter> = LazyLock::new(|| {
         utc_now: || "(UTC_TIMESTAMP(3))".into(),
         boolean_on: "1".into(),
         boolean_off: "0".into(),
-        hex: |arg| format!("X'{arg}'"),
-        hex_reverse: Regex::new(r"^X'(.*)'$").expect("hex"),
+        hex: |arg| format!("(X'{arg}')"),
+        hex_reverse: Regex::new(r"^\(?X'(.*)'\)?$").expect("hex"),
     })
 });
