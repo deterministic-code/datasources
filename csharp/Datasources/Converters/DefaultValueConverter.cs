@@ -77,18 +77,20 @@ public sealed class DefaultValueConverter
         var newId = opts.NewId();
         var now = opts.Now();
         var utcNow = opts.UtcNow();
+        var quote = opts.Quote ?? SqlStringLiteral;
+        var quoteReverse = opts.QuoteReverse ?? QuotedReverse;
         var quotedString = new Dictionary<string, DefaultEntry>
         {
-            ["String"] = Entry(new Regex(@"^.*$"), QuotedReverse, SqlStringLiteral),
-            ["Numeric"] = Entry(new Regex(@"^.*$"), QuotedReverse, SqlStringLiteral),
+            ["String"] = Entry(new Regex(@"^.*$"), quoteReverse, quote),
+            ["Numeric"] = Entry(new Regex(@"^.*$"), quoteReverse, quote),
         };
         var dictionary = new Dictionary<string, IReadOnlyDictionary<string, DefaultEntry>>
         {
             ["string"] = quotedString,
             ["character"] = new Dictionary<string, DefaultEntry>
             {
-                ["String"] = Entry(new Regex(@"^.+$"), QuotedReverse, SqlStringLiteral),
-                ["Numeric"] = Entry(new Regex(@"^.+$"), QuotedReverse, SqlStringLiteral),
+                ["String"] = Entry(new Regex(@"^.+$"), quoteReverse, quote),
+                ["Numeric"] = Entry(new Regex(@"^.+$"), quoteReverse, quote),
             },
             ["boolean"] = new Dictionary<string, DefaultEntry>
             {

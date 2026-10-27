@@ -1,6 +1,7 @@
 import {
   DatasourceError,
   DefaultValueConverter,
+  sqlStringLiteral,
   DeterministicTypeConverter,
   StatementTextRenderer,
   type Cell,
@@ -85,6 +86,8 @@ export class MysqlDriver implements IDriver {
     booleanOff: "0",
     hex: (arg) => `(X'${arg}')`,
     hexReverse: /^\(?X'(.*)'\)?$/,
+    quote: (arg) => `(${sqlStringLiteral(arg)})`,
+    quoteReverse: /^\(?'(.*)'\)?$/,
   });
   columnType = (name: string): string =>
     columnTypes[name] ??

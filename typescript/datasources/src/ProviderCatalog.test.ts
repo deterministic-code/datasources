@@ -59,6 +59,17 @@ describe("ProviderCatalog", () => {
     ]);
   });
 
+  it("defaults loads a catalog provider that is not registered", () => {
+    const load = DriverLoader.load;
+    DriverLoader.load = () => new JsonDriver();
+    try {
+      DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
+      expect(DatasourceFactory.registered()).toEqual(["json"]);
+    } finally {
+      DriverLoader.load = load;
+    }
+  });
+
   it("defaults registers installed providers", () => {
     installed();
     DatasourceFactory.defaults({
@@ -97,9 +108,11 @@ describe("ProviderCatalog", () => {
   });
 
   it("missing package or unknown name", () => {
-    expect(() => DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "sqlite" })).toThrow(
-      ProviderNotInstalledError,
-    );
+    expect(() =>
+      DriverLoader.load(
+        new ProviderCatalog("acme", "@deterministic-code/datasources-missing", "AcmeDriver"),
+      ),
+    ).toThrow(ProviderNotInstalledError);
     expect(() => DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "nope" })).toThrow(
       ProviderNotInstalledError,
     );

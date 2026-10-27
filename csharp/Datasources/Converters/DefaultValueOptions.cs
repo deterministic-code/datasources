@@ -9,4 +9,6 @@ public sealed class DefaultValueOptions
     public required string BooleanOff { get; init; }
     public required Func<string, string> Hex { get; init; }
     public required System.Text.RegularExpressions.Regex HexReverse { get; init; }
+    public Func<string, string>? Quote { get; init; }
+    public System.Text.RegularExpressions.Regex? QuoteReverse { get; init; }
 }

@@ -209,7 +209,11 @@ const expectedOf = (spec, provider) => {
 const one = (spec, provider) => {
   const dest = mkdtempSync(join(tmpdir(), `datasources-qs-${spec.name}-${spec.language}-${provider}-`));
   const isolated = isolate(provider, dest);
-  const env = { PROVIDER: provider, DATASOURCE_URL: isolated.url };
+  const env = {
+    PROVIDER: provider,
+    DATASOURCE_URL: isolated.url,
+    ...(process.env.MIGRATERS_PACKAGE ? { MIGRATERS_PACKAGE: process.env.MIGRATERS_PACKAGE } : {}),
+  };
   console.log(`\n== ${spec.name} ${spec.language} ${provider} (${source}) ${dest}`);
   try {
     for (const line of spec["initialize-commands"] ?? []) run(rewrite(words(line), spec), dest, env);

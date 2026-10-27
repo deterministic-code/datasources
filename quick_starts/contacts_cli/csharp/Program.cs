@@ -7,6 +7,7 @@ var contactsRepo = ds.CreateRepository<Contact>("Contacts");
 var created = await contactsRepo.Create(new Contact()
 {
     GivenName = "Ada",
+    GenderTypeName = "Female",
     Emails =
     [
         new Email() { EmailTypeName = "Personal", Address = "ada@example.com", DisplayName = "Ada", IsPrimary = true },
@@ -32,6 +33,7 @@ await contactsRepo.Update(new Contact()
 {
     Id = created.Id,
     GivenName = "Ada Byron",
+    GenderTypeName = "Female",
     Emails = created.Emails,
     Phones = created.Phones,
     Addresses =

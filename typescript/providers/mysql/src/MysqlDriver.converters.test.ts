@@ -15,5 +15,7 @@ describe("MysqlDriver converters", () => {
     expect(driver.defaultValueConverter.convert("datetime", "Now")).toBe("(NOW(3))");
     expect(driver.defaultValueConverter.convert("datetime", "UtcNow")).toBe("(UTC_TIMESTAMP(3))");
     expect(driver.defaultValueConverter.convert("binary", "Hex('ab')")).toBe("(X'ab')");
+    expect(driver.defaultValueConverter.convert("string", "")).toBe("('')");
+    expect(driver.defaultValueConverter.convert("string", "hi")).toBe("('hi')");
   });
 });

@@ -6,4 +6,6 @@ export type DefaultValueOptions = {
   booleanOff: string;
   hex: (arg: string) => string;
   hexReverse: RegExp;
+  quote?: (arg: string) => string;
+  quoteReverse?: RegExp;
 };

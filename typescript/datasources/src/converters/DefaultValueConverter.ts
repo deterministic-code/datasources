@@ -165,15 +165,17 @@ export class DefaultValueConverter {
         String: token(numeric, (arg) => arg, numeric.spec),
       };
     };
+    const quote = opts.quote ?? quoted;
+    const quoteReverse = opts.quoteReverse ?? quotedReverse;
     const quotedString = {
-      String: token(spec.string.String!, quoted, quotedReverse),
-      Numeric: token(spec.string.String!, quoted, quotedReverse),
+      String: token(spec.string.String!, quote, quoteReverse),
+      Numeric: token(spec.string.String!, quote, quoteReverse),
     };
     const dictionary: Record<string, Record<string, DefaultEntry>> = {
       string: quotedString,
       character: {
-        String: token(spec.character.String!, quoted, quotedReverse),
-        Numeric: token(spec.character.String!, quoted, quotedReverse),
+        String: token(spec.character.String!, quote, quoteReverse),
+        Numeric: token(spec.character.String!, quote, quoteReverse),
       },
       boolean: {
         Boolean: token(

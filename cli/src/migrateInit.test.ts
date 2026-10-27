@@ -8,6 +8,24 @@ describe("migrateInit", () => {
     expect(migrateLanguage("csharp")).toBe("csharp");
     expect(migrateLanguage("rust")).toBe("rust");
     expect(migrateInitCommands([], "csharp")).toEqual([]);
+    expect(migrateInitCommands(["sqlite", "postgres"], "csharp", { MIGRATERS_PACKAGE: "file:../migraters" })).toEqual([
+      { command: "npm", args: ["install", "file:../migraters"] },
+      {
+        command: "npx",
+        args: [
+          "--yes",
+          "--package",
+          "file:../migraters",
+          "migrate-init",
+          "--language",
+          "csharp",
+          "--dialect",
+          "sqlite",
+          "--dialect",
+          "postgres",
+        ],
+      },
+    ]);
     expect(migrateInitCommands(["sqlite", "postgres"], "csharp")).toEqual([
       { command: "npm", args: ["install", "@deterministic-code/migraters"] },
       {
