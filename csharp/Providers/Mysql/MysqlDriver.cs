@@ -44,8 +44,8 @@ public sealed class MysqlDriver : IDriver
         UtcNow = () => "(UTC_TIMESTAMP(3))",
         BooleanOn = "1",
         BooleanOff = "0",
-        Hex = arg => $"X'{arg}'",
-        HexReverse = new Regex(@"^X'(.*)'$"),
+        Hex = arg => $"(X'{arg}')",
+        HexReverse = new Regex(@"^\(?X'(.*)'\)?$"),
     });
 
     public string QuoteLeft => "`";

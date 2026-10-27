@@ -70,6 +70,7 @@ public class MysqlTests
         Assert.Equal("DECIMAL(18,4)", driver.ColumnType("decimal"));
         Assert.Equal("DOUBLE", driver.ColumnType("float"));
         Assert.Equal("BLOB", driver.ColumnType("binary"));
+        Assert.Equal("(X'ab')", driver.DefaultValueConverter!.Convert("binary", "Hex('ab')"));
         Assert.Contains("Unknown mysql type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
     }
 
