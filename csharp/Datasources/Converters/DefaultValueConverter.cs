@@ -48,7 +48,7 @@ public sealed class DefaultValueConverter
         {
             var match = entry.Reverse.Match(native);
             if (!match.Success) continue;
-            var arg = match.Groups.Count > 1 ? match.Groups[1].Value : "";
+            var arg = match.Groups.Cast<Group>().Skip(1).FirstOrDefault(g => g.Success)?.Value ?? "";
             return entry.SpecText is null ? name : entry.SpecText(arg);
         }
         throw new InvalidOperationException($"Native default '{native}' is not a valid {specType} default");

@@ -1,6 +1,11 @@
 name: contacts-cli
 language: csharp
 providers: [sqlite, mysql, postgres]
+prepare-copy:
+  - from: ../docker
+    to: .
+prepare-commands:
+  - docker compose up -d --wait
 initialize-commands:
   - dotnet new console
   - dotnet add package Datasources

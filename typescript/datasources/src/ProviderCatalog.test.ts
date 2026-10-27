@@ -108,11 +108,9 @@ describe("ProviderCatalog", () => {
   });
 
   it("missing package or unknown name", () => {
-    expect(() =>
-      DriverLoader.load(
-        new ProviderCatalog("acme", "@deterministic-code/datasources-missing", "AcmeDriver"),
-      ),
-    ).toThrow(ProviderNotInstalledError);
+    expect(() => DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "sqlite" })).toThrow(
+      ProviderNotInstalledError,
+    );
     expect(() => DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "nope" })).toThrow(
       ProviderNotInstalledError,
     );

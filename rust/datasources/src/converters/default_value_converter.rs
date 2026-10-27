@@ -52,7 +52,13 @@ impl DefaultValueConverter {
         })?;
         for (name, entry) in entries {
             if let Some(caps) = entry.reverse.captures(native) {
-                let arg = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+                let arg = caps
+                    .iter()
+                    .skip(1)
+                    .flatten()
+                    .next()
+                    .map(|m| m.as_str())
+                    .unwrap_or("");
                 return Ok(entry.spec_text.map(|f| f(arg)).unwrap_or_else(|| name.clone()));
             }
         }
