@@ -84,7 +84,7 @@ childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRe
 parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
 ```
 
-Rust has no separate trait. {{AddEnriched|addEnriched|add_enriched}} is a method on [ReadonlyRepository](./readonly-repository.md) and [CRUDRepository](./crud-repository.md). With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md).
+Rust has no separate trait. {{AddEnriched|addEnriched|add_enriched}} is a method on [ReadonlyRepository](./readonly-repository.md) and [CRUDRepository](./crud-repository.md). With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md). Object lookups resolve a name to a foreign key on Create and Update through the write strategy. They still do not insert lookup rows.
 
 ## Examples
 
@@ -96,5 +96,16 @@ Rust has no separate trait. {{AddEnriched|addEnriched|add_enriched}} is a method
 ```rust rust/datasources/tests/enriched.rs#enriched_fills_lookup_select_and_leaves_missing_default
 ```
 ```typescript typescript/datasources/src/ReadonlyRepository.test.ts#fills-lookup-select-and-leaves-missing-default
+```
+:::
+
+### Resolve a lookup name on create
+
+::: example
+```csharp csharp/Datasources.Tests/CRUDRepositoryTests.cs#CreateResolvesLookupName
+```
+```rust rust/datasources/tests/enriched.rs#create_resolves_lookup_name
+```
+```typescript typescript/datasources/src/CRUDRepository.test.ts#create-resolves-lookup-name
 ```
 :::

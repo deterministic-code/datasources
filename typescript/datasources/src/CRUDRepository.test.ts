@@ -401,6 +401,66 @@ describe("CRUDRepository", () => {
     }))).rejects.toThrow(/Children/);
   });
 
+  it("create-resolves-lookup-name", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = repo(Parent, connection);
+    await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    const created = await parentsRepo.create(Object.assign(new Parent(), { TypeName: "work" }));
+    expect(created.Id).toBeGreaterThan(0);
+    expect(created.TypeName).toBe("work");
+    expect((await parentsRepo.readSingle())?.TypeName).toBe("work");
+  });
+
+  it("update-resolves-lookup-name", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = repo(Parent, connection);
+    const home = await typesRepo.create(Object.assign(new UserType(), { Name: "home" }));
+    await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    const created = await parentsRepo.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: home.Id }) }));
+    await parentsRepo.update(Object.assign(new Parent(), { Id: created.Id, TypeName: "work" }));
+    expect((await parentsRepo.readSingle())?.TypeName).toBe("work");
+  });
+
+  it("create-keeps-existing-lookup-key", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = repo(Parent, connection);
+    const home = await typesRepo.create(Object.assign(new UserType(), { Name: "home" }));
+    await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    await parentsRepo.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: home.Id }), TypeName: "work" }));
+    expect((await parentsRepo.readSingle())?.TypeName).toBe("home");
+    expect((await collectAsync(typesRepo.read())).length).toBe(2);
+  });
+
+  it("create-unknown-lookup-name-throws", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = repo(Parent, connection);
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    await expect(parentsRepo.create(Object.assign(new Parent(), { TypeName: "missing" }))).rejects.toThrow(/TypeName/);
+  });
+
+  it("nested-child-resolves-lookup-name", async () => {
+    const connection = await setup();
+    const parentsRepo = repo(Parent, connection);
+    const childrenRepo = repo(Child, connection);
+    const childTypesRepo = repo(UserType, connection);
+    await childTypesRepo.create(Object.assign(new UserType(), { Name: "home" }));
+    childrenRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, childTypesRepo);
+    parentsRepo.addEnriched({ destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" }, childrenRepo);
+    await parentsRepo.create(Object.assign(new Parent(), {
+      Children: [Object.assign(new Child(), { TypeName: "home", Label: "a" })],
+    }));
+    const child = await childrenRepo.readSingle();
+    expect(child?.Label).toBe("a");
+    expect(child?.TypeName).toBe("home");
+  });
+
   it("get still enriches", async () => {
     const org: Seed = { name: "org" };
     const typesConnection = await setup([org]);

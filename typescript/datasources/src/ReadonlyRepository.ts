@@ -33,10 +33,10 @@ export const untyped = <T>(): Constructable<T> => Object as never as Constructab
 
 export type Sourced<T> = { item: T; source?: Row };
 
-const storedEnrichments = new WeakMap<object, StoredEnrichment[]>();
+const storedEnrichments = new WeakMap<object, StoredEnrichment<never>[]>();
 
-export const enrichmentsOf = (host: object): readonly StoredEnrichment[] | undefined =>
-  storedEnrichments.get(host);
+export const enrichmentsOf = <T>(host: object): readonly StoredEnrichment<T>[] | undefined =>
+  storedEnrichments.get(host) as readonly StoredEnrichment<T>[] | undefined;
 
 export const isBuilt = <T>(
   value: IConnection | BuiltRepository<T>,
@@ -113,10 +113,13 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   ): this {
     const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
     this.entries().push(
-      new StoredEnrichment<T & object>(
+      new StoredEnrichment<T, TRelated>(
         enrichment,
-        (parents, sources) => chosen.apply(via, enrichment, parents, sources),
-      ),
+        (parents, sources) => chosen.apply(via, enrichment, parents as (T & object)[], sources),
+        undefined,
+        undefined,
+        via,
+      ) as unknown as StoredEnrichment<T>,
     );
     return this;
   }
@@ -162,8 +165,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     return field && !fieldsApplied ? field.reverseConvert(value) : value;
   };
 
-  private entries = (): StoredEnrichment<T & object>[] =>
-    storedEnrichments.get(this) as StoredEnrichment<T & object>[];
+  private entries = (): StoredEnrichment<T>[] =>
+    storedEnrichments.get(this) as unknown as StoredEnrichment<T>[];
 
   private mappers = (options?: ReadonlyRepositoryMappingOptions<T>): StatementMappers =>
     options?.entityMapper === undefined && options?.propertyMappings === undefined

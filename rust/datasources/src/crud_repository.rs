@@ -199,6 +199,9 @@ impl CRUDRepository {
     }
 
     async fn create_core(&self, item: &mut Row) -> Result<Row> {
+        self.write
+            .resolve_lookups(&self.tree, std::slice::from_mut(item))
+            .await?;
         if !self.enriched() {
             return self.inserted(item).await;
         }
@@ -228,7 +231,11 @@ impl CRUDRepository {
     }
 
     async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let response = self.save(item, by_where).await?;
+        let mut resolved = item.clone();
+        self.write
+            .resolve_lookups(&self.tree, std::slice::from_mut(&mut resolved))
+            .await?;
+        let response = self.save(&resolved, by_where).await?;
         if self.enriched() {
             let mut parent = item.clone();
             self.write

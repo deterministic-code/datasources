@@ -109,6 +109,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<T> CreateCore(T item)
     {
+        await write.ResolveLookups(tree, [item!]);
         await Insert(item);
         if (!Enriched) return item;
         await write.Persist(tree, [item!], WriteMode.Create);
@@ -119,6 +120,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> UpdateCore(T item, IWhere? byWhere = null)
     {
+        await write.ResolveLookups(tree, [item!]);
         var response = await Save(item, byWhere);
         if (Enriched)
             await write.Persist(tree, [item!], WriteMode.Update);

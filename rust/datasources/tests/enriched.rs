@@ -211,6 +211,162 @@ async fn deep_create_writes_children_stamps_fk() {
 }
 
 #[tokio::test]
+async fn create_resolves_lookup_name() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud(connection, "Parent");
+    types
+        .create(&mut record(&[("Name", Value::from("work"))]))
+        .await
+        .unwrap();
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let created = parents
+        .create(&mut record(&[("TypeName", Value::from("work"))]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    assert_eq!(created["TypeName"], Value::from("work"));
+    assert_eq!(
+        parents.read_single(None, None, None).await.unwrap().unwrap()["TypeName"],
+        Value::from("work")
+    );
+}
+
+#[tokio::test]
+async fn update_resolves_lookup_name() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud(connection, "Parent");
+    let home = types
+        .create(&mut record(&[("Name", Value::from("home"))]))
+        .await
+        .unwrap();
+    types
+        .create(&mut record(&[("Name", Value::from("work"))]))
+        .await
+        .unwrap();
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let created = parents
+        .create(&mut record(&[("Type", home.get("Id").unwrap().clone())]))
+        .await
+        .unwrap();
+    parents
+        .update(
+            &mut record(&[
+                ("Id", created.get("Id").unwrap().clone()),
+                ("TypeName", Value::from("work")),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        parents.read_single(None, None, None).await.unwrap().unwrap()["TypeName"],
+        Value::from("work")
+    );
+}
+
+#[tokio::test]
+async fn create_keeps_existing_lookup_key() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud(connection, "Parent");
+    let home = types
+        .create(&mut record(&[("Name", Value::from("home"))]))
+        .await
+        .unwrap();
+    types
+        .create(&mut record(&[("Name", Value::from("work"))]))
+        .await
+        .unwrap();
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types.clone(),
+        None,
+    );
+    parents
+        .create(&mut record(&[
+            ("Type", home.get("Id").unwrap().clone()),
+            ("TypeName", Value::from("work")),
+        ]))
+        .await
+        .unwrap();
+    assert_eq!(
+        parents.read_single(None, None, None).await.unwrap().unwrap()["TypeName"],
+        Value::from("home")
+    );
+    assert_eq!(
+        types.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().len(),
+        2
+    );
+}
+
+#[tokio::test]
+async fn create_unknown_lookup_name_throws() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud(connection, "Parent");
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let error = parents
+        .create(&mut record(&[("TypeName", Value::from("missing"))]))
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("TypeName"));
+}
+
+#[tokio::test]
+async fn nested_child_resolves_lookup_name() {
+    let connection = setup(&mut []).await;
+    let mut parents = mapped_crud(connection.clone(), "Parent");
+    let mut children = mapped_crud(connection.clone(), "Child");
+    let types = Arc::new(mapped_crud(connection, "UserType"));
+    types
+        .create(&mut record(&[("Name", Value::from("home"))]))
+        .await
+        .unwrap();
+    children.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let children = Arc::new(children);
+    parents.add_enriched(
+        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+        children.clone(),
+        None,
+    );
+    parents
+        .create(&mut record(&[(
+            "Children",
+            encode_rows(&[record(&[
+                ("TypeName", Value::from("home")),
+                ("Label", Value::from("a")),
+            ])]),
+        )]))
+        .await
+        .unwrap();
+    let child = children
+        .read_single(None, None, None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(child["Label"], Value::from("a"));
+    assert_eq!(child["TypeName"], Value::from("home"));
+}
+
+#[tokio::test]
 async fn round_trips_string_and_object_dictionaries() {
     let connection = setup(&mut []).await;
     let mut hosts = mapped_crud(connection.clone(), "Host");

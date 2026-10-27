@@ -117,8 +117,10 @@ export class CRUDRepository<T = Cells>
     strategy?: IReadonlyEnrichmentStrategy<T & object>,
   ): this {
     super.addEnriched(enrichment, via, strategy);
+    const stored = lastEnrichment<T, TRelated>(this);
+    stored.via = via;
     const writer = writerOf(via);
-    if (writer) lastEnrichment(this).persist = writer;
+    if (writer) stored.persist = writer;
     return this;
   }
 
@@ -130,10 +132,10 @@ export class CRUDRepository<T = Cells>
   ): this {
     const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
     super.addEnriched(enrichment, via, strategy);
-    const stored = lastEnrichment(this) as StoredEnrichment<T & object>;
+    const stored = lastEnrichment<T, TRelated, TLink>(this);
     stored.apply = (parents, sources) =>
-      chosen.applyLinked(via, link, enrichment, parents, sources);
-    stored.link = link as ICRUDRepository<object>;
+      chosen.applyLinked(via, link, enrichment, parents as (T & object)[], sources);
+    stored.link = link;
     return this;
   }
 
@@ -160,6 +162,7 @@ export class CRUDRepository<T = Cells>
   };
 
   private createCore = async (item: T): Promise<T> => {
+    await this.write.resolveLookups?.(this.tree, [item]);
     await this.insert(item);
     if (!this.enriched) return item;
     await this.write.persist(this.tree, [item], "create");
@@ -169,6 +172,7 @@ export class CRUDRepository<T = Cells>
   };
 
   private updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
+    await this.write.resolveLookups?.(this.tree, [item]);
     const response = await this.save(item, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
@@ -285,12 +289,11 @@ export class CRUDRepository<T = Cells>
   };
 
   protected enrichmentInto = (name: string): boolean =>
-    enrichmentsOf(this)!.some((entry) => entry.enrichment.destinationProperty === name);
+    enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.destinationProperty === name);
 }
 
-const writerOf = <TRelated extends object>(
-  via: IReadonlyRepository<TRelated>,
-): ICRUDRepository<object> | undefined =>
-  "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<object>) : undefined;
+const writerOf = <TRelated>(via: IReadonlyRepository<TRelated>): ICRUDRepository<TRelated> | undefined =>
+  "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<TRelated>) : undefined;
 
-const lastEnrichment = (host: object): StoredEnrichment => enrichmentsOf(host)!.at(-1)!;
+const lastEnrichment = <T, TRelated = T, TLink = TRelated>(host: object): StoredEnrichment<T, TRelated, TLink> =>
+  enrichmentsOf<T>(host)!.at(-1)! as unknown as StoredEnrichment<T, TRelated, TLink>;
