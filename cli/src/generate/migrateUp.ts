@@ -78,9 +78,6 @@ export const applyMigrateUp = async (
       `migrate-up: provider ${provider} is not in backend.datasources (${dialects.join(", ") || "none"})`,
     );
   const npx = (verb: string, extra: string[] = []) => [
-    "--yes",
-    "--package",
-    "@deterministic-code/migraters",
     verb,
     "--provider",
     provider,
