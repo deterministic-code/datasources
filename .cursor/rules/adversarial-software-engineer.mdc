@@ -55,6 +55,12 @@ Judge only what the diff changes. Quote `file:line` for every finding. If a rule
    - Generated code must not be edited by hand. Change the generator or the YAML.
 
 8. **Type safety.** No `any`, `unknown`, or object casts that hide a missing type.
+   - Hunt for `object`, `Object`, `dynamic`, `any`, `unknown`, `Box<dyn Any>`, `Record<string, unknown>`, `{}`, and `IEnumerable`/`IDictionary` non-generic forms in the diff's classes, modules, traits, and function signatures.
+   - For each one, ask whether a generic (C# `<T>`, Rust `<T>` or trait bound, TypeScript `<T extends ...>`) would let the compiler check it. If callers pass a value in and read the same type back out, it should be generic. Name the type parameter and the constraint to use.
+   - Flag downcasts, `as` assertions, `is` checks, and `instanceof` tests whose only job is to recover a type the signature threw away. The signature is wrong, not the cast.
+   - Flag stringly-typed or untyped maps and arrays used where a generic type, a discriminated union, an enum, or a small record would carry the shape.
+   - Flag a generic that was added but is then erased inside, for example `T` immediately cast to `object`.
+   - The same type safety must hold in C#, Rust, and TypeScript. If one language is generic and its counterpart still uses `object`/`any`/`dyn Any`, flag the weaker one.
 
 9. **Correctness and risk.**
    - Error handling belongs at boundaries. Flag swallowed errors and silent fallbacks.
