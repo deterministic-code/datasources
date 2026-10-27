@@ -555,6 +555,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctor"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec09e802f5081de6157da9a75701d6c713d8dc3ba52571fd4bd25f412644e8a6"
+dependencies = [
+ "ctor-proc-macro",
+ "dtor",
+]
+
+[[package]]
+name = "ctor-proc-macro"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2931af7e13dc045d8e9d26afccc6fa115d64e115c9c84b1166288b46f6782c2"
+
+[[package]]
 name = "ctutils"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -606,7 +622,7 @@ checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "datasources"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "abi_stable",
  "async-trait",
@@ -624,7 +640,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-code-generators"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "datasources",
  "deterministic_generators_common",
@@ -636,18 +652,20 @@ dependencies = [
 
 [[package]]
 name = "datasources-dynamodb"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "tokio",
 ]
 
 [[package]]
 name = "datasources-json"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "futures-util",
  "serde_json",
@@ -656,9 +674,10 @@ dependencies = [
 
 [[package]]
 name = "datasources-memory"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "futures-util",
  "serde_json",
@@ -667,20 +686,22 @@ dependencies = [
 
 [[package]]
 name = "datasources-mongodb"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "tokio",
 ]
 
 [[package]]
 name = "datasources-mysql"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "chrono",
+ "ctor",
  "datasources",
  "datasources-code-generators",
  "datasources-tests",
@@ -696,9 +717,10 @@ dependencies = [
 
 [[package]]
 name = "datasources-oracle"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "regex",
  "tokio",
@@ -706,12 +728,13 @@ dependencies = [
 
 [[package]]
 name = "datasources-postgres"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "bytes",
  "chrono",
+ "ctor",
  "datasources",
  "datasources-code-generators",
  "datasources-tests",
@@ -728,10 +751,11 @@ dependencies = [
 
 [[package]]
 name = "datasources-sqlite"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "chrono",
+ "ctor",
  "datasources",
  "datasources-code-generators",
  "datasources-tests",
@@ -747,9 +771,10 @@ dependencies = [
 
 [[package]]
 name = "datasources-sqlserver"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "regex",
  "tokio",
@@ -757,7 +782,7 @@ dependencies = [
 
 [[package]]
 name = "datasources-tests"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -773,18 +798,20 @@ dependencies = [
 
 [[package]]
 name = "datasources-xml"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "tokio",
 ]
 
 [[package]]
 name = "datasources-yaml"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
+ "ctor",
  "datasources",
  "tokio",
 ]
@@ -841,6 +868,21 @@ dependencies = [
  "quote",
  "syn 3.0.3",
 ]
+
+[[package]]
+name = "dtor"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97cbdf2ad6846025e8e25df05171abfb30e3ababa12ee0a0e44b9bbe570633a8"
+dependencies = [
+ "dtor-proc-macro",
+]
+
+[[package]]
+name = "dtor-proc-macro"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
 
 [[package]]
 name = "either"

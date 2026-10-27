@@ -9,6 +9,7 @@ description = "sqlserver datasource stub"
 
 [dependencies]
 async-trait = { workspace = true }
+ctor = { workspace = true }
 datasources = { workspace = true }
 regex = "1"
 

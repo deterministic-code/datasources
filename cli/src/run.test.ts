@@ -1,10 +1,8 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
-import { pluginFileName, run, type Deps } from "./run.ts";
+import { run, type Deps } from "./run.ts";
 import { missingProject } from "./detect.ts";
 import { starterTypesYaml, type Prompter } from "./setup.ts";
 
@@ -60,12 +58,6 @@ const deps = (
 };
 
 describe("run", () => {
-  it("names rust plugins per platform", () => {
-    expect(pluginFileName("datasources-sqlite", "win32")).toBe("datasources_sqlite.dll");
-    expect(pluginFileName("datasources-sqlite", "darwin")).toBe("libdatasources_sqlite.dylib");
-    expect(pluginFileName("datasources-sqlite", "linux")).toBe("libdatasources_sqlite.so");
-  });
-
   it("prints help", async () => {
     const io = deps(mem([]).fs);
     expect(await run(["--help"], io, cwd)).toBe(0);
@@ -209,7 +201,7 @@ describe("run", () => {
     expect(mixed.ran.some((line) => line.includes("cargo add"))).toBe(true);
   });
 
-  it("adds and removes rust crates and builds the plugin", async () => {
+  it("adds and removes rust crates and writes the bind file", async () => {
     const toml = `datasources-json = { version = "0.1.0" }\n`;
     const { files, fs } = mem(["Cargo.toml"], {
       [join(cwd, "Cargo.toml")]: toml,
@@ -221,9 +213,14 @@ describe("run", () => {
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=json,sqlite/);
     expect(io.ran).toContain("cargo add datasources");
     expect(io.ran).toContain("cargo add datasources-sqlite");
-    expect(io.ran).toContain("cargo build -p datasources-sqlite");
+    expect(files[join(cwd, "datasources_providers.rs")]).toBe(
+      "use datasources_json as _;\nuse datasources_sqlite as _;\n",
+    );
+    files[join(cwd, "Cargo.toml")] =
+      `datasources-json = { version = "0.1.0" }\ndatasources-sqlite = { version = "0.1.0" }\n`;
     expect(await run(["remove", "json", "--cwd", cwd, "--languages", "rust"], io)).toBe(0);
     expect(io.ran).toContain("cargo remove datasources-json");
+    expect(files[join(cwd, "datasources_providers.rs")]).toBe("use datasources_sqlite as _;\n");
     const dry = deps(fs);
     expect(await run(["remove", "sqlite", "--cwd", cwd, "--dry-run"], dry)).toBe(0);
     expect(dry.ran).toEqual([]);
@@ -255,6 +252,45 @@ describe("run", () => {
     const project = deps(mem(["App.csproj"]).fs);
     expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "csharp"], project)).toBe(0);
     expect(project.ran).toContain("dotnet add App.csproj package Datasources");
+    const sqliteOnly = deps(
+      mem(["App.csproj"], {
+        [join(cwd, "App.csproj")]: `<PackageReference Include="Datasources" />`,
+      }).fs,
+    );
+    expect(
+      await run(
+        ["setup", "--yes", "--cwd", cwd, "--languages", "csharp", "--datasources", "sqlite"],
+        sqliteOnly,
+      ),
+    ).toBe(0);
+    expect(sqliteOnly.ran).toContain("dotnet add App.csproj package Datasources.Sqlite");
+  });
+
+  it("writes process DATASOURCE_URL into .env", async () => {
+    const previous = {
+      INSTALLED_PROVIDERS: process.env.INSTALLED_PROVIDERS,
+      PROVIDER: process.env.PROVIDER,
+      DATASOURCE_URL: process.env.DATASOURCE_URL,
+    };
+    process.env.INSTALLED_PROVIDERS = "sqlite";
+    process.env.PROVIDER = "sqlite";
+    process.env.DATASOURCE_URL = "sqlite:///./app.sqlite";
+    try {
+      const { files, fs } = mem(["App.csproj"]);
+      const io = deps(fs);
+      expect(await run(["setup", "--yes", "--cwd", cwd, "--languages", "csharp"], io)).toBe(0);
+      expect(io.errors).toEqual([]);
+      expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=sqlite/);
+      expect(files[join(cwd, ".env")]).toMatch(/PROVIDER=sqlite/);
+      expect(files[join(cwd, ".env")]).toMatch(/DATASOURCE_URL=sqlite:\/\/\/\.\/app\.sqlite/);
+    } finally {
+      if (previous.INSTALLED_PROVIDERS === undefined) delete process.env.INSTALLED_PROVIDERS;
+      else process.env.INSTALLED_PROVIDERS = previous.INSTALLED_PROVIDERS;
+      if (previous.PROVIDER === undefined) delete process.env.PROVIDER;
+      else process.env.PROVIDER = previous.PROVIDER;
+      if (previous.DATASOURCE_URL === undefined) delete process.env.DATASOURCE_URL;
+      else process.env.DATASOURCE_URL = previous.DATASOURCE_URL;
+    }
   });
 
   it("dry-runs csharp without writing env", async () => {
@@ -365,27 +401,6 @@ describe("run", () => {
     expect(await run(["add", "sqlite"], mixed, cwd)).toBe(0);
     expect(mixed.ran.some((line) => line.includes("npm install"))).toBe(true);
     expect(mixed.ran.some((line) => line.includes("cargo add datasources-sqlite"))).toBe(true);
-  });
-
-  it("copies a built rust plugin", async () => {
-    const root = await mkdtemp(join(tmpdir(), "datasources-cli-"));
-    const app = join(root, "app");
-    const library = join(app, "target", "debug", "datasources_sqlite.dll");
-    await mkdir(join(app, "target", "debug"), { recursive: true });
-    await writeFile(library, "plugin");
-    const platform = Object.getOwnPropertyDescriptor(process, "platform");
-    Object.defineProperty(process, "platform", { value: "win32" });
-    try {
-      const { fs } = mem(["Cargo.toml"], { [join(app, "Cargo.toml")]: "datasources-json = { version = \"0.1.0\" }\n" });
-      const io = deps(fs);
-      expect(await run(["add", "sqlite", "--cwd", app, "--languages", "rust"], io)).toBe(0);
-      expect(io.logs.some((line) => line.includes("datasources_sqlite.dll"))).toBe(true);
-      Object.defineProperty(process, "platform", { value: "linux" });
-      expect(await run(["add", "sqlite", "--cwd", app, "--languages", "rust"], deps(fs))).toBe(0);
-    } finally {
-      if (platform) Object.defineProperty(process, "platform", platform);
-      await rm(root, { recursive: true, force: true });
-    }
   });
 
   it("maps non-Error throws to a generic message", async () => {

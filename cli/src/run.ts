@@ -1,6 +1,5 @@
-import { access, copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { catalog, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
+import { requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
 import { csharpTarget, detect, requireProjects, resolveLanguages } from "./detect.ts";
 import { parseEnv, serializeEnv, updateEnvProviders, type EnvMap } from "./env.ts";
@@ -21,6 +20,7 @@ import { sqlFlagsOf } from "./generate/sqlFlags.ts";
 import { applyVersion } from "./version/applyVersion.ts";
 import { answersForSetup, envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
 import { wireRegister } from "./wireRegister.ts";
+import { wireRustProviders } from "./wireRustProviders.ts";
 import type { Dialect } from "./generate/GenerateRequest.ts";
 
 export type Deps = {
@@ -77,7 +77,12 @@ const needNames = (names: string[], verb: string): string[] =>
 const applySetup = async (flags: Flags, deps: Deps, requested: string[]): Promise<void> => {
   const entries = await deps.fs.readdir(flags.cwd);
   const found = detect(entries);
-  const existing = await readEnv(deps.fs, flags.cwd);
+  const existing = {
+    ...(await readEnv(deps.fs, flags.cwd)),
+    ...(process.env.INSTALLED_PROVIDERS ? { INSTALLED_PROVIDERS: process.env.INSTALLED_PROVIDERS } : {}),
+    ...(process.env.PROVIDER ? { PROVIDER: process.env.PROVIDER } : {}),
+    ...(process.env.DATASOURCE_URL ? { DATASOURCE_URL: process.env.DATASOURCE_URL } : {}),
+  };
   const specDir = join(flags.cwd, "deterministic");
   const typesPath = join(specDir, "types.yaml");
   const datasourcePath = join(specDir, "datasource.yaml");
@@ -155,17 +160,7 @@ const applyPackages = async (
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
     if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
   }
-  if (ecosystem === "rust") {
-    for (const name of add) {
-      const proc = { command: "cargo", args: ["build", "-p", catalog[name].cargo] };
-      deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
-      if (!flags.dryRun) {
-        await deps.run(proc.command, proc.args, flags.cwd);
-        const copied = await copyPlugin(flags.cwd, catalog[name].cargo);
-        if (copied) deps.log(`copy ${copied}`);
-      }
-    }
-  }
+  if (ecosystem === "rust") await wireRustProviders(flags.cwd, remaining, flags.dryRun, deps);
 };
 
 const applyMigrateInit = async (
@@ -225,35 +220,3 @@ const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
   }
 };
 
-export const pluginFileName = (cargoName: string, platform = process.platform): string => {
-  const stem = cargoName.replaceAll("-", "_");
-  return platform === "win32"
-    ? `${stem}.dll`
-    : platform === "darwin"
-      ? `lib${stem}.dylib`
-      : `lib${stem}.so`;
-};
-
-const copyPlugin = async (cwd: string, cargoName: string): Promise<string | undefined> => {
-  const file = pluginFileName(cargoName);
-  const source = await firstFile(
-    [0, 1, 2].map((up) => join(cwd, ...Array.from({ length: up }, () => ".."), "target", "debug", file)),
-  );
-  if (!source) return undefined;
-  const dest = join(cwd, "plugins", file);
-  await mkdir(join(cwd, "plugins"), { recursive: true });
-  await copyFile(source, dest);
-  return dest;
-};
-
-const firstFile = async (paths: string[]): Promise<string | undefined> => {
-  for (const path of paths) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      continue;
-    }
-  }
-  return undefined;
-};

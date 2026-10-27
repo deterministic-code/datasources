@@ -360,6 +360,9 @@ if (!cliOnly) await assertVendoredOnMain();
 if (!cliOnly) {
   console.log("building typescript packages");
   run("npm", ["run", "build"], tsRoot);
+} else {
+  console.log("building cli code-generators");
+  run("npm", ["run", "build"], join(tsRoot, "code-generators"));
 }
 console.log("building cli generators");
 run(process.execPath, [join(cliRoot, "scripts/build-generators.mjs")], cliRoot);
@@ -371,11 +374,12 @@ const publishedCore = run("npm", ["view", "@deterministic-code/datasources", "ve
   capture: true,
   allowFail: true,
 });
-const libraryVersion =
-  stamp ??
-  (cliOnly && publishedCore.status === 0 && publishedCore.stdout.trim()
-    ? publishedCore.stdout.trim()
-    : JSON.parse(await readFile(join(tsRoot, "datasources/package.json"), "utf8")).version);
+const localLibraryVersion = JSON.parse(await readFile(join(tsRoot, "datasources/package.json"), "utf8")).version;
+const publishedLibraryVersion =
+  publishedCore.status === 0 && publishedCore.stdout.trim() ? publishedCore.stdout.trim() : undefined;
+const libraryVersion = cliOnly
+  ? publishedLibraryVersion ?? localLibraryVersion
+  : stamp ?? localLibraryVersion;
 const cliVersion = stamp ?? JSON.parse(await readFile(join(cliRoot, "package.json"), "utf8")).version;
 
 const staged = [];

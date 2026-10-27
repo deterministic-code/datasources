@@ -13,6 +13,7 @@ async-trait = { workspace = true }
 base64 = "0.22"
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+ctor = { workspace = true }
 datasources = { workspace = true }
 regex = "1"
 futures-core = "0.3"
