@@ -8,7 +8,6 @@ var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, str
 {
     ["DATASOURCE_URL"] = url,
 });
-await (await ds.CreateConnection()).Open();
 var contacts = ds.CreateRepository<Contact>("Contacts");
 var created = await contacts.Create(new Contact
 {

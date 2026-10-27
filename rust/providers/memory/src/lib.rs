@@ -330,13 +330,12 @@ mod tests {
             .execute("insert", None)
             .await
             .is_err());
-        assert!(crud(closed.clone()).create(&mut rec(1, "a")).await.is_err());
-        let mut updated_row_3 = rec(1, "a");
-        assert!(crud(closed.clone())
-            .update(&mut updated_row_3, None)
+        let created = crud(closed.clone())
+            .create(&mut rec(1, "a"))
             .await
-            .is_err());
-        assert!(crud(closed).delete(&rec(1, "a"), None).await.is_err());
+            .expect("create opens");
+        assert!(closed.is_open());
+        assert_eq!(created.get("id"), Some(&Value::Int(1)));
         assert!(
             MemoryConnection::new(Arc::new(MemoryStore::new()), "", None)
                 .start_transaction(None)

@@ -151,6 +151,12 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
       this.connection!.createCommand(),
     );
 
+  private ensureOpen = async (): Promise<void> => {
+    const connection = this.connection;
+    if (!connection) throw new DatasourceError("Connection required");
+    if (!connection.isOpen) await connection.open();
+  };
+
   protected column = (property: string): string => this.statementMappers.column(property);
 
   protected cell = (
@@ -223,6 +229,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     objects: TypeConverter<T, Cells>,
   ): AsyncIterable<Sourced<T>> {
     const statement = query ?? this.readonlyStatements!.select();
+    await this.ensureOpen();
     const reader = await executeReader(this.command(), statement, parameters);
     try {
       while (await reader.next()) {

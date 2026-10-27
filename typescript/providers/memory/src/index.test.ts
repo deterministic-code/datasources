@@ -311,15 +311,14 @@ describe("MemoryCommand and CRUDRepository", () => {
     expect(await collectAsync(repo.read())).toEqual([]);
   });
 
-  it("rejects command and repository IO when closed", async () => {
+  it("rejects command IO when closed and opens on repository create", async () => {
     const connection = new MemoryConnection({ data: [{ id: 1 }] });
     const command = new MemoryCommand(connection);
     const repo = new CRUDRepository(connection, {});
     await expect(command.executeReader("")).rejects.toThrow(DatasourceError);
     await expect(command.execute("insert")).rejects.toThrow(DatasourceError);
-    await expect(repo.create({ id: 2 })).rejects.toThrow(DatasourceError);
-    await expect(repo.update({ id: 1 })).rejects.toThrow(DatasourceError);
-    await expect(repo.delete({ id: 1 })).rejects.toThrow(DatasourceError);
+    expect((await repo.create({ id: 2, name: "b" })).id).toBe(2);
+    expect(connection.isOpen).toBe(true);
   });
 });
 

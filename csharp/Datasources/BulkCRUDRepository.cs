@@ -32,8 +32,15 @@ public class BulkCRUDRepository<T> : CRUDRepository<T> where T : new()
     public Task<Response> Delete(IReadOnlyList<T> items, IWhere? byWhere = null) =>
         InTransaction(() => bulk.Delete(items, byWhere));
 
+    async Task EnsureOpen()
+    {
+        var connection = Command().Connection;
+        if (!connection.IsOpen) await connection.Open();
+    }
+
     async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write, bool required = false)
     {
+        await EnsureOpen();
         if (!required && !useTransaction) return await write();
         var work = new UnitOfWorkTransaction(Command().Connection);
         await work.Begin();

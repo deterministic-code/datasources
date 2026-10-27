@@ -148,6 +148,17 @@ const relate = (
 };
 
 describe("CRUDRepository", () => {
+  it("opens a closed connection on create and read", async () => {
+    const connection = new MemoryDriver().connection();
+    expect(connection.isOpen).toBe(false);
+    const created = await new CRUDRepository(connection, {}).create({ id: 1, name: "Ada" });
+    expect(connection.isOpen).toBe(true);
+    expect(created.id).toBe(1);
+    const closed = new MemoryDriver().connection();
+    expect(await collectAsync(new ReadonlyRepository(closed, {}).read())).toEqual([]);
+    expect(closed.isOpen).toBe(true);
+  });
+
   it("round-trips string and object dictionaries", async () => {
     const connection = await setup();
     const hostsRepo = repo(Host, connection);

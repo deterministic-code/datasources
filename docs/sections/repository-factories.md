@@ -213,7 +213,7 @@ Creates a readonly repository by `T`.
 IReadonlyRepository<T> Create<T>()
 ```
 
-- `connection` — optional open [IConnection](./connection.md)
+- `connection` — optional [IConnection](./connection.md)
 
 **Returns** [IReadonlyRepository](./readonly-repository.md)`<T>`
 

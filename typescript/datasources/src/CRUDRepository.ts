@@ -149,8 +149,10 @@ export class CRUDRepository<T = Cells>
     this.inTransaction(() => this.deleteCore(item, byWhere));
 
   private inTransaction = async <TResult>(write: () => Promise<TResult>): Promise<TResult> => {
+    const connection = this.command().connection;
+    if (!connection.isOpen) await connection.open();
     if (!this.useTransaction) return write();
-    const work = new UnitOfWorkTransaction(this.command().connection);
+    const work = new UnitOfWorkTransaction(connection);
     await work.begin();
     try {
       const result = await write();
