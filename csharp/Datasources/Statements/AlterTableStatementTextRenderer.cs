@@ -16,7 +16,4 @@ public class AlterTableStatementTextRenderer : CreateTableStatementTextRenderer
         AlterTableStatement.DropConstraint drop => $"DROP CONSTRAINT {Quote(drop.Name)}",
         _ => throw new InvalidOperationException("empty alter")
     };
-
-    protected string NotNullSql(NotNull? value) =>
-        value is null ? "" : value.Name is null ? " NOT NULL" : $" CONSTRAINT {Quote(value.Name)} NOT NULL";
 }

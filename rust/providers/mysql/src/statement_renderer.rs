@@ -176,6 +176,23 @@ mod tests {
     }
 
     #[test]
+    fn renders_named_default_without_constraint() {
+        let create = CreateTableStatement::new(
+            "genders",
+            &[Column::new("uuid", "uuid")
+                .default(ColumnDefault::new("(UUID())", Some("df_uuid")))
+                .not_null(NotNull::new(Some("nn_uuid")))],
+            &[],
+        );
+        let sql = renderer().render(&create);
+        assert_eq!(
+            sql,
+            "CREATE TABLE genders (uuid CHAR(36) DEFAULT (UUID()) NOT NULL)"
+        );
+        assert!(!sql.contains("CONSTRAINT"));
+    }
+
+    #[test]
     fn renders_identity() {
         let create = CreateTableStatement::new(
             "users",

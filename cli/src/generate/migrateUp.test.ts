@@ -100,8 +100,8 @@ describe("applyMigrateUp", () => {
     );
     await applyMigrateUp(command(), flags(), fromUrl, {});
     expect(fromUrl.ran).toEqual([
-      "npx --yes --package @deterministic-code/migraters migrate-setup --provider postgres --connection postgres://localhost/db",
-      "npx --yes --package @deterministic-code/migraters migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
+      "npx migrate-setup --provider postgres --connection postgres://localhost/db",
+      "npx migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
     ]);
     const aliased = deps(
       mem({
@@ -114,8 +114,8 @@ describe("applyMigrateUp", () => {
       DATASOURCE_URL: "postgresql://localhost/db",
     });
     expect(aliased.ran).toEqual([
-      "npx --yes --package @deterministic-code/migraters migrate-setup --provider postgres --connection postgresql://localhost/db",
-      "npx --yes --package @deterministic-code/migraters migrate-up --provider postgres --connection postgresql://localhost/db --migrations-root sql",
+      "npx migrate-setup --provider postgres --connection postgresql://localhost/db",
+      "npx migrate-up --provider postgres --connection postgresql://localhost/db --migrations-root sql",
     ]);
     const absolute = deps(
       mem({

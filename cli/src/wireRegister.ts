@@ -76,6 +76,9 @@ const firstFile = async (fs: Fs, cwd: string, names: string[]): Promise<{ path: 
   return undefined;
 };
 
+const excludeNodeModules =
+  "  <PropertyGroup>\n    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**</DefaultItemExcludes>\n  </PropertyGroup>\n";
+
 const wireCsharp = async (cwd: string, output: string, dryRun: boolean, deps: Log): Promise<void> => {
   const entries = await deps.fs.readdir(cwd).catch(() => []);
   const target = csharpTarget(entries);
@@ -83,15 +86,21 @@ const wireCsharp = async (cwd: string, output: string, dryRun: boolean, deps: Lo
   const csprojPath = join(cwd, target);
   const generated = join(outputRoot(cwd, output), "csharp");
   const rel = posix(relative(dirname(csprojPath), generated));
-  if (!rel.startsWith("..")) return;
   const include = `${rel}/**/*.cs`;
   const existing = await optional(deps.fs, csprojPath);
-  if (existing === undefined || existing.includes(include)) return;
+  if (existing === undefined) return;
+  const needExclude = !existing.includes("node_modules/**");
+  const needInclude = rel.startsWith("..") && !existing.includes(include);
+  if (!needExclude && !needInclude) return;
   if (dryRun) {
     deps.log(csprojPath);
     return;
   }
-  await deps.fs.writeFile(csprojPath, existing.replace("</Project>", `  <ItemGroup>\n    <Compile Include="${include}" />\n  </ItemGroup>\n</Project>`));
+  const patched = [
+    needExclude ? excludeNodeModules : "",
+    needInclude ? `  <ItemGroup>\n    <Compile Include="${include}" />\n  </ItemGroup>\n` : "",
+  ].join("");
+  await deps.fs.writeFile(csprojPath, existing.replace("</Project>", `${patched}</Project>`));
   deps.log(csprojPath);
 };
 

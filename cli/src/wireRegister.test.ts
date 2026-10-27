@@ -128,6 +128,7 @@ describe("wireRegister", () => {
     const once = files[join(cwd, "App.csproj")];
     await wireRegister(cwd, "/tmp/out", "csharp", false, { fs, log: () => undefined });
     expect(files[join(cwd, "App.csproj")]).toBe(once);
+    expect(once).toContain("node_modules/**");
   });
 
   it("skips csharp when the csproj file cannot be read", async () => {
@@ -144,6 +145,17 @@ describe("wireRegister", () => {
     expect(Object.keys(files)).toHaveLength(0);
   });
 
+  it("adds a csharp compile include when node_modules is already excluded", async () => {
+    const cwd = "app";
+    const { files, fs } = mem(["App.csproj"], {
+      [join(cwd, "App.csproj")]:
+        `<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup>\n    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**</DefaultItemExcludes>\n  </PropertyGroup>\n</Project>\n`,
+    });
+    await wireRegister(cwd, "/tmp/out", "csharp", false, { fs, log: () => undefined });
+    expect(files[join(cwd, "App.csproj")]).toContain("Compile Include=");
+    expect(files[join(cwd, "App.csproj")]?.match(/node_modules\/\*\*/g)?.length).toBe(1);
+  });
+
   it("adds a csharp compile include when generated output is outside the project", async () => {
     const cwd = "app";
     const { files, fs } = mem(["App.csproj"], {
@@ -154,13 +166,15 @@ describe("wireRegister", () => {
     expect(files[join(cwd, "App.csproj")]).toContain("**/*.cs");
   });
 
-  it("skips csharp compile include when generated output is in the project", async () => {
+  it("excludes node_modules when generated output is in the project", async () => {
     const cwd = "app";
     const { files, fs } = mem(["App.csproj"], {
       [join(cwd, "App.csproj")]: `<Project Sdk="Microsoft.NET.Sdk">\n</Project>\n`,
     });
     await wireRegister(cwd, "generated", "csharp", false, { fs, log: () => undefined });
-    expect(files[join(cwd, "App.csproj")]).toBe(`<Project Sdk="Microsoft.NET.Sdk">\n</Project>\n`);
+    expect(files[join(cwd, "App.csproj")]).toContain("DefaultItemExcludes");
+    expect(files[join(cwd, "App.csproj")]).toContain("node_modules/**");
+    expect(files[join(cwd, "App.csproj")]).not.toContain("Compile Include=");
   });
 
   it("skips a hook when output is outside the project", async () => {

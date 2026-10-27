@@ -895,8 +895,8 @@ types: []
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
       expect(ran).toEqual([
-        "npx --yes --package @deterministic-code/migraters migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
-        "npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql",
+        "npx migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
+        "npx migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql",
       ]);
       const dry = mem(seeded);
       const dryRan: string[] = [];
