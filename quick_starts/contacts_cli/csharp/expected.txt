@@ -1,0 +1,4 @@
+created 1 Ada ada@example.com 555-0100 12 Analytical Engine
+read 1 Ada emails=1 phones=1 addresses=1
+updated 1 Ada Byron Cambridge
+deleted

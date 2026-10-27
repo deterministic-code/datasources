@@ -1,0 +1,26 @@
+# Quick start YAML schema. Copy to <name>/<language>/quick_start.yaml.
+# The runner (run.mjs) executes each step in a fresh tmp directory.
+#
+# --source published  runs commands as written (nuget.org / npm / crates.io).
+# --source local      rewrites package installs to repo ProjectReference / file: / path deps
+#                     and npx @deterministic-code/datasources-cli to cli/bin/datasources.mjs.
+
+name: example-cli
+language: csharp
+providers: [sqlite, mysql, postgres]
+initialize-commands:
+  - dotnet new console
+  - dotnet add package Datasources
+  - npx @deterministic-code/datasources-cli setup --yes --languages csharp --datasources sqlite mysql postgres
+copy:
+  - from: Program.cs
+    to: Program.cs
+  - from: ../../deterministics/example
+    to: deterministic
+run-commands:
+  - npx @deterministic-code/datasources-cli generate all --dialect csharp
+build:
+  - dotnet build
+run:
+  - dotnet run
+expected: expected.txt

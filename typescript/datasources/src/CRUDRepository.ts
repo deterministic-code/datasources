@@ -21,6 +21,7 @@ import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentSt
 import { StoredEnrichment } from "./StoredEnrichment.ts";
 import { execute, executeReader } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
+import { lookupKeys, mergeLookups } from "./CreateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
@@ -46,6 +47,7 @@ const writable = (
 const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
+  extras: Set<string>,
   cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
   enrichmentInto: (name: string) => boolean,
   columns: readonly string[],
@@ -55,8 +57,7 @@ const fieldsOf = (
     .filter(
       ([key, value]) =>
         include(key) &&
-        writable(key, columns, column) &&
-        !enrichmentInto(key) &&
+        (extras.has(key) || (writable(key, columns, column) && !enrichmentInto(key))) &&
         value !== null &&
         value !== undefined,
     )
@@ -187,10 +188,12 @@ export class CRUDRepository<T = Cells>
     this.readSingle(this.byId(id));
 
   private insert = async (item: T): Promise<Response> => {
+    const extras = lookupKeys(item as object);
     const record = this.reverseConvert(item);
     const fields = fieldsOf(
       record,
-      (col) => listed(this.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null)),
+      (col) => extras.has(col) || listed(this.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null)),
+      extras,
       this.cell,
       this.enrichmentInto,
       this.crudStatements.readColumns,
@@ -229,10 +232,12 @@ export class CRUDRepository<T = Cells>
   private idValue = (item: T): Scalar | undefined => scalarOf((item as Props)[this.ids[0]!]);
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
+    const extras = lookupKeys(item as object);
     const record = this.reverseConvert(item);
     const fields = fieldsOf(
       record,
-      (col) => listed(this.updateProperties, col, !this.ids.includes(col)),
+      (col) => extras.has(col) || listed(this.updateProperties, col, !this.ids.includes(col)),
+      extras,
       this.cell,
       this.enrichmentInto,
       this.crudStatements.readColumns,
@@ -257,7 +262,7 @@ export class CRUDRepository<T = Cells>
     const parameters = listed.length
       ? listed
       : DefaultStatementTextRenderer.instance.render(statement).includes("$")
-        ? fieldsOf(record, () => true, this.cell, this.enrichmentInto, this.crudStatements.readColumns, this.column)
+        ? fieldsOf(record, () => true, new Set(), this.cell, this.enrichmentInto, this.crudStatements.readColumns, this.column)
         : [];
     return execute(this.command(), statement, parameters);
   };
@@ -272,7 +277,9 @@ export class CRUDRepository<T = Cells>
 
   private reverseConvert = (item: T): Cells => {
     const row = this.objectConverter!.reverseConvert(item);
-    return this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
+    const converted = this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
+    mergeLookups(item as object, converted);
+    return converted;
   };
 
   private idWhere = (record: Cells): IWhere => {

@@ -291,18 +291,26 @@ impl CRUDRepository {
     ) -> Result<Vec<Parameter>> {
         let entries = self.readonly.enrichments.lock().expect("enrichments");
         let columns = self.crud_statements.read_columns();
+        let extras = |key: &str| {
+            entries.iter().any(|entry| {
+                entry.enrichment.r#type == crate::EnrichmentPropertyType::Object
+                    && entry.enrichment.association.is_none()
+                    && entry.enrichment.source_property == key
+            })
+        };
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, value)| {
-                include(key, value)
-                    && (columns.is_empty()
-                        || columns.iter().any(|name| {
-                            name == *key || self.readonly.column(name) == **key
-                        }))
-                    && !entries
-                        .iter()
-                        .any(|entry| entry.enrichment.destination_property == **key)
-                    && !matches!(value, Value::Null)
+                !matches!(value, Value::Null)
+                    && (extras(key)
+                        || include(key, value)
+                            && (columns.is_empty()
+                                || columns.iter().any(|name| {
+                                    name == *key || self.readonly.column(name) == **key
+                                }))
+                            && !entries
+                                .iter()
+                                .any(|entry| entry.enrichment.destination_property == **key))
             })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();

@@ -1,0 +1,19 @@
+name: contacts-cli
+language: csharp
+providers: [sqlite, mysql, postgres]
+initialize-commands:
+  - dotnet new console
+  - dotnet add package Datasources
+  - npx @deterministic-code/datasources-cli setup --yes --languages csharp --datasources sqlite mysql postgres
+copy:
+  - from: Program.cs
+    to: Program.cs
+  - from: ../../deterministics/contacts
+    to: deterministic
+run-commands:
+  - npx @deterministic-code/datasources-cli generate all --dialect csharp
+build:
+  - dotnet build
+run:
+  - dotnet run
+expected: expected.txt

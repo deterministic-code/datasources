@@ -1,0 +1,12 @@
+types.yaml:
+  types:
+    changed:
+      - contact:
+          remove_fields:
+            - contact_source_id
+      - address:
+          remove_fields:
+            - address_type_id
+      - phone:
+          remove_fields:
+            - phone_type_id
