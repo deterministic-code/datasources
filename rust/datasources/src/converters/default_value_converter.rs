@@ -124,11 +124,15 @@ fn dictionary_of(opts: DefaultValueOptions) -> HashMap<String, HashMap<String, D
     let new_id = (opts.new_id)();
     let now = (opts.now)();
     let utc_now = (opts.utc_now)();
-    let quoted = Regex::new(r"^'(.*)'$").expect("quoted");
+    let quoted = opts
+        .quote_reverse
+        .clone()
+        .unwrap_or_else(|| Regex::new(r"^'(.*)'$").expect("quoted"));
+    let quote = opts.quote.unwrap_or(sql_string_literal);
     let mut dictionary = HashMap::new();
     let quoted_string = HashMap::from([
-        entry("String", r"^.*$", quoted.clone(), |arg| sql_string_literal(arg), Some(|arg| arg.to_string())),
-        entry("Numeric", r"^.*$", quoted.clone(), |arg| sql_string_literal(arg), Some(|arg| arg.to_string())),
+        entry("String", r"^.*$", quoted.clone(), quote, Some(|arg| arg.to_string())),
+        entry("Numeric", r"^.*$", quoted.clone(), quote, Some(|arg| arg.to_string())),
     ]);
     dictionary.insert("string".into(), quoted_string);
     dictionary.insert(
@@ -215,6 +219,8 @@ mod tests {
             boolean_off: "FALSE".into(),
             hex: |arg| format!("'\\x{arg}'"),
             hex_reverse: Regex::new(r"^'\\x(.*)'$").expect("hex"),
+            quote: None,
+            quote_reverse: None,
         });
         assert_eq!(
             converter.convert("datetime", "UtcNow").expect("ok"),

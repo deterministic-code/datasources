@@ -71,6 +71,8 @@ public class MysqlTests
         Assert.Equal("DOUBLE", driver.ColumnType("float"));
         Assert.Equal("BLOB", driver.ColumnType("binary"));
         Assert.Equal("(X'ab')", driver.DefaultValueConverter!.Convert("binary", "Hex('ab')"));
+        Assert.Equal("('')", driver.DefaultValueConverter.Convert("string", ""));
+        Assert.Equal("('hi')", driver.DefaultValueConverter.Convert("string", "hi"));
         Assert.Contains("Unknown mysql type \"xml\"", Assert.Throws<DatasourceException>(() => driver.ColumnType("xml")).Message);
     }
 

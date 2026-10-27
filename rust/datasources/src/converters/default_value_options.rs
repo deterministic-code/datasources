@@ -9,4 +9,6 @@ pub struct DefaultValueOptions {
     pub boolean_off: String,
     pub hex: fn(&str) -> String,
     pub hex_reverse: Regex,
+    pub quote: Option<fn(&str) -> String>,
+    pub quote_reverse: Option<Regex>,
 }

@@ -141,6 +141,20 @@ mod tests {
                 .as_deref(),
             Some("(X'ab')")
         );
+        assert_eq!(
+            MysqlDriver::defaults()
+                .convert("string", "")
+                .unwrap()
+                .as_deref(),
+            Some("('')")
+        );
+        assert_eq!(
+            MysqlDriver::defaults()
+                .convert("string", "hi")
+                .unwrap()
+                .as_deref(),
+            Some("('hi')")
+        );
         assert!(driver
             .column_type("xml")
             .unwrap_err()

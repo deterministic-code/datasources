@@ -56,5 +56,7 @@ pub static DEFAULTS: LazyLock<DefaultValueConverter> = LazyLock::new(|| {
         boolean_off: "FALSE".into(),
         hex: |arg| format!("'\\x{arg}'"),
         hex_reverse: Regex::new(r"^'\\x(.*)'$").expect("hex"),
+        quote: None,
+        quote_reverse: None,
     })
 });

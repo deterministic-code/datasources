@@ -22,18 +22,33 @@ type TypeScript = {
 };
 
 const require = createRequire(import.meta.url);
+
+const requireAt = (from: string) => {
+  try {
+    return [createRequire(from)];
+  } catch {
+    return [];
+  }
+};
+
+const ancestors = (start: string) => {
+  const found = [];
+  let dir = start;
+  for (;;) {
+    found.push(...requireAt(join(dir, "package.json")));
+    const parent = dirname(dir);
+    if (parent === dir) return found;
+    dir = parent;
+  }
+};
+
 const requirers = () => [
-  createRequire(join(process.cwd(), "package.json")),
-  ...(process.argv[1] ? [createRequire(process.argv[1])] : []),
+  ...requireAt(join(process.cwd(), "package.json")),
+  ...(process.argv[1] ? requireAt(process.argv[1]) : []),
   require,
+  ...ancestors(dirname(fileURLToPath(import.meta.url))),
 ];
 
-const missingModule = (error: unknown): boolean =>
-  error instanceof Error &&
-  "code" in error &&
-  (error.code === "MODULE_NOT_FOUND" ||
-    error.code === "ERR_MODULE_NOT_FOUND" ||
-    error.code === "ERR_PACKAGE_PATH_NOT_EXPORTED");
 const virtual = new Map<string, string>();
 const virtualBySource = new Map<string, string>();
 let typeScriptHook = false;
@@ -107,7 +122,6 @@ const instantiateLoaded = (catalog: ProviderCatalog): IDriver => {
       return new Type();
     } catch (error) {
       last = error;
-      if (error instanceof ProviderNotInstalledError || !missingModule(error)) throw error;
     }
   }
   throw last instanceof ProviderNotInstalledError ? last : new ProviderNotInstalledError(catalog.name);
@@ -118,12 +132,13 @@ export class DriverLoader {
     try {
       return instantiate(catalog);
     } catch (error) {
-      if (error instanceof ProviderNotInstalledError) throw error;
       try {
         installTypeScriptHook();
         return instantiate(catalog);
       } catch {
-        throw new ProviderNotInstalledError(catalog.name);
+        throw error instanceof ProviderNotInstalledError
+          ? error
+          : new ProviderNotInstalledError(catalog.name);
       }
     }
   };

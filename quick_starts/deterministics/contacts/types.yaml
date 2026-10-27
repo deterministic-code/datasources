@@ -410,7 +410,7 @@ types:
       extract:
         - gender.name
       mapping:
-        gender.name: gender_name
+        gender.name: gender_type_name
       fields:
         - addresses:
             type: address[]

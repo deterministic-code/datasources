@@ -59,5 +59,7 @@ pub static DEFAULTS: LazyLock<DefaultValueConverter> = LazyLock::new(|| {
         boolean_off: "0".into(),
         hex: |arg| format!("HEXTORAW('{arg}')"),
         hex_reverse: Regex::new(r"^HEXTORAW\('(.*)'\)$").expect("hex"),
+        quote: None,
+        quote_reverse: None,
     })
 });

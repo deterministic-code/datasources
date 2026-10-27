@@ -68,5 +68,11 @@ pub static DEFAULTS: LazyLock<DefaultValueConverter> = LazyLock::new(|| {
         boolean_off: "0".into(),
         hex: |arg| format!("(X'{arg}')"),
         hex_reverse: Regex::new(r"^\(?X'(.*)'\)?$").expect("hex"),
+        quote: Some(mysql_quote),
+        quote_reverse: Some(Regex::new(r"^\(?'(.*)'\)?$").expect("quote")),
     })
 });
+
+fn mysql_quote(arg: &str) -> String {
+    format!("({})", DefaultValueConverter::sql_string_literal(arg))
+}
