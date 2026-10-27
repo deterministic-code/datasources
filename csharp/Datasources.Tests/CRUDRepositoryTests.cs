@@ -357,6 +357,79 @@ public class CRUDRepositoryTests
     }
 
     [Fact]
+    public async Task CreateResolvesLookupName()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = Open<Parent>(connection);
+        await typesRepo.Create(new UserType { Name = "work" });
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        var created = await parentsRepo.Create(new Parent { TypeName = "work" });
+        Assert.True(created.Id > 0);
+        Assert.Equal("work", created.TypeName);
+        Assert.Equal("work", (await parentsRepo.ReadSingle())!.TypeName);
+    }
+
+    [Fact]
+    public async Task UpdateResolvesLookupName()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = Open<Parent>(connection);
+        var home = await typesRepo.Create(new UserType { Name = "home" });
+        await typesRepo.Create(new UserType { Name = "work" });
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        var created = await parentsRepo.Create(new Parent { Type = new UserType { Id = home.Id } });
+        await parentsRepo.Update(new Parent { Id = created.Id, TypeName = "work" });
+        Assert.Equal("work", (await parentsRepo.ReadSingle())!.TypeName);
+    }
+
+    [Fact]
+    public async Task CreateKeepsExistingLookupKey()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = Open<Parent>(connection);
+        var home = await typesRepo.Create(new UserType { Name = "home" });
+        await typesRepo.Create(new UserType { Name = "work" });
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        await parentsRepo.Create(new Parent { Type = new UserType { Id = home.Id }, TypeName = "work" });
+        Assert.Equal("home", (await parentsRepo.ReadSingle())!.TypeName);
+        Assert.Equal(2, (await typesRepo.Read().ToListAsync()).Count);
+    }
+
+    [Fact]
+    public async Task CreateUnknownLookupNameThrows()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = Open<Parent>(connection);
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        var error = await Assert.ThrowsAsync<DatasourceException>(() =>
+            parentsRepo.Create(new Parent { TypeName = "missing" }));
+        Assert.Contains("TypeName", error.Message);
+    }
+
+    [Fact]
+    public async Task NestedChildResolvesLookupName()
+    {
+        var connection = await Setup();
+        var parentsRepo = Open<Parent>(connection);
+        var childrenRepo = Open<Child>(connection);
+        var childTypesRepo = Open<UserType>(connection);
+        await childTypesRepo.Create(new UserType { Name = "home" });
+        childrenRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), childTypesRepo);
+        parentsRepo.AddEnriched(new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List), childrenRepo);
+        await parentsRepo.Create(new Parent
+        {
+            Children = [new Child { TypeName = "home", Label = "a" }]
+        });
+        var child = Assert.Single(await childrenRepo.Read().ToListAsync());
+        Assert.Equal("a", child.Label);
+        Assert.Equal("home", (await childrenRepo.ReadSingle())!.TypeName);
+    }
+
+    [Fact]
     public async Task GetStillEnriches()
     {
         var org = new Row { ["name"] = "org" };

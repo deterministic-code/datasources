@@ -19,13 +19,19 @@ const unloaded = <TParent>(parent: TParent, into: string): boolean => {
   return value === undefined || value === null;
 };
 
-const childWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
-  if (entry.persist) return entry.persist;
+const asRelated = <TRelated>(writer: ICRUDRepository<TRelated>): ICRUDRepository<TRelated & object> =>
+  writer as ICRUDRepository<TRelated & object>;
+
+const childWriter = <TParent, TRelated>(entry: StoredEnrichment<TParent, TRelated>, into: string): ICRUDRepository<TRelated & object> => {
+  if (entry.persist) return asRelated(entry.persist);
   throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
-const linkWriter = (entry: StoredEnrichment, into: string): ICRUDRepository<object> => {
-  if (entry.link) return entry.link;
+const linkWriter = <TParent, TRelated, TLink>(
+  entry: StoredEnrichment<TParent, TRelated, TLink>,
+  into: string,
+): ICRUDRepository<TLink & object> => {
+  if (entry.link) return asRelated(entry.link);
   throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
@@ -54,6 +60,11 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     this.useTransaction = useTransaction;
   }
 
+  resolveLookups = async (tree: IRepositoryTree, items: T[]): Promise<void> => {
+    const entries = enrichmentsOf<T>(tree.parent.value);
+    if (entries) await this.createStrategy.resolveLookups(entries, items);
+  };
+
   persist = async (tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void> => {
     await this.walk(tree.parent.value, items, mode);
   };
@@ -64,19 +75,19 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   };
 
   private walk = async (host: object, parents: T[], mode: WriteMode): Promise<void> => {
-    const entries = enrichmentsOf(host);
+    const entries = enrichmentsOf<T>(host);
     if (!entries) return;
     for (const entry of entries) await this.persistEntry(entry, parents, mode);
   };
 
   private walkBulk = async (host: object, parents: T[], mode: WriteMode): Promise<void> => {
-    const entries = enrichmentsOf(host);
+    const entries = enrichmentsOf<T>(host);
     if (!entries) return;
     for (const entry of entries) await this.persistEntryBulk(entry, parents, mode);
   };
 
   private persistEntryBulk = async (
-    entry: StoredEnrichment,
+    entry: StoredEnrichment<T>,
     parents: T[],
     mode: WriteMode,
   ): Promise<void> => {
@@ -113,7 +124,7 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
   };
 
   private persistEntry = async (
-    entry: StoredEnrichment,
+    entry: StoredEnrichment<T>,
     parents: T[],
     mode: WriteMode,
   ): Promise<void> => {

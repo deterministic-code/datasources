@@ -202,6 +202,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 ## IEnriched
 
 - [Register a fill](./sections/i-enriched.md#register-a-fill)
+- [Resolve a lookup name on create](./sections/i-enriched.md#resolve-a-lookup-name-on-create)
 
 ## Enrichment
 

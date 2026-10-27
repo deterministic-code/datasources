@@ -18,4 +18,4 @@ parents.add_enriched(
     None,
 );
 parents.delete(&created, None).await.unwrap();
-let left = children.read(None, None, None).await.unwrap();
+let left = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();

@@ -1,0 +1,6 @@
+const connection = await setup();
+const typesRepo = repo(UserType, connection);
+const parentsRepo = repo(Parent, connection);
+await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+const created = await parentsRepo.create(Object.assign(new Parent(), { TypeName: "work" }));

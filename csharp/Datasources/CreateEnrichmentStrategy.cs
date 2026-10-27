@@ -43,6 +43,23 @@ public abstract class CreateEnrichmentStrategy<T>
             _ => []
         };
 
+    internal async Task ResolveLookups(IReadOnlyList<StoredEnrichment> entries, IList<T> items)
+    {
+        foreach (var item in items)
+        foreach (var entry in entries)
+        {
+            if (entry.Enrichment is not { Type: EnrichmentPropertyType.Object, Association: null, RelatedProperty: { } related })
+                continue;
+            if (entry is not StoredEnrichment<T> stored) continue;
+            var name = Value.From(TryGet(item, entry.Enrichment.DestinationProperty));
+            if (Missing(name)) continue;
+            if (!Missing(Value.From(Key(TryGet(item, entry.Enrichment.SourceProperty))))) continue;
+            var id = await stored.Read.Lookup(related, name, entry.Enrichment.RelatedKey)
+                ?? throw new DatasourceException($"Unknown {entry.Enrichment.DestinationProperty} \"{name.ToObject()}\"");
+            Set(item, entry.Enrichment.SourceProperty, id.ToObject());
+        }
+    }
+
     public IReadOnlyList<TChild> CollectChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
         where TChild : new()
     {
@@ -92,7 +109,20 @@ public abstract class CreateEnrichmentStrategy<T>
             Set(related, by, key);
     }
 
-    protected static object? Get<TItem>(TItem obj, string name) => Prop(obj, name).GetValue(obj);
+    protected static object? Get<TItem>(TItem obj, string name) =>
+        TryGet(obj, name) ?? (obj is IDictionary ? null : Prop(obj, name).GetValue(obj));
+
+    static object? TryGet<TItem>(TItem obj, string name) =>
+        obj is IDictionary dict
+            ? dict.Contains(name) ? dict[name] : null
+            : obj!.GetType().GetProperty(name)?.GetValue(obj);
+
+    protected static object? Key(object? value) =>
+        value is null or string || value is Value || value.GetType().IsPrimitive
+            ? value
+            : value.GetType().GetProperty("Id")?.GetValue(value)
+                ?? value.GetType().GetProperty("id")?.GetValue(value)
+                ?? value;
 
     protected static void Set<TItem>(TItem obj, string name, object? value)
     {

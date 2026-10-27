@@ -68,6 +68,57 @@ impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
         self.use_transaction
     }
 
+    async fn resolve_lookups(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()> {
+        let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
+        for item in items.iter_mut() {
+            for entry in &entries {
+                let enrichment = &entry.enrichment;
+                if enrichment.r#type != crate::EnrichmentPropertyType::Object
+                    || enrichment.association.is_some()
+                {
+                    continue;
+                }
+                let Some(related) = enrichment.related_property.as_deref() else {
+                    continue;
+                };
+                let Some(name) = item.get(&enrichment.destination_property).filter(|value| !missing(value)) else {
+                    continue;
+                };
+                if item
+                    .get(&enrichment.source_property)
+                    .is_some_and(|value| !missing(value))
+                {
+                    continue;
+                }
+                let found = entry
+                    .via
+                    .read_single(
+                        Some(&crate::Where::new(crate::Operator::equals(
+                            related,
+                            name.clone(),
+                        ))),
+                        None,
+                        None,
+                    )
+                    .await?;
+                let id = found
+                    .as_ref()
+                    .and_then(|row| row.get(&enrichment.related_key))
+                    .filter(|value| !missing(value))
+                    .cloned()
+                    .ok_or_else(|| {
+                        DatasourceError::message(format!(
+                            "Unknown {} \"{}\"",
+                            enrichment.destination_property,
+                            name.wire_text()
+                        ))
+                    })?;
+                item.insert(enrichment.source_property.clone(), id);
+            }
+        }
+        Ok(())
+    }
+
     async fn persist(
         &self,
         tree: &RepositoryTree,

@@ -10,32 +10,32 @@ let mut creating = record(&[
     ("groups", encode_rows(&[seeded.engineering.clone()])),
 ]);
 let created = users.create(&mut creating).await.unwrap();
-let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
-let next = record(&[
+let created_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let mut next = record(&[
     ("id", created.get("id").unwrap().clone()),
     ("username", Value::from("ada")),
     ("is_enabled", Value::Bool(false)),
     ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
 ]);
-let skipped = users.update(&next, None).await.unwrap();
+let skipped = users.update(&mut next, None).await.unwrap();
 let after_skip = users
     .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let skipped_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let skipped_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
-let linked_row = record(&[
+let skipped_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let skipped_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let mut linked_row = record(&[
     ("id", created.get("id").unwrap().clone()),
     ("username", Value::from("ada")),
     ("is_enabled", Value::Bool(false)),
     ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
     ("roles", encode_rows(&[seeded.editor_role.clone()])),
 ]);
-let linked = users.update(&linked_row, None).await.unwrap();
-let linked_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let linked_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
+let linked = users.update(&mut linked_row, None).await.unwrap();
+let linked_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let linked_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
