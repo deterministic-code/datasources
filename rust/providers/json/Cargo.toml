@@ -9,6 +9,7 @@ description = "JSON file datasource provider"
 
 [dependencies]
 async-trait = { workspace = true }
+ctor = { workspace = true }
 datasources = { workspace = true }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 serde_json = { workspace = true }

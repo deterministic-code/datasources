@@ -19,7 +19,8 @@ describe("parseArgs", () => {
       "sqlite",
       "postgres",
     ]);
-    expect(() => parseArgs(["setup", "sqlite"])).toThrow(/Usage: datasources setup/);
+    expect(parseArgs(["setup", "sqlite"]).command).toEqual({ kind: "setup", providers: ["sqlite"] });
+    expect(parseArgs(["setup", "--yes", "mysql", "postgres"]).command.providers).toEqual(["mysql", "postgres"]);
     expect(() => parseArgs(["setup", "--yes", "--languages", "csharp", "sqlite"])).toThrow(/Unknown --languages sqlite/);
     expect(parseArgs(["add", "sqlite", "--cwd=app", "--dry-run"])).toEqual({
       command: { kind: "add", providers: ["sqlite"] },

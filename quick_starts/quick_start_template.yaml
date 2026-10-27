@@ -1,30 +1,18 @@
 # Quick start YAML schema. Copy to <name>/<language>/quick_start.yaml.
-# The runner (run.mjs) executes each step in a fresh tmp directory.
-#
-# --source published  runs commands as written (nuget.org / npm / crates.io).
-# --source local      rewrites package installs to repo ProjectReference / file: / path deps
-#                     and npx @deterministic-code/datasources-cli to cli/bin/datasources.mjs.
-# prepare-copy / prepare-commands run before isolate (docker compose, etc).
+# The runner (run.mjs) creates a dest directory and runs each command as written.
 
 name: example-cli
 language: csharp
-providers: [sqlite, mysql, postgres]
-prepare-copy:
-  - from: .
-    to: .
-prepare-commands:
-  - docker compose up -d --wait
-initialize-commands:
-  - dotnet new console
-  - dotnet add package Datasources
-  - npx @deterministic-code/datasources-cli setup --yes --languages csharp --datasources sqlite mysql postgres
-copy:
-  - from: .
-    to: .
-run-commands:
-  - npx @deterministic-code/datasources-cli generate all --dialect csharp
-build:
-  - dotnet build
-run:
-  - dotnet run
-expected: expected.txt
+suites:
+  - name: sqlite
+    commands:
+      - export PROVIDER=sqlite
+      - export DATASOURCE_URL=sqlite:///./app.sqlite
+      - dotnet new console
+      - cp -R quick_starts/example_cli/csharp/. ./
+      - dotnet add package Datasources
+      - npx @deterministic-code/datasources-cli setup --yes sqlite
+      - npx @deterministic-code/datasources-cli generate all --dialect csharp
+      - dotnet build
+      - dotnet run
+    expected: expected.txt

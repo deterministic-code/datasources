@@ -26,28 +26,9 @@ impl DriverLoader {
 }
 
 fn find(location: &str) -> Option<PathBuf> {
-    let file = lib_name(location);
-    search_dirs().into_iter().find_map(|dir| {
-        let path = dir.join(&file);
-        path.is_file().then_some(path)
-    })
-}
-
-fn search_dirs() -> Vec<PathBuf> {
-    if let Some(dir) = std::env::var_os("DATASOURCES_PLUGIN_DIR") {
-        return vec![PathBuf::from(dir)];
-    }
-    let mut dirs = Vec::new();
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            dirs.push(dir.to_path_buf());
-            if let Some(parent) = dir.parent() {
-                dirs.push(parent.to_path_buf());
-            }
-        }
-    }
-    dirs.push(PathBuf::from("plugins"));
-    dirs
+    let dir = std::env::var_os("DATASOURCES_PLUGIN_DIR")?;
+    let path = PathBuf::from(dir).join(lib_name(location));
+    path.is_file().then_some(path)
 }
 
 fn lib_name(location: &str) -> String {

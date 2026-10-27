@@ -54,7 +54,7 @@ export type Command =
 
 export const help = `Usage: datasources <command> [options]
 
-setup                 Interactive .env, datasource install, and optional deterministic/
+setup [name...]       Interactive .env, datasource install, and optional deterministic/
   --cwd <dir>                 Consumer project directory (default: .)
   --languages ts|rust|csharp  Project languages (default: every type found)
   --datasources <name...>     Datasources to install (default: existing .env)
@@ -210,10 +210,7 @@ const commandOf = (
     SqlFlags,
 ): Command => {
   if (verb === undefined || verb === "help") return { kind: "help" };
-  if (verb === "setup") {
-    if (names.length) throw new Error(`Usage: datasources setup\n${help}`);
-    return { kind: "setup", providers: unique(datasources) };
-  }
+  if (verb === "setup") return { kind: "setup", providers: unique([...datasources, ...names]) };
   if (verb === "add") return { kind: "add", providers: unique([...datasources, ...names]) };
   if (verb === "remove") return { kind: "remove", providers: unique([...datasources, ...names]) };
   if (verb === "generate") return generateCommand(names, generate);

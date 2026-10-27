@@ -10,9 +10,9 @@ The cwd is dest. Copy this sample onto `./`, then install Datasources, generate,
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
 dotnet new console
-cp -R quick_starts/contacts_cli/csharp/ ./
+cp -R quick_starts/contacts_cli/csharp/. ./
 dotnet add package Datasources
-npx @deterministic-code/datasources-cli setup --yes --languages csharp --datasources sqlite
+npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect csharp
 dotnet build
 dotnet run
@@ -24,10 +24,10 @@ dotnet run
 export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
 dotnet new console
-cp -R quick_starts/contacts_cli/csharp/ ./
+cp -R quick_starts/contacts_cli/csharp/. ./
 docker compose up -d --wait
 dotnet add package Datasources
-npx @deterministic-code/datasources-cli setup --yes --languages csharp --datasources mysql postgres
+npx @deterministic-code/datasources-cli setup --yes mysql postgres
 npx @deterministic-code/datasources-cli generate all --dialect csharp
 dotnet build
 dotnet run
