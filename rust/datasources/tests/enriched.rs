@@ -310,6 +310,32 @@ async fn create_keeps_existing_lookup_key() {
 }
 
 #[tokio::test]
+async fn create_resolves_lookup_name_without_source_property() {
+    let connection = setup(&mut []).await;
+    let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+    let mut parents = mapped_crud(connection, "Named");
+    types
+        .create(&mut record(&[("Name", Value::from("work"))]))
+        .await
+        .unwrap();
+    parents.add_enriched(
+        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        types,
+        None,
+    );
+    let created = parents
+        .create(&mut record(&[("TypeName", Value::from("work"))]))
+        .await
+        .unwrap();
+    assert!(num(&created, "Id") > 0);
+    assert_eq!(created["TypeName"], Value::from("work"));
+    assert_eq!(
+        parents.read_single(None, None, None).await.unwrap().unwrap()["TypeName"],
+        Value::from("work")
+    );
+}
+
+#[tokio::test]
 async fn create_unknown_lookup_name_throws() {
     let connection = setup(&mut []).await;
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));

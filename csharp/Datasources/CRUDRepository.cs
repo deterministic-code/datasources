@@ -149,7 +149,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Insert(T item)
     {
         var record = ReverseConvert(item);
-        var fields = Params(record, col => Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)));
+        var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
+        var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
         var statement = CRUDStatements.Insert(fields);
         var response = await Command().Execute(statement, statement.Fields);
         if (ids.Count == 1 && fields.All(field => field.Name != ids[0]))
@@ -197,7 +198,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     async Task<Response> Save(T item, IWhere? byWhere)
     {
         var record = ReverseConvert(item);
-        var fields = Params(record, col => Listed(updateProperties, col, !ids.Contains(col)));
+        var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
+        var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras);
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = CRUDStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
@@ -233,8 +235,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     static bool Listed(IReadOnlyList<string>? list, string col, bool fallback) =>
         list is null ? fallback : list.Contains(col);
 
-    IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include) =>
-        [.. record.Where(pair => include(pair.Key) && Writable(pair.Key) && !EnrichmentInto(pair.Key) && pair.Value is not Value.Null)
+    IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include, IReadOnlySet<string>? extras = null) =>
+        [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null
+                && (extras?.Contains(pair.Key) == true || Writable(pair.Key) && !EnrichmentInto(pair.Key)))
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 
@@ -258,7 +261,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     Row ReverseConvert(T item)
     {
         var row = ObjectConverter.ReverseConvert(item);
-        return RowConverter?.ReverseConvert(row) ?? row;
+        row = RowConverter?.ReverseConvert(row) ?? row;
+        CreateEnrichmentStrategy<T>.MergeLookups(item!, row);
+        return row;
     }
 
     Value IdValue(T item)

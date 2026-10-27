@@ -5,7 +5,7 @@ import type { LocalePreferences } from "./localePreferences";
 import type { Phone } from "./phone";
 /** View Contact. */
 type Dictionary<K extends PropertyKey, V> = Record<K, V>;
-export interface Contact extends ContactsBase {
+export interface Contact extends Omit<ContactsBase, "contactSourceId"> {
   contactSourceName: string;
   description: string | null;
   addresses: Address[];

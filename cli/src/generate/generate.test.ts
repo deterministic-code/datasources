@@ -605,6 +605,8 @@ types:
           references: pointer.id
   - bag:
       tags: [datasource_type, view_type]
+      mapping:
+        missing: gone
       fields:
       - label:
           type: string

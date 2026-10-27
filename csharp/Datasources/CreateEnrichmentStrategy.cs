@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Datasources;
 
@@ -59,6 +60,18 @@ public abstract class CreateEnrichmentStrategy<T>
             Set(item, entry.Enrichment.SourceProperty, id.ToObject());
         }
     }
+
+    internal static void MergeLookups<TItem>(TItem item, Row record)
+    {
+        if (item is null || !Lookups.TryGetValue(item, out var extras)) return;
+        foreach (var pair in extras)
+            record[pair.Key] = pair.Value;
+    }
+
+    internal static IReadOnlySet<string> LookupKeys<TItem>(TItem item) =>
+        item is not null && Lookups.TryGetValue(item, out var extras) ? extras.Keys.ToHashSet() : [];
+
+    static readonly ConditionalWeakTable<object, Row> Lookups = new();
 
     public IReadOnlyList<TChild> CollectChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
         where TChild : new()
@@ -126,6 +139,16 @@ public abstract class CreateEnrichmentStrategy<T>
 
     protected static void Set<TItem>(TItem obj, string name, object? value)
     {
+        if (obj is IDictionary dict)
+        {
+            dict[name] = value;
+            return;
+        }
+        if (obj!.GetType().GetProperty(name) is null)
+        {
+            Lookups.GetOrCreateValue(obj)[name] = Value.From(value);
+            return;
+        }
         var prop = Prop(obj, name);
         var target = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
         if (value is not null && IsReference(target) && !target.IsInstanceOfType(value))

@@ -47,14 +47,14 @@ export class Api {
     ({ status: 200, body: JSON.stringify(await list(this.contacts, where(query, ["id", "firstName", "lastName", "email"]))) });
 
   private postContact = async (body: string | undefined): Promise<HttpResult> => {
-    const contact = await this.bind(read<ContactWrite>(body));
+    const contact = this.stamp(read<ContactWrite>(body));
     return { status: 201, body: JSON.stringify(await this.contacts.create(contact)) };
   };
 
   private putContact = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
     const id = requiredNumber(query, "id");
     if ((await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
-    const contact = await this.bind(read<ContactWrite>(body));
+    const contact = this.stamp(read<ContactWrite>(body));
     contact.id = id;
     await this.contacts.update(contact);
     return { status: 200, body: JSON.stringify(await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) };
@@ -94,8 +94,7 @@ export class Api {
     return { status: 204, body: "" };
   };
 
-  private bind = async (contact: ContactWrite): Promise<ContactWrite> => {
-    contact.contactSourceId = await this.lookupId(this.contacts.contactSource, contact.contactSourceName, "contact_source");
+  private stamp = (contact: ContactWrite): ContactWrite => {
     contact.email = text(contact.email);
     contact.notes = text(contact.notes);
     stampContact(contact);
@@ -103,26 +102,9 @@ export class Api {
     contact.phones ??= [];
     contact.settings ??= {};
     contact.prefs ??= {};
-    for (const address of contact.addresses) {
-      address.addressTypeId = await this.lookupId(this.contacts.address.addressType, address.addressTypeName, "address_type");
-      stampAddress(address);
-    }
-    for (const phone of contact.phones) {
-      phone.phoneTypeId = await this.lookupId(this.contacts.phone.phoneType, phone.phoneTypeName, "phone_type");
-      stampPhone(phone);
-    }
+    for (const address of contact.addresses) stampAddress(address);
+    for (const phone of contact.phones) stampPhone(phone);
     return contact;
-  };
-
-  private lookupId = async (
-    repo: { readSingle: (query: IWhere) => Promise<{ id: number } | undefined> },
-    name: string | undefined,
-    label: string,
-  ): Promise<number> => {
-    if (name == null || name.trim() === "") throw new RequestError(`${label} is required`);
-    const found = await repo.readSingle(new Where(new Operator.Equals("name", name)));
-    if (found == null) throw new RequestError(`Unknown ${label} "${name}"`);
-    return found.id;
   };
 }
 

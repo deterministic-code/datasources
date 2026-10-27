@@ -58,7 +58,7 @@ public sealed class Api
 
     async Task<(int Status, string Body)> PostContact(string? body)
     {
-        var contact = await Bind(Read<Contact>(body));
+        var contact = Stamp(Read<Contact>(body));
         return (201, JsonSerializer.Serialize(await contacts.Create(contact), Json));
     }
 
@@ -67,7 +67,7 @@ public sealed class Api
         var id = RequiredNumber(query, "id");
         if (await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))) is null)
             return (404, "");
-        var contact = await Bind(Read<Contact>(body));
+        var contact = Stamp(Read<Contact>(body));
         contact.Id = id;
         await contacts.Update(contact);
         return (200, JsonSerializer.Serialize(await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))), Json));
@@ -112,9 +112,8 @@ public sealed class Api
         return (204, "");
     }
 
-    async Task<Contact> Bind(Contact contact)
+    static Contact Stamp(Contact contact)
     {
-        contact.ContactSourceId = await LookupId(contacts.ContactSource, contact.ContactSourceName, "contact_source");
         contact.Email = contact.Email ?? "";
         contact.Notes = contact.Notes ?? "";
         contact.Uuid = string.IsNullOrEmpty(contact.Uuid) ? Clock.Uuid() : contact.Uuid;
@@ -127,7 +126,6 @@ public sealed class Api
         contact.Prefs ??= new Dictionary<string, LocalePreferences>();
         foreach (var address in contact.Addresses)
         {
-            address.AddressTypeId = await LookupId(contacts.Address.AddressType, address.AddressTypeName, "address_type");
             address.Line1 = address.Line1 ?? "";
             address.Line2 = address.Line2 ?? "";
             address.Region = address.Region ?? "";
@@ -140,7 +138,6 @@ public sealed class Api
         }
         foreach (var phone in contact.Phones)
         {
-            phone.PhoneTypeId = await LookupId(contacts.Phone.PhoneType, phone.PhoneTypeName, "phone_type");
             phone.Number = phone.Number ?? "";
             phone.Label = phone.Label ?? "";
             phone.Uuid = string.IsNullOrEmpty(phone.Uuid) ? Clock.Uuid() : phone.Uuid;
@@ -149,27 +146,6 @@ public sealed class Api
             phone.Version ??= [0];
         }
         return contact;
-    }
-
-    async Task<long> LookupId(IReadonlyRepository<Backend.Types.Datasource.ContactSource> repo, string? name, string label)
-    {
-        if (string.IsNullOrWhiteSpace(name)) throw new RequestError($"{label} is required");
-        var found = await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Name", name)));
-        return found is null ? throw new RequestError($"Unknown {label} \"{name}\"") : found.Id;
-    }
-
-    async Task<long> LookupId(IReadonlyRepository<Backend.Types.Datasource.AddressType> repo, string? name, string label)
-    {
-        if (string.IsNullOrWhiteSpace(name)) throw new RequestError($"{label} is required");
-        var found = await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Name", name)));
-        return found is null ? throw new RequestError($"Unknown {label} \"{name}\"") : found.Id;
-    }
-
-    async Task<long> LookupId(IReadonlyRepository<Backend.Types.Datasource.PhoneType> repo, string? name, string label)
-    {
-        if (string.IsNullOrWhiteSpace(name)) throw new RequestError($"{label} is required");
-        var found = await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Name", name)));
-        return found is null ? throw new RequestError($"Unknown {label} \"{name}\"") : found.Id;
     }
 
     static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query)

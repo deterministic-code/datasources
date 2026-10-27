@@ -14,7 +14,7 @@ var created = await contacts.Create(new Contact
 {
     FirstName = "Ada",
     LastName = "Lovelace",
-    ContactSourceId = 1,
+    ContactSourceName = "Manual",
     Uuid = "00000000-0000-0000-0000-000000000001",
     Version = [0],
     Addresses = [],

@@ -160,6 +160,8 @@ types:
         - prefs:
             type: contact_preferences_map{}
             references: contact_preferences.contact_id
+      remove_fields:
+        - contact_source_id
   - contact_settings:
       tags:
         - datasource_type
@@ -250,6 +252,8 @@ types:
       mapping:
         name: address_type_name
       fields: []
+      remove_fields:
+        - address_type_id
   - phone:
       tags:
         - view_type
@@ -262,6 +266,8 @@ types:
       mapping:
         name: phone_type_name
       fields: []
+      remove_fields:
+        - phone_type_id
   - contact_group:
       tags:
         - view_type

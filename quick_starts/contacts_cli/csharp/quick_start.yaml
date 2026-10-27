@@ -8,14 +8,8 @@ initialize-commands:
 copy:
   - from: Program.cs
     to: Program.cs
-  - from: ../../deterministics/contacts/types.yaml
-    to: deterministic/types.yaml
-  - from: ../../deterministics/contacts/datasource.yaml
-    to: deterministic/datasource.yaml
-  - from: ../../deterministics/contacts/datasource_seeds.yaml
-    to: deterministic/datasource_seeds.yaml
-  - from: ../../deterministics/contacts/settings.yaml
-    to: deterministic/settings.yaml
+  - from: ../../deterministics/contacts
+    to: deterministic
 run-commands:
   - npx @deterministic-code/datasources-cli generate all --dialect csharp
 build:

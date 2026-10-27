@@ -60,7 +60,7 @@ impl Api {
     }
 
     async fn post_contact(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let mut row = self.bind(object_from(body).map_err(ApiError::bad)?).await?;
+        let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
         Ok(ok(201, row_to_json(&self.contacts.create(&mut row).await?)))
     }
 
@@ -74,7 +74,7 @@ impl Api {
         if self.contacts.read_single(Some(&by), None, None).await?.is_none() {
             return Ok(empty(404));
         }
-        let mut row = self.bind(object_from(body).map_err(ApiError::bad)?).await?;
+        let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
         row.insert("id".into(), Value::Int(id));
         self.contacts.update(&mut row, Some(&by)).await?;
         Ok(ok(200, row_to_json(&self.contacts.read_single(Some(&by), None, None).await?.unwrap_or_default())))
@@ -138,91 +138,10 @@ impl Api {
         Ok(repo.read(filter.as_ref().map(|item| item as &dyn ReadInput), None, None).try_collect::<Vec<_>>().await?)
     }
 
-    async fn bind(&self, mut json: Json) -> Result<Row, ApiError> {
-        let name = json
-            .get("contact_source_name")
-            .and_then(Json::as_str)
-            .map(str::trim)
-            .filter(|name| !name.is_empty())
-            .ok_or_else(|| ApiError::bad("contact_source is required"))?
-            .to_string();
-        let source = self.lookup(&name).await?;
+    fn stamp(&self, mut json: Json) -> Result<Row, ApiError> {
         let object = json.as_object_mut().ok_or_else(|| ApiError::bad("invalid json"))?;
-        object.insert("contact_source_id".into(), Json::from(source));
         stamp_contact(object, &self.clock);
-        self.bind_named(object, "addresses", "address_type_name", "address_type_id", "address_type")
-            .await?;
-        self.bind_named(object, "phones", "phone_type_name", "phone_type_id", "phone_type")
-            .await?;
         json_to_row(&json).map_err(ApiError::from)
-    }
-
-    async fn bind_named(
-        &self,
-        object: &mut Map<String, Json>,
-        list: &str,
-        name_field: &str,
-        id_field: &str,
-        label: &str,
-    ) -> Result<(), ApiError> {
-        let items = match object.get_mut(list) {
-            Some(Json::Array(items)) => items,
-            _ => return Ok(()),
-        };
-        let names: Vec<String> = items
-            .iter()
-            .map(|item| {
-                item.get(name_field)
-                    .and_then(Json::as_str)
-                    .map(str::trim)
-                    .unwrap_or("")
-                    .to_string()
-            })
-            .collect();
-        let repo = match label {
-            "address_type" => &self.contacts.address.address_type,
-            _ => &self.contacts.phone.phone_type,
-        };
-        let mut ids = Vec::new();
-        for name in names {
-            ids.push(self.lookup_named(repo, &name, label).await?);
-        }
-        if let Some(Json::Array(items)) = object.get_mut(list) {
-            for (item, id) in items.iter_mut().zip(ids) {
-                if let Some(map) = item.as_object_mut() {
-                    map.insert(id_field.into(), Json::from(id));
-                }
-            }
-        }
-        Ok(())
-    }
-
-    async fn lookup_named(
-        &self,
-        repo: &CRUDRepository,
-        name: &str,
-        label: &str,
-    ) -> Result<i64, ApiError> {
-        if name.is_empty() {
-            return Err(ApiError::bad(format!("{label} is required")));
-        }
-        let found = repo
-            .read_single(Some(&Where::new(Operator::equals("name", name))), None, None)
-            .await?
-            .ok_or_else(|| ApiError::bad(format!("Unknown {label} \"{name}\"")))?;
-        match found.get("id") {
-            Some(Value::Int(id)) => Ok(*id),
-            Some(value) => value
-                .wire_text()
-                .parse()
-                .map_err(|_| ApiError::bad(format!("Unknown {label} \"{name}\""))),
-            None => Err(ApiError::bad(format!("Unknown {label} \"{name}\""))),
-        }
-    }
-
-    async fn lookup(&self, name: &str) -> Result<i64, ApiError> {
-        self.lookup_named(&self.contacts.contact_source, name, "contact_source")
-            .await
     }
 }
 

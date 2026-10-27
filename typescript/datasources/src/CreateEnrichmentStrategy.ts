@@ -1,11 +1,21 @@
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { Cells } from "./converters/Cell.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
+
+const lookups = new WeakMap<object, Cells>();
+
+export const mergeLookups = (item: object, record: Cells): void => {
+  const extras = lookups.get(item);
+  if (extras) Object.assign(record, extras);
+};
+
+export const lookupKeys = (item: object): Set<string> => new Set(Object.keys(lookups.get(item) ?? {}));
 
 export abstract class CreateEnrichmentStrategy<T> {
   abstract createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
@@ -29,7 +39,7 @@ export abstract class CreateEnrichmentStrategy<T> {
         const id = this.getCell(found, enrichment.relatedKey);
         if (!this.presentCell(id))
           throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
-        this.stampCell(item as T & object, enrichment.sourceProperty, id);
+        this.stamp(item as T & object, enrichment.sourceProperty, id);
       }
     }
   }
@@ -60,7 +70,7 @@ export abstract class CreateEnrichmentStrategy<T> {
     enrichment?: Enrichment,
   ): TChild[] => mapPayload(this.getCell(parent, into), enrichment) as TChild[];
 
-  protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
+  protected stamp = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
     if (key === undefined || key === null || typeof key === "object") return;
     const current = this.getCell(related, by);
     if (current !== null && typeof current === "object" && !Array.isArray(current)) {
@@ -69,8 +79,17 @@ export abstract class CreateEnrichmentStrategy<T> {
       target[id] = key;
       return;
     }
-    Object.assign(related, { [by]: key });
+    if (by in related) {
+      Object.assign(related, { [by]: key });
+      return;
+    }
+    const extras = lookups.get(related) ?? {};
+    extras[by] = key as Exclude<Scalar, object>;
+    lookups.set(related, extras);
   };
+
+  protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void =>
+    this.stamp(related, by, key);
 
   protected relatedIds = <TParent>(parent: TParent, enrichment: Enrichment): Scalar[] => {
     const ids: Scalar[] = [];

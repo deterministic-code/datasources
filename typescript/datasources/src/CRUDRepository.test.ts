@@ -86,6 +86,11 @@ class ParentTag {
   TagId = 0;
 }
 
+class Named {
+  Id = 0;
+  TypeName = "";
+}
+
 class SkipDelete<T extends object> extends DeleteEnrichmentStrategy<T> {
   deleteChildren(): Promise<void> {
     return Promise.resolve();
@@ -435,6 +440,18 @@ describe("CRUDRepository", () => {
     await parentsRepo.create(Object.assign(new Parent(), { Type: Object.assign(new UserType(), { Id: home.Id }), TypeName: "work" }));
     expect((await parentsRepo.readSingle())?.TypeName).toBe("home");
     expect((await collectAsync(typesRepo.read())).length).toBe(2);
+  });
+
+  it("create-resolves-lookup-name-without-source-property", async () => {
+    const connection = await setup();
+    const typesRepo = repo(UserType, connection);
+    const parentsRepo = repo(Named, connection);
+    await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
+    parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+    const created = await parentsRepo.create(Object.assign(new Named(), { TypeName: "work" }));
+    expect(created.Id).toBeGreaterThan(0);
+    expect(created.TypeName).toBe("work");
+    expect((await parentsRepo.readSingle())?.TypeName).toBe("work");
   });
 
   it("create-unknown-lookup-name-throws", async () => {

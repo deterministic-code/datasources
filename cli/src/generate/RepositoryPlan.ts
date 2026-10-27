@@ -198,7 +198,12 @@ const relations = (
     const dotted = key.includes(".") ? key.split(".") : undefined;
     const memberName =
       dotted?.[0] ?? (authored.union ?? []).find((name) => (expanded.get(name) as Type).fields.some((field) => field.name === key));
-    const fk = memberName === undefined ? undefined : full.fields.find((field) => referenceOf(field.references)?.type === memberName);
+    const parent = types.get(authored.inherits ?? "");
+    const fk =
+      memberName === undefined
+        ? undefined
+        : full.fields.find((field) => referenceOf(field.references)?.type === memberName)
+          ?? parent?.fields.find((field) => referenceOf(field.references)?.type === memberName);
     if (memberName === undefined || fk === undefined) continue;
     const via = named(memberName);
     planned.push({

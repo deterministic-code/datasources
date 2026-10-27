@@ -15,8 +15,8 @@ initialize-commands:
 copy:
   - from: Program.cs
     to: Program.cs
-  - from: ../../deterministics/example/types.yaml
-    to: deterministic/types.yaml
+  - from: ../../deterministics/example
+    to: deterministic
 run-commands:
   - npx @deterministic-code/datasources-cli generate all --dialect csharp
 build:

@@ -87,6 +87,12 @@ public class CRUDRepositoryTests
         public long TagId { get; set; }
     }
 
+    sealed class Named
+    {
+        public long Id { get; set; }
+        public string TypeName { get; set; } = "";
+    }
+
     static readonly ChangeCasingMapper Snake = new(Casing.Pascal, Casing.Snake);
 
     static readonly DictionaryMapper<string> References = new(new Dictionary<string, string>
@@ -396,6 +402,20 @@ public class CRUDRepositoryTests
         await parentsRepo.Create(new Parent { Type = new UserType { Id = home.Id }, TypeName = "work" });
         Assert.Equal("home", (await parentsRepo.ReadSingle())!.TypeName);
         Assert.Equal(2, (await typesRepo.Read().ToListAsync()).Count);
+    }
+
+    [Fact]
+    public async Task CreateResolvesLookupNameWithoutSourceProperty()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = Open<Named>(connection);
+        await typesRepo.Create(new UserType { Name = "work" });
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        var created = await parentsRepo.Create(new Named { TypeName = "work" });
+        Assert.True(created.Id > 0);
+        Assert.Equal("work", created.TypeName);
+        Assert.Equal("work", (await parentsRepo.ReadSingle())!.TypeName);
     }
 
     [Fact]
