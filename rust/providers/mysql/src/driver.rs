@@ -155,6 +155,42 @@ mod tests {
                 .as_deref(),
             Some("('hi')")
         );
+        assert_eq!(
+            MysqlDriver::defaults()
+                .reverse_convert("binary", "(X'ab')")
+                .unwrap(),
+            "Hex('ab')"
+        );
+        assert_eq!(
+            MysqlDriver::defaults()
+                .reverse_convert("binary", "X'ab'")
+                .unwrap(),
+            "Hex('ab')"
+        );
+        assert!(MysqlDriver::defaults()
+            .reverse_convert("binary", "X'ab')")
+            .is_err());
+        assert!(MysqlDriver::defaults()
+            .reverse_convert("binary", "(X'ab'")
+            .is_err());
+        assert_eq!(
+            MysqlDriver::defaults()
+                .reverse_convert("string", "('hi')")
+                .unwrap(),
+            "hi"
+        );
+        assert_eq!(
+            MysqlDriver::defaults()
+                .reverse_convert("string", "'hi'")
+                .unwrap(),
+            "hi"
+        );
+        assert!(MysqlDriver::defaults()
+            .reverse_convert("string", "'hi')")
+            .is_err());
+        assert!(MysqlDriver::defaults()
+            .reverse_convert("string", "('hi'")
+            .is_err());
         assert!(driver
             .column_type("xml")
             .unwrap_err()

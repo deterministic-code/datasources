@@ -45,9 +45,9 @@ public sealed class MysqlDriver : IDriver
         BooleanOn = "1",
         BooleanOff = "0",
         Hex = arg => $"(X'{arg}')",
-        HexReverse = new Regex(@"^\(?X'(.*)'\)?$"),
+        HexReverse = new Regex(@"^(?:\(X'(.*)'\)|X'(.*)')$"),
         Quote = arg => $"({DefaultValueConverter.SqlStringLiteral(arg)})",
-        QuoteReverse = new Regex(@"^\(?'(.*)'\)?$"),
+        QuoteReverse = new Regex(@"^(?:\('(.*)'\)|'(.*)')$"),
     });
 
     public string QuoteLeft => "`";

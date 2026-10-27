@@ -15,6 +15,8 @@ import {
 } from "@deterministic-code/generators-common/spec-types";
 import { inferReferenceFieldTypes } from "./infer-reference-types.ts";
 
+export { referenceTarget } from "./reference-target.ts";
+
 /** Flattened `datasource.*` flags. Stored procedures are opt-in `"true"`. */
 export const datasourceSettings = (settings: Record<string, string>) => ({
   useStoredProcedures:
@@ -131,14 +133,6 @@ const referenceParents = (
   if (references === undefined) return [];
   if (Array.isArray(references)) return [references[0]];
   return [references.split(".")[0]!];
-};
-
-export const referenceTarget = (
-  references: NonNullable<TypeField["references"]>,
-): [string, string] => {
-  if (Array.isArray(references)) return [references[0], references[1]];
-  const [table, col] = references.split(".");
-  return [table ?? "", col ?? ""];
 };
 
 const topoSort = (tables: LiveTable[]): LiveTable[] => {

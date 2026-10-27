@@ -1,3 +1,4 @@
+import { referenceTarget } from "./sql/common/reference-target.ts";
 import { ChangeCasingMapper, NestedSelectBuilder, PluralizerMapper } from "@deterministic-code/datasources";
 import type { NestedSelectRelation, NestedSelectType } from "@deterministic-code/datasources";
 import type { Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
@@ -60,12 +61,8 @@ const build = (
   return { name: entity(type.name), key, properties, relations: [...objects, ...lists] };
 };
 
-const target = (field: TypeField): [string, string] => {
-  if (Array.isArray(field.references) && field.references.length === 2)
-    return [field.references[0] ?? "", field.references[1] ?? ""];
-  const [table, column] = String(field.references ?? "").split(".");
-  return [table ?? "", column ?? ""];
-};
+const target = (field: TypeField): [string, string] =>
+  field.references === undefined ? ["", ""] : referenceTarget(field.references);
 
 const relationName = (field: string, table: string): string => {
   const name = entity(field);

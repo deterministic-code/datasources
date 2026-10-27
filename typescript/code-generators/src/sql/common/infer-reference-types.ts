@@ -1,4 +1,5 @@
 import type { Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
+import { referenceTarget } from "./reference-target.ts";
 
 const needsType = (field: TypeField): boolean =>
   !field.isArray &&
@@ -10,14 +11,8 @@ const needsType = (field: TypeField): boolean =>
 const ready = (field: TypeField): boolean =>
   field.type !== "string" || field.size !== undefined;
 
-const targetOf = (references: NonNullable<TypeField["references"]>): [string, string] => {
-  if (Array.isArray(references)) return [references[0], references[1]];
-  const [table, column] = references.split(".");
-  return [table ?? "", column ?? ""];
-};
-
 const lookup = (types: Type[], field: TypeField): TypeField | undefined => {
-  const [table, column] = targetOf(field.references!);
+  const [table, column] = referenceTarget(field.references!);
   return types.find((type) => type.name === table)?.fields.find((item) => item.name === column);
 };
 

@@ -23,6 +23,13 @@ type TypeScript = {
 
 const require = createRequire(import.meta.url);
 
+const missingModule = (error: unknown): boolean =>
+  error instanceof Error &&
+  "code" in error &&
+  (error.code === "MODULE_NOT_FOUND" ||
+    error.code === "ERR_MODULE_NOT_FOUND" ||
+    error.code === "ERR_PACKAGE_PATH_NOT_EXPORTED");
+
 const requireAt = (from: string) => {
   try {
     return [createRequire(from)];
@@ -122,6 +129,7 @@ const instantiateLoaded = (catalog: ProviderCatalog): IDriver => {
       return new Type();
     } catch (error) {
       last = error;
+      if (error instanceof ProviderNotInstalledError || !missingModule(error)) throw error;
     }
   }
   throw last instanceof ProviderNotInstalledError ? last : new ProviderNotInstalledError(catalog.name);
@@ -132,13 +140,12 @@ export class DriverLoader {
     try {
       return instantiate(catalog);
     } catch (error) {
+      if (error instanceof ProviderNotInstalledError) throw error;
       try {
         installTypeScriptHook();
         return instantiate(catalog);
       } catch {
-        throw error instanceof ProviderNotInstalledError
-          ? error
-          : new ProviderNotInstalledError(catalog.name);
+        throw new ProviderNotInstalledError(catalog.name);
       }
     }
   };

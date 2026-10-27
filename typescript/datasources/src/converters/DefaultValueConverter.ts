@@ -145,7 +145,7 @@ export class DefaultValueConverter {
     for (const [name, entry] of Object.entries(entries)) {
       const match = entry.reverse.exec(native);
       if (match === null) continue;
-      const arg = match[1] ?? "";
+      const arg = match.slice(1).find((group) => group !== undefined) ?? "";
       return entry.specText === undefined ? name : entry.specText(arg);
     }
     throw new Error(`Native default '${native}' is not a valid ${specType} default`);

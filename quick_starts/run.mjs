@@ -127,17 +127,24 @@ const rewrite = (argv, spec) => {
     const crate = argv[2];
     return cargoPath[crate] ? ["cargo", "add", "--path", cargoPath[crate]] : argv;
   }
+  if (argv[0] === "docker" && argv[1] === "compose" && !argv.includes("-p")) {
+    return ["docker", "compose", "-p", "datasources", ...argv.slice(2)];
+  }
   return argv;
 };
 
-const copySpec = (spec, dest) => {
-  for (const item of spec.copy ?? []) {
+const copyItems = (spec, dest, items) => {
+  for (const item of items ?? []) {
     const from = resolve(spec.dir, item.from);
     const to = resolve(dest, item.to);
     if (!existsSync(from)) throw new Error(`copy missing: ${from}`);
     mkdirSync(statSync(from).isDirectory() ? to : dirname(to), { recursive: true });
     cpSync(from, to, { recursive: true });
   }
+};
+
+const copySpec = (spec, dest) => {
+  copyItems(spec, dest, spec.copy);
   const settings = join(dest, "deterministic/settings.yaml");
   if (!existsSync(settings)) {
     mkdirSync(dirname(settings), { recursive: true });
@@ -208,13 +215,15 @@ const expectedOf = (spec, provider) => {
 
 const one = (spec, provider) => {
   const dest = mkdtempSync(join(tmpdir(), `datasources-qs-${spec.name}-${spec.language}-${provider}-`));
+  console.log(`\n== ${spec.name} ${spec.language} ${provider} (${source}) ${dest}`);
+  copyItems(spec, dest, spec["prepare-copy"]);
+  for (const line of spec["prepare-commands"] ?? []) run(rewrite(words(line), spec), dest);
   const isolated = isolate(provider, dest);
   const env = {
     PROVIDER: provider,
     DATASOURCE_URL: isolated.url,
     ...(process.env.MIGRATERS_PACKAGE ? { MIGRATERS_PACKAGE: process.env.MIGRATERS_PACKAGE } : {}),
   };
-  console.log(`\n== ${spec.name} ${spec.language} ${provider} (${source}) ${dest}`);
   try {
     for (const line of spec["initialize-commands"] ?? []) run(rewrite(words(line), spec), dest, env);
     copySpec(spec, dest);

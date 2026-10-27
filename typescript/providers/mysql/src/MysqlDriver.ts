@@ -85,9 +85,9 @@ export class MysqlDriver implements IDriver {
     booleanOn: "1",
     booleanOff: "0",
     hex: (arg) => `(X'${arg}')`,
-    hexReverse: /^\(?X'(.*)'\)?$/,
+    hexReverse: /^(?:\(X'(.*)'\)|X'(.*)')$/,
     quote: (arg) => `(${sqlStringLiteral(arg)})`,
-    quoteReverse: /^\(?'(.*)'\)?$/,
+    quoteReverse: /^(?:\('(.*)'\)|'(.*)')$/,
   });
   columnType = (name: string): string =>
     columnTypes[name] ??

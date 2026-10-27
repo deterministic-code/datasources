@@ -4,10 +4,16 @@
 # --source published  runs commands as written (nuget.org / npm / crates.io).
 # --source local      rewrites package installs to repo ProjectReference / file: / path deps
 #                     and npx @deterministic-code/datasources-cli to cli/bin/datasources.mjs.
+# prepare-copy / prepare-commands run before isolate (docker compose, etc).
 
 name: example-cli
 language: csharp
 providers: [sqlite, mysql, postgres]
+prepare-copy:
+  - from: ../docker
+    to: .
+prepare-commands:
+  - docker compose up -d --wait
 initialize-commands:
   - dotnet new console
   - dotnet add package Datasources
