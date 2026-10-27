@@ -40,4 +40,37 @@ describe("generate sql", () => {
     assert.match(sql, /DEFAULT \(UUID\(\)\)/);
     assert.doesNotMatch(sql, /CONSTRAINT `[^`]*_default_constraint` DEFAULT/);
   });
+
+  it("infers a reference column type from the parent id", async () => {
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": `types:
+  - gender:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - name:
+            type: string
+            size: 128
+  - contact:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - gender_type_id:
+            references: gender.id
+`,
+        }),
+        settings: {},
+      },
+      ["mysql"],
+    );
+    const up = files.find((entry) => entry.filename.endsWith("0001_initial_up.sql"));
+    assert.ok(up, "expected initial up migration");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    const contacts = sql.match(/CREATE TABLE `contacts` \(([\s\S]*?)\);/)?.[1];
+    assert.ok(contacts, "expected contacts table body");
+    assert.match(contacts, /`gender_type_id` INT/);
+    assert.doesNotMatch(contacts, /`gender_type_id` TEXT/);
+  });
 });

@@ -163,7 +163,51 @@ pub fn parse(files: &HashMap<String, String>) -> Result<ParsedSpec> {
             .collect(),
     };
     require_id_is_id(&parsed.types)?;
-    Ok(parsed)
+    Ok(ParsedSpec {
+        types: infer_reference_types(parsed.types),
+        expanded_types: infer_reference_types(parsed.expanded_types),
+        datasource: parsed.datasource,
+        datasource_seeds: parsed.datasource_seeds,
+    })
+}
+
+fn infer_reference_types(types: Vec<SpecType>) -> Vec<SpecType> {
+    let mut working = types;
+    for _ in 0..working.len().max(1) {
+        let by_name: HashMap<String, SpecType> = working.iter().map(|t| (t.name.clone(), t.clone())).collect();
+        let mut changed = false;
+        for type_ in &mut working {
+            for field in &mut type_.fields {
+                if !needs_inferred_type(field) {
+                    continue;
+                }
+                let (table, column) = reference_target(field);
+                let Some(parent) = by_name.get(&table).and_then(|t| t.fields.iter().find(|f| f.name == column)) else {
+                    continue;
+                };
+                if parent.type_name == "string" && parent.size.is_none() {
+                    continue;
+                }
+                field.type_name = parent.type_name.clone();
+                field.kind = parent.kind.clone();
+                field.base = parent.base.clone();
+                field.size = parent.size.clone();
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    working
+}
+
+fn needs_inferred_type(field: &SpecTypeField) -> bool {
+    !field.is_array
+        && !field.is_map
+        && (field.references.is_some() || field.reference_pair.is_some())
+        && field.type_name == "string"
+        && field.size.is_none()
 }
 
 fn require_id_is_id(types: &[SpecType]) -> Result<()> {

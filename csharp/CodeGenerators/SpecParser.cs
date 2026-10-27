@@ -24,8 +24,8 @@ public static class SpecParser
             .GetResult();
         var parsed = new ParsedSpec
         {
-            Types = spec.Types.Select(MapType).ToList(),
-            ExpandedTypes = spec.ExpandedTypes.Select(MapType).ToList(),
+            Types = InferReferenceTypes.Apply(spec.Types.Select(MapType).ToList()),
+            ExpandedTypes = InferReferenceTypes.Apply(spec.ExpandedTypes.Select(MapType).ToList()),
             Datasource = spec.Datasource.Select(MapTable).ToList(),
             DatasourceSeeds = spec.DatasourceSeeds.ToDictionary(
                 pair => pair.Key,
