@@ -2,7 +2,6 @@ using Backend.Types.View;
 using Datasources;
 
 var ds = Datasource.Default;
-await (await ds.CreateConnection()).Open();
 var contactsRepo = ds.CreateRepository<Contact>("Contacts");
 var created = await contactsRepo.Create(new Contact()
 {

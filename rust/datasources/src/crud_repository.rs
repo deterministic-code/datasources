@@ -169,6 +169,13 @@ impl CRUDRepository {
         self.write.use_transaction()
     }
 
+    async fn ensure_open(&self) -> Result<()> {
+        if self.readonly.memory_items().is_some() || self.readonly.connection.is_open() {
+            return Ok(());
+        }
+        self.readonly.connection.open().await
+    }
+
     async fn in_transaction<T, F, Fut>(
         transactional: bool,
         connection: Arc<dyn Connection>,
@@ -565,6 +572,7 @@ impl IReadonlyRepository for CRUDRepository {
 #[async_trait]
 impl ICRUDRepository for CRUDRepository {
     async fn create(&self, item: &mut Row) -> Result<Row> {
+        self.ensure_open().await?;
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
@@ -574,6 +582,7 @@ impl ICRUDRepository for CRUDRepository {
     }
 
     async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        self.ensure_open().await?;
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
@@ -583,6 +592,7 @@ impl ICRUDRepository for CRUDRepository {
     }
 
     async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        self.ensure_open().await?;
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),

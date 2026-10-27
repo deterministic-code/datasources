@@ -83,7 +83,7 @@ constructor(type: Constructable<T>, connection: IConnection)
 ```
 
 - `type` — item constructor
-- `connection` — open [IConnection](./connection.md)
+- `connection` — [IConnection](./connection.md)
 
 ##### CRUDRepository(connection, options)
 
@@ -93,7 +93,7 @@ Builds a table repository from an [IConnection](./connection.md) and [CRUDReposi
 constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
 ```
 
-- `connection` — open [IConnection](./connection.md)
+- `connection` — [IConnection](./connection.md)
 - `options` — [CRUDRepositoryOptions](#crudrepositoryoptions)
 
 ##### CRUDRepository(inner, strategy?)
@@ -409,7 +409,7 @@ Builds a table repository from an [IConnection](./connection.md).
 public Repository(IConnection connection)
 ```
 
-- `connection` — open [IConnection](./connection.md)
+- `connection` — [IConnection](./connection.md)
 
 ##### CRUDRepository(connection, options)
 
@@ -419,7 +419,7 @@ Builds a table repository from an [IConnection](./connection.md) and [CRUDReposi
 public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
 ```
 
-- `connection` — open [IConnection](./connection.md)
+- `connection` — [IConnection](./connection.md)
 - `options` — [CRUDRepositoryOptions](#crudrepositoryoptions)
 
 ##### CRUDRepository(inner, strategy)
@@ -903,6 +903,8 @@ pub ids: Vec<String>
 :::
 
 ## Remarks
+
+{{Create|create|create}}, {{Update|update|update}}, and {{Delete|delete|delete}} open a closed connection before they run.
 
 Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 

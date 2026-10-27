@@ -28,6 +28,7 @@ const inTransaction = async <TResult>(
   connection: IConnection,
   write: () => Promise<TResult>,
 ): Promise<TResult> => {
+  if (!connection.isOpen) await connection.open();
   if (!transactional) return write();
   const work = new UnitOfWorkTransaction(connection);
   await work.begin();

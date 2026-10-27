@@ -112,9 +112,10 @@ public class JsonTests
 
         var closed = new JsonConnection();
         await Assert.ThrowsAsync<DatasourceException>(() => new JsonCommand(closed).ExecuteReader(""));
-        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Create(new Row()));
-        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Update(new Row { ["id"] = 1 }));
-        await Assert.ThrowsAsync<DatasourceException>(() => new CRUDRepository<Dictionary<string, Value>>(closed).Delete(new Row { ["id"] = 1 }));
+        var opened = await new CRUDRepository<Dictionary<string, Value>>(closed)
+            .Create(new Row { ["id"] = 1, ["name"] = "a" });
+        Assert.True(closed.IsOpen);
+        Assert.Equal(new Value.Int(1), opened["id"]);
 
         var ds = new Datasource("json", new Of(() => new JsonConnection(new JsonConnectionOptions { Data = new JsonArray() })));
         Assert.Equal("json", ds.Provider);

@@ -87,10 +87,16 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         ReadonlyRepositoryMappingOptions<T>? options = null) =>
         await Read(query, parameters, options).FirstOrDefaultAsync() ?? default;
 
-    protected ICommand Command() =>
+        protected ICommand Command() =>
         middlewares.Aggregate(
             (connection ?? throw new DatasourceException("Connection required")).CreateCommand(),
             (command, middleware) => command.AddMiddleware(middleware));
+
+    async Task EnsureOpen()
+    {
+        var connection = this.connection ?? throw new DatasourceException("Connection required");
+        if (!connection.IsOpen) await connection.Open();
+    }
 
     ReadonlyRepositoryStatements ReadonlyStatements =>
         readonlyStatements ?? throw new DatasourceException("Statements required");
@@ -144,6 +150,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         TypeConverter<Row, Row>? rows,
         TypeConverter<T, Row> objects)
     {
+        await EnsureOpen();
         var reader = await Command().ExecuteReader(
             query ?? (ReadonlyStatements.Select() is SelectStatement typed
                 ? mappers.Apply(typed, (name, cell) => Cell(name, cell, false, (ReadonlyRepositoryMappingOptions<T>?)null))!

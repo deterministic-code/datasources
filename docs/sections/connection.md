@@ -227,7 +227,7 @@ async fn start_transaction(&self, isolation: Option<IsolationLevel>) -> Result<A
 
 ## Remarks
 
-{{CreateConnection|createConnection|create_connection}} returns a closed connection. It is not open until {{Open|open|open}}. Calling {{Open|open|open}} on an open connection throws.
+{{CreateConnection|createConnection|create_connection}} returns a closed connection. It is not open until {{Open|open|open}}. Calling {{Open|open|open}} on an open connection throws. Repository {{Read|read|read}}, {{Create|create|create}}, {{Update|update|update}}, and {{Delete|delete|delete}} open a closed connection before they run.
 
 ::: prose
 ### typescript

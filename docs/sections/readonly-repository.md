@@ -684,6 +684,8 @@ pub fn include(&mut self, via: impl EnrichmentVia, destination_property: impl In
 
 ## Remarks
 
+{{Read|read|read}} and {{ReadSingle|readSingle|read_single}} open a closed connection before they run.
+
 {{AddEnriched|addEnriched|add_enriched}} on [IEnriched](./i-enriched.md) registers a read fill. With no enrichments, {{Read|read|read}} stays streaming. With enrichments, the read is collected, filled, then yielded. A `List` is walked. A `RelatedProperty` scalar is not. Depth follows each related repository's own enrichments. Writes, including `List` children and associations, are [CRUDRepository](./crud-repository.md).
 
 `AddEnriched` stays fluent for siblings. Register the child repository's own fills on that repository:

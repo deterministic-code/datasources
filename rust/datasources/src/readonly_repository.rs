@@ -318,6 +318,13 @@ impl ReadonlyRepository {
         self.rows_from(reader, mappers).await
     }
 
+    async fn ensure_open(&self) -> Result<()> {
+        if self.memory.is_some() || self.connection.is_open() {
+            return Ok(());
+        }
+        self.connection.open().await
+    }
+
     async fn reader_for(
         &self,
         query: Option<&dyn ReadInput>,
@@ -325,6 +332,7 @@ impl ReadonlyRepository {
         mappers: &StatementMappers,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Box<dyn Reader>> {
+        self.ensure_open().await?;
         if let Some(where_clause) = query.and_then(ReadInput::as_where) {
             let (statement, params) = self.stored_query(where_clause, mappers, options)?;
             return self

@@ -105,6 +105,26 @@ public class CRUDRepositoryTests
         name => References.ReverseMap(name) is var from && from != name ? from : Snake.ReverseMap(name));
 
     [Fact]
+    public async Task CreateOpensAClosedConnection()
+    {
+        var connection = new MemoryDriver().Connection(null);
+        Assert.False(connection.IsOpen);
+        var created = await new CRUDRepository<Dictionary<string, Value>>(connection)
+            .Create(new Row { ["id"] = 1, ["name"] = "Ada" });
+        Assert.True(connection.IsOpen);
+        Assert.Equal(new Value.Int(1), created["id"]);
+    }
+
+    [Fact]
+    public async Task ReadOpensAClosedConnection()
+    {
+        var connection = new MemoryDriver().Connection(null);
+        Assert.False(connection.IsOpen);
+        Assert.Empty(await new ReadonlyRepository<Dictionary<string, Value>>(connection).Read().ToListAsync());
+        Assert.True(connection.IsOpen);
+    }
+
+    [Fact]
     public async Task CreateWritesChildrenStampsFkAndSkipsSelect()
     {
         var connection = await Setup();

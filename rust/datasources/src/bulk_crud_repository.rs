@@ -116,6 +116,13 @@ impl BulkCRUDRepository {
         self
     }
 
+    async fn ensure_open(&self) -> Result<()> {
+        if self.crud.memory_items().is_some() || self.crud.connection.is_open() {
+            return Ok(());
+        }
+        self.crud.connection.open().await
+    }
+
     async fn in_transaction<T, F, Fut>(
         transactional: bool,
         connection: Arc<dyn Connection>,
@@ -146,6 +153,7 @@ impl BulkCRUDRepository {
     }
 
     pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Vec<Row>> {
+        self.ensure_open().await?;
         Self::in_transaction(
             self.use_transaction || !items.is_empty(),
             Arc::clone(&self.crud.connection),
@@ -172,6 +180,7 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
+        self.ensure_open().await?;
         let response = Self::in_transaction(
             self.use_transaction,
             Arc::clone(&self.crud.connection),
@@ -196,6 +205,7 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
+        self.ensure_open().await?;
         let response = Self::in_transaction(
             self.use_transaction,
             Arc::clone(&self.crud.connection),

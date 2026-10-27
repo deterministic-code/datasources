@@ -1711,6 +1711,19 @@ async fn read_calls_stored_procedure() {
 }
 
 #[tokio::test]
+async fn repository_methods_open_a_closed_connection() {
+    let connection = MockConnection::new();
+    let repo = CRUDRepository::new(connection.clone(), CRUDRepositoryOptions::default()).unwrap();
+    assert!(!connection.is_open());
+    let _ = repo
+        .read(None, None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .expect("read");
+    assert!(connection.is_open());
+}
+
+#[tokio::test]
 async fn table_repository() {
     let command = Arc::new(MockCommand::new());
     command

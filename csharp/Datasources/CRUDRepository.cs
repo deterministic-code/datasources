@@ -89,8 +89,15 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public Task<Response> Delete(T item, IWhere? byWhere = null) =>
         InTransaction(() => DeleteCore(item, byWhere));
 
+    async Task EnsureOpen()
+    {
+        var connection = Command().Connection;
+        if (!connection.IsOpen) await connection.Open();
+    }
+
     async Task<TResult> InTransaction<TResult>(Func<Task<TResult>> write)
     {
+        await EnsureOpen();
         if (!UseTransaction) return await write();
         var work = new UnitOfWorkTransaction(Command().Connection);
         await work.Begin();
