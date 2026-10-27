@@ -28,6 +28,9 @@ mod integration;
 #[cfg(test)]
 #[path = "../tests/repository_spec.rs"]
 mod repository_spec;
+#[cfg(test)]
+#[path = "../tests/generate_sql.rs"]
+mod generate_sql_tests;
 
 #[cfg(test)]
 mod tests {

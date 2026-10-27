@@ -257,3 +257,47 @@ types:
     assert!(down2.contains("CREATE OR REPLACE"));
 }
 
+#[test]
+fn infers_a_reference_column_type_from_the_parent_id() {
+    let sql = generate_sql(
+        &files(
+            r#"
+types:
+  - gender:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - name:
+            type: string
+            size: 128
+  - contact:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - gender_type_id:
+            references: gender.id
+"#,
+            None,
+            None,
+        ),
+        &HashMap::new(),
+        &["postgres".into()],
+    )
+    .unwrap()
+    .into_iter()
+    .find(|e| e.filename.ends_with("0001_initial_up.sql"))
+    .unwrap()
+    .content;
+    let contacts = Regex::new(r#"CREATE TABLE "contacts" \(([\s\S]*?)\);"#)
+        .unwrap()
+        .captures(&sql)
+        .unwrap()[1]
+        .to_string();
+    assert!(Regex::new(r#""gender_type_id" INTEGER"#)
+        .unwrap()
+        .is_match(&contacts));
+    assert!(!Regex::new(r#""gender_type_id" TEXT"#)
+        .unwrap()
+        .is_match(&contacts));
+}
+

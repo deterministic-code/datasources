@@ -176,6 +176,36 @@ describe("generate-sql base defaults", () => {
     assert.match(cards, /"updated" TEXT .*strftime\('%Y-%m-%dT%H:%M:%fZ'/);
     assert.match(cards, /"version" BLOB .*DEFAULT X'00'/);
   });
+
+  it("infers a reference column type from the parent id", async () => {
+    const files = await generateSql({
+      reader: memoryReader({
+        "types.yaml": `types:
+  - gender:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - name:
+            type: string
+            size: 128
+  - contact:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - gender_type_id:
+            references: gender.id
+`,
+      }),
+      settings: {},
+    }, ["sqlite"]);
+    const up = files.find((e) => e.filename.endsWith("0001_initial_up.sql"));
+    assert.ok(up, "expected initial up migration");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    const contacts = sql.match(/CREATE TABLE "contacts" \(([\s\S]*?)\);/)?.[1];
+    assert.ok(contacts, "expected contacts table body");
+    assert.match(contacts, /"gender_type_id" INTEGER/);
+    assert.doesNotMatch(contacts, /"gender_type_id" TEXT/);
+  });
 });
 
 describe("generate-sql collection fields", () => {

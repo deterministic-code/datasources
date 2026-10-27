@@ -1,4 +1,5 @@
 import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
+import { inferReferenceFieldTypes } from "@deterministic-code/datasources-code-generators/sql/common/infer-reference-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
 import { writeInclusionOf } from "@deterministic-code/datasources-code-generators/sql/common/write-inclusion";
@@ -35,6 +36,11 @@ export const planRepositories = (
 ): RepositoryModel[] => {
   const casing = createCasingStrategy(dialect, settings);
   const naming = createCasing(settings);
+  spec = {
+    ...spec,
+    types: inferReferenceFieldTypes(spec.types),
+    expandedTypes: inferReferenceFieldTypes(spec.expandedTypes),
+  };
   const types = new Map(spec.types.map((type) => [type.name, type]));
   const expanded = new Map(spec.expandedTypes.map((type) => [type.name, type]));
   const referenced = new Set<string>();

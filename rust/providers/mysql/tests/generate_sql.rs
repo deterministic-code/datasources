@@ -1,0 +1,66 @@
+use datasources_code_generators::{generate_sql, SqlGenerateDriver};
+use regex::Regex;
+use std::collections::HashMap;
+use std::sync::Once;
+
+fn register_sql() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        datasources_code_generators::register_dialect(
+            "mysql",
+            SqlGenerateDriver {
+                quote_left: crate::MysqlDriver::QUOTE_LEFT,
+                quote_right: crate::MysqlDriver::QUOTE_RIGHT,
+                type_converter: crate::MysqlDriver::types(),
+                default_value_converter: crate::MysqlDriver::defaults(),
+                statement_renderer: crate::MysqlDriver::statement_text_renderer(),
+            },
+        )
+        .unwrap();
+    });
+}
+
+#[test]
+fn infers_a_reference_column_type_from_the_parent_id() {
+    register_sql();
+    let sql = generate_sql(
+        &HashMap::from([(
+            "types.yaml".into(),
+            r#"
+types:
+  - gender:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - name:
+            type: string
+            size: 128
+  - contact:
+      tags: [datasource_type]
+      inherits: set
+      fields:
+        - gender_type_id:
+            references: gender.id
+"#
+            .into(),
+        )]),
+        &HashMap::new(),
+        &["mysql".into()],
+    )
+    .unwrap()
+    .into_iter()
+    .find(|e| e.filename.ends_with("0001_initial_up.sql"))
+    .unwrap()
+    .content;
+    let contacts = Regex::new(r#"CREATE TABLE `contacts` \(([\s\S]*?)\);"#)
+        .unwrap()
+        .captures(&sql)
+        .unwrap()[1]
+        .to_string();
+    assert!(Regex::new(r#"`gender_type_id` INT"#)
+        .unwrap()
+        .is_match(&contacts));
+    assert!(!Regex::new(r#"`gender_type_id` TEXT"#)
+        .unwrap()
+        .is_match(&contacts));
+}

@@ -13,6 +13,7 @@ import {
   persistedColumnFields,
   tableByName,
 } from "@deterministic-code/generators-common/spec-types";
+import { inferReferenceFieldTypes } from "./infer-reference-types.ts";
 
 /** Flattened `datasource.*` flags. Stored procedures are opt-in `"true"`. */
 export const datasourceSettings = (settings: Record<string, string>) => ({
@@ -82,6 +83,7 @@ export const usesGeneratedIdColumn = (
 
 export const sqlTablesFrom = (spec: IDeterministic): SqlTable[] => {
   requireIdIsId(spec);
+  spec = { ...spec, expandedTypes: inferReferenceFieldTypes(spec.expandedTypes) };
   const overlays = tableByName(spec);
   const byName = new Map(spec.expandedTypes.map((t) => [t.name, t]));
   return datasourceTypesOf(spec).map((type) => {

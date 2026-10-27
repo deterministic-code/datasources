@@ -10,7 +10,8 @@
     "./sql/generate-stored-procedures": "./src/sql/generate-stored-procedures.ts",
     "./common/sql-dialect": "./src/sql/common/sql-dialect.ts",
     "./sql/common/write-inclusion": "./src/sql/common/write-inclusion.ts",
-    "./sql/common/default-casing": "./src/sql/common/default-casing.ts"
+    "./sql/common/default-casing": "./src/sql/common/default-casing.ts",
+    "./sql/common/infer-reference-types": "./src/sql/common/infer-reference-types.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../rewrite-declaration-extensions.mjs dist && rm -rf dist/sql/templates && cp -R src/sql/templates dist/sql/templates",
