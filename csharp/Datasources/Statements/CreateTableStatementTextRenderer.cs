@@ -35,7 +35,7 @@ public class CreateTableStatementTextRenderer
             ? statement.Columns.Select(Column)
             : statement.Columns.Select(Column).Concat(statement.Constraints.Select(Constraint));
 
-    string NotNullSql(NotNull? value) =>
+    protected virtual string NotNullSql(NotNull? value) =>
         value is null ? "" : value.Name is null ? " NOT NULL" : $" CONSTRAINT {Quote(value.Name)} NOT NULL";
 
     string ForeignKeySql(ForeignKey fk) =>

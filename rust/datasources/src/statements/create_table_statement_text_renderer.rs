@@ -44,8 +44,16 @@ pub trait CreateTableStatementTextRenderer {
             self.type_name(column),
             self.identity(column),
             self.column_default(column),
-            not_null_sql(self, column.not_null.as_ref())
+            self.not_null_sql(column.not_null.as_ref())
         )
+    }
+
+    fn not_null_sql(&self, value: Option<&NotNull>) -> String {
+        match value {
+            None => String::new(),
+            Some(NotNull { name: None }) => " NOT NULL".into(),
+            Some(NotNull { name: Some(name) }) => format!(" CONSTRAINT {} NOT NULL", self.quote(name)),
+        }
     }
 
     fn constraint(&self, constraint: &TableConstraint) -> String {
@@ -96,17 +104,6 @@ impl CreateTableStatementTextRenderer for DefaultRenderer {}
 
 pub(crate) fn render(statement: &CreateTableStatement) -> String {
     DefaultRenderer.render(statement)
-}
-
-fn not_null_sql<T: CreateTableStatementTextRenderer + ?Sized>(
-    sql: &T,
-    value: Option<&NotNull>,
-) -> String {
-    match value {
-        None => String::new(),
-        Some(NotNull { name: None }) => " NOT NULL".into(),
-        Some(NotNull { name: Some(name) }) => format!(" CONSTRAINT {} NOT NULL", sql.quote(name)),
-    }
 }
 
 fn quoted<T: CreateTableStatementTextRenderer + ?Sized>(sql: &T, names: &[String]) -> String {

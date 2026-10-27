@@ -74,7 +74,7 @@ export class CreateTableStatementTextRenderer {
         ];
   }
 
-  private notNullSql(value?: NotNull): string {
+  protected notNullSql(value?: NotNull): string {
     return value == null ? "" : value.name == null ? " NOT NULL" : ` CONSTRAINT ${this.quote(value.name)} NOT NULL`;
   }
 

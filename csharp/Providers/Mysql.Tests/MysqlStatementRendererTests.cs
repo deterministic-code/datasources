@@ -32,6 +32,16 @@ public class MysqlStatementRendererTests
     }
 
     [Fact]
+    public void RendersNamedDefaultWithoutConstraint()
+    {
+        var sql = Renderer.Render(new CreateTableStatement("genders", [
+            new Column("uuid", "uuid", new ColumnDefault("(UUID())", "df_uuid"), new NotNull("nn_uuid"))
+        ]));
+        Assert.Equal("CREATE TABLE genders (uuid CHAR(36) DEFAULT (UUID()) NOT NULL)", sql);
+        Assert.DoesNotContain("CONSTRAINT", sql);
+    }
+
+    [Fact]
     public void RendersTypeDefaultAndIdentity()
     {
         var create = new CreateTableStatement("users", [new Column("id", "int", new ColumnDefault("0"), new NotNull(), true)]);

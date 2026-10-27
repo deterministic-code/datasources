@@ -51,6 +51,16 @@ describe("MysqlStatementRenderer", () => {
     );
   });
 
+  it("renders a named default without a constraint", () => {
+    const sql = renderer.render(
+      new CreateTableStatement("genders", [
+        { name: "uuid", type: "uuid", default: new ColumnDefault("(UUID())", "df_uuid"), notNull: new NotNull("nn_uuid") },
+      ]),
+    );
+    expect(sql).toBe("CREATE TABLE genders (uuid CHAR(36) DEFAULT (UUID()) NOT NULL)");
+    expect(sql).not.toContain("CONSTRAINT");
+  });
+
   it("renders type default and identity", () => {
     const create = new CreateTableStatement("users", [
       { name: "id", type: "int", default: new ColumnDefault("0"), notNull: new NotNull(), identity: true },
