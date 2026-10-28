@@ -529,6 +529,10 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/register-a-fill/ReadonlyRepositoryTests.ReadFillsLookupSelectAndLeavesMissingDefault.csharp`
   - `docs/examples/register-a-fill/enriched.enriched_fills_lookup_select_and_leaves_missing_default.rust`
   - `docs/examples/register-a-fill/ReadonlyRepository.test.fills-lookup-select-and-leaves-missing-default.typescript`
+- Resolve a lookup name on create
+  - `docs/examples/resolve-a-lookup-name-on-create/CRUDRepositoryTests.CreateResolvesLookupName.csharp`
+  - `docs/examples/resolve-a-lookup-name-on-create/enriched.create_resolves_lookup_name.rust`
+  - `docs/examples/resolve-a-lookup-name-on-create/CRUDRepository.test.create-resolves-lookup-name.typescript`
 
 ## Enrichment
 
