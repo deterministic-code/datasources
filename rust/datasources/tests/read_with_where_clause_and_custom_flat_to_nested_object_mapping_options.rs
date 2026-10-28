@@ -47,7 +47,7 @@ fn types_repo(connection: Arc<dyn Connection>) -> CRUDRepository {
     options.entity = "UserType".into();
     options.ids = vec!["Id".into()];
     options.property_mappings = Some(Arc::new(columns()));
-    CRUDRepository::new(connection, options).unwrap()
+    CRUDRepository::<Row>::new(connection, options).unwrap()
 }
 
 fn parents_repo(connection: Arc<dyn Connection>) -> CRUDRepository {
@@ -55,7 +55,7 @@ fn parents_repo(connection: Arc<dyn Connection>) -> CRUDRepository {
     options.entity = "Parent".into();
     options.ids = vec!["Id".into()];
     options.property_mappings = Some(Arc::new(columns()));
-    CRUDRepository::new(connection, options).unwrap()
+    CRUDRepository::<Row>::new(connection, options).unwrap()
 }
 
 #[tokio::test]
@@ -63,8 +63,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
     let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
     let types = Arc::new(types_repo(connection.clone()));
-    let mut created_type = record(&[("Name", Value::from("person"))]);
-    let created_type = types.create(&mut created_type).await.unwrap();
+    let created_type = types.create(record(&[("Name", Value::from("person"))])).await.unwrap();
     let mut parents = parents_repo(connection);
     parents.add_enriched(
         Enrichment::new(
@@ -77,8 +76,8 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
         as_readonly(types.clone()),
         None,
     );
-    let mut parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
-    parents.create(&mut parent).await.unwrap();
+    let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
+    parents.create(parent).await.unwrap();
     let enriched = parents.read_single(None, None, None).await.unwrap();
 
     let command = Arc::new(MockCommand::new());
@@ -119,7 +118,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
             None,
             EnrichmentPropertyType::List,
         ),
-        Arc::new(CRUDRepository::new(
+        Arc::new(CRUDRepository::<Row>::new(
             Arc::new(StubConnection::new("memory")),
             CRUDRepositoryOptions::default(),
         ).unwrap()),

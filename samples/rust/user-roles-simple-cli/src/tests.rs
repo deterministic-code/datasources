@@ -543,14 +543,14 @@ async fn omits_null_created_and_updated() {
     omitted.insert("username".into(), Value::from("ada"));
     omitted.insert("created".into(), Value::Null);
     omitted.insert("updated".into(), Value::Null);
-    repo.create(&mut omitted).await.unwrap();
+    repo.create(omitted).await.unwrap();
     let stored = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await
         .unwrap()
         .unwrap();
     omitted.insert("username".into(), Value::from("ada-v2"));
-    repo.update(&mut omitted, None).await.unwrap();
+    repo.update(omitted, None).await.unwrap();
     let kept = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await
@@ -561,7 +561,7 @@ async fn omits_null_created_and_updated() {
     explicit.insert("username".into(), Value::from("grace"));
     explicit.insert("created".into(), Value::DateTime(created));
     explicit.insert("updated".into(), Value::Binary(vec![9, 9]));
-    repo.create(&mut explicit).await.unwrap();
+    repo.create(explicit).await.unwrap();
     let written = repo
         .read_single_by_id(explicit.get("id").unwrap())
         .await

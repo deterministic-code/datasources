@@ -32,8 +32,12 @@ describe("wireRegister", () => {
     expect(cargoWithCtor("[package]\nname = \"app\"\n")).toContain("[dependencies]");
     expect(cargoWithCtor('ctor = "0.4"\n[dependencies]\n')).toContain("tokio");
     expect(
-      cargoWithCtor('ctor = "0.4"\ntokio = { version = "1", features = ["macros", "rt-multi-thread"] }\n[dependencies]\n'),
+      cargoWithCtor(
+        'ctor = "0.4"\ntokio = { version = "1", features = ["macros", "rt-multi-thread"] }\nchrono = { version = "0.4", default-features = false, features = ["clock"] }\nuuid = { version = "1", features = ["v4"] }\nrust_decimal = "1"\n[dependencies]\n',
+      ),
     ).toBeUndefined();
+    expect(cargoWithCtor("[dependencies]\nfoo = \"1\"\n") ?? "").toContain("chrono");
+    expect(cargoWithCtor("[dependencies]\nfoo = \"1\"\n") ?? "").toContain("uuid");
   });
 
   it("builds a relative typescript import and rust path", () => {
@@ -42,13 +46,14 @@ describe("wireRegister", () => {
     const out = join("app", "generated");
     expect(hookContents("typescript", hook, out)).toContain("repositoryRegistry.ts");
     expect(hookContents("rust", rustHook, out)).toContain("mod.rs");
-    expect(hookContents("rust", rustHook, out)).toContain("repositoryRegistry::Repositories");
+    expect(hookContents("rust", rustHook, out)).toContain("generated::repositories::repositoryRegistry::Repositories");
     expect(specFrom(hook, join(out, "typescript/repositories/repositoryRegistry.ts"))).toMatch(/repositoryRegistry/);
   });
 
   it("skips attach when the hook is already referenced", () => {
     expect(attached("typescript", `import "./datasources-register.ts";\n`, join("app", "src", "index.ts"), join("app", "src", "datasources-register.ts"))).toBeUndefined();
-    expect(attached("rust", "mod datasources_register;\n", join("app", "src", "lib.rs"), join("app", "src", "datasources_register.rs"))).toBeUndefined();
+    expect(attached("rust", "mod types;\nmod datasources_register;\n", join("app", "src", "lib.rs"), join("app", "src", "datasources_register.rs"))).toBeUndefined();
+    expect(attached("rust", "mod datasources_register;\n", join("app", "src", "lib.rs"), join("app", "src", "datasources_register.rs"))).toContain("mod types;");
   });
 
   it("logs the typescript hook on dry-run", async () => {
@@ -106,7 +111,9 @@ describe("wireRegister", () => {
     });
     await wireRegister(cwd, "generated", "rust", false, { fs, log: () => undefined });
     expect(files[hookPath(cwd, "rust", true)]).toContain("#[path");
+    expect(files[join(cwd, "src", "types.rs")]).toContain("datasources_register::generated");
     expect(files[join(cwd, "src", "lib.rs")]).toContain("mod datasources_register;");
+    expect(files[join(cwd, "src", "lib.rs")]).toContain("mod types;");
     expect(files[join(cwd, "src", "lib.rs")]).toContain("use datasources_register::Repositories;");
     expect(files[join(cwd, "Cargo.toml")]).toContain('ctor = "0.4"');
     expect(files[join(cwd, "Cargo.toml")]).toContain("rt-multi-thread");

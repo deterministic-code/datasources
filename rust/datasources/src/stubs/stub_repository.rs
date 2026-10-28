@@ -66,15 +66,15 @@ impl IReadonlyRepository for StubRepository {
 
 #[async_trait]
 impl ICRUDRepository for StubRepository {
-    async fn create(&self, _item: &mut Row) -> Result<Row> {
+    async fn create(&self, _item: Row) -> Result<Row> {
         Err(fail(&self.provider))
     }
 
-    async fn update(&self, _item: &mut Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 
-    async fn delete(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 

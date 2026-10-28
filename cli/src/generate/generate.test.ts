@@ -237,10 +237,17 @@ describe("generate", () => {
     expect(contactRs).toContain('vec!["contact_source_id".into()');
     expect(contactRs).toContain("for_connection(connection.as_ref())");
     expect(contactRs).toContain("pub struct ContactRepository");
-    expect(contactRs).toContain("pub address: Arc<super::addressRepository::AddressRepository>");
-    expect(contactRs).toContain("pub phone: Arc<super::phoneRepository::PhoneRepository>");
+    expect(contactRs).toContain("pub address: Arc<CRUDRepository>");
+    expect(contactRs).toContain("pub phone: Arc<CRUDRepository>");
     expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository>");
-    expect(contactRs).toContain("Arc::clone(&address.repo)");
+    expect(contactRs).toContain("address_row_repository");
+    expect(contactRs).toContain("Arc::clone(&address)");
+    expect(textOf(rust, "entities.rs")).toContain("impl Entity for Contact");
+    expect(textOf(rust, "entities.rs")).toContain("fn children");
+    expect(textOf(rust, "entities.rs")).toContain("self.phone_type_name");
+    expect(textOf(rust, "entities.rs")).toContain("self.contact_source_name");
+    expect(textOf(rust, "entities.rs")).not.toContain("self.phone_type_id");
+    expect(textOf(rust, "entities.rs")).not.toContain("self.contact_source_id");
     expect(textOf(rust, "contactGroupRepository.rs")).toContain("add_linked");
     expect(textOf(rust, "contactGroupRepository.rs")).toContain("pub struct ContactGroupRepository");
     expect(textOf(rust, "mod.rs")).toContain("pub mod contactRepository;");
@@ -250,6 +257,7 @@ describe("generate", () => {
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<dyn ICRUDRepository<Contact>>");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
     expect(contactTs).toContain("createReadonly");

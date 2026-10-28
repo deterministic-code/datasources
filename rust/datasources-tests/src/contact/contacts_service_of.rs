@@ -2,7 +2,7 @@ use super::contact_columns::{columns, contact_entity, references, snake};
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, CRUDRepository, CRUDRepositoryOptions, CommandMiddleware, Connection,
-    ICRUDRepository, Mapper, TypeConverter, Value,
+    ICRUDRepository, Mapper, Row, TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -48,7 +48,7 @@ fn open(
         MetaDataRowTypeConverter::new(Vec::new())
             .with_references(references(), Box::new(columns())),
     ));
-    let repo = CRUDRepository::new(connection, options).expect("contacts repo");
+    let repo = CRUDRepository::<Row>::new(connection, options).expect("contacts repo");
     if let Some(middleware) = middleware {
         repo.add_middleware(middleware);
     }

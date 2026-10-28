@@ -35,7 +35,7 @@ export const hookContents = (
   const casing = createCasingStrategy(dialect, settings);
   return dialect === "typescript"
     ? `import "${specFrom(hook, join(output, registryRel(dialect, settings)))}";\n`
-    : `#[path = "${specFrom(hook, join(output, registryRel(dialect, settings)))}"]\npub mod repositories;\npub use repositories::${rustIdent(casing.convertFileName("repository_registry"))}::Repositories;\n`;
+    : `#[path = "${specFrom(hook, join(output, dialect, "mod.rs"))}"]\npub mod generated;\npub use generated::*;\npub use generated::repositories::${rustIdent(casing.convertFileName("repository_registry"))}::Repositories;\n`;
 };
 
 const rustCargoLine = (cargo: string, name: string, line: string): string | undefined =>
@@ -45,6 +45,9 @@ export const cargoWithCtor = (cargo: string): string | undefined => {
   const add = [
     rustCargoLine(cargo, "ctor", 'ctor = "0.4"'),
     rustCargoLine(cargo, "tokio", 'tokio = { version = "1", features = ["macros", "rt-multi-thread"] }'),
+    rustCargoLine(cargo, "chrono", 'chrono = { version = "0.4", default-features = false, features = ["clock"] }'),
+    rustCargoLine(cargo, "uuid", 'uuid = { version = "1", features = ["v4"] }'),
+    rustCargoLine(cargo, "rust_decimal", 'rust_decimal = "1"'),
   ].filter((line): line is string => line !== undefined);
   if (add.length === 0) return undefined;
   const block = add.join("\n");
@@ -53,14 +56,15 @@ export const cargoWithCtor = (cargo: string): string | undefined => {
     : `${cargo.trimEnd()}\n\n[dependencies]\n${block}\n`;
 };
 
-export const attached = (dialect: "typescript" | "rust", entry: string, entryPath: string, hook: string): string | undefined =>
-  dialect === "typescript"
-    ? entry.includes("datasources-register")
-      ? undefined
-      : `import "${specFrom(entryPath, hook)}";\n${entry}`
-    : entry.includes("datasources_register")
-      ? undefined
-      : `mod datasources_register;\nuse datasources_register::Repositories;\n\n${entry}`;
+export const attached = (dialect: "typescript" | "rust", entry: string, entryPath: string, hook: string): string | undefined => {
+  if (dialect === "typescript")
+    return entry.includes("datasources-register") ? undefined : `import "${specFrom(entryPath, hook)}";\n${entry}`;
+  const register = entry.includes("datasources_register")
+    ? entry
+    : `mod datasources_register;\nuse datasources_register::Repositories;\n\n${entry}`;
+  const next = register.includes("mod types;") ? register : `mod types;\n${register}`;
+  return next === entry ? undefined : next;
+};
 
 const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
   try {
@@ -134,6 +138,12 @@ export const wireRegister = async (
   await deps.fs.writeFile(hook, text);
   deps.log(hook);
   if (dialect === "rust") {
+    const types = join(dirname(hook), "types.rs");
+    await deps.fs.writeFile(
+      types,
+      "pub mod generated {\n    pub use crate::datasources_register::generated as views;\n    pub use crate::datasources_register::generated as datasource;\n}\n",
+    );
+    deps.log(types);
     const cargoPath = join(cwd, "Cargo.toml");
     const cargo = await optional(deps.fs, cargoPath);
     const nextCargo = cargo === undefined ? undefined : cargoWithCtor(cargo);

@@ -3,6 +3,7 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
+use crate::entity::Entity;
 use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
@@ -15,7 +16,7 @@ use crate::read_input::ReadInput;
 use crate::reader::Reader;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
-use crate::repository::IReadonlyRepository;
+use crate::repository::{map_stream, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::select_statement::SelectStatement;
@@ -24,7 +25,7 @@ use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
 use crate::statement_mappers::StatementMappers;
 use crate::stored_enrichment::StoredEnrichment;
-use crate::stubs::StubConnection;
+use crate::mocks::MockConnection;
 use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::value::Value;
@@ -33,6 +34,7 @@ use futures_core::Stream;
 use futures_util::stream::try_unfold;
 use futures_util::TryStreamExt;
 use std::any::TypeId;
+use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
@@ -45,7 +47,7 @@ enum ReadRun {
     },
 }
 
-pub struct ReadonlyRepository {
+pub struct ReadonlyRepository<T: Entity = Row> {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     middleware_slot: Arc<Mutex<Vec<Arc<dyn CommandMiddleware>>>>,
@@ -58,14 +60,15 @@ pub struct ReadonlyRepository {
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
+    entity: PhantomData<T>,
 }
 
-impl ReadonlyRepository {
-    pub fn from_type<T: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_readonly_repository_mapping_options::<T>();
-        options.row_converter = Some(RowTypeConverter::of::<T>());
+impl<T: Entity> ReadonlyRepository<T> {
+    pub fn from_type<S: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
+        let mut options = create_readonly_repository_mapping_options::<S>();
+        options.row_converter = Some(RowTypeConverter::of::<S>());
         let mut repo = Self::new(connection, options)?;
-        repo.entity_type = TypeId::of::<T>();
+        repo.entity_type = TypeId::of::<S>();
         Ok(repo)
     }
 
@@ -90,9 +93,10 @@ impl ReadonlyRepository {
             property_mappings: Arc::clone(&built.property_mappings),
             statement_mappers: StatementMappers::new(built.entity_mapper, built.property_mappings),
             readonly_statements: built.statements,
-            entity_type: TypeId::of::<Row>(),
+            entity_type: TypeId::of::<T>(),
             memory: None,
             enrichments,
+            entity: PhantomData,
         }
     }
 
@@ -104,7 +108,7 @@ impl ReadonlyRepository {
         let property: Arc<dyn Mapper<String, String> + Send + Sync> =
             Arc::new(IdentityMapper::<String>::new());
         Self {
-            connection: Arc::new(StubConnection::new("memory")),
+            connection: MockConnection::new(),
             middlewares: Vec::new(),
             middleware_slot: Arc::new(Mutex::new(Vec::new())),
             row_converter: None,
@@ -117,9 +121,10 @@ impl ReadonlyRepository {
                 Vec::new(),
                 StatementMappers::new(entity, property),
             ),
-            entity_type: TypeId::of::<Row>(),
+            entity_type: TypeId::of::<T>(),
             memory: Some(SharedItems::new(items)),
             enrichments,
+            entity: PhantomData,
         }
     }
 
@@ -319,7 +324,7 @@ impl ReadonlyRepository {
     }
 
     async fn ensure_open(&self) -> Result<()> {
-        if self.memory.is_some() || self.connection.is_open() {
+        if self.connection.is_open() {
             return Ok(());
         }
         self.connection.open().await
@@ -484,24 +489,14 @@ impl ReadonlyRepository {
     }
 }
 
-impl IRepository for ReadonlyRepository {
+impl<T: Entity> IRepository for ReadonlyRepository<T> {
     fn entity_type(&self) -> TypeId {
         self.entity_type
     }
 }
 
-#[async_trait]
-impl IReadonlyRepository for ReadonlyRepository {
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<Row>> {
-        self.read(query, parameters, options).try_next().await
-    }
-
-    fn read<'a>(
+impl<T: Entity> ReadonlyRepository<T> {
+    pub(crate) fn read_rows<'a>(
         &'a self,
         query: Option<&'a dyn ReadInput>,
         parameters: Option<&'a [Parameter]>,
@@ -540,6 +535,27 @@ impl IReadonlyRepository for ReadonlyRepository {
     }
 }
 
+#[async_trait]
+impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
+    async fn read_single(
+        &self,
+        query: Option<&dyn ReadInput>,
+        parameters: Option<&[Parameter]>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.read(query, parameters, options).try_next().await
+    }
+
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn ReadInput>,
+        parameters: Option<&'a [Parameter]>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        map_stream(self.read_rows(query, parameters, options))
+    }
+}
+
 fn next_buffered(items: Vec<Row>) -> Result<Option<(Row, ReadRun)>> {
     next_buffered_iter(items.into_iter())
 }
@@ -548,8 +564,8 @@ fn next_buffered_iter(mut items: std::vec::IntoIter<Row>) -> Result<Option<(Row,
     Ok(items.next().map(|row| (row, ReadRun::Buffered(items))))
 }
 
-pub(crate) fn push_middleware(
-    repo: &ReadonlyRepository,
+pub(crate) fn push_middleware<T: Entity>(
+    repo: &ReadonlyRepository<T>,
     middleware: Arc<dyn CommandMiddleware>,
 ) {
     repo.middleware_slot

@@ -1,8 +1,7 @@
 let connection = MemoryDriver.connection(None);
 connection.open().await.unwrap();
 let types = Arc::new(types_repo(connection.clone()));
-let mut created_type = record(&[("Name", Value::from("person"))]);
-let created_type = types.create(&mut created_type).await.unwrap();
+let created_type = types.create(record(&[("Name", Value::from("person"))])).await.unwrap();
 let mut parents = parents_repo(connection);
 parents.add_enriched(
     Enrichment::new(
@@ -15,8 +14,8 @@ parents.add_enriched(
     as_readonly(types.clone()),
     None,
 );
-let mut parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
-parents.create(&mut parent).await.unwrap();
+let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
+parents.create(parent).await.unwrap();
 let enriched = parents.read_single(None, None, None).await.unwrap();
 
 let command = Arc::new(MockCommand::new());

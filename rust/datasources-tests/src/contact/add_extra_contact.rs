@@ -22,7 +22,7 @@ pub async fn add_extra_contact(service: &CRUDRepository, ids: &ContactLookups) -
     let version = Value::Binary(vec![]);
     let uuid = Value::Uuid(Uuid::new_v4());
     let created = service
-        .create(&mut record(&[
+        .create(record(&[
             ("Uuid", uuid.clone()),
             ("Created", stamp.clone()),
             ("Updated", stamp.clone()),

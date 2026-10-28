@@ -61,7 +61,7 @@ impl Api {
 
     async fn post_contact(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
         let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
-        Ok(ok(201, row_to_json(&self.contacts.create(&mut row).await?)))
+        Ok(ok(201, row_to_json(&self.contacts.create(row).await?)))
     }
 
     async fn put_contact(
@@ -76,7 +76,7 @@ impl Api {
         }
         let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
         row.insert("id".into(), Value::Int(id));
-        self.contacts.update(&mut row, Some(&by)).await?;
+        self.contacts.update(row, Some(&by)).await?;
         Ok(ok(200, row_to_json(&self.contacts.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 
@@ -99,7 +99,7 @@ impl Api {
         if text(row.get("key")).is_empty() {
             return Err(ApiError::bad("key is required"));
         }
-        Ok(ok(201, row_to_json(&self.legacy.create(&mut row).await?)))
+        Ok(ok(201, row_to_json(&self.legacy.create(row).await?)))
     }
 
     async fn put_legacy(
@@ -114,7 +114,7 @@ impl Api {
         }
         let mut row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
         row.insert("key".into(), Value::Text(key));
-        self.legacy.update(&mut row, Some(&by)).await?;
+        self.legacy.update(row, Some(&by)).await?;
         Ok(ok(200, row_to_json(&self.legacy.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 

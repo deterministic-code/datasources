@@ -2,7 +2,7 @@ let connection = setup(&mut []).await;
 let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
 let mut parents = mapped_crud(connection, "Parent");
 types
-    .create(&mut record(&[("Name", Value::from("work"))]))
+    .create(record(&[("Name", Value::from("work"))]))
     .await
     .unwrap();
 parents.add_enriched(
@@ -11,7 +11,7 @@ parents.add_enriched(
     None,
 );
 let created = parents
-    .create(&mut record(&[("TypeName", Value::from("work"))]))
+    .create(record(&[("TypeName", Value::from("work"))]))
     .await
     .unwrap();
 assert!(num(&created, "Id") > 0);

@@ -98,10 +98,18 @@ export const deterministic: CodeGenerationProvider = {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
     const models = planRepositories(spec, request.dialect, request.settings);
     const casing = createCasingStrategy(request.dialect, request.settings);
+    const typeFiles =
+      request.dialect === "rust"
+        ? (await deterministic.generateTypes(request))
+            .filter((entry) => entry.kind === "content" && entry.filename.endsWith(".rs"))
+            .map((entry) => entry.filename.replace(/^.*\//, "").replace(/\.rs$/, ""))
+        : [];
     return remap(
       place(
         repositoriesPrefix(request.dialect, casing),
-        repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
+        request.dialect === "rust"
+          ? rustRepositories(await withProviderWrites(request, models), request.settings, typeFiles)
+          : repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
       ),
       request.settings,
       request.dialect,

@@ -57,8 +57,8 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                 .unwrap_or(true)
         }) {
             match children_where(writer.as_ref(), enrichment, parent) {
-                Some(clause) => writer.delete(row, Some(&clause)).await?,
-                None => writer.delete(row, None).await?,
+                Some(clause) => writer.delete(row.clone(), Some(&clause)).await?,
+                None => writer.delete(row.clone(), None).await?,
             };
         }
         for row in &mut related {
@@ -68,10 +68,10 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                         .iter()
                         .any(|stored| row_key(stored, &ids) == Some(key.clone())) =>
                 {
-                    writer.update(row, None).await?;
+                    writer.update(row.clone(), None).await?;
                 }
                 _ => {
-                    writer.create(row).await?;
+                    *row = writer.create(row.clone()).await?;
                 }
             }
         }
@@ -123,7 +123,7 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                     id.cloned().unwrap_or(Value::Null),
                 ),
             ));
-            writer.delete(row, Some(&clause)).await?;
+            writer.delete(row.clone(), Some(&clause)).await?;
         }
         for id in wanted {
             if existing.iter().any(|row| {
@@ -134,7 +134,7 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
             let mut row = Row::new();
             row.insert(association.parent.clone(), parent_key.clone());
             row.insert(association.related.clone(), id);
-            writer.create(&mut row).await?;
+            writer.create(row).await?;
         }
         Ok(())
     }

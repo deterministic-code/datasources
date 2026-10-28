@@ -63,11 +63,11 @@ async fn open(write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> (CRUDRepositor
     let mut users_options = CRUDRepositoryOptions::default();
     users_options.entity = "users".into();
     users_options.write = write;
-    let users = CRUDRepository::new(connection.clone(), users_options).unwrap();
+    let users = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
     let repo = |entity: &str| {
         let mut options = CRUDRepositoryOptions::default();
         options.entity = entity.into();
-        Arc::new(CRUDRepository::new(connection.clone(), options).unwrap())
+        Arc::new(CRUDRepository::<Row>::new(connection.clone(), options).unwrap())
     };
     let user_types = repo("user_types");
     let roles = repo("roles");
@@ -75,23 +75,23 @@ async fn open(write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> (CRUDRepositor
     let user_roles = repo("user_roles");
     let user_groups = repo("user_groups");
     let admin_type = user_types
-        .create(&mut record(&[("name", Value::from("admin"))]))
+        .create(record(&[("name", Value::from("admin"))]))
         .await
         .unwrap();
     let admin_role = roles
-        .create(&mut record(&[("name", Value::from("admin"))]))
+        .create(record(&[("name", Value::from("admin"))]))
         .await
         .unwrap();
     let editor_role = roles
-        .create(&mut record(&[("name", Value::from("editor"))]))
+        .create(record(&[("name", Value::from("editor"))]))
         .await
         .unwrap();
     let engineering = groups
-        .create(&mut record(&[("name", Value::from("engineering"))]))
+        .create(record(&[("name", Value::from("engineering"))]))
         .await
         .unwrap();
     let ops = groups
-        .create(&mut record(&[("name", Value::from("ops"))]))
+        .create(record(&[("name", Value::from("ops"))]))
         .await
         .unwrap();
     (
@@ -146,7 +146,7 @@ fn link(users: &mut CRUDRepository, seeded: &Seed) {
 
 async fn create_ada(users: &mut CRUDRepository, seeded: &Seed, roles: Value, groups: Value) -> Row {
     link(users, seeded);
-    users.create(&mut ada(seeded, roles, groups)).await.unwrap()
+    users.create(ada(seeded, roles, groups)).await.unwrap()
 }
 
 #[tokio::test]
@@ -173,7 +173,7 @@ async fn create_update_and_delete_syncs_link_rows() {
             None,
         );
     let created = users
-        .create(&mut ada(
+        .create(ada(
             &seeded,
             encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
             encode_rows(&[seeded.engineering.clone()]),
@@ -188,7 +188,7 @@ async fn create_update_and_delete_syncs_link_rows() {
         encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
     );
     next.insert("id".into(), created.get("id").unwrap().clone());
-    let saved = users.update(&mut next, None).await.unwrap();
+    let saved = users.update(next, None).await.unwrap();
     let updated = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -197,7 +197,7 @@ async fn create_update_and_delete_syncs_link_rows() {
     let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let removed = users
-        .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+        .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
         .await
         .unwrap();
 
@@ -312,14 +312,14 @@ async fn null_list_clears_that_association() {
     let roles = encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]);
     let groups = encode_rows(&[seeded.engineering.clone()]);
     let created = create_ada(&mut users, &seeded, roles, groups).await;
-    let mut next = record(&[
+    let next = record(&[
         ("id", created.get("id").unwrap().clone()),
         ("username", Value::from("ada")),
         ("is_enabled", Value::Bool(true)),
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
         ("groups", encode_rows(&[seeded.engineering.clone()])),
     ]);
-    let saved = users.update(&mut next, None).await.unwrap();
+    let saved = users.update(next, None).await.unwrap();
     let loaded = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -363,7 +363,7 @@ async fn empty_list_clears_that_association() {
     let roles = encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]);
     let groups = encode_rows(&[seeded.engineering.clone()]);
     let created = create_ada(&mut users, &seeded, roles, groups).await;
-    let mut next = record(&[
+    let next = record(&[
         ("id", created.get("id").unwrap().clone()),
         ("username", Value::from("ada")),
         ("is_enabled", Value::Bool(true)),
@@ -371,7 +371,7 @@ async fn empty_list_clears_that_association() {
         ("roles", encode_rows(&[])),
         ("groups", encode_rows(&[seeded.engineering.clone()])),
     ]);
-    let saved = users.update(&mut next, None).await.unwrap();
+    let saved = users.update(next, None).await.unwrap();
     let loaded = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -439,7 +439,7 @@ async fn missing_related_id_throws() {
     let (mut users, seeded) = open(None).await;
     link(&mut users, &seeded);
     let error = users
-        .create(&mut ada(
+        .create(ada(
             &seeded,
             encode_rows(&[record(&[
                 ("id", Value::Int(0)),
@@ -464,22 +464,22 @@ async fn lazy_write_skips_unloaded_links() {
     ))))
     .await;
     link(&mut users, &seeded);
-    let mut creating = record(&[
+    let creating = record(&[
         ("username", Value::from("ada")),
         ("is_enabled", Value::Bool(true)),
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
         ("groups", encode_rows(&[seeded.engineering.clone()])),
     ]);
-    let created = users.create(&mut creating).await.unwrap();
+    let created = users.create(creating).await.unwrap();
     let created_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let created_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
-    let mut next = record(&[
+    let next = record(&[
         ("id", created.get("id").unwrap().clone()),
         ("username", Value::from("ada")),
         ("is_enabled", Value::Bool(false)),
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
     ]);
-    let skipped = users.update(&mut next, None).await.unwrap();
+    let skipped = users.update(next, None).await.unwrap();
     let after_skip = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -487,18 +487,18 @@ async fn lazy_write_skips_unloaded_links() {
         .unwrap();
     let skipped_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let skipped_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
-    let mut linked_row = record(&[
+    let linked_row = record(&[
         ("id", created.get("id").unwrap().clone()),
         ("username", Value::from("ada")),
         ("is_enabled", Value::Bool(false)),
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
         ("roles", encode_rows(&[seeded.editor_role.clone()])),
     ]);
-    let linked = users.update(&mut linked_row, None).await.unwrap();
+    let linked = users.update(linked_row, None).await.unwrap();
     let linked_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let linked_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
     let removed = users
-        .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+        .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
         .await
         .unwrap();
     assert_eq!(num(&created, "id") > 0, true);

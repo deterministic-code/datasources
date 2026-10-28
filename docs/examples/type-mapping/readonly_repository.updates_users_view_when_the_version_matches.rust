@@ -37,10 +37,10 @@ role_options.entity_mapper =
 role_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
-let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
-    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
-let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+    Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
+let user_roles_repo = Arc::new(CRUDRepository::<Row>::new(connection, role_options).unwrap());
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
@@ -59,7 +59,7 @@ users_repo.add_enriched(
 );
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
-let admin = user_types_repo.create(&mut admin).await.unwrap();
+let admin = user_types_repo.create(admin).await.unwrap();
 let mut admin_role = datasources::Row::new();
 admin_role.insert("Name".into(), Value::from("admin"));
 let mut editor_role = datasources::Row::new();
@@ -71,7 +71,7 @@ user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
 user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 user.insert("Version".into(), Value::Int(1));
 user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-let user = users_repo.create(&mut user).await.unwrap();
+let user = users_repo.create(user).await.unwrap();
 let mut viewer_role = datasources::Row::new();
 viewer_role.insert("Name".into(), Value::from("viewer"));
 let mut grace = datasources::Row::new();
@@ -81,7 +81,7 @@ grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
 grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 grace.insert("Version".into(), Value::Int(1));
 grace.insert("Roles".into(), encode_rows(&[viewer_role]));
-let grace = users_repo.create(&mut grace).await.unwrap();
+let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
     .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
@@ -91,7 +91,7 @@ let mut loaded = users_repo
 let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
-let member = user_types_repo.create(&mut member).await.unwrap();
+let member = user_types_repo.create(member).await.unwrap();
 let mut owner_role = datasources::Row::new();
 owner_role.insert("Name".into(), Value::from("owner"));
 let mut kept_admin = datasources::Row::new();
@@ -107,7 +107,7 @@ loaded.insert(
 loaded.insert("Version".into(), Value::Int(2));
 let updated = users_repo
     .update(
-        &mut loaded,
+        loaded.clone(),
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
     )
     .await
@@ -119,10 +119,10 @@ let current = users_repo
     .unwrap();
 let stale = users_repo
     .update(
-        &mut loaded,
+        loaded.clone(),
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
     )
     .await
     .unwrap();
-let removed = users_repo.delete(&loaded, None).await.unwrap();
+let removed = users_repo.delete(loaded, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();

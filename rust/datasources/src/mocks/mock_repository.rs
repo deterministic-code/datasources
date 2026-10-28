@@ -93,22 +93,22 @@ impl IReadonlyRepository for MockRepository {
 
 #[async_trait]
 impl ICRUDRepository for MockRepository {
-    async fn create(&self, item: &mut Row) -> Result<Row> {
+    async fn create(&self, item: Row) -> Result<Row> {
         if let Some(error) = &*self.add_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         self.items.lock().expect("mock").push(item.clone());
-        Ok(item.clone())
+        Ok(item)
     }
 
-    async fn update(&self, _item: &mut Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(Response::new(Value::Null, 1, None))
     }
 
-    async fn delete(&self, _item: &Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
         if let Some(error) = &*self.delete_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }

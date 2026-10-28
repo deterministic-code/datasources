@@ -25,8 +25,8 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
         delete_nested.delete_nested(&mut existing).await?;
         for row in existing {
             match children_where(writer.as_ref(), enrichment, parent) {
-                Some(clause) => writer.delete(&row, Some(&clause)).await?,
-                None => writer.delete(&row, None).await?,
+                Some(clause) => writer.delete(row, Some(&clause)).await?,
+                None => writer.delete(row, None).await?,
             };
         }
         Ok(())
@@ -65,7 +65,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
                 Operator::equals(association.parent.clone(), parent_key.clone()),
                 Operator::equals(association.related.clone(), related),
             ));
-            writer.delete(&row, Some(&clause)).await?;
+            writer.delete(row, Some(&clause)).await?;
         }
         Ok(())
     }

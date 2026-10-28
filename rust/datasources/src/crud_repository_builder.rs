@@ -7,6 +7,7 @@ use crate::readonly_repository_builder::assemble;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::repository_builder_options_factory::RepositoryBuilderOptionsFactory;
 use crate::result::Result;
+use crate::row::Row;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -53,6 +54,6 @@ impl CRUDRepositoryBuilder {
         connection: Arc<dyn Connection>,
         options: CRUDRepositoryOptions,
     ) -> Result<CRUDRepository> {
-        CRUDRepository::new(connection, options)
+        CRUDRepository::<Row>::new(connection, options)
     }
 }

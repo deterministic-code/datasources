@@ -1,5 +1,6 @@
 use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
+use crate::row::Row;
 use std::any::Any;
 use std::sync::Arc;
 
@@ -25,7 +26,7 @@ pub trait EnrichmentVia {
 
 impl<T> EnrichmentVia for Arc<T>
 where
-    T: IReadonlyRepository + Any + 'static,
+    T: IReadonlyRepository<Row> + Any + 'static,
 {
     fn into_repos(
         self,

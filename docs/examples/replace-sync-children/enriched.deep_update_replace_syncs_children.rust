@@ -2,13 +2,13 @@ let connection = setup(&mut []).await;
 let mut parents = mapped_crud(connection.clone(), "Parent");
 let children = Arc::new(mapped_crud(connection, "Child"));
 let parent = parents
-    .create(&mut record(&[("Label", Value::from("p"))]))
+    .create(record(&[("Label", Value::from("p"))]))
     .await
     .unwrap();
 assert!(num(&parent, "Id") > 0);
 let parent_id = parent.get("Id").unwrap().clone();
 let kept = children
-    .create(&mut record(&[
+    .create(record(&[
         ("ParentId", parent_id.clone()),
         ("Label", Value::from("a")),
     ]))
@@ -16,7 +16,7 @@ let kept = children
     .unwrap();
 assert!(num(&kept, "Id") > 0);
 let dropped = children
-    .create(&mut record(&[
+    .create(record(&[
         ("ParentId", parent_id.clone()),
         ("Label", Value::from("b")),
     ]))
@@ -28,7 +28,7 @@ parents.add_enriched(
     children.clone(),
     None,
 );
-let mut updated_row_2 = record(&[
+let updated_row_2 = record(&[
             ("Id", parent_id.clone()),
             ("Label", Value::from("p")),
             (
@@ -44,7 +44,7 @@ let mut updated_row_2 = record(&[
         ]);
 let updated = parents
     .update(
-        &mut updated_row_2,
+        updated_row_2,
         None,
     )
     .await
