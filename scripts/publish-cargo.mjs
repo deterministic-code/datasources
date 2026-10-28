@@ -64,11 +64,11 @@ const stampVersion = async (ver) => {
 };
 
 const published = (name, ver) => {
-  const result = run("cargo", ["info", "-q", `${name}@${ver}`], rust, {
+  const result = run("cargo", ["info", "-q", "--registry", "crates-io", `${name}@${ver}`], tmpdir(), {
     capture: true,
     allowFail: true,
   });
-  return result.status === 0 && result.stdout.includes(ver);
+  return result.status === 0 && /\bversion:\s/.test(result.stdout) && result.stdout.includes(ver);
 };
 
 const dirty = () => {
@@ -95,7 +95,11 @@ const packageCrate = (name, ver) => {
     return true;
   }
   const text = `${result.stdout}${result.stderr}`;
-  if (name !== "datasources" && text.includes("no matching package named `datasources`")) {
+  if (
+    name !== "datasources" &&
+    (text.includes("no matching package named `datasources`") ||
+      text.includes('requirement `datasources ='))
+  ) {
     console.log(`skip package ${name} until datasources@${ver} is on crates.io`);
     return false;
   }
@@ -142,9 +146,13 @@ if (stamp && ver !== stamp) {
   process.exit(1);
 }
 
-for (const name of crates.slice(1)) packageCrate(name, ver);
 packageCrate("datasources", ver);
 await smoke(ver);
+if (published("datasources", ver)) {
+  for (const name of crates.slice(1)) packageCrate(name, ver);
+} else {
+  console.log(`skip provider packages until datasources@${ver} is on crates.io`);
+}
 
 if (!doPublish) {
   console.log(`dry-run packed ${ver}; pass --publish to push to crates.io`);

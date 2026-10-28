@@ -12,6 +12,8 @@ export class ConditionRenderer implements IConditionVisitor {
   visit(where: Where): string;
   visit(where: WhereText): string;
   visit(where: Where | WhereText): string {
-    return where instanceof Where ? this.expressions.render(where.condition) : where.rawText;
+    return where instanceof Where || where.constructor.name === "Where"
+      ? this.expressions.render((where as Where).condition)
+      : where.rawText;
   }
 }

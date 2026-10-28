@@ -394,6 +394,22 @@ describe("statement compile", () => {
     );
     class CustomWhere extends Where {}
     expect(text.render(new CustomWhere(new Operator.Equals("id", 1)))).toBe("id = $id");
+    class Identifier {
+      constructor(readonly name: string) {}
+    }
+    class Literal {
+      constructor(readonly value: string) {}
+    }
+    class Equals {
+      constructor(readonly left: Identifier, readonly right: Literal) {}
+    }
+    const AlienWhere = class Where {
+      constructor(readonly condition: Equals) {}
+      accept = (visitor: { visit: (where: InstanceType<typeof AlienWhere>) => string }) => visitor.visit(this);
+    };
+    expect(text.render(new AlienWhere(new Equals(new Identifier("name"), new Literal("Female"))) as never)).toBe(
+      "name = $name",
+    );
     expect(new ConditionRenderer(new ExpressionRenderer(text)).render(new WhereText("id = 1"))).toBe("id = 1");
     expect(() =>
       DefaultStatementTextRenderer.instance.render(new AlterTableStatement("users", { kind: "empty" } as never)),

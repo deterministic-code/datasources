@@ -8,68 +8,71 @@ import type { StatementTextRenderer } from "./StatementTextRenderer.ts";
 import { Subquery } from "./Subquery.ts";
 import { Where } from "./Where.ts";
 
+const is = <T extends object>(value: object, type: abstract new (...args: never[]) => T, name: string): value is T =>
+  value instanceof type || value.constructor.name === name;
+
 export class ExpressionRenderer {
   constructor(private readonly text: StatementTextRenderer) {}
 
   render = (expression: IExpression): string => {
-    if (expression instanceof Where) return this.render(expression.condition);
-    if (expression instanceof Identifier) return expression.name;
-    if (expression instanceof Literal) return inline(expression.value);
-    if (expression instanceof ArrayExpression) return expression.elements.map((e) => this.render(e)).join(", ");
-    if (expression instanceof Operator.Not) return `NOT (${this.render(expression.argument)})`;
-    if (expression instanceof Operator.IsNull) return `${this.render(expression.argument)} IS NULL`;
-    if (expression instanceof Operator.IsNotNull) return `${this.render(expression.argument)} IS NOT NULL`;
-    if (expression instanceof Operator.Exists) return `EXISTS ${this.render(expression.argument)}`;
-    if (expression instanceof Subquery) return `(${this.text.render(expression.query)})`;
+    if (is(expression, Where, "Where")) return this.render(expression.condition);
+    if (is(expression, Identifier, "Identifier")) return expression.name;
+    if (is(expression, Literal, "Literal")) return inline(expression.value);
+    if (is(expression, ArrayExpression, "ArrayExpression")) return expression.elements.map((e) => this.render(e)).join(", ");
+    if (is(expression, Operator.Not, "Not")) return `NOT (${this.render(expression.argument)})`;
+    if (is(expression, Operator.IsNull, "IsNull")) return `${this.render(expression.argument)} IS NULL`;
+    if (is(expression, Operator.IsNotNull, "IsNotNull")) return `${this.render(expression.argument)} IS NOT NULL`;
+    if (is(expression, Operator.Exists, "Exists")) return `EXISTS ${this.render(expression.argument)}`;
+    if (is(expression, Subquery, "Subquery")) return `(${this.text.render(expression.query)})`;
     if (
-      expression instanceof Operator.In &&
-      expression.left instanceof Identifier &&
-      expression.right instanceof ArrayExpression
+      is(expression, Operator.In, "In") &&
+      is(expression.left, Identifier, "Identifier") &&
+      is(expression.right, ArrayExpression, "ArrayExpression")
     )
       return expression.right.elements.length === 0
         ? "1 = 0"
         : `${expression.left.name} IN (${slots(expression.left.name, expression.right.elements.length)})`;
     if (
-      expression instanceof Operator.In &&
-      expression.left instanceof Identifier &&
-      expression.right instanceof Subquery
+      is(expression, Operator.In, "In") &&
+      is(expression.left, Identifier, "Identifier") &&
+      is(expression.right, Subquery, "Subquery")
     )
       return `${expression.left.name} IN ${this.render(expression.right)}`;
     if (
-      expression instanceof Operator.NotIn &&
-      expression.left instanceof Identifier &&
-      expression.right instanceof ArrayExpression
+      is(expression, Operator.NotIn, "NotIn") &&
+      is(expression.left, Identifier, "Identifier") &&
+      is(expression.right, ArrayExpression, "ArrayExpression")
     )
       return expression.right.elements.length === 0
         ? "1 = 1"
         : `${expression.left.name} NOT IN (${slots(expression.left.name, expression.right.elements.length)})`;
     if (
-      expression instanceof Operator.NotIn &&
-      expression.left instanceof Identifier &&
-      expression.right instanceof Subquery
+      is(expression, Operator.NotIn, "NotIn") &&
+      is(expression.left, Identifier, "Identifier") &&
+      is(expression.right, Subquery, "Subquery")
     )
       return `${expression.left.name} NOT IN ${this.render(expression.right)}`;
     if (
-      (expression instanceof Operator.Between || expression instanceof Operator.NotBetween) &&
-      expression.value instanceof Identifier &&
-      expression.low instanceof Literal &&
-      expression.high instanceof Literal
+      (is(expression, Operator.Between, "Between") || is(expression, Operator.NotBetween, "NotBetween")) &&
+      is(expression.value, Identifier, "Identifier") &&
+      is(expression.low, Literal, "Literal") &&
+      is(expression.high, Literal, "Literal")
     ) {
-      const word = expression instanceof Operator.NotBetween ? "NOT BETWEEN" : "BETWEEN";
+      const word = is(expression, Operator.NotBetween, "NotBetween") ? "NOT BETWEEN" : "BETWEEN";
       return `${expression.value.name} ${word} $${parameterName(expression.value.name)}_0 AND $${parameterName(expression.value.name)}_1`;
     }
-    if (expression instanceof Operator.Between)
+    if (is(expression, Operator.Between, "Between"))
       return `${this.render(expression.value)} BETWEEN ${this.render(expression.low)} AND ${this.render(expression.high)}`;
-    if (expression instanceof Operator.NotBetween)
+    if (is(expression, Operator.NotBetween, "NotBetween"))
       return `${this.render(expression.value)} NOT BETWEEN ${this.render(expression.low)} AND ${this.render(expression.high)}`;
-    if (expression instanceof Operator.And)
+    if (is(expression, Operator.And, "And"))
       return `${this.wrap(expression.left, true)} AND ${this.wrap(expression.right, true)}`;
-    if (expression instanceof Operator.Or)
+    if (is(expression, Operator.Or, "Or"))
       return `${this.wrap(expression.left, false)} OR ${this.wrap(expression.right, false)}`;
-    const operands = expression instanceof Operator ? pair(expression) : undefined;
-    if (operands && operands.left instanceof Identifier && operands.right instanceof Literal)
+    const operands = pair(expression as Operator);
+    if (operands && is(operands.left, Identifier, "Identifier") && is(operands.right, Literal, "Literal"))
       return `${operands.left.name} ${symbol(expression as Operator)} $${parameterName(operands.left.name)}`;
-    if (operands && operands.left instanceof Literal && operands.right instanceof Literal)
+    if (operands && is(operands.left, Literal, "Literal") && is(operands.right, Literal, "Literal"))
       return `${inline(operands.left.value)} ${symbol(expression as Operator)} ${inline(operands.right.value)}`;
     if (operands)
       return `${this.render(operands.left)} ${symbol(expression as Operator)} ${this.render(operands.right)}`;
@@ -80,24 +83,19 @@ export class ExpressionRenderer {
     needsParens(child, and) ? `(${this.render(child)})` : this.render(child);
 }
 
-const symbol = (op: Operator): string =>
-  op instanceof Operator.Equals
-    ? "="
-    : op instanceof Operator.NotEquals
-      ? "<>"
-      : op instanceof Operator.GreaterThan
-        ? ">"
-        : op instanceof Operator.LessThan
-          ? "<"
-          : op instanceof Operator.GreaterThanOrEqual
-            ? ">="
-            : op instanceof Operator.LessThanOrEqual
-              ? "<="
-              : op instanceof Operator.Like
-                ? "LIKE"
-                : op instanceof Operator.NotLike
-                  ? "NOT LIKE"
-                  : "IN";
+const symbols: Record<string, string> = {
+  Equals: "=",
+  NotEquals: "<>",
+  GreaterThan: ">",
+  LessThan: "<",
+  GreaterThanOrEqual: ">=",
+  LessThanOrEqual: "<=",
+  Like: "LIKE",
+  NotLike: "NOT LIKE",
+  In: "IN",
+};
+
+const symbol = (op: Operator): string => symbols[op.constructor.name] as string;
 
 const inline = (value: Cell): string =>
   value === null
@@ -109,28 +107,28 @@ const inline = (value: Cell): string =>
         : String(value);
 
 const needsParens = (child: IExpression, and: boolean): boolean =>
-  child instanceof Where
+  is(child, Where, "Where")
     ? needsParens(child.condition, and)
-    : child instanceof Operator.Not ||
-      child instanceof Operator.In ||
-      child instanceof Operator.NotIn ||
-      (child instanceof Operator.And && !and) ||
-      (child instanceof Operator.Or && and);
+    : is(child, Operator.Not, "Not") ||
+      is(child, Operator.In, "In") ||
+      is(child, Operator.NotIn, "NotIn") ||
+      (is(child, Operator.And, "And") && !and) ||
+      (is(child, Operator.Or, "Or") && and);
 
 const pair = (
   expression: Operator,
 ): { left: IExpression; right: IExpression } | undefined =>
-  expression instanceof Operator.Equals ||
-  expression instanceof Operator.NotEquals ||
-  expression instanceof Operator.GreaterThan ||
-  expression instanceof Operator.LessThan ||
-  expression instanceof Operator.GreaterThanOrEqual ||
-  expression instanceof Operator.LessThanOrEqual ||
-  expression instanceof Operator.And ||
-  expression instanceof Operator.Or ||
-  expression instanceof Operator.In ||
-  expression instanceof Operator.Like ||
-  expression instanceof Operator.NotLike
+  is(expression, Operator.Equals, "Equals") ||
+  is(expression, Operator.NotEquals, "NotEquals") ||
+  is(expression, Operator.GreaterThan, "GreaterThan") ||
+  is(expression, Operator.LessThan, "LessThan") ||
+  is(expression, Operator.GreaterThanOrEqual, "GreaterThanOrEqual") ||
+  is(expression, Operator.LessThanOrEqual, "LessThanOrEqual") ||
+  is(expression, Operator.And, "And") ||
+  is(expression, Operator.Or, "Or") ||
+  is(expression, Operator.In, "In") ||
+  is(expression, Operator.Like, "Like") ||
+  is(expression, Operator.NotLike, "NotLike")
     ? expression
     : undefined;
 
