@@ -1,5 +1,6 @@
 # Quick start YAML schema. Copy to <name>/<language>/quick_start.yaml.
-# The runner (run.mjs) creates a dest directory and runs each command as written.
+# The runner (run.mjs) creates dest as a subdirectory of this clone and runs each
+# command as written. A person mkdir dest && cd dest from the clone first.
 
 name: example-cli
 language: csharp
@@ -9,7 +10,7 @@ suites:
       - export PROVIDER=sqlite
       - export DATASOURCE_URL=sqlite:///./app.sqlite
       - dotnet new console
-      - cp -R quick_starts/example_cli/csharp/. ./
+      - cp -R ../quick_starts/example_cli/csharp/. ./
       - dotnet add package Datasources
       - npx @deterministic-code/datasources-cli setup --yes sqlite
       - npx @deterministic-code/datasources-cli generate all --dialect csharp

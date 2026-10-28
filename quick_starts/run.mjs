@@ -8,8 +8,7 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -70,17 +69,6 @@ const exportLine = (line) => {
   };
 };
 
-const argvOf = (line, cwd) => {
-  const argv = words(line);
-  if (argv[0] === "cp" && argv[1] === "-R" && argv[2] && argv[3] === "./") {
-    const raw = argv[2].endsWith("/.") ? argv[2].slice(0, -2) : argv[2];
-    const from = isAbsolute(raw) ? raw : resolve(repo, raw);
-    if (!existsSync(from)) throw new Error(`copy missing: ${from}`);
-    argv[2] = `${from}/.`;
-  }
-  return argv;
-};
-
 const normalize = (text) => text.replace(/\r\n/g, "\n").replace(/\s+$/, "") + "\n";
 
 const expectedOf = (spec, suite) => {
@@ -90,7 +78,7 @@ const expectedOf = (spec, suite) => {
 };
 
 const one = (spec, suite) => {
-  const dest = mkdtempSync(join(tmpdir(), `datasources-qs-${spec.name}-${spec.language}-${suite.name}-`));
+  const dest = mkdtempSync(join(repo, "datasources-qs-"));
   console.log(`\n== ${spec.name} ${spec.language} ${suite.name} ${dest}`);
   const env = { ...process.env };
   const actual = [];
@@ -101,7 +89,7 @@ const one = (spec, suite) => {
         env[exported.key] = exported.value;
         continue;
       }
-      const argv = argvOf(line, dest);
+      const argv = words(line);
       const capture = argv[0] === "dotnet" && argv[1] === "run";
       const result = run(argv, dest, env, capture ? "pipe" : "inherit");
       if (capture) actual.push(result.stdout ?? "");
