@@ -155,7 +155,7 @@ constructor(type: Constructable<T>, connection: IConnection)
 | Name | Description |
 | --- | --- |
 | `type` | item constructor |
-| `connection` | open [IConnection](docs/sections/connection.md) |
+| `connection` | [IConnection](docs/sections/connection.md) |
 
 ##### CRUDRepository(connection, options) {#typescript-crudrepository-crudrepository-connection-options}
 
@@ -171,7 +171,7 @@ constructor(connection: IConnection, options: CRUDRepositoryOptions<T>)
 
 | Name | Description |
 | --- | --- |
-| `connection` | open [IConnection](docs/sections/connection.md) |
+| `connection` | [IConnection](docs/sections/connection.md) |
 | `options` | [CRUDRepositoryOptions](#typescript-crudrepositoryoptions) |
 
 ##### CRUDRepository(inner, strategy?) {#typescript-crudrepository-crudrepository-inner-strategy}
@@ -558,7 +558,7 @@ public Repository(IConnection connection)
 
 | Name | Description |
 | --- | --- |
-| `connection` | open [IConnection](docs/sections/connection.md) |
+| `connection` | [IConnection](docs/sections/connection.md) |
 
 ##### CRUDRepository(connection, options) {#csharp-crudrepository-crudrepository-connection-options}
 
@@ -574,7 +574,7 @@ public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options)
 
 | Name | Description |
 | --- | --- |
-| `connection` | open [IConnection](docs/sections/connection.md) |
+| `connection` | [IConnection](docs/sections/connection.md) |
 | `options` | [CRUDRepositoryOptions](#csharp-crudrepositoryoptions) |
 
 ##### CRUDRepository(inner, strategy) {#csharp-crudrepository-crudrepository-inner-strategy}
@@ -1109,6 +1109,8 @@ pub struct BuiltRepository
 
 ## Remarks
 
+`Create` / `create` / `create`, `Update` / `update` / `update`, and `Delete` / `delete` / `delete` open a closed connection before they run.
+
 Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
@@ -1388,7 +1390,7 @@ no user
 roles and groups remain
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L151-L306)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/user_view.rs#L152-L307)
 
 ```rust
 let (mut users, seeded) = open(None).await;
@@ -1420,22 +1422,22 @@ let created = users
     ))
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(&next, None).await.unwrap();
+let saved = users.update(&mut next, None).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None, None).await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None, None).await.unwrap();
+let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
     .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
     .await

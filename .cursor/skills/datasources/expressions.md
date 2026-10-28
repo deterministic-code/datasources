@@ -522,7 +522,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2247-L2253)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2260-L2266)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");

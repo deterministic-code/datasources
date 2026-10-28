@@ -326,7 +326,7 @@ IReadonlyRepository<T> Create<T>()
 
 | Name | Description |
 | --- | --- |
-| `connection` | optional open [IConnection](docs/sections/connection.md) |
+| `connection` | optional [IConnection](docs/sections/connection.md) |
 
 **Returns**
 

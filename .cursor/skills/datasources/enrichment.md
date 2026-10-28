@@ -123,7 +123,7 @@ childrenRepo.AddEnriched(new("type_name", "type_id", "id", "name"), childTypesRe
 parentsRepo.AddEnriched(new("children", "id", "parent_id", Type: EnrichmentPropertyType.List), childrenRepo);
 ```
 
-Rust has no separate trait. `AddEnriched` / `addEnriched` / `add_enriched` is a method on [ReadonlyRepository](readonly-repository.md) and [CRUDRepository](crud-repository.md). With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `List` children and associations, are [CRUDRepository](crud-repository.md).
+Rust has no separate trait. `AddEnriched` / `addEnriched` / `add_enriched` is a method on [ReadonlyRepository](readonly-repository.md) and [CRUDRepository](crud-repository.md). With no enrichments, `Read` / `read` / `read` stays streaming. With enrichments, the read is collected, filled, then yielded. Writes, including `List` children and associations, are [CRUDRepository](crud-repository.md). Object lookups resolve a name to a foreign key on Create and Update through the write strategy. They still do not insert lookup rows.
 
 ## Examples
 
@@ -145,7 +145,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L136-L161)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L137-L162)
 
 ```rust
 let mut seeds = [
@@ -183,6 +183,52 @@ const parentsRepo = repo(Parent, connection);
 const typesRepo = repo(UserType, typesConnection);
 parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
 const items = await collectAsync(parentsRepo.read());
+```
+
+### Resolve a lookup name on create
+
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CRUDRepositoryTests.cs#L385-L397)
+
+```csharp
+var connection = await Setup();
+var typesRepo = Open<UserType>(connection);
+var parentsRepo = Open<Parent>(connection);
+await typesRepo.Create(new UserType { Name = "work" });
+parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+var created = await parentsRepo.Create(new Parent { TypeName = "work" });
+```
+
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L213-L237)
+
+```rust
+let connection = setup(&mut []).await;
+let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
+let mut parents = mapped_crud(connection, "Parent");
+types
+    .create(&mut record(&[("Name", Value::from("work"))]))
+    .await
+    .unwrap();
+parents.add_enriched(
+    Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+    types,
+    None,
+);
+let created = parents
+    .create(&mut record(&[("TypeName", Value::from("work"))]))
+    .await
+    .unwrap();
+assert!(num(&created, "Id") > 0);
+```
+
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L420-L430)
+
+```typescript
+const connection = await setup();
+const typesRepo = repo(UserType, connection);
+const parentsRepo = repo(Parent, connection);
+await typesRepo.create(Object.assign(new UserType(), { Name: "work" }));
+parentsRepo.addEnriched({ destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" }, typesRepo);
+const created = await parentsRepo.create(Object.assign(new Parent(), { TypeName: "work" }));
 ```
 
 ## Enrichment
@@ -492,7 +538,7 @@ parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
 var items = await parentsRepo.Read().ToListAsync();
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L151-L157)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L152-L158)
 
 ```rust
 let mut parents_repo = mapped(connection, "Parent");
