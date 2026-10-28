@@ -19,6 +19,7 @@ import {
 import { procedureSpecs } from "./procedures/driver.ts";
 import { createParamFields, pkFieldOf, updateParamFields } from "./procedures/helpers.ts";
 import { writeInclusionOf } from "./write-inclusion.ts";
+import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
 import {
   createBulkCreateStoredProcedureOf,
   createBulkDeleteStoredProcedureOf,
@@ -144,6 +145,7 @@ export const generateProceduresForDialect = async (
   const tables = buildLiveTables(types, mapping).filter(hasAuditColumns);
   if (tables.length === 0) return [];
 
+  const separator = batchSeparatorOf(ctx.settings);
   const byGroups = byGroupsFromDatasource(types);
   const bodies: string[] = [];
   const drops: string[] = [];
@@ -160,18 +162,18 @@ export const generateProceduresForDialect = async (
       const drop = renderSql(dialect, dropRoutineStatementOf(name));
       if (drop !== "") drops.push(drop);
     }
-    if (created.length > 0) bodies.push(`-- ${t.name}\n\n${created.join("\n\n")}`);
+    if (created.length > 0) bodies.push(`-- ${t.name}\n\n${joinBatches(created, separator)}`);
   }
   if (bodies.length === 0) return [];
 
   return [
     content(
       `${dialect}/migrations/${pad(order)}_stored_procedures_up.sql`,
-      withNl(`-- Stored procedures\n${bodies.join("\n\n")}`, casing),
+      withNl(`-- Stored procedures\n${joinBatches(bodies, separator)}`, casing),
     ),
     content(
       `${dialect}/migrations/${pad(order)}_stored_procedures_down.sql`,
-      withNl(`-- DROP stored procedures\n${drops.join("\n")}`, casing),
+      withNl(`-- DROP stored procedures\n${joinBatches(drops, separator)}`, casing),
     ),
   ];
 };

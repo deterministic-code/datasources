@@ -1,18 +1,4 @@
 -- Generated initial migration for {{dialect}}
 
 {{{preamble}}}-- Create added tables
-{{#tables}}
-{{{createTable}}}
-{{#indexesBlock}}
-{{{indexesBlock}}}
-{{/indexesBlock}}
-{{#trigger}}
-{{{trigger}}}
-{{/trigger}}
-
-{{/tables}}{{#hasSeeds}}
--- Seed data
-{{#seedBlocks}}
-{{{.}}}
-{{/seedBlocks}}
-{{/hasSeeds}}
+{{{body}}}

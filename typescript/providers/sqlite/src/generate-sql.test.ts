@@ -45,6 +45,62 @@ describe("generate-sql datasource.use_stored_procedures", () => {
   });
 });
 
+describe("generate-sql datasource.batch_separator", () => {
+  const upSql = async (settings: Record<string, string>) => {
+    const files = await generateSql(ctx(settings), ["sqlite"]);
+    const up = files.find((entry) => entry.filename.endsWith("sqlite/migrations/0001_initial_up.sql"));
+    assert.ok(up, "expected sqlite/migrations/0001_initial_up.sql");
+    return "contents" in up ? String(up.contents) : up.content;
+  };
+
+  it("defaults to a whole-line GO between table and trigger", async () => {
+    assert.match(await upSql({}), /;\nGO\nCREATE TRIGGER "trg_users_updated_at"/);
+  });
+
+  it("puts GO between tables", async () => {
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": `types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+  - contact:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+`,
+        }),
+        settings: {},
+      },
+      ["sqlite"],
+    );
+    const up = files.find((entry) => entry.filename.endsWith("sqlite/migrations/0001_initial_up.sql"));
+    assert.ok(up, "expected sqlite/migrations/0001_initial_up.sql");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    assert.match(sql, /trg_genders_updated_at[\s\S]*;\nGO\nCREATE TABLE "contacts"/);
+  });
+
+  it("uses the configured separator", async () => {
+    const sql = await upSql({ "datasource.batch_separator": "BATCH" });
+    assert.match(sql, /;\nBATCH\nCREATE TRIGGER "trg_users_updated_at"/);
+    assert.doesNotMatch(sql, /\nGO\n/);
+  });
+});
+
 const identityYaml = `types:
   - person:
       tags: [datasource_type]

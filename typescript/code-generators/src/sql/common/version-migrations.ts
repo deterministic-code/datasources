@@ -11,6 +11,7 @@ import { buildLiveTables, sqlTablesFrom } from "./sql-schema.ts";
 import { renderSql, type SqlDialect } from "./sql-dialect.ts";
 import { schemaDiff, type SchemaSnapshot } from "./schema-diff.ts";
 import { seedSections } from "./seed-generator.ts";
+import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
 import { byGroupsFromDatasource } from "./datasource-by-fields.ts";
 import { procedureStatementsForTable } from "./generate-procedures.ts";
 import { datasourceSettings, hasAuditColumns, type LiveTable } from "./sql-schema.ts";
@@ -74,11 +75,11 @@ const emptySnapshot = (settings: Record<string, string>): Promise<SchemaSnapshot
 
 const pad = (n: number): string => String(n).padStart(4, "0");
 
-const renderAll = (dialect: SqlDialect, statements: IStatement[]): string =>
-  statements
-    .map((statement) => renderSql(dialect, statement))
-    .filter((sql) => sql !== "")
-    .join("\n");
+const renderAll = (dialect: SqlDialect, statements: IStatement[], separator: string): string =>
+  joinBatches(
+    statements.map((statement) => renderSql(dialect, statement)),
+    separator,
+  );
 
 /** Replay frozen diffs, fail when live types/datasource YAML drifted, emit per-version SQL. */
 export const versionMigrationFiles = async (
@@ -127,14 +128,15 @@ export const versionMigrationFiles = async (
       index === 0 && up.some((statement) => statement instanceof CreateTableStatement)
         ? seedSections(dialect, current.tables, current.seeds, current.mapping)
         : [];
+    const separator = batchSeparatorOf(ctx.settings);
     const upSql = [
       `-- Generated migration for ${dialect}`,
-      renderAll(dialect, up),
-      ...(seeds.length ? ["", "-- Seed data", ...seeds] : []),
+      renderAll(dialect, up, separator),
+      ...(seeds.length ? ["-- Seed data", joinBatches(seeds, separator)] : []),
     ]
       .filter((line) => line !== "")
       .join("\n");
-    const downSql = [`-- Rollback migration for ${dialect}`, renderAll(dialect, down)].join("\n");
+    const downSql = [`-- Rollback migration for ${dialect}`, renderAll(dialect, down, separator)].join("\n");
     files.push({
       path: `${pad(number)}_up.sql`,
       content: finalize(upSql, casing),

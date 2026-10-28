@@ -76,6 +76,7 @@ describe("parseArgs", () => {
       columnNames: undefined,
       objectNames: undefined,
       sqlKeywords: undefined,
+      batchSeparator: undefined,
     });
     expect(
       parseArgs([
@@ -169,6 +170,7 @@ describe("parseArgs", () => {
     expect(help).toMatch(/--column-names/);
     expect(help).toMatch(/--object-names/);
     expect(help).toMatch(/--sql-keywords/);
+    expect(help).toMatch(/--batch-separator/);
     expect(
       parseArgs([
         "generate",
@@ -182,6 +184,8 @@ describe("parseArgs", () => {
         "--object-names",
         "upper",
         "--sql-keywords=lower",
+        "--batch-separator",
+        "GO",
       ]).command,
     ).toMatchObject({
       pluralizeTableNames: true,
@@ -189,6 +193,7 @@ describe("parseArgs", () => {
       columnNames: "Camel",
       objectNames: "Upper",
       sqlKeywords: "Lower",
+      batchSeparator: "GO",
     });
     expect(
       parseArgs([
@@ -202,6 +207,7 @@ describe("parseArgs", () => {
         "--object-names=Auto",
         "--sql-keywords",
         "auto",
+        "--batch-separator=GO",
       ]).command,
     ).toMatchObject({
       pluralizeTableNames: false,
@@ -209,6 +215,7 @@ describe("parseArgs", () => {
       columnNames: "Kebab",
       objectNames: "Auto",
       sqlKeywords: "Auto",
+      batchSeparator: "GO",
     });
     expect(() => parseArgs(["generate", "all", "--dialect", "typescript", "--table-names", "screaming"])).toThrow(
       /--table-names must be one of/,
@@ -242,6 +249,7 @@ describe("parseArgs", () => {
       columnNames: undefined,
       objectNames: undefined,
       sqlKeywords: undefined,
+      batchSeparator: undefined,
     });
     expect(
       parseArgs([
@@ -265,6 +273,7 @@ describe("parseArgs", () => {
       columnNames: undefined,
       objectNames: undefined,
       sqlKeywords: undefined,
+      batchSeparator: undefined,
     });
     expect(parseArgs(["migrations", "create", "--stored-procedures"]).command).toMatchObject({
       storedProcedures: true,
