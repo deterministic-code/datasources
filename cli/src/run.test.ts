@@ -126,11 +126,17 @@ describe("run", () => {
     const csharp = mem(["App.csproj"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const csharpIo = deps(csharp.fs);
     expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--languages", "csharp"], csharpIo)).toBe(0);
+    expect(csharpIo.ran).toContain(
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres",
+    );
     expect(csharpIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(csharpIo.ran).toContain(init("csharp"));
     const rust = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const rustIo = deps(rust.fs);
     expect(await run(["add", "sqlite", "postgres", "--cwd", cwd, "--languages", "rust"], rustIo)).toBe(0);
+    expect(rustIo.ran).toContain(
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres",
+    );
     expect(rustIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(rustIo.ran).toContain(init("rust"));
     const json = mem(["App.csproj"], {
@@ -213,6 +219,9 @@ describe("run", () => {
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=json,sqlite/);
     expect(io.ran).toContain("cargo add datasources");
     expect(io.ran).toContain("cargo add datasources-sqlite");
+    expect(io.ran).toContain(
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
+    );
     expect(files[join(cwd, "datasources_providers.rs")]).toBe(
       "use datasources_json as _;\nuse datasources_sqlite as _;\n",
     );
@@ -225,6 +234,7 @@ describe("run", () => {
     expect(await run(["remove", "sqlite", "--cwd", cwd, "--dry-run"], dry)).toBe(0);
     expect(dry.ran).toEqual([]);
     expect(dry.logs.some((line) => line.includes("cargo remove datasources-sqlite"))).toBe(true);
+    expect(dry.logs.some((line) => line.includes("npm uninstall @deterministic-code/datasources-sqlite"))).toBe(true);
     expect(await run(["add", "json", "--cwd", cwd], deps(mem(["Cargo.toml"]).fs))).toBe(0);
   });
 
@@ -264,6 +274,9 @@ describe("run", () => {
       ),
     ).toBe(0);
     expect(sqliteOnly.ran).toContain("dotnet add App.csproj package Datasources.Sqlite");
+    expect(sqliteOnly.ran).toContain(
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
+    );
   });
 
   it("writes process DATASOURCE_URL into .env", async () => {

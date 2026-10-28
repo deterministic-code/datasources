@@ -1,13 +1,19 @@
 import { catalog, host, type Ecosystem, type Provider } from "./catalog.ts";
 import { csharpTarget } from "./detect.ts";
+import { sqlMigrateProviders } from "./migrateInit.ts";
 
 export type Proc = { command: string; args: string[] };
+
+const npmDialects = (names: Provider[]): Proc[] => {
+  const dialects = sqlMigrateProviders(names);
+  return dialects.length === 0 ? [] : npmInstall(dialects);
+};
 
 export const addCommands = (ecosystem: Ecosystem, names: Provider[], entries: string[]): Proc[] =>
   ({
     ts: () => npmInstall(names),
-    rust: () => cargoAdd(names),
-    csharp: () => dotnetAdd(names, csharpTarget(entries)),
+    rust: () => [...cargoAdd(names), ...npmDialects(names)],
+    csharp: () => [...dotnetAdd(names, csharpTarget(entries)), ...npmDialects(names)],
   })[ecosystem]();
 
 export const removeCommands = (
@@ -18,8 +24,8 @@ export const removeCommands = (
 ): Proc[] =>
   ({
     ts: () => npmUninstall(names),
-    rust: () => cargoRemove(names),
-    csharp: () => dotnetRemove(names, csharpTarget(entries)),
+    rust: () => [...cargoRemove(names), ...npmUninstall(sqlMigrateProviders(names))],
+    csharp: () => [...dotnetRemove(names, csharpTarget(entries)), ...npmUninstall(sqlMigrateProviders(names))],
   })[ecosystem]();
 
 const npmInstall = (names: Provider[]): Proc[] => [
