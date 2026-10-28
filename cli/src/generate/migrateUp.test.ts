@@ -130,11 +130,16 @@ describe("applyMigrateUp", () => {
     expect(absolute.ran[1]).toContain("--migrations-root sql");
   });
 
-  it("rejects a provider the spec does not list", async () => {
-    const io = deps(mem(spec("settings:\n  backend:\n    datasources: json\n")).fs);
+  it("rejects a provider that is not installed", async () => {
+    const io = deps(
+      mem({
+        ...spec("settings:\n  backend:\n    datasources: sqlite\n"),
+        [join("app", ".env")]: "INSTALLED_PROVIDERS=json\n",
+      }).fs,
+    );
     await expect(
       applyMigrateUp(command(), flags(), io, { PROVIDER: "sqlite", DATASOURCE_URL: "sqlite:///./app.sqlite" }),
-    ).rejects.toThrow(/backend.datasources \(none\)/);
+    ).rejects.toThrow(/INSTALLED_PROVIDERS \(none\)/);
   });
 
 });

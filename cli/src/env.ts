@@ -39,6 +39,13 @@ const urlOf = (env: EnvMap) => env.DATASOURCE_URL || "";
 
 const installedOf = (env: EnvMap) => env.INSTALLED_PROVIDERS || scheme(urlOf(env)) || "";
 
+export const overlayEnv = (file: EnvMap, env: NodeJS.ProcessEnv): EnvMap => ({
+  ...file,
+  ...(env.INSTALLED_PROVIDERS ? { INSTALLED_PROVIDERS: env.INSTALLED_PROVIDERS } : {}),
+  ...(env.PROVIDER ? { PROVIDER: env.PROVIDER } : {}),
+  ...(env.DATASOURCE_URL ? { DATASOURCE_URL: env.DATASOURCE_URL } : {}),
+});
+
 export const parseEnv = (text: string): EnvMap =>
   Object.fromEntries(
     text
