@@ -104,6 +104,8 @@ const one = (spec, suite) => {
   const dest = mkdtempSync(join(repo, "datasources-qs-"));
   console.log(`\n== ${spec.name} ${spec.language} ${suite.name} ${dest}`);
   const env = { ...process.env };
+  delete env.npm_config_devdir;
+  delete env.NPM_CONFIG_DEVDIR;
   const actual = [];
   let compose = false;
   try {
