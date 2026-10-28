@@ -9,6 +9,7 @@ mod generate_entry;
 mod generate_procedures;
 mod generate_sql;
 mod generate_stored_procedures;
+mod join_batches;
 mod mapping;
 mod nested_select_types;
 mod procedure_fields;

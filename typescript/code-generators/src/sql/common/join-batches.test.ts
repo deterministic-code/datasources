@@ -11,6 +11,13 @@ describe("batchSeparatorOf", () => {
     assert.equal(batchSeparatorOf({ "datasource.batch_separator": "GO" }), "GO");
     assert.equal(batchSeparatorOf({ "datasource.batch_separator": "" }), "");
   });
+
+  it("rejects a separator with newlines", () => {
+    assert.throws(
+      () => batchSeparatorOf({ "datasource.batch_separator": "GO\nDROP" }),
+      /single line/,
+    );
+  });
 });
 
 describe("joinBatches", () => {
@@ -23,7 +30,7 @@ describe("joinBatches", () => {
   });
 
   it("drops empty chunks", () => {
-    assert.equal(joinBatches(["a", "", "  ", "b"], "GO"), "a\nGO\nb");
+    assert.equal(joinBatches(["a", "", "  ", "b"], "GO"), "a\nGO\n  \nGO\nb");
   });
 
   it("uses a newline when the separator is blank", () => {

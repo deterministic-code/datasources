@@ -8,7 +8,8 @@ import { generate as rustViewTypes } from "@deterministic-code/rust-generators/g
 import { generate as typescriptDatasourceTypes } from "@deterministic-code/typescript-generators/generate-datasource-types";
 import { generate as typescriptViewTypes } from "@deterministic-code/typescript-generators/generate-view-types";
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
-import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
+import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/generators-common/spec-types";
+import { DeterministicParser, type IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { caseDirectories, repositoriesPrefix, typesPrefix } from "./casing.ts";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
@@ -38,6 +39,13 @@ const repositoryPacks: Record<Dialect, (models: RepositoryModel[], settings: Rec
   csharp: csharpRepositories,
   typescript: typescriptRepositories,
   rust: rustRepositories,
+};
+
+const rustTypeStems = (spec: IDeterministic, settings: Record<string, string>): string[] => {
+  const casing = createCasingStrategy("rust", settings);
+  return [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) =>
+    casing.convertFileName(type.name),
+  );
 };
 
 const context = (request: GenerateRequest): GenerateContext => ({ reader: request.reader, settings: request.settings });
@@ -98,17 +106,15 @@ export const deterministic: CodeGenerationProvider = {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
     const models = planRepositories(spec, request.dialect, request.settings);
     const casing = createCasingStrategy(request.dialect, request.settings);
-    const typeFiles =
-      request.dialect === "rust"
-        ? (await deterministic.generateTypes(request))
-            .filter((entry) => entry.kind === "content" && entry.filename.endsWith(".rs"))
-            .map((entry) => entry.filename.replace(/^.*\//, "").replace(/\.rs$/, ""))
-        : [];
     return remap(
       place(
         repositoriesPrefix(request.dialect, casing),
         request.dialect === "rust"
-          ? rustRepositories(await withProviderWrites(request, models), request.settings, typeFiles)
+          ? rustRepositories(
+              await withProviderWrites(request, models),
+              request.settings,
+              rustTypeStems(spec, request.settings),
+            )
           : repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
       ),
       request.settings,

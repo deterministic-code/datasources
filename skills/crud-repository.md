@@ -1199,7 +1199,7 @@ let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
-let mut created = users_repo.create(&mut created).await.unwrap();
+let mut created = users_repo.create(created).await.unwrap();
 let by_id = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -1217,13 +1217,13 @@ let matches = users_repo
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
-let updated = users_repo.update(&mut created, None).await.unwrap();
+let updated = users_repo.update(created.clone(), None).await.unwrap();
 let renamed = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let removed = users_repo.delete(&created, None).await.unwrap();
+let removed = users_repo.delete(created.clone(), None).await.unwrap();
 let gone = users_repo
     .read_single_by_id(created.get("Id").unwrap())
     .await
@@ -1415,7 +1415,7 @@ users
         None,
     );
 let created = users
-    .create(&mut ada(
+    .create(ada(
         &seeded,
         encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
         encode_rows(&[seeded.engineering.clone()]),
@@ -1430,7 +1430,7 @@ let mut next = ada(
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(&mut next, None).await.unwrap();
+let saved = users.update(next, None).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
@@ -1439,7 +1439,7 @@ let updated = users
 let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+    .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
     .unwrap();
 ```
@@ -1607,15 +1607,15 @@ options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing:
 options.property_mappings = Some(std::sync::Arc::new(casing));
 options.ids = vec!["TenantId".into(), "Id".into()];
 options.row_converter = Some(RowTypeConverter::of::<Account>());
-let accounts_repo = CRUDRepository::new(connection, options).unwrap();
+let accounts_repo = CRUDRepository::<Row>::new(connection, options).unwrap();
 let mut key = datasources::Row::new();
 key.insert("TenantId".into(), Value::Int(1));
 key.insert("Id".into(), Value::Int(1));
 let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 ada.insert("Name".into(), Value::from("ada-v2"));
-let updated = accounts_repo.update(&mut ada, None).await.unwrap();
+let updated = accounts_repo.update(ada.clone(), None).await.unwrap();
 let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-let removed = accounts_repo.delete(&ada, None).await.unwrap();
+let removed = accounts_repo.delete(ada, None).await.unwrap();
 let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
 let mut other = datasources::Row::new();
 other.insert("TenantId".into(), Value::Int(2));
@@ -1827,7 +1827,7 @@ let stamp = Value::DateTime(
         .with_timezone(&chrono::Utc),
 );
 let version = Value::Binary(vec![]);
-let mut created = contact_row(&[
+let created = contact_row(&[
     ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
     ("Created", stamp.clone()),
     ("Updated", stamp.clone()),
@@ -1860,7 +1860,7 @@ let mut created = contact_row(&[
         ])]),
     ),
 ]);
-let created = contacts_repo.create(&mut created).await.unwrap();
+let created = contacts_repo.create(created).await.unwrap();
 let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };
@@ -2106,10 +2106,10 @@ role_options.entity_mapper =
 role_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
-let mut users_repo = CRUDRepository::new(connection.clone(), users_options).unwrap();
+let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
-    Arc::new(CRUDRepository::new(connection.clone(), type_options).unwrap());
-let user_roles_repo = Arc::new(CRUDRepository::new(connection, role_options).unwrap());
+    Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
+let user_roles_repo = Arc::new(CRUDRepository::<Row>::new(connection, role_options).unwrap());
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
@@ -2128,7 +2128,7 @@ users_repo.add_enriched(
 );
 let mut admin = datasources::Row::new();
 admin.insert("Name".into(), Value::from("admin"));
-let admin = user_types_repo.create(&mut admin).await.unwrap();
+let admin = user_types_repo.create(admin).await.unwrap();
 let mut admin_role = datasources::Row::new();
 admin_role.insert("Name".into(), Value::from("admin"));
 let mut editor_role = datasources::Row::new();
@@ -2140,7 +2140,7 @@ user.insert("Opened".into(), Value::from("2020-01-01T00:00:00.000Z"));
 user.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 user.insert("Version".into(), Value::Int(1));
 user.insert("Roles".into(), encode_rows(&[admin_role, editor_role]));
-let user = users_repo.create(&mut user).await.unwrap();
+let user = users_repo.create(user).await.unwrap();
 let mut viewer_role = datasources::Row::new();
 viewer_role.insert("Name".into(), Value::from("viewer"));
 let mut grace = datasources::Row::new();
@@ -2150,7 +2150,7 @@ grace.insert("Opened".into(), Value::from("2024-06-01T00:00:00.000Z"));
 grace.insert("UserType".into(), admin.get("Id").cloned().unwrap());
 grace.insert("Version".into(), Value::Int(1));
 grace.insert("Roles".into(), encode_rows(&[viewer_role]));
-let grace = users_repo.create(&mut grace).await.unwrap();
+let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
     .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
@@ -2160,7 +2160,7 @@ let mut loaded = users_repo
 let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
-let member = user_types_repo.create(&mut member).await.unwrap();
+let member = user_types_repo.create(member).await.unwrap();
 let mut owner_role = datasources::Row::new();
 owner_role.insert("Name".into(), Value::from("owner"));
 let mut kept_admin = datasources::Row::new();
@@ -2176,7 +2176,7 @@ loaded.insert(
 loaded.insert("Version".into(), Value::Int(2));
 let updated = users_repo
     .update(
-        &mut loaded,
+        loaded.clone(),
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
     )
     .await
@@ -2188,12 +2188,12 @@ let current = users_repo
     .unwrap();
 let stale = users_repo
     .update(
-        &mut loaded,
+        loaded.clone(),
         Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
     )
     .await
     .unwrap();
-let removed = users_repo.delete(&loaded, None).await.unwrap();
+let removed = users_repo.delete(loaded, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 

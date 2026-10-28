@@ -62,10 +62,11 @@ public static class VersionMigrations
             var seeds = index == 0 && up.OfType<CreateTableStatement>().Any()
                 ? SeedGenerator.Sections(dialect, current.Tables, current.Seeds, current.Mapping)
                 : [];
-            var upSql = $"-- Generated migration for {dialect}\n{Render(dialect, up)}";
+            var separator = JoinBatches.Of(settings);
+            var upSql = $"-- Generated migration for {dialect}\n{Render(dialect, up, separator)}";
             if (seeds.Count > 0)
-                upSql += "\n\n-- Seed data\n" + string.Join("", seeds.Select(block => block.EndsWith('\n') ? block : block + "\n"));
-            var downSql = $"-- Rollback migration for {dialect}\n{Render(dialect, down)}";
+                upSql += "\n\n-- Seed data\n" + JoinBatches.Join(seeds, separator);
+            var downSql = $"-- Rollback migration for {dialect}\n{Render(dialect, down, separator)}";
             output.Add(new($"{Pad(number)}_up.sql", Finalize(upSql, casing)));
             output.Add(new($"{Pad(number)}_down.sql", Finalize(downSql, casing)));
             previous = current;
@@ -137,8 +138,8 @@ public static class VersionMigrations
         return (SqlSchema.BuildLive(types, mapping), mapping, spec.DatasourceSeeds);
     }
 
-    static string Render(string dialect, IEnumerable<IStatement> statements) =>
-        string.Join("\n", statements.Select(statement => SqlDialect.RenderSql(dialect, statement)).Where(sql => sql != ""));
+    static string Render(string dialect, IEnumerable<IStatement> statements, string separator) =>
+        JoinBatches.Join(statements.Select(statement => SqlDialect.RenderSql(dialect, statement)), separator);
 
     static string Pad(int n) => n.ToString("0000");
 

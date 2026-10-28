@@ -33,6 +33,7 @@ pub fn for_dialect(
         return Ok(Vec::new());
     }
     let by_groups = by_groups::from(&types);
+    let separator = crate::join_batches::of(settings)?;
     let mut bodies = Vec::new();
     let mut drops = Vec::new();
     for t in &tables {
@@ -40,19 +41,13 @@ pub fn for_dialect(
         let (statements, names) = for_table(dialect, t, &mapping, &casing, &groups)?;
         let mut created = Vec::new();
         for statement in statements {
-            let sql = sql_dialect::render_sql(dialect, statement.as_ref())?;
-            if !sql.is_empty() {
-                created.push(sql);
-            }
+            created.push(sql_dialect::render_sql(dialect, statement.as_ref())?);
         }
         for name in names {
-            let drop = sql_dialect::render_sql(dialect, &table_statements::drop_routine(&name))?;
-            if !drop.is_empty() {
-                drops.push(drop);
-            }
+            drops.push(sql_dialect::render_sql(dialect, &table_statements::drop_routine(&name))?);
         }
-        if !created.is_empty() {
-            bodies.push(format!("-- {}\n\n{}", t.name, created.join("\n\n")));
+        if created.iter().any(|sql| !sql.is_empty()) {
+            bodies.push(format!("-- {}\n\n{}", t.name, crate::join_batches::join(&created, &separator)));
         }
     }
     if bodies.is_empty() {
@@ -61,11 +56,20 @@ pub fn for_dialect(
     Ok(vec![
         GenerateEntry::new(
             format!("{dialect}/migrations/{order:04}_stored_procedures_up.sql"),
-            with_nl(&format!("-- Stored procedures\n{}", bodies.join("\n\n")), &casing),
+            with_nl(
+                &format!("-- Stored procedures\n{}", crate::join_batches::join(&bodies, &separator)),
+                &casing,
+            ),
         ),
         GenerateEntry::new(
             format!("{dialect}/migrations/{order:04}_stored_procedures_down.sql"),
-            with_nl(&format!("-- DROP stored procedures\n{}", drops.join("\n")), &casing),
+            with_nl(
+                &format!(
+                    "-- DROP stored procedures\n{}",
+                    crate::join_batches::join(&drops, &separator)
+                ),
+                &casing,
+            ),
         ),
     ])
 }

@@ -74,7 +74,8 @@ pub fn files(
         } else {
             Vec::new()
         };
-        let mut up_sql = format!("-- Generated migration for {dialect}\n{}", render(dialect, &up)?);
+        let separator = crate::join_batches::of(settings)?;
+        let mut up_sql = format!("-- Generated migration for {dialect}\n{}", render(dialect, &up, &separator)?);
         if !up_procs.is_empty() {
             if !up_sql.ends_with('\n') {
                 up_sql.push('\n');
@@ -83,14 +84,9 @@ pub fn files(
         }
         if !seeds.is_empty() {
             up_sql.push_str("\n\n-- Seed data\n");
-            for block in seeds {
-                up_sql.push_str(&block);
-                if !block.ends_with('\n') {
-                    up_sql.push('\n');
-                }
-            }
+            up_sql.push_str(&crate::join_batches::join(&seeds, &separator));
         }
-        let mut down_sql = format!("-- Rollback migration for {dialect}\n{}", render(dialect, &down)?);
+        let mut down_sql = format!("-- Rollback migration for {dialect}\n{}", render(dialect, &down, &separator)?);
         if !down_procs.is_empty() {
             if !down_sql.ends_with('\n') {
                 down_sql.push('\n');
@@ -203,24 +199,18 @@ fn procedure_sql(
         let group = groups.get(&table.name).cloned().unwrap_or_default();
         let (statements, _) = generate_procedures::for_table(dialect, table, after_map, casing, &group)?;
         for statement in statements {
-            let sql = sql_dialect::render_sql(dialect, statement.as_ref())?;
-            if !sql.is_empty() {
-                parts.push(sql);
-            }
+            parts.push(sql_dialect::render_sql(dialect, statement.as_ref())?);
         }
     }
-    Ok(parts.join("\n"))
+    Ok(crate::join_batches::join(&parts, &crate::join_batches::of(settings)?))
 }
 
-fn render(dialect: &str, statements: &[DdlStatement]) -> Result<String> {
+fn render(dialect: &str, statements: &[DdlStatement], separator: &str) -> Result<String> {
     let mut parts = Vec::new();
     for statement in statements {
-        let sql = sql_dialect::render_sql(dialect, statement.as_statement())?;
-        if !sql.is_empty() {
-            parts.push(sql);
-        }
+        parts.push(sql_dialect::render_sql(dialect, statement.as_statement())?);
     }
-    Ok(parts.join("\n"))
+    Ok(crate::join_batches::join(&parts, separator))
 }
 
 fn finalize(text: &str, casing: &PackCasing) -> String {

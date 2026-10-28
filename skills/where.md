@@ -878,7 +878,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2260-L2266)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L2336-L2342)
 
 ```rust
 let equals = Where::binary("username", eq, "grace");
@@ -963,7 +963,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L408-L416)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L424-L432)
 
 ```typescript
 const where = new Where(

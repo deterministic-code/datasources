@@ -122,9 +122,6 @@ const readonlyOptions = (model: RepositoryModel): string => {
   return `    let mut options = ReadonlyRepositoryMappingOptions::default();\n    options.entity = ${rustString(model.entity)}.into();\n    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([\n        (${rustString(model.entity)}.into(), ${rustString(model.table)}.into()),\n    ])));\n${mapping}    options.read_properties = vec![${model.readProperties.map((name) => `${rustString(name)}.into()`).join(", ")}];`;
 };
 
-const nestedOf = (models: RepositoryModel[]): Set<string> =>
-  new Set(models.filter((model) => childModels(model).length > 0).map((model) => model.specName));
-
 const viaClone = (name: string): string => `Arc::clone(&${name})`;
 
 const fileStem = (specName: string, casing: ICasingStrategy): string =>
@@ -141,7 +138,7 @@ const rowRepoFn = (specName: string, casing: ICasingStrategy): string =>
 const readonlyFnName = (specName: string, casing: ICasingStrategy): string =>
   casing.convertFields(`${specName}_readonly_repository`);
 
-const enrichment = (item: PlannedEnrichment, linked: boolean, nested: Set<string>, casing: ICasingStrategy): string => {
+const enrichment = (item: PlannedEnrichment, linked: boolean, casing: ICasingStrategy): string => {
   const via = childField(casing, item.via);
   if (linked && isLinked(item)) {
     const link = childField(casing, item.link);
@@ -152,7 +149,7 @@ const enrichment = (item: PlannedEnrichment, linked: boolean, nested: Set<string
   return `repo.add_enriched(Enrichment::new(${rustString(item.destination)}, ${rustString(item.source)}, ${rustString(item.relatedKey)}, ${related}, ${type}), ${viaClone(via)}, None);`;
 };
 
-const childLets = (children: Array<{ specName: string; typeName: string }>, nested: Set<string>, casing: ICasingStrategy): string =>
+const childLets = (children: Array<{ specName: string; typeName: string }>, casing: ICasingStrategy): string =>
   children
     .map((child) => {
       const field = childField(casing, child.specName);
@@ -167,9 +164,9 @@ const readonlyChildren = (model: RepositoryModel): Array<{ specName: string; typ
   return [...rows].map(([specName, typeName]) => ({ specName, typeName }));
 };
 
-const readonlyFn = (model: RepositoryModel, nested: Set<string>, casing: ICasingStrategy): string => {
-  const lets = childLets(readonlyChildren(model), nested, casing);
-  const enrich = model.enrichments.map((item) => `        ${enrichment(item, false, nested, casing)}`).join("\n");
+const readonlyFn = (model: RepositoryModel, casing: ICasingStrategy): string => {
+  const lets = childLets(readonlyChildren(model), casing);
+  const enrich = model.enrichments.map((item) => `        ${enrichment(item, false, casing)}`).join("\n");
   const body = `${readonlyOptions(model)}\n${lets}${lets.length === 0 ? "" : "\n"}        let ${model.enrichments.length === 0 ? "repo" : "mut repo"} = ReadonlyRepository::<${model.typeName}>::new(connection, options)?;\n${enrich}${enrich.length === 0 ? "" : "\n"}        Ok(repo)`;
   return `pub fn ${readonlyFnName(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<${model.typeName}>> {\n${body}\n}`;
 };
@@ -276,10 +273,10 @@ ${where}
 `;
 };
 
-const rustRowFn = (model: RepositoryModel, nested: Set<string>, casing: ICasingStrategy): string => {
+const rustRowFn = (model: RepositoryModel, casing: ICasingStrategy): string => {
   const children = childModels(model);
-  const lets = childLets(children, nested, casing);
-  const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, nested, casing)}`).join("\n");
+  const lets = childLets(children, casing);
+  const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, casing)}`).join("\n");
   const mut = model.enrichments.length === 0 ? "" : "mut ";
   const body = model.enrichments.length === 0
     ? `${crudOptions(model)}\n    CRUDRepository::<datasources::Row>::new(connection, options)`
@@ -287,10 +284,10 @@ const rustRowFn = (model: RepositoryModel, nested: Set<string>, casing: ICasingS
   return `pub fn ${rowRepoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {\n${body}\n}`;
 };
 
-const plain = (model: RepositoryModel, nested: Set<string>, casing: ICasingStrategy): string =>
-  `${uses(model)}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<${model.typeName}>> {\n${crudOptions(model)}\n    CRUDRepository::<${model.typeName}>::new(connection, options)${rustZeros(model.createZeros)}\n}\n\n${rustRowFn(model, nested, casing)}\n\n${readonlyFn(model, nested, casing)}\n${rustOcc(model)}`;
+const plain = (model: RepositoryModel, casing: ICasingStrategy): string =>
+  `${uses(model)}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<${model.typeName}>> {\n${crudOptions(model)}\n    CRUDRepository::<${model.typeName}>::new(connection, options)${rustZeros(model.createZeros)}\n}\n\n${rustRowFn(model, casing)}\n\n${readonlyFn(model, casing)}\n${rustOcc(model)}`;
 
-const wrapped = (model: RepositoryModel, nested: Set<string>, casing: ICasingStrategy): string => {
+const wrapped = (model: RepositoryModel, casing: ICasingStrategy): string => {
   const type = `${model.typeName}Repository`;
   const children = childModels(model);
   const fields = children
@@ -301,8 +298,8 @@ const wrapped = (model: RepositoryModel, nested: Set<string>, casing: ICasingStr
     })
     .join("\n");
   const assign = children.map((child) => childField(casing, child.specName)).join(", ");
-  const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, nested, casing)}`).join("\n");
-  return `${uses(model)}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository<${model.typeName}>>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model), 4)}\n${childLets(children, nested, casing)}\n        let mut repo = CRUDRepository::<${model.typeName}>::new(Arc::clone(&connection), options)${rustZeros(model.createZeros)}?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository<${model.typeName}>;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<${model.typeName}>> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${rustRowFn(model, nested, casing)}\n\n${readonlyFn(model, nested, casing)}\n${rustOcc(model)}`;
+  const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, casing)}`).join("\n");
+  return `${uses(model)}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository<${model.typeName}>>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model), 4)}\n${childLets(children, casing)}\n        let mut repo = CRUDRepository::<${model.typeName}>::new(Arc::clone(&connection), options)${rustZeros(model.createZeros)}?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository<${model.typeName}>;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<${model.typeName}>> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${rustRowFn(model, casing)}\n\n${readonlyFn(model, casing)}\n${rustOcc(model)}`;
 };
 
 export const rustRepositories = (
@@ -311,12 +308,11 @@ export const rustRepositories = (
   typeFiles: string[] = [],
 ): GenerateEntry[] => {
   const casing = createCasingStrategy("rust", settings);
-  const nested = nestedOf(models);
   const typeStems = typeFiles.length === 0
     ? models.map((model) => casing.convertFileName(model.specName))
     : typeFiles;
   const files = models.map((model) =>
-    content(repositoryFile("rs", model.specName, casing), childModels(model).length === 0 ? plain(model, nested, casing) : wrapped(model, nested, casing)),
+    content(repositoryFile("rs", model.specName, casing), childModels(model).length === 0 ? plain(model, casing) : wrapped(model, casing)),
   );
   const register = models.map((model) => {
     const module = moduleStem(model.specName, casing);

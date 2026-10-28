@@ -66,6 +66,68 @@ fn omits_stored_procedure_migrations_on_sqlite_even_when_the_flag_is_true() {
     assert!(!files.iter().any(|f| f.contains("stored_procedures")));
 }
 
+fn up_sql(settings: HashMap<String, String>, types: &str) -> String {
+    let entries = generate_sql(&files(types, None, None), &settings, &["sqlite".into()]).unwrap();
+    entries
+        .into_iter()
+        .find(|entry| entry.filename.ends_with("sqlite/migrations/0001_initial_up.sql"))
+        .expect("expected sqlite/migrations/0001_initial_up.sql")
+        .content
+}
+
+#[test]
+fn defaults_to_a_whole_line_go_between_table_and_trigger() {
+    let sql = up_sql(HashMap::new(), TYPES_YAML);
+    assert!(Regex::new(r#";\nGO\nCREATE TRIGGER "trg_users_updated_at""#)
+        .unwrap()
+        .is_match(&sql));
+}
+
+#[test]
+fn puts_go_between_tables() {
+    let sql = up_sql(
+        HashMap::new(),
+        r#"
+types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+  - contact:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+        - updated:
+            type: datetime
+"#,
+    );
+    assert!(Regex::new(r#"trg_genders_updated_at[\s\S]*;\nGO\nCREATE TABLE "contacts""#)
+        .unwrap()
+        .is_match(&sql));
+}
+
+#[test]
+fn uses_the_configured_separator() {
+    let sql = up_sql(
+        HashMap::from([("datasource.batch_separator".into(), "BATCH".into())]),
+        TYPES_YAML,
+    );
+    assert!(Regex::new(r#";\nBATCH\nCREATE TRIGGER "trg_users_updated_at""#)
+        .unwrap()
+        .is_match(&sql));
+    assert!(!Regex::new(r"\nGO\n").unwrap().is_match(&sql));
+}
+
 #[test]
 fn throws_when_id_is_missing_is_id() {
     let error = generate_sql(

@@ -16,20 +16,21 @@ public static class GenerateProcedures
         var tables = SqlSchema.BuildLive(types, mapping).Where(SqlSchema.HasAuditColumns).ToList();
         if (tables.Count == 0) return [];
         var byGroups = ByGroups.From(types);
+        var separator = JoinBatches.Of(settings);
         var bodies = new List<string>();
         var drops = new List<string>();
         foreach (var t in tables)
         {
             var (statements, names) = ForTable(dialect, t, mapping, casing, byGroups.GetValueOrDefault(t.Name) ?? []);
-            var created = statements.Select(statement => SqlDialect.RenderSql(dialect, statement)).Where(sql => sql != "").ToList();
-            drops.AddRange(names.Select(name => SqlDialect.RenderSql(dialect, TableStatements.DropRoutine(name))).Where(sql => sql != ""));
-            if (created.Count > 0) bodies.Add($"-- {t.Name}\n\n{string.Join("\n\n", created)}");
+            var created = statements.Select(statement => SqlDialect.RenderSql(dialect, statement)).ToList();
+            drops.AddRange(names.Select(name => SqlDialect.RenderSql(dialect, TableStatements.DropRoutine(name))));
+            if (created.Any(sql => sql != "")) bodies.Add($"-- {t.Name}\n\n{JoinBatches.Join(created, separator)}");
         }
         if (bodies.Count == 0) return [];
         return
         [
-            new($"{dialect}/migrations/{order:0000}_stored_procedures_up.sql", WithNl($"-- Stored procedures\n{string.Join("\n\n", bodies)}", casing)),
-            new($"{dialect}/migrations/{order:0000}_stored_procedures_down.sql", WithNl($"-- DROP stored procedures\n{string.Join("\n", drops)}", casing)),
+            new($"{dialect}/migrations/{order:0000}_stored_procedures_up.sql", WithNl($"-- Stored procedures\n{JoinBatches.Join(bodies, separator)}", casing)),
+            new($"{dialect}/migrations/{order:0000}_stored_procedures_down.sql", WithNl($"-- DROP stored procedures\n{JoinBatches.Join(drops, separator)}", casing)),
         ];
     }
 
