@@ -1,4 +1,6 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/generators-common/spec-types";
+import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childField, children as childModels, isLinked, pluralSnake, registryFile, repositoryFile, rustIdent, rustModLine, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { dialectsOf, pad, quote, writeList } from "./writeLists.ts";
@@ -305,12 +307,12 @@ const wrapped = (model: RepositoryModel, casing: ICasingStrategy): string => {
 export const rustRepositories = (
   models: RepositoryModel[],
   settings: Record<string, string>,
-  typeFiles: string[] = [],
+  spec?: IDeterministic,
 ): GenerateEntry[] => {
   const casing = createCasingStrategy("rust", settings);
-  const typeStems = typeFiles.length === 0
+  const typeStems = spec === undefined
     ? models.map((model) => casing.convertFileName(model.specName))
-    : typeFiles;
+    : [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name));
   const files = models.map((model) =>
     content(repositoryFile("rs", model.specName, casing), childModels(model).length === 0 ? plain(model, casing) : wrapped(model, casing)),
   );

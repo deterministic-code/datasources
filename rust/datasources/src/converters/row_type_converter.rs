@@ -72,36 +72,56 @@ impl RowTypeConverter {
     pub fn reverse_convert(&self, row: &Row) -> Result<Row> {
         TypeConverter::reverse_convert(self, row)
     }
+
+    fn type_key(value: &Value) -> Option<&'static str> {
+        match value {
+            Value::Bool(_) => Some("bool"),
+            Value::DateTime(_) => Some("datetime"),
+            Value::Uuid(_) => Some("uuid"),
+            Value::Decimal(_) => Some("decimal"),
+            Value::Binary(_) => Some("binary"),
+            Value::Text(text) if text.contains('T') && text.contains('-') => Some("datetime"),
+            _ => None,
+        }
+    }
+
+    fn apply_cell(&self, key: &str, value: &Value, reverse: bool) -> Result<Value> {
+        if let Some(converter) = self.fields.get(key) {
+            return if reverse {
+                converter.reverse_convert(value)
+            } else {
+                converter.convert(value)
+            };
+        }
+        let typed = Self::type_key(value).and_then(|ty| self.types.get(ty));
+        match typed {
+            Some(converter) if reverse => converter.reverse_convert(value),
+            Some(converter) => converter.convert(value),
+            None if reverse => match (value, self.types.get("uuid")) {
+                (Value::Text(_), Some(converter)) => {
+                    let converted = converter.reverse_convert(value)?;
+                    Ok(match converted {
+                        Value::Uuid(_) => converted,
+                        _ => value.clone(),
+                    })
+                }
+                _ => Ok(value.clone()),
+            },
+            None => Ok(value.clone()),
+        }
+    }
 }
 
 impl TypeConverter<Row, Row> for RowTypeConverter {
     fn convert(&self, from: &Row) -> Result<Row> {
         from.iter()
-            .map(|(key, value)| {
-                Ok((
-                    key.clone(),
-                    self.fields
-                        .get(key)
-                        .map(|converter| converter.convert(value))
-                        .transpose()?
-                        .unwrap_or_else(|| value.clone()),
-                ))
-            })
+            .map(|(key, value)| Ok((key.clone(), self.apply_cell(key, value, false)?)))
             .collect()
     }
 
     fn reverse_convert(&self, to: &Row) -> Result<Row> {
         to.iter()
-            .map(|(key, value)| {
-                Ok((
-                    key.clone(),
-                    self.fields
-                        .get(key)
-                        .map(|converter| converter.reverse_convert(value))
-                        .transpose()?
-                        .unwrap_or_else(|| value.clone()),
-                ))
-            })
+            .map(|(key, value)| Ok((key.clone(), self.apply_cell(key, value, true)?)))
             .collect()
     }
 }
@@ -159,6 +179,36 @@ mod tests {
                 .convert(&record(&[("is_enabled", Value::Int(1))]))
                 .unwrap()["is_enabled"],
             Value::Bool(true)
+        );
+    }
+
+    struct UuidAsText;
+
+    impl TypeConverter<Value, Value> for UuidAsText {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(from.clone())
+        }
+
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(match to {
+                Value::Uuid(id) => Value::from(id.to_string()),
+                other => other.clone(),
+            })
+        }
+    }
+
+    #[test]
+    fn types_catalog_reverses_uuid_by_value() {
+        let id = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let converter = RowTypeConverter::new(Vec::new()).with_types(HashMap::from([(
+            "uuid".into(),
+            Box::new(UuidAsText) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+        )]));
+        assert_eq!(
+            converter
+                .reverse_convert(&record(&[("uuid", Value::Uuid(id))]))
+                .unwrap()["uuid"],
+            Value::from(id.to_string())
         );
     }
 }

@@ -11,3 +11,7 @@ static REGISTRY: Mutex<Option<HashMap<String, FactoryPair>>> = Mutex::new(None);
 pub(crate) fn registry() -> MutexGuard<'static, Option<HashMap<String, FactoryPair>>> {
     REGISTRY.lock().expect("registry")
 }
+
+pub(crate) fn registered_driver(name: &str) -> Option<Arc<dyn Driver>> {
+    registry().as_ref()?.get(name).map(|pair| pair.driver.clone())
+}

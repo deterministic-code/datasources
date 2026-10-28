@@ -227,7 +227,9 @@ async fn reads_user_by_guid_username_and_created() {
     assert_eq!(by_id.get("Active"), Some(&Value::Bool(true)));
     assert_eq!(
         by_id.get("Opened"),
-        Some(&Value::from("2020-01-01T00:00:00.000Z"))
+        Some(&Value::DateTime(
+            Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap()
+        ))
     );
     assert_eq!(by_login.len(), 1);
     assert_eq!(by_login[0].get("Login"), Some(&Value::from("ada")));
@@ -257,6 +259,7 @@ async fn execute_sql(connection: &Arc<dyn Connection>, sql: &str) {
 
 mod user_view {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
+    use chrono::{TimeZone, Utc};
     use datasources::{
         create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
         DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Row, Value, Where,
@@ -354,7 +357,9 @@ mod user_view {
         assert_eq!(users_view.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(
             users_view.get("Opened"),
-            Some(&Value::from("2020-01-01T00:00:00.000Z"))
+            Some(&Value::DateTime(
+                Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap()
+            ))
         );
         assert!(users_view.get("UserTypeId").is_none());
     }

@@ -99,7 +99,7 @@ impl ToCell for Vec<u8> {
 
 impl ToCell for uuid::Uuid {
     fn to_cell(&self) -> Value {
-        Value::from(self.to_string())
+        Value::from(*self)
     }
 }
 
@@ -200,6 +200,17 @@ impl<T: FromCell> FromCell for Option<T> {
             None | Some(Value::Null) => None,
             other => Some(T::from_cell(other)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uuid_to_cell_boxes_value_uuid() {
+        let id = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        assert_eq!(id.to_cell(), Value::Uuid(id));
     }
 }
 

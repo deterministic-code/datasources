@@ -833,6 +833,8 @@ types:
         - note:
             type: string
             default_value: ""
+        - latitude:
+            type: integer
         - parent_id:
             references: item.id
 `,
@@ -852,6 +854,7 @@ types: []
     const rust = rustRepositories(models, {});
     const typescript = typescriptRepositories(models, {});
     expect(textOf(rust, "itemRepository.rs")).toContain("Value::from(false)");
+    expect(textOf(rust, "itemRepository.rs")).not.toContain("Value::from(0)");
     expect(textOf(typescript, "itemRepository.ts")).toContain("is_starred: false");
   });
 
