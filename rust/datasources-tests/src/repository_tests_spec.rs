@@ -672,7 +672,7 @@ pub async fn run(
     options.entity = spec.type_spec.table.clone();
     options.row_converter = Some(mapping_of(&spec, dialect));
     apply_mappers(&mut options, &spec, dialect);
-    let repo = CRUDRepository::new(connection, options).unwrap();
+    let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let logs = Arc::new(Mutex::new(Vec::<String>::new()));
     let middleware: Arc<dyn CommandMiddleware> = Arc::new(
         ConsoleCommandMiddleware::with_sink(
@@ -699,7 +699,7 @@ pub async fn run(
                 create: Some(create),
                 ..
             } => {
-                repo.create(&mut domain_record(&create.row, &spec.type_spec.mappings))
+                repo.create(domain_record(&create.row, &spec.type_spec.mappings))
                     .await
                     .unwrap();
             }
@@ -757,9 +757,9 @@ pub async fn run(
                 update: Some(update),
                 ..
             } => {
-                let mut updated_row_1 = domain_record(&update.row, &spec.type_spec.mappings);
+                let updated_row_1 = domain_record(&update.row, &spec.type_spec.mappings);
                 let response = repo
-                    .update(&mut updated_row_1, None)
+                    .update(updated_row_1, None)
                     .await
                     .unwrap();
                 assert_affected(
@@ -773,10 +773,10 @@ pub async fn run(
                 ..
             } => {
                 let where_clause = where_of(&mapping, &update_by.where_clause);
-                let mut updated_row_2 = domain_record(&update_by.row, &spec.type_spec.mappings);
+                let updated_row_2 = domain_record(&update_by.row, &spec.type_spec.mappings);
                 let response = repo
                     .update(
-                        &mut updated_row_2,
+                        updated_row_2,
                         Some(&where_clause),
                     )
                     .await
@@ -793,7 +793,7 @@ pub async fn run(
             } => {
                 let mut row = Row::new();
                 row.insert("id".into(), yaml_value(&delete.id));
-                let response = repo.delete(&row, None).await.unwrap();
+                let response = repo.delete(row, None).await.unwrap();
                 assert_affected(
                     &format!("{} DELETE", spec.name),
                     response.rows_affected,
@@ -805,7 +805,7 @@ pub async fn run(
                 ..
             } => {
                 let where_clause = where_of(&mapping, &delete_by.where_clause);
-                let response = repo.delete(&Row::new(), Some(&where_clause)).await.unwrap();
+                let response = repo.delete(Row::new(), Some(&where_clause)).await.unwrap();
                 assert_affected(
                     &format!("{} DELETEBY", spec.name),
                     response.rows_affected,

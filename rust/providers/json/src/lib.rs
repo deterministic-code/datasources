@@ -26,7 +26,7 @@ mod tests {
     fn crud(conn: Arc<JsonConnection>) -> CRUDRepository {
         let mut options = CRUDRepositoryOptions::default();
         options.ids = vec![];
-        CRUDRepository::new(conn, options).expect("repo")
+        CRUDRepository::<Row>::new(conn, options).expect("repo")
     }
 
     fn rec(id: i64, name: &str) -> Row {
@@ -67,19 +67,19 @@ mod tests {
             .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());
-        let created = repo.create(&mut rec(2, "b")).await.unwrap();
+        let created = repo.create(rec(2, "b")).await.unwrap();
         assert_eq!(created.get("id"), Some(&Value::Int(2)));
-        let mut updated_row_1 = rec(2, "B");
-        let updated = repo.update(&mut updated_row_1, None).await.unwrap();
+        let updated_row_1 = rec(2, "B");
+        let updated = repo.update(updated_row_1, None).await.unwrap();
         assert_eq!(updated.rows_affected, 0);
-        let mut updated_row_2 = rec(2, "C");
+        let updated_row_2 = rec(2, "C");
         let updated_by_where = repo
-            .update(&mut updated_row_2, Some(&WhereText::new("{\"id\":2}")))
+            .update(updated_row_2, Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
         assert_eq!(updated_by_where.rows_affected, 1);
         let removed = repo
-            .delete(&rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
+            .delete(rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
             .await
             .unwrap();
         assert_eq!(removed.rows_affected, 0);
@@ -115,11 +115,11 @@ mod tests {
             .await
             .unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        let rolled_back = repo.create(&mut rec(9, "t")).await.unwrap();
+        let rolled_back = repo.create(rec(9, "t")).await.unwrap();
         assert_eq!(rolled_back.get("id"), Some(&Value::Int(9)));
         txn.abort().await.unwrap();
         let txn = conn.start_transaction(None).await.unwrap();
-        let committed = repo.create(&mut rec(8, "c")).await.unwrap();
+        let committed = repo.create(rec(8, "c")).await.unwrap();
         assert_eq!(committed.get("id"), Some(&Value::Int(8)));
         txn.commit().await.unwrap();
         conn.close().await.unwrap();
@@ -132,7 +132,7 @@ mod tests {
             Some(serde_json::json!({})),
         ));
         memory.open().await.unwrap();
-        let created = crud(memory.clone()).create(&mut rec(1, "a")).await.unwrap();
+        let created = crud(memory.clone()).create(rec(1, "a")).await.unwrap();
         assert_eq!(created.get("id"), Some(&Value::Int(1)));
         *memory.state.data.lock().unwrap() = JsonValue::Null;
         memory.collection_mut(|_| {});
@@ -200,7 +200,7 @@ mod tests {
             .await
             .is_err());
         let created = crud(closed.clone())
-            .create(&mut rec(1, "a"))
+            .create(rec(1, "a"))
             .await
             .expect("create opens");
         assert!(closed.is_open());

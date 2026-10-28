@@ -38,6 +38,7 @@ export type RepositoryModel = {
   optionsByProvider?: Record<string, RepositoryOptionsModel>;
   optimisticConcurrency?: OptimisticConcurrency;
   enrichments: PlannedEnrichment[];
+  removeFields?: string[];
 };
 
 export type RepositoryOptionsModel = Pick<

@@ -29,12 +29,12 @@ async fn omits_null_datetime_and_version() {
     options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
     options.ids = vec!["Id".into()];
     options.row_converter = Some(item_converter());
-    let repo = CRUDRepository::new(conn, options).unwrap();
+    let repo = CRUDRepository::<Row>::new(conn, options).unwrap();
     let mut omitted = Row::new();
     omitted.insert("Name".into(), Value::from("ada"));
     omitted.insert("Created".into(), Value::Null);
     omitted.insert("Version".into(), Value::Null);
-    let mut omitted = repo.create(&mut omitted).await.unwrap();
+    let mut omitted = repo.create(omitted).await.unwrap();
     assert!(matches!(omitted.get("Id"), Some(Value::Int(id)) if *id > 0));
     let stored = repo
         .read_single_by_id(omitted.get("Id").unwrap())
@@ -42,7 +42,7 @@ async fn omits_null_datetime_and_version() {
         .unwrap()
         .unwrap();
     omitted.insert("Name".into(), Value::from("ada-v2"));
-    let updated = repo.update(&mut omitted, None).await.unwrap();
+    let updated = repo.update(omitted.clone(), None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let kept = repo
         .read_single_by_id(omitted.get("Id").unwrap())
@@ -54,7 +54,7 @@ async fn omits_null_datetime_and_version() {
     explicit.insert("Name".into(), Value::from("grace"));
     explicit.insert("Created".into(), Value::DateTime(created));
     explicit.insert("Version".into(), Value::Binary(vec![9, 9]));
-    let explicit = repo.create(&mut explicit).await.unwrap();
+    let explicit = repo.create(explicit).await.unwrap();
     assert!(matches!(explicit.get("Id"), Some(Value::Int(id)) if *id > 0));
     let written = repo
         .read_single_by_id(explicit.get("Id").unwrap())

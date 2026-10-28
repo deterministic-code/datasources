@@ -4,7 +4,7 @@ use super::connection::SqliteConnection;
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
-    ICRUDRepository, IReadonlyRepository, Mapper, Operator, TypeConverter, Value, Where,
+    ICRUDRepository, IReadonlyRepository, Mapper, Operator, Row, TypeConverter, Value, Where,
 };
 use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
@@ -86,7 +86,7 @@ async fn maps_join_rows_to_nested_contacts() {
     cells.entity_mapper = Some(Arc::new(join_entity()));
     cells.property_mappings = Some(Arc::new(columns()));
     cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
-    let join_repo = CRUDRepository::new(conn, cells).expect("join repo");
+    let join_repo = CRUDRepository::<Row>::new(conn, cells).expect("join repo");
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
         join_repo
@@ -132,7 +132,7 @@ fn contact_repo(
     options.object_converter = Some(Box::new(
         MetaDataRowTypeConverter::new(Vec::new()).with_references(references(), Box::new(columns())),
     ));
-    CRUDRepository::new(connection, options).expect("contacts repo")
+    CRUDRepository::<Row>::new(connection, options).expect("contacts repo")
 }
 
 fn contact_row(pairs: &[(&str, Value)]) -> datasources::Row {
@@ -205,7 +205,7 @@ async fn writes_enriched_contact() {
             .with_timezone(&chrono::Utc),
     );
     let version = Value::Binary(vec![]);
-    let mut created = contact_row(&[
+    let created = contact_row(&[
         ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
         ("Created", stamp.clone()),
         ("Updated", stamp.clone()),
@@ -238,7 +238,7 @@ async fn writes_enriched_contact() {
             ])]),
         ),
     ]);
-    let created = contacts_repo.create(&mut created).await.unwrap();
+    let created = contacts_repo.create(created).await.unwrap();
     let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
         panic!("expected insert id");
     };

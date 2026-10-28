@@ -35,7 +35,7 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
     async fn create(&self, items: &mut [Row]) -> Result<Response> {
         let repo = self.repo()?;
         for item in items.iter_mut() {
-            repo.create(item).await?;
+            *item = repo.create(item.clone()).await?;
         }
         Ok(Response::new(Value::Null, items.len() as i64, None))
     }
@@ -49,8 +49,8 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let mut item = item.clone();
-            let response = repo.update(&mut item, by_where).await?;
+            let item = item.clone();
+            let response = repo.update(item, by_where).await?;
             result = response.result;
             rows_affected += response.rows_affected;
         }
@@ -66,7 +66,7 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
         let mut result = Value::Null;
         let mut rows_affected = 0;
         for item in items {
-            let response = repo.delete(item, by_where).await?;
+            let response = repo.delete(item.clone(), by_where).await?;
             result = response.result;
             rows_affected += response.rows_affected;
         }

@@ -97,20 +97,20 @@ mod tests {
             None,
             false,
         ));
-        let children = Arc::new(CRUDRepository::memory(vec![]));
-        let mut parents = CRUDRepository::memory_with(vec![], Some(write));
-        let mut parent = Row::new();
-        let created = parents.create(&mut parent).await.unwrap();
+        let children = Arc::new(CRUDRepository::<Row>::memory(vec![]));
+        let mut parents = CRUDRepository::<Row>::memory_with(vec![], Some(write));
+        let parent = Row::new();
+        let created = parents.create(parent).await.unwrap();
         let mut child = Row::new();
         child.insert("parent_id".into(), created.get("id").unwrap().clone());
         child.insert("label".into(), Value::from("a"));
-        children.create(&mut child).await.unwrap();
+        children.create(child).await.unwrap();
         parents.add_enriched(
             Enrichment::new("children", "id", "parent_id", None, crate::EnrichmentPropertyType::List),
             children.clone(),
             None,
         );
-        parents.delete(&created, None).await.unwrap();
+        parents.delete(created, None).await.unwrap();
         let left = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].get("label"), Some(&Value::from("a")));

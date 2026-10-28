@@ -70,10 +70,10 @@ async fn creates_using_dynamic_after_register() {
     let mut created = Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let mut created = users.create(&mut created).await.unwrap();
+    let created = users.create(created).await.unwrap();
     let loaded: Option<Row> = users.read_single(None, None, None).await.unwrap();
-    let updated: Response = users.update(&mut created, None).await.unwrap();
-    let deleted: Response = users.delete(&created, None).await.unwrap();
+    let updated: Response = users.update(created.clone(), None).await.unwrap();
+    let deleted: Response = users.delete(created.clone(), None).await.unwrap();
     assert_eq!(
         matches!(created.get("Id"), Some(Value::Int(id)) if *id > 0),
         true
@@ -99,7 +99,7 @@ async fn writes_user_through_plural_name() {
     let mut created = datasources::Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let mut created = users_repo.create(&mut created).await.unwrap();
+    let mut created = users_repo.create(created).await.unwrap();
     let by_id = users_repo
         .read_single_by_id(created.get("Id").unwrap())
         .await
@@ -114,13 +114,13 @@ async fn writes_user_through_plural_name() {
         .try_collect::<Vec<_>>().await
         .unwrap();
     created.insert("Username".into(), Value::from("ada-v2"));
-    let updated = users_repo.update(&mut created, None).await.unwrap();
+    let updated = users_repo.update(created.clone(), None).await.unwrap();
     let renamed = users_repo
         .read_single_by_id(created.get("Id").unwrap())
         .await
         .unwrap()
         .unwrap();
-    let removed = users_repo.delete(&created, None).await.unwrap();
+    let removed = users_repo.delete(created.clone(), None).await.unwrap();
     let gone = users_repo
         .read_single_by_id(created.get("Id").unwrap())
         .await
@@ -152,7 +152,7 @@ async fn reads_through_access_create_readonly() {
     let mut created = datasources::Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let created = ds.as_ref().users().create(&mut created).await.unwrap();
+    let created = ds.as_ref().users().create(created).await.unwrap();
     let users_repo = ds
         .as_ref()
         .access("users", None)

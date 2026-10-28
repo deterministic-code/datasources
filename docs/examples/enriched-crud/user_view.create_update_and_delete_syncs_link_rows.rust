@@ -20,7 +20,7 @@ users
         None,
     );
 let created = users
-    .create(&mut ada(
+    .create(ada(
         &seeded,
         encode_rows(&[seeded.admin_role.clone(), seeded.editor_role.clone()]),
         encode_rows(&[seeded.engineering.clone()]),
@@ -35,7 +35,7 @@ let mut next = ada(
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(&mut next, None).await.unwrap();
+let saved = users.update(next, None).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
@@ -44,6 +44,6 @@ let updated = users
 let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(&record(&[("id", created.get("id").unwrap().clone())]), None)
+    .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
     .unwrap();

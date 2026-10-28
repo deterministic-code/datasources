@@ -393,6 +393,8 @@ types:
         - phone_type.description
       mapping:
         name: phone_type_name
+      remove_fields:
+        - phone_type_id
       fields:
         - attributes:
             type: attribute_map{}
@@ -411,6 +413,8 @@ types:
         - gender.name
       mapping:
         gender.name: gender_type_name
+      remove_fields:
+        - gender_type_id
       fields:
         - addresses:
             type: address[]

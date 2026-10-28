@@ -35,7 +35,7 @@ async fn main() {
         Value::from("00000000-0000-0000-0000-000000000001"),
     );
     row.insert("version".into(), Value::from(vec![0u8]));
-    let created: Row = contacts.create(&mut row).await.expect("create");
+    let created: Row = contacts.create(row).await.expect("create");
     assert_eq!(
         created.get("first_name").map(Value::wire_text).as_deref(),
         Some("Ada")

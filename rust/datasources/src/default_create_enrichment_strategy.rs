@@ -48,7 +48,7 @@ pub(crate) async fn create_children(
         if let Some(key) = &key {
             row.insert(enrichment.related_key.clone(), key.clone());
         }
-        writer.create(row).await?;
+        *row = writer.create(row.clone()).await?;
     }
     parent.insert(
         enrichment.destination_property.clone(),
@@ -75,7 +75,7 @@ pub(crate) async fn create_links(
         let mut row = Row::new();
         row.insert(association.parent.clone(), parent_key.clone());
         row.insert(association.related.clone(), id);
-        writer.create(&mut row).await?;
+        writer.create(row.clone()).await?;
     }
     Ok(())
 }

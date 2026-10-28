@@ -225,10 +225,10 @@ impl DefaultWriteEnrichmentStrategy {
             for row in &mut children {
                 match mode {
                     WriteMode::Create => {
-                        writer.create(row).await?;
+                        *row = writer.create(row.clone()).await?;
                     }
                     WriteMode::Update => {
-                        writer.update(row, None).await?;
+                        writer.update(row.clone(), None).await?;
                     }
                     WriteMode::Delete => {}
                 }

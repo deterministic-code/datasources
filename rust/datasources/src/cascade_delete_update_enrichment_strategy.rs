@@ -25,8 +25,8 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         for row in &existing {
             match children_where(writer.as_ref(), enrichment, parent) {
-                Some(clause) => writer.delete(row, Some(&clause)).await?,
-                None => writer.delete(row, None).await?,
+                Some(clause) => writer.delete(row.clone(), Some(&clause)).await?,
+                None => writer.delete(row.clone(), None).await?,
             };
         }
         create_children(writer.as_ref(), enrichment, parent).await
@@ -67,7 +67,7 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
                 Operator::equals(association.parent.clone(), parent_key.clone()),
                 Operator::equals(association.related.clone(), related),
             ));
-            writer.delete(row, Some(&clause)).await?;
+            writer.delete(row.clone(), Some(&clause)).await?;
         }
         create_links(writer.as_ref(), enrichment, parent).await
     }

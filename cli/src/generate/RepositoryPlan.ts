@@ -81,6 +81,7 @@ export const planRepositories = (
       return [];
     const authored = viewByTable.get(table.name) ?? types.get(table.name);
     if (authored === undefined) throw new Error(`${table.name}: no matching type in types.yaml`);
+    const removed = (authored as Type & { removeFields?: string[] }).removeFields ?? [];
     const full = expanded.get(authored.name) as Type;
     const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
@@ -119,6 +120,7 @@ export const planRepositories = (
           .map((field) => property(field.name)),
         optimisticConcurrency: concurrencyToken(table, tableType, property),
         enrichments: relations(authored, full, casing, types, expanded, repoName, identity),
+        removeFields: removed.map(property),
       },
     ];
   });

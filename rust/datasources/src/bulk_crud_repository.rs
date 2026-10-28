@@ -53,7 +53,7 @@ impl BulkCRUDRepository {
             .clone()
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
         let use_transaction = write.use_transaction();
-        let crud = Arc::new(CRUDRepository::new(Arc::clone(&connection), options.clone())?);
+        let crud = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection), options.clone())?);
         let _ = crud.column(
             crud.id_names()
                 .first()
@@ -82,7 +82,7 @@ impl BulkCRUDRepository {
             .clone()
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
         let use_transaction = resolved.use_transaction();
-        let crud = Arc::new(CRUDRepository::memory_with(items, write));
+        let crud = Arc::new(CRUDRepository::<Row>::memory_with(items, write));
         let strategy = Arc::new(SingleCommandIBulkWriteStrategy::new());
         strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
         Self {
@@ -116,13 +116,6 @@ impl BulkCRUDRepository {
         self
     }
 
-    async fn ensure_open(&self) -> Result<()> {
-        if self.crud.memory_items().is_some() || self.crud.connection.is_open() {
-            return Ok(());
-        }
-        self.crud.connection.open().await
-    }
-
     async fn in_transaction<T, F, Fut>(
         transactional: bool,
         connection: Arc<dyn Connection>,
@@ -132,6 +125,9 @@ impl BulkCRUDRepository {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T>>,
     {
+        if !connection.is_open() {
+            connection.open().await?;
+        }
         if !transactional {
             return write().await;
         }
@@ -153,7 +149,6 @@ impl BulkCRUDRepository {
     }
 
     pub async fn create_bulk(&self, items: &mut [Row]) -> Result<Vec<Row>> {
-        self.ensure_open().await?;
         Self::in_transaction(
             self.use_transaction || !items.is_empty(),
             Arc::clone(&self.crud.connection),
@@ -183,7 +178,6 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        self.ensure_open().await?;
         let response = Self::in_transaction(
             self.use_transaction,
             Arc::clone(&self.crud.connection),
@@ -208,7 +202,6 @@ impl BulkCRUDRepository {
         items: &[Row],
         by_where: Option<&dyn IWhere>,
     ) -> Result<Response> {
-        self.ensure_open().await?;
         let response = Self::in_transaction(
             self.use_transaction,
             Arc::clone(&self.crud.connection),
@@ -284,15 +277,15 @@ impl ICRUDRepository for BulkCRUDRepository {
         self.crud.add_middleware(middleware);
     }
 
-    async fn create(&self, item: &mut Row) -> Result<Row> {
+    async fn create(&self, item: Row) -> Result<Row> {
         self.crud.create(item).await
     }
 
-    async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.crud.update(item, by_where).await
     }
 
-    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.crud.delete(item, by_where).await
     }
 

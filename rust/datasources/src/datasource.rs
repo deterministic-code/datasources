@@ -2,6 +2,7 @@ use crate::command::Command;
 use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
+use crate::entity::Entity;
 use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
 use crate::crud_repository::CRUDRepository;
@@ -13,6 +14,7 @@ use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::repository_access::RepositoryAccess;
 use crate::repository_factory::RepositoryFactory;
 use crate::result::Result;
+use crate::row::Row;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -37,12 +39,12 @@ pub trait Datasource: Send + Sync {
         &self,
         connection: Arc<dyn Connection>,
         options: CRUDRepositoryOptions,
-    ) -> Arc<dyn ICRUDRepository>;
+    ) -> Arc<dyn ICRUDRepository<Row>>;
     fn readonly_repository_from(
         &self,
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryMappingOptions,
-    ) -> Arc<dyn IReadonlyRepository>;
+    ) -> Arc<dyn IReadonlyRepository<Row>>;
     fn repositories(&self) -> &RepositoryFactory;
 }
 
@@ -51,34 +53,45 @@ impl dyn Datasource {
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<CRUDRepositoryOptions>,
-    ) -> Arc<dyn ICRUDRepository> {
+    ) -> Arc<dyn ICRUDRepository<Row>> {
         let bound = self.bind_connection(connection);
         self.repository_from(bound, apply_crud::<T>(self, options))
+    }
+
+    pub fn create_typed_repository<T: Entity + ConvertSchema + 'static>(
+        &self,
+        connection: Option<Arc<dyn Connection>>,
+        options: Option<CRUDRepositoryOptions>,
+    ) -> Arc<dyn ICRUDRepository<T>> {
+        let bound = self.bind_connection(connection);
+        Arc::new(
+            CRUDRepository::<T>::new(bound, apply_crud::<T>(self, options)).expect("repository"),
+        )
     }
 
     pub fn create_readonly_repository<T: ConvertSchema + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<ReadonlyRepositoryMappingOptions>,
-    ) -> Arc<dyn IReadonlyRepository> {
+    ) -> Arc<dyn IReadonlyRepository<Row>> {
         let bound = self.bind_connection(connection);
         self.readonly_repository_from(bound, apply_readonly::<T>(self, options))
     }
 
-    pub fn create_repository_by_name(
+    pub fn create_repository_by_name<T: Entity>(
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn ICRUDRepository>> {
+    ) -> Result<Arc<dyn ICRUDRepository<T>>> {
         self.repositories()
             .create_named(name, self.bind_connection(connection))
     }
 
-    pub fn create_readonly_repository_by_name(
+    pub fn create_readonly_repository_by_name<T: Entity>(
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,
-    ) -> Result<Arc<dyn IReadonlyRepository>> {
+    ) -> Result<Arc<dyn IReadonlyRepository<T>>> {
         self.repositories()
             .create_readonly_named(name, self.bind_connection(connection))
     }
@@ -207,7 +220,7 @@ impl Datasource for BuiltDatasource {
         connection: Arc<dyn Connection>,
         options: CRUDRepositoryOptions,
     ) -> Arc<dyn ICRUDRepository> {
-        Arc::new(CRUDRepository::new(connection, options).expect("repository"))
+        Arc::new(CRUDRepository::<Row>::new(connection, options).expect("repository"))
     }
 
     fn readonly_repository_from(
@@ -215,7 +228,7 @@ impl Datasource for BuiltDatasource {
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository> {
-        Arc::new(ReadonlyRepository::new(connection, options).expect("repository"))
+        Arc::new(ReadonlyRepository::<Row>::new(connection, options).expect("repository"))
     }
 
     fn repositories(&self) -> &RepositoryFactory {

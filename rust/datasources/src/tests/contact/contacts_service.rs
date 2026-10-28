@@ -131,15 +131,15 @@ impl IReadonlyRepository for ContactsService {
 
 #[async_trait]
 impl ICRUDRepository for ContactsService {
-    async fn create(&self, item: &mut Row) -> Result<Row> {
+    async fn create(&self, item: Row) -> Result<Row> {
         self.contacts.create(item).await
     }
 
-    async fn update(&self, item: &mut Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.contacts.update(item, by_where).await
     }
 
-    async fn delete(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         self.contacts.delete(item, by_where).await
     }
 
