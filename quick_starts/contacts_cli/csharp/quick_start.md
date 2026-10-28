@@ -2,7 +2,7 @@
 
 Dest is a new folder inside this clone. From the clone, `mkdir dest && cd dest`, then copy this sample onto `./`, install Datasources, generate, build, and run.
 
-`deterministic/settings.yaml` lists sqlite, mysql, and postgres, and generate writes SQL for each of those engines. The program prints [`expected.txt`](expected.txt).
+Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` in `.env`), not every engine listed in `settings.yaml`. The program prints [`expected.txt`](expected.txt).
 
 ## sqlite
 
@@ -36,4 +36,5 @@ export DATASOURCE_URL=postgres://ds:ds@127.0.0.1:5432/datasources
 npx @deterministic-code/datasources-cli generate all --dialect csharp
 dotnet build
 dotnet run
+docker compose down -v
 ```

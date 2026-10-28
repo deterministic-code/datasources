@@ -30,4 +30,5 @@ suites:
       - npx @deterministic-code/datasources-cli generate all --dialect csharp
       - dotnet build
       - dotnet run
+      - docker compose down -v
     expected: expected.txt

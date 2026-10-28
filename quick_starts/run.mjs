@@ -115,9 +115,12 @@ const one = (spec, suite) => {
       const result = run(argv, dest, env, capture ? "pipe" : "inherit");
       if (capture) actual.push(result.stdout ?? "");
     }
-    const got = normalize(actual.join(""));
     const want = expectedOf(spec, suite);
-    if (got !== want) throw new Error(`output mismatch\n--- expected\n${want}--- actual\n${got}`);
+    if (actual.length === 0) throw new Error(`${spec.name} ${suite.name}: no captured run output`);
+    for (const stdout of actual) {
+      const got = normalize(stdout);
+      if (got !== want) throw new Error(`output mismatch\n--- expected\n${want}--- actual\n${got}`);
+    }
     console.log(`ok ${spec.name} ${suite.name}`);
   } finally {
     if (compose) composeDown(dest, env);
