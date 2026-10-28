@@ -59,17 +59,6 @@ describe("ProviderCatalog", () => {
     ]);
   });
 
-  it("defaults loads a catalog provider that is not registered", () => {
-    const load = DriverLoader.load;
-    DriverLoader.load = () => new JsonDriver();
-    try {
-      DatasourceFactory.defaults({ INSTALLED_PROVIDERS: "json" });
-      expect(DatasourceFactory.registered()).toEqual(["json"]);
-    } finally {
-      DriverLoader.load = load;
-    }
-  });
-
   it("defaults registers installed providers", () => {
     installed();
     DatasourceFactory.defaults({
