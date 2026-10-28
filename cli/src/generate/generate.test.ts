@@ -802,6 +802,7 @@ types:
     const input = join(cwd, "deterministic");
     const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const targets = ["all", "types", "repositories", "datasource"] as const;
     for (const target of targets) {
       const store = mem(seeded);
