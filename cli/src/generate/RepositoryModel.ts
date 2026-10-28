@@ -2,6 +2,8 @@ import type { ICasingStrategy } from "@deterministic-code/generators-common/casi
 
 export type Pair = { from: string; to: string };
 
+export type CreateZero = { name: string; kind: "string" | "boolean" };
+
 export type PlannedEnrichment = {
   destination: string;
   source: string;
@@ -31,6 +33,7 @@ export type RepositoryModel = {
   ids: string[];
   readProperties: string[];
   createProperties: string[];
+  createZeros: CreateZero[];
   updateProperties: string[];
   optionsByProvider?: Record<string, RepositoryOptionsModel>;
   optimisticConcurrency?: OptimisticConcurrency;

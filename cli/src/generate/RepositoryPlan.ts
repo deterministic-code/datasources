@@ -7,6 +7,18 @@ import type { DatasourceTable, IDeterministic, Type, TypeField } from "@determin
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
 
+const createZeroKind = (field: TypeField): "string" | "boolean" | undefined =>
+  field.isId === true ||
+  field.references !== undefined ||
+  field.isNullable === true ||
+  (field.defaultValue !== undefined && field.defaultValue !== null)
+    ? undefined
+    : field.type === "boolean"
+      ? "boolean"
+      : field.type === "string"
+        ? "string"
+        : undefined;
+
 const referenceOf = (references: TypeField["references"]): { type: string; field: string } | undefined => {
   if (references === undefined) return undefined;
   const [type, field] = [references].flat().join(".").split(".");
@@ -94,6 +106,12 @@ export const planRepositories = (
             writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInCreate,
           )
           .map((field) => property(field.name)),
+        createZeros: columns.flatMap((field) => {
+          if (!writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInCreate)
+            return [];
+          const kind = createZeroKind(field);
+          return kind === undefined ? [] : [{ name: property(field.name), kind }];
+        }),
         updateProperties: columns
           .filter((field) =>
             writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInUpdate,

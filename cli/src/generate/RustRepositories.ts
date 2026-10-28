@@ -7,10 +7,22 @@ type Options = RepositoryOptionsModel & { entity: string };
 
 const rustString = (value: string): string => `"${quote(value)}"`;
 
-const uses = (model: RepositoryModel): string =>
-  dialectsOf(model).length === 0
-    ? `use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};\nuse std::sync::Arc;`
-    : `use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Result};\nuse std::sync::Arc;`;
+const uses = (model: RepositoryModel): string => {
+  const builder = dialectsOf(model).length === 0 ? "" : "CRUDRepositoryBuilder, ";
+  const value = model.createZeros.length === 0 ? "" : "Value, ";
+  return `use datasources::{Association, Connection, CRUDRepository, ${builder}CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, ${value}Result};\nuse std::sync::Arc;`;
+};
+
+const rustZeros = (zeros: RepositoryModel["createZeros"]): string =>
+  zeros.length === 0
+    ? ""
+    : `.map(|repo| repo.with_create_zeros([\n${zeros
+        .map((zero) =>
+          zero.kind === "boolean"
+            ? `        (${rustString(zero.name)}.into(), Value::from(false)),`
+            : `        (${rustString(zero.name)}.into(), Value::from("")),`,
+        )
+        .join("\n")}\n    ].into_iter().collect()))`;
 
 const rustFill = (model: Options): string => {
   const mapping = model.propertyMappings.length === 0
@@ -199,7 +211,7 @@ ${where}
 };
 
 const plain = (model: RepositoryModel, nested: Set<string>, casing: ICasingStrategy): string =>
-  `${uses(model)}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n${crudOptions(model)}\n    CRUDRepository::new(connection, options)\n}\n\n${readonlyFn(model, nested, casing)}\n${rustOcc(model)}`;
+  `${uses(model)}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n${crudOptions(model)}\n    CRUDRepository::new(connection, options)${rustZeros(model.createZeros)}\n}\n\n${readonlyFn(model, nested, casing)}\n${rustOcc(model)}`;
 
 const wrapped = (model: RepositoryModel, nested: Set<string>, casing: ICasingStrategy): string => {
   const type = `${model.typeName}Repository`;
@@ -215,7 +227,7 @@ const wrapped = (model: RepositoryModel, nested: Set<string>, casing: ICasingStr
     .join("\n");
   const assign = children.map((child) => childField(casing, child.specName)).join(", ");
   const enrich = model.enrichments.map((item) => `        ${enrichment(item, true, nested, casing)}`).join("\n");
-  return `${uses(model)}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model), 4)}\n${childLets(children, nested, casing)}\n        let mut repo = CRUDRepository::new(Arc::clone(&connection), options)?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${readonlyFn(model, nested, casing)}\n${rustOcc(model)}`;
+  return `${uses(model)}\nuse std::ops::Deref;\n\npub struct ${type} {\n    pub repo: Arc<CRUDRepository>,\n${fields}\n}\n\nimpl ${type} {\n    pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {\n${pad(crudOptions(model), 4)}\n${childLets(children, nested, casing)}\n        let mut repo = CRUDRepository::new(Arc::clone(&connection), options)${rustZeros(model.createZeros)}?;\n${enrich}\n        Ok(Self { repo: Arc::new(repo), ${assign} })\n    }\n}\n\nimpl Deref for ${type} {\n    type Target = CRUDRepository;\n    fn deref(&self) -> &Self::Target {\n        self.repo.as_ref()\n    }\n}\n\npub fn ${repoFn(model.specName, casing)}(connection: Arc<dyn Connection>) -> Result<CRUDRepository> {\n    Arc::try_unwrap(${type}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))\n}\n\n${readonlyFn(model, nested, casing)}\n${rustOcc(model)}`;
 };
 
 export const rustRepositories = (models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] => {

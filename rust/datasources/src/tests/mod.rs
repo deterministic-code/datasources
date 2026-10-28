@@ -1857,6 +1857,65 @@ async fn create_and_update_honor_write_properties() {
 }
 
 #[tokio::test]
+async fn create_fills_missing_string_and_bool_zeros() {
+    let command = Arc::new(MockCommand::new());
+    let connection = MockConnection::with_command_provider(command.clone(), "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.ids = vec!["id".into()];
+    options.entity = "contacts".into();
+    options.read_properties = vec![
+        "id".into(),
+        "name".into(),
+        "given_name".into(),
+        "is_starred".into(),
+        "uuid".into(),
+        "gender_type_id".into(),
+    ];
+    options.create_properties = Some(vec![
+        "name".into(),
+        "given_name".into(),
+        "is_starred".into(),
+        "uuid".into(),
+        "gender_type_id".into(),
+    ]);
+    let mut zeros = Row::new();
+    zeros.insert("name".into(), Value::from(""));
+    zeros.insert("is_starred".into(), Value::from(false));
+    let repo = CRUDRepository::new(connection, options)
+        .unwrap()
+        .with_create_zeros(zeros);
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(1))]));
+    repo.create(&mut record(&[("given_name", Value::from("Ada"))]))
+        .await
+        .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)"
+    );
+    command.execute_logs.lock().unwrap().clear();
+    repo.create(&mut record(&[
+        ("given_name", Value::from("Ada")),
+        ("is_starred", Value::from(true)),
+        ("name", Value::from("Ada Lovelace")),
+    ]))
+    .await
+    .unwrap();
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].0,
+        "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)"
+    );
+    assert_eq!(
+        command.execute_logs.lock().unwrap()[0].1[1].value,
+        Value::from(true)
+    );
+}
+
+#[tokio::test]
 async fn create_and_update_write_read_properties_only() {
     let command = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");

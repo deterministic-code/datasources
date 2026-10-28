@@ -158,6 +158,9 @@ impl BulkCRUDRepository {
             self.use_transaction || !items.is_empty(),
             Arc::clone(&self.crud.connection),
             || async {
+                for item in items.iter_mut() {
+                    *item = self.crud.fill_create_zeros(item);
+                }
                 self.strategy.create(items).await?;
                 if self.strategy.persist_children() {
                     crate::bulk_write_enrichment::after_bulk_write(

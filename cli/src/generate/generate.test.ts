@@ -11,6 +11,8 @@ import type { Prompter } from "../setup.ts";
 import { deterministic } from "./DeterministicProvider.ts";
 import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
+import { rustRepositories } from "./RustRepositories.ts";
+import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { pluralCamel, pluralPascal, pluralSnake } from "./RepositoryModel.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
@@ -199,6 +201,10 @@ describe("generate", () => {
     expect(contactTs).toContain('.add("postgres", {');
     expect(contactTs).toContain('createProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"]');
     expect(contactTs).toContain('createProperties: ["contactSourceId", "firstName", "lastName", "email", "notes"]');
+    expect(contactTs).toContain("this.createZeros = {");
+    expect(contactTs).toContain("firstName: \"\"");
+    expect(contactTs).toContain("lastName: \"\"");
+    expect(contactTs).not.toContain("uuid:");
     expect(contactTs).toContain(".for(connection)");
     expect(contactTs).toContain('entity: "Contact"');
     expect(contactTs).toContain('["Contact", "contacts"]');
@@ -224,6 +230,7 @@ describe("generate", () => {
     expect(contactRs).toContain('"addresses"');
     expect(contactRs).toContain('"settings"');
     expect(contactRs).toContain('"prefs"');
+    expect(contactRs).toContain("with_create_zeros");
     expect(contactRs).toContain("CRUDRepositoryBuilder::new()");
     expect(contactRs).toContain('.add_for("mysql"');
     expect(contactRs).toContain('.add_for("postgres"');
@@ -795,6 +802,49 @@ types:
       }),
     ).parse({});
     expect(() => planRepositories(mismatch, "csharp", {})).toThrow(/no matching type in types.yaml/);
+  });
+
+  it("plans createZeros for string and bool without spec defaults", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({
+        "types.yaml": `version: 1.0.0
+types:
+  - item:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+        - is_starred:
+            type: boolean
+        - uuid:
+            type: uuid
+            default_value: NewId
+        - note:
+            type: string
+            default_value: ""
+        - parent_id:
+            references: item.id
+`,
+        "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+      }),
+    ).parse({});
+    const models = planRepositories(spec, "rust", {});
+    expect(models.find((model) => model.specName === "item")?.createZeros).toEqual([
+      { name: "name", kind: "string" },
+      { name: "is_starred", kind: "boolean" },
+    ]);
+    const rust = rustRepositories(models, {});
+    const typescript = typescriptRepositories(models, {});
+    expect(textOf(rust, "itemRepository.rs")).toContain("Value::from(false)");
+    expect(textOf(typescript, "itemRepository.ts")).toContain("is_starred: false");
   });
 
   it("writes each generate target", async () => {

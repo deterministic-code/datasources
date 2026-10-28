@@ -155,7 +155,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Insert(T item)
     {
-        var record = ReverseConvert(item);
+        var record = MergeZeros(ReverseConvert(item));
         var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
         var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
         var statement = CRUDStatements.Insert(fields);
@@ -241,6 +241,16 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     static bool Listed(IReadOnlyList<string>? list, string col, bool fallback) =>
         list is null ? fallback : list.Contains(col);
+
+    internal static bool LanguageZero(Value value) => value is Value.Text("") or Value.Bool(false);
+
+    Row MergeZeros(Row record)
+    {
+        foreach (var (key, value) in ReverseConvert(new T()))
+            if (LanguageZero(value) && Listed(createProperties, key, !ids.Contains(key)))
+                record.TryAdd(key, value);
+        return record;
+    }
 
     IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include, IReadOnlySet<string>? extras = null) =>
         [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null
