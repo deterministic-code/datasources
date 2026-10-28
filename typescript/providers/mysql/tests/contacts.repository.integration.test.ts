@@ -18,7 +18,7 @@ import { MysqlConnection } from "../src/connection.ts";
 import { MysqlDriver } from "../src/MysqlDriver.ts";
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
-const url = (process.env.MYSQL_URL ??=
+let url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 
 const seedPath = join(specsDir(), "contacts/mysql.sql");
@@ -29,7 +29,10 @@ const statementsOf = (sql: string) =>
     .map((part) => part.trim())
     .filter(Boolean);
 
-beforeAll(() => ensureCompose("mysql"), 120_000);
+beforeAll(() => {
+  ensureCompose("mysql");
+  url = process.env.MYSQL_URL ?? url;
+}, 120_000);
 
 const replaceDatabase = (base: string, name: string): string => {
   const parsed = new URL(base);

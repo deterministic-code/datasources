@@ -21,10 +21,13 @@ const dialect = loadDialect(
   "mysql",
   (statement) => new StatementTextRenderer(t => new MysqlStatementRenderer(t)).render(statement),
 );
-const url = (process.env.MYSQL_URL ??=
+let url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 
-beforeAll(() => ensureCompose("mysql"), 120_000);
+beforeAll(() => {
+  ensureCompose("mysql");
+  url = process.env.MYSQL_URL ?? url;
+}, 120_000);
 
 async function fillOutputParameter(command: MysqlCommand) {
   await command.executeNative(new Native(`

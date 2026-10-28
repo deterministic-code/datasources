@@ -21,10 +21,13 @@ const dialect = loadDialect(
   "postgres",
   (statement) => new StatementTextRenderer(t => new PostgresStatementRenderer(t)).render(statement),
 );
-const url = (process.env.POSTGRES_URL ??=
+let url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 
-beforeAll(() => ensureCompose("postgres"), 120_000);
+beforeAll(() => {
+  ensureCompose("postgres");
+  url = process.env.POSTGRES_URL ?? url;
+}, 120_000);
 
 async function readReturnValue(command: PostgresCommand) {
   await command.executeNative(new Native(`
