@@ -149,7 +149,7 @@ pub use datasource_url::DatasourceUrl;
 pub use datasource_url_parser::DatasourceUrlParser;
 pub use default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 pub use default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
-pub use default_write_enrichment_strategy::encode_rows;
+pub use default_write_enrichment_strategy::{decode_rows, encode_rows};
 pub use default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 pub use defaults::defaults;
 pub use erased_driver::erase_driver;

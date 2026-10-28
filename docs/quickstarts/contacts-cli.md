@@ -4,8 +4,6 @@ Dest is a new folder inside this clone. From the clone, `mkdir dest && cd dest`,
 
 Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` in `.env`), not every engine listed in `settings.yaml`. The program prints `expected.txt`.
 
-The tree in the repo today is `quick_starts/contacts_cli/csharp`. Rust and TypeScript tabs use the same command shape for those language folders.
-
 ## sqlite
 
 ::: dialects

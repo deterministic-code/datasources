@@ -25,10 +25,15 @@ const mem = (entries: string[], files: Record<string, string> = {}): { files: Re
 };
 
 describe("wireRegister", () => {
-  it("adds ctor to a rust manifest", () => {
-    expect(cargoWithCtor("[dependencies]\nfoo = \"1\"\n")).toContain('ctor = "0.4"');
+  it("adds ctor and tokio to a rust manifest", () => {
+    const added = cargoWithCtor("[dependencies]\nfoo = \"1\"\n") ?? "";
+    expect(added).toContain('ctor = "0.4"');
+    expect(added).toContain('tokio = { version = "1", features = ["macros", "rt-multi-thread"] }');
     expect(cargoWithCtor("[package]\nname = \"app\"\n")).toContain("[dependencies]");
-    expect(cargoWithCtor('ctor = "0.4"\n[dependencies]\n')).toBeUndefined();
+    expect(cargoWithCtor('ctor = "0.4"\n[dependencies]\n')).toContain("tokio");
+    expect(
+      cargoWithCtor('ctor = "0.4"\ntokio = { version = "1", features = ["macros", "rt-multi-thread"] }\n[dependencies]\n'),
+    ).toBeUndefined();
   });
 
   it("builds a relative typescript import and rust path", () => {
@@ -104,8 +109,10 @@ describe("wireRegister", () => {
     expect(files[join(cwd, "src", "lib.rs")]).toContain("mod datasources_register;");
     expect(files[join(cwd, "src", "lib.rs")]).toContain("use datasources_register::Repositories;");
     expect(files[join(cwd, "Cargo.toml")]).toContain('ctor = "0.4"');
+    expect(files[join(cwd, "Cargo.toml")]).toContain("rt-multi-thread");
     await wireRegister(cwd, "generated", "rust", false, { fs, log: () => undefined });
     expect(files[join(cwd, "Cargo.toml")]?.match(/ctor = /g)?.length).toBe(1);
+    expect(files[join(cwd, "Cargo.toml")]?.match(/tokio = /g)?.length).toBe(1);
   });
 
   it("logs a csharp compile include on dry-run", async () => {
