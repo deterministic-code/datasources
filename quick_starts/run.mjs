@@ -17,6 +17,14 @@ const { parse } = createRequire(join(repo, "cli/package.json"))("yaml");
 const keep = process.env.KEEP === "1";
 const only = flag("provider");
 const composeProject = "datasources-qs";
+const runners = {
+  csharp: ["dotnet", "run"],
+  rust: ["cargo", "run"],
+  typescript: ["npx", "tsx"],
+};
+
+const startsWith = (argv, prefix) =>
+  prefix.length > 0 && prefix.every((word, i) => argv[i] === word);
 
 function flag(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -111,7 +119,7 @@ const one = (spec, suite) => {
         compose = true;
         if (argv.includes("up")) composeDown(dest, env);
       }
-      const capture = argv[0] === "dotnet" && argv[1] === "run";
+      const capture = startsWith(argv, runners[spec.language] ?? []);
       const result = run(argv, dest, env, capture ? "pipe" : "inherit");
       if (capture) actual.push(result.stdout ?? "");
     }

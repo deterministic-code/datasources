@@ -416,7 +416,7 @@ pub(crate) fn row_key(row: &Row, ids: &[String]) -> Option<String> {
     )
 }
 
-pub(crate) fn decode_rows(value: Option<&Value>) -> Vec<Row> {
+pub fn decode_rows(value: Option<&Value>) -> Vec<Row> {
     match value {
         Some(Value::Text(text)) if !text.is_empty() => text.split('|').map(decode_row).collect(),
         _ => Vec::new(),

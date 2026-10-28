@@ -38,12 +38,20 @@ export const hookContents = (
     : `#[path = "${specFrom(hook, join(output, registryRel(dialect, settings)))}"]\npub mod repositories;\npub use repositories::${rustIdent(casing.convertFileName("repository_registry"))}::Repositories;\n`;
 };
 
-export const cargoWithCtor = (cargo: string): string | undefined =>
-  /^\s*ctor\s*=/m.test(cargo)
-    ? undefined
-    : cargo.includes("[dependencies]")
-      ? cargo.replace("[dependencies]", `[dependencies]\nctor = "0.4"`)
-      : `${cargo.trimEnd()}\n\n[dependencies]\nctor = "0.4"\n`;
+const rustCargoLine = (cargo: string, name: string, line: string): string | undefined =>
+  new RegExp(`^\\s*${name}\\s*=`, "m").test(cargo) ? undefined : line;
+
+export const cargoWithCtor = (cargo: string): string | undefined => {
+  const add = [
+    rustCargoLine(cargo, "ctor", 'ctor = "0.4"'),
+    rustCargoLine(cargo, "tokio", 'tokio = { version = "1", features = ["macros", "rt-multi-thread"] }'),
+  ].filter((line): line is string => line !== undefined);
+  if (add.length === 0) return undefined;
+  const block = add.join("\n");
+  return cargo.includes("[dependencies]")
+    ? cargo.replace("[dependencies]", `[dependencies]\n${block}`)
+    : `${cargo.trimEnd()}\n\n[dependencies]\n${block}\n`;
+};
 
 export const attached = (dialect: "typescript" | "rust", entry: string, entryPath: string, hook: string): string | undefined =>
   dialect === "typescript"
