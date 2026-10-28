@@ -638,7 +638,7 @@ Connection URL. Schema is the `schema` query (`postgres://host/db?schema=public`
 
 {{Datasource.Default|Datasource.default|default()}} loads `.env`, then process `INSTALLED_PROVIDERS`, `PROVIDER`, and `DATASOURCE_URL`. {{DatasourceFactory.Create(null)|DatasourceFactory.create()|create(None)}} uses the same path. A non-null options bag is used as-is; missing `PROVIDER` throws.
 
-Each dialect loads an installed provider with `DriverLoader` and `ProviderCatalog`.
+TypeScript and C# load an installed provider with `DriverLoader` and `ProviderCatalog`. Rust registers the public driver from the cargo dependency.
 
 ::: prose
 ### typescript
@@ -646,7 +646,7 @@ Load the provider package.
 ### csharp
 Load the assembly.
 ### rust
-Load the provider cdylib.
+Register the public driver from the cargo dependency.
 :::
 
 {{Reset|reset|reset}} clears the registry. Use it in tests.

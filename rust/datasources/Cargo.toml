@@ -8,13 +8,11 @@ repository.workspace = true
 description = "Async datasource interfaces, middleware, registry, and test doubles"
 
 [dependencies]
-abi_stable = "0.11.3"
 async-trait = { workspace = true }
 futures-core = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-libloading = "0.8"
 regex = "1"
 rust_decimal = "1"
 tokio = { workspace = true }

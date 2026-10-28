@@ -8,6 +8,7 @@ use datasources::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    datasources_providers::register();
     let ds = default()?;
     let contacts_repo = ds.contacts();
     let mut ada_row = contact(

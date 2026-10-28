@@ -1,10 +1,9 @@
 use datasources::{
-    create, default, defaults, registered, reset, DatasourceError, ProviderCatalog,
+    create, default, defaults, register, registered, reset, DatasourceError, ProviderCatalog,
 };
+use datasources_memory::MemoryDriver;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 
 static ENV: Mutex<()> = Mutex::new(());
 
@@ -14,65 +13,22 @@ fn clear_env() {
     }
 }
 
-fn plugins() -> &'static Path {
-    static DIR: OnceLock<PathBuf> = OnceLock::new();
-    DIR.get_or_init(|| {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
-        let plugin_target = root.join("target/plugin-build");
-        let status = Command::new("cargo")
-            .args([
-                "build",
-                "-p",
-                "datasources-json",
-                "-p",
-                "datasources-memory",
-                "--offline",
-                "--target-dir",
-            ])
-            .arg(&plugin_target)
-            .current_dir(&root)
-            .env_remove("CARGO_TARGET_DIR")
-            .status()
-            .expect("cargo build");
-        assert!(status.success(), "json and memory plugins failed to build");
-        let debug = plugin_target.join("debug");
-        let dir = root.join("target/datasources-plugins-test");
-        std::fs::create_dir_all(&dir).unwrap();
-        for location in ["datasources_json", "datasources_memory"] {
-            let file = lib_file(location);
-            std::fs::copy(debug.join(&file), dir.join(&file))
-                .unwrap_or_else(|error| panic!("copy {file}: {error}"));
-        }
-        dir
-    })
-}
-
-fn lib_file(location: &str) -> String {
-    match std::env::consts::OS {
-        "windows" => format!("{location}.dll"),
-        "macos" => format!("lib{location}.dylib"),
-        _ => format!("lib{location}.so"),
-    }
-}
-
-struct Plugins {
+struct Isolated {
     _lock: std::sync::MutexGuard<'static, ()>,
 }
 
-impl Plugins {
+impl Isolated {
     fn enter() -> Self {
         let lock = ENV.lock().expect("env");
-        std::env::set_var("DATASOURCES_PLUGIN_DIR", plugins());
         reset();
         clear_env();
         Self { _lock: lock }
     }
 }
 
-impl Drop for Plugins {
+impl Drop for Isolated {
     fn drop(&mut self) {
         clear_env();
-        std::env::remove_var("DATASOURCES_PLUGIN_DIR");
         reset();
     }
 }
@@ -82,6 +38,10 @@ fn opts(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         .iter()
         .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
         .collect()
+}
+
+fn bind_memory() {
+    register("memory", Arc::new(MemoryDriver));
 }
 
 #[test]
@@ -126,13 +86,14 @@ fn default_lists_monorepo_providers() {
 
 #[test]
 fn defaults_registers_installed_providers() {
-    let _plugins = Plugins::enter();
+    let _isolated = Isolated::enter();
+    bind_memory();
     defaults(opts(&[
-        ("INSTALLED_PROVIDERS", "json,memory"),
+        ("INSTALLED_PROVIDERS", "memory"),
         ("DATASOURCE_URL", "memory://"),
     ]))
     .unwrap();
-    assert_eq!(registered(), vec!["json".to_string(), "memory".to_string()]);
+    assert_eq!(registered(), vec!["memory".to_string()]);
     assert_eq!(
         create(Some(&opts(&[
             ("PROVIDER", "memory"),
@@ -146,43 +107,46 @@ fn defaults_registers_installed_providers() {
 
 #[test]
 fn create_does_not_take_installed_providers() {
-    let _plugins = Plugins::enter();
-    defaults(opts(&[("INSTALLED_PROVIDERS", "json,memory")])).unwrap();
+    let _isolated = Isolated::enter();
+    bind_memory();
+    defaults(opts(&[("INSTALLED_PROVIDERS", "memory")])).unwrap();
     assert_eq!(
         create(Some(&opts(&[
-            ("PROVIDER", "json"),
-            ("DATASOURCE_URL", "json://"),
+            ("PROVIDER", "memory"),
+            ("DATASOURCE_URL", "memory://"),
         ])))
         .unwrap()
         .provider(),
-        "json"
+        "memory"
     );
-    assert_eq!(registered(), vec!["json".to_string(), "memory".to_string()]);
+    assert_eq!(registered(), vec!["memory".to_string()]);
 }
 
 #[test]
 fn create_reads_connection_from_environment() {
-    let _plugins = Plugins::enter();
-    std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
+    let _isolated = Isolated::enter();
+    bind_memory();
+    std::env::set_var("INSTALLED_PROVIDERS", "memory");
     std::env::set_var("DATASOURCE_URL", "memory://");
     std::env::set_var("PROVIDER", "memory");
     assert_eq!(create(None).unwrap().provider(), "memory");
     assert_eq!(default().unwrap().provider(), "memory");
-    assert_eq!(registered(), vec!["json".to_string(), "memory".to_string()]);
+    assert_eq!(registered(), vec!["memory".to_string()]);
 }
 
 #[test]
 fn default_overrides_env() {
-    let _plugins = Plugins::enter();
-    std::env::set_var("INSTALLED_PROVIDERS", "json,memory");
-    std::env::set_var("PROVIDER", "json");
-    std::env::set_var("DATASOURCE_URL", "json://");
-    assert_eq!(default().unwrap().provider(), "json");
+    let _isolated = Isolated::enter();
+    bind_memory();
+    std::env::set_var("INSTALLED_PROVIDERS", "memory");
+    std::env::set_var("PROVIDER", "memory");
+    std::env::set_var("DATASOURCE_URL", "memory://");
+    assert_eq!(default().unwrap().provider(), "memory");
 }
 
 #[test]
 fn missing_package_or_unknown_name() {
-    let _plugins = Plugins::enter();
+    let _isolated = Isolated::enter();
     assert!(matches!(
         defaults(opts(&[("INSTALLED_PROVIDERS", "sqlite")])),
         Err(DatasourceError::ProviderNotInstalled(_))
@@ -196,7 +160,7 @@ fn missing_package_or_unknown_name() {
 
 #[test]
 fn url_without_provider_throws() {
-    let _plugins = Plugins::enter();
+    let _isolated = Isolated::enter();
     assert_eq!(
         defaults(opts(&[("DATASOURCE_URL", "not-a-url")]))
             .unwrap_err()
@@ -207,7 +171,8 @@ fn url_without_provider_throws() {
 
 #[tokio::test]
 async fn loaded_memory_opens() {
-    let _plugins = Plugins::enter();
+    let _isolated = Isolated::enter();
+    bind_memory();
     std::env::set_var("INSTALLED_PROVIDERS", "memory");
     std::env::set_var("PROVIDER", "memory");
     std::env::set_var("DATASOURCE_URL", "memory://");

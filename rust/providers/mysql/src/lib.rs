@@ -16,11 +16,6 @@ mod transaction;
 
 pub use driver::MysqlDriver;
 
-#[ctor::ctor]
-fn bind() {
-    datasources::register("mysql", std::sync::Arc::new(MysqlDriver));
-}
-
 #[cfg(test)]
 #[path = "../tests/isolate.rs"]
 mod isolate;
