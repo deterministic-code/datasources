@@ -15,10 +15,13 @@ const quote = (id: string): string => `"${id.replaceAll('"', '""')}"`;
 const dialect: RepositoryDialect = { quote };
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
-const url = (process.env.POSTGRES_URL ??=
+let url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 
-beforeAll(() => ensureCompose("postgres"), 120_000);
+beforeAll(() => {
+  ensureCompose("postgres");
+  url = process.env.POSTGRES_URL ?? url;
+}, 120_000);
 
 const isolate = async (base: string) => {
   const pg = (await import("pg")) as PgModule;

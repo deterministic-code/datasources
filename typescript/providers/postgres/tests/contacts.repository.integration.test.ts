@@ -18,7 +18,7 @@ import { PostgresConnection } from "../src/connection.ts";
 import { PostgresDriver } from "../src/PostgresDriver.ts";
 import type { PgModule } from "../src/i-postgres-driver.ts";
 
-const url = (process.env.POSTGRES_URL ??=
+let url = (process.env.POSTGRES_URL ??=
   "postgres://ds:ds@127.0.0.1:5432/datasources");
 
 const seedPath = join(specsDir(), "contacts/postgres.sql");
@@ -29,7 +29,10 @@ const statementsOf = (sql: string) =>
     .map((part) => part.trim())
     .filter(Boolean);
 
-beforeAll(() => ensureCompose("postgres"), 120_000);
+beforeAll(() => {
+  ensureCompose("postgres");
+  url = process.env.POSTGRES_URL ?? url;
+}, 120_000);
 
 const isolate = async (base: string) => {
   const pg = (await import("pg")) as PgModule;

@@ -15,10 +15,13 @@ const quote = (id: string): string => `\`${id.replaceAll("`", "``")}\``;
 const dialect: RepositoryDialect = { quote };
 import type { Mysql2Module } from "../src/i-mysql-engine.ts";
 
-const url = (process.env.MYSQL_URL ??=
+let url = (process.env.MYSQL_URL ??=
   "mysql://ds:ds@127.0.0.1:3306/datasources");
 
-beforeAll(() => ensureCompose("mysql"), 120_000);
+beforeAll(() => {
+  ensureCompose("mysql");
+  url = process.env.MYSQL_URL ?? url;
+}, 120_000);
 
 const replaceDatabase = (base: string, name: string): string => {
   const parsed = new URL(base);
