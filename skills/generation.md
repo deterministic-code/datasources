@@ -27,6 +27,7 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 | `--column-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated SQL column names (`Auto` is Snake) |
 | `--object-names Upper\|Lower\|Auto` | Letter case for SQL object names after table-name casing. Columns stay on `--column-names` (`Auto` preserves) |
 | `--sql-keywords Upper\|Lower\|Auto` | Letter case for SQL keywords and native types (`Auto` is Upper) |
+| `--batch-separator <text>` | Whole-line SQL batch separator (`settings.yaml` `datasource.batch_separator`, default `GO`) |
 | `--file-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated language file names |
 | `--type-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated type identifiers (`--types` is the same flag) |
 | `--field-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated fields (`--fields` is the same flag) |
@@ -63,6 +64,7 @@ npx @deterministic-code/datasources-cli migrations create --input ./deterministi
 | `--column-names Pascal\|Camel\|Snake\|Kebab\|Auto` | Casing for generated SQL column names (`Auto` is Snake) |
 | `--object-names Upper\|Lower\|Auto` | Letter case for SQL object names after table-name casing (`Auto` preserves) |
 | `--sql-keywords Upper\|Lower\|Auto` | Letter case for SQL keywords and native types (`Auto` is Upper) |
+| `--batch-separator <text>` | Whole-line SQL batch separator (`settings.yaml` `datasource.batch_separator`, default `GO`) |
 
 Re-running overwrites the same files.
 

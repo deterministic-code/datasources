@@ -90,6 +90,7 @@ generate <all|types|repositories|datasource>
   --column-names Pascal|Camel|Snake|Kebab|Auto
   --object-names Upper|Lower|Auto
   --sql-keywords Upper|Lower|Auto
+  --batch-separator <text>    Whole-line SQL batch separator (default: GO)
   --file-names Pascal|Camel|Snake|Kebab|Auto
   --type-names|--types Pascal|Camel|Snake|Kebab|Auto
   --field-names|--fields Pascal|Camel|Snake|Kebab|Auto
@@ -106,6 +107,7 @@ migrations create     SQL migrations from the spec (migraters layout)
   --column-names Pascal|Camel|Snake|Kebab|Auto
   --object-names Upper|Lower|Auto
   --sql-keywords Upper|Lower|Auto
+  --batch-separator <text>    Whole-line SQL batch separator (default: GO)
 
 version               Snapshot top-level YAML as the next version-*/diff.yaml
   --cwd <dir>                 Consumer project directory (default: .)
@@ -137,6 +139,7 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     columnNames: undefined as CaseFormat | undefined,
     objectNames: undefined as LetterCase | undefined,
     sqlKeywords: undefined as LetterCase | undefined,
+    batchSeparator: undefined as string | undefined,
   };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
@@ -174,6 +177,8 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg.startsWith("--object-names=")) generate.objectNames = parseLetterCaseFlag(arg.slice("--object-names=".length), "--object-names");
     else if (arg === "--sql-keywords") generate.sqlKeywords = parseLetterCaseFlag(take(argv, ++i, arg), arg);
     else if (arg.startsWith("--sql-keywords=")) generate.sqlKeywords = parseLetterCaseFlag(arg.slice("--sql-keywords=".length), "--sql-keywords");
+    else if (arg === "--batch-separator") generate.batchSeparator = take(argv, ++i, arg);
+    else if (arg.startsWith("--batch-separator=")) generate.batchSeparator = arg.slice("--batch-separator=".length);
     else if (arg === "--migrations-root") generate.migrationsRoot = take(argv, ++i, "--migrations-root");
     else if (arg.startsWith("--migrations-root=")) generate.migrationsRoot = arg.slice("--migrations-root=".length);
     else if (arg === "--file-names" || arg === "--type-names" || arg === "--types" || arg === "--field-names" || arg === "--fields" || arg === "--folder-names" || arg === "--directories") {
@@ -236,6 +241,7 @@ const migrationsCommand = (
     columnNames: generate.columnNames,
     objectNames: generate.objectNames,
     sqlKeywords: generate.sqlKeywords,
+    batchSeparator: generate.batchSeparator,
   };
 };
 
@@ -282,6 +288,7 @@ const generateCommand = (
     columnNames: generate.columnNames,
     objectNames: generate.objectNames,
     sqlKeywords: generate.sqlKeywords,
+    batchSeparator: generate.batchSeparator,
   };
 };
 

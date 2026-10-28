@@ -20,6 +20,7 @@ import { buildCustomMigrationFiles } from "./generate-custom-migrations.ts";
 import { generateProceduresForDialect } from "./generate-procedures.ts";
 import { seedSections } from "./seed-generator.ts";
 import { versionDiffPaths, versionMigrationFiles } from "./version-migrations.ts";
+import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
 import { migrationDownTmpl, migrationUpTmpl } from "../resources/sql.ts";
 import {
   createIndexStatementOf,
@@ -37,7 +38,8 @@ const flattenTable = (
   dialect: SqlDialect,
   table: LiveTable,
   mapping: SqlMapping,
-) => {
+  separator: string,
+): string => {
   const indexes = table.indexes.map((idx) =>
     renderSql(dialect, createIndexStatementOf(dialect, mapping, table, idx)),
   );
@@ -48,11 +50,10 @@ const flattenTable = (
         createTriggerStatementOf(dialect, live, mapping, live.pkName ?? "id"),
       )
     : "";
-  return {
-    createTable: renderSql(dialect, createTableStatementOf(dialect, table, mapping)),
-    indexesBlock: indexes.join("\n"),
-    trigger: audit,
-  };
+  return joinBatches(
+    [renderSql(dialect, createTableStatementOf(dialect, table, mapping)), ...indexes, audit],
+    separator,
+  );
 };
 
 const generateInitialMigration = (
@@ -60,10 +61,12 @@ const generateInitialMigration = (
   types: SqlTable[],
   seedsByTable: Map<string, SeedRow[]>,
   casing: PackCasing,
+  settings: Record<string, string>,
 ): { up: SqlFile; down: SqlFile } => {
   const dialect = requireDialect(language);
   const mapping = new SqlMapping(casing, types);
   const live = buildLiveTables(types, mapping);
+  const separator = batchSeparatorOf(settings);
   const seeds = seedSections(dialect, live, seedsByTable, mapping);
 
   return {
@@ -73,9 +76,13 @@ const generateInitialMigration = (
         fill(migrationUpTmpl, {
           dialect,
           preamble: "",
-          tables: live.map((t) => flattenTable(dialect, t, mapping)),
-          hasSeeds: seeds.length > 0,
-          seedBlocks: seeds,
+          body: joinBatches(
+            [
+              ...live.map((t) => flattenTable(dialect, t, mapping, separator)),
+              ...(seeds.length === 0 ? [] : [`-- Seed data\n${joinBatches(seeds, separator)}`]),
+            ],
+            separator,
+          ),
         }),
         casing,
       ),
@@ -85,9 +92,12 @@ const generateInitialMigration = (
       content: finalizeSql(
         fill(migrationDownTmpl, {
           dialect,
-          dropStatements: [...live]
-            .reverse()
-            .map((t) => renderSql(dialect, dropTableStatementOf(dialect, t.tableName))),
+          dropStatements: joinBatches(
+            [...live]
+              .reverse()
+              .map((t) => renderSql(dialect, dropTableStatementOf(dialect, t.tableName))),
+            separator,
+          ),
         }),
         casing,
       ),
@@ -182,7 +192,7 @@ const schemaFiles = async (
     };
   }
   const data = await loadSchema(ctx);
-  const initial = generateInitialMigration(key, data.types, data.seeds, casing);
+  const initial = generateInitialMigration(key, data.types, data.seeds, casing, ctx.settings);
   return {
     entries: [
       content(`${key}/migrations/${initial.up.path}`, initial.up.content),

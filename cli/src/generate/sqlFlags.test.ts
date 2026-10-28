@@ -18,6 +18,7 @@ describe("sqlFlags", () => {
         columnNames: "Camel",
         objectNames: "Upper",
         sqlKeywords: "Lower",
+        batchSeparator: "GO",
       }),
     ).toEqual({
       existing: "1",
@@ -27,6 +28,7 @@ describe("sqlFlags", () => {
       "datasource.casing.fields": "Camel",
       "datasource.casing.objects": "Upper",
       "datasource.casing.keywords": "Lower",
+      "datasource.batch_separator": "GO",
     });
     expect(overlaySqlFlags({ existing: "1" }, {})).toEqual({ existing: "1" });
     expect(overlaySqlFlags({ "datasource.pluralize_datatable_names": "false" }, { pluralizeTableNames: true })).toEqual({

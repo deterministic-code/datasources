@@ -10,6 +10,7 @@ export type SqlFlags = {
   columnNames?: CaseFormat;
   objectNames?: LetterCase;
   sqlKeywords?: LetterCase;
+  batchSeparator?: string;
 };
 
 export const parseLetterCaseFlag = (raw: string, name: string): LetterCase => {
@@ -27,6 +28,7 @@ export const overlaySqlFlags = (settings: Record<string, string>, flags: SqlFlag
   ...(flags.columnNames === undefined ? {} : { "datasource.casing.fields": flags.columnNames }),
   ...(flags.objectNames === undefined ? {} : { "datasource.casing.objects": flags.objectNames }),
   ...(flags.sqlKeywords === undefined ? {} : { "datasource.casing.keywords": flags.sqlKeywords }),
+  ...(flags.batchSeparator === undefined ? {} : { "datasource.batch_separator": flags.batchSeparator }),
 });
 
 export const sqlFlagsOf = (flags: SqlFlags): SqlFlags => ({
@@ -35,4 +37,5 @@ export const sqlFlagsOf = (flags: SqlFlags): SqlFlags => ({
   columnNames: flags.columnNames,
   objectNames: flags.objectNames,
   sqlKeywords: flags.sqlKeywords,
+  batchSeparator: flags.batchSeparator,
 });

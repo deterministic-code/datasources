@@ -41,6 +41,52 @@ describe("generate sql", () => {
     assert.doesNotMatch(sql, /CONSTRAINT `[^`]*_default_constraint` DEFAULT/);
   });
 
+  it("separates table and trigger with datasource.batch_separator", async () => {
+    const auditYaml = `types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - created:
+            type: datetime
+            default_value: UtcNow
+        - updated:
+            type: datetime
+            default_value: UtcNow
+`;
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": auditYaml,
+          "datasource.yaml": datasourceYaml,
+        }),
+        settings: {},
+      },
+      ["mysql"],
+    );
+    const up = files.find((entry) => entry.filename.endsWith("mysql/migrations/0001_initial_up.sql"));
+    assert.ok(up, "expected mysql/migrations/0001_initial_up.sql");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    assert.match(sql, /;\nGO\nCREATE TRIGGER `trg_genders_updated_at`/);
+    const custom = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": auditYaml,
+          "datasource.yaml": datasourceYaml,
+        }),
+        settings: { "datasource.batch_separator": "BATCH" },
+      },
+      ["mysql"],
+    );
+    const customUp = custom.find((entry) => entry.filename.endsWith("mysql/migrations/0001_initial_up.sql"));
+    assert.ok(customUp, "expected mysql/migrations/0001_initial_up.sql");
+    const customSql = "contents" in customUp ? String(customUp.contents) : customUp.content;
+    assert.match(customSql, /;\nBATCH\nCREATE TRIGGER `trg_genders_updated_at`/);
+    assert.doesNotMatch(customSql, /\nGO\n/);
+  });
+
   it("infers a reference column type from the parent id", async () => {
     const files = await generateSql(
       {
@@ -68,6 +114,7 @@ describe("generate sql", () => {
     const up = files.find((entry) => entry.filename.endsWith("0001_initial_up.sql"));
     assert.ok(up, "expected initial up migration");
     const sql = "contents" in up ? String(up.contents) : up.content;
+    assert.match(sql, /;\nGO\nCREATE TABLE `contacts`/);
     const contacts = sql.match(/CREATE TABLE `contacts` \(([\s\S]*?)\);/)?.[1];
     assert.ok(contacts, "expected contacts table body");
     assert.match(contacts, /`gender_type_id` INT/);
