@@ -249,6 +249,27 @@ describe("CRUDRepository", () => {
     );
   });
 
+  it("fills missing string and bool zeros on create", async () => {
+    const { repo, command } = create({
+      entity: "contacts",
+      ids: ["id"],
+      readProperties: ["id", "name", "given_name", "is_starred", "uuid", "gender_type_id"],
+      createProperties: ["name", "given_name", "is_starred", "uuid", "gender_type_id"],
+    });
+    Object.assign(repo, { createZeros: { name: "", is_starred: false } });
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ id: 1 }]);
+    await repo.create({ given_name: "Ada" });
+    expect(command.executeCalls[0]?.text).toBe(
+      "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
+    );
+    await repo.create({ given_name: "Ada", is_starred: true, name: "Ada Lovelace" });
+    expect(command.executeCalls[1]?.text).toBe(
+      "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
+    );
+    expect(command.executeCalls[1]?.parameters?.find((field) => field.name === "is_starred")?.value).toBe(true);
+  });
+
   it("writes only readProperties on create and update", async () => {
     const { repo, command } = create({
       entity: "addresses",

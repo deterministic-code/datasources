@@ -43,6 +43,7 @@ pub struct CRUDRepository {
     ids: Vec<String>,
     create_properties: Option<Vec<String>>,
     update_properties: Option<Vec<String>>,
+    create_zeros: Row,
     crud_statements: CRUDRepositoryStatements,
     tree: RepositoryTree,
     write: Arc<dyn WriteEnrichmentStrategy>,
@@ -93,6 +94,7 @@ impl CRUDRepository {
             ids: id,
             create_properties,
             update_properties,
+            create_zeros: Row::new(),
             tree,
             write: Arc::new(DefaultWriteEnrichmentStrategy::default()),
         })
@@ -114,6 +116,7 @@ impl CRUDRepository {
             ids,
             create_properties: None,
             update_properties: None,
+            create_zeros: Row::new(),
             tree,
             write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
         }
@@ -122,6 +125,19 @@ impl CRUDRepository {
     pub fn with_write(mut self, write: Arc<dyn WriteEnrichmentStrategy>) -> Self {
         self.write = write;
         self
+    }
+
+    pub fn with_create_zeros(mut self, zeros: Row) -> Self {
+        self.create_zeros = zeros;
+        self
+    }
+
+    pub fn fill_create_zeros(&self, record: &Row) -> Row {
+        let mut filled = record.clone();
+        for (key, value) in &self.create_zeros {
+            filled.entry(key.clone()).or_insert_with(|| value.clone());
+        }
+        filled
     }
 
     pub fn add_enriched(
@@ -361,7 +377,7 @@ impl CRUDRepository {
     }
 
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
-        let record = self.readonly.reverse_convert(stored)?;
+        let record = self.fill_create_zeros(&self.readonly.reverse_convert(stored)?);
         let fields = self.insert_params(&record)?;
         let statement = self.crud_statements.insert(&fields);
         let response = self

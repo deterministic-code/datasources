@@ -88,6 +88,7 @@ export class CRUDRepository<T = Cells>
   readonly ids: readonly string[];
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
+  protected createZeros?: Cells;
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
@@ -191,7 +192,7 @@ export class CRUDRepository<T = Cells>
 
   private insert = async (item: T): Promise<Response> => {
     const extras = lookupKeys(item as object);
-    const record = this.reverseConvert(item);
+    const record = this.fillCreateZeros(this.reverseConvert(item));
     const fields = fieldsOf(
       record,
       (col) => extras.has(col) || listed(this.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null)),
@@ -276,6 +277,9 @@ export class CRUDRepository<T = Cells>
       throw new DatasourceError("Composite id requires a row keyed by each Id column");
     return this.idWhere({ [this.ids[0]!]: id });
   };
+
+  fillCreateZeros = (record: Cells): Cells =>
+    this.createZeros === undefined ? record : { ...this.createZeros, ...record };
 
   private reverseConvert = (item: T): Cells => {
     const row = this.objectConverter!.reverseConvert(item);

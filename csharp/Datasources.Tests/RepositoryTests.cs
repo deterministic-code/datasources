@@ -48,6 +48,16 @@ public class RepositoryTests
         public string Description { get; set; } = "";
     }
 
+    sealed class ContactRow
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string GivenName { get; set; } = "";
+        public bool IsStarred { get; set; }
+        public string Uuid { get; set; } = "new-id";
+        public int GenderTypeId { get; set; }
+    }
+
     static (CRUDRepository<T> Repo, MockCommand Command) Create<T>(
         IReadOnlyList<string>? id = null)
         where T : new()
@@ -269,6 +279,30 @@ public class RepositoryTests
         Assert.Equal("INSERT INTO addresses (Line1) VALUES ($Line1)", command.ExecuteCalls[0].Text);
         await repo.Update(new AddressView { Id = 1, Line1 = "2 Main", Description = "Work" });
         Assert.Equal("UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id", command.ExecuteCalls[1].Text);
+    }
+
+    [Fact]
+    public async Task CreateFillsMissingStringAndBoolZeros()
+    {
+        var connection = new MockConnection { Provider = "memory" };
+        var command = new MockCommand(connection);
+        connection.Command = command;
+        var repo = new CRUDRepository<ContactRow>(connection, new CRUDRepositoryOptions<ContactRow>
+        {
+            Ids = ["Id"],
+            Entity = "contacts",
+            ReadProperties = ["Id", "Name", "GivenName", "IsStarred", "Uuid", "GenderTypeId"],
+            CreateProperties = ["Name", "GivenName", "IsStarred", "Uuid"],
+        });
+        command.Response = new Response(new Value.Int(1), 1);
+        command.Reader = new MockReader<Row>([new Row { ["Id"] = 1 }]);
+        await repo.Create(new ContactRow { GivenName = "Ada" });
+        Assert.Equal(
+            "INSERT INTO contacts (GivenName, IsStarred, Name, Uuid) VALUES ($GivenName, $IsStarred, $Name, $Uuid)",
+            command.ExecuteCalls[0].Text);
+        await repo.Create(new ContactRow { GivenName = "Ada", IsStarred = true, Name = "Ada Lovelace" });
+        Assert.Contains("IsStarred", command.ExecuteCalls[1].Text);
+        Assert.Equal(new Value.Bool(true), command.ExecuteCalls[1].Parameters!.Single(field => field.Name == "IsStarred").Value);
     }
 
     [Fact]

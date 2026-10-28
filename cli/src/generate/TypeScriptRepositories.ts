@@ -24,6 +24,13 @@ const tsReadonly = (model: Options): string =>
 const tsOptionsExpr = (model: RepositoryModel): string =>
   dialectsOf(model).length === 0 ? tsOptions(model) : "options(connection)";
 
+const tsZeros = (model: RepositoryModel): string =>
+  model.createZeros.length === 0
+    ? ""
+    : `    this.createZeros = { ${model.createZeros
+        .map((zero) => `${zero.name}: ${zero.kind === "boolean" ? "false" : '""'}`)
+        .join(", ")} };\n`;
+
 const tsBuilder = (name: string, model: RepositoryModel, write: (options: Options) => string): string =>
   `const ${name} = (connection: IConnection) =>\n  new CRUDRepositoryBuilder<${model.typeName}>()\n    .add(${write(model)})${dialectsOf(model)
     .map(([engine, planned]) => `\n    .add("${quote(engine)}", ${write(withEntity(model, planned))})`)
@@ -94,7 +101,7 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
       : `import { CRUDRepository, ${builder}DatasourceError, DictionaryMapper, eq, ReadonlyRepository, Where, type IConnection } from "@deterministic-code/datasources";`;
     return content(
       repositoryFile("ts", model.specName, casing),
-      `import type { ${model.typeName} } from "${typeImport(model, casing)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\n${tsOptionsFn(model)}export class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${tsOptionsExpr(model)});\n${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model, casing)}\n}\n`,
+      `import type { ${model.typeName} } from "${typeImport(model, casing)}";\n${core}\n${imports.length === 0 ? "" : `${imports.join("\n")}\n`}\n${tsOptionsFn(model)}export class ${model.typeName}Repository extends CRUDRepository<${model.typeName}> {\n${fields.length === 0 ? "" : `${fields.join("\n")}\n`}  constructor(connection: IConnection) {\n    super(connection, ${tsOptionsExpr(model)});\n${tsZeros(model)}${wrap}${lines.length === 0 ? "" : `${lines.join("\n")}\n`}  }\n${createReadonly(model, casing)}\n}\n`,
     );
   });
   const registerImports = models.map((model) => `import { ${childClass(model.typeName)} } from "${repoImport(model.specName, casing)}";`);
