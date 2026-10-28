@@ -64,15 +64,14 @@ async fn omits_null_datetime_and_version() {
 
     assert_eq!(
         stored.get("Created"),
-        Some(&Value::from("2020-01-01T00:00:00.000Z"))
+        Some(&Value::DateTime(
+            Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap()
+        ))
     );
     assert_eq!(stored.get("Version"), Some(&Value::Binary(vec![1, 2])));
     assert_eq!(kept.get("Name"), Some(&Value::from("ada-v2")));
     assert_eq!(kept.get("Created"), stored.get("Created"));
     assert_eq!(kept.get("Version"), stored.get("Version"));
-    assert_eq!(
-        written.get("Created"),
-        Some(&Value::Text(Value::iso_datetime(created)))
-    );
+    assert_eq!(written.get("Created"), Some(&Value::DateTime(created)));
     assert_eq!(written.get("Version"), Some(&Value::Binary(vec![9, 9])));
 }

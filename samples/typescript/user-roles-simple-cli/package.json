@@ -14,7 +14,7 @@
     "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
     "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
     "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",
-    "@deterministic-code/migraters": "^0.0.4",
+    "@deterministic-code/migraters": "^0.0.10",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^13.0.3",
     "mysql2": "^3.14.0",

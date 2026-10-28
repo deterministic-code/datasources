@@ -8,7 +8,6 @@ import { generate as rustViewTypes } from "@deterministic-code/rust-generators/g
 import { generate as typescriptDatasourceTypes } from "@deterministic-code/typescript-generators/generate-datasource-types";
 import { generate as typescriptViewTypes } from "@deterministic-code/typescript-generators/generate-view-types";
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
-import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/generators-common/spec-types";
 import { DeterministicParser, type IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { caseDirectories, repositoriesPrefix, typesPrefix } from "./casing.ts";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
@@ -35,17 +34,13 @@ const typePacks: Record<Dialect, { datasource: (ctx: GenerateContext) => Promise
   rust: { datasource: rustDatasourceTypes, views: rustViewTypes },
 };
 
-const repositoryPacks: Record<Dialect, (models: RepositoryModel[], settings: Record<string, string>) => GenerateEntry[]> = {
+const repositoryPacks: Record<
+  Dialect,
+  (models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic) => GenerateEntry[]
+> = {
   csharp: csharpRepositories,
   typescript: typescriptRepositories,
   rust: rustRepositories,
-};
-
-const rustTypeStems = (spec: IDeterministic, settings: Record<string, string>): string[] => {
-  const casing = createCasingStrategy("rust", settings);
-  return [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) =>
-    casing.convertFileName(type.name),
-  );
 };
 
 const context = (request: GenerateRequest): GenerateContext => ({ reader: request.reader, settings: request.settings });
@@ -92,12 +87,10 @@ export const deterministic: CodeGenerationProvider = {
     const datasource = await pack.datasource(ctx);
     const views = await pack.views(ctx);
     return remap(
-      request.dialect === "typescript"
-        ? [
-            ...place(typesPrefix(request.dialect, casing, "datasource"), datasource),
-            ...place(typesPrefix(request.dialect, casing, "views"), views),
-          ]
-        : place(request.dialect, [...datasource, ...views]),
+      [
+        ...place(typesPrefix(request.dialect, casing, "datasource"), datasource),
+        ...place(typesPrefix(request.dialect, casing, "views"), views),
+      ],
       request.settings,
       request.dialect,
     );
@@ -109,13 +102,7 @@ export const deterministic: CodeGenerationProvider = {
     return remap(
       place(
         repositoriesPrefix(request.dialect, casing),
-        request.dialect === "rust"
-          ? rustRepositories(
-              await withProviderWrites(request, models),
-              request.settings,
-              rustTypeStems(spec, request.settings),
-            )
-          : repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings),
+        repositoryPacks[request.dialect](await withProviderWrites(request, models), request.settings, spec),
       ),
       request.settings,
       request.dialect,

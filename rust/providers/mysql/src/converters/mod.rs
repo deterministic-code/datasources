@@ -76,4 +76,17 @@ mod tests {
         }
         assert!(field("int").is_none());
     }
+
+    #[test]
+    fn row_converter_reverses_uuid_to_text() {
+        use datasources::RowTypeConverter;
+        use std::collections::HashMap;
+        let id = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let converter = RowTypeConverter::new(Vec::new()).with_types(row_type_converters());
+        let row = HashMap::from([("uuid".into(), Value::Uuid(id))]);
+        assert_eq!(
+            converter.reverse_convert(&row).unwrap()["uuid"],
+            Value::from(id.to_string())
+        );
+    }
 }

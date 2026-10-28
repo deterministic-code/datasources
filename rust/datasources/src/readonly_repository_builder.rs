@@ -1,9 +1,10 @@
 use crate::built_repository::BuiltRepository;
 use crate::connection::Connection;
-use crate::converters::MetaDataRowTypeConverter;
+use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
+use crate::registry_state::registered_driver;
 use crate::result::Result;
 use crate::statement_mappers::StatementMappers;
 use std::sync::Arc;
@@ -33,7 +34,18 @@ pub(crate) fn assemble(
         object_converter,
         row_type_converters,
     } = options;
-    let row_converter = row_converter.map(|mapping| mapping.with_types(row_type_converters));
+    let types = if row_type_converters.is_empty() {
+        registered_driver(connection.provider())
+            .map(|driver| driver.row_type_converters())
+            .unwrap_or_default()
+    } else {
+        row_type_converters
+    };
+    let row_converter = Some(
+        row_converter
+            .unwrap_or_else(|| RowTypeConverter::new(Vec::new()))
+            .with_types(types),
+    );
     let object_converter =
         object_converter.unwrap_or_else(|| Box::new(MetaDataRowTypeConverter::new(Vec::new())));
     let entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync> =
