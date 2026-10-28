@@ -22,6 +22,7 @@ import {
   DropTableStatement,
   DropTriggerStatement,
   ExpressionRenderer,
+  Identifier,
   IdentityInsertStatement,
   StatementRenderer,
   StatementTextRenderer,
@@ -394,23 +395,33 @@ describe("statement compile", () => {
     );
     class CustomWhere extends Where {}
     expect(text.render(new CustomWhere(new Operator.Equals("id", 1)))).toBe("id = $id");
-    class Identifier {
-      constructor(readonly name: string) {}
+    class AlienWhere {
+      constructor(readonly condition = new Operator.Equals("id", 1)) {}
+      accept = (visitor: { visit: (where: AlienWhere) => string }) => visitor.visit(this);
     }
-    class Literal {
-      constructor(readonly value: string) {}
+    let rendered = "";
+    try {
+      rendered = text.render(new AlienWhere() as never);
+    } catch {
+      rendered = "";
     }
+    expect(rendered).not.toBe("id = $id");
     class Equals {
-      constructor(readonly left: Identifier, readonly right: Literal) {}
+      constructor(
+        readonly left = { name: "id" },
+        readonly right = { value: 1 },
+      ) {}
     }
-    const AlienWhere = class Where {
-      constructor(readonly condition: Equals) {}
-      accept = (visitor: { visit: (where: InstanceType<typeof AlienWhere>) => string }) => visitor.visit(this);
-    };
-    expect(text.render(new AlienWhere(new Equals(new Identifier("name"), new Literal("Female"))) as never)).toBe(
-      "name = $name",
-    );
-    expect(new ConditionRenderer(new ExpressionRenderer(text)).render(new WhereText("id = 1"))).toBe("id = 1");
+    expect(() => new ExpressionRenderer(text).render(new Equals() as never)).toThrow(/empty expression/);
+    expect(
+      new ExpressionRenderer(text).render(new Operator.In(new Identifier("id"), new Identifier("ids"))),
+    ).toBe("id IN ids");
+    expect(() =>
+      new ExpressionRenderer(text).render(new Operator.NotIn(new Identifier("id"), new Identifier("ids"))),
+    ).toThrow(/empty expression/);
+    const conditions = new ConditionRenderer(new ExpressionRenderer(text));
+    expect(conditions.render(new WhereText("id = 1"))).toBe("id = 1");
+    expect(() => conditions.visit(new AlienWhere() as never)).toThrow(/empty expression/);
     expect(() =>
       DefaultStatementTextRenderer.instance.render(new AlterTableStatement("users", { kind: "empty" } as never)),
     ).toThrow(/empty alter/);
@@ -419,6 +430,15 @@ describe("statement compile", () => {
       accept = (visitor: { visit: (statement: object) => string }) => visitor.visit(this);
     }
     expect(() => DefaultStatementTextRenderer.instance.render(new QueryLike() as never)).toThrow();
+  });
+
+  it("renders a Where from a second module copy", async () => {
+    const url = new URL("./Where.ts", import.meta.url);
+    url.searchParams.set("copy", "2");
+    const { Where: ForeignWhere } = await import(url.href);
+    const foreign = new ForeignWhere(new Operator.Equals("id", 1));
+    expect(foreign instanceof Where).toBe(false);
+    expect(DefaultStatementTextRenderer.instance.render(foreign)).toBe("id = $id");
   });
 
   it("attaches where to a query", () => {

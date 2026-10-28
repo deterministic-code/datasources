@@ -4,6 +4,7 @@ import { Condition } from "./Condition.ts";
 import { Identifier } from "./Identifier.ts";
 import type { IExpression } from "./IExpression.ts";
 import { Literal } from "./Literal.ts";
+import { brand } from "./brand.ts";
 
 const pair = (
   left: string | IExpression,
@@ -232,3 +233,22 @@ export namespace Operator {
     }
   }
 }
+
+brand(Operator.Equals);
+brand(Operator.NotEquals);
+brand(Operator.GreaterThan);
+brand(Operator.LessThan);
+brand(Operator.GreaterThanOrEqual);
+brand(Operator.LessThanOrEqual);
+brand(Operator.And);
+brand(Operator.Or);
+brand(Operator.In);
+brand(Operator.Not);
+brand(Operator.IsNull);
+brand(Operator.IsNotNull);
+brand(Operator.Like);
+brand(Operator.NotLike);
+brand(Operator.Between);
+brand(Operator.NotBetween);
+brand(Operator.NotIn);
+brand(Operator.Exists);

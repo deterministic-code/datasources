@@ -11,6 +11,7 @@ import type { Comparison } from "./Cmp.ts";
 import { eq } from "./Cmp.ts";
 import { SelectStatement } from "./SelectStatement.ts";
 import { Subquery } from "./Subquery.ts";
+import { brand } from "./brand.ts";
 
 const pair = (
   expression: Operator,
@@ -249,3 +250,5 @@ export class Where implements IWhere {
     return collect(this.condition) as Parameter[];
   }
 }
+
+brand(Where);
