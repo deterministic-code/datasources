@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Datasources.CodeGenerators;
@@ -56,7 +55,7 @@ public static class GenerateSql
         }
         var spec = SpecParser.Parse(files);
         var types = SqlSchema.From(spec);
-        var initial = Initial(key, types, spec.DatasourceSeeds, casing);
+        var initial = Initial(key, types, spec.DatasourceSeeds, casing, settings);
         return (
             [
                 new($"{key}/migrations/{initial.Up.Filename}", initial.Up.Content),
@@ -69,65 +68,49 @@ public static class GenerateSql
         string language,
         IReadOnlyList<SqlTable> types,
         IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> seedsByTable,
-        PackCasing casing)
+        PackCasing casing,
+        IReadOnlyDictionary<string, string> settings)
     {
         var dialect = SqlDialect.Require(language);
         var mapping = new SqlMapping(casing, types);
         var live = SqlSchema.BuildLive(types, mapping);
         var seeds = SeedGenerator.Sections(dialect, live, seedsByTable, mapping);
+        var separator = JoinBatches.Of(settings);
         return (
-            new("0001_initial_up.sql", Finalize(UpSql(dialect, live, mapping, seeds), casing)),
-            new("0001_initial_down.sql", Finalize(DownSql(dialect, live), casing)));
+            new("0001_initial_up.sql", Finalize(UpSql(dialect, live, mapping, seeds, separator), casing)),
+            new("0001_initial_down.sql", Finalize(DownSql(dialect, live, separator), casing)));
     }
 
-    static string UpSql(string dialect, IReadOnlyList<SqlTable> live, SqlMapping mapping, IReadOnlyList<string> seeds)
+    static IEnumerable<string> FlattenTable(string dialect, SqlTable table, SqlMapping mapping)
     {
-        var body = new StringBuilder();
-        body.Append($"-- Generated initial migration for {dialect}\n\n");
-        body.Append("-- Create added tables\n");
-        foreach (var table in live)
-        {
-            var indexes = table.Indexes
-                .Select(idx => SqlDialect.RenderSql(dialect, TableStatements.CreateIndex(dialect, mapping, table, idx)))
-                .ToList();
-            var pk = SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table));
-            var trigger = SqlSchema.HasAuditColumns(table)
-                ? SqlDialect.RenderSql(dialect, TableStatements.CreateTrigger(dialect, table, mapping, pk ?? "id"))
-                : "";
-            body.Append(SqlDialect.RenderSql(dialect, TableStatements.CreateTable(dialect, table, mapping)));
-            body.Append('\n');
-            if (indexes.Count > 0 && indexes.Any(sql => sql != ""))
-            {
-                body.Append(string.Join("\n", indexes.Where(sql => sql != "")));
-                body.Append('\n');
-            }
-            if (trigger != "")
-            {
-                body.Append(trigger);
-                body.Append('\n');
-            }
-            body.Append('\n');
-        }
-        if (seeds.Count > 0)
-        {
-            body.Append("-- Seed data\n");
-            foreach (var block in seeds) body.Append(block).Append(block.EndsWith('\n') ? "" : "\n");
-        }
-        return body.ToString();
+        var indexes = table.Indexes.Select(idx =>
+            SqlDialect.RenderSql(dialect, TableStatements.CreateIndex(dialect, mapping, table, idx)));
+        var pk = SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table));
+        var trigger = SqlSchema.HasAuditColumns(table)
+            ? SqlDialect.RenderSql(dialect, TableStatements.CreateTrigger(dialect, table, mapping, pk ?? "id"))
+            : "";
+        return
+        [
+            SqlDialect.RenderSql(dialect, TableStatements.CreateTable(dialect, table, mapping)),
+            .. indexes,
+            trigger,
+        ];
     }
 
-    static string DownSql(string dialect, IReadOnlyList<SqlTable> live)
+    static string UpSql(
+        string dialect,
+        IReadOnlyList<SqlTable> live,
+        SqlMapping mapping,
+        IReadOnlyList<string> seeds,
+        string separator)
     {
-        var body = new StringBuilder();
-        body.Append($"-- Rollback initial migration for {dialect}\n\n");
-        body.Append("-- DROP tables (reverse dependency order)\n");
-        foreach (var table in live.Reverse())
-        {
-            body.Append(SqlDialect.RenderSql(dialect, TableStatements.DropTable(dialect, table.TableName)));
-            body.Append('\n');
-        }
-        return body.ToString();
+        var parts = live.SelectMany(table => FlattenTable(dialect, table, mapping)).Concat(
+            seeds.Count == 0 ? [] : [$"-- Seed data\n{JoinBatches.Join(seeds, separator)}"]);
+        return $"-- Generated initial migration for {dialect}\n\n-- Create added tables\n{JoinBatches.Join(parts, separator)}";
     }
+
+    static string DownSql(string dialect, IReadOnlyList<SqlTable> live, string separator) =>
+        $"-- Rollback initial migration for {dialect}\n\n-- DROP tables (reverse dependency order)\n{JoinBatches.Join(live.Reverse().Select(table => SqlDialect.RenderSql(dialect, TableStatements.DropTable(dialect, table.TableName))), separator)}";
 
     static string Finalize(string text, PackCasing casing)
     {

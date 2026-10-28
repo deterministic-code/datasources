@@ -1035,7 +1035,7 @@ type_options.entity_mapper =
 type_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 let mut users_repo =
-    ReadonlyRepository::new(connection.clone(), users_options).unwrap();
+    ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let types =
     ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
 users_repo.add_enriched(
@@ -1361,7 +1361,7 @@ CREATE TABLE user (id uuid, username string NOT NULL, is_enabled bool NOT NULL, 
 
 ### Call a stored procedure
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L114-L123)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L124-L133)
 
 ```csharp
 Parameter[] parameters = [new("id", 9)];
@@ -1416,7 +1416,7 @@ for await (const row of repo.read(call, parameters)) rows.push(row);
 
 ### Read and read single
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L76-L83)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RepositoryTests.cs#L86-L93)
 
 ```csharp
 await foreach (var row in repo.Read())
@@ -1677,10 +1677,10 @@ options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
 ])));
-let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+let mut users_repo = ReadonlyRepository::<Row>::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
     datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
-    Arc::new(ReadonlyRepository::new(
+    Arc::new(ReadonlyRepository::<Row>::new(
         connection.clone(),
         ReadonlyRepositoryMappingOptions::default(),
     ).unwrap()),
@@ -1940,14 +1940,13 @@ var items = await joinRepo.Read(
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L174)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L173)
 
 ```rust
 let connection = MemoryDriver.connection(None);
 connection.open().await.unwrap();
 let types = Arc::new(types_repo(connection.clone()));
-let mut created_type = record(&[("Name", Value::from("person"))]);
-let created_type = types.create(&mut created_type).await.unwrap();
+let created_type = types.create(record(&[("Name", Value::from("person"))])).await.unwrap();
 let mut parents = parents_repo(connection);
 parents.add_enriched(
     Enrichment::new(
@@ -1960,8 +1959,8 @@ parents.add_enriched(
     as_readonly(types.clone()),
     None,
 );
-let mut parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
-parents.create(&mut parent).await.unwrap();
+let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
+parents.create(parent).await.unwrap();
 let enriched = parents.read_single(None, None, None).await.unwrap();
 
 let command = Arc::new(MockCommand::new());

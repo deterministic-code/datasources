@@ -805,7 +805,7 @@ See [Datasource](docs/sections/datasource.md) for `CreateRepository` / `createRe
     var created = factory.Create<Item>();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L214-L218)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L224-L228)
 
 ```rust
 let factory = RepositoryFactory::new();

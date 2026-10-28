@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@deterministic-code/csharp-generators": "github:deterministic-code/generators-csharp#main",
+    "@deterministic-code/datasources-code-generators": "file:../typescript/code-generators",
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
-    "@deterministic-code/datasources-code-generators": "file:../typescript/code-generators",
     "@deterministic-code/rust-generators": "github:deterministic-code/generators-rust#main",
     "@deterministic-code/typescript-generators": "github:deterministic-code/generators-typescript#main",
     "@inquirer/prompts": "^7.8.0",

@@ -226,6 +226,9 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["generate", "all", "--dialect", "typescript", "--sql-keywords=screaming"])).toThrow(
       /--sql-keywords must be one of/,
     );
+    expect(() => parseArgs(["generate", "all", "--dialect", "typescript", "--batch-separator=GO\nDROP"])).toThrow(
+      /--batch-separator must be a single line/,
+    );
     expect(parseArgs(["generate", "types", "--dialect", "rust", "--type-names", "snake", "--field-names=kebab", "--folder-names", "pascal"]).command).toMatchObject({
       types: "Snake",
       fields: "Kebab",

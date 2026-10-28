@@ -38,8 +38,7 @@ const flattenTable = (
   dialect: SqlDialect,
   table: LiveTable,
   mapping: SqlMapping,
-  separator: string,
-): string => {
+): string[] => {
   const indexes = table.indexes.map((idx) =>
     renderSql(dialect, createIndexStatementOf(dialect, mapping, table, idx)),
   );
@@ -50,10 +49,7 @@ const flattenTable = (
         createTriggerStatementOf(dialect, live, mapping, live.pkName ?? "id"),
       )
     : "";
-  return joinBatches(
-    [renderSql(dialect, createTableStatementOf(dialect, table, mapping)), ...indexes, audit],
-    separator,
-  );
+  return [renderSql(dialect, createTableStatementOf(dialect, table, mapping)), ...indexes, audit];
 };
 
 const generateInitialMigration = (
@@ -75,10 +71,9 @@ const generateInitialMigration = (
       content: finalizeSql(
         fill(migrationUpTmpl, {
           dialect,
-          preamble: "",
           body: joinBatches(
             [
-              ...live.map((t) => flattenTable(dialect, t, mapping, separator)),
+              ...live.flatMap((t) => flattenTable(dialect, t, mapping)),
               ...(seeds.length === 0 ? [] : [`-- Seed data\n${joinBatches(seeds, separator)}`]),
             ],
             separator,

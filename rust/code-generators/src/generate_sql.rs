@@ -59,7 +59,7 @@ fn schema_files(
     }
     let parsed = spec::parse(files)?;
     let types = schema::from_spec(&parsed);
-    let initial = initial(key, &types, &parsed.datasource_seeds, casing)?;
+    let initial = initial(key, &types, &parsed.datasource_seeds, casing, settings)?;
     Ok((
         vec![
             GenerateEntry::new(format!("{key}/migrations/{}", initial.0.filename), initial.0.content),
@@ -74,18 +74,45 @@ fn initial(
     types: &[SqlTable],
     seeds_by_table: &HashMap<String, Vec<SeedRow>>,
     casing: &PackCasing,
+    settings: &HashMap<String, String>,
 ) -> Result<(GenerateEntry, GenerateEntry)> {
     let dialect = sql_dialect::require(language)?;
     let mapping = SqlMapping::new(casing.clone(), types);
     let live = schema::build_live(types, &mapping);
     let seeds = seed_generator::sections(&dialect, &live, seeds_by_table, &mapping)?;
+    let separator = crate::join_batches::of(settings)?;
     Ok((
         GenerateEntry::new(
             "0001_initial_up.sql",
-            finalize(&up_sql(&dialect, &live, &mapping, &seeds)?, casing),
+            finalize(&up_sql(&dialect, &live, &mapping, &seeds, &separator)?, casing),
         ),
-        GenerateEntry::new("0001_initial_down.sql", finalize(&down_sql(&dialect, &live)?, casing)),
+        GenerateEntry::new(
+            "0001_initial_down.sql",
+            finalize(&down_sql(&dialect, &live, &separator)?, casing),
+        ),
     ))
+}
+
+fn flatten_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<Vec<String>> {
+    let mut parts = vec![sql_dialect::render_sql(
+        dialect,
+        &table_statements::create_table(dialect, table, mapping)?,
+    )?];
+    for idx in &table.indexes {
+        parts.push(sql_dialect::render_sql(
+            dialect,
+            &table_statements::create_index(dialect, mapping, table, idx)?,
+        )?);
+    }
+    if schema::has_audit_columns(table) {
+        let overlay = schema::overlay_of(table);
+        let pk = spec::pk_name(&table.as_type(), Some(&overlay));
+        parts.push(sql_dialect::render_sql(
+            dialect,
+            &table_statements::create_trigger(dialect, table, mapping, &pk)?,
+        )?);
+    }
+    Ok(parts)
 }
 
 fn up_sql(
@@ -93,64 +120,36 @@ fn up_sql(
     live: &[SqlTable],
     mapping: &SqlMapping,
     seeds: &[String],
+    separator: &str,
 ) -> Result<String> {
-    let mut body = format!("-- Generated initial migration for {dialect}\n\n-- Create added tables\n");
+    let mut parts = Vec::new();
     for table in live {
-        let mut indexes = Vec::new();
-        for idx in &table.indexes {
-            indexes.push(sql_dialect::render_sql(
-                dialect,
-                &table_statements::create_index(dialect, mapping, table, idx)?,
-            )?);
-        }
-        let overlay = schema::overlay_of(table);
-        let pk = spec::pk_name(&table.as_type(), Some(&overlay));
-        let trigger = if schema::has_audit_columns(table) {
-            sql_dialect::render_sql(
-                dialect,
-                &table_statements::create_trigger(dialect, table, mapping, &pk)?,
-            )?
-        } else {
-            String::new()
-        };
-        body.push_str(&sql_dialect::render_sql(
-            dialect,
-            &table_statements::create_table(dialect, table, mapping)?,
-        )?);
-        body.push('\n');
-        let nonempty: Vec<_> = indexes.into_iter().filter(|sql| !sql.is_empty()).collect();
-        if !nonempty.is_empty() {
-            body.push_str(&nonempty.join("\n"));
-            body.push('\n');
-        }
-        if !trigger.is_empty() {
-            body.push_str(&trigger);
-            body.push('\n');
-        }
-        body.push('\n');
+        parts.extend(flatten_table(dialect, table, mapping)?);
     }
     if !seeds.is_empty() {
-        body.push_str("-- Seed data\n");
-        for block in seeds {
-            body.push_str(block);
-            if !block.ends_with('\n') {
-                body.push('\n');
-            }
-        }
+        parts.push(format!(
+            "-- Seed data\n{}",
+            crate::join_batches::join(seeds, separator)
+        ));
     }
-    Ok(body)
+    Ok(format!(
+        "-- Generated initial migration for {dialect}\n\n-- Create added tables\n{}",
+        crate::join_batches::join(&parts, separator)
+    ))
 }
 
-fn down_sql(dialect: &str, live: &[SqlTable]) -> Result<String> {
-    let mut body = format!("-- Rollback initial migration for {dialect}\n\n-- DROP tables (reverse dependency order)\n");
+fn down_sql(dialect: &str, live: &[SqlTable], separator: &str) -> Result<String> {
+    let mut parts = Vec::new();
     for table in live.iter().rev() {
-        body.push_str(&sql_dialect::render_sql(
+        parts.push(sql_dialect::render_sql(
             dialect,
             &table_statements::drop_table(dialect, &table.table_name)?,
         )?);
-        body.push('\n');
     }
-    Ok(body)
+    Ok(format!(
+        "-- Rollback initial migration for {dialect}\n\n-- DROP tables (reverse dependency order)\n{}",
+        crate::join_batches::join(&parts, separator)
+    ))
 }
 
 fn finalize(text: &str, casing: &PackCasing) -> String {

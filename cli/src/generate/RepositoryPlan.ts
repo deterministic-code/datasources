@@ -81,7 +81,7 @@ export const planRepositories = (
       return [];
     const authored = viewByTable.get(table.name) ?? types.get(table.name);
     if (authored === undefined) throw new Error(`${table.name}: no matching type in types.yaml`);
-    const removed = (authored as Type & { removeFields?: string[] }).removeFields ?? [];
+    const removed = authored.removeFields ?? [];
     const full = expanded.get(authored.name) as Type;
     const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
     const overlays = new Map(table.fields.map((field) => [field.name, field]));

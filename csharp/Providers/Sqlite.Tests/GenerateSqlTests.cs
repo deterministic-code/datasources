@@ -48,6 +48,54 @@ public class GenerateSqlTests
         Assert.DoesNotContain(files, f => f.Contains("stored_procedures"));
     }
 
+    static string UpSql(IReadOnlyDictionary<string, string> settings, string types = TypesYaml)
+    {
+        var up = GenerateSql.Of(Files(types), settings, ["sqlite"])
+            .Single(entry => entry.Filename.EndsWith("sqlite/migrations/0001_initial_up.sql"));
+        return up.Content;
+    }
+
+    [Fact]
+    public void DefaultsToAWholeLineGoBetweenTableAndTrigger() =>
+        Assert.Matches(@";\nGO\nCREATE TRIGGER ""trg_users_updated_at""", UpSql(new Dictionary<string, string>()));
+
+    [Fact]
+    public void PutsGoBetweenTables()
+    {
+        var sql = UpSql(new Dictionary<string, string>(), """
+            types:
+              - gender:
+                  tags: [datasource_type]
+                  fields:
+                    - id:
+                        type: integer
+                        is_id: true
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+              - contact:
+                  tags: [datasource_type]
+                  fields:
+                    - id:
+                        type: integer
+                        is_id: true
+                    - created:
+                        type: datetime
+                    - updated:
+                        type: datetime
+            """);
+        Assert.Matches(@"trg_genders_updated_at[\s\S]*;\nGO\nCREATE TABLE ""contacts""", sql);
+    }
+
+    [Fact]
+    public void UsesTheConfiguredSeparator()
+    {
+        var sql = UpSql(new Dictionary<string, string> { ["datasource.batch_separator"] = "BATCH" });
+        Assert.Matches(@";\nBATCH\nCREATE TRIGGER ""trg_users_updated_at""", sql);
+        Assert.DoesNotMatch(@"\nGO\n", sql);
+    }
+
     [Fact]
     public void ThrowsWhenIdIsMissingIsId()
     {
