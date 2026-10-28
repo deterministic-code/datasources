@@ -2,6 +2,7 @@ import type { ICondition } from "./ICondition.ts";
 import type { IConditionVisitor } from "./IConditionVisitor.ts";
 import type { IStatement } from "./IStatement.ts";
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
+import { is } from "./brand.ts";
 import { ConditionRenderer } from "./ConditionRenderer.ts";
 import { ExpressionRenderer } from "./ExpressionRenderer.ts";
 import { StatementRenderer } from "./StatementRenderer.ts";
@@ -25,15 +26,8 @@ export class StatementTextRenderer {
   render(statement: IStatement): string;
   render(condition: ICondition): string;
   render(target: IStatement | ICondition): string {
-    if (target.constructor.name === "Where" || target.constructor.name === "WhereText") {
-      return (target as ICondition).accept(this.conditions);
-    }
-    if (target.constructor.name.endsWith("Statement")) {
-      return (target as IStatement).accept(this.statements);
-    }
-    if (target instanceof Where || target instanceof WhereText) return target.accept(this.conditions);
-    return "where" in target || "fields" in target || "joins" in target || "column" in target
-      ? (target as IStatement).accept(this.statements)
-      : (target as ICondition).accept(this.conditions);
+    return is(target, Where) || is(target, WhereText)
+      ? target.accept(this.conditions)
+      : (target as IStatement).accept(this.statements);
   }
 }

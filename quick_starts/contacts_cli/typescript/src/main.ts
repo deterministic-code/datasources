@@ -7,7 +7,6 @@ import type { Phone } from "../generated/typescript/types/generated/views/phone.
 const ds = Datasource.default;
 const contactsRepo = ds.createRepository("contacts") as ICRUDRepository<Contact>;
 const ada = await contactsRepo.create({
-  name: "",
   givenName: "Ada",
   genderTypeName: "Female",
   emails: [{ emailTypeName: "Personal", address: "ada@example.com", displayName: "Ada", isPrimary: true } as Email],
@@ -17,7 +16,6 @@ const ada = await contactsRepo.create({
 console.log(`created ${ada.id} ${ada.givenName} ${ada.emails[0].address} ${ada.phones[0].number} ${ada.addresses[0].line1}`);
 
 const alan = await contactsRepo.create({
-  name: "",
   givenName: "Alan",
   genderTypeName: "Male",
   emails: [{ emailTypeName: "Work", address: "alan@work.example", displayName: "Alan", isPrimary: true } as Email],
@@ -36,7 +34,6 @@ console.log(`read ${alanRead.id} ${alanRead.givenName} emails=${alanRead.emails.
 
 const adaSaved = await contactsRepo.update({
   id: ada.id,
-  name: "",
   givenName: "Ada Byron",
   genderTypeName: "Female",
   emails: [
@@ -58,7 +55,6 @@ console.log(
 
 const alanSaved = await contactsRepo.update({
   id: alan.id,
-  name: "",
   givenName: "Alan",
   genderTypeName: "Male",
   emails: [
