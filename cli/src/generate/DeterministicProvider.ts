@@ -18,6 +18,7 @@ import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./datasourceYaml.ts";
+import { sqlDialectsFromEnv } from "./sqlDialects.ts";
 
 const place = (dir: string, entries: GenerateEntry[]): GenerateEntry[] =>
   entries.map((entry) => ({ ...entry, filename: `${dir}/${entry.filename}` }));
@@ -74,15 +75,6 @@ const withProviderWrites = async (request: GenerateRequest, models: RepositoryMo
       }));
 };
 
-const dialectsOf = (settings: Record<string, string>): string[] => {
-  const out: string[] = [];
-  for (const name of (settings["backend.datasources"] ?? "").split(",")) {
-    const key = name.trim();
-    if (key !== "" && !out.includes(key)) out.push(key);
-  }
-  return out;
-};
-
 export const deterministic: CodeGenerationProvider = {
   name: "deterministic",
   generateTypes: async (request) => {
@@ -116,5 +108,5 @@ export const deterministic: CodeGenerationProvider = {
     );
   },
   generateDatasource: async (request) =>
-    place("sql", await generateSql(context(request), dialectsOf(request.settings))),
+    place("sql", await generateSql(context(request), sqlDialectsFromEnv(request.env ?? {}))),
 };

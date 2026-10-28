@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Fs } from "./io.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import { run, type Deps } from "./run.ts";
@@ -58,6 +58,21 @@ const deps = (
 };
 
 describe("run", () => {
+  const keys = ["INSTALLED_PROVIDERS", "PROVIDER", "DATASOURCE_URL"] as const;
+  const previous: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    for (const key of keys) {
+      previous[key] = process.env[key];
+      delete process.env[key];
+    }
+  });
+  afterEach(() => {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+
   it("prints help", async () => {
     const io = deps(mem([]).fs);
     expect(await run(["--help"], io, cwd)).toBe(0);

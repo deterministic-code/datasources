@@ -41,10 +41,12 @@ const contactsFiles = (): Record<string, string> => ({
 const request = (
   dialect: Dialect,
   settings: Record<string, string> = { "backend.datasources": "sqlite", "languages.typescript.casing.fields": "camel" },
+  env: Record<string, string> = { INSTALLED_PROVIDERS: "sqlite" },
 ) => ({
   dialect,
   reader: memoryReader(contactsFiles()),
   settings,
+  env,
 });
 
 const textOf = (entries: { kind: string; filename: string; contents?: string }[], filename: string): string => {
@@ -500,13 +502,28 @@ types:
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
-    await deterministic.generateDatasource(request("typescript", {}));
-    await deterministic.generateDatasource(request("typescript", { "backend.datasources": "sqlite, sqlite,," }));
+    await deterministic.generateDatasource(request("typescript", {}, { INSTALLED_PROVIDERS: "sqlite" }));
+    await deterministic.generateDatasource(
+      request("typescript", { "backend.datasources": "sqlite,mysql,postgres" }, { INSTALLED_PROVIDERS: "sqlite" }),
+    );
     const script = sql.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(script).toMatch(/CREATE TABLE/);
     expect(script).toContain("contacts");
     expect(script).toContain("OldContactsTbl");
     expect(script).toContain("CntID");
+    const installedOnly = await deterministic.generateDatasource(
+      request("typescript", { "backend.datasources": "sqlite,mysql,postgres" }, { INSTALLED_PROVIDERS: "sqlite" }),
+    );
+    expect(installedOnly.some((entry) => entry.filename.includes("sql/sqlite"))).toBe(true);
+    expect(installedOnly.some((entry) => entry.filename.includes("sql/mysql"))).toBe(false);
+    expect(installedOnly.some((entry) => entry.filename.includes("sql/postgres"))).toBe(false);
+    expect(
+      await deterministic.generateDatasource({
+        dialect: "typescript",
+        reader: memoryReader(contactsFiles()),
+        settings: { "backend.datasources": "sqlite" },
+      }),
+    ).toEqual([]);
   });
 
   it("emits C# auto-properties without a semicolon after the accessor", async () => {
@@ -881,16 +898,21 @@ types: []
     const input = join(cwd, "deterministic");
     const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
-    seeded[join(cwd, ".env")] = "PROVIDER=sqlite\nDATASOURCE_URL=sqlite:///./app.sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///./app.sqlite\n";
     const store = mem(seeded);
     const ran: string[] = [];
     const io = deps(store.fs);
     io.run = async (command, args) => {
       ran.push(`${command} ${args.join(" ")}`);
     };
-    const previous = { PROVIDER: process.env.PROVIDER, DATASOURCE_URL: process.env.DATASOURCE_URL };
+    const previous = {
+      PROVIDER: process.env.PROVIDER,
+      DATASOURCE_URL: process.env.DATASOURCE_URL,
+      INSTALLED_PROVIDERS: process.env.INSTALLED_PROVIDERS,
+    };
     delete process.env.PROVIDER;
     delete process.env.DATASOURCE_URL;
+    delete process.env.INSTALLED_PROVIDERS;
     try {
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
@@ -918,14 +940,14 @@ types: []
       expect(skipIo.logs.some((line) => line.includes("migrate-up"))).toBe(false);
       const memory = mem({
         ...seeded,
-        [join(cwd, ".env")]: "PROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
+        [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
       });
       const memoryIo = deps(memory.fs);
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], memoryIo, cwd)).toBe(0);
       expect(memoryIo.logs.some((line) => line.includes("in-memory"))).toBe(true);
       const mismatch = mem({
         ...seeded,
-        [join(cwd, ".env")]: "PROVIDER=postgres\nDATASOURCE_URL=postgres://localhost/db\n",
+        [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nPROVIDER=postgres\nDATASOURCE_URL=postgres://localhost/db\n",
       });
       expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], deps(mismatch.fs), cwd)).toBe(1);
     } finally {
@@ -933,6 +955,8 @@ types: []
       else process.env.PROVIDER = previous.PROVIDER;
       if (previous.DATASOURCE_URL === undefined) delete process.env.DATASOURCE_URL;
       else process.env.DATASOURCE_URL = previous.DATASOURCE_URL;
+      if (previous.INSTALLED_PROVIDERS === undefined) delete process.env.INSTALLED_PROVIDERS;
+      else process.env.INSTALLED_PROVIDERS = previous.INSTALLED_PROVIDERS;
     }
   });
 
@@ -941,6 +965,7 @@ types: []
     const input = join(cwd, "deterministic");
     const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const store = mem(seeded);
     const io = deps(store.fs);
     expect(await run(["migrations", "create", "--cwd", cwd], io, cwd)).toBe(0);
@@ -954,6 +979,7 @@ types: []
     const absolute = mem({
       [join("/tmp/spec", "types.yaml")]: typesYaml,
       [join("/tmp/spec", "datasource.yaml")]: sqliteDatasourceYaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     });
     expect(
       await run(
@@ -981,6 +1007,7 @@ types:
             type: string
 `,
       [join(input, "settings.yaml")]: "settings:\n  backend:\n    datasources: sqlite\n",
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     };
     const generate = mem(spec);
     expect(
@@ -1061,6 +1088,7 @@ types:
             is_id: true
 `,
       [join(input, "settings.yaml")]: yaml,
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     });
     const off = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
     expect(
@@ -1103,6 +1131,7 @@ types:
     const input = join(cwd, "deterministic");
     const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const generate = mem(seeded);
     expect(
       await run(

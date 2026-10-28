@@ -2,6 +2,7 @@ import { isAbsolute, join } from "node:path";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import type { Flags, GenerateCommand } from "../parse.ts";
 import type { Deps } from "../run.ts";
+import { destEnv } from "./destEnv.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
 import { withStoredProcedures } from "./storedProcedures.ts";
@@ -24,6 +25,7 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
     dialect: command.dialect,
     reader: memoryReader(loaded.files),
     settings,
+    env: await destEnv(deps.fs, flags.cwd),
   };
   const entries = await {
     all: async () => [

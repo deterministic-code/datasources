@@ -16,6 +16,7 @@ const repo = dirname(here);
 const { parse } = createRequire(join(repo, "cli/package.json"))("yaml");
 const keep = process.env.KEEP === "1";
 const only = flag("provider");
+const composeProject = "datasources-qs";
 
 function flag(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -77,11 +78,26 @@ const expectedOf = (spec, suite) => {
   return normalize(readFileSync(path, "utf8"));
 };
 
+const composeArgv = (argv) =>
+  argv[0] === "docker" && argv[1] === "compose"
+    ? ["docker", "compose", "-p", composeProject, ...argv.slice(2)]
+    : argv;
+
+const composeDown = (cwd, env) => {
+  spawnSync("docker", ["compose", "-p", composeProject, "down", "-v", "--remove-orphans"], {
+    cwd,
+    encoding: "utf8",
+    env,
+    stdio: "inherit",
+  });
+};
+
 const one = (spec, suite) => {
   const dest = mkdtempSync(join(repo, "datasources-qs-"));
   console.log(`\n== ${spec.name} ${spec.language} ${suite.name} ${dest}`);
   const env = { ...process.env };
   const actual = [];
+  let compose = false;
   try {
     for (const line of suite.commands ?? []) {
       const exported = exportLine(line);
@@ -89,7 +105,12 @@ const one = (spec, suite) => {
         env[exported.key] = exported.value;
         continue;
       }
-      const argv = words(line);
+      const raw = words(line);
+      const argv = composeArgv(raw);
+      if (argv !== raw) {
+        compose = true;
+        if (argv.includes("up")) composeDown(dest, env);
+      }
       const capture = argv[0] === "dotnet" && argv[1] === "run";
       const result = run(argv, dest, env, capture ? "pipe" : "inherit");
       if (capture) actual.push(result.stdout ?? "");
@@ -99,6 +120,7 @@ const one = (spec, suite) => {
     if (got !== want) throw new Error(`output mismatch\n--- expected\n${want}--- actual\n${got}`);
     console.log(`ok ${spec.name} ${suite.name}`);
   } finally {
+    if (compose) composeDown(dest, env);
     if (keep) console.log(`KEEP ${dest}`);
     else rmSync(dest, { recursive: true, force: true });
   }
