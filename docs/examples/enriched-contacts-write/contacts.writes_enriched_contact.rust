@@ -59,7 +59,7 @@ let stamp = Value::DateTime(
         .with_timezone(&chrono::Utc),
 );
 let version = Value::Binary(vec![]);
-let mut created = contact_row(&[
+let created = contact_row(&[
     ("Uuid", Value::Uuid(uuid::Uuid::new_v4())),
     ("Created", stamp.clone()),
     ("Updated", stamp.clone()),
@@ -92,7 +92,7 @@ let mut created = contact_row(&[
         ])]),
     ),
 ]);
-let created = contacts_repo.create(&mut created).await.unwrap();
+let created = contacts_repo.create(created).await.unwrap();
 let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };

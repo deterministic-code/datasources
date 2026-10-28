@@ -21,10 +21,10 @@ options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Name".into(), "roles.name".into()),
     ("Id".into(), "id".into()),
 ])));
-let mut users_repo = ReadonlyRepository::new(connection.clone(), options).unwrap();
+let mut users_repo = ReadonlyRepository::<Row>::new(connection.clone(), options).unwrap();
 users_repo.add_enriched(
     datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
-    Arc::new(ReadonlyRepository::new(
+    Arc::new(ReadonlyRepository::<Row>::new(
         connection.clone(),
         ReadonlyRepositoryMappingOptions::default(),
     ).unwrap()),
