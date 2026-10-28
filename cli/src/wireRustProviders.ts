@@ -2,6 +2,20 @@ import { dirname, join } from "node:path";
 import { catalog, type Provider } from "./catalog.ts";
 import type { Fs } from "./io.ts";
 
+const rustDriver: Record<Provider, string> = {
+  json: "JsonDriver",
+  memory: "MemoryDriver",
+  sqlite: "SqliteDriver",
+  xml: "XmlDriver",
+  yaml: "YamlDriver",
+  mysql: "MysqlDriver",
+  sqlserver: "SqlServerDriver",
+  postgres: "PostgresDriver",
+  oracle: "OracleDriver",
+  mongodb: "MongoDbDriver",
+  dynamodb: "DynamoDbDriver",
+};
+
 const optional = async (fs: Fs, path: string): Promise<string | undefined> => {
   try {
     return await fs.readFile(path);
@@ -20,10 +34,26 @@ const firstFile = async (fs: Fs, cwd: string, names: string[]): Promise<{ path: 
 };
 
 export const rustBindContents = (names: Provider[]): string =>
-  names.map((name) => `use ${catalog[name].cargo.replaceAll("-", "_")} as _;\n`).join("");
+  `pub fn register() {\n${names
+    .map((name) => {
+      const crate = catalog[name].cargo.replaceAll("-", "_");
+      return `    datasources::register("${name}", std::sync::Arc::new(${crate}::${rustDriver[name]}));`;
+    })
+    .join("\n")}\n}\n`;
 
-export const attachedProviders = (entry: string): string | undefined =>
-  entry.includes("datasources_providers") ? undefined : `mod datasources_providers;\n${entry}`;
+const withMod = (entry: string): string =>
+  entry.includes("datasources_providers") ? entry : `mod datasources_providers;\n${entry}`;
+
+const withRegisterCall = (entry: string): string => {
+  if (entry.includes("datasources_providers::register()")) return entry;
+  const main = /((?:async\s+)?fn\s+main\s*\([^)]*\)(?:\s*->\s*[^{]+)?\s*)\{(\s*)/;
+  return entry.replace(main, (_, sig: string, ws: string) => `${sig}{\n    datasources_providers::register();${ws === "" ? "\n" : ws}`);
+};
+
+export const attachedProviders = (entry: string): string | undefined => {
+  const next = withRegisterCall(withMod(entry));
+  return next === entry ? undefined : next;
+};
 
 export const wireRustProviders = async (
   cwd: string,

@@ -235,7 +235,7 @@ pub fn registered() -> Vec<String>
 
 A missing factory throws {{ProviderNotInstalledException|ProviderNotInstalledError|DatasourceError::ProviderNotInstalled}}.
 
-When {{Create|create|create}} is called with {{null|undefined|None}} options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` is registered. Every dialect loads those with `DriverLoader` and `ProviderCatalog`. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what {{Register|register|register}} stores.
+When {{Create|create|create}} is called with {{null|undefined|None}} options, each name in `INSTALLED_PROVIDERS` and the provider inferred from `DATASOURCE_URL` must already be registered. TypeScript and C# load a missing name with `DriverLoader` and `ProviderCatalog`. Rust returns {{ProviderNotInstalledException|ProviderNotInstalledError|DatasourceError::ProviderNotInstalled}}. Each dialect implements [IDriver](../writing-providers.md#idriver) (`MemoryDriver`, `SqliteDriver`, `MysqlDriver`, `PostgresDriver`, …) and that is what {{Register|register|register}} stores.
 
 ## Examples
 

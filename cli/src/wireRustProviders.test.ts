@@ -21,15 +21,35 @@ const mem = (files: Record<string, string> = {}): { files: Record<string, string
   };
 };
 
+const sqliteRegister = `pub fn register() {
+    datasources::register("sqlite", std::sync::Arc::new(datasources_sqlite::SqliteDriver));
+}
+`;
+
 describe("wireRustProviders", () => {
   it("names each cargo crate", () => {
     expect(rustBindContents(["sqlite", "postgres"])).toBe(
-      "use datasources_sqlite as _;\nuse datasources_postgres as _;\n",
+      `pub fn register() {
+    datasources::register("sqlite", std::sync::Arc::new(datasources_sqlite::SqliteDriver));
+    datasources::register("postgres", std::sync::Arc::new(datasources_postgres::PostgresDriver));
+}
+`,
     );
   });
 
-  it("skips attach when the bind module is already referenced", () => {
-    expect(attachedProviders("mod datasources_providers;\nfn main() {}\n")).toBeUndefined();
+  it("skips attach when the bind module and register call are already present", () => {
+    expect(
+      attachedProviders("mod datasources_providers;\nfn main() {\n    datasources_providers::register();\n}\n"),
+    ).toBeUndefined();
+  });
+
+  it("inserts register at the start of main", () => {
+    expect(attachedProviders("fn main() {}\n")).toBe(
+      "mod datasources_providers;\nfn main() {\n    datasources_providers::register();\n}\n",
+    );
+    expect(attachedProviders("#[tokio::main]\nasync fn main() -> Result<()> {\n    let ds = default()?;\n}\n")).toBe(
+      "mod datasources_providers;\n#[tokio::main]\nasync fn main() -> Result<()> {\n    datasources_providers::register();\n    let ds = default()?;\n}\n",
+    );
   });
 
   it("writes the bind file next to src/main.rs", async () => {
@@ -37,8 +57,10 @@ describe("wireRustProviders", () => {
     const { files, fs } = mem({ [join(cwd, "src/main.rs")]: "fn main() {}\n" });
     const logs: string[] = [];
     await wireRustProviders(cwd, ["sqlite"], false, { fs, log: (line) => logs.push(line) });
-    expect(files[join(cwd, "src/datasources_providers.rs")]).toBe("use datasources_sqlite as _;\n");
-    expect(files[join(cwd, "src/main.rs")]).toBe("mod datasources_providers;\nfn main() {}\n");
+    expect(files[join(cwd, "src/datasources_providers.rs")]).toBe(sqliteRegister);
+    expect(files[join(cwd, "src/main.rs")]).toBe(
+      "mod datasources_providers;\nfn main() {\n    datasources_providers::register();\n}\n",
+    );
     expect(logs).toContain(join(cwd, "src/datasources_providers.rs"));
     expect(logs).toContain(join(cwd, "src/main.rs"));
   });
@@ -54,10 +76,10 @@ describe("wireRustProviders", () => {
 
   it("rewrites the bind file when the module is already attached", async () => {
     const cwd = "app";
-    const main = "mod datasources_providers;\nfn main() {}\n";
+    const main = "mod datasources_providers;\nfn main() {\n    datasources_providers::register();\n}\n";
     const { files, fs } = mem({ [join(cwd, "src/main.rs")]: main });
     await wireRustProviders(cwd, ["sqlite"], false, { fs, log: () => {} });
-    expect(files[join(cwd, "src/datasources_providers.rs")]).toBe("use datasources_sqlite as _;\n");
+    expect(files[join(cwd, "src/datasources_providers.rs")]).toBe(sqliteRegister);
     expect(files[join(cwd, "src/main.rs")]).toBe(main);
   });
 
@@ -66,7 +88,12 @@ describe("wireRustProviders", () => {
     const { files, fs } = mem();
     const logs: string[] = [];
     await wireRustProviders(cwd, ["json"], false, { fs, log: (line) => logs.push(line) });
-    expect(files[join(cwd, "datasources_providers.rs")]).toBe("use datasources_json as _;\n");
+    expect(files[join(cwd, "datasources_providers.rs")]).toBe(
+      `pub fn register() {
+    datasources::register("json", std::sync::Arc::new(datasources_json::JsonDriver));
+}
+`,
+    );
     expect(logs).toEqual([join(cwd, "datasources_providers.rs")]);
   });
 });

@@ -238,13 +238,22 @@ describe("run", () => {
       "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
     );
     expect(files[join(cwd, "datasources_providers.rs")]).toBe(
-      "use datasources_json as _;\nuse datasources_sqlite as _;\n",
+      `pub fn register() {
+    datasources::register("json", std::sync::Arc::new(datasources_json::JsonDriver));
+    datasources::register("sqlite", std::sync::Arc::new(datasources_sqlite::SqliteDriver));
+}
+`,
     );
     files[join(cwd, "Cargo.toml")] =
       `datasources-json = { version = "0.1.0" }\ndatasources-sqlite = { version = "0.1.0" }\n`;
     expect(await run(["remove", "json", "--cwd", cwd, "--languages", "rust"], io)).toBe(0);
     expect(io.ran).toContain("cargo remove datasources-json");
-    expect(files[join(cwd, "datasources_providers.rs")]).toBe("use datasources_sqlite as _;\n");
+    expect(files[join(cwd, "datasources_providers.rs")]).toBe(
+      `pub fn register() {
+    datasources::register("sqlite", std::sync::Arc::new(datasources_sqlite::SqliteDriver));
+}
+`,
+    );
     const dry = deps(fs);
     expect(await run(["remove", "sqlite", "--cwd", cwd, "--dry-run"], dry)).toBe(0);
     expect(dry.ran).toEqual([]);

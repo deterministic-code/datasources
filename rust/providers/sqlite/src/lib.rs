@@ -15,11 +15,6 @@ mod transaction;
 
 pub use driver::SqliteDriver;
 
-#[ctor::ctor]
-fn bind() {
-    datasources::register("sqlite", std::sync::Arc::new(SqliteDriver));
-}
-
 #[cfg(test)]
 pub(crate) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

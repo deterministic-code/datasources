@@ -31,5 +31,3 @@ tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "
 [lints]
 workspace = true
 
-[lib]
-crate-type = ["rlib", "cdylib"]

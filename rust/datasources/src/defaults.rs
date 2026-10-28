@@ -1,8 +1,5 @@
 use crate::datasource_error::DatasourceError;
 use crate::datasource_url_parser::DatasourceUrlParser;
-use crate::driver_loader::DriverLoader;
-use crate::provider_catalog::ProviderCatalog;
-use crate::register;
 use crate::result::Result;
 use std::collections::HashMap;
 
@@ -15,11 +12,7 @@ pub fn register_listed(options: &HashMap<String, String>) -> Result<()> {
         if crate::registered().iter().any(|existing| existing == &name) {
             continue;
         }
-        let catalog = ProviderCatalog::default()
-            .get(&name)
-            .cloned()
-            .ok_or_else(|| DatasourceError::not_installed(name.clone()))?;
-        register(&name, DriverLoader::load(&catalog)?);
+        return Err(DatasourceError::not_installed(name));
     }
     Ok(())
 }

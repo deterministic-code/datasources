@@ -19,5 +19,3 @@ tokio = { workspace = true }
 [lints]
 workspace = true
 
-[lib]
-crate-type = ["rlib", "cdylib"]

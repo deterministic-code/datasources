@@ -18,11 +18,6 @@ mod transaction;
 
 pub use driver::PostgresDriver;
 
-#[ctor::ctor]
-fn bind() {
-    datasources::register("postgres", std::sync::Arc::new(PostgresDriver));
-}
-
 #[cfg(test)]
 #[path = "../tests/isolate.rs"]
 mod isolate;
