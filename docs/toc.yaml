@@ -4,6 +4,9 @@ pages:
     title: Introduction
   - path: quickstart.md
     title: Quick Start
+  - path: quickstarts/contacts-cli.md
+    title: Contacts CLI
+    parent: Quick Start
   - path: skill.md
     title: Using the skill
   - path: features.md

@@ -28,7 +28,10 @@ const groups = [...new Set(pages.map((page) => page.group).filter(Boolean))].map
   ),
 }));
 const sidebar = [
-  ...pages.filter((page) => !page.group).map(toItem),
+  ...nestSidebar(
+    pages.filter((page) => !page.group),
+    toItem,
+  ),
   ...groups.filter((group) => group.text === "Articles"),
   ...groups.filter((group) => group.text === "Code Reference"),
   ...groups.filter((group) => group.text !== "Articles" && group.text !== "Code Reference"),

@@ -406,6 +406,10 @@ const item = rows.convert(row);
 
 See [Type Converters](docs/sections/type-converters.md).
 
+### Samples
+
+[Contacts CLI](docs/quickstarts/contacts-cli.md) copies a generated contacts app, then setup, generate, build, and run.
+
 ## Using the skill
 
 ### Run setup and add providers
@@ -1377,6 +1381,7 @@ _None._
 
 ## Documentation
 
+- [Contacts CLI](docs/quickstarts/contacts-cli.md)
 - [Examples](docs/examples.md)
 
 ### Articles
