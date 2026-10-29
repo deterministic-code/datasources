@@ -279,4 +279,52 @@ types:
     assert.doesNotMatch(contacts, /"gender_type_id" TEXT/);
   });
 
+  it("infers a versioned reference column type from an inherited parent id", async () => {
+    const typesYaml = `types:
+  - base:
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - gender:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 128
+  - contact:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - gender_type_id:
+            references: gender.id
+`;
+    const datasourceYaml = `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type" || tag == "view_type"
+types: []
+`;
+    const path = "version-20261016T000000Z-001/diff.yaml";
+    const files = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": typesYaml,
+          "datasource.yaml": datasourceYaml,
+          [path]: stringify({ "types.yaml": { added: true, content: parse(typesYaml) } }),
+        }),
+        settings: { "version.diffs": path },
+      },
+      ["postgres"],
+    );
+    const up = files.find((e) => e.filename.endsWith("0001_up.sql"));
+    assert.ok(up, "expected versioned up migration");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    const contacts = sql.match(/CREATE TABLE "contacts" \(([\s\S]*?)\);/)?.[1];
+    assert.ok(contacts, "expected contacts table body");
+    assert.match(contacts, /"gender_type_id" INTEGER/);
+    assert.doesNotMatch(contacts, /"gender_type_id" TEXT/);
+  });
+
 });

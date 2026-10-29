@@ -3,26 +3,6 @@ includes:
   - types:
       filter: tag == "datasource_type"
 types:
-  - group:
-      fields:
-        - name:
-            mapping: ugly_name
-        - created:
-            include_in_create: false
-            include_in_update: false
-        - updated:
-            include_in_create: false
-            include_in_update: false
-  - user_role:
-      fields:
-        - role_id:
-            mapping: bad_role_id
-        - created:
-            include_in_create: false
-            include_in_update: false
-        - updated:
-            include_in_create: false
-            include_in_update: false
   - user:
       fields:
         - created:
@@ -47,3 +27,23 @@ types:
         - updated:
             include_in_create: false
             include_in_update: false
+  - group:
+      fields:
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
+        - name:
+            mapping: ugly_name
+  - user_role:
+      fields:
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
+        - role_id:
+            mapping: bad_role_id
