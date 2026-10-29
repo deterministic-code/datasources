@@ -38,6 +38,38 @@ public static class SeedGenerator
         return lines;
     }
 
+    public static Dictionary<string, IReadOnlyList<SeedRow>> Added(
+        IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> previous,
+        IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> current)
+    {
+        var added = new Dictionary<string, IReadOnlyList<SeedRow>>(StringComparer.Ordinal);
+        foreach (var (table, rows) in current)
+        {
+            var ids = previous.GetValueOrDefault(table)?.Select(row => row.Id).ToHashSet() ?? [];
+            var next = rows.Where(row => !ids.Contains(row.Id)).ToList();
+            if (next.Count > 0) added[table] = next;
+        }
+        return added;
+    }
+
+    public static IReadOnlyList<string> Deletes(
+        string dialect,
+        IReadOnlyList<SqlTable> tables,
+        IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> seeds,
+        SqlMapping mapping)
+    {
+        var lines = new List<string>();
+        foreach (var table in tables)
+        {
+            if (!seeds.TryGetValue(table.Name, out var rows) || rows.Count == 0) continue;
+            var id = SqlSchema.TableIdentity(table).FirstOrDefault() ?? "id";
+            lines.Add($"-- Seeds: {table.TableName}");
+            foreach (var seed in rows)
+                lines.Add($"DELETE FROM {SqlDialect.Q(dialect, table.TableName)} WHERE {SqlDialect.Q(dialect, mapping.ColumnName(table, id))} = {IdValue(table, seed.Id)};");
+        }
+        return lines;
+    }
+
     static string PkType(SqlTable table) =>
         table.Fields.FirstOrDefault(f => SpecTables.IsPkField(f, table.AsType(), SqlSchema.OverlayOf(table)))?.Type ?? "integer";
 

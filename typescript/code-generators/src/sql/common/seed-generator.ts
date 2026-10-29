@@ -7,7 +7,7 @@ import type {
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
 import { sqlStringLiteral } from "@deterministic-code/datasources";
 import { identityInsertStatementOf, seedInsertStatementOf } from "../statements.ts";
-import { renderSql, sqlDefault, type SqlDialect } from "./sql-dialect.ts";
+import { q, renderSql, sqlDefault, type SqlDialect } from "./sql-dialect.ts";
 import { dialectConverter } from "./sql-dialect.ts";
 import { converterFieldOf } from "./converter-field.ts";
 import type { SqlMapping } from "./sql-mapping.ts";
@@ -127,6 +127,39 @@ export const seedSections = (
     lines.push(`-- Seeds: ${table.tableName}`);
     for (const insert of inserts)
       lines.push(renderSql(dialect, identityInsertStatementOf(dialect, table, mapping, [insert], identity)));
+  }
+  return lines;
+};
+
+export const addedSeeds = (
+  previous: Map<string, SeedRow[]>,
+  current: Map<string, SeedRow[]>,
+): Map<string, SeedRow[]> => {
+  const added = new Map<string, SeedRow[]>();
+  for (const [table, rows] of current) {
+    const ids = new Set((previous.get(table) ?? []).map((row) => row.id));
+    const next = rows.filter((row) => !ids.has(row.id));
+    if (next.length > 0) added.set(table, next);
+  }
+  return added;
+};
+
+export const seedDeletes = (
+  dialect: SqlDialect,
+  tables: LiveTable[],
+  seeds: Map<string, SeedRow[]>,
+  mapping: SqlMapping,
+): string[] => {
+  const lines: string[] = [];
+  for (const table of tables) {
+    const rows = seeds.get(table.name) ?? [];
+    if (rows.length === 0) continue;
+    const id = tableIdentity(table)[0] ?? "id";
+    lines.push(`-- Seeds: ${table.tableName}`);
+    for (const seed of rows)
+      lines.push(
+        `DELETE FROM ${q(dialect, table.tableName)} WHERE ${q(dialect, mapping.columnName(table, id))} = ${idValue(table, seed.id)};`,
+      );
   }
   return lines;
 };

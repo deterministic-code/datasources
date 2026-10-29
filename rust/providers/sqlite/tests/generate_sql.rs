@@ -578,6 +578,58 @@ types:
     assert!(error.to_string().contains("run datasources version first"));
 }
 
+fn frozen_file(path: &str, yaml: &str) -> String {
+    let content: serde_yaml::Value = serde_yaml::from_str(yaml).unwrap();
+    let mut envelope = serde_yaml::Mapping::new();
+    envelope.insert(serde_yaml::Value::String("added".into()), serde_yaml::Value::Bool(true));
+    envelope.insert(serde_yaml::Value::String("content".into()), content);
+    let mut doc = serde_yaml::Mapping::new();
+    doc.insert(serde_yaml::Value::String(path.into()), serde_yaml::Value::Mapping(envelope));
+    serde_yaml::to_string(&serde_yaml::Value::Mapping(doc)).unwrap()
+}
+
+#[test]
+fn emits_a_later_version_for_added_seeds() {
+    const GENDER: &str = r#"
+types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+"#;
+    const SEEDS: &str = r#"
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+"#;
+    let first = "version-20261016T000000Z-001/diff.yaml";
+    let second = "version-20261016T000000Z-002/diff.yaml";
+    let mut files = files(GENDER, Some(DEFAULT_DATASOURCE_YAML), Some(SEEDS));
+    files.insert(first.into(), frozen_file("types.yaml", GENDER));
+    files.insert(second.into(), frozen_file("datasource_seeds.yaml", SEEDS));
+    let entries = generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap();
+    assert_eq!(
+        names(&entries),
+        vec![
+            "sqlite/migrations/0001_down.sql".to_string(),
+            "sqlite/migrations/0001_up.sql".to_string(),
+            "sqlite/migrations/0002_down.sql".to_string(),
+            "sqlite/migrations/0002_up.sql".to_string()
+        ]
+    );
+    let up2 = entries.iter().find(|e| e.filename == "sqlite/migrations/0002_up.sql").unwrap();
+    assert!(up2.content.contains("INSERT INTO \"genders\""));
+    assert!(up2.content.contains("Male"));
+    let down2 = entries.iter().find(|e| e.filename == "sqlite/migrations/0002_down.sql").unwrap();
+    assert!(down2.content.contains("DELETE FROM \"genders\" WHERE \"id\" = 1"));
+}
+
 #[test]
 fn throws_when_a_root_datasource_yaml_drifted_from_the_frozen_diffs() {
     let path = "version-20261016T000000Z-001/diff.yaml";

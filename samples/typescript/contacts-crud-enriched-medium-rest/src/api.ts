@@ -3,7 +3,9 @@ import type { Contact } from "../generated/typescript/types/generated/views/cont
 import type { Address } from "../generated/typescript/types/generated/views/address.ts";
 import type { Phone } from "../generated/typescript/types/generated/views/phone.ts";
 import type { LegacyContact } from "../generated/typescript/types/generated/views/legacyContact.ts";
+import type { ContactGroup } from "../generated/typescript/types/generated/views/contactGroup.ts";
 import { ContactRepository } from "../generated/typescript/repositories/contact-repository.ts";
+import { ContactGroupRepository } from "../generated/typescript/repositories/contact-group-repository.ts";
 import { clock } from "./clock.ts";
 import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
 
@@ -14,6 +16,7 @@ export class Api {
   constructor(
     private readonly contacts: ContactRepository,
     private readonly legacy: LegacyContactRepository,
+    private readonly groupsRepo: ContactGroupRepository,
   ) {}
 
   handle = async (method: string, target: string, body: string | undefined): Promise<HttpResult> => {
@@ -30,6 +33,9 @@ export class Api {
         "POST /legacy_contacts": () => this.postLegacy(body),
         "PUT /legacy_contacts": () => this.putLegacy(query, body),
         "DELETE /legacy_contacts": () => this.deleteLegacy(query),
+        "GET /contact_groups": () => this.getGroups(query),
+        "POST /contact_groups": () => this.postGroup(body),
+        "PUT /contact_groups": () => this.putGroup(query, body),
       }[`${method.toUpperCase()} ${path}`] ?? (() => Promise.resolve({ status: 404, body: "" })))();
     } catch (error) {
       return error instanceof RequestError
@@ -94,6 +100,23 @@ export class Api {
     return { status: 204, body: "" };
   };
 
+  private getGroups = async (query: Record<string, string>): Promise<HttpResult> =>
+    ({ status: 200, body: JSON.stringify(await list(this.groupsRepo, where(query, ["id"]))) });
+
+  private postGroup = async (body: string | undefined): Promise<HttpResult> => {
+    const group = stampGroup(read<ContactGroup>(body));
+    return { status: 201, body: JSON.stringify(await this.groupsRepo.create(group)) };
+  };
+
+  private putGroup = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
+    const id = requiredNumber(query, "id");
+    if ((await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
+    const group = stampGroup(read<ContactGroup>(body));
+    group.id = id;
+    await this.groupsRepo.update(group);
+    return { status: 200, body: JSON.stringify(await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) };
+  };
+
   private stamp = (contact: ContactWrite): ContactWrite => {
     contact.email = text(contact.email);
     contact.notes = text(contact.notes) || "none";
@@ -135,6 +158,16 @@ const stampAddress = (address: Address): void => {
   address.created = address.created || clock.now();
   address.updated = clock.now();
   address.version = address.version || "AA==";
+};
+
+const stampGroup = (group: ContactGroup): ContactGroup => {
+  group.name = text(group.name);
+  group.members ??= [];
+  group.uuid = group.uuid || clock.uuid();
+  group.created = group.created || clock.now();
+  group.updated = clock.now();
+  group.version = group.version || "AA==";
+  return group;
 };
 
 const stampPhone = (phone: Phone): void => {

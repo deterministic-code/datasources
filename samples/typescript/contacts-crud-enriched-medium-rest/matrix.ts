@@ -10,6 +10,7 @@ import { Api } from "./src/api.ts";
 import { clock } from "./src/clock.ts";
 import { LegacyContactRepository } from "./generated/typescript/repositories/legacy-contact-repository.ts";
 import { ContactRepository } from "./generated/typescript/repositories/contact-repository.ts";
+import { ContactGroupRepository } from "./generated/typescript/repositories/contact-group-repository.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
 type Scalar = string | number | boolean | null;
@@ -69,7 +70,7 @@ const at = (root: Node | null, pointer: string): string => {
   return current == null ? "" : String(current);
 };
 
-const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, middleware: ICommandMiddleware) => {
+const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, groupsRepo: ContactGroupRepository, middleware: ICommandMiddleware) => {
   contacts.addMiddleware(middleware);
   contacts.address.addMiddleware(middleware);
   contacts.phone.addMiddleware(middleware);
@@ -79,6 +80,8 @@ const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, mi
   contacts.address.addressType.addMiddleware(middleware);
   contacts.phone.phoneType.addMiddleware(middleware);
   legacy.addMiddleware(middleware);
+  groupsRepo.addMiddleware(middleware);
+  groupsRepo.contactGroupMember.addMiddleware(middleware);
 };
 
 const provider = process.env.PROVIDER ?? "sqlite";
@@ -95,8 +98,9 @@ try {
   const middleware = new ConsoleCommandMiddleware((line) => lines.push(line), () => stamp, { isVerbose: "true" });
   const contacts = new ContactRepository(connection);
   const legacy = new LegacyContactRepository(connection);
-  attach(contacts, legacy, middleware);
-  const api = new Api(contacts, legacy);
+  const groupsRepo = new ContactGroupRepository(connection);
+  attach(contacts, legacy, groupsRepo, middleware);
+  const api = new Api(contacts, legacy, groupsRepo);
   const saved: Record<string, string> = {};
   for (const step of spec.steps) {
     const path = substituteText(step.path, saved);

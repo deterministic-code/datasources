@@ -1,6 +1,5 @@
 import { parse } from "yaml";
 import type { IStatement } from "@deterministic-code/datasources";
-import { CreateTableStatement } from "@deterministic-code/datasources";
 import type { SeedRow } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
@@ -10,7 +9,7 @@ import { SqlMapping } from "./sql-mapping.ts";
 import { buildLiveTables, sqlTablesFrom } from "./sql-schema.ts";
 import { renderSql, type SqlDialect } from "./sql-dialect.ts";
 import { schemaDiff, type SchemaSnapshot } from "./schema-diff.ts";
-import { seedSections } from "./seed-generator.ts";
+import { addedSeeds, seedDeletes, seedSections } from "./seed-generator.ts";
 import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
 import { byGroupsFromDatasource } from "./datasource-by-fields.ts";
 import { procedureStatementsForTable } from "./generate-procedures.ts";
@@ -119,7 +118,7 @@ export const versionMigrationFiles = async (
   const files: { path: string; content: string }[] = [];
   let previous = await emptySnapshot(ctx.settings);
   let number = 0;
-  for (const [index, snapshot] of snapshots.entries()) {
+  for (const snapshot of snapshots) {
     const current = await compile(snapshot, ctx.settings);
     const up = [
       ...schemaDiff(dialect, previous, current),
@@ -129,24 +128,33 @@ export const versionMigrationFiles = async (
       ...schemaDiff(dialect, current, previous),
       ...procedureDiff(dialect, ctx.settings, current, previous),
     ];
-    if (up.length === 0 && down.length === 0) {
+    const added = addedSeeds(previous.seeds, current.seeds);
+    const removed = addedSeeds(current.seeds, previous.seeds);
+    const seedUp = seedSections(dialect, current.tables, added, current.mapping);
+    const seedDown = [
+      ...seedDeletes(dialect, previous.tables, added, previous.mapping),
+      ...seedSections(dialect, previous.tables, removed, previous.mapping),
+    ];
+    if (up.length === 0 && down.length === 0 && seedUp.length === 0 && seedDown.length === 0) {
       previous = current;
       continue;
     }
     number += 1;
-    const seeds =
-      index === 0 && up.some((statement) => statement instanceof CreateTableStatement)
-        ? seedSections(dialect, current.tables, current.seeds, current.mapping)
-        : [];
     const separator = batchSeparatorOf(ctx.settings);
     const upSql = [
       `-- Generated migration for ${dialect}`,
       renderAll(dialect, up, separator),
-      ...(seeds.length ? ["-- Seed data", joinBatches(seeds, separator)] : []),
+      ...(seedUp.length ? ["-- Seed data", joinBatches(seedUp, separator)] : []),
     ]
       .filter((line) => line !== "")
       .join("\n");
-    const downSql = [`-- Rollback migration for ${dialect}`, renderAll(dialect, down, separator)].join("\n");
+    const downSql = [
+      `-- Rollback migration for ${dialect}`,
+      renderAll(dialect, down, separator),
+      ...(seedDown.length ? ["-- Seed data", joinBatches(seedDown, separator)] : []),
+    ]
+      .filter((line) => line !== "")
+      .join("\n");
     files.push({
       path: `${pad(number)}_up.sql`,
       content: finalize(upSql, casing),

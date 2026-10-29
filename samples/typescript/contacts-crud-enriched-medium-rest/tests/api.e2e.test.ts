@@ -11,6 +11,7 @@ import { Api } from "../src/api.ts";
 import { clock } from "../src/clock.ts";
 import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
 import { ContactRepository } from "../generated/typescript/repositories/contact-repository.ts";
+import { ContactGroupRepository } from "../generated/typescript/repositories/contact-group-repository.ts";
 
 const sample = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const shared = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared");
@@ -30,6 +31,7 @@ const open = async (middleware?: ICommandMiddleware) => {
   await connection.open();
   const contacts = new ContactRepository(connection);
   const legacy = new LegacyContactRepository(connection);
+  const groupsRepo = new ContactGroupRepository(connection);
   if (middleware) {
     contacts.addMiddleware(middleware);
     contacts.address.addMiddleware(middleware);
@@ -40,8 +42,10 @@ const open = async (middleware?: ICommandMiddleware) => {
     contacts.address.addressType.addMiddleware(middleware);
     contacts.phone.phoneType.addMiddleware(middleware);
     legacy.addMiddleware(middleware);
+    groupsRepo.addMiddleware(middleware);
+    groupsRepo.contactGroupMember.addMiddleware(middleware);
   }
-  return { api: new Api(contacts, legacy), dir };
+  return { api: new Api(contacts, legacy, groupsRepo), dir };
 };
 
 describe("api e2e", () => {

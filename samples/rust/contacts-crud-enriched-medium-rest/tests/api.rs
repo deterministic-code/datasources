@@ -139,8 +139,8 @@ async fn connection() -> std::sync::Arc<dyn datasources::Connection> {
 
 async fn open(middleware: Option<Arc<dyn CommandMiddleware>>) -> Api {
     let connection = connection().await;
-    let (contacts, legacy) = repos::open(connection, middleware).unwrap();
-    Api::new(contacts, legacy, Clock::new())
+    let (contacts, legacy, groups_repo) = repos::open(connection, middleware).unwrap();
+    Api::new(contacts, legacy, groups_repo, Clock::new())
 }
 
 #[tokio::test]
@@ -174,8 +174,8 @@ async fn round_trips_contacts_and_legacy_contacts() {
         Arc::new(ConsoleCommandMiddleware::with_sink(|_| {}, || STAMP.into()))
     };
     let connection = connection().await;
-    let (contacts, legacy) = repos::open(connection, Some(middleware)).unwrap();
-    let api = Api::new(contacts, legacy, clock);
+    let (contacts, legacy, groups_repo) = repos::open(connection, Some(middleware)).unwrap();
+    let api = Api::new(contacts, legacy, groups_repo, clock);
     let created = api
         .handle(
             "POST",
