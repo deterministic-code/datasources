@@ -1,9 +1,11 @@
 namespace Datasources;
 
-public interface IDatasource
+public interface IDatasource : IAsyncDisposable
 {
     string Provider { get; }
     RepositoryFactory Repositories { get; }
+    Task Close();
+    ValueTask IAsyncDisposable.DisposeAsync() => new(Close());
     Task<IConnection> CreateConnection();
     Task<ICommand> CreateCommand(IConnection? connection = null);
     ICRUDRepository<T> CreateRepository<T>(IConnection? connection = null, CRUDRepositoryOptions<T>? options = null) where T : new();

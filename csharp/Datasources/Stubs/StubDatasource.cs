@@ -7,6 +7,12 @@ public sealed class StubDatasource : IDatasource
     public string Provider { get; }
     public RepositoryFactory Repositories { get; } = new();
     IConnection DefaultConnection() => _connection ??= new StubConnection(Provider);
+    public Task Close()
+    {
+        var connection = _connection;
+        _connection = null;
+        return connection?.Close() ?? Task.CompletedTask;
+    }
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public async Task<ICommand> CreateCommand(IConnection? connection = null)
     {

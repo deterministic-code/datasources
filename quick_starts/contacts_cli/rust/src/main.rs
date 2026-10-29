@@ -235,5 +235,6 @@ async fn main() -> Result<()> {
         return Err(DatasourceError::message("delete"));
     }
     println!("deleted {} rows={}", alan.id, alan_removed.rows_affected);
+    ds.close().await?;
     Ok(())
 }

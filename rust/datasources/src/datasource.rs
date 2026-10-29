@@ -46,6 +46,7 @@ pub trait Datasource: Send + Sync {
         options: ReadonlyRepositoryMappingOptions,
     ) -> Arc<dyn IReadonlyRepository<Row>>;
     fn repositories(&self) -> &RepositoryFactory;
+    async fn close(&self) -> Result<()>;
 }
 
 impl dyn Datasource {
@@ -227,5 +228,13 @@ impl Datasource for BuiltDatasource {
 
     fn repositories(&self) -> &RepositoryFactory {
         &self.repositories
+    }
+
+    async fn close(&self) -> Result<()> {
+        let connection = self.connection.lock().expect("connection").take();
+        match connection {
+            Some(connection) => connection.close().await,
+            None => Ok(()),
+        }
     }
 }

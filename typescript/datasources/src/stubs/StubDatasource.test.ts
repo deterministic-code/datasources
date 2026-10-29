@@ -95,5 +95,8 @@ describe("StubDatasource", () => {
     named.repositories.register("Item", "items", () => stub, () => stub);
     expect(named.createRepository("items")).toBe(stub);
     expect(named.createReadonlyRepository("Item")).toBe(stub);
+    await expect(new StubDatasource("text").close()).resolves.toBeUndefined();
+    await expect(named.close()).rejects.toThrow(ProviderNotImplementedError);
+    await expect(new StubDatasource("yaml")[Symbol.asyncDispose]()).resolves.toBeUndefined();
   });
 });

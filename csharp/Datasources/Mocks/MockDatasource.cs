@@ -15,6 +15,8 @@ public sealed class MockDatasource : IDatasource
         Connection = new MockConnection();
     }
 
+    public Task Close() => Connection.Close();
+
     public Task<IConnection> CreateConnection()
     {
         CreateConnectionCalls++;

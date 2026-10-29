@@ -10,6 +10,8 @@ import type { RepositoryFactory } from "./RepositoryFactory.ts";
 export interface IDatasource {
   readonly provider: string;
   readonly repositories: RepositoryFactory;
+  close(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
   createConnection(): Promise<IConnection>;
   createCommand(connection?: IConnection): Promise<ICommand>;
   createRepository<T>(

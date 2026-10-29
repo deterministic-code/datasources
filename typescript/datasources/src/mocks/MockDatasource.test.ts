@@ -36,5 +36,7 @@ describe("MockDatasource", () => {
     named.repositories.register("Item", "items", () => customRepo, () => customRepo);
     expect(named.createRepository("items")).toBe(customRepo);
     expect(named.createReadonlyRepository("Item")).toBe(customRepo);
+    await ds.close();
+    await named[Symbol.asyncDispose]();
   });
 });

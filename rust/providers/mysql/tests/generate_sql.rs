@@ -111,3 +111,50 @@ types:
         .is_match(&custom));
     assert!(!Regex::new(r"\nGO\n").unwrap().is_match(&custom));
 }
+
+#[test]
+fn separates_seed_inserts_with_datasource_batch_separator() {
+    register_sql();
+    let sql = generate_sql(
+        &HashMap::from([
+            (
+                "types.yaml".into(),
+                r#"
+types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+"#
+                .into(),
+            ),
+            (
+                "datasource_seeds.yaml".into(),
+                r#"
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+"#
+                .into(),
+            ),
+        ]),
+        &HashMap::new(),
+        &["mysql".into()],
+    )
+    .unwrap()
+    .into_iter()
+    .find(|e| e.filename.ends_with("0001_initial_up.sql"))
+    .unwrap()
+    .content;
+    assert!(Regex::new(r"INSERT INTO `genders`[\s\S]*;\nGO\nINSERT INTO `genders`")
+        .unwrap()
+        .is_match(&sql));
+}

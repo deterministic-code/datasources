@@ -1,0 +1,12 @@
+---
+description: quick_starts/run.mjs is constant; e2e is the published consumer
+alwaysApply: true
+---
+
+# Quick start runner is constant
+
+Do not edit `quick_starts/run.mjs`. It is the e2e harness.
+
+E2E is the consumer workflow: `npx @deterministic-code/datasources-cli` in a temp project, published packages, Docker when the suite says so. Do not point the runner at this repo’s CLI, add timeouts, kill `tsx`, rewrite commands, or filter languages to hide a failure.
+
+Fix the published library, generator, or sample. Then run `node quick_starts/run.mjs`.

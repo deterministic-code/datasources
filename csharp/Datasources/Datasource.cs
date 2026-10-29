@@ -14,6 +14,12 @@ public sealed class Datasource(
     public string Provider { get; } = provider;
     public RepositoryFactory Repositories { get; } = new();
     IConnection DefaultConnection() => _connection ??= driver.Connection(options);
+    public Task Close()
+    {
+        var connection = _connection;
+        _connection = null;
+        return connection?.Close() ?? Task.CompletedTask;
+    }
     public Task<IConnection> CreateConnection() => Task.FromResult(DefaultConnection());
     public async Task<ICommand> CreateCommand(IConnection? connection = null)
     {

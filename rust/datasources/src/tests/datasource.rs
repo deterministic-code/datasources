@@ -19,3 +19,14 @@ async fn create_default_from_env_settings() {
     assert_eq!(Datasource::provider(&*ds), "sqlite");
     assert_eq!(Arc::strong_count(&command) > 0, true);
 }
+
+#[tokio::test]
+async fn closes_the_default_connection() {
+    let _guard = super::env_lock();
+    arrange();
+    let ds = default().expect("default");
+    ds.create_command(None).await.unwrap();
+    assert!(ds.create_connection().await.unwrap().is_open());
+    ds.close().await.unwrap();
+    assert!(!ds.create_connection().await.unwrap().is_open());
+}

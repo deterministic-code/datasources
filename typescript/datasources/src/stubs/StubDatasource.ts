@@ -18,6 +18,14 @@ export class StubDatasource implements IDatasource {
   private defaultConnection = (): IConnection =>
     (this.connection ??= new StubConnection(this.provider));
 
+  close = async (): Promise<void> => {
+    const connection = this.connection;
+    this.connection = undefined;
+    await connection?.close();
+  };
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
+
   createConnection = (): Promise<IConnection> =>
     Promise.resolve(this.defaultConnection());
 

@@ -4,7 +4,7 @@ import type { Contact } from "../generated/typescript/types/generated/views/cont
 import type { Email } from "../generated/typescript/types/generated/views/email.ts";
 import type { Phone } from "../generated/typescript/types/generated/views/phone.ts";
 
-const ds = Datasource.default;
+await using ds = Datasource.default;
 const contactsRepo = ds.createRepository("contacts") as ICRUDRepository<Contact>;
 const ada = await contactsRepo.create({
   givenName: "Ada",

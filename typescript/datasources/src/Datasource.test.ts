@@ -72,4 +72,12 @@ describe("Datasource", () => {
     expect(ds.createReadonlyRepository("items")).toBeTruthy();
     expect(() => (ds as Datasource & { missing: object }).missing).toThrow(RepositoryNotRegisteredError);
   });
+
+  it("closes the default connection", async () => {
+    await using ds = Datasource.default;
+    await ds.createCommand();
+    expect((await ds.createConnection()).isOpen).toBe(true);
+    await ds.close();
+    expect((await ds.createConnection()).isOpen).toBe(false);
+  });
 });

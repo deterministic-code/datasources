@@ -54,11 +54,12 @@ pub fn sections(
             inserts.push(table_statements::seed_insert(table, mapping, &cols, &values, dialect)?);
         }
         lines.push(format!("-- Seeds: {}", table.table_name));
-        lines.push(sql_dialect::render_sql(
-            dialect,
-            &table_statements::identity_insert(table, mapping, inserts, identity),
-        )?);
-        lines.push(String::new());
+        for insert in inserts {
+            lines.push(sql_dialect::render_sql(
+                dialect,
+                &table_statements::identity_insert(table, mapping, vec![insert], identity),
+            )?);
+        }
     }
     Ok(lines)
 }

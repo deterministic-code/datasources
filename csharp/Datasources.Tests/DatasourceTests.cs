@@ -29,4 +29,14 @@ public class DatasourceTests
         Assert.Equal("sqlite", ds.Provider);
         Assert.NotNull(command);
     }
+
+    [Fact]
+    public async Task ClosesTheDefaultConnection()
+    {
+        await using var ds = Datasource.Default;
+        await ds.CreateCommand();
+        Assert.True((await ds.CreateConnection()).IsOpen);
+        await ds.Close();
+        Assert.False((await ds.CreateConnection()).IsOpen);
+    }
 }

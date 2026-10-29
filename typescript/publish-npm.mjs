@@ -68,6 +68,29 @@ const published = (name, version) => {
   return result.status === 0 && result.stdout.trim() === version;
 };
 
+const tarballUrl = (name, version) =>
+  `https://registry.npmjs.org/${name}/-/${name.replace("@", "").replace("/", "-")}-${version}.tgz`;
+
+const tarballReady = async (name, version) => {
+  try {
+    return (await fetch(tarballUrl(name, version), { method: "HEAD" })).status === 200;
+  } catch {
+    return false;
+  }
+};
+
+const waitPublished = async (name, version) => {
+  for (let i = 0; i < 36; i++) {
+    if (published(name, version) && (await tarballReady(name, version))) {
+      console.log(`ready ${name}@${version}`);
+      return;
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10_000);
+  }
+  console.error(`${name}@${version} is not GET 200 on npm yet`);
+  process.exit(1);
+};
+
 const assertVendoredOnMain = async () => {
   run("npm", ["update"], cliRoot);
   const lock = JSON.parse(await readFile(join(cliRoot, "package-lock.json"), "utf8"));
@@ -272,7 +295,7 @@ const stageCli = async (version, versions, libraryVersion = version) => {
 
   await mkdir(join(dest, "bin"), { recursive: true });
   await writeFile(
-    join(dest, "bin/datasources.mjs"),
+    join(dest, "bin/datasources.js"),
     `#!/usr/bin/env node\nimport "../dist/main.js";\n`,
   );
   await cp(join(cliRoot, "dist"), join(dest, "dist"), { recursive: true });
@@ -300,7 +323,7 @@ const stageCli = async (version, versions, libraryVersion = version) => {
         name: "@deterministic-code/datasources-cli",
         version,
         type: "module",
-        bin: { datasources: "./bin/datasources.mjs" },
+        bin: { datasources: "./bin/datasources.js" },
         files: ["bin", "dist"],
         publishConfig: { access: "public" },
         dependencies,
@@ -430,24 +453,23 @@ if (org.status !== 0) {
 }
 
 for (const pkg of staged) {
-  if (published(pkg.name, pkg.version)) {
+  if (published(pkg.name, pkg.version))
     console.log(`skip ${pkg.name}@${pkg.version} (already on npm)`);
-    continue;
+  else {
+    console.log(`publishing ${pkg.name}@${pkg.version}`);
+    const result = run("npm", ["publish", "--access", "public"], pkg.dest, {
+      allowFail: true,
+      capture: true,
+    });
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    const err = `${result.stderr ?? ""}${result.stdout ?? ""}`;
+    if (result.status !== 0 && !/previously staged version|cannot publish over existing version/i.test(err))
+      process.exit(result.status ?? 1);
+    if (result.status !== 0)
+      console.log(`skip ${pkg.name}@${pkg.version} (already staged or published)`);
   }
-  console.log(`publishing ${pkg.name}@${pkg.version}`);
-  const result = run("npm", ["publish", "--access", "public"], pkg.dest, {
-    allowFail: true,
-    capture: true,
-  });
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-  const err = `${result.stderr ?? ""}${result.stdout ?? ""}`;
-  if (result.status === 0) continue;
-  if (result.status !== 0 && /previously staged version|cannot publish over existing version/i.test(err)) {
-    console.log(`skip ${pkg.name}@${pkg.version} (already staged or published)`);
-    continue;
-  }
-  process.exit(result.status ?? 1);
+  await waitPublished(pkg.name, pkg.version);
 }
 
 for (const pkg of staged) await rm(pkg.dest, { recursive: true, force: true });

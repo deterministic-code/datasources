@@ -28,7 +28,7 @@ const run = async (args: string[]): Promise<number> => {
     const provider = env("PROVIDER");
     const url = env("DATASOURCE_URL");
     migrateUp({ provider, connection: url, migrationsRoot: env("MIGRATIONS_ROOT") || "sql" });
-    const ds = Datasource.default;
+    await using ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();
     const command = await ds.createCommand(connection);

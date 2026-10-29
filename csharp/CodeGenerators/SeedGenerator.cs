@@ -32,8 +32,8 @@ public static class SeedGenerator
                 return TableStatements.SeedInsert(table, mapping, cols, values, dialect);
             }).ToList();
             lines.Add($"-- Seeds: {table.TableName}");
-            lines.Add(SqlDialect.RenderSql(dialect, TableStatements.IdentityInsert(dialect, table, mapping, inserts, identity)));
-            lines.Add("");
+            foreach (var insert in inserts)
+                lines.Add(SqlDialect.RenderSql(dialect, TableStatements.IdentityInsert(dialect, table, mapping, [insert], identity)));
         }
         return lines;
     }

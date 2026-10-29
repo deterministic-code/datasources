@@ -124,9 +124,9 @@ export const seedSections = (
       });
       return seedInsertStatementOf(table, mapping, cols, values, dialect);
     });
-    lines.push(
-      `-- Seeds: ${table.tableName}\n${renderSql(dialect, identityInsertStatementOf(dialect, table, mapping, inserts, identity))}`,
-    );
+    lines.push(`-- Seeds: ${table.tableName}`);
+    for (const insert of inserts)
+      lines.push(renderSql(dialect, identityInsertStatementOf(dialect, table, mapping, [insert], identity)));
   }
   return lines;
 };

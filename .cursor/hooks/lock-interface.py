@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCK_FILE = Path(__file__).resolve().parent / "locked-classes.txt"
+CONSTANT_FILES = (ROOT / "quick_starts" / "run.mjs",)
 EDIT_TOOLS = {"Write", "StrReplace", "Delete"}
 
 KINDS = ("class", "record", "struct", "interface", "enum", "trait")
@@ -56,6 +57,8 @@ def decide(data: dict) -> dict:
         return deny("locked type", "The edit could not be checked.")
     if path.resolve() == LOCK_FILE.resolve():
         return deny_list()
+    if path.resolve() in {file.resolve() for file in CONSTANT_FILES}:
+        return deny_constant(path)
     owners = owners_of(path)
     if not owners:
         return allow()
@@ -145,6 +148,8 @@ def proposed_text(tool: str, tool_input: dict, path: Path) -> str | None:
 def check_shell(command: str) -> dict:
     if writes(command, [LOCK_FILE]):
         return deny_list()
+    if writes(command, list(CONSTANT_FILES)):
+        return deny_constant(CONSTANT_FILES[0])
     for name in locked_names():
         for path in files_for(name):
             if not writes(command, [path]):
@@ -867,6 +872,20 @@ def deny(name: str, extra: str = "") -> dict:
     return {
         "permission": "deny",
         "user_message": f"{name} is locked.",
+        "agent_message": message,
+    }
+
+
+def deny_constant(path: Path) -> dict:
+    relative = path.resolve().relative_to(ROOT).as_posix()
+    message = (
+        f"{relative} is constant. Do not edit the e2e runner. "
+        "Fix the published consumer packages, generate, or samples. "
+        "E2E is npx @deterministic-code/datasources-cli in a consumer project."
+    )
+    return {
+        "permission": "deny",
+        "user_message": f"{relative} is constant.",
         "agent_message": message,
     }
 
