@@ -5,6 +5,8 @@ const forward: Record<string, string> = {
   Boolean: "boolean",
   number: "integer",
   Number: "integer",
+  bigint: "biginteger",
+  BigInt: "biginteger",
   Date: "datetime",
   Uint8Array: "binary",
 };
@@ -12,6 +14,7 @@ const forward: Record<string, string> = {
 const reverse: Record<string, string> = {
   boolean: "boolean",
   integer: "number",
+  biginteger: "bigint",
   datetime: "Date",
   binary: "Uint8Array",
 };
