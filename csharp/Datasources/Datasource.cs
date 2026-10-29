@@ -52,10 +52,12 @@ public sealed class Datasource(
     {
         var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
-        var rows = RowTypeConverter.From(types, Columns(typeof(T)));
+        var schema = options?.Schema ?? SchemaOf(typeof(T));
+        var rows = RowTypeConverter.From(types, schema.Columns);
         return (options ?? built) with
         {
             Entity = options?.Entity ?? built.Entity,
+            Schema = schema,
             RowConverter = options?.RowConverter ?? rows,
             RowTypeConverters = types,
         };
@@ -65,31 +67,27 @@ public sealed class Datasource(
     {
         var built = CreateReadonlyRepositoryMappingOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
-        var rows = RowTypeConverter.From(types, Columns(typeof(T)));
+        var schema = options?.Schema ?? SchemaOf(typeof(T));
+        var rows = RowTypeConverter.From(types, schema.Columns);
         return (options ?? built) with
         {
             Entity = options?.Entity ?? built.Entity,
+            Schema = schema,
             RowConverter = options?.RowConverter ?? rows,
             RowTypeConverters = types,
         };
     }
 
-    static IReadOnlyDictionary<string, string> Columns(Type type) =>
-        typeof(IDictionary).IsAssignableFrom(type)
-            ? new Dictionary<string, string>()
-            : type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
-                .Select(prop => (prop.Name, Type: Canonical(prop.PropertyType)))
-                .Where(pair => pair.Type is not null)
-                .ToDictionary(pair => pair.Name, pair => pair.Type!);
-
-    static string? Canonical(Type type) => (Nullable.GetUnderlyingType(type) ?? type) switch
+    static Schema SchemaOf(Type type)
     {
-        var kind when kind == typeof(Guid) => "uuid",
-        var kind when kind == typeof(bool) => "bool",
-        var kind when kind == typeof(DateTime) => "datetime",
-        var kind when kind == typeof(decimal) => "decimal",
-        var kind when kind == typeof(byte[]) => "binary",
-        _ => null
-    };
+        var mapper = new DeterministicTypeMapper();
+        return typeof(IDictionary).IsAssignableFrom(type)
+            ? new Schema(new Dictionary<string, string>())
+            : new Schema(
+                type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
+                    .Select(prop => (prop.Name, Spec: mapper.Map((Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType).Name)))
+                    .Where(pair => pair.Spec.Length > 0)
+                    .ToDictionary(pair => pair.Name, pair => pair.Spec));
+    }
 }

@@ -243,6 +243,12 @@ describe("generate", () => {
     expect(contactRs).toContain("address_row_repository");
     expect(contactRs).toContain("Arc::clone(&address)");
     expect(textOf(rust, "entities.rs")).toContain("impl Entity for Contact");
+    expect(textOf(rust, "entities.rs")).toContain("Value::from(");
+    expect(textOf(rust, "entities.rs")).toContain("fn schema()");
+    expect(textOf(rust, "entities.rs")).toContain('"integer"');
+    expect(textOf(rust, "entities.rs")).not.toContain("ToCell");
+    expect(textOf(rust, "entities.rs")).not.toContain("FromCell");
+    expect(textOf(rust, "entities.rs")).not.toContain("to_cell");
     expect(textOf(rust, "entities.rs")).toContain("fn children");
     expect(textOf(rust, "entities.rs")).toContain("self.phone_type_name");
     expect(textOf(rust, "entities.rs")).toContain("self.contact_source_name");

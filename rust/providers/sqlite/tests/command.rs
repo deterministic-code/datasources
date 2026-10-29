@@ -1,27 +1,11 @@
 use datasources::{
-    default, Casing, ChangeCasingMapper, ConvertSchema, FlatToNestedMapper,
+    default, Casing, ChangeCasingMapper, FlatToNestedMapper,
     MappedRow, MappedValue,
     Mapper, Native, Parameter, Row, RowTypeConverter, TransformMapper, TypeMap, TypeMapField,
     TypeMapGroup, Value,
 };
 use datasources_tests::apply_schema;
 use futures_util::TryStreamExt;
-
-struct NameValue;
-
-impl ConvertSchema for NameValue {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("name", "TEXT"), ("value", "TEXT")]
-    }
-}
-
-struct Item;
-
-impl ConvertSchema for Item {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("id", "INTEGER"), ("name", "TEXT")]
-    }
-}
 
 struct Contact {
     name: String,
@@ -36,17 +20,6 @@ struct User {
     contacts: Vec<Contact>,
 }
 
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("id", "INTEGER"),
-            ("username", "TEXT"),
-            ("email", "TEXT"),
-            ("contact_name1", "TEXT"),
-            ("contact_name2", "TEXT"),
-        ]
-    }
-}
 
 #[tokio::test]
 async fn reads_boolean_as_bool_and_leaves_integer() {
@@ -227,7 +200,7 @@ async fn run_execute_reader_and_return_name_values() {
         .execute_reader("SELECT name, value FROM settings", None)
         .await
         .unwrap();
-    let converter = RowTypeConverter::of::<NameValue>();
+    let converter = RowTypeConverter::new(std::collections::HashMap::new());
     let items: Vec<_> = reader
         .read()
         .map_ok(|row| converter.convert(&row).unwrap())
@@ -257,7 +230,7 @@ async fn execute_insert_read_update_and_delete() {
         )
         .await
         .unwrap();
-    let converter = RowTypeConverter::of::<Item>();
+    let converter = RowTypeConverter::new(std::collections::HashMap::new());
     let created_reader = command
         .execute_reader(
             "SELECT id, name FROM items WHERE id = $id",
@@ -347,7 +320,7 @@ async fn execute_reader_maps_flat_contacts() {
         )
         .await
         .unwrap();
-    let converter = RowTypeConverter::of::<User>();
+    let converter = RowTypeConverter::new(std::collections::HashMap::new());
     fn user_contacts_mapper() -> TransformMapper<Row, User> {
         fn text_of(row: &Row, key: &str) -> String {
             match row.get(key) {

@@ -28,7 +28,7 @@ internal sealed class SqliteCommandDriver(SqliteConnectionDriver connection) : I
                     for (var i = 0; i < reader.FieldCount; i++)
                     {
                         var cell = Value.From(reader.IsDBNull(i) ? null : reader.GetValue(i));
-                        row[names[i]] = booleans![i] ? SqliteRowTypeConverters.All["bool"].Convert(cell) : cell;
+                        row[names[i]] = booleans![i] ? SqliteRowTypeConverters.All["boolean"].Convert(cell) : cell;
                     }
                     return row;
                 },

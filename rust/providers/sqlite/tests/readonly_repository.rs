@@ -2,8 +2,8 @@ use futures_util::TryStreamExt;
 use chrono::{TimeZone, Utc};
 use datasources::{
     create_readonly_repository_mapping_options, default, eq, gt, BuiltDatasource, Casing, ChangeCasingMapper,
-    Connection, ConvertSchema, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper,
-    Result, Row, TransformMapper, TypeConverter, Value, Where,
+    Connection, Datasource, DictionaryMapper, Mapper, Native, PluralizerMapper,
+    Result, Row, Schema, TransformMapper, TypeConverter, Value, Where,
 };
 use std::sync::Arc;
 use datasources_tests::apply_schema;
@@ -16,28 +16,9 @@ const LIN: &str = "33333333-3333-3333-3333-333333333333";
 
 struct User;
 
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Id", "INTEGER"),
-            ("Username", "TEXT"),
-            ("IsEnabled", "INTEGER"),
-        ]
-    }
-}
 
 struct UserAccount;
 
-impl ConvertSchema for UserAccount {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Key", "TEXT"),
-            ("Login", "TEXT"),
-            ("Active", "INTEGER"),
-            ("Opened", "TEXT"),
-        ]
-    }
-}
 
 fn snake() -> ChangeCasingMapper {
     ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)
@@ -198,6 +179,12 @@ async fn reads_user_by_guid_username_and_created() {
         ("Active".to_string(), "is_enabled".to_string()),
         ("Opened".to_string(), "created".to_string()),
     ])));
+    options.schema = Schema::new(HashMap::from([
+        ("Key".into(), "uuid".into()),
+        ("Login".into(), "string".into()),
+        ("Active".into(), "boolean".into()),
+        ("Opened".into(), "datetime".into()),
+    ]));
     let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
@@ -223,7 +210,10 @@ async fn reads_user_by_guid_username_and_created() {
         .try_collect::<Vec<_>>().await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
-    assert_eq!(by_id.get("Key"), Some(&Value::from(ADA)));
+    assert_eq!(
+        by_id.get("Key"),
+        Some(&Value::Uuid(Uuid::parse_str(ADA).unwrap()))
+    );
     assert_eq!(by_id.get("Active"), Some(&Value::Bool(true)));
     assert_eq!(
         by_id.get("Opened"),
@@ -260,33 +250,18 @@ async fn execute_sql(connection: &Arc<dyn Connection>, sql: &str) {
 mod user_view {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use chrono::{TimeZone, Utc};
+    use std::collections::HashMap;
     use datasources::{
-        create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
-        DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Row, Value, Where,
+        create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, Datasource,
+        DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Row, Schema, Value, Where,
     };
     use uuid::Uuid;
 
     struct UserAccount;
 
-    impl ConvertSchema for UserAccount {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![
-                ("Key", "TEXT"),
-                ("Login", "TEXT"),
-                ("Active", "INTEGER"),
-                ("Opened", "TEXT"),
-                ("UserTypeId", "INTEGER"),
-            ]
-        }
-    }
 
     struct UserType;
 
-    impl ConvertSchema for UserType {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("Id", "INTEGER"), ("Name", "TEXT")]
-        }
-    }
 
     #[tokio::test]
     async fn fills_user_type_on_user_view() {
@@ -319,6 +294,13 @@ mod user_view {
             ("Opened".to_string(), "created".to_string()),
             ("UserTypeId".to_string(), "user_type_id".to_string()),
         ])));
+        users_options.schema = Schema::new(HashMap::from([
+            ("Key".into(), "uuid".into()),
+            ("Login".into(), "string".into()),
+            ("Active".into(), "boolean".into()),
+            ("Opened".into(), "datetime".into()),
+            ("UserTypeId".into(), "integer".into()),
+        ]));
         let mut type_options = create_readonly_repository_mapping_options::<UserType>();
         type_options.entity = "UserType".into();
         type_options.entity_mapper =
@@ -353,7 +335,10 @@ mod user_view {
         assert_eq!(account.get("UserTypeId"), Some(&Value::Int(1)));
         assert_eq!(users_view.get("UserType"), Some(&Value::from("admin")));
         assert_eq!(users_view.get("Login"), Some(&Value::from("ada")));
-        assert_eq!(users_view.get("Key"), Some(&Value::from(ADA)));
+        assert_eq!(
+            users_view.get("Key"),
+            Some(&Value::Uuid(Uuid::parse_str(ADA).unwrap()))
+        );
         assert_eq!(users_view.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(
             users_view.get("Opened"),
@@ -369,7 +354,7 @@ mod users_view_roles {
     use super::{apply_schema, datasource, execute_sql, open, ADA, GRACE, LIN};
     use futures_util::TryStreamExt;
     use datasources::{
-        create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, ConvertSchema, Datasource,
+        create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, Datasource,
         DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Row,
         SelectStatement, SelectStatementOptions, TypeMap,
@@ -379,33 +364,12 @@ mod users_view_roles {
 
     struct UserType;
 
-    impl ConvertSchema for UserType {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("Id", "INTEGER"), ("Name", "TEXT")]
-        }
-    }
 
     struct UserRole;
 
-    impl ConvertSchema for UserRole {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("UserId", "TEXT"), ("Name", "TEXT")]
-        }
-    }
 
     struct UsersView;
 
-    impl ConvertSchema for UsersView {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![
-                ("Key", "TEXT"),
-                ("Login", "TEXT"),
-                ("Active", "INTEGER"),
-                ("Opened", "TEXT"),
-                ("UserType", "TEXT"),
-            ]
-        }
-    }
 
     fn seed() -> String {
         format!(
@@ -657,7 +621,7 @@ mod user_crud {
     use futures_util::TryStreamExt;
     use datasources::{
         create_crud_repository_options, default, eq, CRUDRepository, Casing,
-        ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository, Row,
+        ChangeCasingMapper, Datasource, ICRUDRepository, Row,
         RowTypeConverter, Value, Where,
     };
 
@@ -720,41 +684,20 @@ mod user_crud {
         use futures_util::TryStreamExt;
         use datasources::{
             create_crud_repository_options, default, encode_rows, eq, CRUDRepository, Casing,
-            ChangeCasingMapper, ConvertSchema, DictionaryMapper, ICRUDRepository,
-            IReadonlyRepository, MetaDataRowTypeConverter, Row, RowTypeConverter, Value, Where,
+            ChangeCasingMapper, DictionaryMapper, ICRUDRepository,
+            IReadonlyRepository, MetaDataRowTypeConverter, Row, Schema, Value, Where,
         };
+        use std::collections::HashMap;
         use std::sync::Arc;
 
         struct User;
 
-        impl ConvertSchema for User {
-            fn schema() -> Vec<(&'static str, &'static str)> {
-                vec![
-                    ("Key", "INTEGER"),
-                    ("Login", "TEXT"),
-                    ("Active", "INTEGER"),
-                    ("Opened", "TEXT"),
-                    ("UserType", "INTEGER"),
-                    ("Version", "INTEGER"),
-                ]
-            }
-        }
 
         struct UserType;
 
-        impl ConvertSchema for UserType {
-            fn schema() -> Vec<(&'static str, &'static str)> {
-                vec![("Id", "INTEGER"), ("Name", "TEXT")]
-            }
-        }
 
         struct UserRole;
 
-        impl ConvertSchema for UserRole {
-            fn schema() -> Vec<(&'static str, &'static str)> {
-                vec![("UserId", "INTEGER"), ("Name", "TEXT")]
-            }
-        }
 
         fn role_names(value: &Value) -> Vec<String> {
             value
@@ -787,9 +730,16 @@ mod user_crud {
             ("UserType".to_string(), "user_type_id".to_string()),
             ("Version".to_string(), "version".to_string()),
         ])));
-        users_options.row_converter = Some(RowTypeConverter::of::<User>());
+        users_options.schema = Schema::new(HashMap::from([
+            ("Key".into(), "integer".into()),
+            ("Login".into(), "string".into()),
+            ("Active".into(), "boolean".into()),
+            ("Opened".into(), "datetime".into()),
+            ("UserType".into(), "integer".into()),
+            ("Version".into(), "binary".into()),
+        ]));
         users_options.object_converter = Some(Box::new(
-            MetaDataRowTypeConverter::of::<User>().with_references(
+            MetaDataRowTypeConverter::new(Vec::new()).with_references(
                 vec!["UserType".into()],
                 Box::new(DictionaryMapper::new([
                     ("Key".to_string(), "id".to_string()),
@@ -803,16 +753,19 @@ mod user_crud {
         ));
         let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
         let mut type_options = create_crud_repository_options::<UserType>();
+        type_options.ids = vec!["Id".into()];
         type_options.entity_mapper =
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         type_options.property_mappings = Some(std::sync::Arc::new(casing));
-        type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+        type_options.schema = Schema::new(HashMap::from([
+            ("Id".into(), "integer".into()),
+            ("Name".into(), "string".into()),
+        ]));
         let mut role_options = create_crud_repository_options::<UserRole>();
         role_options.entity_mapper =
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         role_options.property_mappings =
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-        role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
         let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
         let user_types_repo =
             Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
@@ -927,15 +880,6 @@ mod user_crud {
 
     struct Account;
 
-    impl ConvertSchema for Account {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![
-                ("TenantId", "INTEGER"),
-                ("Id", "INTEGER"),
-                ("Name", "TEXT"),
-            ]
-        }
-    }
 
     #[tokio::test]
     async fn reads_updates_and_deletes_by_tenant_and_id() {
@@ -957,7 +901,7 @@ mod user_crud {
         options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         options.property_mappings = Some(std::sync::Arc::new(casing));
         options.ids = vec!["TenantId".into(), "Id".into()];
-        options.row_converter = Some(RowTypeConverter::of::<Account>());
+        options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
         let accounts_repo = CRUDRepository::<Row>::new(connection, options).unwrap();
         let mut key = datasources::Row::new();
         key.insert("TenantId".into(), Value::Int(1));

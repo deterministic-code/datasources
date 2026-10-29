@@ -22,9 +22,9 @@ mod tests {
     use crate::store::{MemoryData, MemoryStore};
     use futures_util::TryStreamExt;
     use datasources::{
-        converters::Cells, create, default, register, reset, CRUDRepository, CRUDRepositoryOptions,
+        Row, create, default, register, reset, CRUDRepository, CRUDRepositoryOptions,
         Command, Connection, DatasourceError, ICRUDRepository, IReadonlyRepository,
-        InsertStatement, IsolationLevel, Parameter, Row, SelectInsertedIdStatement, Value,
+        InsertStatement, IsolationLevel, Parameter, SelectInsertedIdStatement, Value,
         WhereText,
     };
     use serde_json::Value as JsonValue;
@@ -286,8 +286,8 @@ mod tests {
             .unwrap();
         bound.execute("insert", None).await.unwrap();
         bound.execute_reader("", None).await.unwrap();
-        ds.create_repository::<Cells>(None, None);
-        ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);
+        ds.create_repository::<Row>(None, None);
+        ds.create_repository::<Row>(Some(ds.create_connection().await.unwrap()), None);
         assert_eq!(
             create(Some(&HashMap::from([("PROVIDER".into(), "memory".into())])))
                 .unwrap()

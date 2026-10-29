@@ -2,6 +2,7 @@ mod binary_converter;
 mod bool_converter;
 mod datetime_converter;
 mod decimal_converter;
+mod integer_converter;
 mod uuid_converter;
 
 use datasources::{TypeConverter, Value};
@@ -11,15 +12,17 @@ pub use binary_converter::BinaryConverter;
 pub use bool_converter::BoolConverter;
 pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
+pub use integer_converter::IntegerConverter;
 pub use uuid_converter::UuidConverter;
 
 fn catalog() -> Vec<(&'static str, Box<dyn TypeConverter<Value, Value> + Send + Sync>)> {
     vec![
-        ("bool", Box::new(BoolConverter)),
+        ("boolean", Box::new(BoolConverter)),
         ("datetime", Box::new(DateTimeConverter)),
         ("uuid", Box::new(UuidConverter)),
         ("decimal", Box::new(DecimalConverter)),
         ("binary", Box::new(BinaryConverter)),
+        ("integer", Box::new(IntegerConverter)),
     ]
 }
 
@@ -45,7 +48,7 @@ mod tests {
     #[test]
     fn registers_catalog() {
         let catalog = row_type_converters();
-        for key in ["bool", "datetime", "uuid", "decimal", "binary"] {
+        for key in ["boolean", "datetime", "uuid", "decimal", "binary", "integer"] {
             assert!(catalog.contains_key(key));
             assert!(field(key).is_some());
         }
@@ -57,7 +60,10 @@ mod tests {
         use datasources::RowTypeConverter;
         use std::collections::HashMap;
         let text = "550e8400-e29b-41d4-a716-446655440000";
-        let converter = RowTypeConverter::new(Vec::new()).with_types(row_type_converters());
+        let converter = RowTypeConverter::from(
+            row_type_converters,
+            &HashMap::from([("uuid".into(), "uuid".into())]),
+        );
         let row = HashMap::from([("uuid".into(), Value::from(text))]);
         assert!(matches!(
             converter.reverse_convert(&row).unwrap()["uuid"],

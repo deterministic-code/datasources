@@ -1,7 +1,7 @@
 use futures_util::TryStreamExt;
 use datasources::{
     create_crud_repository_options, create_readonly_repository_mapping_options, default, eq,
-    Casing, ChangeCasingMapper, ConvertSchema, Datasource, ICRUDRepository, Response, Row, Value,
+    Casing, ChangeCasingMapper, Datasource, ICRUDRepository, Response, Row, Value,
     Where,
 };
 use datasources_tests::apply_schema;
@@ -9,15 +9,6 @@ use std::sync::Arc;
 
 struct User;
 
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Id", "INTEGER"),
-            ("Username", "TEXT"),
-            ("IsEnabled", "INTEGER"),
-        ]
-    }
-}
 
 trait Repositories {
     fn users(&self) -> Arc<dyn ICRUDRepository>;

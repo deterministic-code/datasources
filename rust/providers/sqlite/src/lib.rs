@@ -64,7 +64,7 @@ mod tests {
     use crate::connection::SqliteConnection;
     use crate::transaction::SqliteTransaction;
     use datasources::{
-        converters::Cells, create, downcast_connection, register, reset, BuiltDatasource, Command,
+        Row, create, downcast_connection, register, reset, BuiltDatasource, Command,
         Connection, Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
@@ -209,7 +209,7 @@ mod tests {
             .execute_reader_native(&datasources::Native::new("SELECT 1"), None)
             .await
             .unwrap();
-        ds.create_repository::<Cells>(None, None);
+        ds.create_repository::<Row>(None, None);
         let factory = BuiltDatasource::new("sqlite", Arc::new(With(None)), None);
         factory.create_connection().await.unwrap();
         let bound = factory
@@ -222,7 +222,7 @@ mod tests {
             .await
             .is_err());
         (&factory as &dyn Datasource)
-            .create_repository::<Cells>(Some(factory.create_connection().await.unwrap()), None);
+            .create_repository::<Row>(Some(factory.create_connection().await.unwrap()), None);
 
         let closed = Arc::new(SqliteConnection::new(None));
         assert!(SqliteCommand::new(closed)

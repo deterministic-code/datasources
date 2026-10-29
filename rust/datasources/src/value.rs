@@ -49,9 +49,21 @@ impl From<i64> for Value {
     }
 }
 
+impl From<i16> for Value {
+    fn from(value: i16) -> Self {
+        Self::Int(value.into())
+    }
+}
+
 impl From<i32> for Value {
     fn from(value: i32) -> Self {
         Self::Int(value.into())
+    }
+}
+
+impl<T: Into<Value>> From<Option<T>> for Value {
+    fn from(value: Option<T>) -> Self {
+        value.map(Into::into).unwrap_or(Self::Null)
     }
 }
 
@@ -94,5 +106,105 @@ impl From<Decimal> for Value {
 impl From<Vec<u8>> for Value {
     fn from(value: Vec<u8>) -> Self {
         Self::Binary(value)
+    }
+}
+
+impl TryFrom<Value> for bool {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Bool(flag) => Ok(flag),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for i16 {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Int(n) => Ok(n as i16),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for i32 {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Int(n) => Ok(n as i32),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for i64 {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Int(n) => Ok(n),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for String {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Text(text) => Ok(text),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for DateTime<Utc> {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::DateTime(date) => Ok(date),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for Uuid {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Uuid(id) => Ok(id),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for Decimal {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Decimal(n) => Ok(n),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<Value> for Vec<u8> {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Binary(bytes) => Ok(bytes),
+            _ => Err(()),
+        }
+    }
+}
+
+impl<T: TryFrom<Value, Error = ()>> TryFrom<Value> for Option<T> {
+    type Error = ();
+    fn try_from(value: Value) -> Result<Self, ()> {
+        match value {
+            Value::Null => Ok(None),
+            other => T::try_from(other).map(Some),
+        }
     }
 }

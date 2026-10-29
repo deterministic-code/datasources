@@ -8,6 +8,7 @@ import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappi
 export type ReadQuery = ISelectStatement | IWhere | IExecuteStoredProcedureStatement;
 
 export interface IReadonlyRepository<T = unknown> extends IRepository<T> {
+  readonly isSchemaRequired: boolean;
   readSingle(
     query?: ReadQuery,
     parameters?: Parameter[],

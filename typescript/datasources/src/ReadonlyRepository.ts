@@ -63,6 +63,7 @@ export const builtOf = <T>(
 
 export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<T> {
   readonly type: Constructable<T>;
+  readonly isSchemaRequired = false;
   private connection?: IConnection;
   protected rowConverter?: TypeConverter<Cells, Cells>;
   protected objectConverter?: TypeConverter<T, Cells>;

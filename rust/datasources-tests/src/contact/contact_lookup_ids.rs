@@ -13,7 +13,7 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     options.ids = vec!["Id".into()];
     options.entity_mapper = Some(std::sync::Arc::new(snake()));
     options.property_mappings = Some(std::sync::Arc::new(columns()));
-    options.row_converter = Some(RowTypeConverter::new(vec!["Id".into(), "Name".into()]));
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options)?;
     let row = repo
         .read_single(

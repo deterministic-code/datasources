@@ -20,7 +20,8 @@ fn parents(strategy: Arc<dyn crate::BulkWriteStrategy>) -> (BulkCRUDRepository, 
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "parents".into();
-    options.row_converter = Some(RowTypeConverter::new(vec!["id".into(), "label".into()]));
+    options.read_properties = vec!["id".into(), "label".into()];
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = BulkCRUDRepository::with_strategy(connection, options, strategy).unwrap();
     (repo, command)
 }
@@ -215,7 +216,7 @@ async fn payload_encodes_scalars() {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "parents".into();
     options.ids = Vec::new();
-    options.row_converter = Some(RowTypeConverter::new(vec![
+    options.read_properties = vec![
         "amount".into(),
         "blob".into(),
         "count".into(),
@@ -224,7 +225,8 @@ async fn payload_encodes_scalars() {
         "label".into(),
         "price".into(),
         "token".into(),
-    ]));
+    ];
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = BulkCRUDRepository::with_strategy(
         connection,
         options,
@@ -287,11 +289,7 @@ async fn create_bulk_returns_composite_ids() {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "coded".into();
     options.ids = vec!["code".into(), "code_extra".into()];
-    options.row_converter = Some(RowTypeConverter::new(vec![
-        "code".into(),
-        "code_extra".into(),
-        "label".into(),
-    ]));
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = BulkCRUDRepository::new(connection, options).unwrap();
     let ids = repo
         .create_bulk(&mut [
@@ -323,17 +321,13 @@ fn family(
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut child_options = CRUDRepositoryOptions::default();
     child_options.entity = "children".into();
-    child_options.row_converter = Some(RowTypeConverter::new(vec![
-        "id".into(),
-        "parent_id".into(),
-        "label".into(),
-    ]));
+    child_options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let children_repo = Arc::new(
         BulkCRUDRepository::with_strategy(connection.clone(), child_options, children).unwrap(),
     );
     let mut parent_options = CRUDRepositoryOptions::default();
     parent_options.entity = "parents".into();
-    parent_options.row_converter = Some(RowTypeConverter::new(vec!["id".into(), "label".into()]));
+    parent_options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let mut parents_repo =
         BulkCRUDRepository::with_strategy(connection, parent_options, parents).unwrap();
     parents_repo.add_enriched(

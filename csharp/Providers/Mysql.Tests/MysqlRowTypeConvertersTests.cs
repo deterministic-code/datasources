@@ -8,6 +8,6 @@ public class MysqlRowTypeConvertersTests
     public void RegistersMysqlRowTypeConverters()
     {
         var types = new MysqlDriver().RowTypeConverters;
-        Assert.Equal(["bool", "datetime", "uuid", "decimal", "binary"], types.Keys);
+        Assert.Equal(["boolean", "datetime", "uuid", "decimal", "binary", "integer"], types.Keys);
     }
 }

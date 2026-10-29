@@ -38,7 +38,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::DictionaryMapper;
-    use crate::converters::{ConvertSchema, RowTypeConverter};
+    use crate::converters::{RowTypeConverter};
     use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
     use crate::mappers::Mapper;
     use crate::mocks::{MockCommand, MockConnection};
@@ -87,14 +87,6 @@ mod tests {
         assert_eq!(address, "Home");
     }
 
-    struct Account;
-
-    impl ConvertSchema for Account {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("Key", "INTEGER"), ("Login", "TEXT")]
-        }
-    }
-
     #[tokio::test]
     async fn read_reverse_maps_column_names() {
         let command = Arc::new(MockCommand::new());
@@ -105,9 +97,10 @@ mod tests {
             row
         });
         let connection = MockConnection::with_command_provider(command.clone(), "memory");
-        let mut options = create_readonly_repository_mapping_options::<Account>();
+        let mut options = create_readonly_repository_mapping_options::<Row>();
         options.entity = "user".into();
-        options.row_converter = Some(RowTypeConverter::of::<Account>());
+        options.read_properties = vec!["Key".into(), "Login".into()];
+        options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
         options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
             ("Login".to_string(), "username".to_string()),

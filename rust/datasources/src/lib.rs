@@ -43,6 +43,7 @@ mod downcast_connection;
 mod driver;
 mod enrichment;
 mod entity;
+mod schema;
 mod enrichment_property_type;
 mod enrichment_via;
 mod expect_console_middleware;
@@ -130,7 +131,7 @@ pub use connection::Connection;
 pub use console_command_middleware::{format_elapsed, utc_iso_millis, ConsoleCommandMiddleware};
 pub use converters::{
     Casing,
-    ChangeCasingConverter, ConvertSchema, DecimalRule, DefaultValueConverter, DefaultValueOptions,
+    ChangeCasingConverter, DecimalRule, DefaultValueConverter, DefaultValueOptions,
     DeterministicTypeConverter, FieldSize, Mapping, MetaDataRowTypeConverter, PluralizerConverter,
     RegexConverter, ReplaceConverter, RowTypeConverter, SpecField, SpecFieldRules,
     ToLowerCaseConverter, ToUpperCaseConverter, TypeConverter, EMPTY_UUID,
@@ -154,7 +155,8 @@ pub use delete_enrichment_strategy::DeleteEnrichmentStrategy;
 pub use delete_nested::DeleteNested;
 pub use downcast_connection::downcast_connection;
 pub use driver::Driver;
-pub use entity::{entity_from_row, stored_row, Entity, FromCell, ToCell};
+pub use entity::{entity_from_row, stored_row, Entity};
+pub use schema::Schema;
 pub use enrichment::Enrichment;
 pub use enrichment_property_type::EnrichmentPropertyType;
 pub use enrichment_via::EnrichmentVia;
@@ -170,7 +172,7 @@ pub use information::Information;
 pub use isolation_level::IsolationLevel;
 pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
 pub use mappers::{
-    ChangeCasingMapper, DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait,
+    ChangeCasingMapper, DeterministicTypeMapper, DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait,
     IdentityMapper, MappedRow, MappedValue, Mapper, PluralizerMapper, RowTypeMapper,
     TransformConverterMapper, TransformMapper, TypeMap, TypeMapField, TypeMapGroup,
 };

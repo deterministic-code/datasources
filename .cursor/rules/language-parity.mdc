@@ -7,6 +7,8 @@ alwaysApply: true
 
 C#, Rust, and TypeScript **must** have the same public API and runtime behavior. C# is the reference. When they diverge, change Rust and TypeScript to match C#. Do not ship a language-only helper, extra method, or auto-path.
 
+**HARD HALT** if a Rust or TypeScript change needs an extra argument, overload, or parameter that C# does not have. Stop. Do not add `read_where`, `with_fields`, `type`, `columns`, or any other language-only argument to paper over a missing C# member. Change C# first, or stop and tell the user which C# signature is missing.
+
 A remark that says one language does it differently is a bug. Fix the code. Do not document around the gap.
 
 Call-site shape must match (names follow each language’s convention only: `Read` / `read` / `read`). One parameter that is query-or-where in C# is one parameter everywhere — not `read` plus `read_where`.

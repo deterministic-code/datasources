@@ -1,4 +1,5 @@
 mod change_casing_mapper;
+mod deterministic_type_mapper;
 mod dictionary_mapper;
 mod flat_to_nested_mapper;
 mod i_flat_to_nested_mapper;
@@ -13,6 +14,7 @@ mod type_map_field;
 mod type_map_group;
 
 pub use change_casing_mapper::ChangeCasingMapper;
+pub use deterministic_type_mapper::DeterministicTypeMapper;
 pub use dictionary_mapper::DictionaryMapper;
 pub use flat_to_nested_mapper::FlatToNestedMapper;
 pub use i_flat_to_nested_mapper::FlatToNestedMapper as FlatToNestedMapperTrait;

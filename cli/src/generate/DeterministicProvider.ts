@@ -14,7 +14,8 @@ import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
 import type { RepositoryModel, RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { csharpRepositories } from "./CSharpRepositories.ts";
-import { rustRepositories } from "./RustRepositories.ts";
+import { rustEntities, rustRepositories } from "./RustRepositories.ts";
+import { content } from "@deterministic-code/generators-common/generate-entry";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./datasourceYaml.ts";
@@ -86,14 +87,15 @@ export const deterministic: CodeGenerationProvider = {
     const casing = createCasingStrategy(request.dialect, request.settings);
     const datasource = await pack.datasource(ctx);
     const views = await pack.views(ctx);
-    return remap(
-      [
-        ...place(typesPrefix(request.dialect, casing, "datasource"), datasource),
-        ...place(typesPrefix(request.dialect, casing, "views"), views),
-      ],
-      request.settings,
-      request.dialect,
-    );
+    const types = [
+      ...place(typesPrefix(request.dialect, casing, "datasource"), datasource),
+      ...place(typesPrefix(request.dialect, casing, "views"), views),
+    ];
+    if (request.dialect === "rust") {
+      const spec = await DeterministicParser(request.reader).parse(request.settings);
+      types.push(content("rust/entities.rs", rustEntities(planRepositories(spec, request.dialect, request.settings), spec, casing)));
+    }
+    return remap(types, request.settings, request.dialect);
   },
   generateRepositories: async (request) => {
     const spec = await DeterministicParser(request.reader).parse(request.settings);

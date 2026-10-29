@@ -1,4 +1,4 @@
-let converter = MetaDataRowTypeConverter::of::<User>();
+let converter = MetaDataRowTypeConverter::new(vec!["id".into(), "name".into()]);
 let row = record(&[
     ("id", Value::Int(1)),
     ("name", Value::from("ada")),

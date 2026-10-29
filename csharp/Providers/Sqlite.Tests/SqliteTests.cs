@@ -84,7 +84,7 @@ public class SqliteTests
         var converter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new Dictionary<string, string>
         {
             ["Key"] = "uuid",
-            ["Active"] = "bool",
+            ["Active"] = "boolean",
             ["Login"] = "string",
             ["Created"] = "datetime",
         });

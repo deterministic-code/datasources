@@ -128,7 +128,7 @@ pub async fn contacts_parity(
     let mut cells = CRUDRepositoryOptions::default();
     cells.entity_mapper = Some(Arc::new(join_entity()));
         cells.property_mappings = Some(Arc::new(super::contact_columns::columns()));
-    cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
+    cells.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let join_repo = CRUDRepository::<Row>::new(connection.clone(), cells).expect("join repo");
     join_repo.add_middleware(middleware.clone());
     let query = contacts_join_query(None);

@@ -39,7 +39,7 @@ mod tests {
     use crate::engine::{isolation_sql, to_mysql};
     use crate::transaction::MysqlTransaction;
     use datasources::{
-        converters::Cells, create, downcast_connection, register, reset, BuiltDatasource, Command,
+        Row, create, downcast_connection, register, reset, BuiltDatasource, Command,
         Connection, Datasource, Driver, IsolationLevel, Transaction,
     };
     use std::collections::HashMap;
@@ -144,7 +144,7 @@ mod tests {
         let ds = create(Some(&HashMap::from([("PROVIDER".into(), "mysql".into())]))).unwrap();
         assert_eq!(ds.provider(), "mysql");
         assert!(ds.create_command(None).await.is_err());
-        ds.create_repository::<Cells>(None, None);
+        ds.create_repository::<Row>(None, None);
         let factory = BuiltDatasource::new("mysql", Arc::new(With(None)), None);
         assert_eq!(factory.provider(), "mysql");
         let closed = Arc::new(MysqlConnection::new(None));

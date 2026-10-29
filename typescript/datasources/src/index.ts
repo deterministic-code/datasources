@@ -258,6 +258,8 @@ export type { TypeMapGroup } from "./mappers/TypeMapGroup.ts";
 export { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";
 export { ChangeCasingMapper } from "./mappers/ChangeCasingMapper.ts";
 export { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
+export { DeterministicTypeMapper } from "./mappers/DeterministicTypeMapper.ts";
+export { Schema } from "./Schema.ts";
 export { IdentityMapper } from "./mappers/IdentityMapper.ts";
 export { PluralizerMapper } from "./mappers/PluralizerMapper.ts";
 export { TransformMapper } from "./mappers/TransformMapper.ts";

@@ -1,25 +1,11 @@
 use datasources::{
-    default, ConvertSchema, DictionaryMapper, Driver, Mapper, MetaDataRowTypeConverter, Parameter,
+    default, DictionaryMapper, Driver, Mapper, MetaDataRowTypeConverter, Parameter,
     Row, RowTypeConverter, Value,
 };
 use datasources_tests::apply_schema;
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
 use uuid::Uuid;
-
-struct User;
-
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Id", "INTEGER"),
-            ("Uuid", "TEXT"),
-            ("Username", "TEXT"),
-            ("IsEnabled", "INTEGER"),
-            ("Created", "TEXT"),
-        ]
-    }
-}
 
 #[tokio::test]
 async fn maps_and_converts_users_through_the_read_pipeline() {
@@ -115,7 +101,7 @@ async fn maps_and_converts_users_through_the_read_pipeline() {
         .map(|row| row_converter.convert(row).unwrap())
         .collect();
 
-    let object_converter = MetaDataRowTypeConverter::of::<User>();
+    let object_converter = MetaDataRowTypeConverter::new(Vec::new());
     let final_entities: Vec<Row> = converted_rows
         .iter()
         .map(|row| object_converter.convert(row).unwrap())

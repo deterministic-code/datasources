@@ -1,20 +1,12 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
     Casing, CRUDRepository, CRUDRepositoryOptions, ChangeCasingMapper, Connection, ICRUDRepository,
-    Row, RowTypeConverter, Value,
+    Row, Schema, Value,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::connection::SqliteConnection;
-
-fn item_converter() -> RowTypeConverter {
-    RowTypeConverter::new(vec![
-        "Id".into(),
-        "Name".into(),
-        "Created".into(),
-        "Version".into(),
-    ])
-}
 
 #[tokio::test]
 async fn omits_null_datetime_and_version() {
@@ -28,7 +20,12 @@ async fn omits_null_datetime_and_version() {
     options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
     options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
     options.ids = vec!["Id".into()];
-    options.row_converter = Some(item_converter());
+    options.schema = Schema::new(HashMap::from([
+        ("Id".into(), "integer".into()),
+        ("Name".into(), "string".into()),
+        ("Created".into(), "datetime".into()),
+        ("Version".into(), "binary".into()),
+    ]));
     let repo = CRUDRepository::<Row>::new(conn, options).unwrap();
     let mut omitted = Row::new();
     omitted.insert("Name".into(), Value::from("ada"));

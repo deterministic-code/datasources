@@ -13,6 +13,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly ReadonlyRepositoryStatements? readonlyStatements;
 
     public Type Type => typeof(T);
+    public bool IsSchemaRequired => false;
     IReadOnlyList<StoredEnrichment> IEnrichmentHost.Enrichments => enrichments;
     protected bool Enriched => enrichments.Count > 0;
 

@@ -150,7 +150,7 @@ const booleanDeclared = (declared?: string | null): boolean =>
   declared?.toUpperCase() === "BOOLEAN";
 
 const cell = (value: Cell | null | undefined, declared?: string | null): Cell | null =>
-  value == null ? null : booleanDeclared(declared) ? SqliteRowTypeConverters.bool.convert(value) : value;
+  value == null ? null : booleanDeclared(declared) ? SqliteRowTypeConverters.boolean.convert(value) : value;
 
 type ColumnStatement = SqliteStatement & {
   columns?: () => SqliteColumn[];

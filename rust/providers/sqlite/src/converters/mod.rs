@@ -2,6 +2,7 @@ mod binary_converter;
 mod bool_converter;
 mod datetime_converter;
 mod decimal_converter;
+mod integer_converter;
 mod uuid_converter;
 
 use datasources::{TypeConverter, Value};
@@ -11,6 +12,7 @@ pub use binary_converter::BinaryConverter;
 pub use bool_converter::BoolConverter;
 pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
+pub use integer_converter::IntegerConverter;
 pub use uuid_converter::UuidConverter;
 
 fn catalog() -> Vec<(
@@ -18,11 +20,12 @@ fn catalog() -> Vec<(
     Box<dyn TypeConverter<Value, Value> + Send + Sync>,
 )> {
     vec![
-        ("bool", Box::new(BoolConverter)),
+        ("boolean", Box::new(BoolConverter)),
         ("datetime", Box::new(DateTimeConverter)),
         ("uuid", Box::new(UuidConverter)),
         ("decimal", Box::new(DecimalConverter)),
         ("binary", Box::new(BinaryConverter)),
+        ("integer", Box::new(IntegerConverter)),
     ]
 }
 
@@ -43,7 +46,7 @@ pub fn field(canonical: &str) -> Option<Box<dyn TypeConverter<Value, Value> + Se
 
 pub fn reverse(value: &Value) -> Value {
     let key = match value {
-        Value::Bool(_) => "bool",
+        Value::Bool(_) => "boolean",
         Value::DateTime(_) => "datetime",
         Value::Uuid(_) => "uuid",
         Value::Decimal(_) => "decimal",
@@ -62,7 +65,7 @@ mod tests {
     #[test]
     fn registers_catalog() {
         let catalog = row_type_converters();
-        for key in ["bool", "datetime", "uuid", "decimal", "binary"] {
+        for key in ["boolean", "datetime", "uuid", "decimal", "binary", "integer"] {
             assert!(catalog.contains_key(key));
             assert!(field(key).is_some());
         }

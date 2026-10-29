@@ -1,8 +1,8 @@
 use crate::default_write_enrichment_strategy::{decode_rows, encode_rows};
 use crate::result::Result;
 use crate::row::Row;
-use crate::value::Value;
-use chrono::{DateTime, Utc};
+use crate::schema::Schema;
+use std::collections::HashMap;
 
 pub trait Entity: Clone + Send + Sync + 'static {
     fn to_row(&self) -> Row;
@@ -18,6 +18,9 @@ pub trait Entity: Clone + Send + Sync + 'static {
     }
     fn child_properties() -> &'static [&'static str] {
         &[]
+    }
+    fn schema() -> Schema {
+        Schema::new(HashMap::new())
     }
 }
 
@@ -45,173 +48,6 @@ pub fn stored_row<T: Entity>(item: &T) -> Row {
         row.insert((*name).to_string(), encode_rows(&item.children(name)));
     }
     row
-}
-
-pub trait ToCell {
-    fn to_cell(&self) -> Value;
-}
-
-pub trait FromCell: Sized {
-    fn from_cell(value: Option<&Value>) -> Self;
-}
-
-impl ToCell for bool {
-    fn to_cell(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl ToCell for i16 {
-    fn to_cell(&self) -> Value {
-        Value::from(i64::from(*self))
-    }
-}
-
-impl ToCell for i32 {
-    fn to_cell(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl ToCell for i64 {
-    fn to_cell(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl ToCell for String {
-    fn to_cell(&self) -> Value {
-        Value::from(self.clone())
-    }
-}
-
-impl ToCell for DateTime<Utc> {
-    fn to_cell(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl ToCell for Vec<u8> {
-    fn to_cell(&self) -> Value {
-        Value::from(self.clone())
-    }
-}
-
-impl ToCell for uuid::Uuid {
-    fn to_cell(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl ToCell for rust_decimal::Decimal {
-    fn to_cell(&self) -> Value {
-        Value::from(*self)
-    }
-}
-
-impl<T: ToCell> ToCell for Option<T> {
-    fn to_cell(&self) -> Value {
-        self.as_ref().map(ToCell::to_cell).unwrap_or(Value::Null)
-    }
-}
-
-impl FromCell for bool {
-    fn from_cell(value: Option<&Value>) -> Self {
-        matches!(value, Some(Value::Bool(true)))
-    }
-}
-
-impl FromCell for i16 {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            Some(Value::Int(n)) => *n as i16,
-            Some(other) => other.wire_text().parse().unwrap_or(0),
-            None => 0,
-        }
-    }
-}
-
-impl FromCell for i32 {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            Some(Value::Int(n)) => *n as i32,
-            Some(other) => other.wire_text().parse().unwrap_or(0),
-            None => 0,
-        }
-    }
-}
-
-impl FromCell for i64 {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            Some(Value::Int(n)) => *n,
-            Some(other) => other.wire_text().parse().unwrap_or(0),
-            None => 0,
-        }
-    }
-}
-
-impl FromCell for String {
-    fn from_cell(value: Option<&Value>) -> Self {
-        value.map(Value::wire_text).unwrap_or_default()
-    }
-}
-
-impl FromCell for DateTime<Utc> {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            Some(Value::DateTime(date)) => *date,
-            _ => Utc::now(),
-        }
-    }
-}
-
-impl FromCell for Vec<u8> {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            Some(Value::Binary(bytes)) => bytes.clone(),
-            _ => Vec::new(),
-        }
-    }
-}
-
-impl FromCell for uuid::Uuid {
-    fn from_cell(value: Option<&Value>) -> Self {
-        value
-            .map(Value::wire_text)
-            .and_then(|text| text.parse().ok())
-            .unwrap_or_else(uuid::Uuid::nil)
-    }
-}
-
-impl FromCell for rust_decimal::Decimal {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            Some(Value::Decimal(n)) => *n,
-            Some(other) => other.wire_text().parse().unwrap_or_default(),
-            None => rust_decimal::Decimal::ZERO,
-        }
-    }
-}
-
-impl<T: FromCell> FromCell for Option<T> {
-    fn from_cell(value: Option<&Value>) -> Self {
-        match value {
-            None | Some(Value::Null) => None,
-            other => Some(T::from_cell(other)),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn uuid_to_cell_boxes_value_uuid() {
-        let id = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
-        assert_eq!(id.to_cell(), Value::Uuid(id));
-    }
 }
 
 pub fn entity_from_row<T: Entity>(row: Row) -> Result<T> {

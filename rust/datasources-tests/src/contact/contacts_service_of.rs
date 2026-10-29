@@ -7,10 +7,6 @@ use datasources::{
 use std::collections::HashMap;
 use std::sync::Arc;
 
-fn name_list(names: &[&str]) -> Vec<String> {
-    names.iter().map(|name| (*name).to_string()).collect()
-}
-
 fn stamp_fields(
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>> {
@@ -28,7 +24,7 @@ fn stamp_fields(
 fn open(
     connection: Arc<dyn Connection>,
     entity: &str,
-    names: &[&str],
+    _names: &[&str],
     contact: bool,
     middleware: Option<Arc<dyn CommandMiddleware>>,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
@@ -43,7 +39,7 @@ fn open(
     });
     options.property_mappings = Some(std::sync::Arc::new(columns()));
     options.row_converter =
-        Some(RowTypeConverter::new(name_list(names)).with_fields(stamp_fields(field)));
+        Some(RowTypeConverter::new(stamp_fields(field)));
     options.object_converter = Some(Box::new(
         MetaDataRowTypeConverter::new(Vec::new())
             .with_references(references(), Box::new(columns())),

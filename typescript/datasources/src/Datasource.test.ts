@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Datasource, DatasourceFactory, MockConnection, MockDriver, RepositoryNotRegisteredError } from "./index.ts";
+import { Datasource, DatasourceFactory, MockConnection, MockDriver, RepositoryNotRegisteredError, RowTypeConverter, Schema } from "./index.ts";
 
 const envKeys = [
   "INSTALLED_PROVIDERS",
@@ -56,8 +56,10 @@ describe("Datasource", () => {
       id = 0;
       name = "";
     }
-    expect(ds.createRepository(Item, undefined, { entity: "items", ids: ["id"] })).toBeTruthy();
-    expect(ds.createReadonlyRepository(Item, undefined, { entity: "items" })).toBeTruthy();
+    const schema = new Schema({ id: "integer" });
+    const rowConverter = RowTypeConverter.from({}, schema.columns);
+    expect(ds.createRepository(Item, undefined, { entity: "items", ids: ["id"], schema, rowConverter })).toBeTruthy();
+    expect(ds.createReadonlyRepository(Item, undefined, { entity: "items", schema, rowConverter })).toBeTruthy();
     expect(ds.createReadonlyRepository(Item)).toBeTruthy();
     ds.repositories.register(
       "Item",

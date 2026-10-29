@@ -2,9 +2,8 @@ use crate::built_repository::BuiltRepository;
 use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
-use crate::converters::{ConvertSchema, MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
+use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
 use crate::entity::Entity;
-use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -64,14 +63,6 @@ pub struct ReadonlyRepository<T: Entity = Row> {
 }
 
 impl<T: Entity> ReadonlyRepository<T> {
-    pub fn from_type<S: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_readonly_repository_mapping_options::<S>();
-        options.row_converter = Some(RowTypeConverter::of::<S>());
-        let mut repo = Self::new(connection, options)?;
-        repo.entity_type = TypeId::of::<S>();
-        Ok(repo)
-    }
-
     pub fn new(
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryMappingOptions,
