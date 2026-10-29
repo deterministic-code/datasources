@@ -26,6 +26,11 @@ fn catalog() -> Vec<(
         ("decimal", Box::new(DecimalConverter)),
         ("binary", Box::new(BinaryConverter)),
         ("integer", Box::new(IntegerConverter)),
+        ("unsignedinteger", Box::new(IntegerConverter)),
+        ("smallinteger", Box::new(IntegerConverter)),
+        ("unsignedsmallinteger", Box::new(IntegerConverter)),
+        ("biginteger", Box::new(IntegerConverter)),
+        ("unsignedbiginteger", Box::new(IntegerConverter)),
     ]
 }
 
@@ -65,7 +70,19 @@ mod tests {
     #[test]
     fn registers_catalog() {
         let catalog = row_type_converters();
-        for key in ["boolean", "datetime", "uuid", "decimal", "binary", "integer"] {
+        for key in [
+            "boolean",
+            "datetime",
+            "uuid",
+            "decimal",
+            "binary",
+            "integer",
+            "unsignedinteger",
+            "smallinteger",
+            "unsignedsmallinteger",
+            "biginteger",
+            "unsignedbiginteger",
+        ] {
             assert!(catalog.contains_key(key));
             assert!(field(key).is_some());
         }
