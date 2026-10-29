@@ -1,4 +1,5 @@
 DROP PROCEDURE IF EXISTS bulk_create_user(jsonb, jsonb)
+GO
 CREATE PROCEDURE bulk_create_user(payload jsonb, INOUT ids jsonb DEFAULT NULL)
 LANGUAGE plpgsql
 AS $$
@@ -14,7 +15,9 @@ BEGIN
   SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) INTO ids FROM inserted;
 END;
 $$
+GO
 DROP PROCEDURE IF EXISTS bulk_update_user(jsonb)
+GO
 CREATE PROCEDURE bulk_update_user(payload jsonb)
 LANGUAGE plpgsql
 AS $$
@@ -31,7 +34,9 @@ BEGIN
   WHERE u.id = x.id;
 END;
 $$
+GO
 DROP PROCEDURE IF EXISTS bulk_delete_user(jsonb)
+GO
 CREATE PROCEDURE bulk_delete_user(payload jsonb)
 LANGUAGE plpgsql
 AS $$

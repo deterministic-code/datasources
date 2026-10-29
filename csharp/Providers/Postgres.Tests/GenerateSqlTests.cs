@@ -221,4 +221,44 @@ public class GenerateSqlTests
         Assert.Matches(@"""gender_type_id"" INTEGER", contacts);
         Assert.DoesNotMatch(@"""gender_type_id"" TEXT", contacts);
     }
+
+    [Fact]
+    public void InfersAVersionedReferenceColumnTypeFromAnInheritedParentId()
+    {
+        const string typesYaml = """
+            types:
+              - base:
+                  fields:
+                    - id:
+                        type: integer
+                        is_id: true
+              - gender:
+                  tags: [datasource_type]
+                  inherits: base
+                  fields:
+                    - name:
+                        type: string
+                        size: 128
+              - contact:
+                  tags: [datasource_type]
+                  inherits: base
+                  fields:
+                    - gender_type_id:
+                        references: gender.id
+            """;
+        const string path = "version-20261016T000000Z-001/diff.yaml";
+        var files = Files(typesYaml, """
+            version: 1.0.0
+            includes:
+              - types:
+                  filter: tag == "datasource_type" || tag == "view_type"
+            types: []
+            """);
+        files[path] = AddedTypes(typesYaml);
+        var sql = GenerateSql.Of(files, new Dictionary<string, string>(), ["postgres"])
+            .Single(e => e.Filename.EndsWith("0001_up.sql")).Content;
+        var contacts = System.Text.RegularExpressions.Regex.Match(sql, @"CREATE TABLE ""contacts"" \(([\s\S]*?)\);").Groups[1].Value;
+        Assert.Matches(@"""gender_type_id"" INTEGER", contacts);
+        Assert.DoesNotMatch(@"""gender_type_id"" TEXT", contacts);
+    }
 }

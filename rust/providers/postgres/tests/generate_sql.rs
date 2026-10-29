@@ -328,3 +328,52 @@ types:
         .is_match(&contacts));
 }
 
+#[test]
+fn infers_a_versioned_reference_column_type_from_an_inherited_parent_id() {
+    let types = r#"
+types:
+  - base:
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - gender:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 128
+  - contact:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - gender_type_id:
+            references: gender.id
+"#;
+    let path = "version-20261016T000000Z-001/diff.yaml";
+    let mut files = files(
+        types,
+        Some("version: 1.0.0\nincludes:\n  - types:\n      filter: tag == \"datasource_type\" || tag == \"view_type\"\ntypes: []\n"),
+        None,
+    );
+    files.insert(path.into(), frozen_diff(types));
+    let sql = generate_sql(&files, &HashMap::new(), &["postgres".into()])
+        .unwrap()
+        .into_iter()
+        .find(|e| e.filename.ends_with("0001_up.sql"))
+        .unwrap()
+        .content;
+    let contacts = Regex::new(r#"CREATE TABLE "contacts" \(([\s\S]*?)\);"#)
+        .unwrap()
+        .captures(&sql)
+        .unwrap()[1]
+        .to_string();
+    assert!(Regex::new(r#""gender_type_id" INTEGER"#)
+        .unwrap()
+        .is_match(&contacts));
+    assert!(!Regex::new(r#""gender_type_id" TEXT"#)
+        .unwrap()
+        .is_match(&contacts));
+}
+
