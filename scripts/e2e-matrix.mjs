@@ -55,6 +55,9 @@ const leftover = () => {
   const listed = spawnSync("docker", ["ps", "-aq", "--filter", `name=${project}`], { encoding: "utf8" });
   const ids = (listed.stdout || "").trim().split(/\s+/).filter(Boolean);
   if (ids.length) spawnSync("docker", ["rm", "-f", ...ids], { encoding: "utf8", stdio: "inherit" });
+  const volumes = spawnSync("docker", ["volume", "ls", "-q", "--filter", `name=${project}`], { encoding: "utf8" });
+  const names = (volumes.stdout || "").trim().split(/\s+/).filter(Boolean);
+  if (names.length) spawnSync("docker", ["volume", "rm", "-f", ...names], { encoding: "utf8", stdio: "inherit" });
 };
 
 const down = () => {
@@ -63,7 +66,7 @@ const down = () => {
 };
 
 const up = () => {
-  requireOk(compose("up", "-d", "--wait", "mysql", "postgres"), "compose up");
+  requireOk(compose("up", "-d", "--force-recreate", "--renew-anon-volumes", "--wait", "mysql", "postgres"), "compose up");
   compose("exec", "-T", "mysql", "mysql", "-uroot", "-proot", "-e", "GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;");
 };
 
@@ -79,18 +82,53 @@ const isolate = (provider) => {
     url.pathname = `/${name}`;
     return {
       url: url.toString(),
-      drop: () => compose("exec", "-T", "mysql", "mysql", "-uds", "-pds", "-e", `DROP DATABASE IF EXISTS \`${name}\``),
+      drop: () =>
+        requireOk(
+          compose("exec", "-T", "mysql", "mysql", "-uds", "-pds", "-e", `DROP DATABASE IF EXISTS \`${name}\``),
+          "drop mysql",
+        ),
     };
   }
   requireOk(
-    compose("exec", "-T", "postgres", "psql", "-U", "ds", "-d", "datasources", "-c", `CREATE SCHEMA ${name}`),
+    compose("exec", "-T", "postgres", "psql", "-U", "ds", "-d", "datasources", "-c", `CREATE DATABASE ${name}`),
     "create postgres",
   );
-  const base = postgresUrl();
+  requireOk(
+    compose(
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "ds",
+      "-d",
+      name,
+      "-c",
+      `CREATE SCHEMA ${name}; ALTER DATABASE ${name} SET search_path TO ${name}`,
+    ),
+    "create postgres schema",
+  );
+  const url = new URL(postgresUrl());
+  url.pathname = `/${name}`;
+  url.searchParams.set("schema", name);
   return {
-    url: `${base}${base.includes("?") ? "&" : "?"}schema=${name}`,
+    url: url.href,
     drop: () =>
-      compose("exec", "-T", "postgres", "psql", "-U", "ds", "-d", "datasources", "-c", `DROP SCHEMA IF EXISTS ${name} CASCADE`),
+      requireOk(
+        compose(
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "-U",
+          "ds",
+          "-d",
+          "datasources",
+          "-c",
+          `DROP DATABASE IF EXISTS ${name} WITH (FORCE)`,
+        ),
+        "drop postgres",
+      ),
   };
 };
 

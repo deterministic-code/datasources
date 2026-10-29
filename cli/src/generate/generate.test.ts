@@ -17,6 +17,7 @@ import { pluralCamel, pluralPascal, pluralSnake } from "./RepositoryModel.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
+import { defaultDatasourceYaml } from "./loadSpec.ts";
 import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 
@@ -920,6 +921,16 @@ types:
     expect(registry).not.toContain('"Note"');
     expect(store.files[join(cwd, "generated/typescript/repositories/noteCardRepository.ts")]).toContain('["NoteCard", "notes"]');
     expect(store.files[join(cwd, "generated/typescript/repositories/noteRepository.ts")]).toBeUndefined();
+  });
+
+  it("does not emit a repository for a dictionary view", async () => {
+    const spec = await DeterministicParser(
+      memoryReader({ "types.yaml": typesYaml, "datasource.yaml": defaultDatasourceYaml }),
+    ).parse({ "backend.datasources": "sqlite" });
+    const names = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" }).map((model) => model.specName);
+    expect(names).not.toContain("card_labels");
+    expect(names).not.toContain("contact_preferences_map");
+    expect(names).not.toContain("contact_settings_map");
   });
 
   it("keeps an explicit datasource.yaml filter", async () => {
