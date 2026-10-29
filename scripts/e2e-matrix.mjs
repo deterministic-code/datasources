@@ -137,6 +137,8 @@ version = "0.1.0"
 edition = "2021"
 `,
   );
+  mkdirSync(join(dir, "src"), { recursive: true });
+  writeFileSync(join(dir, "src/lib.rs"), "");
 };
 
 const consumer = (sample, dialect, env) => {
