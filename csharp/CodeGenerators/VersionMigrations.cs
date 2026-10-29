@@ -39,9 +39,15 @@ public static class VersionMigrations
         if (snapshots.Count == 0) return [];
 
         var last = snapshots[^1];
-        if (!Matches(last, SpecParser.TypesYaml, files.GetValueOrDefault(SpecParser.TypesYaml), null)
-            || !Matches(last, SpecParser.DatasourceYaml, files.GetValueOrDefault(SpecParser.DatasourceYaml), DefaultDatasourceYaml))
+        if (!Matches(last, SpecParser.TypesYaml, files.GetValueOrDefault(SpecParser.TypesYaml), null))
             throw new InvalidOperationException("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
+        if (!Has(files, $"datasource.{dialect}.yaml"))
+        {
+            if (!Has(files, SpecParser.DatasourceYaml))
+                throw new InvalidOperationException($"{dialect} requires datasource.{dialect}.yaml or datasource.yaml");
+            if (!Matches(last, SpecParser.DatasourceYaml, files.GetValueOrDefault(SpecParser.DatasourceYaml), DefaultDatasourceYaml))
+                throw new InvalidOperationException("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
+        }
 
         var output = new List<GenerateEntry>();
         var previous = Compile(Empty(), settings);
@@ -106,6 +112,9 @@ public static class VersionMigrations
         var snapshotYaml = has ? snapshot.Yaml(path) : whenMissing is null ? null : Fold(path, whenMissing);
         return snapshotYaml is not null && snapshotYaml == Fold(path, live);
     }
+
+    static bool Has(IReadOnlyDictionary<string, string> files, string name) =>
+        files.TryGetValue(name, out var text) && text != "";
 
     static string Fold(string path, string text)
     {

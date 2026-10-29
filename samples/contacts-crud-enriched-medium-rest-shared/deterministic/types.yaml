@@ -77,7 +77,6 @@ types:
             type: string
             size: unlimited
             is_nullable: true
-            default_value: none
   - address_base:
       tags:
         - datasource_type
@@ -109,7 +108,6 @@ types:
             type: string
             size: 64
             is_nullable: true
-            default_value: US
   - phone_base:
       tags:
         - datasource_type
@@ -126,7 +124,6 @@ types:
             type: string
             size: 32
             is_nullable: true
-            default_value: Main
   - contact_groups_base:
       tags:
         - datasource_type

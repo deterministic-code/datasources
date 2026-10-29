@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "../io.ts";
-import { loadSpec } from "./loadSpec.ts";
+import { defaultDatasourceYaml, loadSpec } from "./loadSpec.ts";
 
 const mem = (entries: string[], files: Record<string, string>): Fs => ({
   readFile: async (path) => {
@@ -28,7 +28,7 @@ describe("loadSpec", () => {
     expect(loaded.settings["version.diffs"]).toBe(path);
   });
 
-  it("loads engine datasource files and defaults datasource.yaml from sqlite", async () => {
+  it("loads engine datasource files without copying sqlite onto datasource.yaml", async () => {
     const dir = "app";
     const sqlite = "version: 1.0.0\ntypes: []\n";
     const mysql = "version: 1.0.0\ntypes:\n  - base:\n      fields: []\n";
@@ -42,7 +42,7 @@ describe("loadSpec", () => {
     );
     expect(loaded.files["datasource.sqlite.yaml"]).toBe(sqlite);
     expect(loaded.files["datasource.mysql.yaml"]).toBe(mysql);
-    expect(loaded.files["datasource.yaml"]).toBe(sqlite);
+    expect(loaded.files["datasource.yaml"]).toBe(defaultDatasourceYaml);
   });
 
   it("skips a version directory without a diff", async () => {

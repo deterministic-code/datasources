@@ -18,6 +18,23 @@ public class GenerateSqlTests
                     type: datetime
         """;
 
+    const string DefaultDatasourceYaml = """
+        version: 1.0.0
+        includes:
+          - types:
+              filter: tag == "datasource_type" || tag == "view_type"
+        types: []
+        """;
+
+    const string EngineDatasourceYaml = """
+        version: 1.0.0
+        types:
+          - user:
+              fields:
+                - email:
+                    type: string
+        """;
+
     static Dictionary<string, string> Files(string types, string? datasource = null, string? seeds = null)
     {
         var files = new Dictionary<string, string> { ["types.yaml"] = types };
@@ -368,7 +385,20 @@ public class GenerateSqlTests
     public void EmitsNumberedUpDownFilesFromFrozenDiffs()
     {
         const string path = "version-20261016T000000Z-001/diff.yaml";
+        var files = Files(TypesYaml, DefaultDatasourceYaml);
+        files[path] = AddedTypes(TypesYaml);
+        var names = Names(GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
+        Assert.Equal(
+            ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"],
+            names);
+    }
+
+    [Fact]
+    public void AcceptsADialectCoveredByDatasourceDialectYaml()
+    {
+        const string path = "version-20261016T000000Z-001/diff.yaml";
         var files = Files(TypesYaml);
+        files["datasource.sqlite.yaml"] = EngineDatasourceYaml;
         files[path] = AddedTypes(TypesYaml);
         var names = Names(GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
         Assert.Equal(
@@ -380,7 +410,7 @@ public class GenerateSqlTests
     public void ThrowsWhenLiveYamlDriftedFromFrozenDiffs()
     {
         const string path = "version-20261016T000000Z-001/diff.yaml";
-        var files = Files(TypesYaml);
+        var files = Files(TypesYaml, DefaultDatasourceYaml);
         files[path] = AddedTypes(TypesYaml);
         files["types.yaml"] = """
             types:
@@ -391,6 +421,17 @@ public class GenerateSqlTests
                     - name:
                         type: string
             """;
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
+        Assert.Contains("run datasources version first", error.Message);
+    }
+
+    [Fact]
+    public void ThrowsWhenARootDatasourceYamlDriftedFromTheFrozenDiffs()
+    {
+        const string path = "version-20261016T000000Z-001/diff.yaml";
+        var files = Files(TypesYaml, EngineDatasourceYaml);
+        files[path] = AddedTypes(TypesYaml);
         var error = Assert.Throws<InvalidOperationException>(() =>
             GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]));
         Assert.Contains("run datasources version first", error.Message);

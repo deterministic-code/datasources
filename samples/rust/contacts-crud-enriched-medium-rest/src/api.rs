@@ -262,7 +262,7 @@ fn decode(text: &str) -> String {
 
 fn stamp_contact(object: &mut Map<String, Json>, clock: &Clock) {
     set_json_text(object, "email", "");
-    set_json_text(object, "notes", "");
+    set_json_text(object, "notes", "none");
     if object.get("uuid").and_then(Json::as_str).unwrap_or("").is_empty() {
         object.insert("uuid".into(), Json::String(clock.uuid()));
     }
@@ -303,15 +303,16 @@ fn stamp_list(
 }
 
 fn stamp_address(object: &mut Map<String, Json>, clock: &Clock) {
-    for key in ["line1", "line2", "city", "region", "postal_code", "country"] {
+    for key in ["line1", "line2", "city", "region", "postal_code"] {
         set_json_text(object, key, "");
     }
+    set_json_text(object, "country", "US");
     stamp_base(object, clock);
 }
 
 fn stamp_phone(object: &mut Map<String, Json>, clock: &Clock) {
     set_json_text(object, "number", "");
-    set_json_text(object, "label", "");
+    set_json_text(object, "label", "Main");
     stamp_base(object, clock);
 }
 

@@ -17,10 +17,22 @@ types:
             is_unique: true
   - contacts_base:
       mapping: contacts
+      fields:
+        - notes:
+            include_in_create: true
+            include_in_update: true
   - address_base:
       mapping: addresses
+      fields:
+        - country:
+            include_in_create: true
+            include_in_update: true
   - phone_base:
       mapping: phones
+      fields:
+        - label:
+            include_in_create: true
+            include_in_update: true
   - contact_groups_base:
       mapping: contact_groups
       fields:

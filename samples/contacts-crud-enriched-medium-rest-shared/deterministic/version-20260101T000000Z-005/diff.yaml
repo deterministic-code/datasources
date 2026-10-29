@@ -1,21 +1,24 @@
-types.yaml:
+datasource.sqlite.yaml:
   types:
     changed:
       - contacts_base:
           fields:
-            changed:
+            added:
               - notes:
-                  default_value: none
+                  include_in_create: true
+                  include_in_update: true
       - address_base:
           fields:
-            changed:
+            added:
               - country:
-                  default_value: US
+                  include_in_create: true
+                  include_in_update: true
       - phone_base:
           fields:
-            changed:
+            added:
               - label:
-                  default_value: Main
+                  include_in_create: true
+                  include_in_update: true
 datasource_seeds.yaml:
   seeds:
     changed:

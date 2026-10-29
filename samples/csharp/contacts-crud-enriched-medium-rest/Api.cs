@@ -115,7 +115,7 @@ public sealed class Api
     static Contact Stamp(Contact contact)
     {
         contact.Email = contact.Email ?? "";
-        contact.Notes = contact.Notes ?? "";
+        contact.Notes = string.IsNullOrEmpty(contact.Notes) ? "none" : contact.Notes;
         contact.Uuid = string.IsNullOrEmpty(contact.Uuid) ? Clock.Uuid() : contact.Uuid;
         contact.Created = contact.Created == default ? Clock.Now() : contact.Created;
         contact.Updated = Clock.Now();
@@ -130,7 +130,7 @@ public sealed class Api
             address.Line2 = address.Line2 ?? "";
             address.Region = address.Region ?? "";
             address.PostalCode = address.PostalCode ?? "";
-            address.Country = address.Country ?? "";
+            address.Country = string.IsNullOrEmpty(address.Country) ? "US" : address.Country;
             address.Uuid = string.IsNullOrEmpty(address.Uuid) ? Clock.Uuid() : address.Uuid;
             address.Created = address.Created == default ? Clock.Now() : address.Created;
             address.Updated = Clock.Now();
@@ -139,7 +139,7 @@ public sealed class Api
         foreach (var phone in contact.Phones)
         {
             phone.Number = phone.Number ?? "";
-            phone.Label = phone.Label ?? "";
+            phone.Label = string.IsNullOrEmpty(phone.Label) ? "Main" : phone.Label;
             phone.Uuid = string.IsNullOrEmpty(phone.Uuid) ? Clock.Uuid() : phone.Uuid;
             phone.Created = phone.Created == default ? Clock.Now() : phone.Created;
             phone.Updated = Clock.Now();
