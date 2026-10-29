@@ -161,7 +161,13 @@ public class GenerateSqlTests
                     - notes:
                         type: string
             """;
-        var files = Files(nextYaml);
+        var files = Files(nextYaml, """
+            version: 1.0.0
+            includes:
+              - types:
+                  filter: tag == "datasource_type" || tag == "view_type"
+            types: []
+            """);
         files[first] = AddedTypes(TypesYaml);
         files[second] = Document("types.yaml", nextYaml);
         var entries = GenerateSql.Of(files, new Dictionary<string, string> { ["datasource.use_stored_procedures"] = "true" }, ["postgres"]);
@@ -170,6 +176,25 @@ public class GenerateSqlTests
         Assert.Contains("notes", up2);
         Assert.Contains("CREATE OR REPLACE", up2);
         Assert.Contains("CREATE OR REPLACE", down2);
+    }
+
+    [Fact]
+    public void ThrowsWhenTheSelectedDialectHasNeitherAnEngineFileNorDatasourceYaml()
+    {
+        const string path = "version-20261016T000000Z-001/diff.yaml";
+        var files = Files(TypesYaml);
+        files["datasource.sqlite.yaml"] = """
+            version: 1.0.0
+            types:
+              - user:
+                  fields:
+                    - email:
+                        type: string
+            """;
+        files[path] = AddedTypes(TypesYaml);
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            GenerateSql.Of(files, new Dictionary<string, string>(), ["postgres"]));
+        Assert.Contains("postgres requires datasource.postgres.yaml or datasource.yaml", error.Message);
     }
 
     [Fact]

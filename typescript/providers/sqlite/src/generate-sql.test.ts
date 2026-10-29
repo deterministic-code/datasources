@@ -472,6 +472,21 @@ describe("generate-sql collection fields", () => {
   });
 });
 
+const DEFAULT_DATASOURCE_YAML = `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type" || tag == "view_type"
+types: []
+`;
+
+const ENGINE_DATASOURCE_YAML = `version: 1.0.0
+types:
+  - user:
+      fields:
+        - email:
+            type: string
+`;
+
 describe("generate-sql version diffs", () => {
   it("emits numbered up/down files from frozen diffs", async () => {
     const path = "version-20261016T000000Z-001/diff.yaml";
@@ -481,7 +496,11 @@ describe("generate-sql version diffs", () => {
     const files = names(
       await generateSql(
         {
-          reader: memoryReader({ "types.yaml": TYPES_YAML, [path]: diff }),
+          reader: memoryReader({
+            "types.yaml": TYPES_YAML,
+            "datasource.yaml": DEFAULT_DATASOURCE_YAML,
+            [path]: diff,
+          }),
           settings: { "version.diffs": path },
         },
         ["sqlite"],
@@ -490,6 +509,26 @@ describe("generate-sql version diffs", () => {
     assert.deepEqual(files, ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"]);
   });
 
+  it("accepts a dialect covered by datasource.<dialect>.yaml", async () => {
+    const path = "version-20261016T000000Z-001/diff.yaml";
+    const diff = stringify({
+      "types.yaml": { added: true, content: parse(TYPES_YAML) },
+    });
+    const files = names(
+      await generateSql(
+        {
+          reader: memoryReader({
+            "types.yaml": TYPES_YAML,
+            "datasource.sqlite.yaml": ENGINE_DATASOURCE_YAML,
+            [path]: diff,
+          }),
+          settings: { "version.diffs": path },
+        },
+        ["sqlite"],
+      ),
+    );
+    assert.deepEqual(files, ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql"]);
+  });
 
   it("throws when live yaml drifted from frozen diffs", async () => {
     const path = "version-20261016T000000Z-001/diff.yaml";
@@ -509,6 +548,29 @@ describe("generate-sql version diffs", () => {
         - name:
             type: string
 `,
+              "datasource.yaml": DEFAULT_DATASOURCE_YAML,
+              [path]: diff,
+            }),
+            settings: { "version.diffs": path },
+          },
+          ["sqlite"],
+        ),
+      /run datasources version first/,
+    );
+  });
+
+  it("throws when a root datasource.yaml drifted from the frozen diffs", async () => {
+    const path = "version-20261016T000000Z-001/diff.yaml";
+    const diff = stringify({
+      "types.yaml": { added: true, content: parse(TYPES_YAML) },
+    });
+    await assert.rejects(
+      () =>
+        generateSql(
+          {
+            reader: memoryReader({
+              "types.yaml": TYPES_YAML,
+              "datasource.yaml": ENGINE_DATASOURCE_YAML,
               [path]: diff,
             }),
             settings: { "version.diffs": path },

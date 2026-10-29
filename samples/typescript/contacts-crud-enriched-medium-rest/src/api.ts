@@ -96,7 +96,7 @@ export class Api {
 
   private stamp = (contact: ContactWrite): ContactWrite => {
     contact.email = text(contact.email);
-    contact.notes = text(contact.notes);
+    contact.notes = text(contact.notes) || "none";
     stampContact(contact);
     contact.addresses ??= [];
     contact.phones ??= [];
@@ -130,7 +130,7 @@ const stampAddress = (address: Address): void => {
   address.city = text(address.city);
   address.region = text(address.region);
   address.postalCode = text(address.postalCode);
-  address.country = text(address.country);
+  address.country = text(address.country) || "US";
   address.uuid = address.uuid || clock.uuid();
   address.created = address.created || clock.now();
   address.updated = clock.now();
@@ -139,7 +139,7 @@ const stampAddress = (address: Address): void => {
 
 const stampPhone = (phone: Phone): void => {
   phone.number = text(phone.number);
-  phone.label = text(phone.label);
+  phone.label = text(phone.label) || "Main";
   phone.uuid = phone.uuid || clock.uuid();
   phone.created = phone.created || clock.now();
   phone.updated = clock.now();

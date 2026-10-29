@@ -34,6 +34,17 @@ types:
             type: datetime
 "#;
 
+const DEFAULT_DATASOURCE_YAML: &str = "version: 1.0.0\nincludes:\n  - types:\n      filter: tag == \"datasource_type\" || tag == \"view_type\"\ntypes: []\n";
+
+const ENGINE_DATASOURCE_YAML: &str = r#"
+version: 1.0.0
+types:
+  - user:
+      fields:
+        - email:
+            type: string
+"#;
+
 fn files(types: &str, datasource: Option<&str>, seeds: Option<&str>) -> HashMap<String, String> {
     register_sql();
     let mut files = HashMap::from([("types.yaml".into(), types.to_string())]);
@@ -517,7 +528,23 @@ fn frozen_diff(types_yaml: &str) -> String {
 #[test]
 fn emits_numbered_up_down_files_from_frozen_diffs() {
     let path = "version-20261016T000000Z-001/diff.yaml";
+    let mut files = files(TYPES_YAML, Some(DEFAULT_DATASOURCE_YAML), None);
+    files.insert(path.into(), frozen_diff(TYPES_YAML));
+    let names = names(&generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap());
+    assert_eq!(
+        names,
+        vec![
+            "sqlite/migrations/0001_down.sql".to_string(),
+            "sqlite/migrations/0001_up.sql".to_string()
+        ]
+    );
+}
+
+#[test]
+fn accepts_a_dialect_covered_by_datasource_dialect_yaml() {
+    let path = "version-20261016T000000Z-001/diff.yaml";
     let mut files = files(TYPES_YAML, None, None);
+    files.insert("datasource.sqlite.yaml".into(), ENGINE_DATASOURCE_YAML.into());
     files.insert(path.into(), frozen_diff(TYPES_YAML));
     let names = names(&generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap());
     assert_eq!(
@@ -532,7 +559,7 @@ fn emits_numbered_up_down_files_from_frozen_diffs() {
 #[test]
 fn throws_when_live_yaml_drifted_from_frozen_diffs() {
     let path = "version-20261016T000000Z-001/diff.yaml";
-    let mut files = files(TYPES_YAML, None, None);
+    let mut files = files(TYPES_YAML, Some(DEFAULT_DATASOURCE_YAML), None);
     files.insert(path.into(), frozen_diff(TYPES_YAML));
     files.insert(
         "types.yaml".into(),
@@ -547,6 +574,15 @@ types:
 "#
         .into(),
     );
+    let error = generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap_err();
+    assert!(error.to_string().contains("run datasources version first"));
+}
+
+#[test]
+fn throws_when_a_root_datasource_yaml_drifted_from_the_frozen_diffs() {
+    let path = "version-20261016T000000Z-001/diff.yaml";
+    let mut files = files(TYPES_YAML, Some(ENGINE_DATASOURCE_YAML), None);
+    files.insert(path.into(), frozen_diff(TYPES_YAML));
     let error = generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap_err();
     assert!(error.to_string().contains("run datasources version first"));
 }

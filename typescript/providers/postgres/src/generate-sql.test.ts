@@ -198,6 +198,12 @@ describe("generate-sql version diffs", () => {
       {
         reader: memoryReader({
           "types.yaml": nextYaml,
+          "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type" || tag == "view_type"
+types: []
+`,
           [first]: stringify({ "types.yaml": { added: true, content: parse(TYPES_YAML) } }),
           [second]: stringify({ "types.yaml": parse(nextYaml) }),
         }),
@@ -213,6 +219,31 @@ describe("generate-sql version diffs", () => {
     assert.ok(up2.includes("notes"));
     assert.ok(up2.includes("CREATE OR REPLACE"));
     assert.ok(down2.includes("CREATE OR REPLACE"));
+  });
+
+  it("throws when the selected dialect has neither an engine file nor datasource.yaml", async () => {
+    const path = "version-20261016T000000Z-001/diff.yaml";
+    await assert.rejects(
+      () =>
+        generateSql(
+          {
+            reader: memoryReader({
+              "types.yaml": TYPES_YAML,
+              "datasource.sqlite.yaml": `version: 1.0.0
+types:
+  - user:
+      fields:
+        - email:
+            type: string
+`,
+              [path]: stringify({ "types.yaml": { added: true, content: parse(TYPES_YAML) } }),
+            }),
+            settings: { "version.diffs": path },
+          },
+          ["postgres"],
+        ),
+      /postgres requires datasource\.postgres\.yaml or datasource\.yaml/,
+    );
   });
 
   it("infers a reference column type from the parent id", async () => {

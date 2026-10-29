@@ -49,6 +49,16 @@ try
         var path = SubstituteText(step.Path, saved);
         var body = step.Body is null ? null : JsonSerializer.Serialize(SubstituteNode(Normalize(step.Body), saved));
         var result = await api.Handle(step.Method, path, body);
+        if (step.Expect is not null)
+        {
+            if (step.Expect.Status is { } status && result.Status != status)
+                throw new InvalidOperationException($"{step.Method} {path}: expected status {status}, got {result.Status} {result.Body}");
+            if (step.Expect.Body is not null)
+                Contains(
+                    result.Body.Length == 0 ? default : JsonDocument.Parse(result.Body).RootElement,
+                    SubstituteNode(Normalize(step.Expect.Body), saved),
+                    $"{step.Method} {path}");
+        }
         if (step.SaveId)
             saved["id"] = JsonDocument.Parse(result.Body).RootElement.GetProperty("id").ToString();
         foreach (var (name, pointer) in step.Save)
@@ -92,6 +102,37 @@ static object? SubstituteNode(object? node, IReadOnlyDictionary<string, string> 
     _ => node
 };
 
+static void Contains(JsonElement actual, object? expected, string path)
+{
+    switch (expected)
+    {
+        case null:
+            if (actual.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
+                throw new InvalidOperationException($"{path}: expected null, got {actual}");
+            break;
+        case Dictionary<string, object> map:
+            if (actual.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException($"{path}: expected object, got {actual}");
+            foreach (var (key, value) in map)
+                Contains(actual.TryGetProperty(key, out var child) ? child : default, value, $"{path}.{key}");
+            break;
+        case List<object> list:
+            if (actual.ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException($"{path}: expected array, got {actual}");
+            if (actual.GetArrayLength() != list.Count)
+                throw new InvalidOperationException($"{path}: expected {list.Count} items, got {actual.GetArrayLength()}");
+            for (var i = 0; i < list.Count; i++)
+                Contains(actual[i], list[i], $"{path}[{i}]");
+            break;
+        default:
+            var want = expected is bool or long or int or double ? JsonSerializer.Serialize(expected) : expected.ToString();
+            var got = actual.ValueKind == JsonValueKind.String ? actual.GetString() : actual.GetRawText();
+            if (!string.Equals(want, got, StringComparison.Ordinal) && want != JsonSerializer.Serialize(got))
+                throw new InvalidOperationException($"{path}: expected {want}, got {got}");
+            break;
+    }
+}
+
 static string At(JsonElement root, string pointer)
 {
     var current = root;
@@ -118,4 +159,11 @@ sealed class RoundTripStep
     public object? Body { get; set; }
     public bool SaveId { get; set; }
     public Dictionary<string, string> Save { get; set; } = [];
+    public RoundTripExpect? Expect { get; set; }
+}
+
+sealed class RoundTripExpect
+{
+    public int? Status { get; set; }
+    public object? Body { get; set; }
 }

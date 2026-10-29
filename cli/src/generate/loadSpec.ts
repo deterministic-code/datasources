@@ -37,7 +37,7 @@ export const loadSpec = async (
     const text = await readOptional(fs, join(dir, name));
     if (text !== undefined) files[name] = text;
   }
-  files["datasource.yaml"] ??= files["datasource.sqlite.yaml"] ?? defaultDatasourceYaml;
+  files["datasource.yaml"] ??= defaultDatasourceYaml;
   const diffs = names.filter((name) => versionDir.test(name)).sort();
   const versionFiles: string[] = [];
   for (const name of diffs) {

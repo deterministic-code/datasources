@@ -231,7 +231,11 @@ types:
         - notes:
             type: string
 "#;
-    let mut files = files(next, None, None);
+    let mut files = files(
+        next,
+        Some("version: 1.0.0\nincludes:\n  - types:\n      filter: tag == \"datasource_type\" || tag == \"view_type\"\ntypes: []\n"),
+        None,
+    );
     files.insert(first.into(), frozen_diff(TYPES_YAML));
     files.insert(second.into(), replacement_diff(next));
     let entries = generate_sql(
@@ -255,6 +259,29 @@ types:
     assert!(up2.contains("notes"));
     assert!(up2.contains("CREATE OR REPLACE"));
     assert!(down2.contains("CREATE OR REPLACE"));
+}
+
+#[test]
+fn throws_when_the_selected_dialect_has_neither_an_engine_file_nor_datasource_yaml() {
+    let path = "version-20261016T000000Z-001/diff.yaml";
+    let mut files = files(TYPES_YAML, None, None);
+    files.insert(
+        "datasource.sqlite.yaml".into(),
+        r#"
+version: 1.0.0
+types:
+  - user:
+      fields:
+        - email:
+            type: string
+"#
+        .into(),
+    );
+    files.insert(path.into(), frozen_diff(TYPES_YAML));
+    let error = generate_sql(&files, &HashMap::new(), &["postgres".into()]).unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("postgres requires datasource.postgres.yaml or datasource.yaml"));
 }
 
 #[test]

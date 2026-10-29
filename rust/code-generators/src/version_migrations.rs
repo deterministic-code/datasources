@@ -47,12 +47,28 @@ pub fn files(
         return Ok(Vec::new());
     }
     let last = snapshots.last().unwrap();
-    if !same(last, "types.yaml", files.get("types.yaml").map(String::as_str), None)?
-        || !same(last, "datasource.yaml", files.get("datasource.yaml").map(String::as_str), Some(DEFAULT_DATASOURCE))?
-    {
+    if !same(last, "types.yaml", files.get("types.yaml").map(String::as_str), None)? {
         return Err(DatasourceError::message(
             "types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first",
         ));
+    }
+    let engine = format!("datasource.{dialect}.yaml");
+    if !covered(files, &engine) {
+        if !covered(files, "datasource.yaml") {
+            return Err(DatasourceError::message(format!(
+                "{dialect} requires datasource.{dialect}.yaml or datasource.yaml"
+            )));
+        }
+        if !same(
+            last,
+            "datasource.yaml",
+            files.get("datasource.yaml").map(String::as_str),
+            Some(DEFAULT_DATASOURCE),
+        )? {
+            return Err(DatasourceError::message(
+                "types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first",
+            ));
+        }
     }
 
     let mut output = Vec::new();
@@ -148,6 +164,10 @@ fn same(snapshot: &VersionSnapshot, path: &str, live: Option<&str>, missing: Opt
         }
     };
     Ok(snapshot_yaml == live_yaml)
+}
+
+fn covered(files: &HashMap<String, String>, name: &str) -> bool {
+    files.get(name).is_some_and(|text| !text.is_empty())
 }
 
 fn compile(

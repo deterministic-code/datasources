@@ -102,8 +102,18 @@ export const versionMigrationFiles = async (
   if (snapshots.length === 0) return { files: [], count: 0 };
 
   const last = snapshots[snapshots.length - 1]!;
-  if (!matches(last, "types.yaml", live.typesYaml, undefined) || !matches(last, "datasource.yaml", live.datasourceYaml, defaultDatasourceYaml)) {
+  const covered = async (name: string) => (await ctx.reader.exists(name)) && (await ctx.reader.read(name)) !== "";
+  const engine = `datasource.${dialect}.yaml`;
+  if (!matches(last, "types.yaml", live.typesYaml, undefined)) {
     throw new Error("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
+  }
+  if (!(await covered(engine))) {
+    if (!(await covered("datasource.yaml"))) {
+      throw new Error(`${dialect} requires datasource.${dialect}.yaml or datasource.yaml`);
+    }
+    if (!matches(last, "datasource.yaml", live.datasourceYaml, defaultDatasourceYaml)) {
+      throw new Error("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
+    }
   }
 
   const files: { path: string; content: string }[] = [];
