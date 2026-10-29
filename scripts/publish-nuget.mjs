@@ -110,10 +110,27 @@ const smoke = async (ver) => {
 </configuration>
 `,
     );
-    for (const id of ["Datasources", "Datasources.Sqlite"]) {
-      run("dotnet", ["add", "package", id, "--version", ver, "--source", artifacts], dir);
+    for (const id of ["Datasources", "Datasources.Sqlite", "Datasources.Mysql"]) {
+      const add = run(
+        "dotnet",
+        ["add", "package", id, "--version", ver, "--source", artifacts],
+        dir,
+        { capture: true },
+      );
+      process.stdout.write(add.stdout);
+      process.stderr.write(add.stderr);
+      if (/NU1902/.test(`${add.stdout}${add.stderr}`)) {
+        console.error(`NU1902 while adding ${id}@${ver}`);
+        process.exit(1);
+      }
     }
-    run("dotnet", ["build"], dir);
+    const build = run("dotnet", ["build"], dir, { capture: true });
+    process.stdout.write(build.stdout);
+    process.stderr.write(build.stderr);
+    if (/NU1902/.test(`${build.stdout}${build.stderr}`)) {
+      console.error(`NU1902 while building smoke against ${ver}`);
+      process.exit(1);
+    }
     console.log(`smoke ok (${dir})`);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -155,6 +172,19 @@ const push = async (ver) => {
     }
     process.stdout.write(result.stdout);
   }
+  for (const library of libraries) await waitPublished(library.id, ver);
+};
+
+const waitPublished = async (id, ver) => {
+  for (let i = 0; i < 36; i++) {
+    if (await published(id, ver)) {
+      console.log(`ready ${id}@${ver}`);
+      return;
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10_000);
+  }
+  console.error(`${id}@${ver} is not on nuget.org yet`);
+  process.exit(1);
 };
 
 const ver = version();

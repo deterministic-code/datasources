@@ -1,6 +1,6 @@
 # Datasource
 
-Use Datasource to create repositories, commands, and connections for a datasource provider. After setup has written an `.env`, {{Datasource.Default|Datasource.default|default()}} returns that provider. The connection is closed by default.
+Use Datasource to create repositories, commands, and connections for a datasource provider. After setup has written an `.env`, {{Datasource.Default|Datasource.default|default()}} returns that provider. Close the default connection with {{await using|await using|close().await}} on the datasource.
 
 ## Classes
 
@@ -68,6 +68,7 @@ static create(options?: DatasourceOptions): IDatasource
 interface IDatasource
 ```
 
+
 **Properties**
 
 ##### provider
@@ -99,6 +100,24 @@ createConnection(): Promise<IConnection>
 ```
 
 **Returns** `Promise<[IConnection](./connection.md)>`
+
+##### close()
+
+Closes the default connection.
+
+```typescript
+close(): Promise<void>
+```
+
+**Returns** `Promise<void>`
+
+##### `Symbol.asyncDispose`
+
+Closes the default connection. `await using` calls this.
+
+```typescript
+[Symbol.asyncDispose](): Promise<void>
+```
 
 ##### createCommand(connection?)
 
@@ -268,7 +287,7 @@ public RepositoryFactory Repositories { get; }
 #### IDatasource
 
 ```csharp
-public interface IDatasource
+public interface IDatasource : IAsyncDisposable
 ```
 
 **Properties**
@@ -302,6 +321,16 @@ Task<IConnection> CreateConnection()
 ```
 
 **Returns** `Task<[IConnection](./connection.md)>`
+
+##### Close()
+
+Closes the default connection. `await using` calls this.
+
+```csharp
+Task Close()
+```
+
+**Returns** `Task`
 
 ##### CreateCommand(connection)
 
@@ -490,6 +519,16 @@ async fn create_connection(&self) -> Result<Arc<dyn Connection>>
 
 **Returns** `Result<Arc<dyn `[Connection](./connection.md)`>>`
 
+##### close()
+
+Closes the default connection. There is no `using`. Call `close().await`.
+
+```rust
+async fn close(&self) -> Result<()>
+```
+
+**Returns** `Result<()>`
+
 ##### create_command(connection)
 
 Creates a command.
@@ -656,6 +695,17 @@ After `generate repositories`, import the generated registry so {{Datasource.Def
 See [DatasourceFactory](./datasource-factory.md) for the factory contract, and [CLI](../cli.md#command-line-cli) for `setup` and adding providers.
 
 ## Examples
+
+### Close the default connection
+
+::: example
+```csharp csharp/Datasources.Tests/DatasourceTests.cs#ClosesTheDefaultConnection
+```
+```rust rust/datasources/src/tests/datasource.rs#closes_the_default_connection
+```
+```typescript typescript/datasources/src/Datasource.test.ts#closes-the-default-connection
+```
+:::
 
 ### Create default from .env settings
 

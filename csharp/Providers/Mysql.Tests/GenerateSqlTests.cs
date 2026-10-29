@@ -61,4 +61,34 @@ public class GenerateSqlTests
         Assert.Matches(@";\nBATCH\nCREATE TRIGGER `trg_genders_updated_at`", custom);
         Assert.DoesNotMatch(@"\nGO\n", custom);
     }
+
+    [Fact]
+    public void SeparatesSeedInsertsWithDatasourceBatchSeparator()
+    {
+        var sql = GenerateSql.Of(new Dictionary<string, string>
+        {
+            ["types.yaml"] = """
+                types:
+                  - gender:
+                      tags: [datasource_type]
+                      fields:
+                        - id:
+                            type: integer
+                            is_id: true
+                        - name:
+                            type: string
+                """,
+            ["datasource_seeds.yaml"] = """
+                version: 1.0.0
+                seeds:
+                  - gender:
+                      - id1:
+                          name: Male
+                      - id2:
+                          name: Female
+                """,
+        }, new Dictionary<string, string>(), ["mysql"])
+            .Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
+        Assert.Matches(@"INSERT INTO `genders`[\s\S]*;\nGO\nINSERT INTO `genders`", sql);
+    }
 }

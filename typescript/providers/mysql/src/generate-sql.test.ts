@@ -87,6 +87,35 @@ describe("generate sql", () => {
     assert.doesNotMatch(customSql, /\nGO\n/);
   });
 
+  it("separates seed inserts with datasource.batch_separator", async () => {
+    const files = {
+      "types.yaml": `types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+`,
+      "datasource_seeds.yaml": `version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+`,
+    };
+    const up = (await generateSql({ reader: memoryReader(files), settings: {} }, ["mysql"])).find(
+      (entry) => entry.filename.endsWith("mysql/migrations/0001_initial_up.sql"),
+    );
+    assert.ok(up, "expected mysql/migrations/0001_initial_up.sql");
+    const sql = "contents" in up ? String(up.contents) : up.content;
+    assert.match(sql, /INSERT INTO `genders`[\s\S]*;\nGO\nINSERT INTO `genders`/);
+  });
+
   it("infers a reference column type from the parent id", async () => {
     const files = await generateSql(
       {

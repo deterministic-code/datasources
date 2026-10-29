@@ -88,4 +88,8 @@ impl Datasource for MockDatasource {
     fn repositories(&self) -> &RepositoryFactory {
         &self.repositories
     }
+
+    async fn close(&self) -> Result<()> {
+        self.connection.close().await
+    }
 }

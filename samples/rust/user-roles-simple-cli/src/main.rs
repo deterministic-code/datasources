@@ -44,6 +44,7 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
         None => app,
     };
     print!("{}", app.run(parsed).await?);
+    ds.close().await?;
     Ok(())
 }
 

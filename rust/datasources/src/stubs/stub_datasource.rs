@@ -90,4 +90,8 @@ impl Datasource for StubDatasource {
     fn repositories(&self) -> &RepositoryFactory {
         &self.repositories
     }
+
+    async fn close(&self) -> Result<()> {
+        Ok(())
+    }
 }

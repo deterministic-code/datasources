@@ -22,6 +22,10 @@ export class MockDatasource implements IDatasource {
     this.connection = new MockConnection();
   }
 
+  close = (): Promise<void> => this.connection.close();
+
+  [Symbol.asyncDispose] = (): Promise<void> => this.close();
+
   createConnection(): Promise<IConnection> {
     this.createConnectionCalls += 1;
     return Promise.resolve(this.connection);

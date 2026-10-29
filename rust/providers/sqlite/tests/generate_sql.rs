@@ -129,6 +129,47 @@ fn uses_the_configured_separator() {
 }
 
 #[test]
+fn separates_seed_inserts_with_datasource_batch_separator() {
+    let sql = generate_sql(
+        &files(
+            r#"
+types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+"#,
+            None,
+            Some(
+                r#"
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+"#,
+            ),
+        ),
+        &HashMap::new(),
+        &["sqlite".into()],
+    )
+    .unwrap()
+    .into_iter()
+    .find(|e| e.filename.ends_with("sqlite/migrations/0001_initial_up.sql"))
+    .unwrap()
+    .content;
+    assert!(Regex::new(r#"INSERT INTO "genders"[\s\S]*;\nGO\nINSERT INTO "genders""#)
+        .unwrap()
+        .is_match(&sql));
+}
+
+#[test]
 fn throws_when_id_is_missing_is_id() {
     let error = generate_sql(
         &files(

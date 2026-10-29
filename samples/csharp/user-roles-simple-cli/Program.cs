@@ -17,7 +17,7 @@ static async Task<int> Run(string[] args)
         DatasourceFactory.Register("sqlite", new SqliteDriver());
         DatasourceFactory.Register("mysql", new MysqlDriver());
         DatasourceFactory.Register("postgres", new PostgresDriver());
-        var ds = Datasource.Default;
+        await using var ds = Datasource.Default;
         var connection = await ds.CreateConnection();
         await connection.Open();
         var command = await ds.CreateCommand(connection);
