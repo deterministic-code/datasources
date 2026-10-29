@@ -1,3 +1,4 @@
+import "../generated/typescript/repositories/repositoryRegistry.ts";
 import { Datasource, Operator, Where, type ICRUDRepository } from "@deterministic-code/datasources";
 import type { Address } from "../generated/typescript/types/generated/views/address.ts";
 import type { Contact } from "../generated/typescript/types/generated/views/contact.ts";

@@ -19,9 +19,7 @@ import { help, parseArgs, type Command, type Flags } from "./parse.ts";
 import { sqlFlagsOf } from "./generate/sqlFlags.ts";
 import { applyVersion } from "./version/applyVersion.ts";
 import { answersForSetup, envFromAnswers, promptSetup, starterTypesYaml, type Prompter, type SetupAnswers } from "./setup.ts";
-import { wireRegister } from "./wireRegister.ts";
 import { wireRustProviders } from "./wireRustProviders.ts";
-import type { Dialect } from "./generate/GenerateRequest.ts";
 
 export type Deps = {
   fs: Fs;
@@ -106,8 +104,6 @@ const applySetup = async (flags: Flags, deps: Deps, requested: string[]): Promis
       selected,
     );
     await applyMigrateInit(flags, deps, language, selected);
-    const dialect: Dialect = migrateLanguage(language);
-    await wireRegister(flags.cwd, "generated", dialect, flags.dryRun, deps);
   }
   if (!answers.scaffold) return;
   if (flags.dryRun) {
