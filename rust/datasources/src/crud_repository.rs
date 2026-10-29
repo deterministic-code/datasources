@@ -5,7 +5,7 @@ use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
-use crate::entity::Entity;
+use crate::from_schema::FromSchema;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -39,7 +39,7 @@ use std::ops::{Deref, DerefMut};
 use std::pin::Pin;
 use std::sync::Arc;
 
-pub struct CRUDRepository<T: Entity = Row> {
+pub struct CRUDRepository<T: FromSchema = Row> {
     readonly: ReadonlyRepository<T>,
     ids: Vec<String>,
     create_properties: Option<Vec<String>>,
@@ -51,7 +51,7 @@ pub struct CRUDRepository<T: Entity = Row> {
     entity: PhantomData<T>,
 }
 
-fn tree_for<T: Entity>(readonly: &ReadonlyRepository<T>) -> RepositoryTree {
+fn tree_for<T: FromSchema>(readonly: &ReadonlyRepository<T>) -> RepositoryTree {
     RepositoryTree::new(RepositoryTreeNode::new(
         Arc::new(StubRepository::new("crud")),
         "",
@@ -59,7 +59,7 @@ fn tree_for<T: Entity>(readonly: &ReadonlyRepository<T>) -> RepositoryTree {
     ))
 }
 
-impl<T: Entity> CRUDRepository<T> {
+impl<T: FromSchema> CRUDRepository<T> {
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
         let write = options.write.clone();
         let create_properties = options.create_properties.clone();
@@ -554,7 +554,7 @@ impl<T: Entity> CRUDRepository<T> {
     }
 }
 
-impl<T: Entity> Deref for CRUDRepository<T> {
+impl<T: FromSchema> Deref for CRUDRepository<T> {
     type Target = ReadonlyRepository<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -562,20 +562,20 @@ impl<T: Entity> Deref for CRUDRepository<T> {
     }
 }
 
-impl<T: Entity> DerefMut for CRUDRepository<T> {
+impl<T: FromSchema> DerefMut for CRUDRepository<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.readonly
     }
 }
 
-impl<T: Entity> IRepository for CRUDRepository<T> {
+impl<T: FromSchema> IRepository for CRUDRepository<T> {
     fn entity_type(&self) -> TypeId {
         self.readonly.entity_type()
     }
 }
 
 #[async_trait]
-impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
+impl<T: FromSchema> IReadonlyRepository<T> for CRUDRepository<T> {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<T>>> {
         Some(self)
     }
@@ -600,20 +600,20 @@ impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
 }
 
 #[async_trait]
-impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
+impl<T: FromSchema> ICRUDRepository<T> for CRUDRepository<T> {
     async fn create(&self, item: T) -> Result<T> {
-        let mut row = to_stored(&item);
+        let mut row = to_stored(&item, &self.readonly.schema)?;
         let created = Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
             || self.create_core(&mut row),
         )
         .await?;
-        map_row(created)
+        map_row(created, &self.readonly.schema)
     }
 
     async fn update(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let row = to_stored(&item);
+        let row = to_stored(&item, &self.readonly.schema)?;
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
@@ -623,7 +623,7 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     }
 
     async fn delete(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let row = to_stored(&item);
+        let row = to_stored(&item, &self.readonly.schema)?;
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
@@ -641,7 +641,10 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<T>> {
-        self.read_row_by_id(id).await?.map(map_row).transpose()
+        self.read_row_by_id(id)
+            .await?
+            .map(|row| map_row(row, &self.readonly.schema))
+            .transpose()
     }
 }
 

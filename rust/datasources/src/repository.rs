@@ -1,5 +1,5 @@
 use crate::command_middleware::CommandMiddleware;
-use crate::entity::{entity_from_row, stored_row, Entity};
+use crate::from_schema::FromSchema;
 use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
@@ -8,6 +8,7 @@ use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::StreamExt;
@@ -16,7 +17,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait IReadonlyRepository<T: Entity = Row>: IRepository {
+pub trait IReadonlyRepository<T: FromSchema = Row>: IRepository {
     fn is_schema_required(&self) -> bool {
         true
     }
@@ -43,7 +44,7 @@ pub trait IReadonlyRepository<T: Entity = Row>: IRepository {
 }
 
 #[async_trait]
-pub trait ICRUDRepository<T: Entity = Row>: IReadonlyRepository<T> {
+pub trait ICRUDRepository<T: FromSchema = Row>: IReadonlyRepository<T> {
     async fn create(&self, item: T) -> Result<T>;
     async fn update(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response>;
     async fn delete(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response>;
@@ -56,16 +57,16 @@ pub trait ICRUDRepository<T: Entity = Row>: IReadonlyRepository<T> {
     fn add_middleware(&self, _middleware: Arc<dyn CommandMiddleware>) {}
 }
 
-struct AsReadonly<T: Entity>(Arc<dyn ICRUDRepository<T>>);
+struct AsReadonly<T: FromSchema>(Arc<dyn ICRUDRepository<T>>);
 
-impl<T: Entity> IRepository for AsReadonly<T> {
+impl<T: FromSchema> IRepository for AsReadonly<T> {
     fn entity_type(&self) -> TypeId {
         self.0.entity_type()
     }
 }
 
 #[async_trait]
-impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
+impl<T: FromSchema> IReadonlyRepository<T> for AsReadonly<T> {
     async fn read_single(
         &self,
         query: Option<&dyn ReadInput>,
@@ -85,20 +86,21 @@ impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
     }
 }
 
-pub fn as_readonly<T: Entity>(repo: Arc<dyn ICRUDRepository<T>>) -> Arc<dyn IReadonlyRepository<T>> {
+pub fn as_readonly<T: FromSchema>(repo: Arc<dyn ICRUDRepository<T>>) -> Arc<dyn IReadonlyRepository<T>> {
     Arc::new(AsReadonly(repo))
 }
 
-pub(crate) fn map_row<T: Entity>(row: Row) -> Result<T> {
-    entity_from_row(row)
+pub(crate) fn map_row<T: FromSchema>(row: Row, schema: &Schema) -> Result<T> {
+    T::from_schema(row, schema)
 }
 
-pub(crate) fn to_stored<T: Entity>(item: &T) -> Row {
-    stored_row(item)
+pub(crate) fn to_stored<T: FromSchema>(item: &T, schema: &Schema) -> Result<Row> {
+    item.to_schema(schema)
 }
 
-pub(crate) fn map_stream<'a, T: Entity>(
+pub(crate) fn map_stream<'a, T: FromSchema>(
     rows: Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>,
+    schema: Schema,
 ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-    Box::pin(rows.map(|row| row.and_then(entity_from_row)))
+    Box::pin(rows.map(move |row| row.and_then(|row| T::from_schema(row, &schema))))
 }

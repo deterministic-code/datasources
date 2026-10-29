@@ -3,7 +3,7 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
-use crate::entity::Entity;
+use crate::from_schema::FromSchema;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -18,6 +18,7 @@ use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions
 use crate::repository::{map_stream, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::select_statement::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
@@ -46,7 +47,7 @@ enum ReadRun {
     },
 }
 
-pub struct ReadonlyRepository<T: Entity = Row> {
+pub struct ReadonlyRepository<T: FromSchema = Row> {
     pub(crate) connection: Arc<dyn Connection>,
     pub(crate) middlewares: Vec<Arc<dyn CommandMiddleware>>,
     middleware_slot: Arc<Mutex<Vec<Arc<dyn CommandMiddleware>>>>,
@@ -59,10 +60,11 @@ pub struct ReadonlyRepository<T: Entity = Row> {
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
+    pub(crate) schema: Schema,
     entity: PhantomData<T>,
 }
 
-impl<T: Entity> ReadonlyRepository<T> {
+impl<T: FromSchema> ReadonlyRepository<T> {
     pub fn new(
         connection: Arc<dyn Connection>,
         options: ReadonlyRepositoryMappingOptions,
@@ -70,6 +72,10 @@ impl<T: Entity> ReadonlyRepository<T> {
         Ok(Self::from_built(ReadonlyRepositoryBuilder::parts(
             connection, options,
         )?))
+    }
+
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     pub fn from_built(built: BuiltRepository) -> Self {
@@ -87,6 +93,7 @@ impl<T: Entity> ReadonlyRepository<T> {
             entity_type: TypeId::of::<T>(),
             memory: None,
             enrichments,
+            schema: built.schema,
             entity: PhantomData,
         }
     }
@@ -115,6 +122,7 @@ impl<T: Entity> ReadonlyRepository<T> {
             entity_type: TypeId::of::<T>(),
             memory: Some(SharedItems::new(items)),
             enrichments,
+            schema: Schema::default(),
             entity: PhantomData,
         }
     }
@@ -480,13 +488,13 @@ impl<T: Entity> ReadonlyRepository<T> {
     }
 }
 
-impl<T: Entity> IRepository for ReadonlyRepository<T> {
+impl<T: FromSchema> IRepository for ReadonlyRepository<T> {
     fn entity_type(&self) -> TypeId {
         self.entity_type
     }
 }
 
-impl<T: Entity> ReadonlyRepository<T> {
+impl<T: FromSchema> ReadonlyRepository<T> {
     pub(crate) fn read_rows<'a>(
         &'a self,
         query: Option<&'a dyn ReadInput>,
@@ -527,7 +535,7 @@ impl<T: Entity> ReadonlyRepository<T> {
 }
 
 #[async_trait]
-impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
+impl<T: FromSchema> IReadonlyRepository<T> for ReadonlyRepository<T> {
     async fn read_single(
         &self,
         query: Option<&dyn ReadInput>,
@@ -543,7 +551,7 @@ impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
         parameters: Option<&'a [Parameter]>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        map_stream(self.read_rows(query, parameters, options))
+        map_stream(self.read_rows(query, parameters, options), self.schema.clone())
     }
 }
 
@@ -555,7 +563,7 @@ fn next_buffered_iter(mut items: std::vec::IntoIter<Row>) -> Result<Option<(Row,
     Ok(items.next().map(|row| (row, ReadRun::Buffered(items))))
 }
 
-pub(crate) fn push_middleware<T: Entity>(
+pub(crate) fn push_middleware<T: FromSchema>(
     repo: &ReadonlyRepository<T>,
     middleware: Arc<dyn CommandMiddleware>,
 ) {
