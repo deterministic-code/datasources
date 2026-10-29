@@ -2,9 +2,9 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "../io.ts";
-import type { Deps } from "../run.ts";
+import type { Deps } from "../io.ts";
+import { parseArgs } from "../parse.ts";
 import type { Prompter } from "../setup.ts";
-import { run } from "../run.ts";
 import { applyVersion } from "./applyVersion.ts";
 import type { Json } from "./delta.ts";
 
@@ -125,7 +125,9 @@ describe("applyVersion", () => {
       [join(root, "version-20261016T000000Z-002", "other.yaml")]: "skip",
     });
     const io = deps(fs);
-    expect(await run(["version", "--cwd", "app"], io)).toBe(0);
+    const parsed = parseArgs(["version", "--cwd", "app"], "app");
+    if (parsed.command.kind !== "version") throw new Error(parsed.command.kind);
+    await applyVersion(parsed.command, parsed.flags, io);
     expect(io.logs[0]).toMatch(/version-\d{8}T\d{6}Z-003\/diff\.yaml$/);
     expect(files[io.logs[0]!]).toMatch(/added: true/);
   });

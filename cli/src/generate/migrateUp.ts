@@ -2,7 +2,7 @@ import { isAbsolute, join } from "node:path";
 import { overlayEnv, parseEnv, scheme, type EnvMap } from "../env.ts";
 import type { Fs } from "../io.ts";
 import type { Flags, GenerateCommand } from "../parse.ts";
-import type { Deps } from "../run.ts";
+import type { Deps } from "../io.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { canonical, isSql, sqlDialectsFromEnv } from "./sqlDialects.ts";
 

@@ -107,11 +107,15 @@ export const typescriptRepositories = (models: RepositoryModel[], settings: Reco
   const registerImports = models.map((model) => `import { ${childClass(model.typeName)} } from "${repoImport(model.specName, casing)}";`);
   const registerCalls = models.map((model) => `  factory.register("${quote(model.entity)}", "${quote(pluralCamel(model.typeName))}", (connection) => new ${childClass(model.typeName)}(connection), (connection) => ${childClass(model.typeName)}.createReadonly(connection));`);
   const props = models.map((model) => `    readonly ${pluralCamel(model.typeName)}: ${childClass(model.typeName)};`);
+  const factories = models.map((model) => {
+    const name = `${model.typeName[0]!.toLowerCase()}${model.typeName.slice(1)}`;
+    return `export { ${name} } from "${typeImport(model, casing)}";`;
+  });
   return [
     ...files,
     content(
       registryFile("ts", casing),
-      `import { RepositoryFactory } from "@deterministic-code/datasources";\n${registerImports.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\nRepositoryFactory.bind(register);\n\ndeclare module "@deterministic-code/datasources" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
+      `import { RepositoryFactory } from "@deterministic-code/datasources";\n${registerImports.join("\n")}\n${factories.join("\n")}\n\nexport const register = (factory: RepositoryFactory): void => {\n${registerCalls.join("\n")}\n};\nRepositoryFactory.bind(register);\n\ndeclare module "@deterministic-code/datasources" {\n  interface Datasource {\n${props.join("\n")}\n  }\n}\n`,
     ),
   ];
 };

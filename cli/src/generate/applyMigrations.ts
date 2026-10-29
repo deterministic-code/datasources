@@ -2,7 +2,7 @@ import { isAbsolute, join } from "node:path";
 import { generateSql } from "@deterministic-code/datasources-code-generators";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import type { Flags, MigrationsCreateCommand } from "../parse.ts";
-import type { Deps } from "../run.ts";
+import type { Deps } from "../io.ts";
 import { destEnv } from "./destEnv.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
