@@ -155,7 +155,7 @@ pub use delete_enrichment_strategy::DeleteEnrichmentStrategy;
 pub use delete_nested::DeleteNested;
 pub use downcast_connection::downcast_connection;
 pub use driver::Driver;
-pub use facet::Facet;
+pub use facet::{self, Facet};
 pub use from_schema::{FromSchema, SchemaObject};
 pub use schema::Schema;
 pub use enrichment::Enrichment;
