@@ -57,7 +57,7 @@ process.on("SIGINT", () => stop(130));
 process.on("SIGTERM", () => stop(143));
 
 const up = (service) => {
-  const result = compose("up", "-d", "--wait", service);
+  const result = compose("up", "-d", "--force-recreate", "--renew-anon-volumes", "--wait", service);
   if ((result.status ?? 1) !== 0) throw new Error(`compose up ${service}: ${result.stderr || result.stdout}`);
   if (service === "mysql")
     compose("exec", "-T", "mysql", "mysql", "-uroot", "-proot", "-e", "GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;");
@@ -87,14 +87,39 @@ const isolate = (provider, persist, id) => {
         : () => compose("exec", "-T", "mysql", "mysql", "-uds", "-pds", "-e", `DROP DATABASE IF EXISTS \`${name}\``),
     };
   }
-  compose("exec", "-T", "postgres", "psql", "-U", "ds", "-d", "datasources", "-c", `CREATE SCHEMA ${name}`);
-  const base = postgresUrl();
+  compose("exec", "-T", "postgres", "psql", "-U", "ds", "-d", "datasources", "-c", `CREATE DATABASE ${name}`);
+  compose(
+    "exec",
+    "-T",
+    "postgres",
+    "psql",
+    "-U",
+    "ds",
+    "-d",
+    name,
+    "-c",
+    `CREATE SCHEMA ${name}; ALTER DATABASE ${name} SET search_path TO ${name}`,
+  );
+  const url = new URL(postgresUrl());
+  url.pathname = `/${name}`;
+  url.searchParams.set("schema", name);
   return {
-    url: `${base}${base.includes("?") ? "&" : "?"}schema=${name}`,
+    url: url.href,
     drop: persist
       ? () => {}
       : () =>
-          compose("exec", "-T", "postgres", "psql", "-U", "ds", "-d", "datasources", "-c", `DROP SCHEMA IF EXISTS ${name} CASCADE`),
+          compose(
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-U",
+            "ds",
+            "-d",
+            "datasources",
+            "-c",
+            `DROP DATABASE IF EXISTS ${name} WITH (FORCE)`,
+          ),
   };
 };
 
