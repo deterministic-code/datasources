@@ -30,22 +30,22 @@ pub(crate) fn assemble(
         entity_mapper,
         property_mappings,
         read_properties,
+        schema,
         row_converter,
         object_converter,
-        row_type_converters,
+        row_type_converters: _,
     } = options;
-    let types = if row_type_converters.is_empty() {
-        registered_driver(connection.provider())
-            .map(|driver| driver.row_type_converters())
-            .unwrap_or_default()
-    } else {
-        row_type_converters
-    };
-    let row_converter = Some(
-        row_converter
-            .unwrap_or_else(|| RowTypeConverter::new(Vec::new()))
-            .with_types(types),
-    );
+    let provider = connection.provider().to_string();
+    let row_converter = Some(row_converter.unwrap_or_else(|| {
+        RowTypeConverter::from(
+            || {
+                registered_driver(&provider)
+                    .map(|driver| driver.row_type_converters())
+                    .unwrap_or_default()
+            },
+            &schema.columns,
+        )
+    }));
     let object_converter =
         object_converter.unwrap_or_else(|| Box::new(MetaDataRowTypeConverter::new(Vec::new())));
     let entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync> =
@@ -53,14 +53,10 @@ pub(crate) fn assemble(
     let property_mappings: Arc<dyn Mapper<String, String> + Send + Sync> =
         property_mappings.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
     let table = entity;
-    let mut names: Vec<String> = if read_properties.is_empty() {
-        row_converter
-            .as_ref()
-            .map(|converter| converter.column_names().to_vec())
-            .unwrap_or_default()
-    } else {
-        read_properties
-    };
+    let mut names: Vec<String> = read_properties;
+    if names.is_empty() {
+        names = schema.columns.keys().cloned().collect();
+    }
     names.sort_by(|left, right| {
         Mapper::map(&property_mappings, left.clone()).cmp(&Mapper::map(&property_mappings, right.clone()))
     });

@@ -2,6 +2,7 @@ namespace Datasources;
 
 public interface IReadonlyRepository<T> : IRepository
 {
+    bool IsSchemaRequired { get; }
     Task<T?> ReadSingle(
         IStatement? query = null,
         IReadOnlyList<Parameter>? parameters = null,

@@ -336,7 +336,7 @@ describe("Mysql datasource", () => {
     const created = "2020-01-02T03:04:05.000Z";
     const converter = RowTypeConverter.from(provider.rowTypeConverters, {
       Key: "uuid",
-      Active: "bool",
+      Active: "boolean",
       Login: "string",
       Created: "datetime",
     });

@@ -1,6 +1,5 @@
-let converter =
-    RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
-        "is_enabled".into(),
-        Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-    )]));
+let converter = RowTypeConverter::new(HashMap::from([(
+    "is_enabled".into(),
+    Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+)]));
 let row = record(&[("is_enabled", Value::Int(2))]);

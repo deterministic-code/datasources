@@ -3,6 +3,7 @@ import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/gene
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childField, children as childModels, isLinked, pluralSnake, registryFile, repositoryFile, rustIdent, rustModLine, type OptimisticConcurrency, type PlannedEnrichment, type RepositoryModel, type RepositoryOptionsModel } from "./RepositoryModel.ts";
+import { schemaPairs } from "./schemaPairs.ts";
 import { dialectsOf, pad, quote, writeList } from "./writeLists.ts";
 
 type Options = RepositoryOptionsModel & { entity: string };
@@ -25,15 +26,20 @@ const scalarNames = (model: RepositoryModel): string[] => {
   return [...model.readProperties.filter((name) => !nested.has(name) && !removed.has(name)), ...extras];
 };
 
-const rustEntities = (models: RepositoryModel[]): string => {
+export const rustEntities = (models: RepositoryModel[], spec: IDeterministic | undefined, casing: ICasingStrategy): string => {
   const impls = models.map((model) => {
     const children = childNames(model);
-    const scalars = scalarNames(model);
-    const toCells = scalars
-      .map((name) => `        row.insert(${rustString(name)}.into(), self.${name}.to_cell());`)
+    const fields = scalarNames(model);
+    const toCells = fields
+      .map((name) => `        row.insert(${rustString(name)}.into(), Value::from(self.${name}.clone()));`)
       .join("\n");
-    const fromCells = scalars
-      .map((name) => `        item.${name} = FromCell::from_cell(row.get(${rustString(name)}));`)
+    const fromCells = fields
+      .map((name) => {
+        const key = rustString(name);
+        return `        if let Some(cell) = row.get(${key}) {
+            if let Ok(value) = cell.clone().try_into() { item.${name} = value; }
+        }`;
+      })
       .join("\n");
     const childMatch = children
       .map((item) => `            ${rustString(item.destination)} => self.${item.destination}.iter().map(${item.viaType}::to_row).collect(),`)
@@ -73,11 +79,20 @@ ${setMatch}
     fn child_properties() -> &'static [&'static str] {
         &[${props}]
     }
+${schemaFn(model, spec, casing)}
 }`;
   });
   const names = [...new Set(models.flatMap((model) => [model.typeName, ...childNames(model).map((item) => item.viaType)]))].join(", ");
-  return `use datasources::{Entity, FromCell, Row, ToCell};\nuse super::{${names}};\n\n${impls.join("\n\n")}\n`;
+  return `use datasources::{Entity, Row, Schema, Value};\nuse std::collections::HashMap;\nuse super::{${names}};\n\n${impls.join("\n\n")}\n`;
 };
+
+const rustColumnMap = (columns: Array<{ from: string; to: string }>, indent: string): string =>
+  `HashMap::from([\n${columns.map((pair) => `${indent}    (${rustString(pair.from)}.into(), ${rustString(pair.to)}.into()),`).join("\n")}\n${indent}])`;
+
+const schemaFn = (model: RepositoryModel, spec: IDeterministic | undefined, casing: ICasingStrategy): string => `
+    fn schema() -> Schema {
+        Schema::new(${rustColumnMap(schemaPairs(model, spec, casing), "        ")})
+    }`;
 
 const rustZeros = (zeros: RepositoryModel["createZeros"]): string =>
   zeros.length === 0
@@ -340,6 +355,6 @@ export const rustRepositories = (
     content(registryFile("rs", casing), registry),
     content("mod.rs", `${models.map((model) => rustModLine(fileStem(model.specName, casing))).join("\n")}\n${rustModLine(casing.convertFileName("repository_registry"))}\n`),
     content("../mod.rs", `${typeMods.join("\n")}\n${typeUses.join("\n")}\nmod entities;\npub mod repositories;\n`),
-    content("../entities.rs", rustEntities(models)),
+    content("../entities.rs", rustEntities(models, spec, casing)),
   ];
 };

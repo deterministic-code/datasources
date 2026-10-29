@@ -22,7 +22,7 @@ mod statement_parser;
 mod transaction;
 mod unit_of_work_transaction;
 
-use crate::converters::{Cells, RowTypeConverter};
+use crate::converters::RowTypeConverter;
 use futures_util::TryStreamExt;
 use crate::*;
 use async_trait::async_trait;
@@ -659,7 +659,7 @@ async fn stubs_throw() {
         .await
         .is_err());
     let ds: &dyn Datasource = &*ds;
-    let repo = ds.create_repository::<Cells>(None, None);
+    let repo = ds.create_repository::<Row>(None, None);
     let empty = Row::new();
     assert!(repo.read_single(None, None, None).await.is_err());
     assert!(repo.read(None, None, None).try_collect::<Vec<_>>().await.is_err());
@@ -671,7 +671,7 @@ async fn stubs_throw() {
     assert!(repo.create(empty.clone()).await.is_err());
     assert!(repo.update(empty.clone(), None).await.is_err());
     assert!(repo.delete(empty, None).await.is_err());
-    let readonly = ds.create_readonly_repository::<Cells>(None, None);
+    let readonly = ds.create_readonly_repository::<Row>(None, None);
     assert!(readonly.read_single(None, None, None).await.is_err());
     assert!(readonly.read(None, None, None).try_collect::<Vec<_>>().await.is_err());
     assert!(readonly
@@ -831,8 +831,8 @@ async fn published_mocks() {
         .execute_reader_native(&crate::Native::new(""), None)
         .await
         .unwrap();
-    ds.create_repository::<Cells>(None, None);
-    ds.create_readonly_repository::<Cells>(None, None);
+    ds.create_repository::<Row>(None, None);
+    ds.create_readonly_repository::<Row>(None, None);
 
     let q = MockSelectStatement::new("q");
     let w = MockWhere::new("w");
@@ -1670,7 +1670,15 @@ async fn executes_statement_helpers() {
 }
 
 fn users_mapping() -> RowTypeConverter {
-    RowTypeConverter::of::<Item>()
+    RowTypeConverter::new(std::collections::HashMap::new())
+}
+
+fn users_options() -> CRUDRepositoryOptions {
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "users".into();
+    options.read_properties = vec!["id".into(), "name".into()];
+    options.row_converter = Some(users_mapping());
+    options
 }
 
 #[tokio::test]
@@ -1682,9 +1690,7 @@ async fn read_calls_stored_procedure() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
+    let options = users_options();
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let parameters = [Parameter::new("id", 9_i64)];
     let call = ExecuteStoredProcedureStatement::new("get_user", &parameters);
@@ -1749,9 +1755,7 @@ async fn table_repository() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
+    let options = users_options();
     let repo = Arc::new(CRUDRepository::<Row>::new(connection, options).unwrap());
     repo.add_middleware(Arc::new(RecordingMiddleware {
         before: Arc::new(|_| Ok(None)),
@@ -1799,9 +1803,7 @@ async fn table_repository() {
 
     let obj = record(&[("id", Value::Int(0)), ("name", Value::from("a"))]);
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut include_id = CRUDRepositoryOptions::default();
-    include_id.entity = "users".into();
-    include_id.row_converter = Some(users_mapping());
+    let include_id = users_options();
     let repo = CRUDRepository::<Row>::new(connection, include_id).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     command
@@ -1978,9 +1980,7 @@ async fn create_and_update_write_read_properties_only() {
 async fn table_repository_assigned_id() {
     let assigned = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(assigned.clone(), "memory");
-    let mut assigned_options = CRUDRepositoryOptions::default();
-    assigned_options.entity = "users".into();
-    assigned_options.row_converter = Some(users_mapping());
+    let assigned_options = users_options();
     let repo = CRUDRepository::<Row>::new(connection, assigned_options).unwrap();
     *assigned.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo
@@ -2002,7 +2002,7 @@ async fn table_repository_assigned_id() {
     let mut options = CRUDRepositoryOptions::default();
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.entity = "users".into();
-    options.row_converter = Some(RowTypeConverter::of::<Composite>());
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     *generated.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo
@@ -2067,7 +2067,7 @@ async fn table_repository_assigned_id() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
-    options.row_converter = Some(RowTypeConverter::of::<Cells>());
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
     let created = repo
@@ -2085,15 +2085,15 @@ async fn table_repository_assigned_id() {
     assert_eq!(removed.rows_affected, 1);
 
     let from_id = create_crud_repository_options::<Item>();
-    assert_eq!(from_id.ids, vec!["id".to_string()]);
+    assert!(from_id.ids.is_empty());
     assert!(create_crud_repository_options::<Label>().ids.is_empty());
     CRUDRepository::<Row>::new(MockConnection::new(), from_id).unwrap();
-    CRUDRepository::<Row>::from_type::<Item>(MockConnection::new()).unwrap();
+    CRUDRepository::<Item>::new(MockConnection::new(), create_crud_repository_options::<Item>()).unwrap();
 }
 
 #[test]
 fn repository_entity_type() {
-    let typed = CRUDRepository::<Row>::from_type::<Item>(MockConnection::new()).unwrap();
+    let typed = CRUDRepository::<Item>::new(MockConnection::new(), create_crud_repository_options::<Item>()).unwrap();
     assert_eq!(typed.entity_type(), TypeId::of::<Item>());
     assert_eq!(
         (&typed as &dyn IRepository).entity_type(),
@@ -2114,9 +2114,7 @@ fn repository_entity_type() {
 async fn table_repository_crud_mapper() {
     let command = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
+    let mut options = users_options();
     options.entity_mapper = Some(std::sync::Arc::new(TransformMapper::new(
         |name: String| match name.as_str() {
             "users" => "people".into(),
@@ -2209,7 +2207,7 @@ async fn read_uses_per_call_object_and_row_converters() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = ReadonlyRepositoryMappingOptions::default();
     options.entity = "items".into();
-    options.row_converter = Some(RowTypeConverter::new(vec!["Label".into()]));
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     options.object_converter = Some(Box::new(FixedLabel("default")));
     let repo = ReadonlyRepository::<Row>::new(connection, options).unwrap();
     assert_eq!(
@@ -2225,12 +2223,10 @@ async fn read_uses_per_call_object_and_row_converters() {
         .push(record(&[("Label", Value::from("ada"))]));
     let mut per_call = ReadonlyRepositoryMappingOptions::default();
     per_call.object_converter = Some(Box::new(TagLabel));
-    per_call.row_converter = Some(RowTypeConverter::new(vec!["Label".into()]).with_fields(
-        HashMap::from([(
-            "Label".into(),
-            Box::new(UpperLabel) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-        )]),
-    ));
+    per_call.row_converter = Some(RowTypeConverter::new(HashMap::from([(
+        "Label".into(),
+        Box::new(UpperLabel) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+    )])));
     assert_eq!(
         repo.read_single(None, None, Some(&per_call))
             .await
@@ -2240,46 +2236,25 @@ async fn read_uses_per_call_object_and_row_converters() {
     );
 }
 
+#[derive(Clone)]
 struct Item;
 
-impl ConvertSchema for Item {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("id", "INTEGER"), ("name", "TEXT")]
+impl Entity for Item {
+    fn to_row(&self) -> Row {
+        Row::new()
+    }
+
+    fn from_row(_: Row) -> Result<Self> {
+        Ok(Item)
     }
 }
 
-struct Stamp;
-
-impl ConvertSchema for Stamp {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("id", "INTEGER"),
-            ("name", "TEXT"),
-            ("created", "DATETIME"),
-            ("version", "BLOB"),
-        ]
-    }
-}
-
-struct Composite;
-
-impl ConvertSchema for Composite {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("org_id", "INTEGER"),
-            ("user_id", "INTEGER"),
-            ("name", "TEXT"),
-        ]
-    }
-}
 
 #[tokio::test]
 async fn read_single_by_id_uses_id_columns() {
     let command = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.entity = "users".into();
-    options.row_converter = Some(users_mapping());
+    let options = users_options();
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     assert!(repo
         .read_single_by_id(&Value::Int(9))
@@ -2296,7 +2271,7 @@ async fn read_single_by_id_uses_id_columns() {
     let mut options = CRUDRepositoryOptions::default();
     options.ids = vec!["org_id".into(), "user_id".into()];
     options.entity = "users".into();
-    options.row_converter = Some(RowTypeConverter::of::<Composite>());
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     assert!(repo
         .read_single_by_id(&record(&[
@@ -2325,11 +2300,6 @@ async fn read_single_by_id_uses_id_columns() {
 
 struct Label;
 
-impl ConvertSchema for Label {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("name", "TEXT")]
-    }
-}
 
 #[test]
 fn comparison_aliases() {
@@ -2363,7 +2333,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
-    options.row_converter = Some(RowTypeConverter::of::<Stamp>());
+    options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let created = Utc.with_ymd_and_hms(2024, 6, 1, 0, 0, 0).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
@@ -2433,8 +2403,14 @@ impl Entity for Tag {
 
     fn from_row(row: Row) -> Result<Self> {
         Ok(Self {
-            id: FromCell::from_cell(row.get("id")),
-            name: FromCell::from_cell(row.get("name")),
+            id: match row.get("id") {
+                Some(Value::Int(n)) => *n,
+                _ => 0,
+            },
+            name: match row.get("name") {
+                Some(Value::Text(text)) => text.clone(),
+                _ => String::new(),
+            },
         })
     }
 }
@@ -2453,8 +2429,14 @@ impl Entity for Note {
 
     fn from_row(row: Row) -> Result<Self> {
         Ok(Self {
-            id: FromCell::from_cell(row.get("id")),
-            title: FromCell::from_cell(row.get("title")),
+            id: match row.get("id") {
+                Some(Value::Int(n)) => *n,
+                _ => 0,
+            },
+            title: match row.get("title") {
+                Some(Value::Text(text)) => text.clone(),
+                _ => String::new(),
+            },
             tags: Vec::new(),
         })
     }

@@ -1,7 +1,7 @@
 use crate::command::Command;
 use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
-use crate::converters::{ConvertSchema, RowTypeConverter, TypeConverter};
+use crate::converters::{RowTypeConverter, TypeConverter};
 use crate::entity::Entity;
 use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
@@ -32,8 +32,8 @@ pub trait Datasource: Send + Sync {
     fn row_type_converters(
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
-    fn row_converter(&self, columns: &HashMap<String, String>) -> RowTypeConverter {
-        RowTypeConverter::from(|| self.row_type_converters(), columns)
+    fn row_converter(&self, schema: &crate::schema::Schema) -> RowTypeConverter {
+        RowTypeConverter::from(|| self.row_type_converters(), &schema.columns)
     }
     fn repository_from(
         &self,
@@ -49,7 +49,7 @@ pub trait Datasource: Send + Sync {
 }
 
 impl dyn Datasource {
-    pub fn create_repository<T: ConvertSchema + 'static>(
+    pub fn create_repository<T: 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<CRUDRepositoryOptions>,
@@ -58,18 +58,22 @@ impl dyn Datasource {
         self.repository_from(bound, apply_crud::<T>(self, options))
     }
 
-    pub fn create_typed_repository<T: Entity + ConvertSchema + 'static>(
+    pub fn create_typed_repository<T: Entity + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<CRUDRepositoryOptions>,
     ) -> Arc<dyn ICRUDRepository<T>> {
         let bound = self.bind_connection(connection);
+        let mut options = options.unwrap_or_else(create_crud_repository_options::<T>);
+        if options.schema.columns.is_empty() {
+            options.schema = T::schema();
+        }
         Arc::new(
-            CRUDRepository::<T>::new(bound, apply_crud::<T>(self, options)).expect("repository"),
+            CRUDRepository::<T>::new(bound, apply_crud::<T>(self, Some(options))).expect("repository"),
         )
     }
 
-    pub fn create_readonly_repository<T: ConvertSchema + 'static>(
+    pub fn create_readonly_repository<T: 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<ReadonlyRepositoryMappingOptions>,
@@ -102,47 +106,37 @@ impl dyn Datasource {
     }
 }
 
-fn apply_crud<T: ConvertSchema + 'static>(
+fn apply_crud<T: 'static>(
     datasource: &dyn Datasource,
     custom: Option<CRUDRepositoryOptions>,
 ) -> CRUDRepositoryOptions {
     let built = create_crud_repository_options::<T>();
     let types = datasource.row_type_converters();
-    let columns = T::schema()
-        .into_iter()
-        .map(|(name, ty)| (name.to_string(), ty.to_string()))
-        .collect();
-    let rows = datasource.row_converter(&columns);
     let entity = built.entity.clone();
     let mut options = custom.unwrap_or(built);
     if options.entity.is_empty() {
         options.entity = entity;
     }
     if options.row_converter.is_none() {
-        options.row_converter = Some(rows);
+        options.row_converter = Some(datasource.row_converter(&options.schema));
     }
     options.row_type_converters = types;
     options
 }
 
-fn apply_readonly<T: ConvertSchema + 'static>(
+fn apply_readonly<T: 'static>(
     datasource: &dyn Datasource,
     custom: Option<ReadonlyRepositoryMappingOptions>,
 ) -> ReadonlyRepositoryMappingOptions {
     let built = create_readonly_repository_mapping_options::<T>();
     let types = datasource.row_type_converters();
-    let columns = T::schema()
-        .into_iter()
-        .map(|(name, ty)| (name.to_string(), ty.to_string()))
-        .collect();
-    let rows = datasource.row_converter(&columns);
     let entity = built.entity.clone();
     let mut options = custom.unwrap_or(built);
     if options.entity.is_empty() {
         options.entity = entity;
     }
     if options.row_converter.is_none() {
-        options.row_converter = Some(rows);
+        options.row_converter = Some(datasource.row_converter(&options.schema));
     }
     options.row_type_converters = types;
     options

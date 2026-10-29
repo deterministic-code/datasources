@@ -1,4 +1,3 @@
-import type { Cell } from "./converters/Cell.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import type { ICommand } from "./ICommand.ts";
@@ -15,6 +14,7 @@ import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryFactory } from "./RepositoryFactory.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
+import { Schema } from "./Schema.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 import { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
 
@@ -60,10 +60,12 @@ export class Datasource implements IDatasource {
   ): CRUDRepositoryOptions<T> => {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
-    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
+    const schema = options?.schema ?? new Schema({});
+    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.columns);
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
+      schema,
       rowConverter: rows,
       rowTypeConverters: types,
       type,
@@ -76,10 +78,12 @@ export class Datasource implements IDatasource {
   ): ReadonlyRepositoryMappingOptions<T> => {
     const built = createReadonlyRepositoryMappingOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
-    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, columnsOf(type));
+    const schema = options?.schema ?? new Schema({});
+    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.columns);
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
+      schema,
       rowConverter: rows,
       rowTypeConverters: types,
       type,
@@ -130,23 +134,3 @@ export class Datasource implements IDatasource {
     return Datasource.create();
   }
 }
-
-const columnsOf = <T>(type: Constructable<T>): Record<string, string> => {
-  const instance = new type() as Record<string, Cell | object>;
-  const columns: Record<string, string> = {};
-  for (const [name, value] of Object.entries(instance)) {
-    if (Array.isArray(value)) continue;
-    const canonical = canonicalOf(value);
-    if (canonical) columns[name] = canonical;
-  }
-  return columns;
-};
-
-const canonicalOf = (value: Cell | object): string | undefined =>
-  typeof value === "boolean"
-    ? "bool"
-    : value instanceof Date
-      ? "datetime"
-      : value instanceof Uint8Array
-        ? "binary"
-        : undefined;

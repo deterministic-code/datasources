@@ -50,7 +50,7 @@ mod tests {
     use crate::connection::PostgresConnection;
     use crate::transaction::PostgresTransaction;
     use datasources::{
-        converters::Cells, create, downcast_connection, register, reset, Command, Connection,
+        Row, create, downcast_connection, register, reset, Command, Connection,
         Driver, IsolationLevel, Transaction, TypeConverter, Value,
     };
     use std::collections::HashMap;
@@ -187,7 +187,7 @@ mod tests {
         .unwrap();
         assert_eq!(ds.provider(), "postgres");
         assert!(ds.create_command(None).await.is_err());
-        ds.create_repository::<Cells>(None, None);
+        ds.create_repository::<Row>(None, None);
         let closed = Arc::new(PostgresConnection::new(None, None));
         assert!(PostgresCommand::new(closed)
             .execute_native(&datasources::Native::new("x"), None)

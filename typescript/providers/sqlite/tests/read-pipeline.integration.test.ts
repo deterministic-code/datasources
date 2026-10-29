@@ -85,7 +85,7 @@ describe("read pipeline", () => {
 
     const rowConverter = RowTypeConverter.from(new SqliteDriver().rowTypeConverters, {
       Uuid: "uuid",
-      IsEnabled: "bool",
+      IsEnabled: "boolean",
       Created: "datetime",
     });
     const convertedRows = columnMappedRows.map((row) => rowConverter.convert(row));

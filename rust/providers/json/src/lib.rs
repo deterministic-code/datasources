@@ -16,8 +16,8 @@ mod tests {
     use crate::filter::{json_from_record, json_to_value, matches, parse_filter, record_from_json};
     use futures_util::TryStreamExt;
     use datasources::{
-        converters::Cells, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
-        Connection, ICRUDRepository, IReadonlyRepository, Parameter, Row, Value, WhereText,
+        Row, create, register, reset, CRUDRepository, CRUDRepositoryOptions, Command,
+        Connection, ICRUDRepository, IReadonlyRepository, Parameter, Value, WhereText,
     };
     use serde_json::{Map, Value as JsonValue};
     use std::collections::HashMap;
@@ -155,8 +155,8 @@ mod tests {
             .unwrap();
         bound.execute("insert", None).await.unwrap();
         bound.execute_reader("", None).await.unwrap();
-        ds.create_repository::<Cells>(None, None);
-        ds.create_repository::<Cells>(Some(ds.create_connection().await.unwrap()), None);
+        ds.create_repository::<Row>(None, None);
+        ds.create_repository::<Row>(Some(ds.create_connection().await.unwrap()), None);
 
         let missing = MemoryFileStore::new();
         assert!(!missing.exists("x"));

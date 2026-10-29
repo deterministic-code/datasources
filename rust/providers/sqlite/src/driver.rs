@@ -141,7 +141,7 @@ mod tests {
         let driver = SqliteDriver;
         let columns = HashMap::from([
             ("Key".into(), "uuid".into()),
-            ("Active".into(), "bool".into()),
+            ("Active".into(), "boolean".into()),
             ("Login".into(), "string".into()),
             ("Created".into(), "datetime".into()),
         ]);

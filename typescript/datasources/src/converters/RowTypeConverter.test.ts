@@ -81,7 +81,7 @@ describe("MetaDataRowTypeConverter", () => {
 describe("RowTypeConverter", () => {
   it("converts named columns and leaves the rest", () => {
     const flag = new OnlyOne();
-    const converter = RowTypeConverter.from({ bool: flag }, { on: "bool", missing: "nope" });
+    const converter = RowTypeConverter.from({ boolean: flag }, { on: "boolean", missing: "nope" });
     expect(converter.convert({ on: 1, name: "a" })).toEqual({ on: true, name: "a" });
     expect(converter.reverseConvert({ on: true, name: "a" })).toEqual({ on: true, name: "a" });
   });

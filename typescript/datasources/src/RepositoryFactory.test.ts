@@ -9,6 +9,7 @@ class Item {}
 
 const emptyReadonly = (): IReadonlyRepository<Item> => ({
   type: Item,
+  isSchemaRequired: false,
   readSingle: async () => undefined,
   async *read() {},
 });

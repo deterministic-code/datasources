@@ -17,6 +17,10 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait IReadonlyRepository<T: Entity = Row>: IRepository {
+    fn is_schema_required(&self) -> bool {
+        true
+    }
+
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<T>>>
     where
         Self: Sized,

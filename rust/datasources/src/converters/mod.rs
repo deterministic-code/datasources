@@ -1,5 +1,4 @@
 mod change_casing_converter;
-mod convert_schema;
 mod decimal_rule;
 mod default_value_converter;
 mod default_value_options;
@@ -17,7 +16,6 @@ mod to_upper_case_converter;
 mod type_converter;
 
 pub use change_casing_converter::{Casing, ChangeCasingConverter};
-pub use convert_schema::{Cells, ConvertSchema};
 pub use decimal_rule::DecimalRule;
 pub use default_value_converter::{DefaultValueConverter, EMPTY_UUID};
 pub use default_value_options::DefaultValueOptions;

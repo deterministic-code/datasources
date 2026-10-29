@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
+    Schema,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
     SelectStatementOptions, DefaultStatementTextRenderer, Statement, TransformMapper, TypeConverter,
@@ -205,10 +206,10 @@ fn fields_overlay(
 }
 
 fn mapping_of(spec: &Spec, dialect: &RepositoryDialect) -> RowTypeConverter {
-    let columns: Vec<String> = spec.type_spec.fields.keys().cloned().collect();
-    RowTypeConverter::new(columns)
-        .with_types((dialect.types)())
-        .with_fields(fields_overlay(&spec.type_spec, dialect.field))
+    let columns: HashMap<String, String> = spec.type_spec.fields.clone().into_iter().collect();
+    let mut fields = RowTypeConverter::from(|| (dialect.types)(), &columns).fields;
+    fields.extend(fields_overlay(&spec.type_spec, dialect.field));
+    RowTypeConverter::new(fields)
 }
 
 fn assigned_yaml(value: Option<&serde_yaml::Value>) -> bool {
@@ -670,6 +671,7 @@ pub async fn run(
     let mut options = CRUDRepositoryOptions::default();
     options.ids = spec.type_spec.ids.clone();
     options.entity = spec.type_spec.table.clone();
+    options.schema = Schema::new(spec.type_spec.fields.clone().into_iter().collect());
     options.row_converter = Some(mapping_of(&spec, dialect));
     apply_mappers(&mut options, &spec, dialect);
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();

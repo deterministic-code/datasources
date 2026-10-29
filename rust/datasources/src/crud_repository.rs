@@ -1,8 +1,6 @@
 use crate::built_repository::BuiltRepository;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
-use crate::converters::{ConvertSchema, RowTypeConverter};
-use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
@@ -62,14 +60,6 @@ fn tree_for<T: Entity>(readonly: &ReadonlyRepository<T>) -> RepositoryTree {
 }
 
 impl<T: Entity> CRUDRepository<T> {
-    pub fn from_type<S: ConvertSchema + 'static>(connection: Arc<dyn Connection>) -> Result<Self> {
-        let mut options = create_crud_repository_options::<S>();
-        options.row_converter = Some(RowTypeConverter::of::<S>());
-        let mut repo = Self::new(connection, options)?;
-        repo.readonly.entity_type = TypeId::of::<S>();
-        Ok(repo)
-    }
-
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
         let write = options.write.clone();
         let create_properties = options.create_properties.clone();

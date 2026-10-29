@@ -85,7 +85,7 @@ async fn maps_join_rows_to_nested_contacts() {
     let mut cells = CRUDRepositoryOptions::default();
     cells.entity_mapper = Some(Arc::new(join_entity()));
     cells.property_mappings = Some(Arc::new(columns()));
-    cells.row_converter = Some(RowTypeConverter::new(Vec::new()));
+    cells.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let join_repo = CRUDRepository::<Row>::new(conn, cells).expect("join repo");
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
@@ -99,14 +99,10 @@ async fn maps_join_rows_to_nested_contacts() {
     assert!(!mapped.contact_source_name.is_empty());
 }
 
-fn contact_columns(names: &[&str]) -> Vec<String> {
-    names.iter().map(|name| (*name).to_string()).collect()
-}
-
 fn contact_repo(
     connection: Arc<dyn Connection>,
     entity: &str,
-    names: &[&str],
+    _names: &[&str],
     contact: bool,
     field: fn(&str) -> Option<Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
 ) -> CRUDRepository {
@@ -128,7 +124,7 @@ fn contact_repo(
     .into_iter()
     .filter_map(|(column, key)| field(key).map(|converter| (column.to_string(), converter)))
     .collect();
-    options.row_converter = Some(RowTypeConverter::new(contact_columns(names)).with_fields(converters));
+    options.row_converter = Some(RowTypeConverter::new(converters));
     options.object_converter = Some(Box::new(
         MetaDataRowTypeConverter::new(Vec::new()).with_references(references(), Box::new(columns())),
     ));

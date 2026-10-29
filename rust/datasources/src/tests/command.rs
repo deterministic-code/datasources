@@ -1,5 +1,5 @@
 use crate::{
-    Command, ConvertSchema, Mapper, MockCommand, Native, Parameter, Row, RowTypeConverter, TransformMapper,
+    Command, Mapper, MockCommand, Native, Parameter, Row, RowTypeConverter, TransformMapper,
     Value,
 };
 
@@ -8,28 +8,6 @@ fn row(pairs: &[(&str, Value)]) -> Row {
         .iter()
         .map(|(key, value)| ((*key).to_string(), value.clone()))
         .collect()
-}
-
-struct NameValue;
-
-impl ConvertSchema for NameValue {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("name", "TEXT"), ("value", "TEXT")]
-    }
-}
-
-struct UserRow;
-
-impl ConvertSchema for UserRow {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("id", "INTEGER"),
-            ("username", "TEXT"),
-            ("email", "TEXT"),
-            ("contact_name1", "TEXT"),
-            ("contact_name2", "TEXT"),
-        ]
-    }
 }
 
 fn user_contacts_mapper() -> TransformMapper<Row, Row> {
@@ -68,7 +46,7 @@ async fn execute_reader_returns_name_value_objects() {
         .execute_reader("SELECT name, value FROM settings", None)
         .await
         .unwrap();
-    let converter = RowTypeConverter::of::<NameValue>();
+    let converter = RowTypeConverter::new(std::collections::HashMap::new());
     let mut items = Vec::new();
     while reader.next().await.unwrap() {
         items.push(converter.convert(&reader.current().unwrap()).unwrap());
@@ -128,7 +106,7 @@ async fn execute_reader_maps_flat_contacts() {
         )
         .await
         .unwrap();
-    let converter = RowTypeConverter::of::<UserRow>();
+    let converter = RowTypeConverter::new(std::collections::HashMap::new());
     let mapper = user_contacts_mapper();
     let mut user = None;
     while reader.next().await.unwrap() {

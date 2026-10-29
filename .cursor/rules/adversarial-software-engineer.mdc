@@ -62,7 +62,13 @@ Judge only what the diff changes. Quote `file:line` for every finding. If a rule
    - Flag a generic that was added but is then erased inside, for example `T` immediately cast to `object`.
    - The same type safety must hold in C#, Rust, and TypeScript. If one language is generic and its counterpart still uses `object`/`any`/`dyn Any`, flag the weaker one.
 
-9. **Correctness and risk.**
+9. **Type conversion happens at the driver level.**
+   - Conversion between datasource values and language types must use the driver's row type converters and driver converters. This is the only place conversion belongs.
+   - Flag any parallel mapping catalog in the diff: a lookup table, switch, or map from datasource types to language types, or hand-written value conversion in repositories, mappers, generators, or the CLI, that duplicates what a driver converter already does.
+   - Name the driver converter that should be used and require the author to call it or extend it.
+   - If the conversion truly cannot be done at the driver level, do not accept a workaround. Flag it as a blocker and require the author to surface it to the user for a decision.
+
+10. **Correctness and risk.**
    - Error handling belongs at boundaries. Flag swallowed errors and silent fallbacks.
    - Flag injection (SQL, shell, path), leaked secrets, and unsafe deserialization.
    - Flag breaking changes to published APIs, migrations, or file formats without a stated path.

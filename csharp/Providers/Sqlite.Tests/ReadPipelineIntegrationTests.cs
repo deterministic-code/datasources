@@ -82,7 +82,7 @@ public class ReadPipelineIntegrationTests
         var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new Dictionary<string, string>
         {
             ["Uuid"] = "uuid",
-            ["IsEnabled"] = "bool",
+            ["IsEnabled"] = "boolean",
             ["Created"] = "datetime",
         });
         var convertedRows = columnMappedRows.Select(rowConverter.Convert).ToList();

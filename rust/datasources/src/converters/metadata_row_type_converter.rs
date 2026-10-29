@@ -1,4 +1,3 @@
-use crate::converters::convert_schema::ConvertSchema;
 use crate::converters::type_converter::TypeConverter;
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::result::Result;
@@ -15,15 +14,6 @@ pub struct MetaDataRowTypeConverter {
 }
 
 impl MetaDataRowTypeConverter {
-    pub fn of<T: ConvertSchema>() -> Self {
-        Self::new(
-            T::schema()
-                .into_iter()
-                .map(|(field, _)| field.to_string())
-                .collect(),
-        )
-    }
-
     pub fn new(columns: Vec<String>) -> Self {
         Self {
             columns,
@@ -106,17 +96,9 @@ mod tests {
             .collect()
     }
 
-    struct User;
-
-    impl ConvertSchema for User {
-        fn schema() -> Vec<(&'static str, &'static str)> {
-            vec![("id", "INTEGER"), ("name", "TEXT")]
-        }
-    }
-
     #[test]
     fn copies_schema_columns_and_drops_the_rest() {
-        let converter = MetaDataRowTypeConverter::of::<User>();
+        let converter = MetaDataRowTypeConverter::new(vec!["id".into(), "name".into()]);
         let row = record(&[
             ("id", Value::Int(1)),
             ("name", Value::from("ada")),

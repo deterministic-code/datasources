@@ -87,7 +87,7 @@ public class PostgresTests
         var converter = RowTypeConverter.From(new PostgresDriver().RowTypeConverters, new Dictionary<string, string>
         {
             ["Key"] = "uuid",
-            ["Active"] = "bool",
+            ["Active"] = "boolean",
             ["Login"] = "string",
             ["Created"] = "datetime",
         });
