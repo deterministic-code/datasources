@@ -559,6 +559,68 @@ describe("generate-sql version diffs", () => {
     );
   });
 
+  it("emits a later version for added seeds", async () => {
+    const gender = `types:
+  - gender:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+`;
+    const seeds = `version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+`;
+    const first = "version-20261016T000000Z-001/diff.yaml";
+    const second = "version-20261016T000000Z-002/diff.yaml";
+    const files = names(
+      await generateSql(
+        {
+          reader: memoryReader({
+            "types.yaml": gender,
+            "datasource.yaml": DEFAULT_DATASOURCE_YAML,
+            "datasource_seeds.yaml": seeds,
+            [first]: stringify({ "types.yaml": { added: true, content: parse(gender) } }),
+            [second]: stringify({ "datasource_seeds.yaml": { added: true, content: parse(seeds) } }),
+          }),
+          settings: { "version.diffs": `${first}\n${second}` },
+        },
+        ["sqlite"],
+      ),
+    );
+    assert.deepEqual(files, [
+      "sqlite/migrations/0001_down.sql",
+      "sqlite/migrations/0001_up.sql",
+      "sqlite/migrations/0002_down.sql",
+      "sqlite/migrations/0002_up.sql",
+    ]);
+    const entries = await generateSql(
+      {
+        reader: memoryReader({
+          "types.yaml": gender,
+          "datasource.yaml": DEFAULT_DATASOURCE_YAML,
+          "datasource_seeds.yaml": seeds,
+          [first]: stringify({ "types.yaml": { added: true, content: parse(gender) } }),
+          [second]: stringify({ "datasource_seeds.yaml": { added: true, content: parse(seeds) } }),
+        }),
+        settings: { "version.diffs": `${first}\n${second}` },
+      },
+      ["sqlite"],
+    );
+    const up2 = entries.find((entry) => entry.filename === "sqlite/migrations/0002_up.sql");
+    const sql = up2 != null && "contents" in up2 ? String(up2.contents) : up2?.content ?? "";
+    assert.match(sql, /INSERT INTO "genders"/);
+    assert.match(sql, /Male/);
+    const down2 = entries.find((entry) => entry.filename === "sqlite/migrations/0002_down.sql");
+    const down = down2 != null && "contents" in down2 ? String(down2.contents) : down2?.content ?? "";
+    assert.match(down, /DELETE FROM "genders" WHERE "id" = 1/);
+  });
+
   it("throws when a root datasource.yaml drifted from the frozen diffs", async () => {
     const path = "version-20261016T000000Z-001/diff.yaml";
     const diff = stringify({

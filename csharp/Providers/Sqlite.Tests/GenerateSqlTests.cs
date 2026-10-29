@@ -427,6 +427,43 @@ public class GenerateSqlTests
     }
 
     [Fact]
+    public void EmitsALaterVersionForAddedSeeds()
+    {
+        const string gender = """
+            types:
+              - gender:
+                  tags: [datasource_type]
+                  fields:
+                    - id:
+                        type: integer
+                        is_id: true
+                    - name:
+                        type: string
+            """;
+        const string seeds = """
+            version: 1.0.0
+            seeds:
+              - gender:
+                  - id1:
+                      name: Male
+            """;
+        const string first = "version-20261016T000000Z-001/diff.yaml";
+        const string second = "version-20261016T000000Z-002/diff.yaml";
+        var files = Files(gender, DefaultDatasourceYaml, seeds);
+        files[first] = AddedTypes(gender);
+        files[second] = AddedSeeds(seeds);
+        var entries = GenerateSql.Of(files, new Dictionary<string, string>(), ["sqlite"]);
+        Assert.Equal(
+            ["sqlite/migrations/0001_down.sql", "sqlite/migrations/0001_up.sql", "sqlite/migrations/0002_down.sql", "sqlite/migrations/0002_up.sql"],
+            Names(entries));
+        Assert.Contains("INSERT INTO \"genders\"", entries.Single(e => e.Filename == "sqlite/migrations/0002_up.sql").Content);
+        Assert.Contains("Male", entries.Single(e => e.Filename == "sqlite/migrations/0002_up.sql").Content);
+        Assert.Contains("DELETE FROM \"genders\" WHERE \"id\" = 1", entries.Single(e => e.Filename == "sqlite/migrations/0002_down.sql").Content);
+    }
+
+    static string AddedSeeds(string seeds) => $"datasource_seeds.yaml:\n  added: true\n  content:\n{Indent(seeds, 4)}";
+
+    [Fact]
     public void ThrowsWhenARootDatasourceYamlDriftedFromTheFrozenDiffs()
     {
         const string path = "version-20261016T000000Z-001/diff.yaml";

@@ -64,6 +64,52 @@ pub fn sections(
     Ok(lines)
 }
 
+pub fn added(
+    previous: &HashMap<String, Vec<SeedRow>>,
+    current: &HashMap<String, Vec<SeedRow>>,
+) -> HashMap<String, Vec<SeedRow>> {
+    let mut added = HashMap::new();
+    for (table, rows) in current {
+        let ids: HashSet<i32> = previous
+            .get(table)
+            .map(|prior| prior.iter().map(|row| row.id).collect())
+            .unwrap_or_default();
+        let next: Vec<SeedRow> = rows.iter().filter(|row| !ids.contains(&row.id)).cloned().collect();
+        if !next.is_empty() {
+            added.insert(table.clone(), next);
+        }
+    }
+    added
+}
+
+pub fn deletes(
+    dialect: &str,
+    tables: &[SqlTable],
+    seeds: &HashMap<String, Vec<SeedRow>>,
+    mapping: &SqlMapping,
+) -> Result<Vec<String>> {
+    let mut lines = Vec::new();
+    for table in tables {
+        let Some(rows) = seeds.get(&table.name).filter(|rows| !rows.is_empty()) else {
+            continue;
+        };
+        let id = schema::table_identity(table)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| "id".into());
+        lines.push(format!("-- Seeds: {}", table.table_name));
+        for seed in rows {
+            lines.push(format!(
+                "DELETE FROM {} WHERE {} = {};",
+                sql_dialect::q(dialect, &table.table_name)?,
+                sql_dialect::q(dialect, &mapping.column_name(table, &id))?,
+                id_value(table, seed.id)
+            ));
+        }
+    }
+    Ok(lines)
+}
+
 fn pk_type(table: &SqlTable) -> String {
     let overlay = schema::overlay_of(table);
     table

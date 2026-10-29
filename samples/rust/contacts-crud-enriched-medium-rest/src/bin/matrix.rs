@@ -79,8 +79,8 @@ async fn main() {
         )
         .options(HashMap::from([("isVerbose".into(), "true".into())])),
     );
-    let (contacts, legacy) = repos::open(connection, Some(middleware)).expect("repos");
-    let api = Api::new(contacts, legacy, clock);
+    let (contacts, legacy, groups_repo) = repos::open(connection, Some(middleware)).expect("repos");
+    let api = Api::new(contacts, legacy, groups_repo, clock);
     let mut saved = HashMap::<String, String>::new();
     let mut error = None;
     for step in spec.steps {

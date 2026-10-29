@@ -33,6 +33,7 @@ try
     var middleware = new ConsoleCommandMiddleware(lines.Add, () => stamp, new Dictionary<string, string> { ["isVerbose"] = "true" });
     var contacts = new ContactRepository(connection);
     var legacy = new LegacyContactRepository(connection);
+    var groupsRepo = new ContactGroupRepository(connection);
     contacts.AddMiddleware(middleware);
     contacts.Address.AddMiddleware(middleware);
     contacts.Phone.AddMiddleware(middleware);
@@ -42,7 +43,9 @@ try
     contacts.Address.AddressType.AddMiddleware(middleware);
     contacts.Phone.PhoneType.AddMiddleware(middleware);
     legacy.AddMiddleware(middleware);
-    var api = new Api(contacts, legacy);
+    groupsRepo.AddMiddleware(middleware);
+    groupsRepo.ContactGroupMember.AddMiddleware(middleware);
+    var api = new Api(contacts, legacy, groupsRepo);
     var saved = new Dictionary<string, string>(StringComparer.Ordinal);
     foreach (var step in spec.Steps)
     {

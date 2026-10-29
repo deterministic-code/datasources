@@ -15,11 +15,13 @@ public sealed class Api
 
     readonly ContactRepository contacts;
     readonly LegacyContactRepository legacy;
+    readonly ContactGroupRepository groupsRepo;
 
-    public Api(ContactRepository contacts, LegacyContactRepository legacy)
+    public Api(ContactRepository contacts, LegacyContactRepository legacy, ContactGroupRepository groupsRepo)
     {
         this.contacts = contacts;
         this.legacy = legacy;
+        this.groupsRepo = groupsRepo;
     }
 
     public async Task<(int Status, string Body)> Handle(string method, string target, string? body)
@@ -40,6 +42,9 @@ public sealed class Api
                 "POST /legacy_contacts" => PostLegacy(body),
                 "PUT /legacy_contacts" => PutLegacy(query, body),
                 "DELETE /legacy_contacts" => DeleteLegacy(query),
+                "GET /contact_groups" => GetGroups(query),
+                "POST /contact_groups" => PostGroup(body),
+                "PUT /contact_groups" => PutGroup(query, body),
                 _ => Task.FromResult((404, "")),
             });
         }
@@ -103,6 +108,26 @@ public sealed class Api
         return (200, JsonSerializer.Serialize(await legacy.ReadSingle(new Where(new Datasources.Operator.Equals("Key", key))), Json));
     }
 
+    async Task<(int Status, string Body)> GetGroups(Dictionary<string, string> query) =>
+        (200, JsonSerializer.Serialize(await List(groupsRepo, WhereOf(query, ["Id"])), Json));
+
+    async Task<(int Status, string Body)> PostGroup(string? body)
+    {
+        var group = StampGroup(Read<ContactGroup>(body));
+        return (201, JsonSerializer.Serialize(await groupsRepo.Create(group), Json));
+    }
+
+    async Task<(int Status, string Body)> PutGroup(Dictionary<string, string> query, string? body)
+    {
+        var id = RequiredNumber(query, "id");
+        if (await groupsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))) is null)
+            return (404, "");
+        var group = StampGroup(Read<ContactGroup>(body));
+        group.Id = id;
+        await groupsRepo.Update(group);
+        return (200, JsonSerializer.Serialize(await groupsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))), Json));
+    }
+
     async Task<(int Status, string Body)> DeleteLegacy(Dictionary<string, string> query)
     {
         var key = Required(query, "key");
@@ -146,6 +171,17 @@ public sealed class Api
             phone.Version ??= [0];
         }
         return contact;
+    }
+
+    static ContactGroup StampGroup(ContactGroup group)
+    {
+        group.Name = group.Name ?? "";
+        group.Members ??= [];
+        group.Uuid = string.IsNullOrEmpty(group.Uuid) ? Clock.Uuid() : group.Uuid;
+        group.Created = group.Created == default ? Clock.Now() : group.Created;
+        group.Updated = Clock.Now();
+        group.Version ??= [0];
+        return group;
     }
 
     static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query)

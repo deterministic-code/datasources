@@ -1,7 +1,7 @@
 use datasources::{encode_rows, Row, Value};
 use serde_json::{Map, Number, Value as Json};
 
-const LISTS: [&str; 2] = ["addresses", "phones"];
+const LISTS: [&str; 3] = ["addresses", "phones", "members"];
 const MAPS: [&str; 2] = ["settings", "prefs"];
 
 pub fn json_to_row(value: &Json) -> Result<Row, String> {

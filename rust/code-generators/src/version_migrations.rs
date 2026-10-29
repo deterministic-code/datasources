@@ -74,22 +74,28 @@ pub fn files(
     let mut output = Vec::new();
     let mut previous = compile(&combine(std::iter::empty::<Option<YamlValue>>())?, settings)?;
     let mut number = 0;
-    for (index, snapshot) in snapshots.iter().enumerate() {
+    for snapshot in &snapshots {
         let current = compile(snapshot, settings)?;
         let up = schema_diff::of(dialect, &previous.0, &previous.1, &current.0, &current.1)?;
         let down = schema_diff::of(dialect, &current.0, &current.1, &previous.0, &previous.1)?;
         let up_procs = procedure_sql(dialect, settings, &previous.0, &current.0, &current.1, casing)?;
         let down_procs = procedure_sql(dialect, settings, &current.0, &previous.0, &previous.1, casing)?;
-        if up.is_empty() && down.is_empty() && up_procs.is_empty() && down_procs.is_empty() {
+        let added = seed_generator::added(&previous.2, &current.2);
+        let removed = seed_generator::added(&current.2, &previous.2);
+        let seed_up = seed_generator::sections(dialect, &current.0, &added, &current.1)?;
+        let mut seed_down = seed_generator::deletes(dialect, &previous.0, &added, &previous.1)?;
+        seed_down.extend(seed_generator::sections(dialect, &previous.0, &removed, &previous.1)?);
+        if up.is_empty()
+            && down.is_empty()
+            && up_procs.is_empty()
+            && down_procs.is_empty()
+            && seed_up.is_empty()
+            && seed_down.is_empty()
+        {
             previous = current;
             continue;
         }
         number += 1;
-        let seeds = if index == 0 && up.iter().any(DdlStatement::is_create_table) {
-            seed_generator::sections(dialect, &current.0, &current.2, &current.1)?
-        } else {
-            Vec::new()
-        };
         let separator = crate::join_batches::of(settings)?;
         let mut up_sql = format!("-- Generated migration for {dialect}\n{}", render(dialect, &up, &separator)?);
         if !up_procs.is_empty() {
@@ -98,9 +104,9 @@ pub fn files(
             }
             up_sql.push_str(&up_procs);
         }
-        if !seeds.is_empty() {
+        if !seed_up.is_empty() {
             up_sql.push_str("\n\n-- Seed data\n");
-            up_sql.push_str(&crate::join_batches::join(&seeds, &separator));
+            up_sql.push_str(&crate::join_batches::join(&seed_up, &separator));
         }
         let mut down_sql = format!("-- Rollback migration for {dialect}\n{}", render(dialect, &down, &separator)?);
         if !down_procs.is_empty() {
@@ -108,6 +114,10 @@ pub fn files(
                 down_sql.push('\n');
             }
             down_sql.push_str(&down_procs);
+        }
+        if !seed_down.is_empty() {
+            down_sql.push_str("\n\n-- Seed data\n");
+            down_sql.push_str(&crate::join_batches::join(&seed_down, &separator));
         }
         output.push(GenerateEntry::new(
             format!("{:04}_up.sql", number),

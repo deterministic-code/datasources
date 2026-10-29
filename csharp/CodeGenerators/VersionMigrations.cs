@@ -52,27 +52,31 @@ public static class VersionMigrations
         var output = new List<GenerateEntry>();
         var previous = Compile(Empty(), settings);
         var number = 0;
-        for (var index = 0; index < snapshots.Count; index++)
+        foreach (var snapshot in snapshots)
         {
-            var current = Compile(snapshots[index], settings);
+            var current = Compile(snapshot, settings);
             var up = SchemaDiff.Of(dialect, previous.Tables, previous.Mapping, current.Tables, current.Mapping)
                 .Concat(ProcedureDiff(dialect, settings, previous.Tables, previous.Mapping, current.Tables, current.Mapping, casing)).ToList();
             var down = SchemaDiff.Of(dialect, current.Tables, current.Mapping, previous.Tables, previous.Mapping)
                 .Concat(ProcedureDiff(dialect, settings, current.Tables, current.Mapping, previous.Tables, previous.Mapping, casing)).ToList();
-            if (up.Count == 0 && down.Count == 0)
+            var added = SeedGenerator.Added(previous.Seeds, current.Seeds);
+            var removed = SeedGenerator.Added(current.Seeds, previous.Seeds);
+            var seedUp = SeedGenerator.Sections(dialect, current.Tables, added, current.Mapping);
+            var seedDown = SeedGenerator.Deletes(dialect, previous.Tables, added, previous.Mapping)
+                .Concat(SeedGenerator.Sections(dialect, previous.Tables, removed, previous.Mapping)).ToList();
+            if (up.Count == 0 && down.Count == 0 && seedUp.Count == 0 && seedDown.Count == 0)
             {
                 previous = current;
                 continue;
             }
             number++;
-            var seeds = index == 0 && up.OfType<CreateTableStatement>().Any()
-                ? SeedGenerator.Sections(dialect, current.Tables, current.Seeds, current.Mapping)
-                : [];
             var separator = JoinBatches.Of(settings);
             var upSql = $"-- Generated migration for {dialect}\n{Render(dialect, up, separator)}";
-            if (seeds.Count > 0)
-                upSql += "\n\n-- Seed data\n" + JoinBatches.Join(seeds, separator);
+            if (seedUp.Count > 0)
+                upSql += "\n\n-- Seed data\n" + JoinBatches.Join(seedUp, separator);
             var downSql = $"-- Rollback migration for {dialect}\n{Render(dialect, down, separator)}";
+            if (seedDown.Count > 0)
+                downSql += "\n\n-- Seed data\n" + JoinBatches.Join(seedDown, separator);
             output.Add(new($"{Pad(number)}_up.sql", Finalize(upSql, casing)));
             output.Add(new($"{Pad(number)}_down.sql", Finalize(downSql, casing)));
             previous = current;

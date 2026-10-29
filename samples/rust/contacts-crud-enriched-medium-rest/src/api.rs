@@ -3,6 +3,7 @@ use crate::clock::Clock;
 use crate::json_row::{
     ensure_text, json_to_row, object_from, row_to_json, rows_to_json, set_text, text,
 };
+use crate::repositories::contact_group_repository::ContactGroupRepository;
 use crate::repositories::contact_repository::ContactRepository;
 use datasources::{
     DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository, ICRUDRepository,
@@ -19,12 +20,18 @@ pub struct HttpResult {
 pub struct Api {
     contacts: ContactRepository,
     legacy: CRUDRepository,
+    groups_repo: ContactGroupRepository,
     clock: Clock,
 }
 
 impl Api {
-    pub fn new(contacts: ContactRepository, legacy: CRUDRepository, clock: Clock) -> Self {
-        Self { contacts, legacy, clock }
+    pub fn new(
+        contacts: ContactRepository,
+        legacy: CRUDRepository,
+        groups_repo: ContactGroupRepository,
+        clock: Clock,
+    ) -> Self {
+        Self { contacts, legacy, groups_repo, clock }
     }
 
     pub async fn handle(
@@ -47,6 +54,9 @@ impl Api {
             ("POST", "/legacy_contacts") => self.post_legacy(body).await,
             ("PUT", "/legacy_contacts") => self.put_legacy(&query, body).await,
             ("DELETE", "/legacy_contacts") => self.delete_legacy(&query).await,
+            ("GET", "/contact_groups") => self.get_groups(&query).await,
+            ("POST", "/contact_groups") => self.post_group(body).await,
+            ("PUT", "/contact_groups") => self.put_group(&query, body).await,
             _ => Ok(HttpResult {
                 status: 404,
                 body: String::new(),
@@ -60,7 +70,7 @@ impl Api {
     }
 
     async fn post_contact(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
+        let row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
         Ok(ok(201, row_to_json(&self.contacts.create(row).await?)))
     }
 
@@ -86,8 +96,33 @@ impl Api {
         let Some(row) = self.contacts.read_single(Some(&by), None, None).await? else {
             return Ok(empty(404));
         };
-        self.contacts.delete(&row, Some(&by)).await?;
+        self.contacts.delete(row, Some(&by)).await?;
         Ok(empty(204))
+    }
+
+    async fn get_groups(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
+        Ok(ok(200, rows_to_json(&self.read_rows(&*self.groups_repo, query, &["id"]).await?)))
+    }
+
+    async fn post_group(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
+        let row = self.stamp_group(object_from(body).map_err(ApiError::bad)?)?;
+        Ok(ok(201, row_to_json(&self.groups_repo.create(row).await?)))
+    }
+
+    async fn put_group(
+        &self,
+        query: &HashMap<String, String>,
+        body: Option<&str>,
+    ) -> Result<HttpResult, ApiError> {
+        let id = required_number(query, "id")?;
+        let by = Where::new(Operator::equals("id", id));
+        if self.groups_repo.read_single(Some(&by), None, None).await?.is_none() {
+            return Ok(empty(404));
+        }
+        let mut row = self.stamp_group(object_from(body).map_err(ApiError::bad)?)?;
+        row.insert("id".into(), Value::Int(id));
+        self.groups_repo.update(row, Some(&by)).await?;
+        Ok(ok(200, row_to_json(&self.groups_repo.read_single(Some(&by), None, None).await?.unwrap_or_default())))
     }
 
     async fn get_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
@@ -95,7 +130,7 @@ impl Api {
     }
 
     async fn post_legacy(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let mut row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
+        let row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
         if text(row.get("key")).is_empty() {
             return Err(ApiError::bad("key is required"));
         }
@@ -124,7 +159,7 @@ impl Api {
         let Some(row) = self.legacy.read_single(Some(&by), None, None).await? else {
             return Ok(empty(404));
         };
-        self.legacy.delete(&row, Some(&by)).await?;
+        self.legacy.delete(row, Some(&by)).await?;
         Ok(empty(204))
     }
 
@@ -141,6 +176,12 @@ impl Api {
     fn stamp(&self, mut json: Json) -> Result<Row, ApiError> {
         let object = json.as_object_mut().ok_or_else(|| ApiError::bad("invalid json"))?;
         stamp_contact(object, &self.clock);
+        json_to_row(&json).map_err(ApiError::from)
+    }
+
+    fn stamp_group(&self, mut json: Json) -> Result<Row, ApiError> {
+        let object = json.as_object_mut().ok_or_else(|| ApiError::bad("invalid json"))?;
+        stamp_group(object, &self.clock);
         json_to_row(&json).map_err(ApiError::from)
     }
 }
@@ -300,6 +341,12 @@ fn stamp_list(
                 .collect(),
         ),
     );
+}
+
+fn stamp_group(object: &mut Map<String, Json>, clock: &Clock) {
+    set_json_text(object, "name", "");
+    stamp_base(object, clock);
+    stamp_list(object, "members", clock, |_, _| {});
 }
 
 fn stamp_address(object: &mut Map<String, Json>, clock: &Clock) {
