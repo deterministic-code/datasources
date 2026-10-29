@@ -69,7 +69,7 @@ const published = (name, version) => {
 };
 
 const tarballUrl = (name, version) =>
-  `https://registry.npmjs.org/${name}/-/${name.replace("@", "").replace("/", "-")}-${version}.tgz`;
+  `https://registry.npmjs.org/${name}/-/${name.split("/").pop()}-${version}.tgz`;
 
 const tarballReady = async (name, version) => {
   try {
