@@ -14,6 +14,12 @@ struct Spec {
 }
 
 #[derive(Deserialize)]
+struct Expect {
+    status: Option<u16>,
+    body: Option<Value>,
+}
+
+#[derive(Deserialize)]
 struct Step {
     method: String,
     path: String,
@@ -22,6 +28,8 @@ struct Step {
     save_id: bool,
     #[serde(default)]
     save: HashMap<String, String>,
+    #[serde(default)]
+    expect: Option<Expect>,
 }
 
 #[tokio::main]
@@ -81,6 +89,19 @@ async fn main() {
         match api.handle(&step.method, &path, body.as_deref()).await {
             Ok(result) => {
                 let payload = serde_json::from_str::<Value>(&result.body).unwrap_or(Value::Null);
+                if let Some(wanted) = &step.expect {
+                    if let Some(status) = wanted.status {
+                        if result.status != status {
+                            panic!(
+                                "{} {}: expected status {}, got {} {}",
+                                step.method, path, status, result.status, result.body
+                            );
+                        }
+                    }
+                    if let Some(body) = &wanted.body {
+                        contains(&payload, &substitute_node(body, &saved), &format!("{} {}", step.method, path));
+                    }
+                }
                 if step.save_id {
                     if let Some(id) = payload.get("id") {
                         saved.insert("id".into(), scalar(id));
@@ -134,6 +155,35 @@ fn at(root: &Value, pointer: &str) -> String {
         };
     }
     scalar(current)
+}
+
+fn contains(actual: &Value, expected: &Value, path: &str) {
+    match expected {
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {
+            if actual != expected {
+                panic!("{path}: expected {expected}, got {actual}");
+            }
+        }
+        Value::Array(items) => {
+            let Value::Array(got) = actual else {
+                panic!("{path}: expected array, got {actual}");
+            };
+            if got.len() != items.len() {
+                panic!("{path}: expected {} items, got {}", items.len(), got.len());
+            }
+            for (i, item) in items.iter().enumerate() {
+                contains(&got[i], item, &format!("{path}[{i}]"));
+            }
+        }
+        Value::Object(map) => {
+            let Value::Object(got) = actual else {
+                panic!("{path}: expected object, got {actual}");
+            };
+            for (key, value) in map {
+                contains(got.get(key).unwrap_or(&Value::Null), value, &format!("{path}.{key}"));
+            }
+        }
+    }
 }
 
 fn scalar(value: &Value) -> String {

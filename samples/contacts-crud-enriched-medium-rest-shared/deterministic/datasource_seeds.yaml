@@ -12,6 +12,8 @@ seeds:
   - address_type:
       - id1:
           name: Home
+      - id2:
+          name: Work
   - phone_type:
       - id1:
           name: Mobile

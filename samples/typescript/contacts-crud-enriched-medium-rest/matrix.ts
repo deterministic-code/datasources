@@ -15,9 +15,11 @@ const sample = dirname(fileURLToPath(import.meta.url));
 type Scalar = string | number | boolean | null;
 type Node = Scalar | Node[] | { [key: string]: Node };
 
+type Expect = { status?: number; body?: Node };
+type Step = { method: string; path: string; body?: Node; saveId?: boolean; save?: Record<string, string>; expect?: Expect };
 const spec = parseYaml(
   readFileSync(resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/round-trip.yaml"), "utf8"),
-) as { now: string; steps: { method: string; path: string; body?: Node; saveId?: boolean; save?: Record<string, string> }[] };
+) as { now: string; steps: Step[] };
 
 const driver = (provider: string) =>
   ({ sqlite: () => new SqliteDriver(), mysql: () => new MysqlDriver(), postgres: () => new PostgresDriver() })[provider]?.() ??
@@ -38,6 +40,22 @@ const substituteNode = (node: Node, saved: Record<string, string>): Node =>
       : typeof node === "string" && node.startsWith("$") && saved[node.slice(1)] != null
         ? (Number.isFinite(Number(saved[node.slice(1)])) ? Number(saved[node.slice(1)]) : saved[node.slice(1)])
         : node;
+
+const contains = (actual: Node | null, expected: Node, path: string): void => {
+  if (expected === null || typeof expected !== "object") {
+    if (actual !== expected) throw new Error(`${path}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    return;
+  }
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual)) throw new Error(`${path}: expected array, got ${JSON.stringify(actual)}`);
+    if (actual.length !== expected.length) throw new Error(`${path}: expected ${expected.length} items, got ${actual.length}`);
+    expected.forEach((item, i) => contains(actual[i] ?? null, item, `${path}[${i}]`));
+    return;
+  }
+  if (actual == null || typeof actual !== "object" || Array.isArray(actual))
+    throw new Error(`${path}: expected object, got ${JSON.stringify(actual)}`);
+  for (const [key, value] of Object.entries(expected)) contains(actual[key] ?? null, value, `${path}.${key}`);
+};
 
 const at = (root: Node | null, pointer: string): string => {
   let current: Node | undefined = root ?? undefined;
@@ -84,6 +102,11 @@ try {
     const path = substituteText(step.path, saved);
     const result = await api.handle(step.method, path, step.body === undefined ? undefined : JSON.stringify(substituteNode(step.body, saved)));
     const payload = result.body ? (JSON.parse(result.body) as Node) : null;
+    if (step.expect) {
+      if (step.expect.status != null && result.status !== step.expect.status)
+        throw new Error(`${step.method} ${path}: expected status ${step.expect.status}, got ${result.status} ${result.body}`);
+      if (step.expect.body !== undefined) contains(payload, substituteNode(step.expect.body, saved), `${step.method} ${path}`);
+    }
     if (step.saveId && payload && typeof payload === "object" && !Array.isArray(payload) && payload.id != null)
       saved.id = String(payload.id);
     for (const [name, pointer] of Object.entries(step.save ?? {})) saved[name] = at(payload, pointer);

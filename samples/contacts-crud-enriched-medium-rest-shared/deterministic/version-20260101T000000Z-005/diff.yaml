@@ -1,0 +1,25 @@
+types.yaml:
+  types:
+    changed:
+      - contacts_base:
+          fields:
+            changed:
+              - notes:
+                  default_value: none
+      - address_base:
+          fields:
+            changed:
+              - country:
+                  default_value: US
+      - phone_base:
+          fields:
+            changed:
+              - label:
+                  default_value: Main
+datasource_seeds.yaml:
+  seeds:
+    changed:
+      - address_type:
+          added:
+            - id2:
+                name: Work
