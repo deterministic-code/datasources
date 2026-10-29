@@ -542,6 +542,12 @@ types:
     ).toEqual([]);
   });
 
+  it("points generated Rust Facet derives at the datasources re-export", async () => {
+    const text = textOf(await deterministic.generateTypes(request("rust")), "contactSource.rs");
+    expect(text).toContain("#[derive(Clone, Debug, PartialEq, datasources::Facet)]");
+    expect(text).toContain("#[facet(crate = ::datasources::facet)]");
+  });
+
   it("emits C# auto-properties without a semicolon after the accessor", async () => {
     const contacts = (await deterministic.generateTypes(request("csharp")))
       .filter((entry) => entry.kind === "content")

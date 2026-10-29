@@ -95,7 +95,8 @@ export const deterministic: CodeGenerationProvider = {
         if (!entry.filename.endsWith(".rs") || entry.contents === undefined || !entry.contents.includes("pub struct")) continue;
         entry.contents = entry.contents.replace(
           /#\[derive\(([^)]*)\)\]/g,
-          (_, list: string) => `#[derive(${list}, datasources::Facet)]`,
+          (_, list: string) =>
+            `#[derive(${list}, datasources::Facet)]\n#[facet(crate = ::datasources::facet)]`,
         );
       }
     }
