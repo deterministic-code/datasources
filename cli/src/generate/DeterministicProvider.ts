@@ -93,11 +93,15 @@ export const deterministic: CodeGenerationProvider = {
     if (request.dialect === "rust") {
       for (const entry of types) {
         if (!entry.filename.endsWith(".rs") || entry.contents === undefined || !entry.contents.includes("pub struct")) continue;
-        entry.contents = entry.contents.replace(
-          /#\[derive\(([^)]*)\)\]/g,
-          (_, list: string) =>
-            `#[derive(${list}, datasources::Facet)]\n#[facet(crate = ::datasources::facet)]`,
-        );
+        entry.contents = entry.contents
+          .replace(
+            /#\[derive\(([^)]*)\)\]/g,
+            (_, list: string) =>
+              `#[derive(${list}, datasources::Facet)]\n#[facet(crate = ::datasources::facet)]`,
+          )
+          .replace(/(^|[^:\w])chrono::/g, "$1datasources::chrono::")
+          .replace(/(^|[^:\w])uuid::/g, "$1datasources::uuid::")
+          .replace(/(^|[^:\w])rust_decimal::/g, "$1datasources::rust_decimal::");
       }
     }
     return remap(types, request.settings, request.dialect);

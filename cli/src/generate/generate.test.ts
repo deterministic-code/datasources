@@ -272,8 +272,8 @@ describe("generate", () => {
     expect(contactTs).not.toMatch(/from "[^"]+\.ts"/);
     expect(legacyTs).not.toMatch(/from "[^"]+\.ts"/);
     expect(textOf(typescript, "repositoryRegistry.ts")).not.toMatch(/from "[^"]+\.ts"/);
-    expect(textOf(rust, "repositoryRegistry.rs")).toContain("RepositoryFactory::bind(register)");
-    expect(textOf(rust, "repositoryRegistry.rs")).toContain("#[ctor::ctor]");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("datasources::bind_repositories!(register);");
+    expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("#[ctor::ctor]");
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("Once");
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("bind();\n");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain('"Contact"');
@@ -546,6 +546,10 @@ types:
     const text = textOf(await deterministic.generateTypes(request("rust")), "contactSource.rs");
     expect(text).toContain("#[derive(Clone, Debug, PartialEq, datasources::Facet)]");
     expect(text).toContain("#[facet(crate = ::datasources::facet)]");
+    expect(text).toContain("datasources::chrono::DateTime<datasources::chrono::Utc>");
+    expect(text).toContain("datasources::uuid::Uuid::new_v4()");
+    expect(text).not.toMatch(/(^|[^:\w])chrono::/);
+    expect(text).not.toMatch(/(^|[^:\w])uuid::/);
   });
 
   it("emits C# auto-properties without a semicolon after the accessor", async () => {

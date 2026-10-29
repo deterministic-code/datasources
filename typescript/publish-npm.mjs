@@ -323,7 +323,10 @@ const stageCli = async (version, versions, libraryVersion = version) => {
         name: "@deterministic-code/datasources-cli",
         version,
         type: "module",
-        bin: { datasources: "./bin/datasources.js" },
+        bin: {
+          datasources: "bin/datasources.js",
+          "datasources-cli": "bin/datasources.js",
+        },
         files: ["bin", "dist"],
         publishConfig: { access: "public" },
         dependencies,

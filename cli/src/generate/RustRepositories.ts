@@ -286,7 +286,7 @@ export const rustRepositories = (
   });
   const typeMods = typeStems.map((stem) => rustModLine(stem));
   const typeUses = typeStems.map((stem) => `pub use ${rustIdent(stem)}::*;`);
-  const registry = `use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};\nuse super::super::{${models.map((model) => model.typeName).join(", ")}};\nuse std::sync::Arc;\n\npub fn register(factory: &RepositoryFactory) {\n${register.join("\n")}\n}\n\n#[ctor::ctor]\nfn bind() {\n    RepositoryFactory::bind(register);\n}\n\npub trait Repositories {\n${methods.join("\n")}\n}\n\nimpl Repositories for dyn Datasource {\n${impls.join("\n")}\n}\n`;
+  const registry = `use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};\nuse super::super::{${models.map((model) => model.typeName).join(", ")}};\nuse std::sync::Arc;\n\npub fn register(factory: &RepositoryFactory) {\n${register.join("\n")}\n}\n\ndatasources::bind_repositories!(register);\n\npub trait Repositories {\n${methods.join("\n")}\n}\n\nimpl Repositories for dyn Datasource {\n${impls.join("\n")}\n}\n`;
   return [
     ...files,
     content(registryFile("rs", casing), registry),

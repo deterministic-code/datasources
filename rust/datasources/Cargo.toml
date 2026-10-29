@@ -13,11 +13,12 @@ futures-core = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-facet = { version = "0.46", features = ["reflect"] }
+ctor = { workspace = true }
+facet = { version = "0.46", features = ["reflect", "chrono", "uuid", "rust_decimal"] }
 regex = "1"
 rust_decimal = "1"
 tokio = { workspace = true }
-uuid = "1"
+uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 tokio = { workspace = true }
