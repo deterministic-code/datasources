@@ -2236,18 +2236,10 @@ async fn read_uses_per_call_object_and_row_converters() {
     );
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default, Facet)]
 struct Item;
 
-impl Entity for Item {
-    fn to_row(&self) -> Row {
-        Row::new()
-    }
-
-    fn from_row(_: Row) -> Result<Self> {
-        Ok(Item)
-    }
-}
+impl SchemaObject for Item {}
 
 
 #[tokio::test]
@@ -2390,79 +2382,27 @@ async fn create_and_update_omit_null_datetime_and_version() {
     );
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Facet)]
 struct Tag {
     id: i64,
     name: String,
 }
 
-impl Entity for Tag {
-    fn to_row(&self) -> Row {
-        record(&[("id", Value::Int(self.id)), ("name", Value::from(self.name.clone()))])
-    }
+impl SchemaObject for Tag {}
 
-    fn from_row(row: Row) -> Result<Self> {
-        Ok(Self {
-            id: match row.get("id") {
-                Some(Value::Int(n)) => *n,
-                _ => 0,
-            },
-            name: match row.get("name") {
-                Some(Value::Text(text)) => text.clone(),
-                _ => String::new(),
-            },
-        })
-    }
-}
-
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Facet)]
 struct Note {
     id: i64,
     title: String,
     tags: Vec<Tag>,
 }
 
-impl Entity for Note {
-    fn to_row(&self) -> Row {
-        record(&[("id", Value::Int(self.id)), ("title", Value::from(self.title.clone()))])
-    }
-
-    fn from_row(row: Row) -> Result<Self> {
-        Ok(Self {
-            id: match row.get("id") {
-                Some(Value::Int(n)) => *n,
-                _ => 0,
-            },
-            title: match row.get("title") {
-                Some(Value::Text(text)) => text.clone(),
-                _ => String::new(),
-            },
-            tags: Vec::new(),
-        })
-    }
-
-    fn children(&self, property: &str) -> Vec<Row> {
-        match property {
-            "tags" => self.tags.iter().map(Tag::to_row).collect(),
-            _ => Vec::new(),
-        }
-    }
-
-    fn set_children(&mut self, property: &str, rows: Vec<Row>) {
-        if property == "tags" {
-            self.tags = rows.into_iter().filter_map(|row| Tag::from_row(row).ok()).collect();
-        }
-    }
-
-    fn child_properties() -> &'static [&'static str] {
-        &["tags"]
-    }
-}
+impl SchemaObject for Note {}
 
 #[tokio::test]
 async fn typed_entity_create_and_read_single() {
     let encoded = encode_rows(&[record(&[("id", Value::Int(2)), ("name", Value::from("work"))])]);
-    let row = Entity::to_row(&record(&[("id", Value::Int(1)), ("title", Value::from("Ada"))]));
+    let row = record(&[("id", Value::Int(1)), ("title", Value::from("Ada"))]);
     assert_eq!(row.get("title"), Some(&Value::from("Ada")));
     let command = Arc::new(MockCommand::new());
     command.reader_rows.lock().unwrap().push(record(&[
@@ -2476,6 +2416,10 @@ async fn typed_entity_create_and_read_single() {
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "title".into()];
     options.create_properties = Some(vec!["title".into()]);
+    options.schema = Schema::new(HashMap::from([
+        ("id".into(), "integer".into()),
+        ("title".into(), "string".into()),
+    ]));
     let repo = CRUDRepository::<Note>::new(connection, options).unwrap();
     let created = repo
         .create(Note {

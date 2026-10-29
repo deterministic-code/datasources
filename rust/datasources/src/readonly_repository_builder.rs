@@ -68,6 +68,7 @@ pub(crate) fn assemble(
         property_mappings,
         entity_mapper,
         statements: ReadonlyRepositoryStatements::new(table, names, mappings),
+        schema,
         ids,
     })
 }

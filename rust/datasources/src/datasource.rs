@@ -2,7 +2,7 @@ use crate::command::Command;
 use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::{RowTypeConverter, TypeConverter};
-use crate::entity::Entity;
+use crate::from_schema::FromSchema;
 use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
 use crate::crud_repository::CRUDRepository;
@@ -59,16 +59,13 @@ impl dyn Datasource {
         self.repository_from(bound, apply_crud::<T>(self, options))
     }
 
-    pub fn create_typed_repository<T: Entity + 'static>(
+    pub fn create_typed_repository<T: FromSchema + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<CRUDRepositoryOptions>,
     ) -> Arc<dyn ICRUDRepository<T>> {
         let bound = self.bind_connection(connection);
-        let mut options = options.unwrap_or_else(create_crud_repository_options::<T>);
-        if options.schema.columns.is_empty() {
-            options.schema = T::schema();
-        }
+        let options = options.unwrap_or_else(create_crud_repository_options::<T>);
         Arc::new(
             CRUDRepository::<T>::new(bound, apply_crud::<T>(self, Some(options))).expect("repository"),
         )
@@ -83,7 +80,7 @@ impl dyn Datasource {
         self.readonly_repository_from(bound, apply_readonly::<T>(self, options))
     }
 
-    pub fn create_repository_by_name<T: Entity>(
+    pub fn create_repository_by_name<T: FromSchema>(
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,
@@ -92,7 +89,7 @@ impl dyn Datasource {
             .create_named(name, self.bind_connection(connection))
     }
 
-    pub fn create_readonly_repository_by_name<T: Entity>(
+    pub fn create_readonly_repository_by_name<T: FromSchema>(
         &self,
         name: &str,
         connection: Option<Arc<dyn Connection>>,

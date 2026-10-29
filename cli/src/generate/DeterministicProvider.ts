@@ -14,8 +14,7 @@ import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
 import type { RepositoryModel, RepositoryOptionsModel } from "./RepositoryModel.ts";
 import { csharpRepositories } from "./CSharpRepositories.ts";
-import { rustEntities, rustRepositories } from "./RustRepositories.ts";
-import { content } from "@deterministic-code/generators-common/generate-entry";
+import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./datasourceYaml.ts";
@@ -92,8 +91,13 @@ export const deterministic: CodeGenerationProvider = {
       ...place(typesPrefix(request.dialect, casing, "views"), views),
     ];
     if (request.dialect === "rust") {
-      const spec = await DeterministicParser(request.reader).parse(request.settings);
-      types.push(content("rust/entities.rs", rustEntities(planRepositories(spec, request.dialect, request.settings), spec, casing)));
+      for (const entry of types) {
+        if (!entry.filename.endsWith(".rs") || entry.contents === undefined || !entry.contents.includes("pub struct")) continue;
+        entry.contents = entry.contents.replace(
+          /#\[derive\(([^)]*)\)\]/g,
+          (_, list: string) => `#[derive(${list}, datasources::Facet)]`,
+        );
+      }
     }
     return remap(types, request.settings, request.dialect);
   },

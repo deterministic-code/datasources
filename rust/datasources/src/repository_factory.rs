@@ -1,6 +1,6 @@
 use crate::connection::Connection;
 use crate::datasource_error::DatasourceError;
-use crate::entity::Entity;
+use crate::from_schema::FromSchema;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::repository_access::RepositoryAccess;
 use crate::result::Result;
@@ -86,7 +86,7 @@ impl RepositoryFactory {
         maps.crud.insert(type_id, repository);
     }
 
-    pub fn register_named<T: Entity>(
+    pub fn register_named<T: FromSchema>(
         &self,
         type_name: impl Into<String>,
         plural_name: impl Into<String>,
@@ -114,7 +114,7 @@ impl RepositoryFactory {
         repository.ok_or_else(|| missing(&short_name::<T>()))
     }
 
-    pub fn create_named<T: Entity>(
+    pub fn create_named<T: FromSchema>(
         &self,
         name: &str,
         connection: Arc<dyn Connection>,
@@ -131,7 +131,7 @@ impl RepositoryFactory {
             .map_err(|_| missing_named(name))
     }
 
-    pub fn create_readonly_named<T: Entity>(
+    pub fn create_readonly_named<T: FromSchema>(
         &self,
         name: &str,
         connection: Arc<dyn Connection>,

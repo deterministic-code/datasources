@@ -3,6 +3,7 @@ use crate::converters::{RowTypeConverter, TypeConverter};
 use crate::mappers::Mapper;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::row::Row;
+use crate::schema::Schema;
 use std::sync::Arc;
 
 pub struct BuiltRepository {
@@ -12,5 +13,6 @@ pub struct BuiltRepository {
     pub property_mappings: Arc<dyn Mapper<String, String> + Send + Sync>,
     pub entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync>,
     pub statements: ReadonlyRepositoryStatements,
+    pub schema: Schema,
     pub ids: Vec<String>,
 }
