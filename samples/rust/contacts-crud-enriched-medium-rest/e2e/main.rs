@@ -11,13 +11,26 @@ fn ada() -> Contact {
         contact_source_name: "Manual".into(),
         uuid: "00000000-0000-0000-0000-000000000001".into(),
         version: vec![0],
-        addresses: vec![Address {
-            address_type_name: "Home".into(),
-            line1: "12 Analytical Engine".into(),
-            city: "London".into(),
-            country: Some("GB".into()),
-            ..Default::default()
-        }],
+        notes: Some("poet".into()),
+        email: Some("ada@example.com".into()),
+        addresses: vec![
+            Address {
+                address_type_name: "Home".into(),
+                line1: "12 Analytical Engine".into(),
+                line2: Some("Room 12".into()),
+                city: "London".into(),
+                region: Some("England".into()),
+                postal_code: Some("SW1A 1AA".into()),
+                country: Some("GB".into()),
+                ..Default::default()
+            },
+            Address {
+                address_type_name: "Work".into(),
+                line1: "1 Strand".into(),
+                city: "London".into(),
+                ..Default::default()
+            },
+        ],
         phones: vec![Phone {
             phone_type_name: "Mobile".into(),
             number: "555-0100".into(),
@@ -72,11 +85,14 @@ async fn main() -> Result<()> {
     let ds = default()?;
     let contacts_repo = ds.contacts();
     let ada = contacts_repo.create(ada()).await?;
-    if ada.first_name != "Ada" || ada.addresses.len() != 1 || ada.phones.len() != 1
+    if ada.first_name != "Ada" || ada.addresses.len() != 2 || ada.phones.len() != 1
         || ada.settings.get("theme") != Some(&"dark".into())
         || ada.prefs.get("home").map(|pref| pref.locale.as_str()) != Some("en-GB")
         || ada.addresses[0].line1 != "12 Analytical Engine"
+        || ada.addresses[0].line2.as_deref() != Some("Room 12")
+        || ada.addresses[1].address_type_name != "Work"
         || ada.phones[0].number != "555-0100"
+        || ada.addresses[0].latitude.is_some()
     {
         return Err(DatasourceError::message("create ada"));
     }
@@ -89,7 +105,7 @@ async fn main() -> Result<()> {
         .read_single(&Where::new(Operator::equals("id", ada.id)))
         .await?
         .ok_or_else(|| DatasourceError::message("read ada"))?;
-    if ada_read.addresses.len() != 1 || ada_read.phones.len() != 1 || ada_read.settings.len() != 1
+    if ada_read.addresses.len() != 2 || ada_read.phones.len() != 1 || ada_read.settings.len() != 1
         || ada_read.prefs.len() != 1
     {
         return Err(DatasourceError::message("read ada enrichments"));
@@ -113,10 +129,12 @@ async fn main() -> Result<()> {
             addresses: vec![
                 Address {
                     id: ada.addresses[0].id,
-                    address_type_name: "Home".into(),
+                    address_type_name: "Work".into(),
                     line1: ada.addresses[0].line1.clone(),
+                    line2: Some(String::new()),
                     city: "Cambridge".into(),
-                    country: Some("GB".into()),
+                    region: Some(String::new()),
+                    country: Some("FR".into()),
                     ..Default::default()
                 },
                 Address {
@@ -149,6 +167,107 @@ async fn main() -> Result<()> {
         || !ada_after.addresses.iter().any(|address| address.city == "Cambridge")
     {
         return Err(DatasourceError::message("update ada"));
+    }
+
+    let omitted = contacts_repo
+        .create(Contact {
+            first_name: "Outlier".into(),
+            last_name: "Types".into(),
+            contact_source_name: "Manual".into(),
+            uuid: "00000000-0000-0000-0000-000000000003".into(),
+            version: vec![0],
+            addresses: vec![Address {
+                address_type_name: "Home".into(),
+                line1: "1 Null Lane".into(),
+                city: "London".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .await?;
+    if omitted.addresses[0].latitude.is_some()
+        || omitted.addresses[0].is_verified.is_some()
+        || omitted.addresses[0].score.is_some()
+    {
+        return Err(DatasourceError::message("outlier omit"));
+    }
+    contacts_repo
+        .update(Contact {
+            id: omitted.id,
+            first_name: omitted.first_name.clone(),
+            last_name: omitted.last_name.clone(),
+            contact_source_name: "Manual".into(),
+            uuid: omitted.uuid.clone(),
+            version: omitted.version.clone(),
+            addresses: vec![Address {
+                id: omitted.addresses[0].id,
+                address_type_name: "Home".into(),
+                line1: "1 Null Lane".into(),
+                city: "London".into(),
+                latitude: Some(51),
+                label_note: Some("side".into()),
+                floor: Some(2),
+                score: Some("10.5".into()),
+                external_id: Some("550e8400-e29b-41d4-a716-446655440000".into()),
+                is_verified: Some(true),
+                verified_at: Some(
+                    datasources::chrono::DateTime::parse_from_rfc3339("2020-01-02T03:04:05.000Z")
+                        .map_err(|_| DatasourceError::message("date"))?
+                        .with_timezone(&datasources::chrono::Utc),
+                ),
+                stamp: Some(vec![1]),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .await?;
+    let valued = contacts_repo
+        .read_single(&Where::new(Operator::equals("id", omitted.id)))
+        .await?
+        .ok_or_else(|| DatasourceError::message("outlier value"))?;
+    if valued.addresses[0].latitude != Some(51)
+        || valued.addresses[0].label_note.as_deref() != Some("side")
+        || valued.addresses[0].floor != Some(2)
+        || valued.addresses[0].score.as_deref() != Some("10.5")
+        || valued.addresses[0].is_verified != Some(true)
+    {
+        return Err(DatasourceError::message("outlier value"));
+    }
+    contacts_repo
+        .update(Contact {
+            id: omitted.id,
+            first_name: omitted.first_name.clone(),
+            last_name: omitted.last_name.clone(),
+            contact_source_name: "Manual".into(),
+            uuid: omitted.uuid.clone(),
+            version: valued.version.clone(),
+            addresses: vec![Address {
+                id: omitted.addresses[0].id,
+                address_type_name: "Home".into(),
+                line1: "1 Null Lane".into(),
+                city: "London".into(),
+                latitude: Some(0),
+                label_note: Some(String::new()),
+                floor: Some(0),
+                score: Some("0".into()),
+                is_verified: Some(false),
+                verified_at: None,
+                stamp: None,
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .await?;
+    let zeroed = contacts_repo
+        .read_single(&Where::new(Operator::equals("id", omitted.id)))
+        .await?
+        .ok_or_else(|| DatasourceError::message("outlier zero"))?;
+    if zeroed.addresses[0].latitude != Some(0)
+        || zeroed.addresses[0].label_note.as_deref() != Some("")
+        || zeroed.addresses[0].floor != Some(0)
+        || zeroed.addresses[0].is_verified != Some(false)
+    {
+        return Err(DatasourceError::message("outlier zero"));
     }
 
     contacts_repo.delete(ada_after).await?;
