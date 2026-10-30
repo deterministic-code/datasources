@@ -1,0 +1,10 @@
+---
+description: Provider packages come from CLI setup or add
+alwaysApply: true
+---
+
+# Providers
+
+`sqlite`, `mysql`, `postgres`, `sqlserver`, `oracle`, and every other catalog provider are installed by `npx @deterministic-code/datasources-cli setup` or `add`. The manifest lists only those providers, matching `INSTALLED_PROVIDERS`. A generator reads the dialect from a provider the project already has. In this repo, a crate depends only on the provider crates that package uses.
+
+A missing dialect, compile error, or failing test is not a reason to add the other drivers.

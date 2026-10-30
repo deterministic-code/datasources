@@ -1,0 +1,12 @@
+---
+description: Unit, integration, and e2e test boundaries
+alwaysApply: true
+---
+
+# Tests
+
+- **Unit** (`npm test`, default `cargo test`, `dotnet test` unit projects): core, generators, the sqlite package, and memory. Mocks and in-memory ports. No filesystem, network, Docker, other providers, samples, or repository CRUD suites. `scripts/unit-test-scope.test.mjs` fails if `package.json` or `typescript/package.json` `scripts.test` names another provider, `test:samples`, `test:e2e`, `--workspaces`, or `npm run build`.
+- **Integration**: in-process SQLite only. No Docker and no remote servers.
+- **E2E** (`test:e2e`, `test:e2e:ci`, `test:e2e:rust`, `test:e2e:csharp`, `test:e2e:sqlite`, `test:samples`): other providers, samples, and Docker. Run `setup` or `add`, then the documented consumer commands, in the consumer project. The CLI working directory is that project. Setup installs each provider and writes `.env`.
+
+Each test builds its own connection, repository, and mapper. A test calls `ReadonlyRepository` or `CRUDRepository` the way the docs do, and the extracted example includes every type and helper that call uses.

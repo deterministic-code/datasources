@@ -1,0 +1,19 @@
+---
+description: Repository pipeline, select names, and C# / Rust / TypeScript parity
+alwaysApply: true
+---
+
+# Repositories
+
+C#, Rust, and TypeScript share one public API and the same runtime behavior. C# is the reference. Names follow each language (`Read` / `read` / `read`, `Datasource.Default` / `Datasource.default` / `default()`). One query-or-where argument is one argument in every language. `Default`, `Create`, and `Register` mean the same thing. When `INSTALLED_PROVIDERS` and `DATASOURCE_URL` are set, default applies those and registers the listed factories.
+
+Stop if Rust or TypeScript needs an extra argument, overload, or method that C# lacks (`read_where`, `read_single_where`, `with_fields`, `columns`). Change C# first, or name the missing C# signature. A language difference is a bug in the code.
+
+`Read` / `ReadSingle` and the write reverse path convert, then map. `RowTypeConverter` turns database cells into `T`. `IMapper<T, T>` reshapes that object. The default mapper is identity.
+
+```csharp
+yield return Mapper.Map(rowConverter.Convert(reader.Current));
+// writes: rowConverter.ReverseConvert(Mapper.ReverseMap(item))
+```
+
+A `SelectStatement` names PascalCase entity types and properties (`Contact`, `Contact.FirstName`). `EntityMapper` and `PropertyMappings` compile those to tables and columns. A Pascal `AS` alias is only for a join collision (`Contact.Id AS Id`, `Address.Id AS AddressId`).
