@@ -5,9 +5,13 @@ import { memoryReader } from "@deterministic-code/generators-common/deterministi
 import { content, patch } from "@deterministic-code/generators-common/generate-entry";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { describe, expect, it } from "vitest";
-import type { Fs } from "../io.ts";
-import { run, type Deps } from "../run.ts";
+import type { Deps, Fs } from "../io.ts";
+import { parseArgs } from "../parse.ts";
 import type { Prompter } from "../setup.ts";
+import { applyGenerate } from "./applyGenerate.ts";
+import { applyMigrations } from "./applyMigrations.ts";
+import { applyMigrateUp } from "./migrateUp.ts";
+import { sqlFlagsOf } from "./sqlFlags.ts";
 import { deterministic } from "./DeterministicProvider.ts";
 import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
@@ -86,6 +90,37 @@ const silent: Prompter = {
 const deps = (fs: Fs): Deps & { logs: string[] } => {
   const logs: string[] = [];
   return { fs, run: async () => undefined, log: (line) => logs.push(line), err: () => undefined, prompt: silent, logs };
+};
+
+const exec = async (argv: string[], io: Deps, cwd = "."): Promise<number> => {
+  try {
+    const { command, flags } = parseArgs(argv, cwd);
+    if (command.kind === "migrations-create") {
+      await applyMigrations(command, flags, io);
+      return 0;
+    }
+    if (command.kind !== "generate") throw new Error(command.kind);
+    await applyGenerate(command, flags, io);
+    if (command.target !== "all") return 0;
+    if (command.migrations)
+      await applyMigrations(
+        {
+          kind: "migrations-create",
+          provider: command.provider,
+          input: command.input,
+          storedProcedures: command.storedProcedures,
+          migrationsRoot: command.migrationsRoot,
+          ...sqlFlagsOf(command),
+        },
+        flags,
+        io,
+      );
+    if (command.migrate) await applyMigrateUp(command, flags, io);
+    return 0;
+  } catch (error) {
+    io.err(error instanceof Error ? error.message : "Unknown error");
+    return 1;
+  }
 };
 
 describe("generate", () => {
@@ -258,7 +293,9 @@ describe("generate", () => {
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/generated/views/contact"');
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<dyn ICRUDRepository<Contact>>");
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
     expect(contactTs).toContain("createReadonly");
@@ -464,7 +501,7 @@ types:
     seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n  languages:\n    typescript:\n      casing:\n        file_names: camel\n        fields: camel\n";
     const store = mem(seeded);
     expect(
-      await run(
+      await exec(
         ["generate", "repositories", "--dialect", "typescript", "--cwd", cwd, "--file-names", "kebab"],
         deps(store.fs),
         cwd,
@@ -490,7 +527,7 @@ types:
     const store = mem(seeded);
     const io = deps(store.fs);
     expect(
-      await run(
+      await exec(
         [
           "generate",
           "all",
@@ -515,6 +552,7 @@ types:
     const types = await deterministic.generateTypes(request("typescript"));
     const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(text).toContain("export interface Contact");
+    expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({ ...init } as Contact);");
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
@@ -550,6 +588,34 @@ types:
     expect(text).toContain("datasources::uuid::Uuid::new_v4()");
     expect(text).not.toMatch(/(^|[^:\w])chrono::/);
     expect(text).not.toMatch(/(^|[^:\w])uuid::/);
+  });
+
+  it("owns generated Rust module names without crate::types::generated", async () => {
+    const types = await deterministic.generateTypes(request("rust"));
+    const contact = textOf(types, "contact.rs");
+    expect(contact).toContain("Vec<Address>");
+    expect(contact).not.toContain("crate::types::generated");
+    const rust = await deterministic.generateRepositories(request("rust"));
+    const root = rust.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "rust/mod.rs");
+    expect(root?.contents).toContain("pub use repositories::repositoryRegistry::Repositories;");
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
+    const store = mem(seeded);
+    expect(
+      await exec(
+        ["generate", "repositories", "--dialect", "rust", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        deps(store.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(store.files[join(cwd, "src/generated.rs")]).toBe(
+      `#[path = "../generated/rust/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
+    );
+    expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
+    expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();
   });
 
   it("emits C# auto-properties without a semicolon after the accessor", async () => {
@@ -880,7 +946,7 @@ types: []
       const store = mem(seeded);
       const io = deps(store.fs);
       expect(
-        await run(
+        await exec(
           ["generate", target, "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
           io,
           cwd,
@@ -890,18 +956,18 @@ types: []
     }
     const rustTypes = mem(seeded);
     const rustIo = deps(rustTypes.fs);
-    expect(await run(["generate", "types", "--dialect", "rust", "--cwd", cwd], rustIo, cwd)).toBe(0);
+    expect(await exec(["generate", "types", "--dialect", "rust", "--cwd", cwd], rustIo, cwd)).toBe(0);
     expect(rustIo.logs.length).toBeGreaterThan(0);
     const absolute = mem({
       [join("/tmp/spec", "types.yaml")]: typesYaml,
       [join("/tmp/spec", "datasource.yaml")]: sqliteDatasourceYaml,
     });
     const io = deps(absolute.fs);
-    expect(await run(["generate", "repositories", "--dialect", "rust", "--input", "/tmp/spec", "--output", "/tmp/out"], io, cwd)).toBe(0);
+    expect(await exec(["generate", "repositories", "--dialect", "rust", "--input", "/tmp/spec", "--output", "/tmp/out"], io, cwd)).toBe(0);
     expect(absolute.files[join("/tmp/out", "rust/repositories/legacyContactRepository.rs")]).toContain("CntID");
     const missing = mem();
-    expect(await run(["generate", "types", "--dialect", "csharp", "--cwd", cwd], deps(missing.fs), cwd)).toBe(1);
-    expect(await run(["generate", "types", "--dialect", "typescript", "--provider", "missing", "--cwd", cwd], deps(mem(seeded).fs), cwd)).toBe(1);
+    expect(await exec(["generate", "types", "--dialect", "csharp", "--cwd", cwd], deps(missing.fs), cwd)).toBe(1);
+    expect(await exec(["generate", "types", "--dialect", "typescript", "--provider", "missing", "--cwd", cwd], deps(mem(seeded).fs), cwd)).toBe(1);
   });
 
   it("defaults missing datasource.yaml to tagged types and one view repository", async () => {
@@ -925,7 +991,7 @@ types:
 `,
     });
     const io = deps(store.fs);
-    expect(await run(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+    expect(await exec(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
     const registry = store.files[join(cwd, "generated/typescript/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"NoteCard", "noteCards"');
     expect(registry).not.toContain('"Note"');
@@ -970,7 +1036,7 @@ types: []
 `,
     });
     const io = deps(store.fs);
-    expect(await run(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+    expect(await exec(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
     const registry = store.files[join(cwd, "generated/typescript/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"Kept", "kepts"');
     expect(registry).not.toContain('"Dropped"');
@@ -997,7 +1063,7 @@ types: []
     delete process.env.DATASOURCE_URL;
     delete process.env.INSTALLED_PROVIDERS;
     try {
-      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
+      expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
       expect(ran).toEqual([
         "npx migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
@@ -1009,7 +1075,7 @@ types: []
       dryIo.run = async (command, args) => {
         dryRan.push(`${command} ${args.join(" ")}`);
       };
-      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
+      expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
       expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
       expect(dryIo.logs.some((line) => line.includes("migrate-setup --provider sqlite"))).toBe(true);
       expect(dryIo.logs.some((line) => line.includes("migrate-up --provider sqlite"))).toBe(true);
@@ -1017,7 +1083,7 @@ types: []
       const skipped = mem(seeded);
       const skipIo = deps(skipped.fs);
       expect(
-        await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"], skipIo, cwd),
+        await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"], skipIo, cwd),
       ).toBe(0);
       expect(skipped.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
       expect(skipIo.logs.some((line) => line.includes("migrate-up"))).toBe(false);
@@ -1026,13 +1092,13 @@ types: []
         [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nPROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
       });
       const memoryIo = deps(memory.fs);
-      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], memoryIo, cwd)).toBe(0);
+      expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd], memoryIo, cwd)).toBe(0);
       expect(memoryIo.logs.some((line) => line.includes("in-memory"))).toBe(true);
       const mismatch = mem({
         ...seeded,
         [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\nPROVIDER=postgres\nDATASOURCE_URL=postgres://localhost/db\n",
       });
-      expect(await run(["generate", "all", "--dialect", "typescript", "--cwd", cwd], deps(mismatch.fs), cwd)).toBe(1);
+      expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd], deps(mismatch.fs), cwd)).toBe(1);
     } finally {
       if (previous.PROVIDER === undefined) delete process.env.PROVIDER;
       else process.env.PROVIDER = previous.PROVIDER;
@@ -1051,12 +1117,12 @@ types: []
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const store = mem(seeded);
     const io = deps(store.fs);
-    expect(await run(["migrations", "create", "--cwd", cwd], io, cwd)).toBe(0);
+    expect(await exec(["migrations", "create", "--cwd", cwd], io, cwd)).toBe(0);
     const up = store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")];
     expect(up).toMatch(/CREATE TABLE/i);
     const dry = mem(seeded);
     const dryIo = deps(dry.fs);
-    expect(await run(["migrations", "create", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
+    expect(await exec(["migrations", "create", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
     expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
     expect(dryIo.logs.some((line) => line.endsWith("sql/sqlite/migrations/0001_initial_up.sql"))).toBe(true);
     const absolute = mem({
@@ -1065,7 +1131,7 @@ types: []
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
     });
     expect(
-      await run(
+      await exec(
         ["migrations", "create", "--input", "/tmp/spec", "--migrations-root", "/tmp/mig"],
         deps(absolute.fs),
         cwd,
@@ -1094,7 +1160,7 @@ types:
     };
     const generate = mem(spec);
     expect(
-      await run(
+      await exec(
         [
           "generate",
           "all",
@@ -1139,7 +1205,7 @@ types:
 `,
     });
     expect(
-      await run(
+      await exec(
         [
           "migrations",
           "create",
@@ -1175,7 +1241,7 @@ types:
     });
     const off = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
     expect(
-      await run(
+      await exec(
         ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-pluralize-table-names", "--no-auto-migrate-up"],
         deps(off.fs),
         cwd,
@@ -1186,7 +1252,7 @@ types:
       '["Application", "application"]',
     );
     const create = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
-    expect(await run(["migrations", "create", "--cwd", cwd, "--no-pluralize-table-names"], deps(create.fs), cwd)).toBe(0);
+    expect(await exec(["migrations", "create", "--cwd", cwd, "--no-pluralize-table-names"], deps(create.fs), cwd)).toBe(0);
     expect(create.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "application"/);
     const on = mem(
       spec(`settings:
@@ -1197,7 +1263,7 @@ types:
 `),
     );
     expect(
-      await run(
+      await exec(
         ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--pluralize-table-names", "--no-auto-migrate-up"],
         deps(on.fs),
         cwd,
@@ -1217,7 +1283,7 @@ types:
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     const generate = mem(seeded);
     expect(
-      await run(
+      await exec(
         ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--stored-procedures", "--no-auto-migrate-up"],
         deps(generate.fs),
         cwd,
@@ -1226,7 +1292,7 @@ types:
     expect(generate.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
     expect(Object.keys(generate.files).some((path) => path.includes("stored_procedures"))).toBe(false);
     const create = mem(seeded);
-    expect(await run(["migrations", "create", "--cwd", cwd, "--stored-procedures"], deps(create.fs), cwd)).toBe(0);
+    expect(await exec(["migrations", "create", "--cwd", cwd, "--stored-procedures"], deps(create.fs), cwd)).toBe(0);
     expect(create.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
     expect(Object.keys(create.files).some((path) => path.includes("stored_procedures"))).toBe(false);
   });

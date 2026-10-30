@@ -97,7 +97,7 @@ When `datasource.yaml` is omitted, generate includes every `datasource_type` and
 
 `types` writes datasource and view types under `<output>/<dialect>/`. `repositories` writes one repository class per datasource table under `<output>/<dialect>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
 
-`generate` writes types and repositories under `--output` (default `./generated`). The app imports that registry. C# `RepositoryRegistry` uses `[ModuleInitializer]`. TypeScript imports the generated `repositoryRegistry`. Rust `mod`s a `datasources_register.rs` that `#[path]`s `generated/rust/mod.rs`. Those files belong in the project. Generate does not rewrite `Cargo.toml`, `.csproj`, or `main`.
+`generate` writes types and repositories under `--output` (default `./generated`). The app imports that registry. C# `RepositoryRegistry` uses `[ModuleInitializer]`. TypeScript imports the generated `repositoryRegistry`. Rust generate writes `src/generated.rs` so the crate can `mod generated;` and `use generated::…`. Generate does not rewrite `Cargo.toml`, `.csproj`, or `main`.
 
 ## Migrations
 

@@ -11,24 +11,17 @@ export const migrateLanguage = (ecosystem: Ecosystem): MigrateLanguage =>
 export const sqlMigrateProviders = (names: readonly Provider[]): Provider[] =>
   migrateProviders.filter((name) => names.includes(name));
 
-const migratersPackage = (env: NodeJS.ProcessEnv = process.env): string =>
-  env.MIGRATERS_PACKAGE || "@deterministic-code/migraters";
-
-export const migrateInitCommands = (
-  dialects: Provider[],
-  language: MigrateLanguage,
-  env: NodeJS.ProcessEnv = process.env,
-): Proc[] =>
+export const migrateInitCommands = (dialects: Provider[], language: MigrateLanguage): Proc[] =>
   dialects.length === 0
     ? []
     : [
-        { command: "npm", args: ["install", migratersPackage(env)] },
+        { command: "npm", args: ["install", "@deterministic-code/migraters"] },
         {
           command: "npx",
           args: [
             "--yes",
             "--package",
-            migratersPackage(env),
+            "@deterministic-code/migraters",
             "migrate-init",
             "--language",
             language,

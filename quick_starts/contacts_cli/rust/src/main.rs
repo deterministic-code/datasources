@@ -1,12 +1,9 @@
-mod datasources_providers;
-mod datasources_register;
-mod types;
-use datasources_register::{Address, Contact, Email, Phone, Repositories};
+mod generated;
+use generated::{Address, Contact, Email, Phone, Repositories};
 use datasources::{default, DatasourceError, Operator, Result, Where};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    datasources_providers::register();
     let ds = default()?;
     let contacts_repo = ds.contacts();
     let ada = contacts_repo
@@ -78,7 +75,7 @@ async fn main() -> Result<()> {
     );
 
     let ada_read = contacts_repo
-        .read_single(Some(&Where::new(Operator::equals("id", ada.id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", ada.id)))
         .await?
         .ok_or_else(|| DatasourceError::message("read"))?;
     println!(
@@ -91,7 +88,7 @@ async fn main() -> Result<()> {
     );
 
     let alan_read = contacts_repo
-        .read_single(Some(&Where::new(Operator::equals("id", alan.id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", alan.id)))
         .await?
         .ok_or_else(|| DatasourceError::message("read"))?;
     println!(
@@ -104,8 +101,7 @@ async fn main() -> Result<()> {
     );
 
     let ada_saved = contacts_repo
-        .update(
-            Contact {
+        .update(Contact {
                 id: ada.id,
                 given_name: "Ada Byron".into(),
                 gender_type_name: "Female".into(),
@@ -144,12 +140,10 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 }],
                 ..Default::default()
-            },
-            None,
-        )
+            })
         .await?;
     let ada_after = contacts_repo
-        .read_single(Some(&Where::new(Operator::equals("id", ada.id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", ada.id)))
         .await?
         .ok_or_else(|| DatasourceError::message("update"))?;
     let mut ada_emails: Vec<_> = ada_after.emails.iter().map(|email| email.address.clone()).collect();
@@ -167,8 +161,7 @@ async fn main() -> Result<()> {
     );
 
     let alan_saved = contacts_repo
-        .update(
-            Contact {
+        .update(Contact {
                 id: alan.id,
                 given_name: "Alan".into(),
                 gender_type_name: "Male".into(),
@@ -198,12 +191,10 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 }],
                 ..Default::default()
-            },
-            None,
-        )
+            })
         .await?;
     let alan_after = contacts_repo
-        .read_single(Some(&Where::new(Operator::equals("id", alan.id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", alan.id)))
         .await?
         .ok_or_else(|| DatasourceError::message("update"))?;
     println!(
@@ -216,9 +207,9 @@ async fn main() -> Result<()> {
         alan_after.addresses[0].line_1
     );
 
-    let ada_removed = contacts_repo.delete(ada_after, None).await?;
+    let ada_removed = contacts_repo.delete(ada_after).await?;
     if contacts_repo
-        .read_single(Some(&Where::new(Operator::equals("id", ada.id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", ada.id)))
         .await?
         .is_some()
     {
@@ -226,9 +217,9 @@ async fn main() -> Result<()> {
     }
     println!("deleted {} rows={}", ada.id, ada_removed.rows_affected);
 
-    let alan_removed = contacts_repo.delete(alan_after, None).await?;
+    let alan_removed = contacts_repo.delete(alan_after).await?;
     if contacts_repo
-        .read_single(Some(&Where::new(Operator::equals("id", alan.id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", alan.id)))
         .await?
         .is_some()
     {

@@ -11,6 +11,7 @@ export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
 cargo init
 cp -R ../quick_starts/contacts_cli/rust/. ./
+cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect rust
@@ -24,6 +25,7 @@ export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
 cargo init
 cp -R ../quick_starts/contacts_cli/rust/. ./
+cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 docker compose up -d --wait
 cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres

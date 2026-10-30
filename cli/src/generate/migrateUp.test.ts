@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fs } from "../io.ts";
 import type { Flags, GenerateCommand } from "../parse.ts";
-import type { Deps } from "../run.ts";
+import type { Deps } from "../io.ts";
 import type { Prompter } from "../setup.ts";
 import { applyMigrateUp } from "./migrateUp.ts";
 import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";

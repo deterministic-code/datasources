@@ -291,7 +291,10 @@ export const rustRepositories = (
     ...files,
     content(registryFile("rs", casing), registry),
     content("mod.rs", `${models.map((model) => rustModLine(fileStem(model.specName, casing))).join("\n")}\n${rustModLine(casing.convertFileName("repository_registry"))}\n`),
-    content("../mod.rs", `${typeMods.join("\n")}\n${typeUses.join("\n")}\nmod schema_objects;\npub mod repositories;\n`),
+    content(
+      "../mod.rs",
+      `${typeMods.join("\n")}\n${typeUses.join("\n")}\nmod schema_objects;\npub mod repositories;\npub use repositories::${rustIdent(casing.convertFileName("repository_registry"))}::Repositories;\n`,
+    ),
     content("../schema_objects.rs", rustSchemaObjects(models)),
   ];
 };

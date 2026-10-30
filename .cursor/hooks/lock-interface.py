@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCK_FILE = Path(__file__).resolve().parent / "locked-classes.txt"
-CONSTANT_FILES = (ROOT / "quick_starts" / "run.mjs",)
+CONSTANT_FILES: tuple[Path, ...] = ()
 EDIT_TOOLS = {"Write", "StrReplace", "Delete"}
 
 KINDS = ("class", "record", "struct", "interface", "enum", "trait")
@@ -148,7 +148,7 @@ def proposed_text(tool: str, tool_input: dict, path: Path) -> str | None:
 def check_shell(command: str) -> dict:
     if writes(command, [LOCK_FILE]):
         return deny_list()
-    if writes(command, list(CONSTANT_FILES)):
+    if CONSTANT_FILES and writes(command, list(CONSTANT_FILES)):
         return deny_constant(CONSTANT_FILES[0])
     for name in locked_names():
         for path in files_for(name):

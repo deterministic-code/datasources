@@ -1,6 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import type { Flags, VersionCommand } from "../parse.ts";
-import type { Deps } from "../run.ts";
+import type { Deps } from "../io.ts";
 import { VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Json } from "./delta.ts";
 import { parseYaml, render } from "./render.ts";

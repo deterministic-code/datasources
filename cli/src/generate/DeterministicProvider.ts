@@ -92,7 +92,8 @@ export const deterministic: CodeGenerationProvider = {
     ];
     if (request.dialect === "rust") {
       for (const entry of types) {
-        if (!entry.filename.endsWith(".rs") || entry.contents === undefined || !entry.contents.includes("pub struct")) continue;
+        entry.contents = entry.contents!.replace(/crate::types::generated::(?:views|datasource)::/g, "");
+        if (!entry.contents.includes("pub struct")) continue;
         entry.contents = entry.contents
           .replace(
             /#\[derive\(([^)]*)\)\]/g,
@@ -102,6 +103,15 @@ export const deterministic: CodeGenerationProvider = {
           .replace(/(^|[^:\w])chrono::/g, "$1datasources::chrono::")
           .replace(/(^|[^:\w])uuid::/g, "$1datasources::uuid::")
           .replace(/(^|[^:\w])rust_decimal::/g, "$1datasources::rust_decimal::");
+      }
+    }
+    if (request.dialect === "typescript") {
+      for (const entry of types) {
+        entry.contents = entry.contents!.replace(
+          /export interface (\w+)/g,
+          (_, name: string) =>
+            `export const ${name[0]!.toLowerCase()}${name.slice(1)} = (init: Partial<${name}>): ${name} => ({ ...init } as ${name});\nexport interface ${name}`,
+        );
       }
     }
     return remap(types, request.settings, request.dialect);
