@@ -122,6 +122,16 @@ public class RowTypeConverterTests
     }
 
     [Fact]
+    public void FromUsesIntegerConverterForIntegerFamily()
+    {
+        var converter = RowTypeConverter.From(
+            new Dictionary<string, TypeConverter<Value, Value>> { ["integer"] = new OnlyOne() },
+            new Dictionary<string, string> { ["age"] = "unsignedinteger", ["name"] = "string" });
+        Assert.Equal(new Value.Bool(true), converter.Convert(new Row { ["age"] = 1L, ["name"] = "a" })["age"]);
+        Assert.Equal(new Value.Text("a"), converter.Convert(new Row { ["age"] = 1L, ["name"] = "a" })["name"]);
+    }
+
+    [Fact]
     public void AppliesFieldOverrideOnDictionaryRows()
     {
         var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dictionary<string, TypeConverter<Value, Value>>

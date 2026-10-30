@@ -8,15 +8,15 @@ use std::collections::HashMap;
 
 pub struct DeterministicTypeConverter {
     pub dictionary: HashMap<String, String>,
-    reverse: HashMap<String, Vec<String>>,
+    reverse: HashMap<String, String>,
     rules: SpecFieldRules,
 }
 
 impl DeterministicTypeConverter {
     pub fn new(dictionary: HashMap<String, String>, rules: SpecFieldRules) -> Self {
-        let mut reverse = HashMap::<String, Vec<String>>::new();
+        let mut reverse = HashMap::<String, String>::new();
         for (spec_type, native) in &dictionary {
-            reverse.entry(native.clone()).or_default().push(spec_type.clone());
+            reverse.entry(native.clone()).or_insert_with(|| spec_type.clone());
         }
         Self { dictionary, reverse, rules }
     }
@@ -82,16 +82,9 @@ impl Mapping<String, String> for DeterministicTypeConverter {
     }
 
     fn reverse_convert(&self, native: &String) -> Result<String> {
-        let spec_types = self.reverse.get(native).ok_or_else(|| {
+        self.reverse.get(native).cloned().ok_or_else(|| {
             DatasourceError::message(format!("Unknown native field type: {native}"))
-        })?;
-        if spec_types.len() > 1 {
-            return Err(DatasourceError::message(format!(
-                "Native field type {native} maps to multiple spec types: {}",
-                spec_types.join(", ")
-            )));
-        }
-        Ok(spec_types[0].clone())
+        })
     }
 }
 

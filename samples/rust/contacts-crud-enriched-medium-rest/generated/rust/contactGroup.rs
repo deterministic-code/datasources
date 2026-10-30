@@ -2,8 +2,9 @@
 #[allow(unused_imports)]
 use super::*;
 /// View ContactGroup.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
+#[facet(crate = ::datasources::facet)]
 pub struct ContactGroup {
-    pub base: crate::types::generated::datasource::ContactGroupsBase,
-    pub members: Vec<crate::types::generated::views::Contact>,
+    pub base: ContactGroupsBase,
+    pub members: Vec<Contact>,
 }

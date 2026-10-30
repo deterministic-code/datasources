@@ -29,7 +29,6 @@ describe("DefaultValueConverter", () => {
     expect(d.convert("datetime", "UtcNow")).toBe(`(NOW() AT TIME ZONE 'UTC')`);
     expect(d.convert("datetime", "Now")).toBe("LOCALTIMESTAMP");
     expect(d.convert("string", "o'reilly")).toBe("'o''reilly'");
-    expect(d.convert("number", "3")).toBe("3");
     expect(d.convert("unsignedinteger", "3")).toBe("3");
     expect(d.convert("smallinteger", "-2")).toBe("-2");
     expect(d.convert("character", "Z")).toBe("'Z'");

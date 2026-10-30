@@ -6,7 +6,8 @@ internal sealed class IntegerConverter : TypeConverter<Value, Value>
 {
     public override Value Convert(Value from) => from switch
     {
-        Value.Text(var text) when text.Length > 0 && long.TryParse(text, out var number) => number,
+        Value.Text("") => 0L,
+        Value.Text(var text) when long.TryParse(text, out var number) => number,
         _ => from
     };
 

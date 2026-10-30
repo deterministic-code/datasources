@@ -41,7 +41,6 @@ export class SqlServerDriver implements IDriver {
     {
       string: "NVARCHAR(MAX)",
       character: "NCHAR(1)",
-      number: "INT",
       integer: "INT",
       unsignedinteger: "BIGINT",
       smallinteger: "SMALLINT",

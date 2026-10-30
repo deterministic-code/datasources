@@ -17,7 +17,6 @@ pub static TYPES: LazyLock<DeterministicTypeConverter> = LazyLock::new(|| {
         HashMap::from([
             ("string".into(), "TEXT".into()),
             ("character".into(), "TEXT".into()),
-            ("number".into(), "INTEGER".into()),
             ("integer".into(), "INTEGER".into()),
             ("unsignedinteger".into(), "INTEGER".into()),
             ("smallinteger".into(), "INTEGER".into()),

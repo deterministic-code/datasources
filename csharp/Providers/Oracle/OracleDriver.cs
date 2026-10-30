@@ -12,7 +12,6 @@ public sealed class OracleDriver : IDriver
         {
             ["string"] = "CLOB",
             ["character"] = "CHAR(1)",
-            ["number"] = "NUMBER(10)",
             ["integer"] = "NUMBER(10)",
             ["unsignedinteger"] = "NUMBER(10)",
             ["smallinteger"] = "NUMBER(5)",

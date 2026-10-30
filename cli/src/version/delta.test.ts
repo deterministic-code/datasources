@@ -17,7 +17,7 @@ const commentBefore: Json = {
     {
       comment: {
         fields: [
-          { author_id: { type: "number", references: "user.id" } },
+          { author_id: { type: "integer", references: "user.id" } },
           { body: { type: "string", size: "unlimited" } },
           { old_field: { type: "string", size: 32 } },
         ],
@@ -31,7 +31,7 @@ const commentAfter: Json = {
     {
       comment: {
         fields: [
-          { author_id: { type: "number", references: "user.id" } },
+          { author_id: { type: "integer", references: "user.id" } },
           { body: { type: "string", size: 1024 } },
           { is_pinned: { type: "boolean", default_value: false } },
         ],

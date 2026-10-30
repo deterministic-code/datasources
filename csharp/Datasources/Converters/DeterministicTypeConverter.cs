@@ -3,7 +3,7 @@ namespace Datasources;
 public sealed class DeterministicTypeConverter : IMapping<string, string>
 {
     readonly IReadOnlyDictionary<string, string> dictionary;
-    readonly Dictionary<string, List<string>> reverse = [];
+    readonly Dictionary<string, string> reverse = [];
     readonly SpecFieldRules rules;
 
     public IReadOnlyDictionary<string, string> Dictionary => dictionary;
@@ -13,11 +13,7 @@ public sealed class DeterministicTypeConverter : IMapping<string, string>
         this.dictionary = dictionary;
         this.rules = rules;
         foreach (var (specType, native) in dictionary)
-        {
-            if (!reverse.TryGetValue(native, out var specTypes))
-                reverse[native] = specTypes = [];
-            specTypes.Add(specType);
-        }
+            reverse.TryAdd(native, specType);
     }
 
     public string Convert(string from) =>
@@ -54,12 +50,9 @@ public sealed class DeterministicTypeConverter : IMapping<string, string>
     }
 
     public string ReverseConvert(string native) =>
-        !reverse.TryGetValue(native, out var specTypes)
-            ? throw new InvalidOperationException($"Unknown native field type: {native}")
-            : specTypes.Count > 1
-                ? throw new InvalidOperationException(
-                    $"Native field type {native} maps to multiple spec types: {string.Join(", ", specTypes)}")
-                : specTypes[0];
+        reverse.TryGetValue(native, out var spec)
+            ? spec
+            : throw new InvalidOperationException($"Unknown native field type: {native}");
 
     static bool IsUnlimited(object? size) =>
         size is null or "unlimited";

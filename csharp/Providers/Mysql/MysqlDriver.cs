@@ -12,7 +12,6 @@ public sealed class MysqlDriver : IDriver
         {
             ["string"] = "TEXT",
             ["character"] = "CHAR(1)",
-            ["number"] = "INT",
             ["integer"] = "INT",
             ["unsignedinteger"] = "INT UNSIGNED",
             ["smallinteger"] = "SMALLINT",

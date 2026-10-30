@@ -44,7 +44,6 @@ export class SqliteDriver implements IDriver {
     {
       string: "TEXT",
       character: "TEXT",
-      number: "INTEGER",
       integer: "INTEGER",
       unsignedinteger: "INTEGER",
       smallinteger: "INTEGER",

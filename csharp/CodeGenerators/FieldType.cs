@@ -4,7 +4,7 @@ public static class FieldType
 {
     static readonly HashSet<string> Primitives =
     [
-        "string", "character", "number", "integer", "unsignedinteger",
+        "string", "character", "integer", "unsignedinteger",
         "biginteger", "unsignedbiginteger", "smallinteger", "unsignedsmallinteger",
         "float", "decimal", "boolean", "datetime", "binary", "uuid", "reference",
     ];

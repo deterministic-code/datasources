@@ -1,7 +1,6 @@
 // schema-version: 1.0
 /** View ContactCard. */
-type Dictionary<K extends PropertyKey, V> = Record<K, V>;
+export const contactCard = (init: Partial<ContactCard>): ContactCard => ({ ...init } as ContactCard);
 export interface ContactCard {
   displayName: string;
-  labels: Dictionary<string, string>;
 }

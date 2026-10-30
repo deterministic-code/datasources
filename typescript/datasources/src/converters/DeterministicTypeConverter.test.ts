@@ -92,10 +92,10 @@ describe("DeterministicTypeConverter", () => {
     expect(sqlite().convert("integer")).toBe("INTEGER");
     expect(sqlite().reverseConvert("INTEGER")).toBe("integer");
     expect(() => sqlite().reverseConvert("NOPE")).toThrow(/Unknown native/);
-    const multi = new DeterministicTypeConverter(
-      { integer: "INT", number: "INT" },
+    const first = new DeterministicTypeConverter(
+      { integer: "INT", unsignedinteger: "INT" },
       { stringUnlimited: "TEXT", stringSized: (n) => `VARCHAR(${n})` },
     );
-    expect(() => multi.reverseConvert("INT")).toThrow(/multiple spec types/);
+    expect(first.reverseConvert("INT")).toBe("integer");
   });
 });

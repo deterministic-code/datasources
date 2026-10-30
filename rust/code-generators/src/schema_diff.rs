@@ -5,7 +5,7 @@ use crate::schema::{
 use crate::spec::{pk_name, DatasourceIndex, SpecTypeField};
 use crate::table_statements;
 use datasources::{
-    AlterAction, AlterTableStatement, CreateIndexStatement, CreateTableStatement,
+    AlterAction, AlterTableStatement, Column, CreateIndexStatement, CreateTableStatement,
     CreateTriggerStatement, DatasourceError, DropIndexStatement, DropTableStatement,
     DropTriggerStatement, Result, Statement, TableConstraint,
 };
@@ -183,19 +183,25 @@ fn diff_table(
     }
 
     for field in after.fields.iter().filter(|field| before_fields.contains_key(field.name.as_str())) {
-        let previous = before_fields[field.name.as_str()];
-        let from = table_statements::column(dialect, before_map, before, previous)?.name;
-        let to = table_statements::column(dialect, after_map, after, field)?.name;
-        if from != to {
+        let previous = table_statements::column(dialect, before_map, before, before_fields[field.name.as_str()])?;
+        let next = table_statements::column(dialect, after_map, after, field)?;
+        if previous.name != next.name {
             out.push(DdlStatement::AlterTable(AlterTableStatement::new(
                 &table_name,
-                AlterAction::RenameColumn { from, to },
+                AlterAction::RenameColumn {
+                    from: previous.name.clone(),
+                    to: next.name.clone(),
+                },
             )));
         }
-        if column_shape(previous) != column_shape(field) {
+        if (Column {
+            name: next.name.clone(),
+            ..previous
+        }) != next
+        {
             out.push(DdlStatement::AlterTable(AlterTableStatement::new(
                 &table_name,
-                AlterAction::AlterColumn(table_statements::column(dialect, after_map, after, field)?),
+                AlterAction::AlterColumn(next),
             )));
         }
     }
@@ -285,13 +291,6 @@ fn index_key(index: &DatasourceIndex) -> String {
 
 fn identity_of(table: &SqlTable) -> String {
     format!("{:?}:{}", table_identity(table), is_generated_identity(table))
-}
-
-fn column_shape(field: &SpecTypeField) -> String {
-    format!(
-        "{}:{:?}:{}:{:?}",
-        field.type_name, field.size, field.is_nullable, field.default_value
-    )
 }
 
 fn has_refs(field: &SpecTypeField) -> bool {

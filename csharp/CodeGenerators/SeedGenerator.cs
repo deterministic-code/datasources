@@ -87,7 +87,7 @@ public static class SeedGenerator
     {
         if (field.Type == "boolean")
             return SqlDialect.DriverOf(dialect).DefaultValueConverter.Convert("boolean", Truthy(value) ? "true" : "false") ?? "0";
-        if (field.Type is "number" or "reference") return Convert.ToString(value) ?? "NULL";
+        if (field.Type is "integer" or "reference") return Convert.ToString(value) ?? "NULL";
         return DefaultValueConverter.SqlStringLiteral(value);
     }
 

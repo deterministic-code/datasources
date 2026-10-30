@@ -316,7 +316,7 @@ describe("generate-sql collection fields", () => {
       inherits: set
       fields:
         - contact_id:
-            type: number
+            type: integer
             references: contact.id
         - city:
             type: string

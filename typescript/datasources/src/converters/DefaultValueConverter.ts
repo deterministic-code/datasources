@@ -14,8 +14,7 @@ export type DefaultEntry = SpecToken & {
 
 type DefaultToken = { token: string; arg?: string | boolean };
 
-const NUMERIC_LITERAL_TYPES = new Set([
-  "number",
+const NUMERIC_TYPES = [
   "integer",
   "unsignedinteger",
   "smallinteger",
@@ -24,8 +23,8 @@ const NUMERIC_LITERAL_TYPES = new Set([
   "unsignedbiginteger",
   "float",
   "decimal",
-  "reference",
-]);
+] as const;
+const NUMERIC_LITERAL_TYPES = new Set<string>([...NUMERIC_TYPES, "reference"]);
 
 const CALL_FORM = /^([A-Za-z]+)\('(.*)'\)$/;
 const quotedReverse = /^'(.*)'$/;
@@ -48,23 +47,10 @@ const token = (specToken: SpecToken, native: (arg: string) => string, reverse: R
   reverse,
 });
 
-const NUMERIC_TYPES = [
-  "number",
-  "integer",
-  "unsignedinteger",
-  "smallinteger",
-  "unsignedsmallinteger",
-  "biginteger",
-  "unsignedbiginteger",
-  "float",
-  "decimal",
-] as const;
-
 export class DefaultValueConverter {
   static readonly spec: Record<string, Record<string, SpecToken>> = {
     string: { String: { spec: /^.*$/, specText: identity } },
     character: { String: { spec: /^.+$/, specText: identity } },
-    number: { Numeric: intLit },
     integer: { Numeric: intLit },
     unsignedinteger: { Numeric: uintLit },
     smallinteger: { Numeric: intLit },

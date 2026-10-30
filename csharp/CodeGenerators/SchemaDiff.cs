@@ -87,14 +87,12 @@ public static class SchemaDiff
 
         foreach (var field in after.Fields.Where(field => beforeFields.ContainsKey(field.Name)))
         {
-            var previous = beforeFields[field.Name];
-            var from = TableStatements.Column(dialect, beforeMap, before, previous).Name;
-            var to = TableStatements.Column(dialect, afterMap, after, field).Name;
-            if (from != to)
-                yield return new AlterTableStatement(tableName, new AlterTableStatement.RenameColumn(from, to));
-            if (JsonSerializer.Serialize(ColumnShape(previous)) != JsonSerializer.Serialize(ColumnShape(field)))
-                yield return new AlterTableStatement(tableName, new AlterTableStatement.AlterColumn(
-                    TableStatements.Column(dialect, afterMap, after, field)));
+            var previous = TableStatements.Column(dialect, beforeMap, before, beforeFields[field.Name]);
+            var next = TableStatements.Column(dialect, afterMap, after, field);
+            if (previous.Name != next.Name)
+                yield return new AlterTableStatement(tableName, new AlterTableStatement.RenameColumn(previous.Name, next.Name));
+            if (previous with { Name = next.Name } != next)
+                yield return new AlterTableStatement(tableName, new AlterTableStatement.AlterColumn(next));
         }
 
         foreach (var field in after.Fields.Where(field => !beforeFields.ContainsKey(field.Name)))
@@ -135,8 +133,6 @@ public static class SchemaDiff
     static string IndexKey(DatasourceIndex index) => JsonSerializer.Serialize(new { index.Name, index.Fields, index.IsUnique });
 
     static object IdentityOf(SqlTable table) => new { Keys = SqlSchema.TableIdentity(table), Generated = SqlSchema.IsGeneratedIdentity(table) };
-
-    static object ColumnShape(SpecTypeField field) => new { field.Type, field.Size, field.IsNullable, field.DefaultValue };
 
     static string RefsOf(SpecTypeField field) => JsonSerializer.Serialize(field.ReferencePair ?? (object?)field.References);
 }

@@ -12,7 +12,6 @@ public sealed class SqliteDriver : IDriver
         {
             ["string"] = "TEXT",
             ["character"] = "TEXT",
-            ["number"] = "INTEGER",
             ["integer"] = "INTEGER",
             ["unsignedinteger"] = "INTEGER",
             ["smallinteger"] = "INTEGER",

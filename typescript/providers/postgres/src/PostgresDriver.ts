@@ -53,7 +53,6 @@ export class PostgresDriver implements IDriver {
     {
       string: "TEXT",
       character: "CHAR(1)",
-      number: "INTEGER",
       integer: "INTEGER",
       unsignedinteger: "BIGINT",
       smallinteger: "SMALLINT",

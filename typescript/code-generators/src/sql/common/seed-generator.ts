@@ -56,7 +56,7 @@ const renderValue = (
       ) ?? "0"
     );
   }
-  if (field.type === "number" || field.type === "reference") {
+  if (field.type === "integer" || field.type === "reference") {
     return String(value);
   }
   return sqlStringLiteral(value);

@@ -26,6 +26,25 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
             .Add(new()
             {
                 Entity = "ContactGroup",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactGroup"] = "contact_groups_bases" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["Name"] = "name",
+                    ["Description"] = "description",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
+                CreateProperties = ["Uuid", "Created", "Updated", "Version", "Name", "Description"],
+                UpdateProperties = ["Uuid", "Created", "Updated", "Version", "Name", "Description"],
+            })
+            .Add("sqlite", new()
+            {
+                Entity = "ContactGroup",
                 EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactGroup"] = "contact_groups" }),
                 PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
                 {

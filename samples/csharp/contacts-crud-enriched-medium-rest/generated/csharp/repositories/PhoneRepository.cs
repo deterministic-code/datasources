@@ -23,6 +23,27 @@ public sealed class PhoneRepository : CRUDRepository<Backend.Types.View.Phone>
             .Add(new()
             {
                 Entity = "Phone",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Phone"] = "phone_bases" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["ContactId"] = "contact_id",
+                    ["PhoneTypeId"] = "phone_type_id",
+                    ["Number"] = "number",
+                    ["Label"] = "label",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+                CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+                UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+            })
+            .Add("sqlite", new()
+            {
+                Entity = "Phone",
                 EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Phone"] = "phones" }),
                 PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
                 {

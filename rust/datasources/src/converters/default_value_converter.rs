@@ -85,8 +85,7 @@ fn parse(spec_type: &str, value: Option<&str>) -> (String, Option<String>) {
     }
     if matches!(
         spec_type,
-        "number"
-            | "integer"
+        "integer"
             | "unsignedinteger"
             | "smallinteger"
             | "unsignedsmallinteger"

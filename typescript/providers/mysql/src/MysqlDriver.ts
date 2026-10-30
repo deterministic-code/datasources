@@ -53,7 +53,6 @@ export class MysqlDriver implements IDriver {
     {
       string: "TEXT",
       character: "CHAR(1)",
-      number: "INT",
       integer: "INT",
       unsignedinteger: "INT UNSIGNED",
       smallinteger: "SMALLINT",

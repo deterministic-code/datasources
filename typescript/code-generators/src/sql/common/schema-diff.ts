@@ -46,13 +46,6 @@ const uniqueField = (table: LiveTable, field: TypeField): boolean =>
 
 const refsOf = (field: TypeField): string => JSON.stringify(field.references ?? null);
 
-const columnShape = (field: TypeField): unknown => [
-  field.type,
-  field.size ?? null,
-  field.isNullable,
-  field.defaultValue ?? null,
-];
-
 const identityOf = (table: LiveTable): unknown => [
   tableIdentity(table),
   isGeneratedIdentity(table),
@@ -168,19 +161,13 @@ const diffTable = (
   }
 
   for (const field of keptFields) {
-    const previous = beforeFields.get(field.name)!;
-    const from = columnOf(dialect, beforeMap, before, previous).name;
-    const to = columnOf(dialect, afterMap, after, field).name;
-    if (from !== to) {
-      out.push(new AlterTableStatement(tableName, { kind: "renameColumn", from, to }));
+    const previous = columnOf(dialect, beforeMap, before, beforeFields.get(field.name)!);
+    const next = columnOf(dialect, afterMap, after, field);
+    if (previous.name !== next.name) {
+      out.push(new AlterTableStatement(tableName, { kind: "renameColumn", from: previous.name, to: next.name }));
     }
-    if (!isDeepStrictEqual(columnShape(previous), columnShape(field))) {
-      out.push(
-        new AlterTableStatement(tableName, {
-          kind: "alterColumn",
-          column: columnOf(dialect, afterMap, after, field),
-        }),
-      );
+    if (!isDeepStrictEqual({ ...previous, name: next.name }, next)) {
+      out.push(new AlterTableStatement(tableName, { kind: "alterColumn", column: next }));
     }
   }
 

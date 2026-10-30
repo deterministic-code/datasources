@@ -25,7 +25,9 @@ impl RowTypeConverter {
     ) -> Self {
         let mut fields = HashMap::new();
         for (name, ty) in columns {
-            if let Some(converter) = catalog().remove(ty) {
+            if let Some(converter) = catalog().remove(ty).or_else(|| {
+                ty.ends_with("integer").then(|| catalog().remove("integer")).flatten()
+            }) {
                 fields.insert(name.clone(), converter);
             }
         }
@@ -119,7 +121,7 @@ mod tests {
                 "integer".into(),
                 Box::new(TextInt) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
             )]),
-            &HashMap::from([("id".into(), "integer".into())]),
+            &HashMap::from([("id".into(), "unsignedinteger".into())]),
         );
         assert_eq!(
             converter.convert(&record(&[("id", Value::from("9"))])).unwrap()["id"],
