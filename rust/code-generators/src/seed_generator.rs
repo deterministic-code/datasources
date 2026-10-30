@@ -164,7 +164,7 @@ fn render_value(dialect: &str, field: &SpecTypeField, value: &Value) -> Result<S
             .convert("boolean", if truthy(value) { "true" } else { "false" })?
             .unwrap_or_else(|| "0".into()));
     }
-    if field.type_name == "number" || field.type_name == "reference" {
+    if field.type_name == "integer" || field.type_name == "reference" {
         return Ok(spec::yaml_text(value));
     }
     Ok(DefaultValueConverter::sql_string_literal(spec::yaml_text(value)))

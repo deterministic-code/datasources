@@ -13,10 +13,18 @@ public sealed class RowTypeConverter : TypeConverter<Row, Row>
     {
         var fields = new Dictionary<string, TypeConverter<Value, Value>>();
         foreach (var (name, type) in columns)
-            if (converters.TryGetValue(type, out var converter))
+            if (FieldConverter(converters, type) is { } converter)
                 fields[name] = converter;
         return new(fields);
     }
+
+    static TypeConverter<Value, Value>? FieldConverter(
+        IReadOnlyDictionary<string, TypeConverter<Value, Value>> converters,
+        string type) =>
+        converters.TryGetValue(type, out var converter) ? converter
+        : type.EndsWith("integer", StringComparison.Ordinal) && converters.TryGetValue("integer", out converter)
+            ? converter
+            : null;
 
     public override Row Convert(Row from) => Apply(from, reverse: false);
 

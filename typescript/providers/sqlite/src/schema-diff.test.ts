@@ -68,6 +68,12 @@ describe("schemaDiff", () => {
     );
   });
 
+  it("skips alter when spec types compile to the same column", () => {
+    const before = table("user", [field("id", { isId: true }), field("age", { type: "integer" })]);
+    const after = table("user", [field("id", { isId: true }), field("age", { type: "unsignedinteger" })]);
+    assert.deepEqual(sql([before], [after]), []);
+  });
+
   it("throws when the primary key changes", () => {
     const before = table("user", [field("id", { isId: true }), field("email")]);
     const after = table("user", [field("email", { isId: true }), field("id")]);

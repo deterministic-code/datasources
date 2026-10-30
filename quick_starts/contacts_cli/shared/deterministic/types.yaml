@@ -206,10 +206,10 @@ types:
             size: unlimited
             default_value: ""
         - latitude:
-            type: number
+            type: integer
             is_nullable: true
         - longitude:
-            type: number
+            type: integer
             is_nullable: true
         - is_primary:
             type: boolean

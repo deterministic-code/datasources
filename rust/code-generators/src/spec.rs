@@ -122,7 +122,6 @@ pub fn files_for(files: &HashMap<String, String>, dialect: &str) -> HashMap<Stri
 const PRIMITIVES: &[&str] = &[
     "string",
     "character",
-    "number",
     "integer",
     "unsignedinteger",
     "biginteger",

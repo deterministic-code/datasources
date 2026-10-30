@@ -1,13 +1,13 @@
 // schema-version: 1.0
 /** Type ContactPreferences. */
-export interface ContactPreferences {
-  id: number;
-  uuid: string;
-  created: Date;
-  updated: Date;
-  version: string;
-  contactId: number;
-  key: string;
-  locale: string;
-  timezone: string;
+export class ContactPreferences {
+  id!: number;
+  uuid: string = crypto.randomUUID();
+  created: Date = new Date();
+  updated: Date = new Date();
+  version: string = Buffer.from([0]).toString("base64");
+  contactId!: number;
+  key!: string;
+  locale!: string;
+  timezone!: string;
 }

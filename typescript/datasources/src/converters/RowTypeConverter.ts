@@ -12,7 +12,7 @@ export class RowTypeConverter extends TypeConverter<Cells, Cells> {
   ): RowTypeConverter {
     const fields: Record<string, TypeConverter<Cell, Cell>> = {};
     for (const [name, type] of Object.entries(columns)) {
-      const converter = converters[type];
+      const converter = converters[type] ?? (type.endsWith("integer") ? converters.integer : undefined);
       if (converter) fields[name] = converter;
     }
     return new RowTypeConverter(fields);

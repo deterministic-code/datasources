@@ -43,6 +43,28 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
             .Add(new()
             {
                 Entity = "Contact",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts_bases" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["ContactSourceId"] = "contact_source_id",
+                    ["FirstName"] = "first_name",
+                    ["LastName"] = "last_name",
+                    ["Email"] = "email",
+                    ["Notes"] = "notes",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+            })
+            .Add("sqlite", new()
+            {
+                Entity = "Contact",
                 EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Contact"] = "contacts" }),
                 PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
                 {

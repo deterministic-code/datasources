@@ -13,12 +13,6 @@ internal static class SqliteRowTypeConverters
             ["decimal"] = new DecimalConverter(),
             ["binary"] = new BinaryConverter(),
             ["integer"] = new IntegerConverter(),
-            ["number"] = new IntegerConverter(),
-            ["unsignedinteger"] = new IntegerConverter(),
-            ["smallinteger"] = new IntegerConverter(),
-            ["unsignedsmallinteger"] = new IntegerConverter(),
-            ["biginteger"] = new IntegerConverter(),
-            ["unsignedbiginteger"] = new IntegerConverter(),
         };
 
     public static Value Reverse(Value value) => value switch

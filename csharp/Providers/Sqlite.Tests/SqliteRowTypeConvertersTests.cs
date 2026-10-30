@@ -10,9 +10,7 @@ public class SqliteRowTypeConvertersTests
         var types = new SqliteDriver().RowTypeConverters;
         Assert.Equal(
             [
-                "boolean", "datetime", "uuid", "decimal", "binary", "integer", "number",
-                "unsignedinteger", "smallinteger", "unsignedsmallinteger", "biginteger",
-                "unsignedbiginteger",
+                "boolean", "datetime", "uuid", "decimal", "binary", "integer",
             ],
             types.Keys);
     }

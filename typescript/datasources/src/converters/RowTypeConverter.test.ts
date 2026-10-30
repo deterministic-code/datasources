@@ -84,5 +84,7 @@ describe("RowTypeConverter", () => {
     const converter = RowTypeConverter.from({ boolean: flag }, { on: "boolean", missing: "nope" });
     expect(converter.convert({ on: 1, name: "a" })).toEqual({ on: true, name: "a" });
     expect(converter.reverseConvert({ on: true, name: "a" })).toEqual({ on: true, name: "a" });
+    const ages = RowTypeConverter.from({ integer: flag }, { age: "unsignedinteger" });
+    expect(ages.convert({ age: 1 })).toEqual({ age: true });
   });
 });

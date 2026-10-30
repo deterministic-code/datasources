@@ -13,12 +13,6 @@ export const SqliteRowTypeConverters: Record<string, TypeConverter<Cell, Cell>> 
   decimal: new DecimalConverter(),
   binary: new BinaryConverter(),
   integer: new IntegerConverter(),
-  number: new IntegerConverter(),
-  unsignedinteger: new IntegerConverter(),
-  smallinteger: new IntegerConverter(),
-  unsignedsmallinteger: new IntegerConverter(),
-  biginteger: new IntegerConverter(),
-  unsignedbiginteger: new IntegerConverter(),
 };
 
 export const reverse = (value: Cell): Cell =>

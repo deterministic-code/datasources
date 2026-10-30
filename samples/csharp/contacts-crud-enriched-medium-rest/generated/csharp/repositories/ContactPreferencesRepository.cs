@@ -27,6 +27,27 @@ public sealed class ContactPreferencesRepository : CRUDRepository<Backend.Types.
                 }),
                 Ids = ["Id"],
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
+                CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
+                UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
+            })
+            .Add("sqlite", new()
+            {
+                Entity = "ContactPreferences",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["ContactPreferences"] = "contact_preferences" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["ContactId"] = "contact_id",
+                    ["Key"] = "key",
+                    ["Locale"] = "locale",
+                    ["Timezone"] = "timezone",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 CreateProperties = ["Uuid", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Locale", "Timezone"],
             })

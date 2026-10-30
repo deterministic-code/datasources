@@ -33,7 +33,7 @@ const decimalPrecisionScale = (field: SpecField): [number, number] | null => {
 
 export class DeterministicTypeConverter implements IMapping<string, string> {
   readonly dictionary: Record<string, string>;
-  readonly #reverse: Map<string, string[]>;
+  readonly #reverse: Map<string, string>;
   readonly #rules: SpecFieldRules;
 
   constructor(dictionary: Record<string, string>, rules: SpecFieldRules) {
@@ -41,9 +41,7 @@ export class DeterministicTypeConverter implements IMapping<string, string> {
     this.#rules = rules;
     this.#reverse = new Map();
     for (const [specType, native] of Object.entries(dictionary)) {
-      const existing = this.#reverse.get(native);
-      if (existing === undefined) this.#reverse.set(native, [specType]);
-      else existing.push(specType);
+      if (!this.#reverse.has(native)) this.#reverse.set(native, specType);
     }
   }
 
@@ -83,11 +81,8 @@ export class DeterministicTypeConverter implements IMapping<string, string> {
   }
 
   reverseConvert = (native: string): string => {
-    const specTypes = this.#reverse.get(native);
-    if (specTypes === undefined) throw new Error(`Unknown native field type: ${native}`);
-    if (specTypes.length > 1) {
-      throw new Error(`Native field type ${native} maps to multiple spec types: ${specTypes.join(", ")}`);
-    }
-    return specTypes[0]!;
+    const spec = this.#reverse.get(native);
+    if (spec === undefined) throw new Error(`Unknown native field type: ${native}`);
+    return spec;
   };
 }

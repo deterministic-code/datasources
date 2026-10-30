@@ -17,5 +17,10 @@ public class DeterministicTypeConverterTests
             });
         Assert.Equal("TEXT", sqlite.Convert("string"));
         Assert.Equal("VARCHAR(64)", sqlite.Convert(new SpecField { Type = "string", Size = 64 }));
+        Assert.Equal("string", sqlite.ReverseConvert("TEXT"));
+        var first = new DeterministicTypeConverter(
+            new Dictionary<string, string> { ["integer"] = "INT", ["unsignedinteger"] = "INT" },
+            new SpecFieldRules { StringUnlimited = "TEXT", StringSized = n => $"VARCHAR({n})" });
+        Assert.Equal("integer", first.ReverseConvert("INT"));
     }
 }

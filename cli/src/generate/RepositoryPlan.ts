@@ -140,7 +140,7 @@ const concurrencyToken = (
   return {
     property: property(token.name),
     increment: tableType.fields.some((field) =>
-      field.name === token.name && ["integer", "number"].includes((field as { type?: string }).type as string),
+      field.name === token.name && (field as { type?: string }).type === "integer",
     ),
   };
 };

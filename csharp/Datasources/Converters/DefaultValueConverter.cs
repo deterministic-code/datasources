@@ -7,16 +7,12 @@ public sealed class DefaultValueConverter
     public const string EmptyUuid = "00000000-0000-0000-0000-000000000000";
     static readonly Regex CallForm = new(@"^([A-Za-z]+)\('(.*)'\)$", RegexOptions.Compiled);
     static readonly Regex QuotedReverse = new(@"^'(.*)'$", RegexOptions.Compiled);
-    static readonly HashSet<string> NumericLiteralTypes =
-    [
-        "number", "integer", "unsignedinteger", "smallinteger", "unsignedsmallinteger",
-        "biginteger", "unsignedbiginteger", "float", "decimal", "reference",
-    ];
     static readonly string[] NumericTypes =
     [
-        "number", "integer", "unsignedinteger", "smallinteger", "unsignedsmallinteger",
+        "integer", "unsignedinteger", "smallinteger", "unsignedsmallinteger",
         "biginteger", "unsignedbiginteger", "float", "decimal",
     ];
+    static readonly HashSet<string> NumericLiteralTypes = [.. NumericTypes, "reference"];
 
     public static string SqlStringLiteral(object? value) =>
         $"'{System.Convert.ToString(value)?.Replace("'", "''", StringComparison.Ordinal)}'";
