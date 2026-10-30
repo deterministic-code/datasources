@@ -135,6 +135,7 @@ describe("versioned migrations", () => {
         "0002_up.sql",
         "0003_up.sql",
         "0004_up.sql",
+        "0005_up.sql",
       ]);
       const staged = join(out, "staged");
       const apply = (n: number) => {

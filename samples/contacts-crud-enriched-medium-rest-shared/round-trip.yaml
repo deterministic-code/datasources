@@ -12,14 +12,19 @@ steps:
       firstName: Ada
       lastName: Lovelace
       email: ada@example.com
+      notes: poet
       contactSourceName: Manual
       addresses:
         - line1: 12 Analytical Engine
+          line2: Room 12
           city: London
+          region: England
+          postalCode: "SW1A 1AA"
+          country: GB
           addressTypeName: Home
         - line1: 1 Strand
           city: London
-          addressTypeName: Home
+          addressTypeName: Work
       phones:
         - number: "555-0100"
           label: Mobile
@@ -77,13 +82,17 @@ steps:
     body:
       firstName: Ada
       lastName: Byron
-      email: null
+      email: ""
+      notes: ""
       contactSourceName: Manual
       addresses:
         - id: $homeAddressId
           line1: 12 Analytical Engine
+          line2: ""
           city: Cambridge
-          addressTypeName: Home
+          region: ""
+          country: FR
+          addressTypeName: Work
         - line1: 10 Downing
           city: London
           addressTypeName: Home
@@ -191,6 +200,7 @@ steps:
       groupId: id
     body:
       name: Coverage
+      description: Coverage group
       members:
         - id: $graceId
         - id: $sparseId
@@ -202,6 +212,7 @@ steps:
       status: 200
       body:
         - name: Coverage
+          description: Coverage group
           members:
             - firstName: Grace
             - firstName: Sparse
@@ -343,6 +354,99 @@ steps:
         - name: Coverage
           members:
             - firstName: Grace
+  - method: POST
+    path: /contacts/
+    save:
+      outlierId: id
+      outlierAddressId: addresses.0.id
+    body:
+      firstName: Outlier
+      lastName: Types
+      contactSourceName: Manual
+      addresses:
+        - line1: 1 Null Lane
+          city: London
+          addressTypeName: Home
+    expect:
+      status: 201
+      body:
+        firstName: Outlier
+        addresses:
+          - latitude: null
+            labelNote: null
+            floor: null
+            score: null
+            externalId: null
+            isVerified: null
+            verifiedAt: null
+            stamp: null
+  - method: PUT
+    path: /contacts/?id=$outlierId
+    body:
+      firstName: Outlier
+      lastName: Types
+      contactSourceName: Manual
+      addresses:
+        - id: $outlierAddressId
+          line1: 1 Null Lane
+          city: London
+          addressTypeName: Home
+          latitude: 51
+          labelNote: side
+          floor: 2
+          score: "10.5"
+          externalId: "550e8400-e29b-41d4-a716-446655440000"
+          isVerified: true
+          verifiedAt: "2020-01-02T03:04:05.000Z"
+          stamp: AQ==
+  - method: GET
+    path: /contacts/?id=$outlierId
+    expect:
+      status: 200
+      body:
+        - firstName: Outlier
+          addresses:
+            - latitude: 51
+              labelNote: side
+              floor: 2
+              score: "10.5"
+              externalId: "550e8400-e29b-41d4-a716-446655440000"
+              isVerified: true
+              verifiedAt: "2020-01-02T03:04:05.000Z"
+              stamp: AQ==
+  - method: PUT
+    path: /contacts/?id=$outlierId
+    body:
+      firstName: Outlier
+      lastName: Types
+      contactSourceName: Manual
+      addresses:
+        - id: $outlierAddressId
+          line1: 1 Null Lane
+          city: London
+          addressTypeName: Home
+          latitude: 0
+          labelNote: ""
+          floor: 0
+          score: "0"
+          externalId: null
+          isVerified: false
+          verifiedAt: null
+          stamp: null
+  - method: GET
+    path: /contacts/?id=$outlierId
+    expect:
+      status: 200
+      body:
+        - firstName: Outlier
+          addresses:
+            - latitude: 0
+              labelNote: ""
+              floor: 0
+              score: "0"
+              isVerified: false
+              verifiedAt: null
+              stamp: null
   - method: POST
     path: /legacy_contacts/
     body:

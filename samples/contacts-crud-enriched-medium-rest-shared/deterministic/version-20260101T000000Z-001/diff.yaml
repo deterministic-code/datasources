@@ -418,7 +418,7 @@ types.yaml:
             - occurred_at:
                 type: datetime
             - contact_id:
-                type: number
+                type: integer
             - changed_by:
                 type: string
                 size: 128
@@ -436,17 +436,17 @@ types.yaml:
       - import_contacts_result:
           fields:
             - imported_count:
-                type: number
+                type: integer
             - skipped_count:
-                type: number
+                type: integer
             - failed_count:
-                type: number
+                type: integer
       - legacy_migration_result:
           fields:
             - migrated_count:
-                type: number
+                type: integer
             - skipped_count:
-                type: number
+                type: integer
             - completed_at:
                 type: datetime
                 is_nullable: true

@@ -181,7 +181,7 @@ async fn round_trips_contacts_and_legacy_contacts() {
             "POST",
             "/contacts/",
             Some(
-                r#"{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.com","contact_source_name":"Manual","addresses":[{"line1":"12 Analytical Engine","city":"London","address_type_name":"Home"},{"line1":"1 Strand","city":"London","address_type_name":"Home"}],"phones":[{"number":"555-0100","label":"Mobile","phone_type_name":"Mobile"},{"number":"555-0199","label":"Work","phone_type_name":"Mobile"}],"settings":{"theme":"dark","density":"comfortable"},"prefs":{"home":{"locale":"en-GB","timezone":"Europe/London"},"travel":{"locale":"en-US","timezone":"America/New_York"}}}"#,
+                r#"{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.com","notes":"poet","contact_source_name":"Manual","addresses":[{"line1":"12 Analytical Engine","line2":"Room 12","city":"London","region":"England","postal_code":"SW1A 1AA","country":"GB","address_type_name":"Home"},{"line1":"1 Strand","city":"London","address_type_name":"Work"}],"phones":[{"number":"555-0100","label":"Mobile","phone_type_name":"Mobile"},{"number":"555-0199","label":"Work","phone_type_name":"Mobile"}],"settings":{"theme":"dark","density":"comfortable"},"prefs":{"home":{"locale":"en-GB","timezone":"Europe/London"},"travel":{"locale":"en-US","timezone":"America/New_York"}}}"#,
             ),
         )
         .await
@@ -193,7 +193,11 @@ async fn round_trips_contacts_and_legacy_contacts() {
     assert_eq!(saved["contact_source_name"], "Manual");
     assert_eq!(saved["addresses"].as_array().unwrap().len(), 2);
     assert_eq!(by(&saved["addresses"], "line1", "12 Analytical Engine")["city"], "London");
-    assert_eq!(by(&saved["addresses"], "line1", "1 Strand")["address_type_name"], "Home");
+    assert_eq!(by(&saved["addresses"], "line1", "12 Analytical Engine")["line2"], "Room 12");
+    assert_eq!(by(&saved["addresses"], "line1", "12 Analytical Engine")["region"], "England");
+    assert_eq!(by(&saved["addresses"], "line1", "12 Analytical Engine")["postal_code"], "SW1A 1AA");
+    assert_eq!(by(&saved["addresses"], "line1", "12 Analytical Engine")["country"], "GB");
+    assert_eq!(by(&saved["addresses"], "line1", "1 Strand")["address_type_name"], "Work");
     assert_eq!(saved["phones"].as_array().unwrap().len(), 2);
     assert_eq!(by(&saved["phones"], "number", "555-0100")["phone_type_name"], "Mobile");
     assert_eq!(by(&saved["phones"], "number", "555-0199")["label"], "Work");
@@ -233,7 +237,7 @@ async fn round_trips_contacts_and_legacy_contacts() {
             "PUT",
             &format!("/contacts/?id={id}"),
             Some(&format!(
-                r#"{{"first_name":"Ada","last_name":"Byron","email":null,"contact_source_name":"Manual","addresses":[{{"id":{home_address_id},"line1":"12 Analytical Engine","city":"Cambridge","address_type_name":"Home"}},{{"line1":"10 Downing","city":"London","address_type_name":"Home"}}],"phones":[{{"id":{mobile_phone_id},"number":"555-0101","label":"Mobile","phone_type_name":"Mobile"}},{{"number":"555-0200","label":"Office","phone_type_name":"Mobile"}}],"settings":{{"theme":"light","locale":"en"}},"prefs":{{"home":{{"locale":"en-GB","timezone":"Europe/Paris"}},"work":{{"locale":"en-US","timezone":"America/New_York"}}}}}}"#
+                r#"{{"first_name":"Ada","last_name":"Byron","email":"","notes":"","contact_source_name":"Manual","addresses":[{{"id":{home_address_id},"line1":"12 Analytical Engine","line2":"","city":"Cambridge","region":"","country":"FR","address_type_name":"Work"}},{{"line1":"10 Downing","city":"London","address_type_name":"Home"}}],"phones":[{{"id":{mobile_phone_id},"number":"555-0101","label":"Mobile","phone_type_name":"Mobile"}},{{"number":"555-0200","label":"Office","phone_type_name":"Mobile"}}],"settings":{{"theme":"light","locale":"en"}},"prefs":{{"home":{{"locale":"en-GB","timezone":"Europe/Paris"}},"work":{{"locale":"en-US","timezone":"America/New_York"}}}}}}"#
             )),
         )
         .await
@@ -243,6 +247,10 @@ async fn round_trips_contacts_and_legacy_contacts() {
     assert_eq!(changed["last_name"], "Byron");
     assert_eq!(changed["addresses"].as_array().unwrap().len(), 2);
     assert_eq!(by(&changed["addresses"], "line1", "12 Analytical Engine")["city"], "Cambridge");
+    assert_eq!(by(&changed["addresses"], "line1", "12 Analytical Engine")["line2"], "");
+    assert_eq!(by(&changed["addresses"], "line1", "12 Analytical Engine")["region"], "");
+    assert_eq!(by(&changed["addresses"], "line1", "12 Analytical Engine")["country"], "FR");
+    assert_eq!(by(&changed["addresses"], "line1", "12 Analytical Engine")["address_type_name"], "Work");
     assert_eq!(by(&changed["addresses"], "line1", "10 Downing")["city"], "London");
     assert!(changed["addresses"].as_array().unwrap().iter().all(|row| row["line1"] != "1 Strand"));
     assert_eq!(changed["phones"].as_array().unwrap().len(), 2);
@@ -270,6 +278,66 @@ async fn round_trips_contacts_and_legacy_contacts() {
     assert_eq!(filtered.len(), 1);
     assert_eq!(filtered[0]["addresses"].as_array().unwrap().len(), 2);
     assert_eq!(filtered[0]["settings"]["theme"], "light");
+    let omitted = api
+        .handle(
+            "POST",
+            "/contacts/",
+            Some(r#"{"first_name":"Outlier","last_name":"Types","contact_source_name":"Manual","addresses":[{"line1":"1 Null Lane","city":"London","address_type_name":"Home"}]}"#),
+        )
+        .await
+        .unwrap();
+    assert_eq!(omitted.status, 201);
+    let blank: Value = serde_json::from_str(&omitted.body).unwrap();
+    let blank_address = &blank["addresses"][0];
+    assert!(blank_address["latitude"].is_null());
+    assert!(blank_address["label_note"].is_null());
+    assert!(blank_address["floor"].is_null());
+    assert!(blank_address["score"].is_null());
+    assert!(blank_address["external_id"].is_null());
+    assert!(blank_address["is_verified"].is_null());
+    assert!(blank_address["verified_at"].is_null());
+    assert!(blank_address["stamp"].is_null());
+    let outlier_id = blank["id"].as_i64().unwrap();
+    let outlier_address_id = blank_address["id"].as_i64().unwrap();
+    let filled = api
+        .handle(
+            "PUT",
+            &format!("/contacts/?id={outlier_id}"),
+            Some(&format!(
+                r#"{{"first_name":"Outlier","last_name":"Types","contact_source_name":"Manual","addresses":[{{"id":{outlier_address_id},"line1":"1 Null Lane","city":"London","address_type_name":"Home","latitude":51,"label_note":"side","floor":2,"score":"10.5","external_id":"550e8400-e29b-41d4-a716-446655440000","is_verified":true,"verified_at":"2020-01-02T03:04:05.000Z","stamp":"AQ=="}}]}}"#
+            )),
+        )
+        .await
+        .unwrap();
+    assert_eq!(filled.status, 200);
+    let valued = &serde_json::from_str::<Value>(&filled.body).unwrap()["addresses"][0];
+    assert_eq!(valued["latitude"], 51);
+    assert_eq!(valued["label_note"], "side");
+    assert_eq!(valued["floor"], 2);
+    assert_eq!(valued["score"], "10.5");
+    assert_eq!(valued["external_id"], "550e8400-e29b-41d4-a716-446655440000");
+    assert_eq!(valued["is_verified"], true);
+    assert_eq!(valued["verified_at"], "2020-01-02T03:04:05.000Z");
+    assert_eq!(valued["stamp"], "AQ==");
+    let cleared = api
+        .handle(
+            "PUT",
+            &format!("/contacts/?id={outlier_id}"),
+            Some(&format!(
+                r#"{{"first_name":"Outlier","last_name":"Types","contact_source_name":"Manual","addresses":[{{"id":{outlier_address_id},"line1":"1 Null Lane","city":"London","address_type_name":"Home","latitude":0,"label_note":"","floor":0,"score":"0","external_id":null,"is_verified":false,"verified_at":null,"stamp":null}}]}}"#
+            )),
+        )
+        .await
+        .unwrap();
+    assert_eq!(cleared.status, 200);
+    let zeroed = &serde_json::from_str::<Value>(&cleared.body).unwrap()["addresses"][0];
+    assert_eq!(zeroed["latitude"], 0);
+    assert_eq!(zeroed["label_note"], "");
+    assert_eq!(zeroed["floor"], 0);
+    assert_eq!(zeroed["score"], "0");
+    assert_eq!(zeroed["is_verified"], false);
+    assert!(zeroed["verified_at"].is_null());
+    assert!(zeroed["stamp"].is_null());
     assert_eq!(
         api.handle("DELETE", &format!("/contacts/?id={id}"), None)
             .await
@@ -281,11 +349,11 @@ async fn round_trips_contacts_and_legacy_contacts() {
         &api.handle("get", "/contacts/", None).await.unwrap().body,
     )
     .unwrap();
-    assert_eq!(remaining.len(), 1);
-    assert_eq!(remaining[0]["first_name"], "Grace");
-    assert_eq!(remaining[0]["addresses"].as_array().unwrap().len(), 2);
-    assert_eq!(remaining[0]["settings"]["imported"], "yes");
-    assert_eq!(remaining[0]["settings"]["source"], "csv");
+    assert_eq!(remaining.len(), 2);
+    let grace_left = remaining.iter().find(|row| row["first_name"] == "Grace").unwrap();
+    assert_eq!(grace_left["addresses"].as_array().unwrap().len(), 2);
+    assert_eq!(grace_left["settings"]["imported"], "yes");
+    assert_eq!(grace_left["settings"]["source"], "csv");
     let legacy = api
         .handle(
             "POST",

@@ -84,10 +84,11 @@ describe("api e2e", () => {
         firstName: "Ada",
         lastName: "Lovelace",
         email: "ada@example.com",
+        notes: "poet",
         contactSourceName: "Manual",
         addresses: [
-          { line1: "12 Analytical Engine", city: "London", addressTypeName: "Home" },
-          { line1: "1 Strand", city: "London", addressTypeName: "Home" },
+          { line1: "12 Analytical Engine", line2: "Room 12", city: "London", region: "England", postalCode: "SW1A 1AA", country: "GB", addressTypeName: "Home" },
+          { line1: "1 Strand", city: "London", addressTypeName: "Work" },
         ],
         phones: [
           { number: "555-0100", label: "Mobile", phoneTypeName: "Mobile" },
@@ -100,7 +101,24 @@ describe("api e2e", () => {
         },
       }));
       expect(created.status).toBe(201);
-      type Address = { id: number; line1: string; city: string; addressTypeName: string };
+      type Address = {
+        id: number;
+        line1: string;
+        line2?: string | null;
+        city: string;
+        region?: string | null;
+        postalCode?: string | null;
+        country?: string | null;
+        addressTypeName: string;
+        latitude?: number | null;
+        labelNote?: string | null;
+        floor?: number | null;
+        score?: string | null;
+        externalId?: string | null;
+        isVerified?: boolean | null;
+        verifiedAt?: string | null;
+        stamp?: string | null;
+      };
       type Phone = { id: number; number: string; label?: string; phoneTypeName: string };
       type Contact = {
         id: number;
@@ -114,6 +132,14 @@ describe("api e2e", () => {
       };
       const saved = JSON.parse(created.body) as Contact;
       expect(saved.firstName).toBe("Ada");
+      const home = saved.addresses.find((row) => row.line1 === "12 Analytical Engine")!;
+      const work = saved.addresses.find((row) => row.line1 === "1 Strand")!;
+      expect(home.line2).toBe("Room 12");
+      expect(home.region).toBe("England");
+      expect(home.postalCode).toBe("SW1A 1AA");
+      expect(home.country).toBe("GB");
+      expect(home.addressTypeName).toBe("Home");
+      expect(work.addressTypeName).toBe("Work");
       await api.handle("POST", "/contacts", JSON.stringify({
         firstName: "Grace",
         lastName: "Hopper",
@@ -135,10 +161,11 @@ describe("api e2e", () => {
       const updated = await api.handle("PUT", `/contacts/?id=${saved.id}`, JSON.stringify({
         firstName: "Ada",
         lastName: "Byron",
-        email: null,
+        email: "",
+        notes: "",
         contactSourceName: "Manual",
         addresses: [
-          { id: saved.addresses.find((row) => row.line1 === "12 Analytical Engine")!.id, line1: "12 Analytical Engine", city: "Cambridge", addressTypeName: "Home" },
+          { id: home.id, line1: "12 Analytical Engine", line2: "", city: "Cambridge", region: "", country: "FR", addressTypeName: "Work" },
           { line1: "10 Downing", city: "London", addressTypeName: "Home" },
         ],
         phones: [
@@ -152,6 +179,86 @@ describe("api e2e", () => {
         },
       }));
       expect(updated.status).toBe(200);
+      const changed = JSON.parse(updated.body) as Contact;
+      const moved = changed.addresses.find((row) => row.line1 === "12 Analytical Engine")!;
+      expect(moved.line2).toBe("");
+      expect(moved.region).toBe("");
+      expect(moved.country).toBe("FR");
+      expect(moved.addressTypeName).toBe("Work");
+      const omitted = await api.handle("POST", "/contacts/", JSON.stringify({
+        firstName: "Outlier",
+        lastName: "Types",
+        contactSourceName: "Manual",
+        addresses: [{ line1: "1 Null Lane", city: "London", addressTypeName: "Home" }],
+      }));
+      expect(omitted.status).toBe(201);
+      const blank = JSON.parse(omitted.body) as Contact;
+      const blankAddress = blank.addresses[0]!;
+      expect(blankAddress.latitude).toBeNull();
+      expect(blankAddress.labelNote).toBeNull();
+      expect(blankAddress.floor).toBeNull();
+      expect(blankAddress.score).toBeNull();
+      expect(blankAddress.externalId).toBeNull();
+      expect(blankAddress.isVerified).toBeNull();
+      expect(blankAddress.verifiedAt).toBeNull();
+      expect(blankAddress.stamp).toBeNull();
+      const filled = await api.handle("PUT", `/contacts/?id=${blank.id}`, JSON.stringify({
+        firstName: "Outlier",
+        lastName: "Types",
+        contactSourceName: "Manual",
+        addresses: [{
+          id: blankAddress.id,
+          line1: "1 Null Lane",
+          city: "London",
+          addressTypeName: "Home",
+          latitude: 51,
+          labelNote: "side",
+          floor: 2,
+          score: "10.5",
+          externalId: "550e8400-e29b-41d4-a716-446655440000",
+          isVerified: true,
+          verifiedAt: "2020-01-02T03:04:05.000Z",
+          stamp: "AQ==",
+        }],
+      }));
+      expect(filled.status).toBe(200);
+      const valued = (JSON.parse(filled.body) as Contact).addresses[0]!;
+      expect(valued.latitude).toBe(51);
+      expect(valued.labelNote).toBe("side");
+      expect(valued.floor).toBe(2);
+      expect(valued.score).toBe("10.5");
+      expect(valued.externalId).toBe("550e8400-e29b-41d4-a716-446655440000");
+      expect(valued.isVerified).toBe(true);
+      expect(valued.verifiedAt).toBe("2020-01-02T03:04:05.000Z");
+      expect(valued.stamp).toBe("AQ==");
+      const cleared = await api.handle("PUT", `/contacts/?id=${blank.id}`, JSON.stringify({
+        firstName: "Outlier",
+        lastName: "Types",
+        contactSourceName: "Manual",
+        addresses: [{
+          id: blankAddress.id,
+          line1: "1 Null Lane",
+          city: "London",
+          addressTypeName: "Home",
+          latitude: 0,
+          labelNote: "",
+          floor: 0,
+          score: "0",
+          externalId: null,
+          isVerified: false,
+          verifiedAt: null,
+          stamp: null,
+        }],
+      }));
+      expect(cleared.status).toBe(200);
+      const zeroed = (JSON.parse(cleared.body) as Contact).addresses[0]!;
+      expect(zeroed.latitude).toBe(0);
+      expect(zeroed.labelNote).toBe("");
+      expect(zeroed.floor).toBe(0);
+      expect(zeroed.score).toBe("0");
+      expect(zeroed.isVerified).toBe(false);
+      expect(zeroed.verifiedAt).toBeNull();
+      expect(zeroed.stamp).toBeNull();
       expect((await api.handle("DELETE", `/contacts/?id=${saved.id}`, undefined)).status).toBe(204);
       expect((await api.handle("POST", "/legacy_contacts/", JSON.stringify({
         key: "ada",

@@ -12,10 +12,30 @@ const repo = resolve(sample, "../../..");
 const spec = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/deterministic");
 const cli = join(repo, "cli/bin/datasources.mjs");
 
-type Contact = { id: number; firstName: string };
+type Address = {
+  id: number;
+  line1: string;
+  line2?: string | null;
+  addressTypeName: string;
+  country?: string | null;
+  latitude?: number | null;
+  labelNote?: string | null;
+  floor?: number | null;
+  score?: string | null;
+  isVerified?: boolean | null;
+};
+type Contact = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  addresses: Address[];
+  phones: { id: number; number: string }[];
+};
 type ContactRepo = {
-  create: (row: Record<string, string | number | object>) => Promise<Contact>;
+  create: (row: Record<string, string | number | object | null>) => Promise<Contact>;
+  update: (row: Record<string, string | number | object | null>) => Promise<unknown>;
   readSingle: (query: object) => Promise<Contact | undefined>;
+  delete: (row: Contact) => Promise<unknown>;
 };
 
 describe("generate-and-register", () => {
@@ -51,17 +71,114 @@ describe("generate-and-register", () => {
       const created = await ds.contacts.create({
         firstName: "Ada",
         lastName: "Lovelace",
-        contactSourceId: 1,
+        notes: "poet",
+        email: "ada@example.com",
+        contactSourceName: "Manual",
         uuid: "00000000-0000-0000-0000-000000000001",
         version: "AA==",
-        addresses: [],
+        addresses: [
+          { addressTypeName: "Home", line1: "12 Analytical Engine", line2: "Room 12", city: "London", region: "England", postalCode: "SW1A 1AA", country: "GB" },
+          { addressTypeName: "Work", line1: "1 Strand", city: "London" },
+        ],
+        phones: [{ phoneTypeName: "Mobile", number: "555-0100" }],
+        settings: { theme: "dark" },
+        prefs: { home: { locale: "en-GB", timezone: "Europe/London" } },
+      });
+      expect(created.firstName).toBe("Ada");
+      expect(created.addresses).toHaveLength(2);
+      expect(created.addresses[0]?.line2).toBe("Room 12");
+      expect(created.addresses[0]?.latitude ?? null).toBeNull();
+      const loaded = await ds.contacts.readSingle(new Where(new Operator.Equals("id", created.id)));
+      expect(loaded?.firstName).toBe("Ada");
+      expect(loaded?.addresses).toHaveLength(2);
+      await ds.contacts.update({
+        id: created.id,
+        firstName: "Ada Byron",
+        lastName: created.lastName,
+        contactSourceName: "Manual",
+        uuid: "00000000-0000-0000-0000-000000000001",
+        version: "AA==",
+        addresses: [
+          { id: created.addresses[0]!.id, addressTypeName: "Work", line1: "12 Analytical Engine", line2: "", city: "Cambridge", region: "", country: "FR" },
+          { addressTypeName: "Home", line1: "1 College", city: "Cambridge", country: "GB" },
+        ],
+        phones: [{ id: created.phones[0]!.id, phoneTypeName: "Mobile", number: "555-0111" }],
+        settings: { theme: "sepia" },
+        prefs: { home: { locale: "en-GB", timezone: "Europe/London" } },
+      });
+      const after = await ds.contacts.readSingle(new Where(new Operator.Equals("id", created.id)));
+      expect(after?.firstName).toBe("Ada Byron");
+      expect(after?.addresses.find((row) => row.line1 === "12 Analytical Engine")?.addressTypeName).toBe("Work");
+      const omitted = await ds.contacts.create({
+        firstName: "Outlier",
+        lastName: "Types",
+        contactSourceName: "Manual",
+        uuid: "00000000-0000-0000-0000-000000000003",
+        version: "AA==",
+        addresses: [{ addressTypeName: "Home", line1: "1 Null Lane", city: "London" }],
         phones: [],
         settings: {},
         prefs: {},
       });
-      expect(created.firstName).toBe("Ada");
-      const loaded = await ds.contacts.readSingle(new Where(new Operator.Equals("id", created.id)));
-      expect(loaded?.firstName).toBe("Ada");
+      expect(omitted.addresses[0]?.latitude ?? null).toBeNull();
+      await ds.contacts.update({
+        id: omitted.id,
+        firstName: "Outlier",
+        lastName: "Types",
+        contactSourceName: "Manual",
+        uuid: "00000000-0000-0000-0000-000000000003",
+        version: "AA==",
+        addresses: [{
+          id: omitted.addresses[0]!.id,
+          addressTypeName: "Home",
+          line1: "1 Null Lane",
+          city: "London",
+          latitude: 51,
+          labelNote: "side",
+          floor: 2,
+          score: "10.5",
+          externalId: "550e8400-e29b-41d4-a716-446655440000",
+          isVerified: true,
+          verifiedAt: "2020-01-02T03:04:05.000Z",
+          stamp: "AQ==",
+        }],
+        phones: [],
+        settings: {},
+        prefs: {},
+      });
+      const valued = await ds.contacts.readSingle(new Where(new Operator.Equals("id", omitted.id)));
+      expect(valued?.addresses[0]?.latitude).toBe(51);
+      expect(valued?.addresses[0]?.labelNote).toBe("side");
+      expect(valued?.addresses[0]?.floor).toBe(2);
+      expect(valued?.addresses[0]?.score).toBe("10.5");
+      expect(valued?.addresses[0]?.isVerified).toBe(true);
+      await ds.contacts.update({
+        id: omitted.id,
+        firstName: "Outlier",
+        lastName: "Types",
+        contactSourceName: "Manual",
+        uuid: "00000000-0000-0000-0000-000000000003",
+        version: "AA==",
+        addresses: [{
+          id: omitted.addresses[0]!.id,
+          addressTypeName: "Home",
+          line1: "1 Null Lane",
+          city: "London",
+          latitude: 0,
+          labelNote: "",
+          floor: 0,
+          score: "0",
+          isVerified: false,
+        }],
+        phones: [],
+        settings: {},
+        prefs: {},
+      });
+      const zeroed = await ds.contacts.readSingle(new Where(new Operator.Equals("id", omitted.id)));
+      expect(zeroed?.addresses[0]?.latitude).toBe(0);
+      expect(zeroed?.addresses[0]?.labelNote).toBe("");
+      expect(zeroed?.addresses[0]?.isVerified).toBe(false);
+      await ds.contacts.delete(after ?? created);
     } finally {
       chdir(here);
       rmSync(out, { recursive: true, force: true });

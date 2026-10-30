@@ -6,6 +6,14 @@ export class AddressBase {
   created: Date = new Date();
   updated: Date = new Date();
   version: string = Buffer.from([0]).toString("base64");
+  latitude: number | null;
+  labelNote: string | null;
+  floor: number | null;
+  score: string | null;
+  externalId: string | null;
+  isVerified: boolean | null;
+  verifiedAt: Date | null;
+  stamp: string | null;
   contactId!: number;
   addressTypeId!: number;
   line1!: string;
