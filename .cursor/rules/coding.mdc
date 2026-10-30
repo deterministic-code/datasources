@@ -1,0 +1,13 @@
+---
+description: Coding shape for C#, Rust, and TypeScript
+alwaysApply: true
+---
+
+# Coding
+
+- Expression-bodied members for a single lookup, assignment, throw, or return. A multi-statement body stays a block.
+- Dispatch on a shape or enum with an expression that returns the value: C# `switch`, Rust `match`, TypeScript a handler record keyed by the discriminant plus a throw when the key is missing. A two-way lookup or throw is a ternary.
+- A method that produces a sequence returns an iterator (`IAsyncEnumerable` or an async generator when a step awaits, otherwise `IEnumerable` or `Iterator`). Materialize only when a later step needs the full set first (enrichment, a count, a full sort).
+- One type, one job. Members are private unless a caller outside the type needs them. Each fact is stored once; derive lookups at the use site. Each major type lives in its own file; small private helpers stay with the owner. Tests may share one `*.test.*` file.
+- A connection variable is `connection`. A repository variable ends in `Repo` (`usersRepo`); the name without that suffix is the row.
+- Options are a dictionary (`IReadOnlyDictionary<string, string?>`). Typed connection options stay on constructors. `object` is only an empty placeholder (`close: {}`). No `any`, no `unknown`, and no `object` parameter that gets cast.
