@@ -41,26 +41,11 @@ fn reflect(error: impl std::fmt::Display) -> DatasourceError {
     DatasourceError::message(error.to_string())
 }
 
-fn read_facet<T: Facet<'static>>(row: Row, schema: &Schema) -> Result<T> {
+fn read_facet<T: Facet<'static>>(row: Row, _schema: &Schema) -> Result<T> {
     let mut partial = Partial::alloc::<T>().map_err(reflect)?;
     let fields = struct_fields(T::SHAPE)?;
     for (index, field) in fields.iter().enumerate() {
-        let name = field.name;
-        if let Some(_spec) = schema.columns.get(name) {
-            partial = match row.get(name) {
-                Some(cell) if *cell != Value::Null => set_scalar(partial, name, cell, field.shape())?,
-                _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
-            };
-            continue;
-        }
-        partial = match field.shape().def {
-            Def::List(_) => read_list(partial, name, field.shape(), decode_rows(row.get(name)))?,
-            Def::Map(_) => read_map(partial, name, field.shape(), decode_rows(row.get(name)))?,
-            _ => match row.get(name) {
-                Some(cell) if *cell != Value::Null => set_scalar(partial, name, cell, field.shape())?,
-                _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
-            },
-        };
+        partial = apply_field(partial, index, field, &row)?;
     }
     let value = partial.build().map_err(reflect)?;
     value.materialize::<T>().map_err(reflect)
@@ -140,15 +125,32 @@ fn read_map<'f>(
     next.end().map_err(reflect)
 }
 
+fn apply_field<'f>(
+    partial: Partial<'f>,
+    index: usize,
+    field: &Field,
+    row: &Row,
+) -> Result<Partial<'f>> {
+    let name = field.name;
+    let shape = field.shape();
+    if is_map(shape) {
+        return read_map(partial, name, shape, decode_rows(row.get(name)));
+    }
+    if is_list(shape) {
+        return read_list(partial, name, shape, decode_rows(row.get(name)));
+    }
+    match row.get(name) {
+        Some(cell) if *cell != Value::Null => set_scalar(partial, name, cell, shape),
+        _ => partial.set_nth_field_to_default(index).map_err(reflect),
+    }
+}
+
 fn fill_shape<'f>(mut partial: Partial<'f>, shape: &'static Shape, row: Row) -> Result<Partial<'f>> {
     let Ok(fields) = struct_fields(shape) else {
         return set_from_value(partial, row.values().next().unwrap_or(&Value::Null), shape);
     };
     for (index, field) in fields.iter().enumerate() {
-        partial = match row.get(field.name) {
-            Some(cell) if *cell != Value::Null => set_scalar(partial, field.name, cell, field.shape())?,
-            _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
-        };
+        partial = apply_field(partial, index, field, &row)?;
     }
     Ok(partial)
 }
@@ -198,6 +200,11 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
         (Value::Int(n), Some(ScalarType::I32), _) => partial.set(*n as i32),
         (Value::Int(n), Some(ScalarType::I64), _) => partial.set(*n),
         (Value::Int(n), Some(ScalarType::U32), _) => partial.set(*n as u32),
+        (Value::Text(text), Some(ScalarType::I8), _) if text.is_empty() => partial.set(0i8),
+        (Value::Text(text), Some(ScalarType::I16), _) if text.is_empty() => partial.set(0i16),
+        (Value::Text(text), Some(ScalarType::I32), _) if text.is_empty() => partial.set(0i32),
+        (Value::Text(text), Some(ScalarType::I64), _) if text.is_empty() => partial.set(0i64),
+        (Value::Text(text), Some(ScalarType::U32), _) if text.is_empty() => partial.set(0u32),
         (Value::Float(n), Some(ScalarType::F64), _) => partial.set(*n),
         (Value::Text(text), Some(ScalarType::String), _) => partial.set(text.clone()),
         (Value::Text(text), _, "String") => partial.set(text.clone()),
@@ -213,12 +220,15 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
         (Value::Decimal(number), _, ident) if ident.contains("Decimal") => partial.set(*number),
         (Value::Int(n), _, "i32") => partial.set(*n as i32),
         (Value::Int(n), _, "i64") => partial.set(*n),
+        (Value::Text(text), _, "i32") if text.is_empty() => partial.set(0i32),
+        (Value::Text(text), _, "i64") if text.is_empty() => partial.set(0i64),
         (Value::Binary(bytes), _, _) if is_bytes(shape) => partial.set(bytes.clone()),
         (Value::Text(text), _, _) if is_bytes(shape) => match base64::engine::general_purpose::STANDARD.decode(text) {
             Ok(bytes) => partial.set(bytes),
             Err(error) => return Err(reflect(error)),
         },
         (Value::Null, _, _) => partial.set_default(),
+        (Value::Text(text), _, _) if text.is_empty() && (is_map(shape) || is_list(shape)) => partial.set_default(),
         _ => return Err(DatasourceError::message(format!("cannot set {} from {cell:?}", shape.type_identifier))),
     };
     set.map_err(reflect)
@@ -319,6 +329,15 @@ fn is_option(shape: &'static Shape) -> bool {
 
 fn is_bytes(shape: &'static Shape) -> bool {
     matches!(shape.def, Def::List(_)) && list_element(shape).is_ok_and(|inner| inner.type_identifier == "u8")
+}
+
+fn is_map(shape: &'static Shape) -> bool {
+    matches!(shape.def, Def::Map(_)) || shape.type_identifier.contains("HashMap")
+}
+
+fn is_list(shape: &'static Shape) -> bool {
+    !is_bytes(shape)
+        && (matches!(shape.def, Def::List(_)) || shape.type_identifier.starts_with("Vec"))
 }
 
 fn map_kv(shape: &'static Shape) -> Result<(&'static Shape, &'static Shape)> {

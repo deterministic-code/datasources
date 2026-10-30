@@ -19,6 +19,12 @@ public class RowTypeConverterTests
         public int this[int i] { get => 0; set { } }
     }
 
+    public class WithAttributes
+    {
+        public long Id { get; set; }
+        public Dictionary<string, string> Attributes { get; set; } = [];
+    }
+
     public class WriteOnly
     {
         public long Id { get; set; }
@@ -102,6 +108,30 @@ public class RowTypeConverterTests
     {
         public override Value Convert(Value from) => from.ToObject() is long n && n == 1;
         public override Value ReverseConvert(Value to) => to;
+    }
+
+    [Fact]
+    public void EmptyTextLeavesDictionaryAtDefault()
+    {
+        var item = new MetaDataRowTypeConverter<WithAttributes>().Convert(new Row
+        {
+            ["Id"] = 1L,
+            ["Attributes"] = ""
+        });
+        Assert.Equal(1L, item.Id);
+        Assert.Empty(item.Attributes);
+    }
+
+    [Fact]
+    public void EmptyTextLeavesIntegerAtDefault()
+    {
+        var user = new MetaDataRowTypeConverter<User>().Convert(new Row
+        {
+            ["Id"] = "",
+            ["Username"] = "ada"
+        });
+        Assert.Equal(0L, user.Id);
+        Assert.Equal("ada", user.Username);
     }
 
     [Fact]
