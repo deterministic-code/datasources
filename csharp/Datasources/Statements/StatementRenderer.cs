@@ -58,6 +58,12 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
     public virtual string Visit(IdentityInsertStatement statement) =>
         new IdentityInsertStatementTextRenderer().Render(statement);
 
+    public virtual string Visit(SqlSeedStatement statement) =>
+        throw new InvalidOperationException("SqlSeedStatement is rendered by the SQL driver.");
+
+    public virtual string Visit(ForeignKeyStatement statement) =>
+        throw new InvalidOperationException("ForeignKeyStatement is rendered by the SQL driver.");
+
     public virtual string Visit(DropRoutineStatement statement) =>
         new DropRoutineStatementTextRenderer().Render(statement);
 

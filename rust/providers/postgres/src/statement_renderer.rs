@@ -5,15 +5,17 @@ use crate::create_trigger_statement_renderer::PostgresCreateTriggerStatementRend
 use crate::drop_routine_statement_renderer::PostgresDropRoutineStatementRenderer;
 use crate::identity_insert_statement_renderer::PostgresIdentityInsertStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::PostgresSelectInsertedIdStatementTextRenderer;
+use crate::sql_seed_statement_renderer::PostgresSqlSeedStatementRenderer;
 use datasources::{
     AlterTableStatement, BulkInsertStatement, BulkUpdateStatement,
     BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
-    CreateTableStatementTextRenderer, CreateTriggerStatement, DropRoutineStatement,
-    DropTriggerStatement, IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
-    StatementTextRenderer, StatementVisitor, TypeConverter, Value,
+    CreateIndexStatement, CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
+    DropRoutineStatement, DropTableStatement, DropTriggerStatement, ForeignKeyStatement,
+    IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
+    SqlSeedStatement, StatementTextRenderer, StatementVisitor, TypeConverter, Value,
 };
 
 pub struct PostgresStatementRenderer;
@@ -176,6 +178,57 @@ impl StatementVisitor for PostgresStatementRenderer {
     }
     fn visit_create_bulk_delete_stored_procedure(&self, statement: &CreateBulkDeleteStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         PostgresStoredProcedureStatementRenderer.render_bulk_delete(statement)
+    }
+
+    fn visit_sql_seed(&self, statement: &SqlSeedStatement, _text: &StatementTextRenderer) -> String {
+        PostgresSqlSeedStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_table(&self, statement: &DropTableStatement, _text: &StatementTextRenderer) -> String {
+        format!("DROP TABLE IF EXISTS {}", crate::PostgresDriver::quote(statement.table()))
+    }
+
+    fn visit_create_index(&self, statement: &CreateIndexStatement, _text: &StatementTextRenderer) -> String {
+        format!(
+            "CREATE {}INDEX {} ON {} ({})",
+            if statement.unique() { "UNIQUE " } else { "" },
+            crate::PostgresDriver::quote(statement.name()),
+            crate::PostgresDriver::quote(statement.table()),
+            statement
+                .columns()
+                .iter()
+                .map(|column| crate::PostgresDriver::quote(column))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    fn visit_drop_index(&self, statement: &DropIndexStatement, _text: &StatementTextRenderer) -> String {
+        format!("DROP INDEX IF EXISTS {}", crate::PostgresDriver::quote(statement.name()))
+    }
+
+    fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
+        let table = crate::PostgresDriver::quote(statement.table());
+        let name = crate::PostgresDriver::quote(statement.name());
+        if statement.kind() == "drop" {
+            return format!("ALTER TABLE {table} DROP CONSTRAINT {name}");
+        }
+        let cols = statement
+            .columns()
+            .iter()
+            .map(|column| crate::PostgresDriver::quote(column))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let refs = statement
+            .references_columns()
+            .iter()
+            .map(|column| crate::PostgresDriver::quote(column))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "ALTER TABLE {table} ADD CONSTRAINT {name} FOREIGN KEY ({cols}) REFERENCES {} ({refs})",
+            crate::PostgresDriver::quote(statement.references_table())
+        )
     }
 }
 

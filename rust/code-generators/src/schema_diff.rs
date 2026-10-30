@@ -7,7 +7,7 @@ use crate::table_statements;
 use datasources::{
     AlterAction, AlterTableStatement, Column, CreateIndexStatement, CreateTableStatement,
     CreateTriggerStatement, DatasourceError, DropIndexStatement, DropTableStatement,
-    DropTriggerStatement, Result, Statement, TableConstraint,
+    DropTriggerStatement, ForeignKeyStatement, Result, Statement, TableConstraint,
 };
 
 pub enum DdlStatement {
@@ -18,6 +18,7 @@ pub enum DdlStatement {
     DropIndex(DropIndexStatement),
     DropTrigger(DropTriggerStatement),
     DropTable(DropTableStatement),
+    ForeignKey(ForeignKeyStatement),
 }
 
 impl DdlStatement {
@@ -30,6 +31,7 @@ impl DdlStatement {
             Self::DropIndex(statement) => statement,
             Self::DropTrigger(statement) => statement,
             Self::DropTable(statement) => statement,
+            Self::ForeignKey(statement) => statement,
         }
     }
 
@@ -70,12 +72,12 @@ pub fn of(
 
 fn create_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<Vec<DdlStatement>> {
     let mut out = vec![DdlStatement::CreateTable(table_statements::create_table(
-        dialect, table, mapping,
+        table, mapping,
     )?)];
     for index in &table.indexes {
         out.push(DdlStatement::CreateIndex(table_statements::create_index(
-            dialect, mapping, table, index,
-        )?));
+            mapping, table, index,
+        )));
     }
     if has_audit_columns(table) {
         out.push(DdlStatement::CreateTrigger(trigger(dialect, table, mapping)?));
@@ -91,10 +93,7 @@ fn drop_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<V
     for index in table.indexes.iter().rev() {
         out.push(DdlStatement::DropIndex(drop_index(dialect, mapping, table, index)?));
     }
-    out.push(DdlStatement::DropTable(table_statements::drop_table(
-        dialect,
-        &table.table_name,
-    )?));
+    out.push(DdlStatement::DropTable(table_statements::drop_table(&table.table_name)));
     Ok(out)
 }
 
@@ -137,7 +136,7 @@ fn diff_table(
             out.push(DdlStatement::AlterTable(AlterTableStatement::new(
                 &before.table_name,
                 AlterAction::DropConstraint {
-                    name: constraint_name(&table_statements::unique_of(dialect, before_map, before, field)?)
+                    name: constraint_name(&table_statements::unique_of(before_map, before, field))
                         .into(),
                 },
             )));
@@ -148,15 +147,9 @@ fn diff_table(
                 .map(|next| refs_of(next) != refs_of(field))
                 .unwrap_or(true)
         {
-            out.push(DdlStatement::AlterTable(AlterTableStatement::new(
-                &before.table_name,
-                AlterAction::DropConstraint {
-                    name: constraint_name(&table_statements::foreign_key_of(
-                        dialect, before_map, before, field,
-                    )?)
-                    .into(),
-                },
-            )));
+            out.push(DdlStatement::ForeignKey(table_statements::drop_foreign_key(
+                before_map, before, field,
+            )?));
         }
     }
 
@@ -165,7 +158,7 @@ fn diff_table(
     }
 
     for field in before.fields.iter().filter(|field| !after_fields.contains_key(field.name.as_str())) {
-        let column = table_statements::column(dialect, before_map, before, field)?;
+        let column = table_statements::column(before_map, before, field)?;
         out.push(DdlStatement::AlterTable(AlterTableStatement::new(
             &before.table_name,
             AlterAction::DropColumn { name: column.name },
@@ -183,8 +176,8 @@ fn diff_table(
     }
 
     for field in after.fields.iter().filter(|field| before_fields.contains_key(field.name.as_str())) {
-        let previous = table_statements::column(dialect, before_map, before, before_fields[field.name.as_str()])?;
-        let next = table_statements::column(dialect, after_map, after, field)?;
+        let previous = table_statements::column(before_map, before, before_fields[field.name.as_str()])?;
+        let next = table_statements::column(after_map, after, field)?;
         if previous.name != next.name {
             out.push(DdlStatement::AlterTable(AlterTableStatement::new(
                 &table_name,
@@ -209,7 +202,7 @@ fn diff_table(
     for field in after.fields.iter().filter(|field| !before_fields.contains_key(field.name.as_str())) {
         out.push(DdlStatement::AlterTable(AlterTableStatement::new(
             &table_name,
-            AlterAction::AddColumn(table_statements::column(dialect, after_map, after, field)?),
+            AlterAction::AddColumn(table_statements::column(after_map, after, field)?),
         )));
     }
 
@@ -222,7 +215,7 @@ fn diff_table(
         {
             out.push(DdlStatement::AlterTable(AlterTableStatement::new(
                 &table_name,
-                AlterAction::AddConstraint(table_statements::unique_of(dialect, after_map, after, field)?),
+                AlterAction::AddConstraint(table_statements::unique_of(after_map, after, field)),
             )));
         }
         if has_refs(field)
@@ -231,20 +224,17 @@ fn diff_table(
                 .map(|prior| refs_of(prior) != refs_of(field))
                 .unwrap_or(true)
         {
-            out.push(DdlStatement::AlterTable(AlterTableStatement::new(
-                &table_name,
-                AlterAction::AddConstraint(table_statements::foreign_key_of(
-                    dialect, after_map, after, field,
-                )?),
-            )));
+            out.push(DdlStatement::ForeignKey(table_statements::add_foreign_key(
+                after_map, after, field,
+            )?));
         }
     }
 
     for index in &after.indexes {
         if before_indexes.get(index.name.as_str()).map(|kept| index_key(kept)) != Some(index_key(index)) {
             out.push(DdlStatement::CreateIndex(table_statements::create_index(
-                dialect, after_map, after, index,
-            )?));
+                after_map, after, index,
+            )));
         }
     }
 
@@ -254,30 +244,28 @@ fn diff_table(
     Ok(out)
 }
 
-fn trigger(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<CreateTriggerStatement> {
-    table_statements::create_trigger(
-        dialect,
+fn trigger(_dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<CreateTriggerStatement> {
+    Ok(table_statements::create_trigger(
         table,
         mapping,
         &pk_name(&table.as_type(), Some(&overlay_of(table))),
-    )
+    ))
 }
 
-fn drop_trigger(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<DropTriggerStatement> {
-    table_statements::drop_trigger(dialect, &mapping.trigger_name(table), &table.table_name)
+fn drop_trigger(_dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<DropTriggerStatement> {
+    Ok(table_statements::drop_trigger(&mapping.trigger_name(table), &table.table_name))
 }
 
 fn drop_index(
-    dialect: &str,
+    _dialect: &str,
     mapping: &SqlMapping,
     table: &SqlTable,
     index: &DatasourceIndex,
 ) -> Result<DropIndexStatement> {
-    table_statements::drop_index(
-        dialect,
+    Ok(table_statements::drop_index(
         &mapping.constraint_name(table, &[&index.name, "index"]),
         &table.table_name,
-    )
+    ))
 }
 
 fn unique_field(table: &SqlTable, field: &SpecTypeField) -> bool {

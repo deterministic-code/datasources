@@ -7,7 +7,11 @@ mod drop_routine_statement_renderer;
 mod driver;
 mod export;
 mod identity_insert_statement_renderer;
+mod default_value_converter;
+mod default_value_options;
 mod sql_generate;
+mod type_map;
+mod sql_seed_statement_renderer;
 mod statement_renderer;
 mod stored_procedure_statement_renderer;
 

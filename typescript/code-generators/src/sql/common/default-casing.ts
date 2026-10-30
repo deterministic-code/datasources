@@ -3,7 +3,7 @@ import {
   type ICasingStrategy,
 } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
-import { applyKeywordCasing } from "./sql-keywords.ts";
+import { dialectDriver } from "./sql-dialect.ts";
 
 const DATASOURCE_CASING = "datasource.casing";
 const UPPER_LOWER = ["upper", "lower"] as const;
@@ -25,7 +25,7 @@ export type PackCasing = ICasingStrategy & {
   filePath: (stem: string) => string
   directory: (entity: string) => string
   keyword: (text: string) => string
-  applyKeywords: (sql: string) => string
+  applyKeywords: (sql: string, dialect: string) => string
 };
 
 const parseUpperLower = (
@@ -105,7 +105,15 @@ export const createCasing = (
     filePath: (stem) => `${fileBase(stem)}.sql`,
     directory: (entity) => casing.convertDirectories(entity),
     keyword,
-    applyKeywords: (sql) =>
-      keywordFormat === "lower" ? applyKeywordCasing(sql, keyword) : sql,
+    applyKeywords: (sql, dialect) => {
+      if (keywordFormat !== "lower") return sql;
+      const apply = (
+        dialectDriver(dialect).constructor as {
+          applyKeywords?: (sql: string, keyword: (word: string) => string) => string
+        }
+      ).applyKeywords;
+      if (apply === undefined) throw new Error(`"${dialect}" has no applyKeywords.`);
+      return apply(sql, keyword);
+    },
   };
 };

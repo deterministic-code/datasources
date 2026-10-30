@@ -1,14 +1,29 @@
-use crate::driver::column_sql;
 use datasources::{Column, CreateTableStatement, CreateTableStatementTextRenderer, TableConstraint};
 use std::collections::HashSet;
 
 pub struct SqliteCreateTableStatementRenderer;
 
 impl CreateTableStatementTextRenderer for SqliteCreateTableStatementRenderer {
+    fn quote(&self, name: &str) -> String {
+        crate::SqliteDriver::quote(name)
+    }
+
     fn type_name(&self, column: &Column) -> String {
-        column_sql(&column.type_name)
-            .map(str::to_string)
-            .unwrap_or_else(|| column.type_name.clone())
+        crate::SqliteDriver::native_type(column)
+    }
+
+    fn column_default(&self, column: &Column) -> String {
+        match &column.default {
+            None => String::new(),
+            Some(value) if value.name.is_none() => {
+                format!(" DEFAULT {}", crate::SqliteDriver::native_default(column))
+            }
+            Some(value) => format!(
+                " CONSTRAINT {} DEFAULT {}",
+                self.quote(value.name.as_deref().unwrap_or("")),
+                crate::SqliteDriver::native_default(column)
+            ),
+        }
     }
 
     fn identity(&self, column: &Column) -> String {

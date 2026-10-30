@@ -11,11 +11,16 @@ import {
   CreateTableStatement,
   CreateTriggerStatement,
   CreateUpdateStoredProcedureStatement,
+  CreateIndexStatement,
+  DropIndexStatement,
   DropRoutineStatement,
+  DropTableStatement,
   DropTriggerStatement,
+  ForeignKeyStatement,
   IdentityInsertStatement,
   SelectInsertedIdStatement,
   SelectInsertedIdStatementTextRenderer,
+  SqlSeedStatement,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
@@ -27,6 +32,13 @@ import { PostgresDropRoutineStatementRenderer } from "./PostgresDropRoutineState
 import { PostgresStoredProcedureStatementRenderer } from "./PostgresStoredProcedureStatementRenderer.ts";
 import { PostgresDropTriggerStatementRenderer } from "./PostgresDropTriggerStatementRenderer.ts";
 import { PostgresIdentityInsertStatementRenderer } from "./PostgresIdentityInsertStatementRenderer.ts";
+import { PostgresSqlSeedStatementRenderer } from "./PostgresSqlSeedStatementRenderer.ts";
+import {
+  PostgresCreateIndexStatementRenderer,
+  PostgresDropIndexStatementRenderer,
+  PostgresDropTableStatementRenderer,
+  PostgresForeignKeyStatementRenderer,
+} from "./PostgresQuotedRenderers.ts";
 
 class PostgresSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
   override render(statement: SelectInsertedIdStatement): string {
@@ -102,5 +114,25 @@ export class PostgresStatementRenderer extends StatementRenderer {
 
   protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
     return new PostgresStoredProcedureStatementRenderer().renderBulkDelete(statement);
+  }
+
+  protected override visitSqlSeed(seed: SqlSeedStatement): string {
+    return new PostgresSqlSeedStatementRenderer().render(seed);
+  }
+
+  protected override visitDropTable(drop: DropTableStatement): string {
+    return new PostgresDropTableStatementRenderer().render(drop);
+  }
+
+  protected override visitCreateIndex(index: CreateIndexStatement): string {
+    return new PostgresCreateIndexStatementRenderer().render(index);
+  }
+
+  protected override visitDropIndex(index: DropIndexStatement): string {
+    return new PostgresDropIndexStatementRenderer().render(index);
+  }
+
+  protected override visitForeignKey(key: ForeignKeyStatement): string {
+    return new PostgresForeignKeyStatementRenderer().render(key);
   }
 }

@@ -1,18 +1,13 @@
-use datasources_code_generators::{generate_sql, SqlGenerateDriver};
-use std::sync::Once;
+use datasources_code_generators::generate_sql;
+use std::sync::{Arc, Once};
 
 fn register_sql() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         datasources_code_generators::register_dialect(
             "sqlite",
-            SqlGenerateDriver {
-                quote_left: crate::SqliteDriver::QUOTE_LEFT,
-                quote_right: crate::SqliteDriver::QUOTE_RIGHT,
-                type_converter: crate::SqliteDriver::types(),
-                default_value_converter: crate::SqliteDriver::defaults(),
-                statement_renderer: crate::SqliteDriver::statement_text_renderer(),
-            },
+            Arc::new(crate::SqliteDriver),
+            crate::SqliteDriver::apply_keywords,
         )
         .unwrap();
     });
@@ -637,4 +632,17 @@ fn throws_when_a_root_datasource_yaml_drifted_from_the_frozen_diffs() {
     files.insert(path.into(), frozen_diff(TYPES_YAML));
     let error = generate_sql(&files, &HashMap::new(), &["sqlite".into()]).unwrap_err();
     assert!(error.to_string().contains("run datasources version first"));
+}
+
+#[test]
+fn apply_keywords_skips_quoted_identifiers_and_strings() {
+    let lower = |word: &str| word.to_ascii_lowercase();
+    assert_eq!(
+        crate::SqliteDriver::apply_keywords(r#"CREATE TABLE "CREATE" ("TABLE")"#, &lower),
+        r#"create table "CREATE" ("TABLE")"#
+    );
+    assert_eq!(
+        crate::SqliteDriver::apply_keywords("INSERT INTO t VALUES ('CREATE')", &lower),
+        "insert into t values ('CREATE')"
+    );
 }

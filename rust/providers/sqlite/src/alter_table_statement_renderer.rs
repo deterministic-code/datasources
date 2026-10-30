@@ -1,4 +1,4 @@
-use crate::driver::column_sql;
+use crate::SqliteDriver;
 use datasources::{
     AlterAction, AlterTableStatement, AlterTableStatementTextRenderer, Column,
     CreateTableStatementTextRenderer,
@@ -7,10 +7,24 @@ use datasources::{
 pub struct SqliteAlterTableStatementRenderer;
 
 impl CreateTableStatementTextRenderer for SqliteAlterTableStatementRenderer {
+    fn quote(&self, name: &str) -> String {
+        SqliteDriver::quote(name)
+    }
+
     fn type_name(&self, column: &Column) -> String {
-        column_sql(&column.type_name)
-            .map(str::to_string)
-            .unwrap_or_else(|| column.type_name.clone())
+        SqliteDriver::native_type(column)
+    }
+
+    fn column_default(&self, column: &Column) -> String {
+        match &column.default {
+            None => String::new(),
+            Some(value) if value.name.is_none() => format!(" DEFAULT {}", SqliteDriver::native_default(column)),
+            Some(value) => format!(
+                " CONSTRAINT {} DEFAULT {}",
+                self.quote(value.name.as_deref().unwrap_or("")),
+                SqliteDriver::native_default(column)
+            ),
+        }
     }
 }
 

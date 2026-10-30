@@ -136,19 +136,19 @@ describe("PostgresStatementRenderer", () => {
       renderer.render(
         new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT" } }),
       ),
-    ).toBe("ALTER TABLE users ADD COLUMN email TEXT");
+    ).toBe('ALTER TABLE "users" ADD COLUMN "email" TEXT');
     expect(renderer.render(new DropTriggerStatement("tr_users", "users"))).toBe(
-      "DROP TRIGGER IF EXISTS tr_users ON users",
+      'DROP TRIGGER IF EXISTS "tr_users" ON "users"',
     );
-    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "NOW()"))).toBe(
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id"))).toBe(
       `-- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE TRIGGER tr_users BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_updated_at()`,
+CREATE TRIGGER "tr_users" BEFORE UPDATE ON "users" FOR EACH ROW EXECUTE FUNCTION set_updated_at()`,
     );
     const insert = new InsertStatement("users", [{ name: "id", value: 1 }, { name: "name", value: "ada" }]);
     expect(renderer.render(new IdentityInsertStatement("users", "id", [insert], true))).toBe(

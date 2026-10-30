@@ -6,7 +6,7 @@ internal sealed class MysqlCreateTriggerStatementRenderer : CreateTriggerStateme
 {
     public override string Render(CreateTriggerStatement statement) =>
         $"""
-        CREATE TRIGGER {statement.Name} BEFORE UPDATE ON {statement.Table}
-        FOR EACH ROW SET NEW.{statement.UpdatedColumn} = {statement.UtcNow}
+        CREATE TRIGGER {MysqlDriver.Quote(statement.Name)} BEFORE UPDATE ON {MysqlDriver.Quote(statement.Table)}
+        FOR EACH ROW SET NEW.{MysqlDriver.Quote(statement.UpdatedColumn)} = {MysqlDriver.UtcNow()}
         """;
 }

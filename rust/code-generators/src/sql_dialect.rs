@@ -1,29 +1,56 @@
-use crate::sql_generate_driver::SqlGenerateDriver;
-use datasources::{DatasourceError, ProviderCatalog, Result, SpecField, Statement};
+use datasources::{DatasourceError, Driver, ProviderCatalog, Result, Statement};
 use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
-fn store() -> &'static Mutex<HashMap<String, &'static SqlGenerateDriver>> {
-    static DRIVERS: OnceLock<Mutex<HashMap<String, &'static SqlGenerateDriver>>> = OnceLock::new();
+pub type ApplyKeywords = fn(&str, &dyn Fn(&str) -> String) -> String;
+
+fn store() -> &'static Mutex<HashMap<String, Arc<dyn Driver>>> {
+    static DRIVERS: OnceLock<Mutex<HashMap<String, Arc<dyn Driver>>>> = OnceLock::new();
     DRIVERS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-pub fn register_dialect(dialect: impl Into<String>, driver: SqlGenerateDriver) -> Result<()> {
+fn apply_store() -> &'static Mutex<HashMap<String, ApplyKeywords>> {
+    static APPLY: OnceLock<Mutex<HashMap<String, ApplyKeywords>>> = OnceLock::new();
+    APPLY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub fn register_dialect(
+    dialect: impl Into<String>,
+    driver: Arc<dyn Driver>,
+    apply_keywords: ApplyKeywords,
+) -> Result<()> {
     let dialect = dialect.into();
     require_name(&dialect)?;
-    let leaked: &'static SqlGenerateDriver = Box::leak(Box::new(driver));
-    store().lock().expect("drivers").insert(dialect, leaked);
+    if driver.statement_renderer().is_none() {
+        return Err(DatasourceError::message(format!("\"{dialect}\" is not a SQL dialect.")));
+    }
+    apply_store()
+        .lock()
+        .expect("apply")
+        .insert(dialect.clone(), apply_keywords);
+    store().lock().expect("drivers").insert(dialect, driver);
     Ok(())
 }
 
-pub fn driver_of(dialect: &str) -> Result<&'static SqlGenerateDriver> {
+pub fn driver_of(dialect: &str) -> Result<Arc<dyn Driver>> {
     require_name(dialect)?;
     store()
         .lock()
         .expect("drivers")
         .get(dialect)
-        .copied()
+        .cloned()
         .ok_or_else(|| DatasourceError::not_installed(dialect))
+}
+
+pub fn apply_keywords(dialect: &str, sql: &str, keyword: &dyn Fn(&str) -> String) -> Result<String> {
+    driver_of(dialect)?;
+    let apply = apply_store()
+        .lock()
+        .expect("apply")
+        .get(dialect)
+        .copied()
+        .ok_or_else(|| DatasourceError::message(format!("\"{dialect}\" has no apply_keywords.")))?;
+    Ok(apply(sql, keyword))
 }
 
 fn require_name(dialect: &str) -> Result<()> {
@@ -43,7 +70,8 @@ pub fn require(language: &str) -> Result<String> {
 
 pub fn render_sql(dialect: &str, statement: &dyn Statement) -> Result<String> {
     let sql = driver_of(dialect)?
-        .statement_renderer
+        .statement_renderer()
+        .expect("sql")
         .render(statement)
         .trim_end()
         .to_string();
@@ -54,22 +82,4 @@ pub fn render_sql(dialect: &str, statement: &dyn Statement) -> Result<String> {
     } else {
         format!("{sql};")
     })
-}
-
-pub fn q(dialect: &str, ident: &str) -> Result<String> {
-    let driver = driver_of(dialect)?;
-    Ok(format!("{}{ident}{}", driver.quote_left, driver.quote_right))
-}
-
-pub fn map_column_type(dialect: &str, field: &SpecField) -> Result<String> {
-    driver_of(dialect)?.type_converter.convert(field)
-}
-
-pub fn sql_default(dialect: &str, field: &SpecField) -> Result<Option<String>> {
-    let Some(default) = &field.default_value else {
-        return Ok(None);
-    };
-    driver_of(dialect)?
-        .default_value_converter
-        .convert(&field.type_name, default)
 }

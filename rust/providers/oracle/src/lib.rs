@@ -6,7 +6,11 @@ mod create_trigger_statement_renderer;
 mod drop_table_statement_renderer;
 mod driver;
 mod export;
+mod default_value_converter;
+mod default_value_options;
 mod sql_generate;
+mod type_map;
+mod sql_seed_statement_renderer;
 mod statement_renderer;
 mod stored_procedure_statement_renderer;
 

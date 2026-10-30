@@ -1,19 +1,17 @@
+use crate::SqlServerDriver;
 use datasources::CreateTriggerStatement;
 
 pub struct SqlServerCreateTriggerStatementRenderer;
 
 impl SqlServerCreateTriggerStatementRenderer {
     pub fn render(&self, statement: &CreateTriggerStatement) -> String {
+        let table = SqlServerDriver::quote(statement.table());
+        let updated = SqlServerDriver::quote(statement.updated_column());
+        let key = SqlServerDriver::quote(statement.key_column());
         format!(
-            "CREATE TRIGGER {} ON {}\nAFTER UPDATE AS\nBEGIN\n  SET NOCOUNT ON;\n  UPDATE {} SET {} = {}\n  FROM {} t INNER JOIN inserted i ON t.{} = i.{};\nEND",
-            statement.name(),
-            statement.table(),
-            statement.table(),
-            statement.updated_column(),
-            statement.utc_now(),
-            statement.table(),
-            statement.key_column(),
-            statement.key_column(),
+            "CREATE TRIGGER {} ON {table}\nAFTER UPDATE AS\nBEGIN\n  SET NOCOUNT ON;\n  UPDATE {table} SET {updated} = {}\n  FROM {table} t INNER JOIN inserted i ON t.{key} = i.{key};\nEND",
+            SqlServerDriver::quote(statement.name()),
+            SqlServerDriver::utc_now(),
         )
     }
 }

@@ -6,7 +6,7 @@ import { pkName } from "@deterministic-code/generators-common/spec-types";
 import { createCasing, type PackCasing } from "./default-casing.ts";
 import { byGroupsFromDatasource } from "./datasource-by-fields.ts";
 import { SqlMapping } from "./sql-mapping.ts";
-import { mapColumnType, q, renderSql, type SqlDialect } from "./sql-dialect.ts";
+import { dialectDriver, renderSql, type SqlDialect } from "./sql-dialect.ts";
 import {
   buildLiveTables,
   datasourceSettings,
@@ -16,7 +16,6 @@ import {
   tableIdentity,
   type LiveTable,
 } from "./sql-schema.ts";
-import { procedureSpecs } from "./procedures/driver.ts";
 import { createParamFields, pkFieldOf, updateParamFields } from "./procedures/helpers.ts";
 import { writeInclusionOf } from "./write-inclusion.ts";
 import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
@@ -31,20 +30,13 @@ import {
   dropRoutineStatementOf,
 } from "../statements.ts";
 
-const withNl = (text: string, casing: PackCasing): string => {
-  const out = casing.applyKeywords(text);
+const withNl = (text: string, casing: PackCasing, dialect: SqlDialect): string => {
+  const out = casing.applyKeywords(text, dialect);
   return out.endsWith("\n") ? out : `${out}\n`;
 };
 
 const pad = (n: number): string => String(n).padStart(4, "0");
 
-const payloadType = (dialect: SqlDialect): string =>
-  ({
-    mysql: "JSON",
-    postgres: "jsonb",
-    sqlserver: "NVARCHAR(MAX)",
-    oracle: "CLOB",
-  }[dialect] ?? "JSON");
 
 /** Create / read / update / delete / bulk procedure statements for one live table. */
 export const procedureStatementsForTable = (
@@ -71,60 +63,69 @@ export const procedureStatementsForTable = (
   };
   const pk = pkFieldOf(table);
   const columnName = (logical: string): string => mapping.columnName(t, logical);
+  const param = (field: { type: string; name: string }): { name: string; type: string; field: { type: string; name: string } } => ({
+    name: columnName(field.name),
+    type: field.type,
+    field,
+  });
   const columns = table.fields.map((f) => columnName(f.name));
   const writable = updateParamFields(table).map((f) => columnName(f.name));
-  const paramType = (field: { type: string; name: string }): string =>
-    mapColumnType(dialect, field);
-  const createdParams = createParamFields(table).map((f) => ({
-    name: columnName(f.name),
-    type: paramType(f),
-  }));
-  const typedColumns = table.fields.map((f) => ({ name: columnName(f.name), type: paramType(f) }));
-  const createColumns = createParamFields(table).map((f) => ({ name: columnName(f.name), type: paramType(f) }));
+  const createdParams = createParamFields(table).map(param);
+  const typedColumns = table.fields.map(param);
+  const createColumns = createParamFields(table).map(param);
   const updateColumns = [
-    { name: columnName(pk.name), type: paramType(pk) },
+    param(pk),
     ...updateParamFields(table)
       .filter((f) => f.name !== pk.name)
-      .map((f) => ({ name: columnName(f.name), type: paramType(f) })),
+      .map(param),
   ];
-  const payload = { name: "payload", type: payloadType(dialect) };
+  const payload = { name: "payload", type: "payload" };
   const key = columnName(pk.name);
-  const keyType = paramType(pk);
+  const keyType = pk.type;
   const audit = table.fields.some((f) => f.name === "updated" && f.includeInUpdate) ? columnName("updated") : undefined;
   const generatedKey = pk.type === "uuid";
-  const quoted = q(dialect, t.tableName);
+  const tableName = t.tableName;
   const statements: IStatement[] = [];
   const names: string[] = [];
-  for (const proc of procedureSpecs(t.name, groups, casing)) {
+  const specs = (
+    dialectDriver(dialect).constructor as {
+      procedureSpecs: (
+        entity: string,
+        groups: string[][],
+        casing: { routineName: (stem: string) => string; pluralStem: (entity: string) => string },
+      ) => { op: string; name: string; byProperties: string[] }[];
+    }
+  ).procedureSpecs;
+  for (const proc of specs(t.name, groups, casing)) {
     names.push(proc.name);
     const by = proc.byProperties.map(columnName);
     const byParams = proc.byProperties.map((logical) => {
       const field = table.fields.find((f) => f.name === logical) ?? pk;
-      return { name: columnName(field.name), type: paramType(field) };
+      return param(field);
     });
     const updateParams = [
       ...byParams,
       ...updateParamFields(table)
         .filter((f) => !proc.byProperties.includes(f.name))
-        .map((f) => ({ name: columnName(f.name), type: paramType(f) })),
+        .map(param),
     ];
     statements.push(
       ({
         create: () =>
-          createCreateStoredProcedureOf(proc.name, quoted, columns, createdParams, key, keyType, writable, generatedKey, audit),
+          createCreateStoredProcedureOf(proc.name, tableName, columns, createdParams, key, keyType, writable, generatedKey, audit),
         read: () =>
-          createReadStoredProcedureOf(proc.name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
+          createReadStoredProcedureOf(proc.name, tableName, columns, byParams, key, keyType, writable, by, generatedKey, audit),
         update: () =>
-          createUpdateStoredProcedureOf(proc.name, quoted, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
+          createUpdateStoredProcedureOf(proc.name, tableName, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
         delete: () =>
-          createDeleteStoredProcedureOf(proc.name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
+          createDeleteStoredProcedureOf(proc.name, tableName, columns, byParams, key, keyType, writable, by, generatedKey, audit),
         bulkCreate: () =>
-          createBulkCreateStoredProcedureOf(proc.name, quoted, createColumns, payload, key, keyType),
+          createBulkCreateStoredProcedureOf(proc.name, tableName, createColumns, payload, key, keyType),
         bulkUpdate: () =>
-          createBulkUpdateStoredProcedureOf(proc.name, quoted, updateColumns, payload, key, keyType),
+          createBulkUpdateStoredProcedureOf(proc.name, tableName, updateColumns, payload, key, keyType),
         bulkDelete: () =>
-          createBulkDeleteStoredProcedureOf(proc.name, quoted, typedColumns, payload, key, keyType),
-      }[proc.op])(),
+          createBulkDeleteStoredProcedureOf(proc.name, tableName, typedColumns, payload, key, keyType),
+      }[proc.op as "create"])(),
     );
   }
   return { statements, names };
@@ -169,11 +170,11 @@ export const generateProceduresForDialect = async (
   return [
     content(
       `${dialect}/migrations/${pad(order)}_stored_procedures_up.sql`,
-      withNl(`-- Stored procedures\n${joinBatches(bodies, separator)}`, casing),
+      withNl(`-- Stored procedures\n${joinBatches(bodies, separator)}`, casing, dialect),
     ),
     content(
       `${dialect}/migrations/${pad(order)}_stored_procedures_down.sql`,
-      withNl(`-- DROP stored procedures\n${joinBatches(drops, separator)}`, casing),
+      withNl(`-- DROP stored procedures\n${joinBatches(drops, separator)}`, casing, dialect),
     ),
   ];
 };

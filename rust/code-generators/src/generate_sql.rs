@@ -84,11 +84,11 @@ fn initial(
     Ok((
         GenerateEntry::new(
             "0001_initial_up.sql",
-            finalize(&up_sql(&dialect, &live, &mapping, &seeds, &separator)?, casing),
+            finalize(&up_sql(&dialect, &live, &mapping, &seeds, &separator)?, casing, &dialect)?,
         ),
         GenerateEntry::new(
             "0001_initial_down.sql",
-            finalize(&down_sql(&dialect, &live, &separator)?, casing),
+            finalize(&down_sql(&dialect, &live, &separator)?, casing, &dialect)?,
         ),
     ))
 }
@@ -96,12 +96,12 @@ fn initial(
 fn flatten_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<Vec<String>> {
     let mut parts = vec![sql_dialect::render_sql(
         dialect,
-        &table_statements::create_table(dialect, table, mapping)?,
+        &table_statements::create_table(table, mapping)?,
     )?];
     for idx in &table.indexes {
         parts.push(sql_dialect::render_sql(
             dialect,
-            &table_statements::create_index(dialect, mapping, table, idx)?,
+            &table_statements::create_index(mapping, table, idx),
         )?);
     }
     if schema::has_audit_columns(table) {
@@ -109,7 +109,7 @@ fn flatten_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Resul
         let pk = spec::pk_name(&table.as_type(), Some(&overlay));
         parts.push(sql_dialect::render_sql(
             dialect,
-            &table_statements::create_trigger(dialect, table, mapping, &pk)?,
+            &table_statements::create_trigger(table, mapping, &pk),
         )?);
     }
     Ok(parts)
@@ -143,7 +143,7 @@ fn down_sql(dialect: &str, live: &[SqlTable], separator: &str) -> Result<String>
     for table in live.iter().rev() {
         parts.push(sql_dialect::render_sql(
             dialect,
-            &table_statements::drop_table(dialect, &table.table_name)?,
+            &table_statements::drop_table(&table.table_name),
         )?);
     }
     Ok(format!(
@@ -152,12 +152,12 @@ fn down_sql(dialect: &str, live: &[SqlTable], separator: &str) -> Result<String>
     ))
 }
 
-fn finalize(text: &str, casing: &PackCasing) -> String {
+fn finalize(text: &str, casing: &PackCasing, dialect: &str) -> Result<String> {
     let collapsed = Regex::new(r"\n{3,}").expect("nl").replace_all(text, "\n\n");
-    let output = casing.apply_keywords(&collapsed);
-    if output.ends_with('\n') {
+    let output = casing.apply_keywords(&collapsed, dialect)?;
+    Ok(if output.ends_with('\n') {
         output
     } else {
         format!("{output}\n")
-    }
+    })
 }

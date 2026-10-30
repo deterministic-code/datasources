@@ -97,6 +97,7 @@ fn procedure_adds_where_argument() {
             RoutineParameter {
                 name: "email".into(),
                 r#type: "varchar".into(),
+                field: None,
             },
         )],
     );
@@ -123,6 +124,7 @@ fn procedure_ands_onto_existing_where() {
             RoutineParameter {
                 name: "email".into(),
                 r#type: "varchar".into(),
+                field: None,
             },
         )],
     );

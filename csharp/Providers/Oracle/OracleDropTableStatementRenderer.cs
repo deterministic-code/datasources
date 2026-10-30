@@ -6,7 +6,7 @@ internal sealed class OracleDropTableStatementRenderer : DropTableStatementTextR
 {
     public override string Render(DropTableStatement statement) =>
         $"""
-        BEGIN EXECUTE IMMEDIATE 'DROP TABLE {statement.Table} CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+        BEGIN EXECUTE IMMEDIATE 'DROP TABLE {OracleDriver.Quote(statement.Table)} CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
         /
         """;
 }

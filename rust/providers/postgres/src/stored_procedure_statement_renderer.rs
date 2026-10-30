@@ -10,7 +10,7 @@ pub struct PostgresStoredProcedureStatementRenderer;
 
 fn params(list: &[RoutineParameter]) -> String {
     list.iter()
-        .map(|p| format!("  {} {}", p.name, p.r#type))
+        .map(|p| format!("  {} {}", p.name, crate::PostgresDriver::native_param(p)))
         .collect::<Vec<_>>()
         .join(",\n")
 }
@@ -222,6 +222,7 @@ mod tests {
                     RoutineParameter {
                         name: "email".into(),
                         r#type: "varchar".into(),
+                        field: None,
                     },
                 )],
             ),

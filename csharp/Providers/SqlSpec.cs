@@ -209,7 +209,7 @@ public static class SqlSpec
         };
 
         string Schema(string name) =>
-            string.Join(";\n", SchemaSpec.Tables(name, static id => $"\"{id.Replace("\"", "\"\"")}\"").Select(Render));
+            string.Join(";\n", SchemaSpec.Tables(name, static id => id).Select(Render));
 
         public List<Row>? ResolveRows(object? rows) => rows switch
         {

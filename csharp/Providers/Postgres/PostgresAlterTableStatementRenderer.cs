@@ -4,8 +4,9 @@ namespace Datasources.Postgres;
 
 internal sealed class PostgresAlterTableStatementRenderer : AlterTableStatementTextRenderer
 {
-    protected override string Type(Column column) =>
-        PostgresDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;
+    protected override string Quote(string name) => PostgresDriver.Quote(name);
+
+    protected override string Type(Column column) => PostgresDriver.NativeType(column);
 
     protected override string ActionSql(AlterTableStatement.IAction action) => action switch
     {

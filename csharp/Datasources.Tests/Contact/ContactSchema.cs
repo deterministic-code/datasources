@@ -15,7 +15,7 @@ internal static class ContactSchema
 
     public static async Task Apply(IConnection connection, string dialect, IDriver driver)
     {
-        SqlDialect.Register(dialect, driver);
+        GenerateSql.Register(dialect, driver);
         var command = connection.CreateCommand();
         foreach (var statement in Statements(dialect))
             await command.Execute(statement);
@@ -23,9 +23,9 @@ internal static class ContactSchema
 
     static IEnumerable<IStatement> StatementsOf(string dialect, SqlMapping mapping, SqlTable table)
     {
-        yield return TableStatements.CreateTable(dialect, table, mapping);
+        yield return TableStatements.CreateTable(table, mapping);
         foreach (var index in table.Indexes)
-            yield return TableStatements.CreateIndex(dialect, mapping, table, index);
+            yield return TableStatements.CreateIndex(mapping, table, index);
     }
 
     static IReadOnlyDictionary<string, string> Files()

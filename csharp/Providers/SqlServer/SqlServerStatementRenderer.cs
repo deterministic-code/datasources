@@ -45,4 +45,19 @@ internal sealed class SqlServerStatementRenderer(StatementTextRenderer text) : S
 
     public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
         new SqlServerStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(SqlSeedStatement seed) =>
+        new SqlServerSqlSeedStatementRenderer().Render(seed);
+
+    public override string Visit(DropTableStatement drop) =>
+        new SqlServerDropTableStatementRenderer().Render(drop);
+
+    public override string Visit(CreateIndexStatement index) =>
+        new SqlServerCreateIndexStatementRenderer().Render(index);
+
+    public override string Visit(DropTriggerStatement trigger) =>
+        new SqlServerDropTriggerStatementRenderer().Render(trigger);
+
+    public override string Visit(ForeignKeyStatement key) =>
+        new SqlServerForeignKeyStatementRenderer().Render(key);
 }

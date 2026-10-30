@@ -115,7 +115,7 @@ public class SqliteCommandIntegrationTests
         await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
         await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
         var rows = await reader.Read().ToListAsync();
-        var mapper = new FlatToNestedMapper(new TypeMap
+        var mapper = new FlatToNestedMapper(new Datasources.TypeMap
         {
             Key = "id",
             Fields = new Dictionary<string, TypeMapField>

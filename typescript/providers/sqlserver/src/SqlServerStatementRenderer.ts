@@ -7,12 +7,16 @@ import {
   CreateDeleteStoredProcedureStatement,
   CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
+  CreateIndexStatement,
   CreateTableStatement,
   CreateTriggerStatement,
   CreateUpdateStoredProcedureStatement,
   DropIndexStatement,
   DropRoutineStatement,
+  DropTableStatement,
+  ForeignKeyStatement,
   IdentityInsertStatement,
+  SqlSeedStatement,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
@@ -23,6 +27,12 @@ import { SqlServerDropIndexStatementRenderer } from "./SqlServerDropIndexStateme
 import { SqlServerDropRoutineStatementRenderer } from "./SqlServerDropRoutineStatementRenderer.ts";
 import { SqlServerStoredProcedureStatementRenderer } from "./SqlServerStoredProcedureStatementRenderer.ts";
 import { SqlServerIdentityInsertStatementRenderer } from "./SqlServerIdentityInsertStatementRenderer.ts";
+import { SqlServerSqlSeedStatementRenderer } from "./SqlServerSqlSeedStatementRenderer.ts";
+import {
+  SqlServerCreateIndexStatementRenderer,
+  SqlServerDropTableStatementRenderer,
+  SqlServerForeignKeyStatementRenderer,
+} from "./SqlServerQuotedRenderers.ts";
 
 export class SqlServerStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
@@ -83,5 +93,21 @@ export class SqlServerStatementRenderer extends StatementRenderer {
 
   protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
     return new SqlServerStoredProcedureStatementRenderer().renderBulkDelete(statement);
+  }
+
+  protected override visitSqlSeed(seed: SqlSeedStatement): string {
+    return new SqlServerSqlSeedStatementRenderer().render(seed);
+  }
+
+  protected override visitDropTable(drop: DropTableStatement): string {
+    return new SqlServerDropTableStatementRenderer().render(drop);
+  }
+
+  protected override visitCreateIndex(index: CreateIndexStatement): string {
+    return new SqlServerCreateIndexStatementRenderer().render(index);
+  }
+
+  protected override visitForeignKey(key: ForeignKeyStatement): string {
+    return new SqlServerForeignKeyStatementRenderer().render(key);
   }
 }

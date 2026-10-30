@@ -10,20 +10,23 @@ import type {
   RoutineParameter,
 } from "@deterministic-code/datasources";
 import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
+import { PostgresDriver } from "./PostgresDriver.ts";
+
+const typeOf = (parameter: RoutineParameter): string => PostgresDriver.nativeParam(parameter);
 
 const params = (list: readonly RoutineParameter[]): string =>
-  list.map((p) => `  ${p.name} ${p.type}`).join(",\n");
+  list.map((p) => `  ${p.name} ${typeOf(p)}`).join(",\n");
 
 const recordset = (columns: readonly RoutineParameter[]): string =>
-  columns.map((c) => `${c.name} ${c.type}`).join(", ");
+  columns.map((c) => `${c.name} ${typeOf(c)}`).join(", ");
 
 export class PostgresStoredProcedureStatementRenderer {
   renderCreate(statement: CreateCreateStoredProcedureStatement): string {
     return `CREATE OR REPLACE FUNCTION ${statement.name}(
 ${params(statement.parameters)}
-) RETURNS ${statement.keyType} LANGUAGE plpgsql AS $$
+) RETURNS ${PostgresDriver.nativeSpec(statement.keyType)} LANGUAGE plpgsql AS $$
 DECLARE
-  new_id ${statement.keyType};
+  new_id ${PostgresDriver.nativeSpec(statement.keyType)};
 BEGIN
   INSERT INTO ${statement.table} (${statement.parameters.map((p) => p.name).join(", ")})
   VALUES (${statement.parameters.map((p) => p.name).join(", ")})
@@ -36,7 +39,7 @@ $$`;
   renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
     const select = DefaultStatementTextRenderer.instance.render(statement.select);
     const signature = statement.arguments
-      .map((argument) => `${argument.parameter.name} ${argument.parameter.type}`)
+      .map((argument) => `${argument.parameter.name} ${typeOf(argument.parameter)}`)
       .join(", ");
     return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS SETOF RECORD
 LANGUAGE sql AS $$ ${select}; $$`;
@@ -49,7 +52,7 @@ LANGUAGE sql AS $$ ${select}; $$`;
 LANGUAGE sql AS $$ SELECT ${aliased} FROM ${statement.table} t ORDER BY t.${statement.key}; $$`;
     }
     const signature = statement.byProperties
-      .map((c) => `${c} ${statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType}`)
+      .map((c) => `${c} ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
       .join(", ");
     const pred = statement.byProperties
       .map((c) => `t.${c} = ${statement.name}.${c}`)
@@ -85,7 +88,7 @@ $$`;
   renderDelete(statement: CreateDeleteStoredProcedureStatement): string {
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
-      .map((c) => `${c} ${statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType}`)
+      .map((c) => `${c} ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
       .join(", ");
     const pred = by.map((c) => `t.${c} = ${statement.name}.${c}`).join(" AND ");
     return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS INT LANGUAGE plpgsql AS $$
@@ -135,7 +138,7 @@ $$`;
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${statement.payload.name} jsonb)
 LANGUAGE plpgsql AS $$
 BEGIN
-  DELETE FROM ${statement.table} WHERE ${statement.key} IN (SELECT ${statement.key} FROM jsonb_to_recordset(${statement.payload.name}) AS x(${statement.key} ${statement.keyType}));
+  DELETE FROM ${statement.table} WHERE ${statement.key} IN (SELECT ${statement.key} FROM jsonb_to_recordset(${statement.payload.name}) AS x(${statement.key} ${PostgresDriver.nativeSpec(statement.keyType)}));
 END;
 $$`;
   }

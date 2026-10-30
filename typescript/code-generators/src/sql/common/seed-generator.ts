@@ -1,14 +1,8 @@
 import { createHash } from "node:crypto";
-import type {
-  SeedRow,
-  SeedValue,
-  TypeField,
-} from "@deterministic-code/deterministic-generators-common/parser";
+import type { SeedRow, SeedValue } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
-import { sqlStringLiteral } from "@deterministic-code/datasources";
-import { identityInsertStatementOf, seedInsertStatementOf } from "../statements.ts";
-import { q, renderSql, sqlDefault, type SqlDialect } from "./sql-dialect.ts";
-import { dialectConverter } from "./sql-dialect.ts";
+import { SqlSeedStatement, type SpecField } from "@deterministic-code/datasources";
+import { renderSql, type SqlDialect } from "./sql-dialect.ts";
 import { converterFieldOf } from "./converter-field.ts";
 import type { SqlMapping } from "./sql-mapping.ts";
 import {
@@ -22,8 +16,7 @@ import {
 const SEED_UUID_NAMESPACE = "9b3a8e6c-2f1d-4a5b-8c9d-1e2f3a4b5c6d";
 
 const pkType = (table: LiveTable): string =>
-  table.fields.find((f) => isPkField(f, table, overlayOf(table)))?.type ??
-  "integer";
+  table.fields.find((f) => isPkField(f, table, overlayOf(table)))?.type ?? "integer";
 
 const seedUuid = (tableName: string, id: number): string => {
   const bytes = Buffer.from(
@@ -43,48 +36,14 @@ const seedUuid = (tableName: string, id: number): string => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 };
 
-const renderValue = (
-  dialect: SqlDialect,
-  field: TypeField,
-  value: SeedValue,
-): string => {
-  if (field.type === "boolean") {
-    return (
-      dialectConverter(dialect).defaultValueConverter.convert(
-        "boolean",
-        value ? "true" : "false",
-      ) ?? "0"
-    );
-  }
-  if (field.type === "integer" || field.type === "reference") {
-    return String(value);
-  }
-  return sqlStringLiteral(value);
-};
-
-const idValue = (table: LiveTable, id: number): string => {
+const idValue = (table: LiveTable, id: number): unknown => {
   const t = pkType(table);
-  if (t === "uuid") return sqlStringLiteral(seedUuid(table.name, id));
-  if (t === "string") return sqlStringLiteral(String(id));
-  return String(id);
+  if (t === "uuid") return seedUuid(table.name, id);
+  if (t === "string") return String(id);
+  return id;
 };
 
-const colValue = (
-  dialect: SqlDialect,
-  field: TypeField | undefined,
-  value: SeedValue | undefined,
-): string => {
-  if (!field) return "NULL";
-  if (value === null || value === undefined) {
-    return sqlDefault(dialect, field) ?? "NULL";
-  }
-  return renderValue(dialect, field, value);
-};
-
-const colsForRow = (
-  table: LiveTable,
-  row: Record<string, SeedValue>,
-): string[] => {
+const colsForRow = (table: LiveTable, row: Record<string, SeedValue>): string[] => {
   const names = new Set(table.fields.map((f) => f.name));
   const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
   return [
@@ -92,6 +51,23 @@ const colsForRow = (
     ...(names.has("uuid") && !generated.includes("uuid") ? ["uuid"] : []),
     ...Object.keys(row).filter((k) => !generated.includes(k) && k !== "uuid"),
   ];
+};
+
+const columnOf = (
+  table: LiveTable,
+  mapping: SqlMapping,
+  logical: string,
+  seed: SeedRow,
+): { column: string; field: SpecField; value: unknown } => {
+  const field = table.fields.find((f) => f.name === logical);
+  const spec = field ? converterFieldOf(field) : { type: "string", name: logical };
+  const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
+  const value = generated.includes(logical)
+    ? idValue(table, seed.id)
+    : logical === "uuid"
+      ? seedUuid(table.name, seed.id)
+      : seed.row[logical];
+  return { column: mapping.columnName(table, logical), field: spec, value };
 };
 
 /** Per-table seed SQL blocks for the initial migration (`-- Seeds: <table>`). */
@@ -105,28 +81,20 @@ export const seedSections = (
   for (const table of tables) {
     const rows = seeds.get(table.name) ?? [];
     if (rows.length === 0) continue;
-    const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
     const pk = table.fields.find((field) => field.name === tableIdentity(table)[0]);
     const identity =
-      pk != null &&
-      usesGeneratedIdColumn(table, pk) &&
-      sqlDefault(dialect, converterFieldOf(pk)) == null;
-    const inserts = rows.map((seed) => {
-      const cols = colsForRow(table, seed.row);
-      const values = cols.map((c) => {
-        if (generated.includes(c)) return idValue(table, seed.id);
-        if (c === "uuid") return sqlStringLiteral(seedUuid(table.name, seed.id));
-        return colValue(
-          dialect,
-          table.fields.find((f) => f.name === c),
-          seed.row[c],
-        );
-      });
-      return seedInsertStatementOf(table, mapping, cols, values, dialect);
-    });
+      pk != null && usesGeneratedIdColumn(table, pk) && pk.defaultValue == null;
     lines.push(`-- Seeds: ${table.tableName}`);
-    for (const insert of inserts)
-      lines.push(renderSql(dialect, identityInsertStatementOf(dialect, table, mapping, [insert], identity)));
+    for (const seed of rows) {
+      const cols = colsForRow(table, seed.row);
+      const columns = cols.map((c) => columnOf(table, mapping, c, seed));
+      lines.push(
+        renderSql(
+          dialect,
+          new SqlSeedStatement(mapping.tableName(table), columns, "insert", identity, pk ? mapping.columnName(table, pk.name) : undefined),
+        ),
+      );
+    }
   }
   return lines;
 };
@@ -155,10 +123,24 @@ export const seedDeletes = (
     const rows = seeds.get(table.name) ?? [];
     if (rows.length === 0) continue;
     const id = tableIdentity(table)[0] ?? "id";
+    const field = table.fields.find((f) => f.name === id);
     lines.push(`-- Seeds: ${table.tableName}`);
     for (const seed of rows)
       lines.push(
-        `DELETE FROM ${q(dialect, table.tableName)} WHERE ${q(dialect, mapping.columnName(table, id))} = ${idValue(table, seed.id)};`,
+        renderSql(
+          dialect,
+          new SqlSeedStatement(
+            mapping.tableName(table),
+            [
+              {
+                column: mapping.columnName(table, id),
+                field: field ? converterFieldOf(field) : { type: pkType(table) },
+                value: idValue(table, seed.id),
+              },
+            ],
+            "delete",
+          ),
+        ),
       );
   }
   return lines;

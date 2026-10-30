@@ -10,7 +10,7 @@ pub struct MysqlStoredProcedureStatementRenderer;
 
 fn params(list: &[RoutineParameter]) -> String {
     list.iter()
-        .map(|p| format!("  IN {} {}", p.name, p.r#type))
+        .map(|p| format!("  IN {} {}", p.name, crate::MysqlDriver::native_param(p)))
         .collect::<Vec<_>>()
         .join(",\n")
 }
@@ -243,6 +243,7 @@ impl MysqlStoredProcedureStatementRenderer {
             .unwrap_or(RoutineParameter {
                 name: statement.key().into(),
                 r#type: statement.key_type().into(),
+                field: None,
             });
         procedure(
             statement.name(),

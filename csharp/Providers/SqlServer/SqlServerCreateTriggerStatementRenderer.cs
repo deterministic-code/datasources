@@ -4,14 +4,19 @@ namespace Datasources.SqlServer;
 
 internal sealed class SqlServerCreateTriggerStatementRenderer : CreateTriggerStatementTextRenderer
 {
-    public override string Render(CreateTriggerStatement statement) =>
-        $"""
-        CREATE TRIGGER {statement.Name} ON {statement.Table}
-        AFTER UPDATE AS
-        BEGIN
-          SET NOCOUNT ON;
-          UPDATE {statement.Table} SET {statement.UpdatedColumn} = {statement.UtcNow}
-          FROM {statement.Table} t INNER JOIN inserted i ON t.{statement.KeyColumn} = i.{statement.KeyColumn};
-        END
-        """;
+    public override string Render(CreateTriggerStatement statement)
+    {
+        var table = SqlServerDriver.Quote(statement.Table);
+        var updated = SqlServerDriver.Quote(statement.UpdatedColumn);
+        var key = SqlServerDriver.Quote(statement.KeyColumn);
+        return $"""
+            CREATE TRIGGER {SqlServerDriver.Quote(statement.Name)} ON {table}
+            AFTER UPDATE AS
+            BEGIN
+              SET NOCOUNT ON;
+              UPDATE {table} SET {updated} = {SqlServerDriver.UtcNow()}
+              FROM {table} t INNER JOIN inserted i ON t.{key} = i.{key};
+            END
+            """;
+    }
 }

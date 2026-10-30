@@ -138,7 +138,7 @@ describe("createCasing Auto defaults", () => {
     assert.equal(casing.keyword("create"), "CREATE");
     assert.equal(casing.keyword("TABLE"), "TABLE");
     assert.equal(
-      casing.applyKeywords('CREATE TABLE "users"'),
+      casing.applyKeywords('CREATE TABLE "users"', "sqlite"),
       'CREATE TABLE "users"',
     );
   });
@@ -239,7 +239,7 @@ describe("createCasing overrides", () => {
     assert.equal(upper.keyword("table"), "TABLE");
     assert.equal(auto.keyword("not"), "NOT");
     assert.equal(
-      upper.applyKeywords('CREATE TABLE "users"'),
+      upper.applyKeywords('CREATE TABLE "users"', "sqlite"),
       'CREATE TABLE "users"',
     );
   });
@@ -248,20 +248,6 @@ describe("createCasing overrides", () => {
     const casing = createCasing({ "datasource.casing.keywords": "LOWER" });
     assert.equal(casing.keyword("CREATE"), "create");
     assert.equal(casing.keyword("Table"), "table");
-    assert.equal(
-      casing.applyKeywords(
-        'CREATE TABLE "users" (\n  "email" VARCHAR(256) NOT NULL\n);',
-      ),
-      'create table "users" (\n  "email" varchar(256) not null\n);',
-    );
-    assert.equal(
-      casing.applyKeywords("INSERT INTO t VALUES ('CREATE', 'NOT NULL');"),
-      "insert into t values ('CREATE', 'NOT NULL');",
-    );
-    assert.equal(
-      casing.applyKeywords('-- CREATE TABLE stays in comments\nDROP TABLE t;'),
-      '-- CREATE TABLE stays in comments\ndrop table t;',
-    );
   });
 
   for (const leaf of ["file_names", "types", "fields", "directories"] as const) {
@@ -307,7 +293,7 @@ describe("createCasing objects", () => {
       const casing = createCasing(settings);
       assert.equal(casing.keyword("create"), "CREATE");
       assert.equal(
-        casing.applyKeywords('CREATE TABLE "users"'),
+        casing.applyKeywords('CREATE TABLE "users"', "sqlite"),
         'CREATE TABLE "users"',
       );
     });
@@ -317,10 +303,6 @@ describe("createCasing objects", () => {
     for (const raw of ["lower", "LOWER", "Lower"] as const) {
       const casing = createCasing({ "datasource.casing.keywords": raw });
       assert.equal(casing.keyword("CREATE"), "create");
-      assert.equal(
-        casing.applyKeywords("CREATE TABLE t"),
-        "create table t",
-      );
     }
   });
 

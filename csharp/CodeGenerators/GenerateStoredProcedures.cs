@@ -9,7 +9,7 @@ public static class GenerateStoredProcedures
     {
         var entries = new List<GenerateEntry>();
         foreach (var dialect in dialects)
-            entries.AddRange(GenerateProcedures.ForDialect(SqlDialect.Require(dialect), files, settings));
+            entries.AddRange(GenerateProcedures.ForDialect(GenerateSql.Require(dialect), files, settings));
         return entries;
     }
 }

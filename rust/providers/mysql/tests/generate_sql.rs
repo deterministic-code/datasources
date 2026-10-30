@@ -1,20 +1,15 @@
-use datasources_code_generators::{generate_sql, SqlGenerateDriver};
+use datasources_code_generators::generate_sql;
 use regex::Regex;
 use std::collections::HashMap;
-use std::sync::Once;
+use std::sync::{Arc, Once};
 
 fn register_sql() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         datasources_code_generators::register_dialect(
             "mysql",
-            SqlGenerateDriver {
-                quote_left: crate::MysqlDriver::QUOTE_LEFT,
-                quote_right: crate::MysqlDriver::QUOTE_RIGHT,
-                type_converter: crate::MysqlDriver::types(),
-                default_value_converter: crate::MysqlDriver::defaults(),
-                statement_renderer: crate::MysqlDriver::statement_text_renderer(),
-            },
+            Arc::new(crate::MysqlDriver),
+            crate::MysqlDriver::apply_keywords,
         )
         .unwrap();
     });

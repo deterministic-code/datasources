@@ -6,7 +6,6 @@ use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
     Mapper, Operator, Row, TypeConverter, Value, Where,
 };
-use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, columns, contact_entity, contact_lookup_ids,
     contact_schema, contact_with, contacts_join_query, contacts_parity, join_entity,
@@ -18,13 +17,8 @@ use std::sync::Arc;
 fn register_sql() {
     datasources_tests::register_contact_dialect(
         "sqlite",
-        SqlGenerateDriver {
-            quote_left: crate::SqliteDriver::QUOTE_LEFT,
-            quote_right: crate::SqliteDriver::QUOTE_RIGHT,
-            type_converter: crate::SqliteDriver::types(),
-            default_value_converter: crate::SqliteDriver::defaults(),
-            statement_renderer: crate::SqliteDriver::statement_text_renderer(),
-        },
+        Arc::new(crate::SqliteDriver),
+        crate::SqliteDriver::apply_keywords,
     );
 }
 

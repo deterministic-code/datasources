@@ -12,7 +12,7 @@ use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ConsoleCommandMiddleware,
     FlatToNestedMapper, Mapper, Native, Row, TypeConverter, Value,
 };
-use datasources_code_generators::SqlGenerateDriver;
+use datasources::Driver;
 use serde_yaml::Value as Yaml;
 use std::collections::HashMap;
 use std::fs;
@@ -23,10 +23,14 @@ pub fn contact_seed(dialect: &str) -> String {
         .unwrap_or_else(|err| panic!("contact seed {dialect}: {err}"))
 }
 
-pub fn register_contact_dialect(dialect: &str, driver: SqlGenerateDriver) {
+pub fn register_contact_dialect(
+    dialect: &str,
+    driver: Arc<dyn Driver>,
+    apply_keywords: fn(&str, &dyn Fn(&str) -> String) -> String,
+) {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
-        datasources_code_generators::register_dialect(dialect, driver).unwrap();
+        datasources_code_generators::register_dialect(dialect, driver, apply_keywords).unwrap();
     });
 }
 

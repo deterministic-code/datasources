@@ -4,21 +4,23 @@ namespace Datasources.Postgres;
 
 internal sealed class PostgresStoredProcedureStatementRenderer
 {
+    static string TypeOf(RoutineParameter parameter) => PostgresDriver.NativeType(parameter);
+
     static string Params(IReadOnlyList<RoutineParameter> list) =>
-        string.Join(",\n", list.Select(parameter => $"  {parameter.Name} {parameter.Type}"));
+        string.Join(",\n", list.Select(parameter => $"  {parameter.Name} {TypeOf(parameter)}"));
 
     static string Recordset(IReadOnlyList<RoutineParameter> columns) =>
-        string.Join(", ", columns.Select(column => $"{column.Name} {column.Type}"));
+        string.Join(", ", columns.Select(column => $"{column.Name} {TypeOf(column)}"));
 
     public string Render(CreateCreateStoredProcedureStatement statement) =>
         $"""
         CREATE OR REPLACE FUNCTION {statement.Name}(
         {Params(statement.Parameters)}
-        ) RETURNS {statement.KeyType} LANGUAGE plpgsql AS $$
+        ) RETURNS {PostgresDriver.NativeSpec(statement.KeyType)} LANGUAGE plpgsql AS $$
         DECLARE
-          new_id {statement.KeyType};
+          new_id {PostgresDriver.NativeSpec(statement.KeyType)};
         BEGIN
-          INSERT INTO {statement.Table} ({string.Join(", ", statement.Parameters.Select(parameter => parameter.Name))})
+          INSERT INTO {PostgresDriver.Quote(statement.Table)} ({string.Join(", ", statement.Parameters.Select(parameter => parameter.Name))})
           VALUES ({string.Join(", ", statement.Parameters.Select(parameter => parameter.Name))})
           RETURNING {statement.Key} INTO new_id;
           RETURN new_id;
@@ -30,7 +32,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
     {
         var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
         var signature = string.Join(", ", statement.Arguments.Select(argument =>
-            $"{argument.Parameter.Name} {argument.Parameter.Type}"));
+            $"{argument.Parameter.Name} {TypeOf(argument.Parameter)}"));
         return $"""
             CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS SETOF RECORD
             LANGUAGE sql AS $$ {select}; $$
@@ -42,15 +44,15 @@ internal sealed class PostgresStoredProcedureStatementRenderer
         var aliased = string.Join(", ", statement.Columns.Select(column => $"t.{column}"));
         if (statement.ByProperties.Count == 0)
             return $"""
-                CREATE OR REPLACE FUNCTION {statement.Name}() RETURNS SETOF {statement.Table}
-                LANGUAGE sql AS $$ SELECT {aliased} FROM {statement.Table} t ORDER BY t.{statement.Key}; $$
+                CREATE OR REPLACE FUNCTION {statement.Name}() RETURNS SETOF {PostgresDriver.Quote(statement.Table)}
+                LANGUAGE sql AS $$ SELECT {aliased} FROM {PostgresDriver.Quote(statement.Table)} t ORDER BY t.{statement.Key}; $$
                 """;
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"{column} {statement.Parameters.FirstOrDefault(parameter => parameter.Name == column)?.Type ?? statement.KeyType}"));
+            $"{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
         var pred = string.Join(" AND ", statement.ByProperties.Select(column => $"t.{column} = {statement.Name}.{column}"));
         return $"""
-            CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS SETOF {statement.Table}
-            LANGUAGE sql AS $$ SELECT {aliased} FROM {statement.Table} t WHERE {pred}; $$
+            CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS SETOF {PostgresDriver.Quote(statement.Table)}
+            LANGUAGE sql AS $$ SELECT {aliased} FROM {PostgresDriver.Quote(statement.Table)} t WHERE {pred}; $$
             """;
     }
 
@@ -71,7 +73,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
             DECLARE
               affected INT;
             BEGIN
-              UPDATE {statement.Table} t
+              UPDATE {PostgresDriver.Quote(statement.Table)} t
               SET
             {string.Join(",\n", sets)}
               WHERE {pred};
@@ -86,14 +88,14 @@ internal sealed class PostgresStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"{column} {statement.Parameters.FirstOrDefault(parameter => parameter.Name == column)?.Type ?? statement.KeyType}"));
+            $"{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
         var pred = string.Join(" AND ", by.Select(column => $"t.{column} = {statement.Name}.{column}"));
         return $"""
             CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS INT LANGUAGE plpgsql AS $$
             DECLARE
               affected INT;
             BEGIN
-              DELETE FROM {statement.Table} t WHERE {pred};
+              DELETE FROM {PostgresDriver.Quote(statement.Table)} t WHERE {pred};
               GET DIAGNOSTICS affected = ROW_COUNT;
               RETURN affected;
             END;
@@ -109,7 +111,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
             LANGUAGE plpgsql AS $$
             BEGIN
               WITH inserted AS (
-                INSERT INTO {statement.Table} ({cols})
+                INSERT INTO {PostgresDriver.Quote(statement.Table)} ({cols})
                 SELECT {cols}
                 FROM jsonb_to_recordset({statement.Payload.Name}) AS x({Recordset(statement.Columns)})
                 RETURNING {statement.Key}
@@ -127,7 +129,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
             CREATE OR REPLACE PROCEDURE {statement.Name}({statement.Payload.Name} jsonb)
             LANGUAGE plpgsql AS $$
             BEGIN
-              UPDATE {statement.Table} t SET
+              UPDATE {PostgresDriver.Quote(statement.Table)} t SET
                 {sets}
               FROM jsonb_to_recordset({statement.Payload.Name}) AS x({Recordset(statement.Columns)})
               WHERE t.{statement.Key} = x.{statement.Key};
@@ -141,7 +143,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
         CREATE OR REPLACE PROCEDURE {statement.Name}({statement.Payload.Name} jsonb)
         LANGUAGE plpgsql AS $$
         BEGIN
-          DELETE FROM {statement.Table} WHERE {statement.Key} IN (SELECT {statement.Key} FROM jsonb_to_recordset({statement.Payload.Name}) AS x({statement.Key} {statement.KeyType}));
+          DELETE FROM {PostgresDriver.Quote(statement.Table)} WHERE {statement.Key} IN (SELECT {statement.Key} FROM jsonb_to_recordset({statement.Payload.Name}) AS x({statement.Key} {PostgresDriver.NativeSpec(statement.KeyType)}));
         END;
         $$
         """;

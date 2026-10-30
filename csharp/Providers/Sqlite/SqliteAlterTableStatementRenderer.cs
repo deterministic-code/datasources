@@ -4,8 +4,16 @@ namespace Datasources.Sqlite;
 
 internal sealed class SqliteAlterTableStatementRenderer : AlterTableStatementTextRenderer
 {
-    protected override string Type(Column column) =>
-        SqliteDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;
+    protected override string Quote(string name) => SqliteDriver.Quote(name);
+
+    protected override string Type(Column column) => SqliteDriver.NativeType(column);
+
+    protected override string Default(Column column) =>
+        column.Default is null
+            ? ""
+            : column.Default.Name is null
+                ? $" DEFAULT {SqliteDriver.NativeDefault(column)}"
+                : $" CONSTRAINT {Quote(column.Default.Name)} DEFAULT {SqliteDriver.NativeDefault(column)}";
 
     protected override string ActionSql(AlterTableStatement.IAction action) => action switch
     {

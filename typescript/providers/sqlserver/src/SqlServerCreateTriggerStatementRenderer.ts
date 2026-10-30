@@ -1,13 +1,17 @@
 import { CreateTriggerStatementTextRenderer, type CreateTriggerStatement } from "@deterministic-code/datasources";
+import { SqlServerDriver } from "./SqlServerDriver.ts";
 
 export class SqlServerCreateTriggerStatementRenderer extends CreateTriggerStatementTextRenderer {
   override render(statement: CreateTriggerStatement): string {
-    return `CREATE TRIGGER ${statement.name} ON ${statement.table}
+    const table = SqlServerDriver.quote(statement.table);
+    const updated = SqlServerDriver.quote(statement.updatedColumn);
+    const key = SqlServerDriver.quote(statement.keyColumn);
+    return `CREATE TRIGGER ${SqlServerDriver.quote(statement.name)} ON ${table}
 AFTER UPDATE AS
 BEGIN
   SET NOCOUNT ON;
-  UPDATE ${statement.table} SET ${statement.updatedColumn} = ${statement.utcNow}
-  FROM ${statement.table} t INNER JOIN inserted i ON t.${statement.keyColumn} = i.${statement.keyColumn};
+  UPDATE ${table} SET ${updated} = ${SqlServerDriver.utcNow()}
+  FROM ${table} t INNER JOIN inserted i ON t.${key} = i.${key};
 END`;
   }
 }

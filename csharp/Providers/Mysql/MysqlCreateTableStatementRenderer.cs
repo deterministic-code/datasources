@@ -2,11 +2,12 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlCreateTableStatementRenderer : CreateTableStatementTextRenderer
 {
-    protected override string Type(Column column) =>
-        MysqlDriver.ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;
+    protected override string Quote(string name) => MysqlDriver.Quote(name);
+
+    protected override string Type(Column column) => MysqlDriver.NativeType(column);
 
     protected override string Default(Column column) =>
-        column.Default is null ? "" : $" DEFAULT {column.Default.Value}";
+        column.Default is null ? "" : $" DEFAULT {MysqlDriver.NativeDefault(column)}";
 
     protected override string NotNullSql(NotNull? value) =>
         value is null ? "" : " NOT NULL";

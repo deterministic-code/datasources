@@ -177,13 +177,9 @@ where
         .collect()
 }
 
-fn quote_ident(id: &str) -> String {
-    format!("\"{}\"", id.replace('"', "\"\""))
-}
-
 pub async fn apply_schema(connection: &dyn Connection, name: &str) -> Result<()> {
     let command = connection.create_command();
-    for statement in tables(name, quote_ident, None) {
+    for statement in tables(name, |id| id.to_string(), None) {
         command.execute_statement(&statement, None).await?;
     }
     Ok(())

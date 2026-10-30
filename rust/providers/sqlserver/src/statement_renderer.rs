@@ -4,14 +4,16 @@ use crate::create_table_statement_renderer::SqlServerCreateTableStatementRendere
 use crate::create_trigger_statement_renderer::SqlServerCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::SqlServerDropRoutineStatementRenderer;
 use crate::identity_insert_statement_renderer::SqlServerIdentityInsertStatementRenderer;
+use crate::sql_seed_statement_renderer::SqlServerSqlSeedStatementRenderer;
 use datasources::{
     AlterTableStatement, CreateBulkCreateStoredProcedureStatement,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
-    DropIndexStatement, DropRoutineStatement, IdentityInsertStatement, StatementTextRenderer,
-    StatementVisitor,
+    CreateIndexStatement, DropIndexStatement, DropRoutineStatement, DropTableStatement,
+    ForeignKeyStatement, IdentityInsertStatement, SqlSeedStatement,
+    StatementTextRenderer, StatementVisitor,
 };
 
 pub struct SqlServerStatementRenderer;
@@ -88,5 +90,52 @@ impl StatementVisitor for SqlServerStatementRenderer {
     }
     fn visit_create_bulk_delete_stored_procedure(&self, statement: &CreateBulkDeleteStoredProcedureStatement, _text: &StatementTextRenderer) -> String {
         SqlServerStoredProcedureStatementRenderer.render_bulk_delete(statement)
+    }
+
+    fn visit_sql_seed(&self, statement: &SqlSeedStatement, _text: &StatementTextRenderer) -> String {
+        SqlServerSqlSeedStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_table(&self, statement: &DropTableStatement, _text: &StatementTextRenderer) -> String {
+        format!("DROP TABLE IF EXISTS {}", crate::SqlServerDriver::quote(statement.table()))
+    }
+
+    fn visit_create_index(&self, statement: &CreateIndexStatement, _text: &StatementTextRenderer) -> String {
+        format!(
+            "CREATE {}INDEX {} ON {} ({})",
+            if statement.unique() { "UNIQUE " } else { "" },
+            crate::SqlServerDriver::quote(statement.name()),
+            crate::SqlServerDriver::quote(statement.table()),
+            statement
+                .columns()
+                .iter()
+                .map(|column| crate::SqlServerDriver::quote(column))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
+        let table = crate::SqlServerDriver::quote(statement.table());
+        let name = crate::SqlServerDriver::quote(statement.name());
+        if statement.kind() == "drop" {
+            return format!("ALTER TABLE {table} DROP CONSTRAINT {name}");
+        }
+        let cols = statement
+            .columns()
+            .iter()
+            .map(|column| crate::SqlServerDriver::quote(column))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let refs = statement
+            .references_columns()
+            .iter()
+            .map(|column| crate::SqlServerDriver::quote(column))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "ALTER TABLE {table} ADD CONSTRAINT {name} FOREIGN KEY ({cols}) REFERENCES {} ({refs})",
+            crate::SqlServerDriver::quote(statement.references_table())
+        )
     }
 }

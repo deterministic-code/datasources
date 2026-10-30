@@ -6,11 +6,11 @@ internal sealed class OracleCreateTriggerStatementRenderer : CreateTriggerStatem
 {
     public override string Render(CreateTriggerStatement statement) =>
         $"""
-        CREATE OR REPLACE TRIGGER {statement.Name}
-        BEFORE UPDATE ON {statement.Table}
+        CREATE OR REPLACE TRIGGER {OracleDriver.Quote(statement.Name)}
+        BEFORE UPDATE ON {OracleDriver.Quote(statement.Table)}
         FOR EACH ROW
         BEGIN
-          :NEW.{statement.UpdatedColumn} := {statement.UtcNow};
+          :NEW.{OracleDriver.Quote(statement.UpdatedColumn)} := {OracleDriver.UtcNow()};
         END;
         /
         """;

@@ -1,3 +1,4 @@
+use crate::converters::SpecField;
 use crate::statements::{ColumnDefault, NotNull};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -7,6 +8,7 @@ pub struct Column {
     pub default: Option<ColumnDefault>,
     pub not_null: Option<NotNull>,
     pub identity: bool,
+    pub field: Option<SpecField>,
 }
 
 impl Column {
@@ -17,6 +19,14 @@ impl Column {
             default: None,
             not_null: None,
             identity: false,
+            field: None,
+        }
+    }
+
+    pub fn field(self, field: SpecField) -> Self {
+        Self {
+            field: Some(field),
+            ..self
         }
     }
 

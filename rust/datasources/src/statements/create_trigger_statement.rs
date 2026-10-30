@@ -6,7 +6,6 @@ pub struct CreateTriggerStatement {
     name: String,
     updated_column: String,
     key_column: String,
-    utc_now: String,
 }
 
 impl CreateTriggerStatement {
@@ -15,14 +14,12 @@ impl CreateTriggerStatement {
         name: impl AsRef<str>,
         updated_column: impl AsRef<str>,
         key_column: impl AsRef<str>,
-        utc_now: impl AsRef<str>,
     ) -> Self {
         Self {
             table: table.as_ref().to_string(),
             name: name.as_ref().to_string(),
             updated_column: updated_column.as_ref().to_string(),
             key_column: key_column.as_ref().to_string(),
-            utc_now: utc_now.as_ref().to_string(),
         }
     }
 
@@ -40,10 +37,6 @@ impl CreateTriggerStatement {
 
     pub fn key_column(&self) -> &str {
         &self.key_column
-    }
-
-    pub fn utc_now(&self) -> &str {
-        &self.utc_now
     }
 }
 

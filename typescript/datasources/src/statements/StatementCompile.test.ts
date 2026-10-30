@@ -28,6 +28,7 @@ import {
   StatementTextRenderer,
   DeleteStatement,
   ForeignKey,
+  ForeignKeyStatement,
   InsertStatement,
   Join,
   NotNull,
@@ -35,6 +36,7 @@ import {
   OrderBy,
   PrimaryKey,
   SelectStatement,
+  SqlSeedStatement,
   ReferentialAction,
   ReturnStatement,
   UniqueConstraint,
@@ -311,7 +313,7 @@ describe("statement compile", () => {
     );
     expect(
       DefaultStatementTextRenderer.instance.render(
-        new CreateTriggerStatement("users", "tr_users", "updated", "id", "CURRENT_TIMESTAMP"),
+        new CreateTriggerStatement("users", "tr_users", "updated", "id"),
       ),
     ).toBe("");
     expect(DefaultStatementTextRenderer.instance.render(new DropRoutineStatement("sp_users"))).toBe("");
@@ -439,6 +441,19 @@ describe("statement compile", () => {
     const foreign = new ForeignWhere(new Operator.Equals("id", 1));
     expect(foreign instanceof Where).toBe(false);
     expect(DefaultStatementTextRenderer.instance.render(foreign)).toBe("id = $id");
+  });
+
+  it("leaves seed and foreign key statements to the driver", () => {
+    expect(() =>
+      DefaultStatementTextRenderer.instance.render(
+        new SqlSeedStatement("users", [{ column: "id", field: { type: "integer" }, value: 1 }]),
+      ),
+    ).toThrow(/SqlSeedStatement is rendered by the SQL driver/);
+    expect(() =>
+      DefaultStatementTextRenderer.instance.render(
+        new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"]),
+      ),
+    ).toThrow(/ForeignKeyStatement is rendered by the SQL driver/);
   });
 
   it("attaches where to a query", () => {

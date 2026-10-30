@@ -45,4 +45,13 @@ internal sealed class OracleStatementRenderer(StatementTextRenderer text) : Stat
 
     public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
         new OracleStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(SqlSeedStatement seed) =>
+        new OracleSqlSeedStatementRenderer().Render(seed);
+
+    public override string Visit(CreateIndexStatement index) =>
+        new OracleCreateIndexStatementRenderer().Render(index);
+
+    public override string Visit(ForeignKeyStatement key) =>
+        new OracleForeignKeyStatementRenderer().Render(key);
 }

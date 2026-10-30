@@ -110,10 +110,8 @@ export const tables = (
   return schemas.map((table) => statementOf(table, quote, rename));
 };
 
-const quoteIdent = (id: string): string => `"${id.replaceAll('"', '""')}"`;
-
 export const applySchema = async (connection: IConnection, name: string): Promise<void> => {
   const command = connection.createCommand();
-  for (const statement of tables(name, quoteIdent))
+  for (const statement of tables(name, (id) => id))
     await execute(command, statement);
 };

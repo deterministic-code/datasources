@@ -157,11 +157,11 @@ export const versionMigrationFiles = async (
       .join("\n");
     files.push({
       path: `${pad(number)}_up.sql`,
-      content: finalize(upSql, casing),
+      content: finalize(upSql, casing, dialect),
     });
     files.push({
       path: `${pad(number)}_down.sql`,
-      content: finalize(downSql, casing),
+      content: finalize(downSql, casing, dialect),
     });
     previous = current;
   }
@@ -188,7 +188,7 @@ const procedureDiff = (
   });
 };
 
-const finalize = (text: string, casing: PackCasing): string => {
-  const out = casing.applyKeywords(text.replace(/\n{3,}/g, "\n\n"));
+const finalize = (text: string, casing: PackCasing, dialect: SqlDialect): string => {
+  const out = casing.applyKeywords(text.replace(/\n{3,}/g, "\n\n"), dialect);
   return out.endsWith("\n") ? out : `${out}\n`;
 };

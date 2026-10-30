@@ -2,87 +2,77 @@ namespace Datasources.CodeGenerators;
 
 public static class TableStatements
 {
-    public static CreateTableStatement CreateTable(string dialect, SqlTable table, SqlMapping mapping)
+    public static CreateTableStatement CreateTable(SqlTable table, SqlMapping mapping)
     {
         var keys = SqlSchema.TableIdentity(table);
-        var columns = table.Fields.Select(field => ColumnOf(dialect, mapping, table, field)).ToList();
+        var columns = table.Fields.Select(field => ColumnOf(mapping, table, field)).ToList();
         var uniques = table.Fields
             .Where(field => SqlSchema.FieldOverlay(table, field.Name)?.IsUnique == true || field.Name == "uuid")
             .Select(field => new UniqueConstraint(
-                SqlDialect.Q(dialect, mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint")),
-                [SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name))]))
+                mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint"),
+                [mapping.ColumnName(table, field.Name)]))
             .ToList();
         var foreignKeys = table.Fields
             .Where(field => field.References is not null || field.ReferencePair is not null)
-            .Select(field =>
-            {
-                var reference = mapping.ResolveReference(field);
-                return new ForeignKey(
-                    SqlDialect.Q(dialect, mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "foreign_key")),
-                    [SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name))],
-                    SqlDialect.Q(dialect, reference.TableName),
-                    [SqlDialect.Q(dialect, reference.ColumnName)]);
-            })
+            .Select(field => ForeignKeyOf(mapping, table, field))
             .ToList();
         var overlay = SqlSchema.OverlayOf(table);
         IReadOnlyList<ITableConstraint> pk = keys.Count > 1
-            ? [new PrimaryKey(SqlDialect.Q(dialect, mapping.ConstraintName(table, "primary_key")), keys.Select(key => SqlDialect.Q(dialect, mapping.ColumnName(table, key))).ToList())]
+            ? [new PrimaryKey(mapping.ConstraintName(table, "primary_key"), keys.Select(key => mapping.ColumnName(table, key)).ToList())]
             : keys.Count == 1 && table.Fields.Any(field => SpecTables.IsPkField(field, table.AsType(), overlay))
-                ? [new PrimaryKey(SqlDialect.Q(dialect, mapping.ConstraintName(table, "primary_key")), [SqlDialect.Q(dialect, mapping.ColumnName(table, keys[0]))])]
+                ? [new PrimaryKey(mapping.ConstraintName(table, "primary_key"), [mapping.ColumnName(table, keys[0])])]
                 : [];
-        return new CreateTableStatement(SqlDialect.Q(dialect, table.TableName), columns, [.. pk, .. uniques, .. foreignKeys]);
+        return new CreateTableStatement(table.TableName, columns, [.. pk, .. uniques, .. foreignKeys]);
     }
 
-    public static CreateIndexStatement CreateIndex(string dialect, SqlMapping mapping, SqlTable table, DatasourceIndex index) =>
+    public static CreateIndexStatement CreateIndex(SqlMapping mapping, SqlTable table, DatasourceIndex index) =>
         new(
-            SqlDialect.Q(dialect, mapping.ConstraintName(table, index.Name, "index")),
-            SqlDialect.Q(dialect, table.TableName),
-            index.Fields.Select(column => SqlDialect.Q(dialect, mapping.ColumnName(table, column))).ToList(),
+            mapping.ConstraintName(table, index.Name, "index"),
+            table.TableName,
+            index.Fields.Select(column => mapping.ColumnName(table, column)).ToList(),
             index.IsUnique);
 
-    public static DropTableStatement DropTable(string dialect, string table) =>
-        new(SqlDialect.Q(dialect, table));
+    public static DropTableStatement DropTable(string table) => new(table);
 
-    public static DropIndexStatement DropIndex(string dialect, string name, string table) =>
-        new(SqlDialect.Q(dialect, name), SqlDialect.Q(dialect, table));
+    public static DropIndexStatement DropIndex(string name, string table) => new(name, table);
 
-    public static DropTriggerStatement DropTrigger(string dialect, string name, string table) =>
-        new(SqlDialect.Q(dialect, name), SqlDialect.Q(dialect, table));
+    public static DropTriggerStatement DropTrigger(string name, string table) => new(name, table);
 
-    public static Column Column(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field) =>
-        ColumnOf(dialect, mapping, table, field);
+    public static Column Column(SqlMapping mapping, SqlTable table, SpecTypeField field) =>
+        ColumnOf(mapping, table, field);
 
-    public static UniqueConstraint UniqueOf(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field) =>
+    public static UniqueConstraint UniqueOf(SqlMapping mapping, SqlTable table, SpecTypeField field) =>
         new(
-            SqlDialect.Q(dialect, mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint")),
-            [SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name))]);
+            mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint"),
+            [mapping.ColumnName(table, field.Name)]);
 
-    public static ForeignKey ForeignKeyOf(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field)
+    public static ForeignKey ForeignKeyOf(SqlMapping mapping, SqlTable table, SpecTypeField field)
     {
         var reference = mapping.ResolveReference(field);
         return new ForeignKey(
-            SqlDialect.Q(dialect, mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "foreign_key")),
-            [SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name))],
-            SqlDialect.Q(dialect, reference.TableName),
-            [SqlDialect.Q(dialect, reference.ColumnName)]);
+            mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "foreign_key"),
+            [mapping.ColumnName(table, field.Name)],
+            reference.TableName,
+            [reference.ColumnName]);
     }
 
-    public static CreateTriggerStatement CreateTrigger(string dialect, SqlTable table, SqlMapping mapping, string key) =>
-        new(
-            SqlDialect.Q(dialect, table.TableName),
-            SqlDialect.Q(dialect, mapping.TriggerName(table)),
-            SqlDialect.Q(dialect, mapping.ColumnName(table, "updated")),
-            SqlDialect.Q(dialect, mapping.ColumnName(table, key)),
-            SqlDialect.DriverOf(dialect).DefaultValueConverter.Convert("datetime", "UtcNow") ?? "");
+    public static ForeignKeyStatement AddForeignKey(SqlMapping mapping, SqlTable table, SpecTypeField field)
+    {
+        var fk = ForeignKeyOf(mapping, table, field);
+        return new ForeignKeyStatement(table.TableName, fk.Name, fk.Columns, fk.ReferencesTable, fk.ReferencesColumns);
+    }
 
-    public static InsertStatement SeedInsert(SqlTable table, SqlMapping mapping, IReadOnlyList<string> columns, IReadOnlyList<string> values, string dialect) =>
-        new(
-            SqlDialect.Q(dialect, table.TableName),
-            columns.Select((column, i) => new Parameter(
-                SqlDialect.Q(dialect, mapping.ColumnName(table, column)),
-                SqlValue(values.ElementAtOrDefault(i) ?? "NULL"))).ToList());
+    public static ForeignKeyStatement DropForeignKey(SqlMapping mapping, SqlTable table, SpecTypeField field) =>
+        new(table.TableName, ForeignKeyOf(mapping, table, field).Name, [], "", [], "drop");
 
-    public static IdentityInsertStatement IdentityInsert(string dialect, SqlTable table, SqlMapping mapping, IReadOnlyList<InsertStatement> inserts, bool identity)
+    public static CreateTriggerStatement CreateTrigger(SqlTable table, SqlMapping mapping, string key) =>
+        new(
+            table.TableName,
+            mapping.TriggerName(table),
+            mapping.ColumnName(table, "updated"),
+            mapping.ColumnName(table, key));
+
+    public static IdentityInsertStatement IdentityInsert(SqlTable table, SqlMapping mapping, IReadOnlyList<InsertStatement> inserts, bool identity)
     {
         var keys = SqlSchema.TableIdentity(table);
         return new IdentityInsertStatement(
@@ -129,21 +119,20 @@ public static class TableStatements
         string name, string table, IReadOnlyList<RoutineParameter> columns, RoutineParameter payload, string key, string keyType) =>
         new(name, table, columns, payload, key, keyType);
 
-    static Column ColumnOf(string dialect, SqlMapping mapping, SqlTable table, SpecTypeField field)
+    static Column ColumnOf(SqlMapping mapping, SqlTable table, SpecTypeField field)
     {
         var converterField = field.ConverterField();
         var generated = SqlSchema.UsesGeneratedIdColumn(table, field);
         var named = mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "default_constraint");
-        var fromSpec = SqlDialect.SqlDefault(dialect, converterField);
+        var fromSpec = converterField.DefaultValue;
         var identity = generated && fromSpec is null;
         var keys = SqlSchema.TableIdentity(table);
         return new Column(
-            SqlDialect.Q(dialect, mapping.ColumnName(table, field.Name)),
-            SqlDialect.MapColumnType(dialect, converterField),
-            fromSpec is null ? null : new ColumnDefault(fromSpec, SqlDialect.Q(dialect, named)),
+            mapping.ColumnName(table, field.Name),
+            converterField.Type,
+            fromSpec is null ? null : new ColumnDefault(Convert.ToString(fromSpec) ?? "", named),
             !field.IsNullable || keys.Contains(field.Name) ? new NotNull() : null,
-            identity);
+            identity,
+            converterField);
     }
-
-    static Value SqlValue(string sql) => sql == "NULL" ? Value.Null.Instance : new Value.Text(sql);
 }

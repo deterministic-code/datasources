@@ -658,7 +658,7 @@ pub async fn run(
     }
     for statement in schema_tables(
         &spec.schema,
-        dialect.quote,
+        |id| id.to_string(),
         if rename.is_empty() {
             None
         } else {

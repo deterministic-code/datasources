@@ -20,6 +20,9 @@ export type {
   IDropTriggerStatement,
   ICreateTriggerStatement,
   IIdentityInsertStatement,
+  ISqlSeedStatement,
+  IForeignKeyStatement,
+  SqlSeedColumn,
   ICreateCreateStoredProcedureStatement,
   ICreateReadStoredProcedureStatement,
   ICreateNestedReadStoredProcedureStatement,
@@ -135,6 +138,8 @@ export {
   CreateTriggerStatementTextRenderer,
   IdentityInsertStatement,
   IdentityInsertStatementTextRenderer,
+  SqlSeedStatement,
+  ForeignKeyStatement,
   CreateCreateStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
   CreateNestedReadStoredProcedureStatement,
@@ -234,15 +239,7 @@ export {
   type FieldSize,
   type SpecField,
 } from "./converters/SpecField.ts";
-export type { DecimalRule, SpecFieldRules } from "./converters/SpecFieldRules.ts";
 export type { IMapping } from "./converters/IMapping.ts";
-export { DeterministicTypeConverter } from "./converters/DeterministicTypeConverter.ts";
-export type { DefaultValueOptions } from "./converters/DefaultValueOptions.ts";
-export {
-  DefaultValueConverter,
-  EMPTY_UUID,
-  sqlStringLiteral,
-} from "./converters/DefaultValueConverter.ts";
 export { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 export { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 export { ToLowerCaseConverter } from "./converters/ToLowerCaseConverter.ts";

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 
 namespace Datasources.CodeGenerators;
@@ -26,9 +27,9 @@ public static class SchemaDiff
 
     static IEnumerable<IStatement> CreateTable(string dialect, SqlTable table, SqlMapping mapping)
     {
-        yield return TableStatements.CreateTable(dialect, table, mapping);
+        yield return TableStatements.CreateTable(table, mapping);
         foreach (var index in table.Indexes)
-            yield return TableStatements.CreateIndex(dialect, mapping, table, index);
+            yield return TableStatements.CreateIndex(mapping, table, index);
         if (SqlSchema.HasAuditColumns(table))
             yield return Trigger(dialect, table, mapping);
     }
@@ -39,7 +40,7 @@ public static class SchemaDiff
             yield return DropTrigger(dialect, table, mapping);
         foreach (var index in table.Indexes.Reverse())
             yield return DropIndex(dialect, mapping, table, index);
-        yield return TableStatements.DropTable(dialect, table.TableName);
+        yield return TableStatements.DropTable(table.TableName);
     }
 
     static IEnumerable<IStatement> DiffTable(
@@ -64,13 +65,12 @@ public static class SchemaDiff
         {
             if (UniqueField(before, field) && (!afterFields.TryGetValue(field.Name, out var kept) || !UniqueField(after, kept)))
                 yield return new AlterTableStatement(before.TableName, new AlterTableStatement.DropConstraint(
-                    TableStatements.UniqueOf(dialect, beforeMap, before, field).Name));
+                    TableStatements.UniqueOf(beforeMap, before, field).Name));
             if (field.References is not null || field.ReferencePair is not null)
             {
                 var same = afterFields.TryGetValue(field.Name, out var next) && RefsOf(next) == RefsOf(field);
                 if (!same)
-                    yield return new AlterTableStatement(before.TableName, new AlterTableStatement.DropConstraint(
-                        TableStatements.ForeignKeyOf(dialect, beforeMap, before, field).Name));
+                    yield return TableStatements.DropForeignKey(beforeMap, before, field);
             }
         }
 
@@ -79,7 +79,7 @@ public static class SchemaDiff
 
         foreach (var field in before.Fields.Where(field => !afterFields.ContainsKey(field.Name)))
             yield return new AlterTableStatement(before.TableName, new AlterTableStatement.DropColumn(
-                TableStatements.Column(dialect, beforeMap, before, field).Name));
+                TableStatements.Column(beforeMap, before, field).Name));
 
         var tableName = after.TableName;
         if (before.TableName != after.TableName)
@@ -87,45 +87,52 @@ public static class SchemaDiff
 
         foreach (var field in after.Fields.Where(field => beforeFields.ContainsKey(field.Name)))
         {
-            var previous = TableStatements.Column(dialect, beforeMap, before, beforeFields[field.Name]);
-            var next = TableStatements.Column(dialect, afterMap, after, field);
+            var previous = TableStatements.Column(beforeMap, before, beforeFields[field.Name]);
+            var next = TableStatements.Column(afterMap, after, field);
             if (previous.Name != next.Name)
                 yield return new AlterTableStatement(tableName, new AlterTableStatement.RenameColumn(previous.Name, next.Name));
-            if (previous with { Name = next.Name } != next)
+            if (Compiled(dialect, previous with { Name = next.Name }) != Compiled(dialect, next))
                 yield return new AlterTableStatement(tableName, new AlterTableStatement.AlterColumn(next));
         }
 
         foreach (var field in after.Fields.Where(field => !beforeFields.ContainsKey(field.Name)))
             yield return new AlterTableStatement(tableName, new AlterTableStatement.AddColumn(
-                TableStatements.Column(dialect, afterMap, after, field)));
+                TableStatements.Column(afterMap, after, field)));
 
         foreach (var field in after.Fields)
         {
             if (UniqueField(after, field) && (!beforeFields.TryGetValue(field.Name, out var previous) || !UniqueField(before, previous)))
                 yield return new AlterTableStatement(tableName, new AlterTableStatement.AddConstraint(
-                    TableStatements.UniqueOf(dialect, afterMap, after, field)));
+                    TableStatements.UniqueOf(afterMap, after, field)));
             if ((field.References is not null || field.ReferencePair is not null)
                 && (!beforeFields.TryGetValue(field.Name, out var prior) || RefsOf(prior) != RefsOf(field)))
-                yield return new AlterTableStatement(tableName, new AlterTableStatement.AddConstraint(
-                    TableStatements.ForeignKeyOf(dialect, afterMap, after, field)));
+                yield return TableStatements.AddForeignKey(afterMap, after, field);
         }
 
         foreach (var index in after.Indexes)
             if (!beforeIndexes.TryGetValue(index.Name, out var previous) || IndexKey(previous) != IndexKey(index))
-                yield return TableStatements.CreateIndex(dialect, afterMap, after, index);
+                yield return TableStatements.CreateIndex(afterMap, after, index);
 
         if (!SqlSchema.HasAuditColumns(before) && SqlSchema.HasAuditColumns(after))
             yield return Trigger(dialect, after, afterMap);
     }
 
+    static Column Compiled(string dialect, Column column)
+    {
+        var native = GenerateSql.Driver(dialect).GetType()
+            .GetMethod("NativeType", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, [typeof(Column)]);
+        var type = native is null ? column.Type : (string)native.Invoke(null, [column])!;
+        return column with { Type = type, Field = null };
+    }
+
     static CreateTriggerStatement Trigger(string dialect, SqlTable table, SqlMapping mapping) =>
-        TableStatements.CreateTrigger(dialect, table, mapping, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table)) ?? "id");
+        TableStatements.CreateTrigger(table, mapping, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table)) ?? "id");
 
     static DropTriggerStatement DropTrigger(string dialect, SqlTable table, SqlMapping mapping) =>
-        TableStatements.DropTrigger(dialect, mapping.TriggerName(table), table.TableName);
+        TableStatements.DropTrigger(mapping.TriggerName(table), table.TableName);
 
     static DropIndexStatement DropIndex(string dialect, SqlMapping mapping, SqlTable table, DatasourceIndex index) =>
-        TableStatements.DropIndex(dialect, mapping.ConstraintName(table, index.Name, "index"), table.TableName);
+        TableStatements.DropIndex(mapping.ConstraintName(table, index.Name, "index"), table.TableName);
 
     static bool UniqueField(SqlTable table, SpecTypeField field) =>
         SqlSchema.FieldOverlay(table, field.Name)?.IsUnique == true || field.Name == "uuid";

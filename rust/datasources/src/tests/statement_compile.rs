@@ -325,6 +325,7 @@ fn renders_stored_procedure_statements_empty() {
     let payload = RoutineParameter {
         name: "payload".into(),
         r#type: "JSON".into(),
+        field: None,
     };
     assert_eq!(
         stmt_text(&CreateCreateStoredProcedureStatement::new(

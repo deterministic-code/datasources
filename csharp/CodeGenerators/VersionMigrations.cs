@@ -77,8 +77,8 @@ public static class VersionMigrations
             var downSql = $"-- Rollback migration for {dialect}\n{Render(dialect, down, separator)}";
             if (seedDown.Count > 0)
                 downSql += "\n\n-- Seed data\n" + JoinBatches.Join(seedDown, separator);
-            output.Add(new($"{Pad(number)}_up.sql", Finalize(upSql, casing)));
-            output.Add(new($"{Pad(number)}_down.sql", Finalize(downSql, casing)));
+            output.Add(new($"{Pad(number)}_up.sql", Finalize(upSql, casing, dialect)));
+            output.Add(new($"{Pad(number)}_down.sql", Finalize(downSql, casing, dialect)));
             previous = current;
         }
         return output;
@@ -152,13 +152,13 @@ public static class VersionMigrations
     }
 
     static string Render(string dialect, IEnumerable<IStatement> statements, string separator) =>
-        JoinBatches.Join(statements.Select(statement => SqlDialect.RenderSql(dialect, statement)), separator);
+        JoinBatches.Join(statements.Select(statement => GenerateSql.Render(dialect, statement)), separator);
 
     static string Pad(int n) => n.ToString("0000");
 
-    static string Finalize(string text, PackCasing casing)
+    static string Finalize(string text, PackCasing casing, string dialect)
     {
-        var output = casing.ApplyKeywords(System.Text.RegularExpressions.Regex.Replace(text, "\n{3,}", "\n\n"));
+        var output = casing.ApplyKeywords(System.Text.RegularExpressions.Regex.Replace(text, "\n{3,}", "\n\n"), dialect);
         return output.EndsWith('\n') ? output : $"{output}\n";
     }
 }

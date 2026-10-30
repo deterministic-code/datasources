@@ -10,12 +10,15 @@ import type {
   RoutineParameter,
 } from "@deterministic-code/datasources";
 import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
+import { SqlServerDriver } from "./SqlServerDriver.ts";
+
+const typeOf = (parameter: RoutineParameter): string => SqlServerDriver.nativeParam(parameter);
 
 const params = (list: readonly RoutineParameter[]): string =>
-  list.map((p) => `  @${p.name} ${p.type}`).join(",\n");
+  list.map((p) => `  @${p.name} ${typeOf(p)}`).join(",\n");
 
 const openjson = (columns: readonly RoutineParameter[]): string =>
-  columns.map((c) => `${c.name} ${c.type} '$.${c.name}'`).join(", ");
+  columns.map((c) => `${c.name} ${typeOf(c)} '$.${c.name}'`).join(", ");
 
 export class SqlServerStoredProcedureStatementRenderer {
   renderCreate(statement: CreateCreateStoredProcedureStatement): string {
@@ -33,7 +36,7 @@ GO`;
   renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
     const select = DefaultStatementTextRenderer.instance.render(statement.select);
     const signature = statement.arguments
-      .map((argument) => `  @${argument.parameter.name} ${argument.parameter.type}`)
+      .map((argument) => `  @${argument.parameter.name} ${typeOf(argument.parameter)}`)
       .join(",\n");
     return `CREATE OR ALTER PROCEDURE ${statement.name}
 ${signature}
@@ -55,7 +58,7 @@ END;
 GO`;
     }
     const signature = statement.byProperties
-      .map((c) => `@${c} ${statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType}`)
+      .map((c) => `@${c} ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
       .join(", ");
     const pred = statement.byProperties.map((c) => `${c} = @${c}`).join(" AND ");
     return `CREATE OR ALTER PROCEDURE ${statement.name} ${signature}
@@ -90,7 +93,7 @@ GO`;
   renderDelete(statement: CreateDeleteStoredProcedureStatement): string {
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
-      .map((c) => `@${c} ${statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType}`)
+      .map((c) => `@${c} ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
       .join(", ");
     const pred = by.map((c) => `${c} = @${c}`).join(" AND ");
     return `CREATE OR ALTER PROCEDURE ${statement.name} ${signature}
@@ -140,7 +143,7 @@ GO`;
 AS
 BEGIN
   DELETE t FROM ${statement.table} t
-  JOIN OPENJSON(@${statement.payload.name}) WITH (${statement.key} ${statement.keyType} '$.${statement.key}') AS payload_rows
+  JOIN OPENJSON(@${statement.payload.name}) WITH (${statement.key} ${SqlServerDriver.nativeParam({ name: statement.key, type: statement.keyType })} '$.${statement.key}') AS payload_rows
     ON t.${statement.key} = payload_rows.${statement.key};
 END;
 GO`;

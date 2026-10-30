@@ -20,6 +20,8 @@ import type { DropTableStatement } from "./DropTableStatement.ts";
 import type { DropTriggerStatement } from "./DropTriggerStatement.ts";
 import type { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureStatement.ts";
 import type { IdentityInsertStatement } from "./IdentityInsertStatement.ts";
+import type { SqlSeedStatement } from "./SqlSeedStatement.ts";
+import type { ForeignKeyStatement } from "./ForeignKeyStatement.ts";
 import type { InsertStatement } from "./InsertStatement.ts";
 import type { ReturnStatement } from "./ReturnStatement.ts";
 import type { SelectInsertedIdStatement } from "./SelectInsertedIdStatement.ts";
@@ -45,6 +47,8 @@ export interface IStatementVisitor {
   visit(statement: DropTriggerStatement): string;
   visit(statement: CreateTriggerStatement): string;
   visit(statement: IdentityInsertStatement): string;
+  visit(statement: SqlSeedStatement): string;
+  visit(statement: ForeignKeyStatement): string;
   visit(statement: DropRoutineStatement): string;
   visit(statement: CreateCreateStoredProcedureStatement): string;
   visit(statement: CreateReadStoredProcedureStatement): string;

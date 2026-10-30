@@ -4,16 +4,18 @@ use datasources::{Column, ColumnDefault, CreateTableStatementTextRenderer, NotNu
 pub struct MysqlCreateTableStatementRenderer;
 
 impl CreateTableStatementTextRenderer for MysqlCreateTableStatementRenderer {
+    fn quote(&self, name: &str) -> String {
+        crate::MysqlDriver::quote(name)
+    }
+
     fn type_name(&self, column: &Column) -> String {
-        column_sql(&column.type_name)
-            .map(str::to_string)
-            .unwrap_or_else(|| column.type_name.clone())
+        crate::MysqlDriver::native_type(column)
     }
 
     fn column_default(&self, column: &Column) -> String {
         match column.default.as_ref() {
             None => String::new(),
-            Some(ColumnDefault { value, .. }) => format!(" DEFAULT {value}"),
+            Some(_) => format!(" DEFAULT {}", crate::MysqlDriver::native_default(column)),
         }
     }
 

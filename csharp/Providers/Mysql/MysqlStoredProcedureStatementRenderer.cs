@@ -4,14 +4,16 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlStoredProcedureStatementRenderer
 {
+    static string TypeOf(RoutineParameter parameter) => MysqlDriver.NativeType(parameter);
+
     static string Params(IReadOnlyList<RoutineParameter> list) =>
-        string.Join(",\n", list.Select(parameter => $"  IN {parameter.Name} {parameter.Type}"));
+        string.Join(",\n", list.Select(parameter => $"  IN {parameter.Name} {TypeOf(parameter)}"));
 
     static string Where(IReadOnlyList<string> columns) =>
         string.Join(" AND ", columns.Select(column => $"t.{column} = {column}"));
 
     static string JsonColumns(IReadOnlyList<RoutineParameter> columns) =>
-        string.Join(", ", columns.Select(column => $"{column.Name} {column.Type} PATH '$.{column.Name}'"));
+        string.Join(", ", columns.Select(column => $"{column.Name} {TypeOf(column)} PATH '$.{column.Name}'"));
 
     static string Procedure(string name, string signature, string body) =>
         $"""
@@ -37,12 +39,12 @@ internal sealed class MysqlStoredProcedureStatementRenderer
             ? $"""
               DECLARE new_id VARCHAR(36);
               SET new_id = UUID();
-              INSERT INTO {statement.Table} ({insertCols})
+              INSERT INTO {MysqlDriver.Quote(statement.Table)} ({insertCols})
               VALUES ({vals});
               SELECT new_id AS {statement.Key};
             """
             : $"""
-              INSERT INTO {statement.Table} ({insertCols})
+              INSERT INTO {MysqlDriver.Quote(statement.Table)} ({insertCols})
               VALUES ({vals});
               SELECT LAST_INSERT_ID() AS {statement.Key};
             """;
@@ -53,7 +55,7 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     {
         var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
         var signature = string.Join(", ", statement.Arguments.Select(argument =>
-            $"IN {argument.Parameter.Name} {argument.Parameter.Type}"));
+            $"IN {argument.Parameter.Name} {TypeOf(argument.Parameter)}"));
         return Procedure(statement.Name, signature, $"  {select};");
     }
 
@@ -61,10 +63,10 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     {
         var aliased = string.Join(", ", statement.Columns.Select(column => $"t.{column}"));
         if (statement.ByProperties.Count == 0)
-            return Procedure(statement.Name, "", $"  SELECT {aliased} FROM {statement.Table} t ORDER BY t.{statement.Key};");
+            return Procedure(statement.Name, "", $"  SELECT {aliased} FROM {MysqlDriver.Quote(statement.Table)} t ORDER BY t.{statement.Key};");
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"IN {column} {statement.Parameters.FirstOrDefault(parameter => parameter.Name == column)?.Type ?? statement.KeyType}"));
-        return Procedure(statement.Name, signature, $"  SELECT {aliased} FROM {statement.Table} t WHERE {Where(statement.ByProperties)};");
+            $"IN {column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+        return Procedure(statement.Name, signature, $"  SELECT {aliased} FROM {MysqlDriver.Quote(statement.Table)} t WHERE {Where(statement.ByProperties)};");
     }
 
     public string Render(CreateUpdateStoredProcedureStatement statement)
@@ -77,7 +79,7 @@ internal sealed class MysqlStoredProcedureStatementRenderer
         }
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         return Procedure(statement.Name, $"\n{Params(statement.Parameters)}\n", $"""
-          UPDATE {statement.Table} t
+          UPDATE {MysqlDriver.Quote(statement.Table)} t
           SET
         {string.Join(",\n", sets)}
           WHERE {Where(by)};
@@ -89,9 +91,9 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"IN {column} {statement.Parameters.FirstOrDefault(parameter => parameter.Name == column)?.Type ?? statement.KeyType}"));
+            $"IN {column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
         return Procedure(statement.Name, signature, $"""
-          DELETE t FROM {statement.Table} t WHERE {Where(by)};
+          DELETE t FROM {MysqlDriver.Quote(statement.Table)} t WHERE {Where(by)};
           SELECT ROW_COUNT() AS affected;
         """);
     }
@@ -99,8 +101,8 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     public string Render(CreateBulkCreateStoredProcedureStatement statement)
     {
         var cols = string.Join(", ", statement.Columns.Select(column => column.Name));
-        return Procedure(statement.Name, $"IN {statement.Payload.Name} {statement.Payload.Type}, OUT ids JSON", $"""
-          INSERT INTO {statement.Table} ({cols})
+        return Procedure(statement.Name, $"IN {statement.Payload.Name} {TypeOf(statement.Payload)}, OUT ids JSON", $"""
+          INSERT INTO {MysqlDriver.Quote(statement.Table)} ({cols})
           SELECT {cols}
           FROM JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS (
             {JsonColumns(statement.Columns)}
@@ -119,8 +121,8 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     public string Render(CreateBulkUpdateStoredProcedureStatement statement)
     {
         var sets = string.Join(", ", statement.Columns.Where(column => column.Name != statement.Key).Select(column => $"c.{column.Name} = payload_rows.{column.Name}"));
-        return Procedure(statement.Name, $"IN {statement.Payload.Name} {statement.Payload.Type}", $"""
-          UPDATE {statement.Table} c
+        return Procedure(statement.Name, $"IN {statement.Payload.Name} {TypeOf(statement.Payload)}", $"""
+          UPDATE {MysqlDriver.Quote(statement.Table)} c
           JOIN JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS (
             {JsonColumns(statement.Columns)}
           )) AS payload_rows ON c.{statement.Key} = payload_rows.{statement.Key}
@@ -132,7 +134,7 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     {
         var key = statement.Columns.FirstOrDefault(column => column.Name == statement.Key)
             ?? new RoutineParameter(statement.Key, statement.KeyType);
-        return Procedure(statement.Name, $"IN {statement.Payload.Name} {statement.Payload.Type}",
-            $"  DELETE c FROM {statement.Table} c JOIN JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({key.Name} {key.Type} PATH '$.{key.Name}')) AS payload_rows ON c.{statement.Key} = payload_rows.{statement.Key};");
+        return Procedure(statement.Name, $"IN {statement.Payload.Name} {TypeOf(statement.Payload)}",
+            $"  DELETE c FROM {MysqlDriver.Quote(statement.Table)} c JOIN JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({key.Name} {TypeOf(key)} PATH '$.{key.Name}')) AS payload_rows ON c.{statement.Key} = payload_rows.{statement.Key};");
     }
 }

@@ -2,7 +2,6 @@ use super::command::PostgresCommand;
 use super::connection::PostgresConnection;
 use super::isolate;
 use datasources::Connection;
-use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
     contact_with, contacts_parity, contacts_service_of, expect_contacts_view,     seed_contacts_sql,
@@ -17,13 +16,8 @@ fn verbose() -> bool {
 fn register_sql() {
     datasources_tests::register_contact_dialect(
         "postgres",
-        SqlGenerateDriver {
-            quote_left: crate::PostgresDriver::QUOTE_LEFT,
-            quote_right: crate::PostgresDriver::QUOTE_RIGHT,
-            type_converter: crate::PostgresDriver::types(),
-            default_value_converter: crate::PostgresDriver::defaults(),
-            statement_renderer: crate::PostgresDriver::statement_text_renderer(),
-        },
+        Arc::new(crate::PostgresDriver),
+        crate::PostgresDriver::apply_keywords,
     );
 }
 

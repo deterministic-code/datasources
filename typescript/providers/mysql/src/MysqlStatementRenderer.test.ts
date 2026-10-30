@@ -88,17 +88,17 @@ describe("MysqlStatementRenderer", () => {
       renderer.render(
         new AlterTableStatement("users", { kind: "alterColumn", column: { name: "id", type: "int", identity: true } }),
       ),
-    ).toBe("ALTER TABLE users MODIFY COLUMN id INT AUTO_INCREMENT");
+    ).toBe("ALTER TABLE `users` MODIFY COLUMN `id` INT AUTO_INCREMENT");
     expect(
       renderer.render(
         new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT" } }),
       ),
-    ).toBe("ALTER TABLE users ADD COLUMN email TEXT");
+    ).toBe("ALTER TABLE `users` ADD COLUMN `email` TEXT");
     expect(renderer.render(new DropIndexStatement("ix_users_email", "users"))).toBe(
-      "DROP INDEX ix_users_email ON users",
+      "DROP INDEX `ix_users_email` ON `users`",
     );
-    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "UTC_TIMESTAMP()"))).toBe(
-      "CREATE TRIGGER tr_users BEFORE UPDATE ON users\nFOR EACH ROW SET NEW.updated = UTC_TIMESTAMP()",
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id"))).toBe(
+      "CREATE TRIGGER `tr_users` BEFORE UPDATE ON `users`\nFOR EACH ROW SET NEW.`updated` = (UTC_TIMESTAMP(3))",
     );
     expect(renderer.render(new DropRoutineStatement("sp_users"))).toBe("DROP PROCEDURE IF EXISTS sp_users");
   });
