@@ -141,7 +141,7 @@ const rustOcc = (model: RepositoryModel): string => {
     : "";
   const where = rustTokenWhere(model, token);
   return `
-use datasources::{async_trait, CommandMiddleware, DatasourceError, FromSchema, ICRUDRepository, IReadonlyRepository, IRepository, IdKey, IWhere, Parameter, ReadInput, Response, Value, Where, eq};
+use datasources::{async_trait, CommandMiddleware, DatasourceError, FromSchema, ICRUDRepository, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Result, Value, Where, eq};
 use futures_core::Stream;
 use std::any::TypeId;
 use std::pin::Pin;
@@ -153,6 +153,14 @@ pub struct ${name} {
 impl ${name} {
     pub fn new(repo: CRUDRepository<${entity}>) -> Self {
         Self { repo }
+    }
+
+    pub async fn update(&self, item: ${entity}) -> Result<Response> {
+        ICRUDRepository::update(self, item, None).await
+    }
+
+    pub async fn delete(&self, item: ${entity}) -> Result<Response> {
+        ICRUDRepository::delete(self, item, None).await
     }
 }
 
@@ -168,22 +176,12 @@ impl IReadonlyRepository<${entity}> for ${name} {
         Some(self)
     }
 
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<${entity}>> {
-        self.repo.read_single(query, parameters, options).await
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<${entity}>> {
+        self.repo.read_single(query).await
     }
 
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [Parameter]>,
-        options: Option<&'a ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<${entity}>> + Send + 'a>> {
-        self.repo.read(query, parameters, options)
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<${entity}>> + Send + 'a>> {
+        self.repo.read(query)
     }
 }
 
@@ -196,7 +194,7 @@ impl ICRUDRepository<${entity}> for ${name} {
     async fn update(&self, item: ${entity}, by_where: Option<&dyn IWhere>) -> Result<Response> {
 ${where}
 ${bump}        let item = ${entity}::from_schema(stored, self.repo.schema())?;
-        let response = self.repo.update(item, Some(by_where.unwrap_or(&clause))).await?;
+        let response = ICRUDRepository::update(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Update affected {} rows", response.rows_affected)));
         }
@@ -205,7 +203,7 @@ ${bump}        let item = ${entity}::from_schema(stored, self.repo.schema())?;
 
     async fn delete(&self, item: ${entity}, by_where: Option<&dyn IWhere>) -> Result<Response> {
 ${where}
-        let response = self.repo.delete(item, Some(by_where.unwrap_or(&clause))).await?;
+        let response = ICRUDRepository::delete(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Delete affected {} rows", response.rows_affected)));
         }
@@ -262,9 +260,13 @@ export const rustRepositories = (
   spec?: IDeterministic,
 ): GenerateEntry[] => {
   const casing = createCasingStrategy("rust", settings);
-  const typeStems = spec === undefined
-    ? models.map((model) => casing.convertFileName(model.specName))
-    : [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name));
+  const typeStems = [
+    ...new Set(
+      spec === undefined
+        ? models.map((model) => casing.convertFileName(model.specName))
+        : [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name)),
+    ),
+  ];
   const files = models.map((model) =>
     content(repositoryFile("rs", model.specName, casing), childModels(model).length === 0 ? plain(model, spec, casing) : wrapped(model, spec, casing)),
   );
@@ -278,15 +280,29 @@ export const rustRepositories = (
   });
   const methods = models.map((model) => {
     const name = pluralSnake(model.specName);
-    return `    fn ${name}(&self) -> Arc<dyn ICRUDRepository<${model.typeName}>>;`;
+    const module = moduleStem(model.specName, casing);
+    const fn = repoFn(model.specName, casing);
+    const returned = model.optimisticConcurrency === undefined
+      ? `Arc<CRUDRepository<${model.typeName}>>`
+      : `Arc<super::${module}::${model.typeName}Optimistic>`;
+    return `    fn ${name}(&self) -> ${returned};`;
   });
   const impls = models.map((model) => {
     const name = pluralSnake(model.specName);
-    return `    fn ${name}(&self) -> Arc<dyn ICRUDRepository<${model.typeName}>> {\n        self.create_repository_by_name(${rustString(name)}, None).expect(${rustString(name)})\n    }`;
+    const module = moduleStem(model.specName, casing);
+    const fn = repoFn(model.specName, casing);
+    const built = `super::${module}::${fn}(self.bind_connection(None)).expect(${rustString(name)})`;
+    const value = model.optimisticConcurrency === undefined
+      ? `Arc::new(${built})`
+      : `Arc::new(super::${module}::${model.typeName}Optimistic::new(${built}))`;
+    const returned = model.optimisticConcurrency === undefined
+      ? `Arc<CRUDRepository<${model.typeName}>>`
+      : `Arc<super::${module}::${model.typeName}Optimistic>`;
+    return `    fn ${name}(&self) -> ${returned} {\n        ${value}\n    }`;
   });
   const typeMods = typeStems.map((stem) => rustModLine(stem));
   const typeUses = typeStems.map((stem) => `pub use ${rustIdent(stem)}::*;`);
-  const registry = `use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};\nuse super::super::{${models.map((model) => model.typeName).join(", ")}};\nuse std::sync::Arc;\n\npub fn register(factory: &RepositoryFactory) {\n${register.join("\n")}\n}\n\ndatasources::bind_repositories!(register);\n\npub trait Repositories {\n${methods.join("\n")}\n}\n\nimpl Repositories for dyn Datasource {\n${impls.join("\n")}\n}\n`;
+  const registry = `use datasources::{CRUDRepository, Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};\nuse super::super::{${models.map((model) => model.typeName).join(", ")}};\nuse std::sync::Arc;\n\npub fn register(factory: &RepositoryFactory) {\n${register.join("\n")}\n}\n\ndatasources::bind_repositories!(register);\n\npub trait Repositories {\n${methods.join("\n")}\n}\n\nimpl Repositories for dyn Datasource {\n${impls.join("\n")}\n}\n`;
   return [
     ...files,
     content(registryFile("rs", casing), registry),

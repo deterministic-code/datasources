@@ -550,7 +550,7 @@ async fn omits_null_created_and_updated() {
         .unwrap()
         .unwrap();
     omitted.insert("username".into(), Value::from("ada-v2"));
-    repo.update(omitted, None).await.unwrap();
+    repo.update(omitted).await.unwrap();
     let kept = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await

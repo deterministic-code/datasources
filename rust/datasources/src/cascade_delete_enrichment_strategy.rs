@@ -1,5 +1,5 @@
 use futures_util::TryStreamExt;
-use crate::delete_enrichment_strategy::{load, children_where, DeleteEnrichmentStrategy};
+use crate::delete_enrichment_strategy::{load, DeleteEnrichmentStrategy};
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
@@ -24,10 +24,7 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
         let mut existing = load(writer.as_ref(), enrichment, parent).await?;
         delete_nested.delete_nested(&mut existing).await?;
         for row in existing {
-            match children_where(writer.as_ref(), enrichment, parent) {
-                Some(clause) => writer.delete(row, Some(&clause)).await?,
-                None => writer.delete(row, None).await?,
-            };
+            writer.delete(row, None).await?;
         }
         Ok(())
     }
@@ -49,23 +46,16 @@ impl DeleteEnrichmentStrategy for CascadeDeleteEnrichmentStrategy {
             return Ok(());
         }
         let existing = writer
-            .read(
-                Some(&Where::new(Operator::equals(
+            .read(&Where::new(Operator::equals(
                     association.parent.clone(),
                     parent_key.clone(),
-                ))),
-                None, None
-        )
+                )))
             .try_collect::<Vec<_>>().await?;
         for row in existing {
-            let Some(related) = row.get(&association.related).cloned() else {
+            if row.get(&association.related).is_none() {
                 continue;
-            };
-            let clause = Where::new(Operator::and(
-                Operator::equals(association.parent.clone(), parent_key.clone()),
-                Operator::equals(association.related.clone(), related),
-            ));
-            writer.delete(row, Some(&clause)).await?;
+            }
+            writer.delete(row, None).await?;
         }
         Ok(())
     }

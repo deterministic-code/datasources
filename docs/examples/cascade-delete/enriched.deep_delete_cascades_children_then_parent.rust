@@ -46,6 +46,6 @@ parents.add_enriched(
     None,
 );
 let removed = parents
-    .delete(record(&[("Id", parent_id)]), None)
+    .delete(record(&[("Id", parent_id)]))
     .await
     .unwrap();

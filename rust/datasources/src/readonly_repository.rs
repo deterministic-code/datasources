@@ -347,8 +347,12 @@ impl<T: FromSchema> ReadonlyRepository<T> {
         let statement = query.and_then(ReadInput::as_statement);
         match statement {
             Some(statement) if statement.kind() == StatementKind::Procedure => {
+                let stored = statement
+                    .as_any()
+                    .downcast_ref::<crate::statements::ExecuteStoredProcedureStatement>();
+                let from_statement = stored.map(crate::statements::ExecuteStoredProcedureStatement::parameters);
                 self.command()
-                    .execute_reader_statement(statement, Some(parameters.unwrap_or(&[])))
+                    .execute_reader_statement(statement, Some(parameters.or(from_statement).unwrap_or(&[])))
                     .await
             }
             Some(statement) => match statement.as_any().downcast_ref::<SelectStatement>() {
@@ -486,6 +490,14 @@ impl<T: FromSchema> ReadonlyRepository<T> {
             .unwrap_or_default();
         Ok((mapped, params))
     }
+
+    pub async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
+        IReadonlyRepository::read_single(self, query).await
+    }
+
+    pub fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        IReadonlyRepository::read(self, query)
+    }
 }
 
 impl<T: FromSchema> IRepository for ReadonlyRepository<T> {
@@ -536,22 +548,12 @@ impl<T: FromSchema> ReadonlyRepository<T> {
 
 #[async_trait]
 impl<T: FromSchema> IReadonlyRepository<T> for ReadonlyRepository<T> {
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<T>> {
-        self.read(query, parameters, options).try_next().await
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
+        self.read(query).try_next().await
     }
 
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [Parameter]>,
-        options: Option<&'a ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        map_stream(self.read_rows(query, parameters, options), self.schema.clone())
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        map_stream(self.read_rows(Some(query), None, None), self.schema.clone())
     }
 }
 

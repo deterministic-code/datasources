@@ -265,6 +265,7 @@ describe("setup", () => {
     expect(files[join(cwd, ".env")]).toMatch(/INSTALLED_PROVIDERS=json,sqlite/);
     expect(io.ran).toContain("cargo add datasources");
     expect(io.ran).toContain("cargo add tokio --features macros,rt-multi-thread");
+    expect(io.ran).toContain("cargo add ctor@0.4");
     expect(io.ran).toContain("cargo add datasources-sqlite");
     expect(io.ran).toContain(
       "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",

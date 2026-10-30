@@ -23,7 +23,7 @@ mod tests {
     use futures_util::TryStreamExt;
     use datasources::{
         Row, create, default, register, reset, CRUDRepository, CRUDRepositoryOptions,
-        Command, Connection, DatasourceError, ICRUDRepository, IReadonlyRepository,
+        Command, Connection, DatasourceError,
         InsertStatement, IsolationLevel, Parameter, SelectInsertedIdStatement, Value,
         WhereText,
     };
@@ -168,40 +168,40 @@ mod tests {
         conn.open().await.unwrap();
         assert_eq!(conn.collection_name(), "");
         let repo = crud(conn.clone());
-        assert!(repo.read_single(None, None, None).await.unwrap().is_some());
+        assert!(repo.read_single(&()).await.unwrap().is_some());
         assert!(repo
-            .read_single(Some(&WhereText::new("{\"id\":9}")), None, None)
+            .read_single(&WhereText::new("{\"id\":9}"))
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(Some(&WhereText::new("{\"id\":1}")), None, None)
+            .read(&WhereText::new("{\"id\":1}"))
             .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());
         assert!(repo
-            .read_single(Some(&WhereText::new("{\"id\":1}")), None, None)
+            .read_single(&WhereText::new("{\"id\":1}"))
             .await
             .unwrap()
             .is_some());
         assert!(!repo
-            .read(Some(&WhereText::new("{\"id\":1}")), None, None)
+            .read(&WhereText::new("{\"id\":1}"))
             .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());
         let created = repo.create(rec(2, "b")).await.unwrap();
         assert_eq!(created.get("id"), Some(&Value::Int(2)));
         let updated_row_1 = rec(2, "B");
-        let updated = repo.update(updated_row_1, None).await.unwrap();
+        let updated = repo.update(updated_row_1).await.unwrap();
         assert_eq!(updated.rows_affected, 1);
         let updated_row_2 = rec(2, "C");
         let updated_by_where = repo
-            .update(updated_row_2, Some(&WhereText::new("{\"id\":2}")))
+            .update(updated_row_2)
             .await
             .unwrap();
         assert_eq!(updated_by_where.rows_affected, 1);
         let removed = repo
-            .delete(rec(2, "C"), Some(&WhereText::new("{\"id\":2}")))
+            .delete(rec(2, "C"))
             .await
             .unwrap();
         assert_eq!(removed.rows_affected, 1);

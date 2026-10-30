@@ -552,6 +552,22 @@ impl<T: FromSchema> CRUDRepository<T> {
             )),
         }
     }
+
+    pub async fn create(&self, item: T) -> Result<T> {
+        ICRUDRepository::create(self, item).await
+    }
+
+    pub async fn update(&self, item: T) -> Result<Response> {
+        ICRUDRepository::update(self, item, None).await
+    }
+
+    pub async fn delete(&self, item: T) -> Result<Response> {
+        ICRUDRepository::delete(self, item, None).await
+    }
+
+    pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<T>> {
+        ICRUDRepository::read_single_by_id(self, id).await
+    }
 }
 
 impl<T: FromSchema> Deref for CRUDRepository<T> {
@@ -580,22 +596,12 @@ impl<T: FromSchema> IReadonlyRepository<T> for CRUDRepository<T> {
         Some(self)
     }
 
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[Parameter]>,
-        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<T>> {
-        self.readonly.read_single(query, parameters, options).await
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
+        self.readonly.read_single(query).await
     }
 
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [Parameter]>,
-        options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        self.readonly.read(query, parameters, options)
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.readonly.read(query)
     }
 }
 

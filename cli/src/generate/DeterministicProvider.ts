@@ -94,11 +94,12 @@ export const deterministic: CodeGenerationProvider = {
       for (const entry of types) {
         entry.contents = entry.contents!.replace(/crate::types::generated::(?:views|datasource)::/g, "");
         if (!entry.contents.includes("pub struct")) continue;
+        const extra = entry.contents.includes("impl Default") ? "" : ", Default";
         entry.contents = entry.contents
           .replace(
             /#\[derive\(([^)]*)\)\]/g,
             (_, list: string) =>
-              `#[derive(${list}, datasources::Facet)]\n#[facet(crate = ::datasources::facet)]`,
+              `#[derive(${list}${extra}, datasources::Facet)]\n#[facet(crate = ::datasources::facet)]`,
           )
           .replace(/(^|[^:\w])chrono::/g, "$1datasources::chrono::")
           .replace(/(^|[^:\w])uuid::/g, "$1datasources::uuid::")
@@ -114,7 +115,13 @@ export const deterministic: CodeGenerationProvider = {
         );
       }
     }
-    return remap(types, request.settings, request.dialect);
+    return remap(
+      request.dialect === "rust"
+        ? types.filter((entry) => !/pub type (\w+) = \1;/.test(entry.contents!))
+        : types,
+      request.settings,
+      request.dialect,
+    );
   },
   generateRepositories: async (request) => {
     const spec = await DeterministicParser(request.reader).parse(request.settings);

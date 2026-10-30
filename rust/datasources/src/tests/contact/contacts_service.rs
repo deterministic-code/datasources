@@ -1,6 +1,5 @@
 use crate::crud_repository::CRUDRepository;
 use crate::i_repository::IRepository;
-use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
@@ -110,22 +109,12 @@ impl IReadonlyRepository for ContactsService {
         Some(self)
     }
 
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<Row>> {
-        self.contacts.read_single(query, parameters, options).await
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<Row>> {
+        self.contacts.read_single(query).await
     }
 
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [crate::Parameter]>,
-        options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
-        self.contacts.read(query, parameters, options)
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.contacts.read(query)
     }
 }
 
@@ -135,12 +124,12 @@ impl ICRUDRepository for ContactsService {
         self.contacts.create(item).await
     }
 
-    async fn update(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.contacts.update(item, by_where).await
+    async fn update(&self, item: Row, by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
+        ICRUDRepository::update(&self.contacts, item, by_where).await
     }
 
-    async fn delete(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.contacts.delete(item, by_where).await
+    async fn delete(&self, item: Row, by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
+        ICRUDRepository::delete(&self.contacts, item, by_where).await
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {

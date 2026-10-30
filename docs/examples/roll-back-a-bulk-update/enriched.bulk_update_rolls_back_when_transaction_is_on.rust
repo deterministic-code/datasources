@@ -12,7 +12,7 @@ let created = parents
     ])
     .await
     .unwrap();
-let stored = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let stored = parents.read(&()).try_collect::<Vec<_>>().await.unwrap();
 let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
 let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
 created_ids.sort();

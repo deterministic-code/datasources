@@ -92,14 +92,10 @@ impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
                 }
                 let found = entry
                     .via
-                    .read_single(
-                        Some(&crate::Where::new(crate::Operator::equals(
+                    .read_single(&crate::Where::new(crate::Operator::equals(
                             related,
                             name.clone(),
-                        ))),
-                        None,
-                        None,
-                    )
+                        )))
                     .await?;
                 let id = found
                     .as_ref()

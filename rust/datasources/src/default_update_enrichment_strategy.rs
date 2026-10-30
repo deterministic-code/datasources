@@ -2,7 +2,7 @@ use futures_util::TryStreamExt;
 use crate::default_write_enrichment_strategy::{
     decode_rows, encode_rows, related_ids, required, row_key,
 };
-use crate::delete_enrichment_strategy::{load, children_where};
+use crate::delete_enrichment_strategy::load;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
@@ -56,10 +56,7 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
                 .map(|key| !keep.contains(&key))
                 .unwrap_or(true)
         }) {
-            match children_where(writer.as_ref(), enrichment, parent) {
-                Some(clause) => writer.delete(row.clone(), Some(&clause)).await?,
-                None => writer.delete(row.clone(), None).await?,
-            };
+            writer.delete(row.clone(), None).await?;
         }
         for row in &mut related {
             match row_key(row, &ids) {
@@ -98,13 +95,10 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
             &enrichment.destination_property,
         )?;
         let existing = writer
-            .read(
-                Some(&Where::new(Operator::equals(
+            .read(&Where::new(Operator::equals(
                     association.parent.clone(),
                     parent_key.clone(),
-                ))),
-                None, None
-        )
+                )))
             .try_collect::<Vec<_>>().await?;
         let wanted = related_ids(parent, enrichment)?;
         let keep: HashSet<String> = wanted.iter().map(Value::wire_text).collect();
@@ -116,14 +110,7 @@ impl UpdateEnrichmentStrategy for DefaultUpdateEnrichmentStrategy {
             {
                 continue;
             }
-            let clause = Where::new(Operator::and(
-                Operator::equals(association.parent.clone(), parent_key.clone()),
-                Operator::equals(
-                    association.related.clone(),
-                    id.cloned().unwrap_or(Value::Null),
-                ),
-            ));
-            writer.delete(row.clone(), Some(&clause)).await?;
+            writer.delete(row.clone(), None).await?;
         }
         for id in wanted {
             if existing.iter().any(|row| {

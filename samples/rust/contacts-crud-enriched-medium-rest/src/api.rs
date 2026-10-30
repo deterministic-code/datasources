@@ -6,7 +6,7 @@ use crate::json_row::{
 use crate::repositories::contact_group_repository::ContactGroupRepository;
 use crate::repositories::contact_repository::ContactRepository;
 use datasources::{
-    DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository, ICRUDRepository,
+    DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository,
     IReadonlyRepository,
 };
 use serde_json::{Map, Value as Json};
@@ -81,22 +81,22 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        if self.contacts.read_single(Some(&by), None, None).await?.is_none() {
+        if self.contacts.read_single(&by).await?.is_none() {
             return Ok(empty(404));
         }
         let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
         row.insert("id".into(), Value::Int(id));
-        self.contacts.update(row, Some(&by)).await?;
-        Ok(ok(200, row_to_json(&self.contacts.read_single(Some(&by), None, None).await?.unwrap_or_default())))
+        self.contacts.update(row).await?;
+        Ok(ok(200, row_to_json(&self.contacts.read_single(&by).await?.unwrap_or_default())))
     }
 
     async fn delete_contact(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        let Some(row) = self.contacts.read_single(Some(&by), None, None).await? else {
+        let Some(row) = self.contacts.read_single(&by).await? else {
             return Ok(empty(404));
         };
-        self.contacts.delete(row, Some(&by)).await?;
+        self.contacts.delete(row).await?;
         Ok(empty(204))
     }
 
@@ -116,13 +116,13 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        if self.groups_repo.read_single(Some(&by), None, None).await?.is_none() {
+        if self.groups_repo.read_single(&by).await?.is_none() {
             return Ok(empty(404));
         }
         let mut row = self.stamp_group(object_from(body).map_err(ApiError::bad)?)?;
         row.insert("id".into(), Value::Int(id));
-        self.groups_repo.update(row, Some(&by)).await?;
-        Ok(ok(200, row_to_json(&self.groups_repo.read_single(Some(&by), None, None).await?.unwrap_or_default())))
+        self.groups_repo.update(row).await?;
+        Ok(ok(200, row_to_json(&self.groups_repo.read_single(&by).await?.unwrap_or_default())))
     }
 
     async fn get_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
@@ -144,22 +144,22 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let key = required(query, "key")?;
         let by = Where::new(Operator::equals("key", key.clone()));
-        if self.legacy.read_single(Some(&by), None, None).await?.is_none() {
+        if self.legacy.read_single(&by).await?.is_none() {
             return Ok(empty(404));
         }
         let mut row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
         row.insert("key".into(), Value::Text(key));
-        self.legacy.update(row, Some(&by)).await?;
-        Ok(ok(200, row_to_json(&self.legacy.read_single(Some(&by), None, None).await?.unwrap_or_default())))
+        self.legacy.update(row).await?;
+        Ok(ok(200, row_to_json(&self.legacy.read_single(&by).await?.unwrap_or_default())))
     }
 
     async fn delete_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let key = required(query, "key")?;
         let by = Where::new(Operator::equals("key", key));
-        let Some(row) = self.legacy.read_single(Some(&by), None, None).await? else {
+        let Some(row) = self.legacy.read_single(&by).await? else {
             return Ok(empty(404));
         };
-        self.legacy.delete(row, Some(&by)).await?;
+        self.legacy.delete(row).await?;
         Ok(empty(204))
     }
 
@@ -170,7 +170,12 @@ impl Api {
         keys: &[&str],
     ) -> Result<Vec<Row>, ApiError> {
         let filter = where_query(query, keys);
-        Ok(repo.read(filter.as_ref().map(|item| item as &dyn ReadInput), None, None).try_collect::<Vec<_>>().await?)
+        let none = ();
+        let query: &dyn ReadInput = filter
+            .as_ref()
+            .map(|item| item as &dyn ReadInput)
+            .unwrap_or(&none);
+        Ok(repo.read(query).try_collect::<Vec<_>>().await?)
     }
 
     fn stamp(&self, mut json: Json) -> Result<Row, ApiError> {

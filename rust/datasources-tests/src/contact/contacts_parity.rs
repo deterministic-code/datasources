@@ -10,7 +10,7 @@ use crate::specs_dir;
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, Connection, ConsoleCommandMiddleware,
-    FlatToNestedMapper, IReadonlyRepository, Mapper, Native, Row, TypeConverter, Value,
+    FlatToNestedMapper, Mapper, Native, Row, TypeConverter, Value,
 };
 use datasources_code_generators::SqlGenerateDriver;
 use serde_yaml::Value as Yaml;
@@ -134,11 +134,11 @@ pub async fn contacts_parity(
     let query = contacts_join_query(None);
     let eager = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
-        join_repo.read(Some(&query), None, None).try_collect::<Vec<_>>().await?,
+        join_repo.read(&query).try_collect::<Vec<_>>().await?,
     ));
     let enriched = from_enriched_contacts(
         &contacts_service_of(connection, verbose.then_some(middleware), field)
-            .read(None, None, None)
+            .read(&())
             .try_collect::<Vec<_>>().await?,
     );
     Ok((eager, enriched))

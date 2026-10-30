@@ -5,6 +5,6 @@ let mut created = Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
 let created = users.create(created).await.unwrap();
-let loaded: Option<Row> = users.read_single(None, None, None).await.unwrap();
+let loaded: Option<Row> = users.read_single(&()).await.unwrap();
 let updated: Response = users.update(created.clone(), None).await.unwrap();
 let deleted: Response = users.delete(created.clone(), None).await.unwrap();

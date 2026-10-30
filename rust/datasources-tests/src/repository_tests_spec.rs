@@ -709,7 +709,7 @@ pub async fn run(
                 read: Some(read), ..
             } => {
                 let where_clause = Where::new(Operator::equals("id", yaml_value(&read.id)));
-                let row = repo.read_single(Some(&where_clause), None, None).await.unwrap();
+                let row = repo.read_single(&where_clause).await.unwrap();
                 if let Some(expect) = &read.expect {
                     assert_row(
                         &format!("{} READ", spec.name),
@@ -723,11 +723,11 @@ pub async fn run(
                 query: Some(query), ..
             } => {
                 let rows = if let Some(where_clause) = &query.where_clause {
-                    repo.read(Some(&where_of(&mapping, where_clause)), None, None)
+                    repo.read(&where_of(&mapping, where_clause))
                         .try_collect::<Vec<_>>().await
                         .unwrap()
                 } else {
-                    repo.read(None, None, None).try_collect::<Vec<_>>().await.unwrap()
+                    repo.read(&()).try_collect::<Vec<_>>().await.unwrap()
                 };
                 if let Some(expect) = &query.expect {
                     assert_rows(
@@ -743,7 +743,7 @@ pub async fn run(
                 ..
             } => {
                 let row = repo
-                    .read_single(Some(&where_of(&mapping, &read_by.where_clause)), None, None)
+                    .read_single(&where_of(&mapping, &read_by.where_clause))
                     .await
                     .unwrap();
                 if let Some(expect) = &read_by.expect {
@@ -761,7 +761,7 @@ pub async fn run(
             } => {
                 let updated_row_1 = domain_record(&update.row, &spec.type_spec.mappings);
                 let response = repo
-                    .update(updated_row_1, None)
+                    .update(updated_row_1)
                     .await
                     .unwrap();
                 assert_affected(
@@ -774,13 +774,9 @@ pub async fn run(
                 update_by: Some(update_by),
                 ..
             } => {
-                let where_clause = where_of(&mapping, &update_by.where_clause);
                 let updated_row_2 = domain_record(&update_by.row, &spec.type_spec.mappings);
-                let response = repo
-                    .update(
-                        updated_row_2,
-                        Some(&where_clause),
-                    )
+                let by_where = where_of(&mapping, &update_by.where_clause);
+                let response = ICRUDRepository::update(&repo, updated_row_2, Some(&by_where))
                     .await
                     .unwrap();
                 assert_affected(
@@ -795,7 +791,7 @@ pub async fn run(
             } => {
                 let mut row = Row::new();
                 row.insert("id".into(), yaml_value(&delete.id));
-                let response = repo.delete(row, None).await.unwrap();
+                let response = repo.delete(row).await.unwrap();
                 assert_affected(
                     &format!("{} DELETE", spec.name),
                     response.rows_affected,
@@ -806,8 +802,10 @@ pub async fn run(
                 delete_by: Some(delete_by),
                 ..
             } => {
-                let where_clause = where_of(&mapping, &delete_by.where_clause);
-                let response = repo.delete(Row::new(), Some(&where_clause)).await.unwrap();
+                let by_where = where_of(&mapping, &delete_by.where_clause);
+                let response = ICRUDRepository::delete(&repo, Row::new(), Some(&by_where))
+                    .await
+                    .unwrap();
                 assert_affected(
                     &format!("{} DELETEBY", spec.name),
                     response.rows_affected,

@@ -43,7 +43,6 @@ mod tests {
     use crate::mappers::Mapper;
     use crate::mocks::{MockCommand, MockConnection};
     use crate::readonly_repository::ReadonlyRepository;
-    use crate::repository::IReadonlyRepository;
     use crate::row::Row;
     use crate::value::Value;
     use std::sync::Arc;
@@ -106,7 +105,7 @@ mod tests {
             ("Login".to_string(), "username".to_string()),
         ])));
         let repo = ReadonlyRepository::<Row>::new(connection, options).unwrap();
-        let row = repo.read_single(None, None, None).await.unwrap().unwrap();
+        let row = repo.read_single(&()).await.unwrap().unwrap();
         assert_eq!(row.get("Key"), Some(&Value::Int(7)));
         assert_eq!(row.get("Login"), Some(&Value::from("ada")));
         assert_eq!(

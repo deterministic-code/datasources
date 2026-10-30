@@ -294,7 +294,7 @@ describe("generate", () => {
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/generated/views/contact"');
-    expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<dyn ICRUDRepository<Contact>>");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<CRUDRepository<Contact>>");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
@@ -595,9 +595,11 @@ types:
     const contact = textOf(types, "contact.rs");
     expect(contact).toContain("Vec<Address>");
     expect(contact).not.toContain("crate::types::generated");
+    expect(types.filter((entry) => /pub type (\w+) = \1;/.test(entry.contents ?? "")).length).toBe(0);
     const rust = await deterministic.generateRepositories(request("rust"));
     const root = rust.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "rust/mod.rs");
     expect(root?.contents).toContain("pub use repositories::repositoryRegistry::Repositories;");
+    expect(root?.contents?.split("\n").filter((line) => line === "pub mod legacyContact;").length).toBe(1);
     const cwd = "app";
     const input = join(cwd, "deterministic");
     const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
