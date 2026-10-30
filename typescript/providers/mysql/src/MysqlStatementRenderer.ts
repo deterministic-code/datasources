@@ -16,7 +16,9 @@ import {
   DropRoutineStatement,
   DropTableStatement,
   ForeignKeyStatement,
+  type ProcedureSource,
   SelectInsertedIdStatement,
+  sqlProcedureStatementsOf,
   SelectInsertedIdStatementTextRenderer,
   SqlSeedStatement,
   StatementRenderer,
@@ -45,6 +47,10 @@ class MysqlSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStateme
 export class MysqlStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
     super(text);
+  }
+
+  override procedures(source: ProcedureSource) {
+    return sqlProcedureStatementsOf(source);
   }
 
   protected override visitSelectInsertedId(inserted: SelectInsertedIdStatement): string {

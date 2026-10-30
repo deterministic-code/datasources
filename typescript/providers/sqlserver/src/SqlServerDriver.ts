@@ -16,12 +16,11 @@ import {
 } from "@deterministic-code/datasources";
 import { SqlServerConnection } from "./connection.ts";
 import { SqlServerStatementRenderer } from "./SqlServerStatementRenderer.ts";
-import { procedureSpecs } from "./procedureSpecs.ts";
 import { applyKeywords } from "./applyKeywords.ts";
 import { TypeMap } from "./TypeMap.ts";
 import { DefaultValueConverter } from "./DefaultValueConverter.ts";
 
-const statements = new StatementTextRenderer(t => new SqlServerStatementRenderer(t));
+const statements = new StatementTextRenderer(t => new SqlServerStatementRenderer(t), undefined, undefined, undefined, applyKeywords);
 const types = new TypeMap({
   string: "NVARCHAR(MAX)",
   character: "NCHAR(1)",
@@ -51,7 +50,6 @@ const defaults = new DefaultValueConverter({
 
 export class SqlServerDriver implements IDriver {
   static readonly procedurePayloadType = "NVARCHAR(MAX)";
-  static procedureSpecs = procedureSpecs;
   static applyKeywords = applyKeywords;
   static quote = (name: string): string => `[${name}]`;
   static nativeType = (column: Column): string =>

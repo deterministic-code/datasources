@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@deterministic-code/csharp-generators": "github:deterministic-code/generators-csharp#main",
+    "@deterministic-code/datasources": "file:../typescript/datasources",
     "@deterministic-code/datasources-code-generators": "file:../typescript/code-generators",
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",

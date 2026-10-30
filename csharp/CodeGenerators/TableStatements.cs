@@ -2,34 +2,38 @@ namespace Datasources.CodeGenerators;
 
 public static class TableStatements
 {
-    public static CreateTableStatement CreateTable(SqlTable table, SqlMapping mapping)
+    public static CreateTableStatement CreateTable(
+        SqlTable table,
+        StatementNaming naming,
+        IReadOnlyList<SqlTable> tables)
     {
         var keys = SqlSchema.TableIdentity(table);
-        var columns = table.Fields.Select(field => ColumnOf(mapping, table, field)).ToList();
+        var columns = table.Fields.Select(field => ColumnOf(naming, table, field)).ToList();
+        var stem = SqlSchema.TableStem(table);
         var uniques = table.Fields
             .Where(field => SqlSchema.FieldOverlay(table, field.Name)?.IsUnique == true || field.Name == "uuid")
             .Select(field => new UniqueConstraint(
-                mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint"),
-                [mapping.ColumnName(table, field.Name)]))
+                UniqueConstraint.NameOf(stem, naming, SqlSchema.FieldStem(table, field.Name), "unique_constraint"),
+                [CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, field.Name), naming)]))
             .ToList();
         var foreignKeys = table.Fields
             .Where(field => field.References is not null || field.ReferencePair is not null)
-            .Select(field => ForeignKeyOf(mapping, table, field))
+            .Select(field => ForeignKeyOf(naming, tables, table, field))
             .ToList();
         var overlay = SqlSchema.OverlayOf(table);
         IReadOnlyList<ITableConstraint> pk = keys.Count > 1
-            ? [new PrimaryKey(mapping.ConstraintName(table, "primary_key"), keys.Select(key => mapping.ColumnName(table, key)).ToList())]
+            ? [new PrimaryKey(PrimaryKey.NameOf(stem, naming, "primary_key"), keys.Select(key => CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, key), naming)).ToList())]
             : keys.Count == 1 && table.Fields.Any(field => SpecTables.IsPkField(field, table.AsType(), overlay))
-                ? [new PrimaryKey(mapping.ConstraintName(table, "primary_key"), [mapping.ColumnName(table, keys[0])])]
+                ? [new PrimaryKey(PrimaryKey.NameOf(stem, naming, "primary_key"), [CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, keys[0]), naming)])]
                 : [];
         return new CreateTableStatement(table.TableName, columns, [.. pk, .. uniques, .. foreignKeys]);
     }
 
-    public static CreateIndexStatement CreateIndex(SqlMapping mapping, SqlTable table, DatasourceIndex index) =>
+    public static CreateIndexStatement CreateIndex(StatementNaming naming, SqlTable table, DatasourceIndex index) =>
         new(
-            mapping.ConstraintName(table, index.Name, "index"),
+            CreateIndexStatement.NameOf(SqlSchema.TableStem(table), naming, index.Name, "index"),
             table.TableName,
-            index.Fields.Select(column => mapping.ColumnName(table, column)).ToList(),
+            index.Fields.Select(column => CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, column), naming)).ToList(),
             index.IsUnique);
 
     public static DropTableStatement DropTable(string table) => new(table);
@@ -38,46 +42,58 @@ public static class TableStatements
 
     public static DropTriggerStatement DropTrigger(string name, string table) => new(name, table);
 
-    public static Column Column(SqlMapping mapping, SqlTable table, SpecTypeField field) =>
-        ColumnOf(mapping, table, field);
+    public static Column Column(StatementNaming naming, SqlTable table, SpecTypeField field) =>
+        ColumnOf(naming, table, field);
 
-    public static UniqueConstraint UniqueOf(SqlMapping mapping, SqlTable table, SpecTypeField field) =>
+    public static UniqueConstraint UniqueOf(StatementNaming naming, SqlTable table, SpecTypeField field) =>
         new(
-            mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "unique_constraint"),
-            [mapping.ColumnName(table, field.Name)]);
+            UniqueConstraint.NameOf(SqlSchema.TableStem(table), naming, SqlSchema.FieldStem(table, field.Name), "unique_constraint"),
+            [CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, field.Name), naming)]);
 
-    public static ForeignKey ForeignKeyOf(SqlMapping mapping, SqlTable table, SpecTypeField field)
+    public static ForeignKey ForeignKeyOf(
+        StatementNaming naming,
+        IReadOnlyList<SqlTable> tables,
+        SqlTable table,
+        SpecTypeField field)
     {
-        var reference = mapping.ResolveReference(field);
+        var reference = SqlSchema.ResolveReference(tables, naming, field);
         return new ForeignKey(
-            mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "foreign_key"),
-            [mapping.ColumnName(table, field.Name)],
+            ForeignKey.NameOf(SqlSchema.TableStem(table), naming, SqlSchema.FieldStem(table, field.Name), "foreign_key"),
+            [CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, field.Name), naming)],
             reference.TableName,
             [reference.ColumnName]);
     }
 
-    public static ForeignKeyStatement AddForeignKey(SqlMapping mapping, SqlTable table, SpecTypeField field)
+    public static ForeignKeyStatement AddForeignKey(
+        StatementNaming naming,
+        IReadOnlyList<SqlTable> tables,
+        SqlTable table,
+        SpecTypeField field)
     {
-        var fk = ForeignKeyOf(mapping, table, field);
+        var fk = ForeignKeyOf(naming, tables, table, field);
         return new ForeignKeyStatement(table.TableName, fk.Name, fk.Columns, fk.ReferencesTable, fk.ReferencesColumns);
     }
 
-    public static ForeignKeyStatement DropForeignKey(SqlMapping mapping, SqlTable table, SpecTypeField field) =>
-        new(table.TableName, ForeignKeyOf(mapping, table, field).Name, [], "", [], "drop");
+    public static ForeignKeyStatement DropForeignKey(
+        StatementNaming naming,
+        IReadOnlyList<SqlTable> tables,
+        SqlTable table,
+        SpecTypeField field) =>
+        new(table.TableName, ForeignKeyOf(naming, tables, table, field).Name, [], "", [], "drop");
 
-    public static CreateTriggerStatement CreateTrigger(SqlTable table, SqlMapping mapping, string key) =>
+    public static CreateTriggerStatement CreateTrigger(SqlTable table, StatementNaming naming, string key) =>
         new(
             table.TableName,
-            mapping.TriggerName(table),
-            mapping.ColumnName(table, "updated"),
-            mapping.ColumnName(table, key));
+            CreateTriggerStatement.NameOf(SqlSchema.TableStem(table), naming),
+            CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, "updated"), naming),
+            CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, key), naming));
 
-    public static IdentityInsertStatement IdentityInsert(SqlTable table, SqlMapping mapping, IReadOnlyList<InsertStatement> inserts, bool identity)
+    public static IdentityInsertStatement IdentityInsert(SqlTable table, StatementNaming naming, IReadOnlyList<InsertStatement> inserts, bool identity)
     {
         var keys = SqlSchema.TableIdentity(table);
         return new IdentityInsertStatement(
             table.TableName,
-            mapping.ColumnName(table, keys.FirstOrDefault() ?? "id"),
+            CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, keys.FirstOrDefault() ?? "id"), naming),
             inserts,
             identity);
     }
@@ -119,16 +135,17 @@ public static class TableStatements
         string name, string table, IReadOnlyList<RoutineParameter> columns, RoutineParameter payload, string key, string keyType) =>
         new(name, table, columns, payload, key, keyType);
 
-    static Column ColumnOf(SqlMapping mapping, SqlTable table, SpecTypeField field)
+    static Column ColumnOf(StatementNaming naming, SqlTable table, SpecTypeField field)
     {
         var converterField = field.ConverterField();
         var generated = SqlSchema.UsesGeneratedIdColumn(table, field);
-        var named = mapping.ConstraintName(table, mapping.FieldStem(table, field.Name), "default_constraint");
+        var named = UniqueConstraint.NameOf(
+            SqlSchema.TableStem(table), naming, SqlSchema.FieldStem(table, field.Name), "default_constraint");
         var fromSpec = converterField.DefaultValue;
         var identity = generated && fromSpec is null;
         var keys = SqlSchema.TableIdentity(table);
         return new Column(
-            mapping.ColumnName(table, field.Name),
+            CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, field.Name), naming),
             converterField.Type,
             fromSpec is null ? null : new ColumnDefault(Convert.ToString(fromSpec) ?? "", named),
             !field.IsNullable || keys.Contains(field.Name) ? new NotNull() : null,

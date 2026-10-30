@@ -1,3 +1,4 @@
+import { CreateTableStatement } from "@deterministic-code/datasources";
 import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
 import { inferReferenceFieldTypes } from "@deterministic-code/datasources-code-generators/sql/common/infer-reference-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
@@ -95,10 +96,10 @@ export const planRepositories = (
         typeName: casing.convertTypes(authored.name),
         typeHome: authored.tags.includes("view_type") ? "view" : "datasource",
         entity: casing.convertTypes(authored.name),
-        table: naming.tableName(table.mapping ?? table.name),
+        table: CreateTableStatement.tableName(table.mapping ?? table.name, naming.naming),
         propertyMappings: columns.flatMap((field) => {
           const from = property(field.name);
-          const to = naming.columnName(overlays.get(field.name)?.mapping ?? field.name);
+          const to = CreateTableStatement.columnName(overlays.get(field.name)?.mapping ?? field.name, naming.naming);
           return from === to ? [] : [{ from, to }];
         }),
         ids: identityColumns(tableType, table).map(property),

@@ -1,5 +1,7 @@
+use super::constraint_name::constraint_name_of;
 use super::foreign_key::ReferentialAction;
 use super::statement::Statement;
+use super::statement_naming::StatementNaming;
 use super::statement_text_renderer::StatementTextRenderer;
 
 pub struct ForeignKeyStatement {
@@ -32,6 +34,10 @@ impl ForeignKeyStatement {
             on_delete: None,
             on_update: None,
         }
+    }
+
+    pub fn name_of(entity: &str, naming: &StatementNaming, parts: &[&str]) -> String {
+        constraint_name_of(entity, naming, parts)
     }
 
     pub fn table(&self) -> &str {

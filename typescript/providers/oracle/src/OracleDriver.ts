@@ -16,12 +16,11 @@ import {
 } from "@deterministic-code/datasources";
 import { OracleConnection } from "./connection.ts";
 import { OracleStatementRenderer } from "./OracleStatementRenderer.ts";
-import { procedureSpecs } from "./procedureSpecs.ts";
 import { applyKeywords } from "./applyKeywords.ts";
 import { TypeMap } from "./TypeMap.ts";
 import { DefaultValueConverter } from "./DefaultValueConverter.ts";
 
-const statements = new StatementTextRenderer(t => new OracleStatementRenderer(t));
+const statements = new StatementTextRenderer(t => new OracleStatementRenderer(t), undefined, undefined, undefined, applyKeywords);
 const types = new TypeMap({
   string: "CLOB",
   character: "CHAR(1)",
@@ -51,7 +50,6 @@ const defaults = new DefaultValueConverter({
 
 export class OracleDriver implements IDriver {
   static readonly procedurePayloadType = "CLOB";
-  static procedureSpecs = procedureSpecs;
   static applyKeywords = applyKeywords;
   static quote = (name: string): string => `"${name}"`;
   static nativeType = (column: Column): string =>

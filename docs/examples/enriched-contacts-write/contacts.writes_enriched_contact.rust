@@ -2,7 +2,7 @@ let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
 conn.open().await.unwrap();
 register_sql();
 let command = SqliteCommand::new(conn.clone());
-apply_sql(&command, &statements_of(&contact_schema("sqlite"))).await.unwrap();
+apply_sql(&command, &contact_schema("sqlite")).await.unwrap();
 
 let field = super::converters::field;
 let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];

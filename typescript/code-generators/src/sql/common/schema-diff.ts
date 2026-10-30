@@ -17,7 +17,11 @@ import {
   dropForeignKeyStatementOf,
   uniqueConstraintOf,
 } from "../statements.ts";
-import type { SqlMapping } from "./sql-mapping.ts";
+import {
+  CreateIndexStatement,
+  CreateTriggerStatement,
+  type StatementNaming,
+} from "@deterministic-code/datasources";
 import { dialectDriver, type SqlDialect } from "./sql-dialect.ts";
 import {
   fieldOverlay,
@@ -25,13 +29,14 @@ import {
   isGeneratedIdentity,
   overlayOf,
   tableIdentity,
+  tableStem,
   type LiveTable,
 } from "./sql-schema.ts";
 import { pkName } from "@deterministic-code/generators-common/spec-types";
 
 export type SchemaSnapshot = {
   tables: LiveTable[];
-  mapping: SqlMapping;
+  naming: StatementNaming;
 };
 
 const byName = (tables: LiveTable[]): Map<string, LiveTable> =>
@@ -56,25 +61,25 @@ const identityOf = (table: LiveTable): unknown => [
 const trigger = (
   dialect: SqlDialect,
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
 ): IStatement =>
-  createTriggerStatementOf(table, mapping, pkName(table, overlayOf(table)) ?? "id");
+  createTriggerStatementOf(table, naming, pkName(table, overlayOf(table)) ?? "id");
 
 const dropTrigger = (
   dialect: SqlDialect,
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
 ): IStatement =>
-  dropTriggerStatementOf(mapping.triggerName(table), table.tableName);
+  dropTriggerStatementOf(CreateTriggerStatement.nameOf(tableStem(table), naming), table.tableName);
 
 const dropIndex = (
   dialect: SqlDialect,
-  mapping: SqlMapping,
+  naming: StatementNaming,
   table: LiveTable,
   index: DatasourceIndex,
 ): IStatement =>
   dropIndexStatementOf(
-    mapping.constraintName(table, index.name, "index"),
+    CreateIndexStatement.nameOf(tableStem(table), naming, index.name, "index"),
     table.tableName,
   );
 
@@ -94,20 +99,21 @@ const compiledColumn = (dialect: SqlDialect, column: Column, name: string) => {
 const createTable = (
   dialect: SqlDialect,
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
+  tables: readonly LiveTable[],
 ): IStatement[] => [
-  createTableStatementOf(table, mapping),
-  ...table.indexes.map((index) => createIndexStatementOf(mapping, table, index)),
-  ...(hasAuditColumns(table) ? [trigger(dialect, table, mapping)] : []),
+  createTableStatementOf(table, naming, tables),
+  ...table.indexes.map((index) => createIndexStatementOf(naming, table, index)),
+  ...(hasAuditColumns(table) ? [trigger(dialect, table, naming)] : []),
 ];
 
 const dropTable = (
   dialect: SqlDialect,
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
 ): IStatement[] => [
-  ...(hasAuditColumns(table) ? [dropTrigger(dialect, table, mapping)] : []),
-  ...[...table.indexes].reverse().map((index) => dropIndex(dialect, mapping, table, index)),
+  ...(hasAuditColumns(table) ? [dropTrigger(dialect, table, naming)] : []),
+  ...[...table.indexes].reverse().map((index) => dropIndex(dialect, naming, table, index)),
   dropTableStatementOf(table.tableName),
 ];
 
@@ -115,8 +121,10 @@ const diffTable = (
   dialect: SqlDialect,
   before: LiveTable,
   after: LiveTable,
-  beforeMap: SqlMapping,
-  afterMap: SqlMapping,
+  beforeNaming: StatementNaming,
+  afterNaming: StatementNaming,
+  beforeTables: readonly LiveTable[],
+  afterTables: readonly LiveTable[],
 ): IStatement[] => {
   if (!isDeepStrictEqual(identityOf(before), identityOf(after))) {
     throw new Error(`${after.name}: primary key or identity change is not supported`);
@@ -133,7 +141,7 @@ const diffTable = (
   for (const index of before.indexes) {
     const next = afterIndexes.get(index.name);
     if (next === undefined || indexKey(index) !== indexKey(next)) {
-      out.push(dropIndex(dialect, beforeMap, before, index));
+      out.push(dropIndex(dialect, beforeNaming, before, index));
     }
   }
 
@@ -142,24 +150,24 @@ const diffTable = (
       out.push(
         new AlterTableStatement(before.tableName, {
           kind: "dropConstraint",
-          name: uniqueConstraintOf(beforeMap, before, field).name,
+          name: uniqueConstraintOf(beforeNaming, before, field).name,
         }),
       );
     }
     if (field.references !== undefined && (!afterFields.has(field.name) || refsOf(afterFields.get(field.name)!) !== refsOf(field))) {
-      out.push(dropForeignKeyStatementOf(beforeMap, before, field));
+      out.push(dropForeignKeyStatementOf(beforeNaming, beforeTables, before, field));
     }
   }
 
   if (hasAuditColumns(before) && !hasAuditColumns(after)) {
-    out.push(dropTrigger(dialect, before, beforeMap));
+    out.push(dropTrigger(dialect, before, beforeNaming));
   }
 
   for (const field of droppedFields) {
     out.push(
       new AlterTableStatement(before.tableName, {
         kind: "dropColumn",
-        name: columnOf(beforeMap, before, field).name,
+        name: columnOf(beforeNaming, before, field).name,
       }),
     );
   }
@@ -170,8 +178,8 @@ const diffTable = (
   }
 
   for (const field of keptFields) {
-    const previous = columnOf(beforeMap, before, beforeFields.get(field.name)!);
-    const next = columnOf(afterMap, after, field);
+    const previous = columnOf(beforeNaming, before, beforeFields.get(field.name)!);
+    const next = columnOf(afterNaming, after, field);
     if (previous.name !== next.name) {
       out.push(new AlterTableStatement(tableName, { kind: "renameColumn", from: previous.name, to: next.name }));
     }
@@ -184,7 +192,7 @@ const diffTable = (
     out.push(
       new AlterTableStatement(tableName, {
         kind: "addColumn",
-        column: columnOf(afterMap, after, field),
+        column: columnOf(afterNaming, after, field),
       }),
     );
   }
@@ -194,24 +202,24 @@ const diffTable = (
       out.push(
         new AlterTableStatement(tableName, {
           kind: "addConstraint",
-          constraint: uniqueConstraintOf(afterMap, after, field),
+          constraint: uniqueConstraintOf(afterNaming, after, field),
         }),
       );
     }
     if (field.references !== undefined && (!beforeFields.has(field.name) || refsOf(beforeFields.get(field.name)!) !== refsOf(field))) {
-        out.push(addForeignKeyStatementOf(afterMap, after, field));
+        out.push(addForeignKeyStatementOf(afterNaming, afterTables, after, field));
     }
   }
 
   for (const index of after.indexes) {
     const previous = beforeIndexes.get(index.name);
     if (previous === undefined || indexKey(previous) !== indexKey(index)) {
-      out.push(createIndexStatementOf(afterMap, after, index));
+      out.push(createIndexStatementOf(afterNaming, after, index));
     }
   }
 
   if (!hasAuditColumns(before) && hasAuditColumns(after)) {
-    out.push(trigger(dialect, after, afterMap));
+    out.push(trigger(dialect, after, afterNaming));
   }
 
   return out;
@@ -229,10 +237,10 @@ export const schemaDiff = (
   const added = after.tables.filter((table) => !previous.has(table.name));
   const kept = after.tables.filter((table) => previous.has(table.name));
   return [
-    ...[...removed].reverse().flatMap((table) => dropTable(dialect, table, before.mapping)),
+    ...[...removed].reverse().flatMap((table) => dropTable(dialect, table, before.naming)),
     ...kept.flatMap((table) =>
-      diffTable(dialect, previous.get(table.name)!, table, before.mapping, after.mapping),
+      diffTable(dialect, previous.get(table.name)!, table, before.naming, after.naming, before.tables, after.tables),
     ),
-    ...added.flatMap((table) => createTable(dialect, table, after.mapping)),
+    ...added.flatMap((table) => createTable(dialect, table, after.naming, after.tables)),
   ];
 };

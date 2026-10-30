@@ -11,13 +11,17 @@ use crate::sql_seed_statement_renderer::SqliteSqlSeedStatementRenderer;
 use datasources::{
     AlterTableStatement, CreateIndexStatement, CreateTableStatement, CreateTableStatementTextRenderer,
     CreateTriggerStatement, DropIndexStatement, DropTableStatement, DropTriggerStatement,
-    ForeignKeyStatement, SelectInsertedIdStatement, SqlSeedStatement, StatementTextRenderer,
-    StatementVisitor,
+    ForeignKeyStatement, ProcedureSource, SelectInsertedIdStatement, SqlSeedStatement,
+    sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor,
 };
 
 pub struct SqliteStatementRenderer;
 
 impl StatementVisitor for SqliteStatementRenderer {
+    fn procedures(&self, source: &ProcedureSource) -> Vec<Box<dyn Statement>> {
+        sql_procedure_statements_of(source)
+    }
+
     fn visit_create_table(
         &self,
         statement: &CreateTableStatement,

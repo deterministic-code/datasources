@@ -1,6 +1,8 @@
 use super::check_constraint::CheckConstraint;
+use super::constraint_name::constraint_name_of;
 use super::foreign_key::{ForeignKey, ReferentialAction};
 use super::primary_key::PrimaryKey;
+use super::statement_naming::StatementNaming;
 use super::unique_constraint::UniqueConstraint;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,6 +19,10 @@ impl PrimaryKey {
             name: name.into(),
             columns: columns.iter().map(|column| (*column).to_string()).collect(),
         })
+    }
+
+    pub fn name_of(entity: &str, naming: &StatementNaming, parts: &[&str]) -> String {
+        constraint_name_of(entity, naming, parts)
     }
 }
 
@@ -41,6 +47,10 @@ impl ForeignKey {
             on_update,
         })
     }
+
+    pub fn name_of(entity: &str, naming: &StatementNaming, parts: &[&str]) -> String {
+        constraint_name_of(entity, naming, parts)
+    }
 }
 
 impl UniqueConstraint {
@@ -49,6 +59,10 @@ impl UniqueConstraint {
             name: name.into(),
             columns: columns.iter().map(|column| (*column).to_string()).collect(),
         })
+    }
+
+    pub fn name_of(entity: &str, naming: &StatementNaming, parts: &[&str]) -> String {
+        constraint_name_of(entity, naming, parts)
     }
 }
 

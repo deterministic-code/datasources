@@ -3,6 +3,7 @@ import {
   ProviderCatalog,
   type IDriver,
   type IStatement,
+  type StatementNaming,
 } from "@deterministic-code/datasources";
 
 export type SqlDialect = string;
@@ -36,6 +37,9 @@ export const requireDialect = (language: string): SqlDialect => {
   dialectDriver(language);
   return language;
 };
+
+export const schemaRenderer = (dialect: string, naming: StatementNaming) =>
+  dialectDriver(dialect).statementRenderer!.withNaming(naming);
 
 export const renderSql = (dialect: string, statement: IStatement): string => {
   const sql = dialectDriver(dialect).statementRenderer!.render(statement).trimEnd();

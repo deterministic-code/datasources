@@ -8,9 +8,9 @@ public static class SchemaDiff
     public static IReadOnlyList<IStatement> Of(
         string dialect,
         IReadOnlyList<SqlTable> beforeTables,
-        SqlMapping beforeMap,
+        StatementNaming beforeNaming,
         IReadOnlyList<SqlTable> afterTables,
-        SqlMapping afterMap)
+        StatementNaming afterNaming)
     {
         var previous = beforeTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
         var next = afterTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
@@ -19,27 +19,35 @@ public static class SchemaDiff
         var kept = afterTables.Where(table => previous.ContainsKey(table.Name));
         return
         [
-            .. removed.SelectMany(table => DropTable(dialect, table, beforeMap)),
-            .. kept.SelectMany(table => DiffTable(dialect, previous[table.Name], table, beforeMap, afterMap)),
-            .. added.SelectMany(table => CreateTable(dialect, table, afterMap)),
+            .. removed.SelectMany(table => DropTable(dialect, table, beforeNaming, beforeTables)),
+            .. kept.SelectMany(table => DiffTable(dialect, previous[table.Name], table, beforeNaming, afterNaming, beforeTables, afterTables)),
+            .. added.SelectMany(table => CreateTable(dialect, table, afterNaming, afterTables)),
         ];
     }
 
-    static IEnumerable<IStatement> CreateTable(string dialect, SqlTable table, SqlMapping mapping)
+    static IEnumerable<IStatement> CreateTable(
+        string dialect,
+        SqlTable table,
+        StatementNaming naming,
+        IReadOnlyList<SqlTable> tables)
     {
-        yield return TableStatements.CreateTable(table, mapping);
+        yield return TableStatements.CreateTable(table, naming, tables);
         foreach (var index in table.Indexes)
-            yield return TableStatements.CreateIndex(mapping, table, index);
+            yield return TableStatements.CreateIndex(naming, table, index);
         if (SqlSchema.HasAuditColumns(table))
-            yield return Trigger(dialect, table, mapping);
+            yield return Trigger(dialect, table, naming);
     }
 
-    static IEnumerable<IStatement> DropTable(string dialect, SqlTable table, SqlMapping mapping)
+    static IEnumerable<IStatement> DropTable(
+        string dialect,
+        SqlTable table,
+        StatementNaming naming,
+        IReadOnlyList<SqlTable> tables)
     {
         if (SqlSchema.HasAuditColumns(table))
-            yield return DropTrigger(dialect, table, mapping);
+            yield return DropTrigger(dialect, table, naming);
         foreach (var index in table.Indexes.Reverse())
-            yield return DropIndex(dialect, mapping, table, index);
+            yield return DropIndex(dialect, naming, table, index);
         yield return TableStatements.DropTable(table.TableName);
     }
 
@@ -47,8 +55,10 @@ public static class SchemaDiff
         string dialect,
         SqlTable before,
         SqlTable after,
-        SqlMapping beforeMap,
-        SqlMapping afterMap)
+        StatementNaming beforeNaming,
+        StatementNaming afterNaming,
+        IReadOnlyList<SqlTable> beforeTables,
+        IReadOnlyList<SqlTable> afterTables)
     {
         if (JsonSerializer.Serialize(IdentityOf(before)) != JsonSerializer.Serialize(IdentityOf(after)))
             throw new InvalidOperationException($"{after.Name}: primary key or identity change is not supported");
@@ -59,27 +69,27 @@ public static class SchemaDiff
 
         foreach (var index in before.Indexes)
             if (!afterIndexes.TryGetValue(index.Name, out var next) || IndexKey(index) != IndexKey(next))
-                yield return DropIndex(dialect, beforeMap, before, index);
+                yield return DropIndex(dialect, beforeNaming, before, index);
 
         foreach (var field in before.Fields)
         {
             if (UniqueField(before, field) && (!afterFields.TryGetValue(field.Name, out var kept) || !UniqueField(after, kept)))
                 yield return new AlterTableStatement(before.TableName, new AlterTableStatement.DropConstraint(
-                    TableStatements.UniqueOf(beforeMap, before, field).Name));
+                    TableStatements.UniqueOf(beforeNaming, before, field).Name));
             if (field.References is not null || field.ReferencePair is not null)
             {
                 var same = afterFields.TryGetValue(field.Name, out var next) && RefsOf(next) == RefsOf(field);
                 if (!same)
-                    yield return TableStatements.DropForeignKey(beforeMap, before, field);
+                    yield return TableStatements.DropForeignKey(beforeNaming, beforeTables, before, field);
             }
         }
 
         if (SqlSchema.HasAuditColumns(before) && !SqlSchema.HasAuditColumns(after))
-            yield return DropTrigger(dialect, before, beforeMap);
+            yield return DropTrigger(dialect, before, beforeNaming);
 
         foreach (var field in before.Fields.Where(field => !afterFields.ContainsKey(field.Name)))
             yield return new AlterTableStatement(before.TableName, new AlterTableStatement.DropColumn(
-                TableStatements.Column(beforeMap, before, field).Name));
+                TableStatements.Column(beforeNaming, before, field).Name));
 
         var tableName = after.TableName;
         if (before.TableName != after.TableName)
@@ -87,8 +97,8 @@ public static class SchemaDiff
 
         foreach (var field in after.Fields.Where(field => beforeFields.ContainsKey(field.Name)))
         {
-            var previous = TableStatements.Column(beforeMap, before, beforeFields[field.Name]);
-            var next = TableStatements.Column(afterMap, after, field);
+            var previous = TableStatements.Column(beforeNaming, before, beforeFields[field.Name]);
+            var next = TableStatements.Column(afterNaming, after, field);
             if (previous.Name != next.Name)
                 yield return new AlterTableStatement(tableName, new AlterTableStatement.RenameColumn(previous.Name, next.Name));
             if (Compiled(dialect, previous with { Name = next.Name }) != Compiled(dialect, next))
@@ -97,24 +107,24 @@ public static class SchemaDiff
 
         foreach (var field in after.Fields.Where(field => !beforeFields.ContainsKey(field.Name)))
             yield return new AlterTableStatement(tableName, new AlterTableStatement.AddColumn(
-                TableStatements.Column(afterMap, after, field)));
+                TableStatements.Column(afterNaming, after, field)));
 
         foreach (var field in after.Fields)
         {
             if (UniqueField(after, field) && (!beforeFields.TryGetValue(field.Name, out var previous) || !UniqueField(before, previous)))
                 yield return new AlterTableStatement(tableName, new AlterTableStatement.AddConstraint(
-                    TableStatements.UniqueOf(afterMap, after, field)));
+                    TableStatements.UniqueOf(afterNaming, after, field)));
             if ((field.References is not null || field.ReferencePair is not null)
                 && (!beforeFields.TryGetValue(field.Name, out var prior) || RefsOf(prior) != RefsOf(field)))
-                yield return TableStatements.AddForeignKey(afterMap, after, field);
+                yield return TableStatements.AddForeignKey(afterNaming, afterTables, after, field);
         }
 
         foreach (var index in after.Indexes)
             if (!beforeIndexes.TryGetValue(index.Name, out var previous) || IndexKey(previous) != IndexKey(index))
-                yield return TableStatements.CreateIndex(afterMap, after, index);
+                yield return TableStatements.CreateIndex(afterNaming, after, index);
 
         if (!SqlSchema.HasAuditColumns(before) && SqlSchema.HasAuditColumns(after))
-            yield return Trigger(dialect, after, afterMap);
+            yield return Trigger(dialect, after, afterNaming);
     }
 
     static Column Compiled(string dialect, Column column)
@@ -125,14 +135,14 @@ public static class SchemaDiff
         return column with { Type = type, Field = null };
     }
 
-    static CreateTriggerStatement Trigger(string dialect, SqlTable table, SqlMapping mapping) =>
-        TableStatements.CreateTrigger(table, mapping, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table)) ?? "id");
+    static CreateTriggerStatement Trigger(string dialect, SqlTable table, StatementNaming naming) =>
+        TableStatements.CreateTrigger(table, naming, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table)) ?? "id");
 
-    static DropTriggerStatement DropTrigger(string dialect, SqlTable table, SqlMapping mapping) =>
-        TableStatements.DropTrigger(mapping.TriggerName(table), table.TableName);
+    static DropTriggerStatement DropTrigger(string dialect, SqlTable table, StatementNaming naming) =>
+        TableStatements.DropTrigger(CreateTriggerStatement.NameOf(SqlSchema.TableStem(table), naming), table.TableName);
 
-    static DropIndexStatement DropIndex(string dialect, SqlMapping mapping, SqlTable table, DatasourceIndex index) =>
-        TableStatements.DropIndex(mapping.ConstraintName(table, index.Name, "index"), table.TableName);
+    static DropIndexStatement DropIndex(string dialect, StatementNaming naming, SqlTable table, DatasourceIndex index) =>
+        TableStatements.DropIndex(CreateIndexStatement.NameOf(SqlSchema.TableStem(table), naming, index.Name, "index"), table.TableName);
 
     static bool UniqueField(SqlTable table, SpecTypeField field) =>
         SqlSchema.FieldOverlay(table, field.Name)?.IsUnique == true || field.Name == "uuid";

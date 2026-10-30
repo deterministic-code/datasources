@@ -1,5 +1,7 @@
+import { constraintNameOf } from "./ConstraintName.ts";
 import type { ICreateIndexStatement } from "./ICreateIndexStatement.ts";
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
+import type { StatementNaming } from "./StatementNaming.ts";
 
 export class CreateIndexStatement implements ICreateIndexStatement {
   readonly name: string;
@@ -15,4 +17,7 @@ export class CreateIndexStatement implements ICreateIndexStatement {
   }
 
   accept = (visitor: IStatementVisitor): string => visitor.visit(this);
+
+  static nameOf = (entity: string, naming: StatementNaming, ...parts: string[]): string =>
+    constraintNameOf(entity, naming, ...parts);
 }

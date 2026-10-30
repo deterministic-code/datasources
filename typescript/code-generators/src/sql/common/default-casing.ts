@@ -1,31 +1,29 @@
 import {
+  KeywordCasing,
+  StatementNaming,
+  type Casing,
+} from "@deterministic-code/datasources";
+import {
   createCasingStrategy,
   type ICasingStrategy,
 } from "@deterministic-code/generators-common/casing-strategy";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
-import { dialectDriver } from "./sql-dialect.ts";
 
 const DATASOURCE_CASING = "datasource.casing";
 const UPPER_LOWER = ["upper", "lower"] as const;
 type UpperLower = (typeof UPPER_LOWER)[number];
-type ObjectFormat = UpperLower | "preserve";
 
 export type PackCasing = ICasingStrategy & {
+  naming: StatementNaming
   isVerbatim: (mapping: string) => boolean
-  tableName: (entity: string) => string
   /** Always-plural routine English (`find_contacts`); ignores the table flag. */
   pluralTableName: (entity: string) => string
   /** Snake plural stem for routine names (`notification_types`). */
   pluralStem: (entity: string) => string
-  columnName: (field: string) => string
-  constraintName: (entity: string, ...parts: string[]) => string
-  triggerName: (entity: string) => string
   routineName: (stem: string) => string
   fileBase: (stem: string) => string
   filePath: (stem: string) => string
   directory: (entity: string) => string
-  keyword: (text: string) => string
-  applyKeywords: (sql: string, dialect: string) => string
 };
 
 const parseUpperLower = (
@@ -42,12 +40,24 @@ const parseUpperLower = (
   );
 };
 
-const letterCase = (text: string, format: ObjectFormat): string =>
-  format === "upper"
-    ? text.toUpperCase()
-    : format === "lower"
-      ? text.toLowerCase()
-      : text;
+const identifier = (settings: Record<string, string>, path: string): Casing => {
+  const raw = settings[path];
+  if (raw === undefined || raw === "" || raw.toLowerCase() === "auto") return "snakeCase";
+  switch (raw.toLowerCase()) {
+    case "camel":
+      return "camelCase";
+    case "pascal":
+      return "pascalCase";
+    case "snake":
+      return "snakeCase";
+    case "kebab":
+      return "kebabCase";
+    default:
+      throw new Error(
+        `${path} must be one of [Camel, Pascal, Snake, Kebab] (got "${raw}").`,
+      );
+  }
+};
 
 /** Datasource naming + SQL-only keyword/object letter-case. */
 export const createCasing = (
@@ -61,59 +71,42 @@ export const createCasing = (
   const casing = createCasingStrategy("sql", settings, {
     prefix: DATASOURCE_CASING,
   });
-  const keywordFormat = parseUpperLower(
-    settings[`${DATASOURCE_CASING}.keywords`],
-    `${DATASOURCE_CASING}.keywords`,
-    "upper",
-  ) as UpperLower;
-  const objectFormat = parseUpperLower(
+  const objects = parseUpperLower(
     settings[`${DATASOURCE_CASING}.objects`],
     `${DATASOURCE_CASING}.objects`,
     "preserve",
   );
-  const keyword = (text: string): string => letterCase(text, keywordFormat);
-  const objectName = (text: string): string => letterCase(text, objectFormat);
+  const keywords = parseUpperLower(
+    settings[`${DATASOURCE_CASING}.keywords`],
+    `${DATASOURCE_CASING}.keywords`,
+    "upper",
+  ) as UpperLower;
+  const types = identifier(settings, `${DATASOURCE_CASING}.types`);
+  const strategy = new StatementNaming({
+    tableNameCasing: types,
+    fieldNameCasing: identifier(settings, `${DATASOURCE_CASING}.fields`),
+    constraintNameCasing: types,
+    triggerNameCasing: types,
+    keywordCasing: keywords === "lower" ? KeywordCasing.Lower : KeywordCasing.Upper,
+    pluralizeTables: settings["datasource.pluralize_datatable_names"] !== "false",
+    objects: objects === "upper" || objects === "lower" ? objects : "preserve",
+  });
   const objectIdent = (stem: string, converted: string): string =>
-    naming.isVerbatim(stem) ? converted : objectName(converted);
+    naming.isVerbatim(stem) ? converted : strategy.letter(converted);
   const fileBase = (stem: string): string => casing.convertFileName(stem);
-  const trigger = (entity: string, suffix: string): string => {
-    const stem = naming.physicalStem(entity);
-    return naming.isVerbatim(entity)
-      ? `trg_${entity}_${suffix}`
-      : objectName(naming.tableName(`trg_${stem}_${suffix}`));
-  };
   return {
+    naming: strategy,
     convertFileName: (text) => casing.convertFileName(text),
     convertTypes: (text) => casing.convertTypes(text),
     convertFields: (text) => casing.convertFields(text),
     convertDirectories: (text) => casing.convertDirectories(text),
     isVerbatim: naming.isVerbatim,
-    tableName: (entity) => objectIdent(entity, naming.resolveTable(entity)),
     pluralTableName: (entity) =>
       objectIdent(entity, alwaysPlural.resolveTable(entity)),
     pluralStem: (entity) => alwaysPlural.physicalStem(entity),
-    columnName: (field) => naming.resolveColumn(field),
-    constraintName: (entity, ...parts) =>
-      naming.isVerbatim(entity)
-        ? [entity, ...parts].join("_")
-        : objectName(
-            naming.tableName([naming.physicalStem(entity), ...parts].join("_")),
-          ),
-    triggerName: (entity) => trigger(entity, "updated_at"),
     routineName: (stem) => objectIdent(stem, naming.tableName(stem)),
     fileBase,
     filePath: (stem) => `${fileBase(stem)}.sql`,
     directory: (entity) => casing.convertDirectories(entity),
-    keyword,
-    applyKeywords: (sql, dialect) => {
-      if (keywordFormat !== "lower") return sql;
-      const apply = (
-        dialectDriver(dialect).constructor as {
-          applyKeywords?: (sql: string, keyword: (word: string) => string) => string
-        }
-      ).applyKeywords;
-      if (apply === undefined) throw new Error(`"${dialect}" has no applyKeywords.`);
-      return apply(sql, keyword);
-    },
   };
 };

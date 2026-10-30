@@ -9,7 +9,6 @@ fn register_sql() {
         datasources_code_generators::register_dialect(
             "mysql",
             Arc::new(crate::MysqlDriver),
-            crate::MysqlDriver::apply_keywords,
         )
         .unwrap();
     });

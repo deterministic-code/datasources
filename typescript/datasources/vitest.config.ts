@@ -33,6 +33,7 @@ export default defineConfig({
         "src/statements/Column.ts",
         "src/statements/NestedWhereArgument.ts",
         "src/statements/RoutineParameter.ts",
+        "src/statements/ProcedureSource.ts",
         "src/NestedSelectBuilderOptions.ts",
         "src/NestedSelectRelation.ts",
         "src/NestedSelectRelationKind.ts",

@@ -60,4 +60,7 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
 
     public override string Visit(ForeignKeyStatement key) =>
         new MysqlForeignKeyStatementRenderer().Render(key);
+
+    public override IReadOnlyList<IStatement> Procedures(ProcedureSource source) =>
+        SqlProcedureStatements.Of(source);
 }

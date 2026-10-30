@@ -15,12 +15,16 @@ use datasources::{
     CreateIndexStatement, CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
     DropRoutineStatement, DropTableStatement, DropTriggerStatement, ForeignKeyStatement,
     IdentityInsertStatement, InsertStatement, SelectInsertedIdStatement,
-    SqlSeedStatement, StatementTextRenderer, StatementVisitor, TypeConverter, Value,
+    ProcedureSource, SqlSeedStatement, sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor, TypeConverter, Value,
 };
 
 pub struct PostgresStatementRenderer;
 
 impl StatementVisitor for PostgresStatementRenderer {
+    fn procedures(&self, source: &ProcedureSource) -> Vec<Box<dyn Statement>> {
+        sql_procedure_statements_of(source)
+    }
+
     fn visit_create_table(
         &self,
         statement: &CreateTableStatement,

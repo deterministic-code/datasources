@@ -10,10 +10,8 @@ mod generate_procedures;
 mod generate_sql;
 mod generate_stored_procedures;
 mod join_batches;
-mod mapping;
 mod nested_select_types;
 mod procedure_fields;
-mod procedure_spec;
 mod schema;
 mod schema_diff;
 mod seed_generator;
@@ -34,32 +32,26 @@ use std::collections::HashMap;
 
 use datasources::Result;
 
+pub fn schema_statements(
+    dialect: &str,
+    files: &HashMap<String, String>,
+    settings: &HashMap<String, String>,
+) -> Result<Vec<String>> {
+    let spec = spec::parse(files)?;
+    let types = schema::from_spec(&spec);
+    let naming = casing::PackCasing::of(settings)?.strategy;
+    let live = schema::build_live(&types, &naming);
+    let statements = schema_diff::of(dialect, &[], &naming, &live, &naming)?;
+    statements
+        .iter()
+        .map(|statement| sql_dialect::render_sql(dialect, statement.as_statement()))
+        .collect()
+}
+
 pub fn schema_sql(
     dialect: &str,
     files: &HashMap<String, String>,
     settings: &HashMap<String, String>,
 ) -> Result<String> {
-    let spec = spec::parse(files)?;
-    let types = schema::from_spec(&spec);
-    let mapping = mapping::SqlMapping::new(casing::PackCasing::of(settings)?, &types);
-    let live = schema::build_live(&types, &mapping);
-    let mut sql = String::new();
-    for table in &live {
-        sql.push_str(&sql_dialect::render_sql(
-            dialect,
-            &table_statements::create_table(table, &mapping)?,
-        )?);
-        sql.push('\n');
-        for index in &table.indexes {
-            let index_sql = sql_dialect::render_sql(
-                dialect,
-                &table_statements::create_index(&mapping, table, index),
-            )?;
-            if !index_sql.is_empty() {
-                sql.push_str(&index_sql);
-                sql.push('\n');
-            }
-        }
-    }
-    Ok(sql)
+    Ok(schema_statements(dialect, files, settings)?.join("\n"))
 }

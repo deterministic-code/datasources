@@ -11,13 +11,17 @@ use datasources::{
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement, CreateUpdateStoredProcedureStatement,
     CreateIndexStatement, CreateTableStatementTextRenderer, CreateTriggerStatement, DropIndexStatement,
     ForeignKeyStatement,
-    DropTableStatement, DropTriggerStatement, SqlSeedStatement, StatementTextRenderer,
-    StatementVisitor,
+    DropTableStatement, DropTriggerStatement, ProcedureSource, SqlSeedStatement,
+    sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor,
 };
 
 pub struct OracleStatementRenderer;
 
 impl StatementVisitor for OracleStatementRenderer {
+    fn procedures(&self, source: &ProcedureSource) -> Vec<Box<dyn Statement>> {
+        sql_procedure_statements_of(source)
+    }
+
     fn visit_create_table(
         &self,
         statement: &CreateTableStatement,

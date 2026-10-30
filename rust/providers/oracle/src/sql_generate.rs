@@ -10,45 +10,6 @@ pub const QUOTE_LEFT: &str = "\"";
 pub const QUOTE_RIGHT: &str = "\"";
 pub const PROCEDURE_PAYLOAD_TYPE: &str = "CLOB";
 
-pub fn procedure_specs(
-    entity_name: &str,
-    by_groups: &[Vec<String>],
-    routine_name: &dyn Fn(&str) -> String,
-    plural_stem: &dyn Fn(&str) -> String,
-) -> Vec<(String, String, Vec<String>)> {
-    crate_specs(entity_name, by_groups, routine_name, plural_stem)
-}
-
-fn crate_specs(
-    entity_name: &str,
-    by_groups: &[Vec<String>],
-    routine_name: &dyn Fn(&str) -> String,
-    plural_stem: &dyn Fn(&str) -> String,
-) -> Vec<(String, String, Vec<String>)> {
-    let plural = plural_stem(entity_name);
-    let suffix = |props: &[String]| {
-        if props.is_empty() {
-            String::new()
-        } else {
-            format!("_by_{}", props.join("_"))
-        }
-    };
-    let mut out = vec![
-        ("create".into(), routine_name(&format!("create_{plural}")), vec![]),
-        ("read".into(), routine_name(&format!("read_{plural}")), vec![]),
-    ];
-    for props in by_groups {
-        let by = suffix(props);
-        out.push(("read".into(), routine_name(&format!("read_{plural}{by}")), props.clone()));
-        out.push(("update".into(), routine_name(&format!("update_{plural}{by}")), props.clone()));
-        out.push(("delete".into(), routine_name(&format!("delete_{plural}{by}")), props.clone()));
-    }
-    out.push(("bulkCreate".into(), routine_name(&format!("bulk_create_{plural}")), vec![]));
-    out.push(("bulkUpdate".into(), routine_name(&format!("bulk_update_{plural}")), vec![]));
-    out.push(("bulkDelete".into(), routine_name(&format!("bulk_delete_{plural}")), vec![]));
-    out
-}
-
 pub static TYPES: LazyLock<TypeMap> = LazyLock::new(|| {
     TypeMap::new(HashMap::from([
         ("string".into(), "CLOB".into()),

@@ -54,4 +54,7 @@ internal sealed class OracleStatementRenderer(StatementTextRenderer text) : Stat
 
     public override string Visit(ForeignKeyStatement key) =>
         new OracleForeignKeyStatementRenderer().Render(key);
+
+    public override IReadOnlyList<IStatement> Procedures(ProcedureSource source) =>
+        SqlProcedureStatements.Of(source);
 }

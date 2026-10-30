@@ -1,15 +1,16 @@
-import type { IStatement } from "@deterministic-code/datasources";
+import type { IStatement, ProcedureByGroup, ProcedureSource } from "@deterministic-code/datasources";
+import { procedureNameOf } from "@deterministic-code/datasources";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { pkName } from "@deterministic-code/generators-common/spec-types";
 import { createCasing, type PackCasing } from "./default-casing.ts";
 import { byGroupsFromDatasource } from "./datasource-by-fields.ts";
-import { SqlMapping } from "./sql-mapping.ts";
-import { dialectDriver, renderSql, type SqlDialect } from "./sql-dialect.ts";
+import { dialectDriver, renderSql, schemaRenderer, type SqlDialect } from "./sql-dialect.ts";
 import {
   buildLiveTables,
   datasourceSettings,
+  fieldStem,
   hasAuditColumns,
   overlayOf,
   sqlTablesFrom,
@@ -19,33 +20,23 @@ import {
 import { createParamFields, pkFieldOf, updateParamFields } from "./procedures/helpers.ts";
 import { writeInclusionOf } from "./write-inclusion.ts";
 import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
-import {
-  createBulkCreateStoredProcedureOf,
-  createBulkDeleteStoredProcedureOf,
-  createBulkUpdateStoredProcedureOf,
-  createCreateStoredProcedureOf,
-  createDeleteStoredProcedureOf,
-  createReadStoredProcedureOf,
-  createUpdateStoredProcedureOf,
-  dropRoutineStatementOf,
-} from "../statements.ts";
+import { dropRoutineStatementOf } from "../statements.ts";
+import { CreateTableStatement } from "@deterministic-code/datasources";
 
-const withNl = (text: string, casing: PackCasing, dialect: SqlDialect): string => {
-  const out = casing.applyKeywords(text, dialect);
+const withNl = (text: string, naming: import("@deterministic-code/datasources").StatementNaming, dialect: SqlDialect): string => {
+  const out = schemaRenderer(dialect, naming).applyKeywords(text);
   return out.endsWith("\n") ? out : `${out}\n`;
 };
 
 const pad = (n: number): string => String(n).padStart(4, "0");
 
-
 /** Create / read / update / delete / bulk procedure statements for one live table. */
 export const procedureStatementsForTable = (
   dialect: SqlDialect,
   t: LiveTable,
-  mapping: SqlMapping,
   casing: PackCasing,
   groups: string[][],
-): { statements: IStatement[]; names: string[] } => {
+): IStatement[] => {
   const overlay = overlayOf(t);
   const ids = tableIdentity(t);
   const table = {
@@ -62,73 +53,51 @@ export const procedureStatementsForTable = (
     pkName: pkName(t, overlay),
   };
   const pk = pkFieldOf(table);
-  const columnName = (logical: string): string => mapping.columnName(t, logical);
+  const columnName = (logical: string): string =>
+    CreateTableStatement.columnName(fieldStem(t, logical), casing.naming);
   const param = (field: { type: string; name: string }): { name: string; type: string; field: { type: string; name: string } } => ({
     name: columnName(field.name),
     type: field.type,
     field,
   });
-  const columns = table.fields.map((f) => columnName(f.name));
-  const writable = updateParamFields(table).map((f) => columnName(f.name));
-  const createdParams = createParamFields(table).map(param);
-  const typedColumns = table.fields.map(param);
-  const createColumns = createParamFields(table).map(param);
-  const updateColumns = [
-    param(pk),
-    ...updateParamFields(table)
-      .filter((f) => f.name !== pk.name)
-      .map(param),
-  ];
-  const payload = { name: "payload", type: "payload" };
-  const key = columnName(pk.name);
-  const keyType = pk.type;
-  const audit = table.fields.some((f) => f.name === "updated" && f.includeInUpdate) ? columnName("updated") : undefined;
-  const generatedKey = pk.type === "uuid";
-  const tableName = t.tableName;
-  const statements: IStatement[] = [];
-  const names: string[] = [];
-  const specs = (
-    dialectDriver(dialect).constructor as {
-      procedureSpecs: (
-        entity: string,
-        groups: string[][],
-        casing: { routineName: (stem: string) => string; pluralStem: (entity: string) => string },
-      ) => { op: string; name: string; byProperties: string[] }[];
-    }
-  ).procedureSpecs;
-  for (const proc of specs(t.name, groups, casing)) {
-    names.push(proc.name);
-    const by = proc.byProperties.map(columnName);
-    const byParams = proc.byProperties.map((logical) => {
-      const field = table.fields.find((f) => f.name === logical) ?? pk;
+  const byGroups: ProcedureByGroup[] = groups.map((logical) => {
+    const parameters = logical.map((name) => {
+      const field = table.fields.find((f) => f.name === name) ?? pk;
       return param(field);
     });
-    const updateParams = [
-      ...byParams,
-      ...updateParamFields(table)
-        .filter((f) => !proc.byProperties.includes(f.name))
-        .map(param),
+    const update = [
+      ...parameters,
+      ...updateParamFields(table).filter((f) => !logical.includes(f.name)).map(param),
     ];
-    statements.push(
-      ({
-        create: () =>
-          createCreateStoredProcedureOf(proc.name, tableName, columns, createdParams, key, keyType, writable, generatedKey, audit),
-        read: () =>
-          createReadStoredProcedureOf(proc.name, tableName, columns, byParams, key, keyType, writable, by, generatedKey, audit),
-        update: () =>
-          createUpdateStoredProcedureOf(proc.name, tableName, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
-        delete: () =>
-          createDeleteStoredProcedureOf(proc.name, tableName, columns, byParams, key, keyType, writable, by, generatedKey, audit),
-        bulkCreate: () =>
-          createBulkCreateStoredProcedureOf(proc.name, tableName, createColumns, payload, key, keyType),
-        bulkUpdate: () =>
-          createBulkUpdateStoredProcedureOf(proc.name, tableName, updateColumns, payload, key, keyType),
-        bulkDelete: () =>
-          createBulkDeleteStoredProcedureOf(proc.name, tableName, typedColumns, payload, key, keyType),
-      }[proc.op as "create"])(),
-    );
-  }
-  return { statements, names };
+    return {
+      logical,
+      columns: logical.map(columnName),
+      parameters,
+      updateParameters: update,
+    };
+  });
+  const source: ProcedureSource = {
+    plural: casing.pluralStem(t.name),
+    table: t.tableName,
+    columns: table.fields.map((f) => columnName(f.name)),
+    createParameters: createParamFields(table).map(param),
+    writable: updateParamFields(table).map((f) => columnName(f.name)),
+    createColumns: createParamFields(table).map(param),
+    updateColumns: [
+      param(pk),
+      ...updateParamFields(table).filter((f) => f.name !== pk.name).map(param),
+    ],
+    typedColumns: table.fields.map(param),
+    byGroups,
+    key: columnName(pk.name),
+    keyType: pk.type,
+    auditUpdated: table.fields.some((f) => f.name === "updated" && f.includeInUpdate)
+      ? columnName("updated")
+      : undefined,
+    generatedKey: pk.type === "uuid",
+    routineName: casing.routineName,
+  };
+  return dialectDriver(dialect).statementRenderer!.procedures(source);
 };
 
 /** Stored-procedure migration — empty when the driver does not render routines. */
@@ -142,8 +111,7 @@ export const generateProceduresForDialect = async (
   const spec = await DeterministicParser(ctx.reader).parse(ctx.settings);
   const types = sqlTablesFrom(spec);
   const casing = createCasing(ctx.settings);
-  const mapping = new SqlMapping(casing, types);
-  const tables = buildLiveTables(types, mapping).filter(hasAuditColumns);
+  const tables = buildLiveTables(types, casing.naming).filter(hasAuditColumns);
   if (tables.length === 0) return [];
 
   const separator = batchSeparatorOf(ctx.settings);
@@ -151,16 +119,15 @@ export const generateProceduresForDialect = async (
   const bodies: string[] = [];
   const drops: string[] = [];
   for (const t of tables) {
-    const { statements, names } = procedureStatementsForTable(
+    const statements = procedureStatementsForTable(
       dialect,
       t,
-      mapping,
       casing,
       byGroups.get(t.name) ?? [],
     );
     const created = statements.map((statement) => renderSql(dialect, statement)).filter((sql) => sql !== "");
-    for (const name of names) {
-      const drop = renderSql(dialect, dropRoutineStatementOf(name));
+    for (const statement of statements) {
+      const drop = renderSql(dialect, dropRoutineStatementOf(procedureNameOf(statement)));
       if (drop !== "") drops.push(drop);
     }
     if (created.length > 0) bodies.push(`-- ${t.name}\n\n${joinBatches(created, separator)}`);
@@ -170,11 +137,11 @@ export const generateProceduresForDialect = async (
   return [
     content(
       `${dialect}/migrations/${pad(order)}_stored_procedures_up.sql`,
-      withNl(`-- Stored procedures\n${joinBatches(bodies, separator)}`, casing, dialect),
+      withNl(`-- Stored procedures\n${joinBatches(bodies, separator)}`, casing.naming, dialect),
     ),
     content(
       `${dialect}/migrations/${pad(order)}_stored_procedures_down.sql`,
-      withNl(`-- DROP stored procedures\n${joinBatches(drops, separator)}`, casing, dialect),
+      withNl(`-- DROP stored procedures\n${joinBatches(drops, separator)}`, casing.naming, dialect),
     ),
   ];
 };

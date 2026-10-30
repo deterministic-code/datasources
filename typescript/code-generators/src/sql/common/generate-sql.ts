@@ -4,8 +4,8 @@ import type { GenerateContext } from "@deterministic-code/generators-common/gene
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { pkName } from "@deterministic-code/generators-common/spec-types";
+import { type StatementNaming } from "@deterministic-code/datasources";
 import { createCasing, type PackCasing } from "./default-casing.ts";
-import { SqlMapping } from "./sql-mapping.ts";
 import {
   buildLiveTables,
   hasAuditColumns,
@@ -15,7 +15,7 @@ import {
   type SqlFile,
   type SqlTable,
 } from "./sql-schema.ts";
-import { renderSql, requireDialect, type SqlDialect } from "./sql-dialect.ts";
+import { renderSql, requireDialect, schemaRenderer, type SqlDialect } from "./sql-dialect.ts";
 import { buildCustomMigrationFiles } from "./generate-custom-migrations.ts";
 import { generateProceduresForDialect } from "./generate-procedures.ts";
 import { seedSections } from "./seed-generator.ts";
@@ -29,27 +29,28 @@ import {
   dropTableStatementOf,
 } from "../statements.ts";
 
-const finalizeSql = (text: string, casing: PackCasing, dialect: SqlDialect): string => {
-  const out = casing.applyKeywords(text.replace(/\n{3,}/g, "\n\n"), dialect);
+const finalizeSql = (text: string, naming: StatementNaming, dialect: SqlDialect): string => {
+  const out = schemaRenderer(dialect, naming).applyKeywords(text.replace(/\n{3,}/g, "\n\n"));
   return out.endsWith("\n") ? out : `${out}\n`;
 };
 
 const flattenTable = (
   dialect: SqlDialect,
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
+  live: readonly LiveTable[],
 ): string[] => {
   const indexes = table.indexes.map((idx) =>
-    renderSql(dialect, createIndexStatementOf(mapping, table, idx)),
+    renderSql(dialect, createIndexStatementOf(naming, table, idx)),
   );
-  const live = { ...table, pkName: pkName(table, overlayOf(table)) };
+  const keyed = { ...table, pkName: pkName(table, overlayOf(table)) };
   const audit = hasAuditColumns(table)
     ? renderSql(
         dialect,
-        createTriggerStatementOf(live, mapping, live.pkName ?? "id"),
+        createTriggerStatementOf(keyed, naming, keyed.pkName ?? "id"),
       )
     : "";
-  return [renderSql(dialect, createTableStatementOf(table, mapping)), ...indexes, audit];
+  return [renderSql(dialect, createTableStatementOf(table, naming, live)), ...indexes, audit];
 };
 
 const generateInitialMigration = (
@@ -60,10 +61,10 @@ const generateInitialMigration = (
   settings: Record<string, string>,
 ): { up: SqlFile; down: SqlFile } => {
   const dialect = requireDialect(language);
-  const mapping = new SqlMapping(casing, types);
-  const live = buildLiveTables(types, mapping);
+  const naming = casing.naming;
+  const live = buildLiveTables(types, naming);
   const separator = batchSeparatorOf(settings);
-  const seeds = seedSections(dialect, live, seedsByTable, mapping);
+  const seeds = seedSections(dialect, live, seedsByTable, naming);
 
   return {
     up: {
@@ -73,13 +74,13 @@ const generateInitialMigration = (
           dialect,
           body: joinBatches(
             [
-              ...live.flatMap((t) => flattenTable(dialect, t, mapping)),
+              ...live.flatMap((t) => flattenTable(dialect, t, naming, live)),
               ...(seeds.length === 0 ? [] : [`-- Seed data\n${joinBatches(seeds, separator)}`]),
             ],
             separator,
           ),
         }),
-        casing,
+        naming,
         dialect,
       ),
     },
@@ -95,7 +96,7 @@ const generateInitialMigration = (
             separator,
           ),
         }),
-        casing,
+        naming,
         dialect,
       ),
     },

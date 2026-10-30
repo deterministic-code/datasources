@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import type { SeedRow, SeedValue } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
-import { SqlSeedStatement, type SpecField } from "@deterministic-code/datasources";
+import { CreateTableStatement, SqlSeedStatement, type SpecField, type StatementNaming } from "@deterministic-code/datasources";
 import { renderSql, type SqlDialect } from "./sql-dialect.ts";
 import { converterFieldOf } from "./converter-field.ts";
-import type { SqlMapping } from "./sql-mapping.ts";
 import {
+  fieldStem,
   isGeneratedIdentity,
   overlayOf,
   tableIdentity,
@@ -55,7 +55,7 @@ const colsForRow = (table: LiveTable, row: Record<string, SeedValue>): string[] 
 
 const columnOf = (
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
   logical: string,
   seed: SeedRow,
 ): { column: string; field: SpecField; value: unknown } => {
@@ -67,7 +67,7 @@ const columnOf = (
     : logical === "uuid"
       ? seedUuid(table.name, seed.id)
       : seed.row[logical];
-  return { column: mapping.columnName(table, logical), field: spec, value };
+  return { column: CreateTableStatement.columnName(fieldStem(table, logical), naming), field: spec, value };
 };
 
 /** Per-table seed SQL blocks for the initial migration (`-- Seeds: <table>`). */
@@ -75,7 +75,7 @@ export const seedSections = (
   dialect: SqlDialect,
   tables: LiveTable[],
   seeds: Map<string, SeedRow[]>,
-  mapping: SqlMapping,
+  naming: StatementNaming,
 ): string[] => {
   const lines: string[] = [];
   for (const table of tables) {
@@ -87,11 +87,11 @@ export const seedSections = (
     lines.push(`-- Seeds: ${table.tableName}`);
     for (const seed of rows) {
       const cols = colsForRow(table, seed.row);
-      const columns = cols.map((c) => columnOf(table, mapping, c, seed));
+      const columns = cols.map((c) => columnOf(table, naming, c, seed));
       lines.push(
         renderSql(
           dialect,
-          new SqlSeedStatement(mapping.tableName(table), columns, "insert", identity, pk ? mapping.columnName(table, pk.name) : undefined),
+          new SqlSeedStatement(table.tableName, columns, "insert", identity, pk ? CreateTableStatement.columnName(fieldStem(table, pk.name), naming) : undefined),
         ),
       );
     }
@@ -116,7 +116,7 @@ export const seedDeletes = (
   dialect: SqlDialect,
   tables: LiveTable[],
   seeds: Map<string, SeedRow[]>,
-  mapping: SqlMapping,
+  naming: StatementNaming,
 ): string[] => {
   const lines: string[] = [];
   for (const table of tables) {
@@ -130,10 +130,10 @@ export const seedDeletes = (
         renderSql(
           dialect,
           new SqlSeedStatement(
-            mapping.tableName(table),
+            table.tableName,
             [
               {
-                column: mapping.columnName(table, id),
+                column: CreateTableStatement.columnName(fieldStem(table, id), naming),
                 field: field ? converterFieldOf(field) : { type: pkType(table) },
                 value: idValue(table, seed.id),
               },

@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Datasources.CodeGenerators;
 
 public sealed class PackCasing
@@ -7,77 +5,62 @@ public sealed class PackCasing
     const string Prefix = "datasource.casing";
     readonly DatasourceNaming naming;
     readonly DatasourceNaming alwaysPlural;
-    readonly CasingStrategy casing;
-    readonly string keywordFormat;
-    readonly string objectFormat;
 
     PackCasing(
         DatasourceNaming naming,
         DatasourceNaming alwaysPlural,
-        CasingStrategy casing,
-        string keywordFormat,
-        string objectFormat)
+        StatementNaming strategy)
     {
         this.naming = naming;
         this.alwaysPlural = alwaysPlural;
-        this.casing = casing;
-        this.keywordFormat = keywordFormat;
-        this.objectFormat = objectFormat;
+        Naming = strategy;
     }
+
+    public StatementNaming Naming { get; }
 
     public static PackCasing Of(IReadOnlyDictionary<string, string> settings)
     {
         var always = new Dictionary<string, string>(settings) { ["datasource.pluralize_datatable_names"] = "true" };
+        var objects = ParseUpperLower(Get(settings, $"{Prefix}.objects"), $"{Prefix}.objects", "preserve");
+        var keywords = ParseUpperLower(Get(settings, $"{Prefix}.keywords"), $"{Prefix}.keywords", "upper");
+        var types = Identifier(settings, $"{Prefix}.types");
         return new(
             DatasourceNaming.Of(settings),
             DatasourceNaming.Of(always),
-            CasingStrategy.Sql(settings, Prefix),
-            ParseUpperLower(Get(settings, $"{Prefix}.keywords"), $"{Prefix}.keywords", "upper"),
-            ParseUpperLower(Get(settings, $"{Prefix}.objects"), $"{Prefix}.objects", "preserve"));
+            new StatementNaming
+            {
+                TableNameCasing = types,
+                FieldNameCasing = Identifier(settings, $"{Prefix}.fields"),
+                ConstraintNameCasing = types,
+                TriggerNameCasing = types,
+                KeywordCasing = keywords == "lower" ? KeywordCasing.Lower : KeywordCasing.Upper,
+                PluralizeTables = !settings.TryGetValue("datasource.pluralize_datatable_names", out var flag) || flag != "false",
+                Objects = objects,
+            });
     }
 
     public bool IsVerbatim(string mapping) => naming.IsVerbatim(mapping);
-    public string TableName(string entity) => ObjectIdent(entity, naming.ResolveTable(entity));
     public string PluralTableName(string entity) => ObjectIdent(entity, alwaysPlural.ResolveTable(entity));
     public string PluralStem(string entity) => alwaysPlural.PhysicalStem(entity);
-    public string ColumnName(string field) => naming.ResolveColumn(field);
-    public string Keyword(string text) => Letter(text, keywordFormat);
-    public string ApplyKeywords(string sql, string dialect) =>
-        keywordFormat == "lower" ? DriverApply(dialect, sql) : sql;
-
-    string DriverApply(string dialect, string sql)
-    {
-        var method = GenerateSql.Driver(dialect).GetType()
-            .GetMethod("ApplyKeywords", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
-            ?? throw new InvalidOperationException($"\"{dialect}\" has no ApplyKeywords.");
-        return (string)method.Invoke(null, [sql, (Func<string, string>)Keyword])!;
-    }
-
-    public string ConstraintName(string entity, params string[] parts) =>
-        naming.IsVerbatim(entity)
-            ? string.Join("_", new[] { entity }.Concat(parts))
-            : ObjectName(naming.TableName(string.Join("_", new[] { naming.PhysicalStem(entity) }.Concat(parts))));
-
-    public string TriggerName(string entity)
-    {
-        var stem = naming.PhysicalStem(entity);
-        return naming.IsVerbatim(entity)
-            ? $"trg_{entity}_updated_at"
-            : ObjectName(naming.TableName($"trg_{stem}_updated_at"));
-    }
-
     public string RoutineName(string stem) => ObjectIdent(stem, naming.TableName(stem));
 
-    string ObjectIdent(string stem, string converted) => naming.IsVerbatim(stem) ? converted : ObjectName(converted);
+    string ObjectIdent(string stem, string converted) =>
+        naming.IsVerbatim(stem) ? converted : Naming.Letter(converted);
 
-    string ObjectName(string text) => Letter(text, objectFormat);
-
-    static string Letter(string text, string format) => format switch
+    static Casing Identifier(IReadOnlyDictionary<string, string> settings, string path)
     {
-        "upper" => text.ToUpperInvariant(),
-        "lower" => text.ToLowerInvariant(),
-        _ => text,
-    };
+        var raw = Get(settings, path);
+        if (string.IsNullOrEmpty(raw) || raw.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            return Casing.Snake;
+        return raw.ToLowerInvariant() switch
+        {
+            "camel" => Casing.Camel,
+            "pascal" => Casing.Pascal,
+            "snake" => Casing.Snake,
+            "kebab" => Casing.Kebab,
+            _ => throw new InvalidOperationException($"{path} must be one of [Camel, Pascal, Snake, Kebab] (got \"{raw}\")."),
+        };
+    }
 
     static string ParseUpperLower(string? raw, string path, string fallback)
     {

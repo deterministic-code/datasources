@@ -55,15 +55,15 @@ public static class VersionMigrations
         foreach (var snapshot in snapshots)
         {
             var current = Compile(snapshot, settings);
-            var up = SchemaDiff.Of(dialect, previous.Tables, previous.Mapping, current.Tables, current.Mapping)
-                .Concat(ProcedureDiff(dialect, settings, previous.Tables, previous.Mapping, current.Tables, current.Mapping, casing)).ToList();
-            var down = SchemaDiff.Of(dialect, current.Tables, current.Mapping, previous.Tables, previous.Mapping)
-                .Concat(ProcedureDiff(dialect, settings, current.Tables, current.Mapping, previous.Tables, previous.Mapping, casing)).ToList();
+            var up = SchemaDiff.Of(dialect, previous.Tables, previous.Naming, current.Tables, current.Naming)
+                .Concat(ProcedureDiff(dialect, settings, previous.Tables, current.Tables, casing)).ToList();
+            var down = SchemaDiff.Of(dialect, current.Tables, current.Naming, previous.Tables, previous.Naming)
+                .Concat(ProcedureDiff(dialect, settings, current.Tables, previous.Tables, casing)).ToList();
             var added = SeedGenerator.Added(previous.Seeds, current.Seeds);
             var removed = SeedGenerator.Added(current.Seeds, previous.Seeds);
-            var seedUp = SeedGenerator.Sections(dialect, current.Tables, added, current.Mapping);
-            var seedDown = SeedGenerator.Deletes(dialect, previous.Tables, added, previous.Mapping)
-                .Concat(SeedGenerator.Sections(dialect, previous.Tables, removed, previous.Mapping)).ToList();
+            var seedUp = SeedGenerator.Sections(dialect, current.Tables, added, current.Naming);
+            var seedDown = SeedGenerator.Deletes(dialect, previous.Tables, added, previous.Naming)
+                .Concat(SeedGenerator.Sections(dialect, previous.Tables, removed, previous.Naming)).ToList();
             if (up.Count == 0 && down.Count == 0 && seedUp.Count == 0 && seedDown.Count == 0)
             {
                 previous = current;
@@ -77,8 +77,8 @@ public static class VersionMigrations
             var downSql = $"-- Rollback migration for {dialect}\n{Render(dialect, down, separator)}";
             if (seedDown.Count > 0)
                 downSql += "\n\n-- Seed data\n" + JoinBatches.Join(seedDown, separator);
-            output.Add(new($"{Pad(number)}_up.sql", Finalize(upSql, casing, dialect)));
-            output.Add(new($"{Pad(number)}_down.sql", Finalize(downSql, casing, dialect)));
+            output.Add(new($"{Pad(number)}_up.sql", GenerateSql.Finalize(upSql, dialect, casing.Naming)));
+            output.Add(new($"{Pad(number)}_down.sql", GenerateSql.Finalize(downSql, dialect, casing.Naming)));
             previous = current;
         }
         return output;
@@ -88,9 +88,7 @@ public static class VersionMigrations
         string dialect,
         IReadOnlyDictionary<string, string> settings,
         IReadOnlyList<SqlTable> before,
-        SqlMapping beforeMap,
         IReadOnlyList<SqlTable> after,
-        SqlMapping afterMap,
         PackCasing casing)
     {
         if (!SqlSchema.UseStoredProcedures(settings)) return [];
@@ -100,7 +98,7 @@ public static class VersionMigrations
             .Where(table => previous.TryGetValue(table.Name, out var prior)
                 && SqlSchema.HasAuditColumns(table)
                 && FieldsOf(prior) != FieldsOf(table))
-            .SelectMany(table => GenerateProcedures.ForTable(dialect, table, afterMap, casing, groups.GetValueOrDefault(table.Name) ?? []).Statements);
+            .SelectMany(table => GenerateProcedures.ForTable(dialect, table, casing, groups.GetValueOrDefault(table.Name) ?? []));
     }
 
     static string FieldsOf(SqlTable table) =>
@@ -139,7 +137,7 @@ public static class VersionMigrations
         return root is YamlMap ? root : throw new InvalidOperationException($"{source}: expected a mapping");
     }
 
-    static (IReadOnlyList<SqlTable> Tables, SqlMapping Mapping, IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> Seeds) Compile(
+    static (IReadOnlyList<SqlTable> Tables, StatementNaming Naming, IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> Seeds) Compile(
         VersionSnapshot snapshot,
         IReadOnlyDictionary<string, string> settings)
     {
@@ -147,8 +145,8 @@ public static class VersionMigrations
         files.TryAdd(SpecParser.DatasourceYaml, DefaultDatasourceYaml);
         var spec = SpecParser.Parse(files);
         var types = SqlSchema.From(spec);
-        var mapping = new SqlMapping(PackCasing.Of(settings), types);
-        return (SqlSchema.BuildLive(types, mapping), mapping, spec.DatasourceSeeds);
+        var naming = PackCasing.Of(settings).Naming;
+        return (SqlSchema.BuildLive(types, naming), naming, spec.DatasourceSeeds);
     }
 
     static string Render(string dialect, IEnumerable<IStatement> statements, string separator) =>
@@ -156,9 +154,4 @@ public static class VersionMigrations
 
     static string Pad(int n) => n.ToString("0000");
 
-    static string Finalize(string text, PackCasing casing, string dialect)
-    {
-        var output = casing.ApplyKeywords(System.Text.RegularExpressions.Regex.Replace(text, "\n{3,}", "\n\n"), dialect);
-        return output.EndsWith('\n') ? output : $"{output}\n";
-    }
 }

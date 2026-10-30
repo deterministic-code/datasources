@@ -1,4 +1,6 @@
+use super::constraint_name::constraint_name_of;
 use super::statement::Statement;
+use super::statement_naming::StatementNaming;
 use super::statement_text_renderer::StatementTextRenderer;
 
 pub struct CreateIndexStatement {
@@ -21,6 +23,10 @@ impl CreateIndexStatement {
             columns: columns.iter().map(|column| (*column).to_string()).collect(),
             unique,
         }
+    }
+
+    pub fn name_of(entity: &str, naming: &StatementNaming, parts: &[&str]) -> String {
+        constraint_name_of(entity, naming, parts)
     }
 
     pub fn name(&self) -> &str {

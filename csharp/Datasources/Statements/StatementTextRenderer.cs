@@ -2,18 +2,42 @@ namespace Datasources;
 
 public class StatementTextRenderer
 {
+    readonly Func<StatementTextRenderer, StatementRenderer>? statementsFactory;
+    readonly Func<ExpressionRenderer, ConditionRenderer>? conditionsFactory;
+    readonly Func<StatementTextRenderer, ExpressionRenderer>? expressionsFactory;
+    readonly Func<string, Func<string, string>, string>? applyKeywords;
+
     protected IStatementVisitor Statements { get; }
     protected IConditionVisitor Conditions { get; }
+    public StatementNaming Naming { get; }
 
     public StatementTextRenderer(
         Func<StatementTextRenderer, StatementRenderer>? statements = null,
         Func<ExpressionRenderer, ConditionRenderer>? conditions = null,
-        Func<StatementTextRenderer, ExpressionRenderer>? expressions = null)
+        Func<StatementTextRenderer, ExpressionRenderer>? expressions = null,
+        StatementNaming? naming = null,
+        Func<string, Func<string, string>, string>? applyKeywords = null)
     {
+        statementsFactory = statements;
+        conditionsFactory = conditions;
+        expressionsFactory = expressions;
+        this.applyKeywords = applyKeywords;
+        Naming = naming ?? StatementNaming.Sql;
         var expressionRenderer = expressions?.Invoke(this) ?? new ExpressionRenderer(this);
         Statements = statements?.Invoke(this) ?? new StatementRenderer(this);
         Conditions = conditions?.Invoke(expressionRenderer) ?? new ConditionRenderer(expressionRenderer);
     }
+
+    public StatementTextRenderer WithNaming(StatementNaming naming) =>
+        new(statementsFactory, conditionsFactory, expressionsFactory, naming, applyKeywords);
+
+    public IReadOnlyList<IStatement> Procedures(ProcedureSource source) =>
+        Statements is StatementRenderer renderer ? renderer.Procedures(source) : [];
+
+    public string ApplyKeywords(string sql) =>
+        Naming.KeywordCasing == KeywordCasing.Lower && applyKeywords is not null
+            ? applyKeywords(sql, Naming.Keyword)
+            : sql;
 
     public string Render(IStatement statement) => statement switch
     {

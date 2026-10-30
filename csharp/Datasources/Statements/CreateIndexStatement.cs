@@ -11,4 +11,7 @@ public sealed record CreateIndexStatement : ICreateIndexStatement
         (Name, Table, Columns, Unique) = (name, table, columns, unique);
 
     public string Accept(IStatementVisitor visitor) => visitor.Visit(this);
+
+    public static string NameOf(string entity, StatementNaming naming, params string[] parts) =>
+        ConstraintName.Of(entity, naming, parts);
 }

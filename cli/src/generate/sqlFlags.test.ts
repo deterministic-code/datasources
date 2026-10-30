@@ -39,6 +39,6 @@ describe("sqlFlags", () => {
   it("writes Auto keywords and pack still uppercases", () => {
     const settings = overlaySqlFlags({}, { sqlKeywords: "Auto" });
     expect(settings["datasource.casing.keywords"]).toBe("Auto");
-    expect(createCasing(settings).keyword("create")).toBe("CREATE");
+    expect(createCasing(settings).naming.keyword("create")).toBe("CREATE");
   });
 });

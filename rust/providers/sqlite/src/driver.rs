@@ -20,15 +20,6 @@ impl SqliteDriver {
     pub const QUOTE_RIGHT: &'static str = sql_generate::QUOTE_RIGHT;
     pub const PROCEDURE_PAYLOAD_TYPE: &'static str = sql_generate::PROCEDURE_PAYLOAD_TYPE;
 
-    pub fn procedure_specs(
-        entity_name: &str,
-        by_groups: &[Vec<String>],
-        routine_name: &dyn Fn(&str) -> String,
-        plural_stem: &dyn Fn(&str) -> String,
-    ) -> Vec<(String, String, Vec<String>)> {
-        sql_generate::procedure_specs(entity_name, by_groups, routine_name, plural_stem)
-    }
-
     pub fn apply_keywords(sql: &str, keyword: &dyn Fn(&str) -> String) -> String {
         sql_generate::apply_keywords(sql, keyword)
     }
@@ -105,7 +96,10 @@ impl SqliteDriver {
 }
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
-    LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(SqliteStatementRenderer)), None));
+    LazyLock::new(|| {
+        StatementTextRenderer::new(Some(Box::new(SqliteStatementRenderer)), None)
+            .with_keyword_apply(sql_generate::apply_keywords)
+    });
 
 static INFORMATION: LazyLock<Information> = LazyLock::new(|| {
     Information::new(

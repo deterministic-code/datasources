@@ -1,5 +1,4 @@
-use crate::sql_dialect;
-use datasources::{DatasourceError, PluralizerConverter, Result};
+use datasources::{Casing, DatasourceError, KeywordCasing, PluralizerConverter, Result, StatementNaming};
 use regex::Regex;
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -175,24 +174,33 @@ impl DatasourceNaming {
 pub struct PackCasing {
     naming: DatasourceNaming,
     always_plural: DatasourceNaming,
-    keyword_format: String,
-    object_format: String,
+    pub strategy: StatementNaming,
 }
 
 impl PackCasing {
     pub fn of(settings: &HashMap<String, String>) -> Result<Self> {
         let mut always = settings.clone();
         always.insert("datasource.pluralize_datatable_names".into(), "true".into());
+        let objects = parse_upper_lower(get(settings, "datasource.casing.objects"), "datasource.casing.objects", "preserve")?;
+        let keywords = parse_upper_lower(get(settings, "datasource.casing.keywords"), "datasource.casing.keywords", "upper")?;
+        let types = identifier(settings, "datasource.casing.types")?;
         Ok(Self {
             naming: DatasourceNaming::of(settings)?,
             always_plural: DatasourceNaming::of(&always)?,
-            keyword_format: parse_upper_lower(get(settings, "datasource.casing.keywords"), "datasource.casing.keywords", "upper")?,
-            object_format: parse_upper_lower(get(settings, "datasource.casing.objects"), "datasource.casing.objects", "preserve")?,
+            strategy: StatementNaming {
+                table_name_casing: types,
+                field_name_casing: identifier(settings, "datasource.casing.fields")?,
+                constraint_name_casing: types,
+                trigger_name_casing: types,
+                keyword_casing: if keywords == "lower" { KeywordCasing::Lower } else { KeywordCasing::Upper },
+                pluralize_tables: settings.get("datasource.pluralize_datatable_names").map(String::as_str) != Some("false"),
+                objects,
+            },
         })
     }
 
-    pub fn table_name(&self, entity: &str) -> String {
-        self.object_ident(entity, &self.naming.resolve_table(entity))
+    pub fn is_verbatim(&self, mapping: &str) -> bool {
+        self.naming.is_verbatim(mapping)
     }
 
     pub fn plural_table_name(&self, entity: &str) -> String {
@@ -203,43 +211,6 @@ impl PackCasing {
         self.always_plural.physical_stem(entity)
     }
 
-    pub fn column_name(&self, field: &str) -> String {
-        self.naming.resolve_column(field)
-    }
-
-    pub fn keyword(&self, text: &str) -> String {
-        letter(text, &self.keyword_format)
-    }
-
-    pub fn apply_keywords(&self, sql: &str, dialect: &str) -> Result<String> {
-        if self.keyword_format == "lower" {
-            sql_dialect::apply_keywords(dialect, sql, &|k| self.keyword(k))
-        } else {
-            Ok(sql.into())
-        }
-    }
-
-    pub fn constraint_name(&self, entity: &str, parts: &[&str]) -> String {
-        if self.naming.is_verbatim(entity) {
-            let mut bits = vec![entity.to_string()];
-            bits.extend(parts.iter().map(|p| (*p).to_string()));
-            bits.join("_")
-        } else {
-            let mut bits = vec![self.naming.physical_stem(entity)];
-            bits.extend(parts.iter().map(|p| (*p).to_string()));
-            self.object_name(&self.naming.table_name(&bits.join("_")))
-        }
-    }
-
-    pub fn trigger_name(&self, entity: &str) -> String {
-        let stem = self.naming.physical_stem(entity);
-        if self.naming.is_verbatim(entity) {
-            format!("trg_{entity}_updated_at")
-        } else {
-            self.object_name(&self.naming.table_name(&format!("trg_{stem}_updated_at")))
-        }
-    }
-
     pub fn routine_name(&self, stem: &str) -> String {
         self.object_ident(stem, &self.naming.table_name(stem))
     }
@@ -248,20 +219,27 @@ impl PackCasing {
         if self.naming.is_verbatim(stem) {
             converted.into()
         } else {
-            self.object_name(converted)
+            self.strategy.letter(converted)
         }
-    }
-
-    fn object_name(&self, text: &str) -> String {
-        letter(text, &self.object_format)
     }
 }
 
-fn letter(text: &str, format: &str) -> String {
-    match format {
-        "upper" => text.to_ascii_uppercase(),
-        "lower" => text.to_ascii_lowercase(),
-        _ => text.into(),
+fn identifier(settings: &HashMap<String, String>, path: &str) -> Result<Casing> {
+    let raw = get(settings, path);
+    let Some(raw) = raw.filter(|s| !s.is_empty()) else {
+        return Ok(Casing::Snake);
+    };
+    if raw.eq_ignore_ascii_case("auto") {
+        return Ok(Casing::Snake);
+    }
+    match raw.to_ascii_lowercase().as_str() {
+        "camel" => Ok(Casing::Camel),
+        "pascal" => Ok(Casing::Pascal),
+        "snake" => Ok(Casing::Snake),
+        "kebab" => Ok(Casing::Kebab),
+        _ => Err(DatasourceError::message(format!(
+            "{path} must be one of [Camel, Pascal, Snake, Kebab] (got \"{raw}\")."
+        ))),
     }
 }
 

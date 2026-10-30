@@ -13,7 +13,6 @@ use datasources::{
     FlatToNestedMapper, Mapper, Native, Row, TypeConverter, Value,
 };
 use datasources::Driver;
-use serde_yaml::Value as Yaml;
 use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Once};
@@ -23,84 +22,33 @@ pub fn contact_seed(dialect: &str) -> String {
         .unwrap_or_else(|err| panic!("contact seed {dialect}: {err}"))
 }
 
-pub fn register_contact_dialect(
-    dialect: &str,
-    driver: Arc<dyn Driver>,
-    apply_keywords: fn(&str, &dyn Fn(&str) -> String) -> String,
-) {
+pub fn register_contact_dialect(dialect: &str, driver: Arc<dyn Driver>) {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
-        datasources_code_generators::register_dialect(dialect, driver, apply_keywords).unwrap();
+        datasources_code_generators::register_dialect(dialect, driver).unwrap();
     });
 }
 
-pub fn contact_schema(dialect: &str) -> String {
+pub fn contact_schema(dialect: &str) -> Vec<String> {
     let dir = specs_dir().join("contacts");
-    let datasource = fs::read_to_string(dir.join("datasource.yaml")).expect("datasource.yaml");
     let files = HashMap::from([
         (
             "types.yaml".into(),
             fs::read_to_string(dir.join("types.yaml")).expect("types.yaml"),
         ),
-        ("datasource.yaml".into(), datasource.clone()),
+        (
+            "datasource.yaml".into(),
+            fs::read_to_string(dir.join("datasource.yaml")).expect("datasource.yaml"),
+        ),
     ]);
-    let ddl = datasources_code_generators::schema_sql(dialect, &files, &settings_of(&datasource))
+    let settings = HashMap::from([(
+        "datasource.pluralize_datatable_names".into(),
+        "false".into(),
+    )]);
+    let mut statements = datasources_code_generators::schema_statements(dialect, &files, &settings)
         .unwrap_or_else(|err| panic!("contact schema {dialect}: {err}"));
-    format!("{ddl}{}", contact_seed(dialect))
-}
-
-fn settings_of(yaml: &str) -> HashMap<String, String> {
-    let parsed: Yaml = serde_yaml::from_str(yaml).expect("datasource.yaml");
-    let mut settings = HashMap::new();
-    if let Some(root) = parsed.get("settings") {
-        flatten(root, "", &mut settings);
-    }
-    settings
-}
-
-fn flatten(value: &Yaml, prefix: &str, settings: &mut HashMap<String, String>) {
-    match value {
-        Yaml::Mapping(map) => {
-            for (key, child) in map {
-                let Some(name) = key.as_str() else { continue };
-                let path = if prefix.is_empty() {
-                    name.to_string()
-                } else {
-                    format!("{prefix}.{name}")
-                };
-                flatten(child, &path, settings);
-            }
-        }
-        Yaml::Sequence(items) if !prefix.is_empty() => {
-            settings.insert(
-                prefix.into(),
-                items
-                    .iter()
-                    .map(|item| match item {
-                        Yaml::Bool(flag) => flag.to_string(),
-                        Yaml::Number(number) => number.to_string(),
-                        Yaml::String(text) => text.clone(),
-                        Yaml::Null => "null".into(),
-                        _ => String::new(),
-                    })
-                    .collect::<Vec<_>>()
-                    .join(","),
-            );
-        }
-        Yaml::Bool(flag) if !prefix.is_empty() => {
-            settings.insert(prefix.into(), flag.to_string());
-        }
-        Yaml::Number(number) if !prefix.is_empty() => {
-            settings.insert(prefix.into(), number.to_string());
-        }
-        Yaml::String(text) if !prefix.is_empty() => {
-            settings.insert(prefix.into(), text.clone());
-        }
-        Yaml::Null if !prefix.is_empty() => {
-            settings.insert(prefix.into(), "null".into());
-        }
-        _ => {}
-    }
+    statements.extend(statements_of(&contact_seed(dialect)));
+    statements
 }
 
 pub fn statements_of(sql: &str) -> Vec<String> {

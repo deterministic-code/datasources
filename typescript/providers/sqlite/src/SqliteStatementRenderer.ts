@@ -7,7 +7,9 @@ import {
   DropTableStatement,
   DropTriggerStatement,
   ForeignKeyStatement,
+  type ProcedureSource,
   SelectInsertedIdStatement,
+  sqlProcedureStatementsOf,
   SelectInsertedIdStatementTextRenderer,
   SqlSeedStatement,
   StatementRenderer,
@@ -34,6 +36,10 @@ class SqliteSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatem
 export class SqliteStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
     super(text);
+  }
+
+  override procedures(source: ProcedureSource) {
+    return sqlProcedureStatementsOf(source);
   }
 
   protected override visitSelectInsertedId(inserted: SelectInsertedIdStatement): string {

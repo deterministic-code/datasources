@@ -5,9 +5,8 @@ import type { GenerateContext } from "@deterministic-code/generators-common/gene
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { DeterministicParser, VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
 import { createCasing, type PackCasing } from "./default-casing.ts";
-import { SqlMapping } from "./sql-mapping.ts";
 import { buildLiveTables, sqlTablesFrom } from "./sql-schema.ts";
-import { renderSql, type SqlDialect } from "./sql-dialect.ts";
+import { renderSql, schemaRenderer, type SqlDialect } from "./sql-dialect.ts";
 import { schemaDiff, type SchemaSnapshot } from "./schema-diff.ts";
 import { addedSeeds, seedDeletes, seedSections } from "./seed-generator.ts";
 import { batchSeparatorOf, joinBatches } from "./join-batches.ts";
@@ -65,8 +64,8 @@ const compile = async (
 ): Promise<SchemaSnapshot & { seeds: Map<string, SeedRow[]> }> => {
   const spec = await DeterministicParser(memoryReader(filesOf(snapshot))).parse(settings);
   const types = sqlTablesFrom(spec);
-  const mapping = new SqlMapping(createCasing(settings), types);
-  return { tables: buildLiveTables(types, mapping), mapping, seeds: spec.datasourceSeeds };
+  const naming = createCasing(settings).naming;
+  return { tables: buildLiveTables(types, naming), naming, seeds: spec.datasourceSeeds };
 };
 
 const emptySnapshot = (settings: Record<string, string>): Promise<SchemaSnapshot & { seeds: Map<string, SeedRow[]> }> =>
@@ -130,10 +129,10 @@ export const versionMigrationFiles = async (
     ];
     const added = addedSeeds(previous.seeds, current.seeds);
     const removed = addedSeeds(current.seeds, previous.seeds);
-    const seedUp = seedSections(dialect, current.tables, added, current.mapping);
+    const seedUp = seedSections(dialect, current.tables, added, current.naming);
     const seedDown = [
-      ...seedDeletes(dialect, previous.tables, added, previous.mapping),
-      ...seedSections(dialect, previous.tables, removed, previous.mapping),
+      ...seedDeletes(dialect, previous.tables, added, previous.naming),
+      ...seedSections(dialect, previous.tables, removed, previous.naming),
     ];
     if (up.length === 0 && down.length === 0 && seedUp.length === 0 && seedDown.length === 0) {
       previous = current;
@@ -184,11 +183,11 @@ const procedureDiff = (
   return after.tables.flatMap((table) => {
     const prior = previous.get(table.name);
     if (prior === undefined || !hasAuditColumns(table) || fieldsOf(prior) === fieldsOf(table)) return [];
-    return procedureStatementsForTable(dialect, table, after.mapping, casing, groups.get(table.name) ?? []).statements;
+    return procedureStatementsForTable(dialect, table, casing, groups.get(table.name) ?? []);
   });
 };
 
 const finalize = (text: string, casing: PackCasing, dialect: SqlDialect): string => {
-  const out = casing.applyKeywords(text.replace(/\n{3,}/g, "\n\n"), dialect);
+  const out = schemaRenderer(dialect, casing.naming).applyKeywords(text.replace(/\n{3,}/g, "\n\n"));
   return out.endsWith("\n") ? out : `${out}\n`;
 };

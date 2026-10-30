@@ -7,7 +7,6 @@ fn register_sql() {
         datasources_code_generators::register_dialect(
             "sqlite",
             Arc::new(crate::SqliteDriver),
-            crate::SqliteDriver::apply_keywords,
         )
         .unwrap();
     });

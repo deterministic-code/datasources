@@ -1,4 +1,6 @@
+import { constraintNameOf } from "./ConstraintName.ts";
 import type { ITableConstraint } from "./ITableConstraint.ts";
+import type { StatementNaming } from "./StatementNaming.ts";
 
 export const ReferentialAction = {
   Cascade: "cascade",
@@ -20,4 +22,7 @@ export class ForeignKey implements ITableConstraint {
     readonly onDelete?: ReferentialAction,
     readonly onUpdate?: ReferentialAction,
   ) {}
+
+  static nameOf = (entity: string, naming: StatementNaming, ...parts: string[]): string =>
+    constraintNameOf(entity, naming, ...parts);
 }

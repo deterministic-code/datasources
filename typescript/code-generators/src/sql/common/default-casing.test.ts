@@ -1,6 +1,28 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { createCasing } from "./default-casing.ts";
+import {
+  CreateTableStatement,
+  CreateTriggerStatement,
+  ForeignKey,
+} from "@deterministic-code/datasources";
+import { createCasing as packCasing } from "./default-casing.ts";
+import { schemaRenderer } from "./sql-dialect.ts";
+import "../../../../providers/sqlite/src/register-sql-generate.ts";
+
+const createCasing = (settings: Record<string, string>) => {
+  const c = packCasing(settings);
+  return {
+    ...c,
+    tableName: (entity: string) => CreateTableStatement.tableName(entity, c.naming),
+    columnName: (field: string) => CreateTableStatement.columnName(field, c.naming),
+    constraintName: (entity: string, ...parts: string[]) =>
+      ForeignKey.nameOf(entity, c.naming, ...parts),
+    triggerName: (entity: string) => CreateTriggerStatement.nameOf(entity, c.naming),
+    keyword: (text: string) => c.naming.keyword(text),
+    applyKeywords: (sql: string, dialect: string) =>
+      schemaRenderer(dialect, c.naming).applyKeywords(sql),
+  };
+};
 
 type Format = "Camel" | "Pascal" | "Snake" | "Kebab";
 type Pluralize = "on" | "off";

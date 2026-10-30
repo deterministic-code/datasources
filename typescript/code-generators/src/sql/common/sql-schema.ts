@@ -13,9 +13,11 @@ import {
   persistedColumnFields,
   tableByName,
 } from "@deterministic-code/generators-common/spec-types";
+import { CreateTableStatement, type StatementNaming } from "@deterministic-code/datasources";
 import { inferReferenceFieldTypes } from "./infer-reference-types.ts";
+import { referenceTarget } from "./reference-target.ts";
 
-export { referenceTarget } from "./reference-target.ts";
+export { referenceTarget };
 
 /** Flattened `datasource.*` flags. Stored procedures are opt-in `"true"`. */
 export const datasourceSettings = (settings: Record<string, string>) => ({
@@ -167,14 +169,38 @@ const topoSort = (tables: LiveTable[]): LiveTable[] => {
   return out;
 };
 
+export const tableStem = (table: SqlTable): string => table.mapping ?? table.name;
+
+export const fieldStem = (table: SqlTable, fieldName: string): string =>
+  fieldOverlay(table, fieldName)?.mapping ?? fieldName;
+
+export const tableOf = (tables: readonly SqlTable[], logicalName: string): SqlTable => {
+  const table = tables.find((item) => item.name === logicalName);
+  if (!table) throw new Error(`foreign key references unknown table "${logicalName}"`);
+  return table;
+};
+
+export const resolveReference = (
+  tables: readonly SqlTable[],
+  naming: StatementNaming,
+  field: TypeField,
+): { tableName: string; columnName: string } => {
+  const [logicalTable, logicalCol] = referenceTarget(field.references!);
+  const target = tableOf(tables, logicalTable);
+  return {
+    tableName: CreateTableStatement.tableName(tableStem(target), naming),
+    columnName: CreateTableStatement.columnName(fieldStem(target, logicalCol), naming),
+  };
+};
+
 /** Attach physical names and order parent tables before children. */
 export const buildLiveTables = (
   types: SqlTable[],
-  mapping: { tableName: (table: SqlTable) => string },
+  naming: StatementNaming,
 ): LiveTable[] =>
   topoSort(
     types.map((t) => ({
       ...t,
-      tableName: mapping.tableName(t),
+      tableName: CreateTableStatement.tableName(tableStem(t), naming),
     })),
   );

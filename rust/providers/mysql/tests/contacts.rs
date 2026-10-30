@@ -5,7 +5,7 @@ use datasources::Connection;
 use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
     contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
-    seed_identity_sql, statements_of, SEED_CONTACT_COUNT,
+    seed_identity_sql, SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
 
@@ -14,11 +14,7 @@ fn verbose() -> bool {
 }
 
 fn register_sql() {
-    datasources_tests::register_contact_dialect(
-        "mysql",
-        Arc::new(crate::MysqlDriver),
-        crate::MysqlDriver::apply_keywords,
-    );
+    datasources_tests::register_contact_dialect("mysql", Arc::new(crate::MysqlDriver));
 }
 
 #[tokio::test]
@@ -28,7 +24,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     let conn = Arc::new(MysqlConnection::new(Some(isolated.url.clone())));
     conn.open().await.unwrap();
     let command = MysqlCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("mysql"));
+    let mut sql = contact_schema("mysql");
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     sql.extend(seed_identity_sql("mysql"));
     apply_sql(&command, &sql).await.unwrap();

@@ -49,10 +49,21 @@ describe("SqliteDriver converters", () => {
       ),
     ).toThrow(/not a valid uuid/);
     expect(
-      SqliteDriver.procedureSpecs("User", [[]], {
+      driver.statementRenderer.procedures({
+        plural: "Users",
+        table: "users",
+        columns: [],
+        createParameters: [],
+        writable: [],
+        createColumns: [],
+        updateColumns: [],
+        typedColumns: [],
+        byGroups: [],
+        key: "id",
+        keyType: "integer",
+        generatedKey: false,
         routineName: (stem) => stem,
-        pluralStem: (entity) => `${entity}s`,
-      }).some((row) => row.name === "read_Users"),
+      }).some((statement) => "name" in statement && statement.name === "read_Users"),
     ).toBe(true);
     expect(driver.defaultValueConverter.convert("datetime", "Now")).toBe(
       `(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))`,

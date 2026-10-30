@@ -66,4 +66,7 @@ internal sealed class PostgresStatementRenderer(StatementTextRenderer text) : St
 
     public override string Visit(ForeignKeyStatement key) =>
         new PostgresForeignKeyStatementRenderer().Render(key);
+
+    public override IReadOnlyList<IStatement> Procedures(ProcedureSource source) =>
+        SqlProcedureStatements.Of(source);
 }
