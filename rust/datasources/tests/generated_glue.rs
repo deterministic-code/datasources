@@ -80,6 +80,21 @@ fn from_schema_sets_bytes_from_base64_text() {
 }
 
 #[test]
+fn from_schema_sets_i32_from_empty_text() {
+    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
+    #[facet(crate = ::datasources::facet)]
+    struct WithId {
+        id: i32,
+    }
+    impl SchemaObject for WithId {}
+    let mut row = datasources::Row::new();
+    row.insert("id".into(), Value::from(""));
+    let schema = Schema::new(HashMap::from([("id".into(), "integer".into())]));
+    let item = WithId::from_schema(row, &schema).unwrap();
+    assert_eq!(item.id, 0);
+}
+
+#[test]
 fn from_schema_sets_string_from_int() {
     let mut row = datasources::Row::new();
     row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
@@ -124,6 +139,39 @@ fn encoded(pairs: &[(&str, Value)]) -> Value {
         row.insert((*key).into(), value.clone());
     }
     encode_rows(&[row])
+}
+
+#[test]
+fn from_schema_sets_empty_map_from_empty_text() {
+    let mut row = datasources::Row::new();
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
+    row.insert("settings".into(), Value::from(""));
+    let schema = Schema::new(HashMap::from([("created".into(), "datetime".into())]));
+    let item = GeneratedShape::from_schema(row, &schema).unwrap();
+    assert!(item.settings.is_empty());
+}
+
+#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
+#[facet(crate = ::datasources::facet)]
+struct ChildShape {
+    attributes: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
+#[facet(crate = ::datasources::facet)]
+struct ParentShape {
+    children: Vec<ChildShape>,
+}
+
+impl SchemaObject for ParentShape {}
+
+#[test]
+fn from_schema_sets_nested_empty_map_from_empty_text() {
+    let mut row = datasources::Row::new();
+    row.insert("children".into(), encoded(&[("attributes", Value::from(""))]));
+    let item = ParentShape::from_schema(row, &Schema::new(HashMap::new())).unwrap();
+    assert_eq!(item.children.len(), 1);
+    assert!(item.children[0].attributes.is_empty());
 }
 
 #[test]
