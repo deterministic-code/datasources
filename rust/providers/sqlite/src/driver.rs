@@ -3,10 +3,12 @@ use crate::converters;
 use crate::statement_renderer::SqliteStatementRenderer;
 use crate::transaction::SqliteTransaction;
 use crate::sql_generate;
+use crate::default_value_converter::DefaultValueConverter;
+use crate::type_map::TypeMap;
 use datasources::{
-    downcast_connection, Command, Connection, DatasourceError, DefaultValueConverter,
-    DeterministicTypeConverter, Driver, Information, IsolationLevel, Mapping, Result,
-    StatementTextRenderer, Transaction, TypeConverter, Value,
+    downcast_connection, Column, Command, Connection, DatasourceError, Driver, Information,
+    IsolationLevel, Mapping, Result, RoutineParameter, StatementTextRenderer, Transaction,
+    TypeConverter, Value,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -16,18 +18,89 @@ pub struct SqliteDriver;
 impl SqliteDriver {
     pub const QUOTE_LEFT: &'static str = sql_generate::QUOTE_LEFT;
     pub const QUOTE_RIGHT: &'static str = sql_generate::QUOTE_RIGHT;
+    pub const PROCEDURE_PAYLOAD_TYPE: &'static str = sql_generate::PROCEDURE_PAYLOAD_TYPE;
+
+    pub fn procedure_specs(
+        entity_name: &str,
+        by_groups: &[Vec<String>],
+        routine_name: &dyn Fn(&str) -> String,
+        plural_stem: &dyn Fn(&str) -> String,
+    ) -> Vec<(String, String, Vec<String>)> {
+        sql_generate::procedure_specs(entity_name, by_groups, routine_name, plural_stem)
+    }
+
+    pub fn apply_keywords(sql: &str, keyword: &dyn Fn(&str) -> String) -> String {
+        sql_generate::apply_keywords(sql, keyword)
+    }
 
     pub fn statement_text_renderer() -> &'static StatementTextRenderer {
         static DRIVER: SqliteDriver = SqliteDriver;
         Driver::statement_renderer(&DRIVER).expect("sqlite")
     }
 
-    pub fn types() -> &'static DeterministicTypeConverter {
+    pub fn types() -> &'static TypeMap {
         &*sql_generate::TYPES
     }
 
     pub fn defaults() -> &'static DefaultValueConverter {
         &sql_generate::DEFAULTS
+    }
+
+    pub fn convert_type(field: &datasources::SpecField) -> Result<String> {
+        sql_generate::convert_type(field)
+    }
+
+    pub fn convert_default(spec_type: &str, text: &str) -> Result<Option<String>> {
+        sql_generate::convert_default(spec_type, text)
+    }
+
+    pub fn quote(name: &str) -> String {
+        format!("\"{name}\"")
+    }
+
+    pub fn native_type(column: &Column) -> String {
+        column
+            .field
+            .as_ref()
+            .and_then(|field| sql_generate::TYPES.convert_field(field).ok())
+            .unwrap_or_else(|| {
+                column_sql(&column.type_name)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| column.type_name.clone())
+            })
+    }
+
+    pub fn native_default(column: &Column) -> String {
+        let Some(default) = &column.default else {
+            return String::new();
+        };
+        let Some(field) = &column.field else {
+            return default.value.clone();
+        };
+        sql_generate::DEFAULTS
+            .convert(&field.type_name, &default.value)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| default.value.clone())
+    }
+
+    pub fn utc_now() -> String {
+        sql_generate::DEFAULTS
+            .convert("datetime", "UtcNow")
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
+
+    pub fn native_param(parameter: &RoutineParameter) -> String {
+        if parameter.r#type == "payload" {
+            return Self::PROCEDURE_PAYLOAD_TYPE.to_string();
+        }
+        parameter
+            .field
+            .as_ref()
+            .and_then(|field| sql_generate::TYPES.convert_field(field).ok())
+            .unwrap_or_else(|| parameter.r#type.clone())
     }
 }
 
@@ -92,10 +165,6 @@ impl Driver for SqliteDriver {
 
     fn type_converter(&self) -> Option<&dyn Mapping<String, String>> {
         Some(&*sql_generate::TYPES)
-    }
-
-    fn default_value_converter(&self) -> Option<&DefaultValueConverter> {
-        Some(&sql_generate::DEFAULTS)
     }
 
     fn statement_renderer(&self) -> Option<&StatementTextRenderer> {

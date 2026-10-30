@@ -87,7 +87,7 @@ public class PostgresCommandIntegrationTests
             });
             await conn.Open();
             var command = new PostgresCommand(conn);
-            foreach (var statement in SchemaSpec.Tables("postgres-items", static id => $"\"{id.Replace("\"", "\"\"")}\""))
+            foreach (var statement in SchemaSpec.Tables("postgres-items", static id => id))
                 await command.Execute(statement);
             await command.Execute(
                 "INSERT INTO items (id, name) VALUES ($id, $name)",

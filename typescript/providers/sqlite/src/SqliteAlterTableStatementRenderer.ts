@@ -3,11 +3,23 @@ import {
   type AlterAction,
   type Column,
 } from "@deterministic-code/datasources";
-import { columnTypes } from "./columnTypes.ts";
+import { SqliteDriver } from "./SqliteDriver.ts";
 
 export class SqliteAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
+  protected quote(name: string): string {
+    return SqliteDriver.quote(name);
+  }
+
   protected typeName(column: Column): string {
-    return columnTypes[column.type] ?? column.type;
+    return SqliteDriver.nativeType(column);
+  }
+
+  protected columnDefault(column: Column): string {
+    return column.default == null
+      ? ""
+      : column.default.name == null
+        ? ` DEFAULT ${SqliteDriver.nativeDefault(column)}`
+        : ` CONSTRAINT ${this.quote(column.default.name)} DEFAULT ${SqliteDriver.nativeDefault(column)}`;
   }
 
   protected override actionSql(action: AlterAction): string {

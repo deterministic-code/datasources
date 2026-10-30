@@ -7,7 +7,7 @@ public sealed class SqliteDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
         new(t => new SqliteStatementRenderer(t));
-    static readonly DeterministicTypeConverter Types = new(
+    static readonly TypeMap Types = new(
         new Dictionary<string, string>
         {
             ["string"] = "TEXT",
@@ -25,12 +25,6 @@ public sealed class SqliteDriver : IDriver
             ["binary"] = "BLOB",
             ["uuid"] = "TEXT",
             ["reference"] = "INTEGER",
-        },
-        new SpecFieldRules
-        {
-            DialectName = "sqlite",
-            StringUnlimited = "TEXT",
-            StringSized = n => $"VARCHAR({n})",
         });
     static readonly DefaultValueConverter Defaults = new(new DefaultValueOptions
     {
@@ -44,10 +38,22 @@ public sealed class SqliteDriver : IDriver
         HexReverse = new Regex(@"^X'(.*)'$"),
     });
 
-    public string QuoteLeft => "\"";
-    public string QuoteRight => "\"";
+    internal string QuoteLeft => "\"";
+    internal string QuoteRight => "\"";
+    internal static string Quote(string name) => $"\"{name}\"";
+    internal static string NativeType(Column column) =>
+        column.Field is { } field
+            ? Types.Convert(field)
+            : ColumnTypes.TryGetValue(column.Type, out var sql) ? sql : column.Type;
+    internal static string NativeDefault(Column column) =>
+        column.Default is null
+            ? ""
+            : column.Field is { } field
+                ? Defaults.Convert(field.Type, column.Default.Value) ?? column.Default.Value
+                : column.Default.Value;
+    internal static string UtcNow() => Defaults.Convert("datetime", "UtcNow") ?? "";
     public IMapping<string, string>? TypeConverter => Types;
-    public DefaultValueConverter? DefaultValueConverter => Defaults;
+    internal DefaultValueConverter DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         [
@@ -81,4 +87,16 @@ public sealed class SqliteDriver : IDriver
 
     public string ColumnType(string name) =>
         ColumnTypes.TryGetValue(name, out var sql) ? sql : throw new DatasourceException($"Unknown sqlite type \"{name}\"");
+
+    internal const string ProcedurePayloadType = "JSON";
+
+    internal static IReadOnlyList<(string Op, string Name, IReadOnlyList<string> ByProperties)> ProcedureSpecs(
+        string entityName,
+        IReadOnlyList<IReadOnlyList<string>> byGroups,
+        Func<string, string> routineName,
+        Func<string, string> pluralStem) =>
+        SqlProcedureSpecs.Of(entityName, byGroups, routineName, pluralStem);
+
+    internal static string ApplyKeywords(string sql, Func<string, string> keyword) =>
+        SqlKeywords.Apply(sql, keyword);
 }

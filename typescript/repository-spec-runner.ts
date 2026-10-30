@@ -195,7 +195,7 @@ export const runRepositorySpec = async (
   const rename = spec.type.crudMapper?.entity && spec.type.crudMapper.entity !== spec.type.table
     ? { [spec.type.table]: spec.type.crudMapper.entity }
     : undefined;
-  for (const statement of tables(spec.schema, dialect.quote, rename))
+  for (const statement of tables(spec.schema, (id) => id, rename))
     await execute(statement);
   const mapping = new MetaDataRowTypeConverter<SpecRow>(fieldsOf(spec.type, types));
   const mappings = spec.type.mappings ?? {};

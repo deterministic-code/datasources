@@ -1,3 +1,3 @@
 namespace Datasources;
 
-public sealed record RoutineParameter(string Name, string Type);
+public sealed record RoutineParameter(string Name, string Type, SpecField? Field = null);

@@ -29,8 +29,8 @@ import {
   dropTableStatementOf,
 } from "../statements.ts";
 
-const finalizeSql = (text: string, casing: PackCasing): string => {
-  const out = casing.applyKeywords(text.replace(/\n{3,}/g, "\n\n"));
+const finalizeSql = (text: string, casing: PackCasing, dialect: SqlDialect): string => {
+  const out = casing.applyKeywords(text.replace(/\n{3,}/g, "\n\n"), dialect);
   return out.endsWith("\n") ? out : `${out}\n`;
 };
 
@@ -40,16 +40,16 @@ const flattenTable = (
   mapping: SqlMapping,
 ): string[] => {
   const indexes = table.indexes.map((idx) =>
-    renderSql(dialect, createIndexStatementOf(dialect, mapping, table, idx)),
+    renderSql(dialect, createIndexStatementOf(mapping, table, idx)),
   );
   const live = { ...table, pkName: pkName(table, overlayOf(table)) };
   const audit = hasAuditColumns(table)
     ? renderSql(
         dialect,
-        createTriggerStatementOf(dialect, live, mapping, live.pkName ?? "id"),
+        createTriggerStatementOf(live, mapping, live.pkName ?? "id"),
       )
     : "";
-  return [renderSql(dialect, createTableStatementOf(dialect, table, mapping)), ...indexes, audit];
+  return [renderSql(dialect, createTableStatementOf(table, mapping)), ...indexes, audit];
 };
 
 const generateInitialMigration = (
@@ -80,6 +80,7 @@ const generateInitialMigration = (
           ),
         }),
         casing,
+        dialect,
       ),
     },
     down: {
@@ -90,11 +91,12 @@ const generateInitialMigration = (
           dropStatements: joinBatches(
             [...live]
               .reverse()
-              .map((t) => renderSql(dialect, dropTableStatementOf(dialect, t.tableName))),
+              .map((t) => renderSql(dialect, dropTableStatementOf(t.tableName))),
             separator,
           ),
         }),
         casing,
+        dialect,
       ),
     },
   };

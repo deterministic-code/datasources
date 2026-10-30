@@ -108,12 +108,10 @@ export const dialectTarget = (dialect: Dialect, connections: number): string => 
     : (dialect.connection.filename ?? ":memory:");
 };
 
-const quoteIdent = (id: string): string => `"${id.replaceAll('"', '""')}"`;
-
 const resolveSql = (sql: string, dialect: Dialect): string => {
   const key = sql.trim();
   return isSqlFragment(key)
-    ? tables(dialect[key], quoteIdent).map((statement) => dialect.render(statement)).join(";\n")
+    ? tables(dialect[key], (id) => id).map((statement) => dialect.render(statement)).join(";\n")
     : sql;
 };
 

@@ -4,6 +4,10 @@ namespace Datasources.SqlServer;
 
 internal sealed class SqlServerAlterTableStatementRenderer : AlterTableStatementTextRenderer
 {
+    protected override string Quote(string name) => SqlServerDriver.Quote(name);
+
+    protected override string Type(Column column) => SqlServerDriver.NativeType(column);
+
     public override string Render(AlterTableStatement statement) => statement.Action switch
     {
         AlterTableStatement.RenameColumn rename =>

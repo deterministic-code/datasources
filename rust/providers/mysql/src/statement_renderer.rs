@@ -4,6 +4,7 @@ use crate::create_table_statement_renderer::MysqlCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::MysqlCreateTriggerStatementRenderer;
 use crate::drop_routine_statement_renderer::MysqlDropRoutineStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
+use crate::sql_seed_statement_renderer::MysqlSqlSeedStatementRenderer;
 use datasources::{
     AlterTableStatement, BulkUpdateStatement,
     BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
@@ -11,8 +12,9 @@ use datasources::{
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement,
     CreateTableStatementTextRenderer, CreateTriggerStatement, CreateUpdateStoredProcedureStatement,
-    DropIndexStatement, DropRoutineStatement, SelectInsertedIdStatement, StatementTextRenderer,
-    StatementVisitor,
+    CreateIndexStatement, DropIndexStatement, DropRoutineStatement, DropTableStatement,
+    ForeignKeyStatement, SelectInsertedIdStatement, SqlSeedStatement,
+    StatementTextRenderer, StatementVisitor,
 };
 
 pub struct MysqlStatementRenderer;
@@ -39,7 +41,11 @@ impl StatementVisitor for MysqlStatementRenderer {
         statement: &DropIndexStatement,
         _text: &StatementTextRenderer,
     ) -> String {
-        format!("DROP INDEX {} ON {}", statement.name(), statement.table())
+        format!(
+            "DROP INDEX {} ON {}",
+            crate::MysqlDriver::quote(statement.name()),
+            crate::MysqlDriver::quote(statement.table())
+        )
     }
 
     fn visit_select_inserted_id(
@@ -136,6 +142,53 @@ impl StatementVisitor for MysqlStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         MysqlStoredProcedureStatementRenderer.render_bulk_delete(statement)
+    }
+
+    fn visit_sql_seed(&self, statement: &SqlSeedStatement, _text: &StatementTextRenderer) -> String {
+        MysqlSqlSeedStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_table(&self, statement: &DropTableStatement, _text: &StatementTextRenderer) -> String {
+        format!("DROP TABLE IF EXISTS {}", crate::MysqlDriver::quote(statement.table()))
+    }
+
+    fn visit_create_index(&self, statement: &CreateIndexStatement, _text: &StatementTextRenderer) -> String {
+        format!(
+            "CREATE {}INDEX {} ON {} ({})",
+            if statement.unique() { "UNIQUE " } else { "" },
+            crate::MysqlDriver::quote(statement.name()),
+            crate::MysqlDriver::quote(statement.table()),
+            statement
+                .columns()
+                .iter()
+                .map(|column| crate::MysqlDriver::quote(column))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
+        let table = crate::MysqlDriver::quote(statement.table());
+        let name = crate::MysqlDriver::quote(statement.name());
+        if statement.kind() == "drop" {
+            return format!("ALTER TABLE {table} DROP FOREIGN KEY {name}");
+        }
+        let cols = statement
+            .columns()
+            .iter()
+            .map(|column| crate::MysqlDriver::quote(column))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let refs = statement
+            .references_columns()
+            .iter()
+            .map(|column| crate::MysqlDriver::quote(column))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
+            "ALTER TABLE {table} ADD CONSTRAINT {name} FOREIGN KEY ({cols}) REFERENCES {} ({refs})",
+            crate::MysqlDriver::quote(statement.references_table())
+        )
     }
 }
 

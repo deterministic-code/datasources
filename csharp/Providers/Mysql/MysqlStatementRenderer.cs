@@ -48,4 +48,16 @@ internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : State
 
     public override string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
         new MysqlStoredProcedureStatementRenderer().Render(statement);
+
+    public override string Visit(SqlSeedStatement seed) =>
+        new MysqlSqlSeedStatementRenderer().Render(seed);
+
+    public override string Visit(DropTableStatement drop) =>
+        new MysqlDropTableStatementRenderer().Render(drop);
+
+    public override string Visit(CreateIndexStatement index) =>
+        new MysqlCreateIndexStatementRenderer().Render(index);
+
+    public override string Visit(ForeignKeyStatement key) =>
+        new MysqlForeignKeyStatementRenderer().Render(key);
 }

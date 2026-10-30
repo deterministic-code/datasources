@@ -7,12 +7,15 @@ import {
   CreateDeleteStoredProcedureStatement,
   CreateNestedReadStoredProcedureStatement,
   CreateReadStoredProcedureStatement,
+  CreateIndexStatement,
   CreateTableStatement,
   CreateTriggerStatement,
   CreateUpdateStoredProcedureStatement,
   DropIndexStatement,
   DropTableStatement,
   DropTriggerStatement,
+  ForeignKeyStatement,
+  SqlSeedStatement,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
@@ -23,6 +26,8 @@ import { OracleDropIndexStatementRenderer } from "./OracleDropIndexStatementRend
 import { OracleDropTableStatementRenderer } from "./OracleDropTableStatementRenderer.ts";
 import { OracleDropTriggerStatementRenderer } from "./OracleDropTriggerStatementRenderer.ts";
 import { OracleStoredProcedureStatementRenderer } from "./OracleStoredProcedureStatementRenderer.ts";
+import { OracleSqlSeedStatementRenderer } from "./OracleSqlSeedStatementRenderer.ts";
+import { OracleCreateIndexStatementRenderer, OracleForeignKeyStatementRenderer } from "./OracleQuotedRenderers.ts";
 
 export class OracleStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
@@ -83,5 +88,17 @@ export class OracleStatementRenderer extends StatementRenderer {
 
   protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
     return new OracleStoredProcedureStatementRenderer().renderBulkDelete(statement);
+  }
+
+  protected override visitSqlSeed(seed: SqlSeedStatement): string {
+    return new OracleSqlSeedStatementRenderer().render(seed);
+  }
+
+  protected override visitCreateIndex(index: CreateIndexStatement): string {
+    return new OracleCreateIndexStatementRenderer().render(index);
+  }
+
+  protected override visitForeignKey(key: ForeignKeyStatement): string {
+    return new OracleForeignKeyStatementRenderer().render(key);
   }
 }

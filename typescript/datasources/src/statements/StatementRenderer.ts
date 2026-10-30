@@ -43,6 +43,8 @@ import { ExecuteStoredProcedureStatement } from "./ExecuteStoredProcedureStateme
 import { ExecuteStoredProcedureStatementTextRenderer } from "./ExecuteStoredProcedureStatementTextRenderer.ts";
 import { IdentityInsertStatement } from "./IdentityInsertStatement.ts";
 import { IdentityInsertStatementTextRenderer } from "./IdentityInsertStatementTextRenderer.ts";
+import { SqlSeedStatement } from "./SqlSeedStatement.ts";
+import { ForeignKeyStatement } from "./ForeignKeyStatement.ts";
 import { InsertStatement } from "./InsertStatement.ts";
 import { InsertStatementTextRenderer } from "./InsertStatementTextRenderer.ts";
 import { ReturnStatement } from "./ReturnStatement.ts";
@@ -74,6 +76,8 @@ type AnyStatement =
   | DropTriggerStatement
   | CreateTriggerStatement
   | IdentityInsertStatement
+  | SqlSeedStatement
+  | ForeignKeyStatement
   | DropRoutineStatement
   | CreateCreateStoredProcedureStatement
   | CreateReadStoredProcedureStatement
@@ -105,6 +109,8 @@ export class StatementRenderer implements IStatementVisitor {
   visit(statement: DropTriggerStatement): string;
   visit(statement: CreateTriggerStatement): string;
   visit(statement: IdentityInsertStatement): string;
+  visit(statement: SqlSeedStatement): string;
+  visit(statement: ForeignKeyStatement): string;
   visit(statement: DropRoutineStatement): string;
   visit(statement: CreateCreateStoredProcedureStatement): string;
   visit(statement: CreateReadStoredProcedureStatement): string;
@@ -134,6 +140,8 @@ export class StatementRenderer implements IStatementVisitor {
       DropTriggerStatement: () => this.visitDropTrigger(statement as DropTriggerStatement),
       CreateTriggerStatement: () => this.visitCreateTrigger(statement as CreateTriggerStatement),
       IdentityInsertStatement: () => this.visitIdentityInsert(statement as IdentityInsertStatement),
+      SqlSeedStatement: () => this.visitSqlSeed(statement as SqlSeedStatement),
+      ForeignKeyStatement: () => this.visitForeignKey(statement as ForeignKeyStatement),
       DropRoutineStatement: () => this.visitDropRoutine(statement as DropRoutineStatement),
       CreateCreateStoredProcedureStatement: () => this.visitCreateCreateStoredProcedureStatement(statement as CreateCreateStoredProcedureStatement),
       CreateReadStoredProcedureStatement: () => this.visitCreateReadStoredProcedureStatement(statement as CreateReadStoredProcedureStatement),
@@ -218,6 +226,14 @@ export class StatementRenderer implements IStatementVisitor {
 
   protected visitIdentityInsert(statement: IdentityInsertStatement): string {
     return new IdentityInsertStatementTextRenderer().render(statement);
+  }
+
+  protected visitSqlSeed(_statement: SqlSeedStatement): string {
+    throw new Error("SqlSeedStatement is rendered by the SQL driver.");
+  }
+
+  protected visitForeignKey(_statement: ForeignKeyStatement): string {
+    throw new Error("ForeignKeyStatement is rendered by the SQL driver.");
   }
 
   protected visitDropRoutine(statement: DropRoutineStatement): string {

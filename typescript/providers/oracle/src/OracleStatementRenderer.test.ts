@@ -42,21 +42,21 @@ describe("OracleStatementRenderer", () => {
         new AlterTableStatement("users", { kind: "renameColumn", from: "old", to: "new" }),
       ),
     ).toBe("ALTER TABLE users RENAME COLUMN old TO new");
-    expect(renderer.render(new DropIndexStatement("ix_users_email", "users"))).toBe("DROP INDEX ix_users_email");
+    expect(renderer.render(new DropIndexStatement("ix_users_email", "users"))).toBe('DROP INDEX "ix_users_email"');
     expect(renderer.render(new DropTableStatement("users"))).toBe(
-      `BEGIN EXECUTE IMMEDIATE 'DROP TABLE users CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
+      `BEGIN EXECUTE IMMEDIATE 'DROP TABLE "users" CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END;
 /`,
     );
-    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "SYS_EXTRACT_UTC(SYSTIMESTAMP)"))).toBe(
-      `CREATE OR REPLACE TRIGGER tr_users
-BEFORE UPDATE ON users
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id"))).toBe(
+      `CREATE OR REPLACE TRIGGER "tr_users"
+BEFORE UPDATE ON "users"
 FOR EACH ROW
 BEGIN
-  :NEW.updated := SYS_EXTRACT_UTC(SYSTIMESTAMP);
+  :NEW."updated" := SYS_EXTRACT_UTC(SYSTIMESTAMP);
 END;
 /`,
     );
-    expect(renderer.render(new DropTriggerStatement("tr_users", "users"))).toBe("DROP TRIGGER tr_users");
+    expect(renderer.render(new DropTriggerStatement("tr_users", "users"))).toBe('DROP TRIGGER "tr_users"');
   });
 
   it("renders create/read/update stored procedure statements", () => {

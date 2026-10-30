@@ -1,4 +1,4 @@
-use crate::sql_keywords;
+use crate::sql_dialect;
 use datasources::{DatasourceError, PluralizerConverter, Result};
 use regex::Regex;
 use std::collections::HashMap;
@@ -211,11 +211,11 @@ impl PackCasing {
         letter(text, &self.keyword_format)
     }
 
-    pub fn apply_keywords(&self, sql: &str) -> String {
+    pub fn apply_keywords(&self, sql: &str, dialect: &str) -> Result<String> {
         if self.keyword_format == "lower" {
-            sql_keywords::apply(sql, |k| self.keyword(k))
+            sql_dialect::apply_keywords(dialect, sql, &|k| self.keyword(k))
         } else {
-            sql.into()
+            Ok(sql.into())
         }
     }
 

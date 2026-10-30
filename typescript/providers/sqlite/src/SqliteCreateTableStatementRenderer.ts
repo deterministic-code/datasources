@@ -1,5 +1,5 @@
 import { CreateTableStatement, CreateTableStatementTextRenderer, PrimaryKey, type Column } from "@deterministic-code/datasources";
-import { columnTypes } from "./columnTypes.ts";
+import { SqliteDriver } from "./SqliteDriver.ts";
 
 const primaryKey = (constraint: { kind: string }): constraint is PrimaryKey =>
   constraint.kind === "primaryKey";
@@ -17,8 +17,20 @@ export class SqliteCreateTableStatementRenderer extends CreateTableStatementText
     );
   }
 
+  protected quote(name: string): string {
+    return SqliteDriver.quote(name);
+  }
+
   protected typeName(column: Column): string {
-    return columnTypes[column.type] ?? column.type;
+    return SqliteDriver.nativeType(column);
+  }
+
+  protected columnDefault(column: Column): string {
+    return column.default == null
+      ? ""
+      : column.default.name == null
+        ? ` DEFAULT ${SqliteDriver.nativeDefault(column)}`
+        : ` CONSTRAINT ${this.quote(column.default.name)} DEFAULT ${SqliteDriver.nativeDefault(column)}`;
   }
 
   protected identity(column: Column): string {

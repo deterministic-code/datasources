@@ -9,7 +9,12 @@ mod driver;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
 mod sqlite_path;
+mod default_value_converter;
+mod default_value_options;
 mod sql_generate;
+mod sql_seed_statement_renderer;
+mod type_map;
+mod quoted_renderers;
 mod statement_renderer;
 mod transaction;
 

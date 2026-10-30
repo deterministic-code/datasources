@@ -3,11 +3,23 @@ import {
   type AlterAction,
   type Column,
 } from "@deterministic-code/datasources";
-import { columnTypes } from "./columnTypes.ts";
+import { PostgresDriver } from "./PostgresDriver.ts";
 
 export class PostgresAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
+  protected quote(name: string): string {
+    return PostgresDriver.quote(name);
+  }
+
   protected typeName(column: Column): string {
-    return columnTypes[column.type] ?? column.type;
+    return PostgresDriver.nativeType(column);
+  }
+
+  protected columnDefault(column: Column): string {
+    return column.default == null
+      ? ""
+      : column.default.name == null
+        ? ` DEFAULT ${PostgresDriver.nativeDefault(column)}`
+        : ` CONSTRAINT ${this.quote(column.default.name)} DEFAULT ${PostgresDriver.nativeDefault(column)}`;
   }
 
   protected override actionSql(action: AlterAction): string {
@@ -19,7 +31,7 @@ export class PostgresAlterTableStatementRenderer extends AlterTableStatementText
     const defaultSql =
       column.default == null
         ? `ALTER COLUMN ${name} DROP DEFAULT`
-        : `ALTER COLUMN ${name} SET DEFAULT ${column.default.value}`;
+        : `ALTER COLUMN ${name} SET DEFAULT ${PostgresDriver.nativeDefault(column)}`;
     const nullSql =
       column.notNull == null
         ? `ALTER COLUMN ${name} DROP NOT NULL`

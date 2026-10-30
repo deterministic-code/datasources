@@ -5,5 +5,5 @@ namespace Datasources.SqlServer;
 internal sealed class SqlServerDropIndexStatementRenderer : DropIndexStatementTextRenderer
 {
     public override string Render(DropIndexStatement statement) =>
-        $"DROP INDEX {statement.Name} ON {statement.Table}";
+        $"DROP INDEX {SqlServerDriver.Quote(statement.Name)} ON {SqlServerDriver.Quote(statement.Table)}";
 }

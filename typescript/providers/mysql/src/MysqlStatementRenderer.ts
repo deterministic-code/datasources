@@ -11,10 +11,14 @@ import {
   CreateTableStatement,
   CreateTriggerStatement,
   CreateUpdateStoredProcedureStatement,
+  CreateIndexStatement,
   DropIndexStatement,
   DropRoutineStatement,
+  DropTableStatement,
+  ForeignKeyStatement,
   SelectInsertedIdStatement,
   SelectInsertedIdStatementTextRenderer,
+  SqlSeedStatement,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
@@ -25,6 +29,12 @@ import { MysqlCreateTriggerStatementRenderer } from "./MysqlCreateTriggerStateme
 import { MysqlDropIndexStatementRenderer } from "./MysqlDropIndexStatementRenderer.ts";
 import { MysqlDropRoutineStatementRenderer } from "./MysqlDropRoutineStatementRenderer.ts";
 import { MysqlStoredProcedureStatementRenderer } from "./MysqlStoredProcedureStatementRenderer.ts";
+import { MysqlSqlSeedStatementRenderer } from "./MysqlSqlSeedStatementRenderer.ts";
+import {
+  MysqlCreateIndexStatementRenderer,
+  MysqlDropTableStatementRenderer,
+  MysqlForeignKeyStatementRenderer,
+} from "./MysqlQuotedRenderers.ts";
 
 class MysqlSelectInsertedIdStatementTextRenderer extends SelectInsertedIdStatementTextRenderer {
   override render(statement: SelectInsertedIdStatement): string {
@@ -95,5 +105,21 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   protected override visitCreateBulkDeleteStoredProcedureStatement(statement: CreateBulkDeleteStoredProcedureStatement): string {
     return new MysqlStoredProcedureStatementRenderer().renderBulkDelete(statement);
+  }
+
+  protected override visitSqlSeed(seed: SqlSeedStatement): string {
+    return new MysqlSqlSeedStatementRenderer().render(seed);
+  }
+
+  protected override visitDropTable(drop: DropTableStatement): string {
+    return new MysqlDropTableStatementRenderer().render(drop);
+  }
+
+  protected override visitCreateIndex(index: CreateIndexStatement): string {
+    return new MysqlCreateIndexStatementRenderer().render(index);
+  }
+
+  protected override visitForeignKey(key: ForeignKeyStatement): string {
+    return new MysqlForeignKeyStatementRenderer().render(key);
   }
 }

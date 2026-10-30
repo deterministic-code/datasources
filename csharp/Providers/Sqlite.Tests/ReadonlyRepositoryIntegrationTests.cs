@@ -517,7 +517,7 @@ public class UsersViewRoleTests
         usersRepo.AddEnriched(
             new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List),
             usersRepo,
-            new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
+            new NestedToObjectEnrichmentStrategy<UsersView>(new Datasources.TypeMap
             {
                 Key = "Key",
                 Fields = new Dictionary<string, TypeMapField>

@@ -10,12 +10,15 @@ import type {
   RoutineParameter,
 } from "@deterministic-code/datasources";
 import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
+import { OracleDriver } from "./OracleDriver.ts";
+
+const typeOf = (parameter: RoutineParameter): string => OracleDriver.nativeParam(parameter);
 
 const params = (list: readonly RoutineParameter[]): string =>
-  list.map((p) => `  ${p.name} IN ${p.type}`).join(",\n");
+  list.map((p) => `  ${p.name} IN ${typeOf(p)}`).join(",\n");
 
 const jsonColumns = (columns: readonly RoutineParameter[]): string =>
-  columns.map((c) => `${c.name} ${c.type} PATH '$.${c.name}'`).join(", ");
+  columns.map((c) => `${c.name} ${typeOf(c)} PATH '$.${c.name}'`).join(", ");
 
 export class OracleStoredProcedureStatementRenderer {
   renderCreate(statement: CreateCreateStoredProcedureStatement): string {
@@ -31,7 +34,7 @@ END;`;
   renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
     const select = DefaultStatementTextRenderer.instance.render(statement.select);
     const signature = statement.arguments
-      .map((argument) => `${argument.parameter.name} IN ${argument.parameter.type}`)
+      .map((argument) => `${argument.parameter.name} IN ${typeOf(argument.parameter)}`)
       .join(", ");
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${signature}) AS
 BEGIN
@@ -48,7 +51,7 @@ BEGIN
 END;`;
     }
     const signature = statement.byProperties
-      .map((c) => `${c} IN ${statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType}`)
+      .map((c) => `${c} IN ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
       .join(", ");
     const pred = statement.byProperties.map((c) => `t.${c} = ${c}`).join(" AND ");
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${signature}) AS
@@ -79,7 +82,7 @@ END;`;
   renderDelete(statement: CreateDeleteStoredProcedureStatement): string {
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
-      .map((c) => `${c} IN ${statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType}`)
+      .map((c) => `${c} IN ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
       .join(", ");
     const pred = by.map((c) => `t.${c} = ${c}`).join(" AND ");
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${signature}) AS
@@ -118,7 +121,7 @@ END;`;
 BEGIN
   DELETE FROM ${statement.table} t
   WHERE t.${statement.key} IN (
-    SELECT ${statement.key} FROM JSON_TABLE(${statement.payload.name}, '$[*]' COLUMNS (${statement.key} ${statement.keyType} PATH '$.${statement.key}'))
+    SELECT ${statement.key} FROM JSON_TABLE(${statement.payload.name}, '$[*]' COLUMNS (${statement.key} ${OracleDriver.nativeParam({ name: statement.key, type: statement.keyType })} PATH '$.${statement.key}'))
   );
 END;`;
   }

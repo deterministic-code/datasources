@@ -7,7 +7,7 @@ public sealed class OracleDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
         new(t => new OracleStatementRenderer(t));
-    static readonly DeterministicTypeConverter Types = new(
+    static readonly TypeMap Types = new(
         new Dictionary<string, string>
         {
             ["string"] = "CLOB",
@@ -25,16 +25,6 @@ public sealed class OracleDriver : IDriver
             ["binary"] = "BLOB",
             ["uuid"] = "VARCHAR2(36)",
             ["reference"] = "NUMBER(10)",
-        },
-        new SpecFieldRules
-        {
-            DialectName = "oracle",
-            StringUnlimited = "CLOB",
-            StringSized = n => $"VARCHAR2({n})",
-            Character = "CHAR",
-            Decimal = new DecimalRule.Required("NUMBER"),
-            BinaryUnlimited = "BLOB",
-            BinarySized = n => $"RAW({n})",
         });
     static readonly DefaultValueConverter Defaults = new(new DefaultValueOptions
     {
@@ -47,10 +37,26 @@ public sealed class OracleDriver : IDriver
         HexReverse = new Regex(@"^HEXTORAW\('(.*)'\)$"),
     });
 
-    public string QuoteLeft => "\"";
-    public string QuoteRight => "\"";
+    internal string QuoteLeft => "\"";
+    internal string QuoteRight => "\"";
+    internal static string Quote(string name) => $"\"{name}\"";
+    internal static string NativeType(Column column) =>
+        column.Field is { } field ? Types.Convert(field) : column.Type;
+    internal static string NativeDefault(Column column) =>
+        column.Default is null
+            ? ""
+            : column.Field is { } field
+                ? Defaults.Convert(field.Type, column.Default.Value) ?? column.Default.Value
+                : column.Default.Value;
+    internal static string UtcNow() => Defaults.Convert("datetime", "UtcNow") ?? "";
+    internal static string NativeType(RoutineParameter parameter) =>
+        parameter.Type == "payload"
+            ? ProcedurePayloadType
+            : parameter.Field is { } field ? Types.Convert(field) : NativeSpec(parameter.Type);
+    internal static string NativeSpec(string spec) =>
+        spec == "payload" ? ProcedurePayloadType : Types.Convert(spec);
     public IMapping<string, string>? TypeConverter => Types;
-    public DefaultValueConverter? DefaultValueConverter => Defaults;
+    internal DefaultValueConverter DefaultValueConverter => Defaults;
     public StatementTextRenderer? StatementRenderer => Statements;
     public Information? Information { get; } = new(
         ["Oracle driver."],
@@ -70,4 +76,16 @@ public sealed class OracleDriver : IDriver
         new StubTransaction(connection.Provider, connection);
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>> RowTypeConverters { get; } =
         new Dictionary<string, TypeConverter<Value, Value>>();
+
+    internal const string ProcedurePayloadType = "CLOB";
+
+    internal static IReadOnlyList<(string Op, string Name, IReadOnlyList<string> ByProperties)> ProcedureSpecs(
+        string entityName,
+        IReadOnlyList<IReadOnlyList<string>> byGroups,
+        Func<string, string> routineName,
+        Func<string, string> pluralStem) =>
+        SqlProcedureSpecs.Of(entityName, byGroups, routineName, pluralStem);
+
+    internal static string ApplyKeywords(string sql, Func<string, string> keyword) =>
+        SqlKeywords.Apply(sql, keyword);
 }

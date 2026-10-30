@@ -10,15 +10,18 @@ import type {
   RoutineParameter,
 } from "@deterministic-code/datasources";
 import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
+import { MysqlDriver } from "./MysqlDriver.ts";
+
+const typeOf = (parameter: RoutineParameter): string => MysqlDriver.nativeParam(parameter);
 
 const params = (list: readonly RoutineParameter[]): string =>
-  list.map((p) => `  IN ${p.name} ${p.type}`).join(",\n");
+  list.map((p) => `  IN ${p.name} ${typeOf(p)}`).join(",\n");
 
 const where = (columns: readonly string[]): string =>
   columns.map((c) => `t.${c} = ${c}`).join(" AND ");
 
 const jsonColumns = (columns: readonly RoutineParameter[]): string =>
-  columns.map((c) => `${c.name} ${c.type} PATH '$.${c.name}'`).join(", ");
+  columns.map((c) => `${c.name} ${typeOf(c)} PATH '$.${c.name}'`).join(", ");
 
 const procedure = (name: string, signature: string, body: string): string =>
   `DROP PROCEDURE IF EXISTS ${name};
@@ -39,10 +42,10 @@ export class MysqlStoredProcedureStatementRenderer {
     const body = generated
       ? `  DECLARE new_id VARCHAR(36);
   SET new_id = UUID();
-  INSERT INTO ${statement.table} (${insertCols.join(", ")})
+  INSERT INTO ${MysqlDriver.quote(statement.table)} (${insertCols.join(", ")})
   VALUES (${vals.join(", ")});
   SELECT new_id AS ${statement.key};`
-      : `  INSERT INTO ${statement.table} (${insertCols.join(", ")})
+      : `  INSERT INTO ${MysqlDriver.quote(statement.table)} (${insertCols.join(", ")})
   VALUES (${vals.join(", ")});
   SELECT LAST_INSERT_ID() AS ${statement.key};`;
     return procedure(statement.name, `\n${params(statement.parameters)}\n`, body);
@@ -51,7 +54,7 @@ export class MysqlStoredProcedureStatementRenderer {
   renderNestedRead(statement: CreateNestedReadStoredProcedureStatement): string {
     const select = DefaultStatementTextRenderer.instance.render(statement.select);
     const signature = statement.arguments
-      .map((argument) => `IN ${argument.parameter.name} ${argument.parameter.type}`)
+      .map((argument) => `IN ${argument.parameter.name} ${typeOf(argument.parameter)}`)
       .join(", ");
     return procedure(statement.name, signature, `  ${select};`);
   }
@@ -62,19 +65,19 @@ export class MysqlStoredProcedureStatementRenderer {
       return procedure(
         statement.name,
         "",
-        `  SELECT ${aliased} FROM ${statement.table} t ORDER BY t.${statement.key};`,
+        `  SELECT ${aliased} FROM ${MysqlDriver.quote(statement.table)} t ORDER BY t.${statement.key};`,
       );
     }
     const signature = statement.byProperties
       .map((c) => {
-        const type = statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType;
+        const type = typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType });
         return `IN ${c} ${type}`;
       })
       .join(", ");
     return procedure(
       statement.name,
       signature,
-      `  SELECT ${aliased} FROM ${statement.table} t WHERE ${where(statement.byProperties)};`,
+      `  SELECT ${aliased} FROM ${MysqlDriver.quote(statement.table)} t WHERE ${where(statement.byProperties)};`,
     );
   }
 
@@ -88,7 +91,7 @@ export class MysqlStoredProcedureStatementRenderer {
     return procedure(
       statement.name,
       `\n${params(statement.parameters)}\n`,
-      `  UPDATE ${statement.table} t
+      `  UPDATE ${MysqlDriver.quote(statement.table)} t
   SET
 ${sets.join(",\n")}
   WHERE ${where(by)};
@@ -100,14 +103,14 @@ ${sets.join(",\n")}
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
       .map((c) => {
-        const type = statement.parameters.find((p) => p.name === c)?.type ?? statement.keyType;
+        const type = typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType });
         return `IN ${c} ${type}`;
       })
       .join(", ");
     return procedure(
       statement.name,
       signature,
-      `  DELETE t FROM ${statement.table} t WHERE ${where(by)};
+      `  DELETE t FROM ${MysqlDriver.quote(statement.table)} t WHERE ${where(by)};
   SELECT ROW_COUNT() AS affected;`,
     );
   }
@@ -116,8 +119,8 @@ ${sets.join(",\n")}
     const cols = statement.columns.map((c) => c.name).join(", ");
     return procedure(
       statement.name,
-      `IN ${statement.payload.name} ${statement.payload.type}, OUT ids JSON`,
-      `  INSERT INTO ${statement.table} (${cols})
+      `IN ${statement.payload.name} ${typeOf(statement.payload)}, OUT ids JSON`,
+      `  INSERT INTO ${MysqlDriver.quote(statement.table)} (${cols})
   SELECT ${cols}
   FROM JSON_TABLE(${statement.payload.name}, '$[*]' COLUMNS (
     ${jsonColumns(statement.columns)}
@@ -140,8 +143,8 @@ ${sets.join(",\n")}
       .join(", ");
     return procedure(
       statement.name,
-      `IN ${statement.payload.name} ${statement.payload.type}`,
-      `  UPDATE ${statement.table} c
+      `IN ${statement.payload.name} ${typeOf(statement.payload)}`,
+      `  UPDATE ${MysqlDriver.quote(statement.table)} c
   JOIN JSON_TABLE(${statement.payload.name}, '$[*]' COLUMNS (
     ${jsonColumns(statement.columns)}
   )) AS payload_rows ON c.${statement.key} = payload_rows.${statement.key}
@@ -156,8 +159,8 @@ ${sets.join(",\n")}
     };
     return procedure(
       statement.name,
-      `IN ${statement.payload.name} ${statement.payload.type}`,
-      `  DELETE c FROM ${statement.table} c JOIN JSON_TABLE(${statement.payload.name}, '$[*]' COLUMNS (${key.name} ${key.type} PATH '$.${key.name}')) AS payload_rows ON c.${statement.key} = payload_rows.${statement.key};`,
+      `IN ${statement.payload.name} ${typeOf(statement.payload)}`,
+      `  DELETE c FROM ${MysqlDriver.quote(statement.table)} c JOIN JSON_TABLE(${statement.payload.name}, '$[*]' COLUMNS (${key.name} ${typeOf(key)} PATH '$.${key.name}')) AS payload_rows ON c.${statement.key} = payload_rows.${statement.key};`,
     );
   }
 }

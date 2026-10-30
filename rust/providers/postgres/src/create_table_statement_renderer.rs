@@ -5,10 +5,12 @@ use datasources::{Column, ColumnDefault, CreateTableStatementTextRenderer, Value
 pub struct PostgresCreateTableStatementRenderer;
 
 impl CreateTableStatementTextRenderer for PostgresCreateTableStatementRenderer {
+    fn quote(&self, name: &str) -> String {
+        crate::PostgresDriver::quote(name)
+    }
+
     fn type_name(&self, column: &Column) -> String {
-        column_sql(&column.type_name)
-            .map(str::to_string)
-            .unwrap_or_else(|| column.type_name.clone())
+        crate::PostgresDriver::native_type(column)
     }
 
     fn column_default(&self, column: &Column) -> String {
@@ -16,7 +18,11 @@ impl CreateTableStatementTextRenderer for PostgresCreateTableStatementRenderer {
             (Some(value), Some(text)) => {
                 self.write_default(Some(&ColumnDefault::new(text, value.name.as_deref())))
             }
-            _ => self.write_default(column.default.as_ref()),
+            (Some(value), None) => self.write_default(Some(&ColumnDefault::new(
+                crate::PostgresDriver::native_default(column),
+                value.name.as_deref(),
+            ))),
+            _ => String::new(),
         }
     }
 

@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import {
   AlterTableStatement,
+  type Column,
   type IStatement,
 } from "@deterministic-code/datasources";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
@@ -12,11 +13,12 @@ import {
   dropIndexStatementOf,
   dropTableStatementOf,
   dropTriggerStatementOf,
-  foreignKeyOf,
+  addForeignKeyStatementOf,
+  dropForeignKeyStatementOf,
   uniqueConstraintOf,
 } from "../statements.ts";
 import type { SqlMapping } from "./sql-mapping.ts";
-import type { SqlDialect } from "./sql-dialect.ts";
+import { dialectDriver, type SqlDialect } from "./sql-dialect.ts";
 import {
   fieldOverlay,
   hasAuditColumns,
@@ -56,14 +58,14 @@ const trigger = (
   table: LiveTable,
   mapping: SqlMapping,
 ): IStatement =>
-  createTriggerStatementOf(dialect, table, mapping, pkName(table, overlayOf(table)) ?? "id");
+  createTriggerStatementOf(table, mapping, pkName(table, overlayOf(table)) ?? "id");
 
 const dropTrigger = (
   dialect: SqlDialect,
   table: LiveTable,
   mapping: SqlMapping,
 ): IStatement =>
-  dropTriggerStatementOf(dialect, mapping.triggerName(table), table.tableName);
+  dropTriggerStatementOf(mapping.triggerName(table), table.tableName);
 
 const dropIndex = (
   dialect: SqlDialect,
@@ -72,18 +74,30 @@ const dropIndex = (
   index: DatasourceIndex,
 ): IStatement =>
   dropIndexStatementOf(
-    dialect,
     mapping.constraintName(table, index.name, "index"),
     table.tableName,
   );
+
+const compiledColumn = (dialect: SqlDialect, column: Column, name: string) => {
+  const ctor = dialectDriver(dialect).constructor as {
+    nativeType?: (column: Column) => string;
+  };
+  return {
+    name,
+    type: ctor.nativeType?.(column) ?? column.type,
+    default: column.default,
+    notNull: column.notNull,
+    identity: column.identity,
+  };
+};
 
 const createTable = (
   dialect: SqlDialect,
   table: LiveTable,
   mapping: SqlMapping,
 ): IStatement[] => [
-  createTableStatementOf(dialect, table, mapping),
-  ...table.indexes.map((index) => createIndexStatementOf(dialect, mapping, table, index)),
+  createTableStatementOf(table, mapping),
+  ...table.indexes.map((index) => createIndexStatementOf(mapping, table, index)),
   ...(hasAuditColumns(table) ? [trigger(dialect, table, mapping)] : []),
 ];
 
@@ -94,7 +108,7 @@ const dropTable = (
 ): IStatement[] => [
   ...(hasAuditColumns(table) ? [dropTrigger(dialect, table, mapping)] : []),
   ...[...table.indexes].reverse().map((index) => dropIndex(dialect, mapping, table, index)),
-  dropTableStatementOf(dialect, table.tableName),
+  dropTableStatementOf(table.tableName),
 ];
 
 const diffTable = (
@@ -128,17 +142,12 @@ const diffTable = (
       out.push(
         new AlterTableStatement(before.tableName, {
           kind: "dropConstraint",
-          name: uniqueConstraintOf(dialect, beforeMap, before, field).name,
+          name: uniqueConstraintOf(beforeMap, before, field).name,
         }),
       );
     }
     if (field.references !== undefined && (!afterFields.has(field.name) || refsOf(afterFields.get(field.name)!) !== refsOf(field))) {
-      out.push(
-        new AlterTableStatement(before.tableName, {
-          kind: "dropConstraint",
-          name: foreignKeyOf(dialect, beforeMap, before, field).name,
-        }),
-      );
+      out.push(dropForeignKeyStatementOf(beforeMap, before, field));
     }
   }
 
@@ -150,7 +159,7 @@ const diffTable = (
     out.push(
       new AlterTableStatement(before.tableName, {
         kind: "dropColumn",
-        name: columnOf(dialect, beforeMap, before, field).name,
+        name: columnOf(beforeMap, before, field).name,
       }),
     );
   }
@@ -161,12 +170,12 @@ const diffTable = (
   }
 
   for (const field of keptFields) {
-    const previous = columnOf(dialect, beforeMap, before, beforeFields.get(field.name)!);
-    const next = columnOf(dialect, afterMap, after, field);
+    const previous = columnOf(beforeMap, before, beforeFields.get(field.name)!);
+    const next = columnOf(afterMap, after, field);
     if (previous.name !== next.name) {
       out.push(new AlterTableStatement(tableName, { kind: "renameColumn", from: previous.name, to: next.name }));
     }
-    if (!isDeepStrictEqual({ ...previous, name: next.name }, next)) {
+    if (!isDeepStrictEqual(compiledColumn(dialect, previous, next.name), compiledColumn(dialect, next, next.name))) {
       out.push(new AlterTableStatement(tableName, { kind: "alterColumn", column: next }));
     }
   }
@@ -175,7 +184,7 @@ const diffTable = (
     out.push(
       new AlterTableStatement(tableName, {
         kind: "addColumn",
-        column: columnOf(dialect, afterMap, after, field),
+        column: columnOf(afterMap, after, field),
       }),
     );
   }
@@ -185,24 +194,19 @@ const diffTable = (
       out.push(
         new AlterTableStatement(tableName, {
           kind: "addConstraint",
-          constraint: uniqueConstraintOf(dialect, afterMap, after, field),
+          constraint: uniqueConstraintOf(afterMap, after, field),
         }),
       );
     }
     if (field.references !== undefined && (!beforeFields.has(field.name) || refsOf(beforeFields.get(field.name)!) !== refsOf(field))) {
-      out.push(
-        new AlterTableStatement(tableName, {
-          kind: "addConstraint",
-          constraint: foreignKeyOf(dialect, afterMap, after, field),
-        }),
-      );
+        out.push(addForeignKeyStatementOf(afterMap, after, field));
     }
   }
 
   for (const index of after.indexes) {
     const previous = beforeIndexes.get(index.name);
     if (previous === undefined || indexKey(previous) !== indexKey(index)) {
-      out.push(createIndexStatementOf(dialect, afterMap, after, index));
+      out.push(createIndexStatementOf(afterMap, after, index));
     }
   }
 

@@ -20,6 +20,8 @@ public interface IStatementVisitor
     string Visit(DropTriggerStatement statement);
     string Visit(CreateTriggerStatement statement);
     string Visit(IdentityInsertStatement statement);
+    string Visit(SqlSeedStatement statement);
+    string Visit(ForeignKeyStatement statement);
     string Visit(DropRoutineStatement statement);
     string Visit(CreateCreateStoredProcedureStatement statement);
     string Visit(CreateReadStoredProcedureStatement statement);

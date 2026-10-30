@@ -48,8 +48,8 @@ const contactStatements = async (dialect: string): Promise<IStatement[]> => {
   const types = sqlTablesFrom(spec);
   const mapping = new SqlMapping(createCasing(settings), types);
   return buildLiveTables(types, mapping).flatMap((table) => [
-    createTableStatementOf(dialect, table, mapping),
-    ...table.indexes.map((index) => createIndexStatementOf(dialect, mapping, table, index)),
+    createTableStatementOf(table, mapping),
+    ...table.indexes.map((index) => createIndexStatementOf(mapping, table, index)),
   ]);
 };
 

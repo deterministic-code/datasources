@@ -2,10 +2,17 @@ use crate::alter_table_statement_renderer::SqliteAlterTableStatementRenderer;
 use crate::create_table_statement_renderer::SqliteCreateTableStatementRenderer;
 use crate::create_trigger_statement_renderer::SqliteCreateTriggerStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::SqliteSelectInsertedIdStatementTextRenderer;
+use crate::quoted_renderers::{
+    SqliteCreateIndexStatementRenderer, SqliteDropIndexStatementRenderer,
+    SqliteDropTableStatementRenderer, SqliteDropTriggerStatementRenderer,
+    SqliteForeignKeyStatementRenderer,
+};
+use crate::sql_seed_statement_renderer::SqliteSqlSeedStatementRenderer;
 use datasources::{
-    AlterTableStatement, CreateTableStatement,
-    CreateTableStatementTextRenderer, CreateTriggerStatement, SelectInsertedIdStatement,
-    StatementTextRenderer, StatementVisitor,
+    AlterTableStatement, CreateIndexStatement, CreateTableStatement, CreateTableStatementTextRenderer,
+    CreateTriggerStatement, DropIndexStatement, DropTableStatement, DropTriggerStatement,
+    ForeignKeyStatement, SelectInsertedIdStatement, SqlSeedStatement, StatementTextRenderer,
+    StatementVisitor,
 };
 
 pub struct SqliteStatementRenderer;
@@ -41,6 +48,30 @@ impl StatementVisitor for SqliteStatementRenderer {
         _text: &StatementTextRenderer,
     ) -> String {
         SqliteSelectInsertedIdStatementTextRenderer.render(statement)
+    }
+
+    fn visit_sql_seed(&self, statement: &SqlSeedStatement, _text: &StatementTextRenderer) -> String {
+        SqliteSqlSeedStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_table(&self, statement: &DropTableStatement, _text: &StatementTextRenderer) -> String {
+        SqliteDropTableStatementRenderer.render(statement)
+    }
+
+    fn visit_create_index(&self, statement: &CreateIndexStatement, _text: &StatementTextRenderer) -> String {
+        SqliteCreateIndexStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_index(&self, statement: &DropIndexStatement, _text: &StatementTextRenderer) -> String {
+        SqliteDropIndexStatementRenderer.render(statement)
+    }
+
+    fn visit_drop_trigger(&self, statement: &DropTriggerStatement, _text: &StatementTextRenderer) -> String {
+        SqliteDropTriggerStatementRenderer.render(statement)
+    }
+
+    fn visit_foreign_key(&self, statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
+        SqliteForeignKeyStatementRenderer.render(statement)
     }
 }
 
@@ -106,7 +137,7 @@ mod tests {
         let create = CreateTableStatement::new("users", &columns, &[]);
         assert_eq!(
             renderer().render(&create),
-            "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)"
+            "CREATE TABLE \"users\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)"
         );
         assert_eq!(
             DefaultStatementTextRenderer::instance().render(&create),
@@ -120,7 +151,7 @@ mod tests {
         );
         assert_eq!(
             renderer().render(&keyed),
-            "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT)"
+            "CREATE TABLE \"users\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT)"
         );
     }
 
@@ -133,7 +164,7 @@ mod tests {
         );
         assert_eq!(
             renderer().render(&alter),
-            "ALTER TABLE users ADD COLUMN email TEXT NOT NULL"
+            "ALTER TABLE \"users\" ADD COLUMN \"email\" TEXT NOT NULL"
         );
     }
 

@@ -121,11 +121,11 @@ pub fn files(
         }
         output.push(GenerateEntry::new(
             format!("{:04}_up.sql", number),
-            finalize(&up_sql, casing),
+            finalize(&up_sql, casing, dialect)?,
         ));
         output.push(GenerateEntry::new(
             format!("{:04}_down.sql", number),
-            finalize(&down_sql, casing),
+            finalize(&down_sql, casing, dialect)?,
         ));
         previous = current;
     }
@@ -243,12 +243,12 @@ fn render(dialect: &str, statements: &[DdlStatement], separator: &str) -> Result
     Ok(crate::join_batches::join(&parts, separator))
 }
 
-fn finalize(text: &str, casing: &PackCasing) -> String {
+fn finalize(text: &str, casing: &PackCasing, dialect: &str) -> Result<String> {
     let collapsed = regex::Regex::new(r"\n{3,}").expect("nl").replace_all(text, "\n\n");
-    let output = casing.apply_keywords(&collapsed);
-    if output.ends_with('\n') {
+    let output = casing.apply_keywords(&collapsed, dialect)?;
+    Ok(if output.ends_with('\n') {
         output
     } else {
         format!("{output}\n")
-    }
+    })
 }

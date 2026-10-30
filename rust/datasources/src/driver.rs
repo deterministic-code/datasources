@@ -1,6 +1,6 @@
 use crate::command::Command;
 use crate::connection::Connection;
-use crate::converters::{DefaultValueConverter, Mapping, TypeConverter};
+use crate::converters::{Mapping, TypeConverter};
 use crate::information::Information;
 use crate::isolation_level::IsolationLevel;
 use crate::statements::StatementTextRenderer;
@@ -26,10 +26,6 @@ pub trait Driver: Send + Sync {
     }
 
     fn type_converter(&self) -> Option<&dyn Mapping<String, String>> {
-        None
-    }
-
-    fn default_value_converter(&self) -> Option<&DefaultValueConverter> {
         None
     }
 

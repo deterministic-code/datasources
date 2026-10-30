@@ -9,7 +9,7 @@ use datasources::{
 pub struct SqlServerStoredProcedureStatementRenderer;
 
 fn params(list: &[RoutineParameter]) -> String {
-    list.iter().map(|p| format!("  @{} {}", p.name, p.r#type)).collect::<Vec<_>>().join(",\n")
+    list.iter().map(|p| format!("  @{} {}", p.name, crate::SqlServerDriver::native_param(p))).collect::<Vec<_>>().join(",\n")
 }
 
 fn type_of(parameters: &[RoutineParameter], name: &str, fallback: &str) -> String {

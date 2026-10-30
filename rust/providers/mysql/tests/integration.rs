@@ -80,16 +80,12 @@ fn load_dialect() -> DialectFile {
     .unwrap()
 }
 
-fn quote_ident(id: &str) -> String {
-    format!("\"{}\"", id.replace('"', "\"\""))
-}
-
 fn render_schema(name: &str) -> String {
     let renderer = datasources::StatementTextRenderer::new(
         Some(Box::new(crate::statement_renderer::MysqlStatementRenderer)),
         None,
     );
-    datasources_tests::schema_tables(name, quote_ident, None)
+    datasources_tests::schema_tables(name, |id| id.to_string(), None)
         .iter()
         .map(|statement| renderer.render(statement))
         .collect::<Vec<_>>()

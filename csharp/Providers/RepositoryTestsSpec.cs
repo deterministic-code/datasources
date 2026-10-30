@@ -26,7 +26,7 @@ public static class RepositoryTestsSpec
         var rename = spec.Type.CRUDMapper?.Entity is { Length: > 0 } entity && entity != spec.Type.Table
             ? new Dictionary<string, string> { [spec.Type.Table] = entity }
             : null;
-        foreach (var statement in SchemaSpec.Tables(spec.Schema, quote, rename))
+        foreach (var statement in SchemaSpec.Tables(spec.Schema, static id => id, rename))
             await session.Command.Execute(statement);
         var types = session.Types;
         var fields = FieldsOf(spec.Type, types);

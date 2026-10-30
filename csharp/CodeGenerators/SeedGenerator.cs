@@ -21,19 +21,19 @@ public static class SeedGenerator
             var pk = table.Fields.FirstOrDefault(field => field.Name == SqlSchema.TableIdentity(table).FirstOrDefault());
             var identity = pk is not null
                 && SqlSchema.UsesGeneratedIdColumn(table, pk)
-                && SqlDialect.SqlDefault(dialect, pk.ConverterField()) is null;
-            var inserts = rows.Select(seed =>
+                && !pk.HasDefault;
+            lines.Add($"-- Seeds: {table.TableName}");
+            foreach (var seed in rows)
             {
                 var cols = ColsForRow(table, seed.Row, generated);
-                var values = cols.Select(c =>
-                    generated.Contains(c) ? IdValue(table, seed.Id)
-                    : c == "uuid" ? DefaultValueConverter.SqlStringLiteral(SeedUuid(table.Name, seed.Id))
-                    : ColValue(dialect, table.Fields.FirstOrDefault(f => f.Name == c), seed.Row.GetValueOrDefault(c))).ToList();
-                return TableStatements.SeedInsert(table, mapping, cols, values, dialect);
-            }).ToList();
-            lines.Add($"-- Seeds: {table.TableName}");
-            foreach (var insert in inserts)
-                lines.Add(SqlDialect.RenderSql(dialect, TableStatements.IdentityInsert(dialect, table, mapping, [insert], identity)));
+                var columns = cols.Select(c => ColumnOf(table, mapping, c, seed)).ToList();
+                lines.Add(GenerateSql.Render(dialect, new SqlSeedStatement(
+                    mapping.TableName(table),
+                    columns,
+                    "insert",
+                    identity,
+                    pk is null ? null : mapping.ColumnName(table, pk.Name))));
+            }
         }
         return lines;
     }
@@ -63,9 +63,13 @@ public static class SeedGenerator
         {
             if (!seeds.TryGetValue(table.Name, out var rows) || rows.Count == 0) continue;
             var id = SqlSchema.TableIdentity(table).FirstOrDefault() ?? "id";
+            var field = table.Fields.FirstOrDefault(f => f.Name == id);
             lines.Add($"-- Seeds: {table.TableName}");
             foreach (var seed in rows)
-                lines.Add($"DELETE FROM {SqlDialect.Q(dialect, table.TableName)} WHERE {SqlDialect.Q(dialect, mapping.ColumnName(table, id))} = {IdValue(table, seed.Id)};");
+                lines.Add(GenerateSql.Render(dialect, new SqlSeedStatement(
+                    mapping.TableName(table),
+                    [new SqlSeedColumn(mapping.ColumnName(table, id), field?.ConverterField() ?? new SpecField { Type = PkType(table) }, IdValue(table, seed.Id))],
+                    "delete")));
         }
         return lines;
     }
@@ -83,29 +87,23 @@ public static class SeedGenerator
         return $"{hex[..8]}-{hex[8..12]}-{hex[12..16]}-{hex[16..20]}-{hex[20..32]}";
     }
 
-    static string RenderValue(string dialect, SpecTypeField field, object? value)
-    {
-        if (field.Type == "boolean")
-            return SqlDialect.DriverOf(dialect).DefaultValueConverter.Convert("boolean", Truthy(value) ? "true" : "false") ?? "0";
-        if (field.Type is "integer" or "reference") return Convert.ToString(value) ?? "NULL";
-        return DefaultValueConverter.SqlStringLiteral(value);
-    }
-
-    static bool Truthy(object? value) => value is true or "true" or "True" or 1 or 1L;
-
-    static string IdValue(SqlTable table, int id)
+    static object IdValue(SqlTable table, int id)
     {
         var t = PkType(table);
-        if (t == "uuid") return DefaultValueConverter.SqlStringLiteral(SeedUuid(table.Name, id));
-        if (t == "string") return DefaultValueConverter.SqlStringLiteral(id);
-        return id.ToString();
+        if (t == "uuid") return SeedUuid(table.Name, id);
+        if (t == "string") return id.ToString();
+        return id;
     }
 
-    static string ColValue(string dialect, SpecTypeField? field, object? value)
+    static SqlSeedColumn ColumnOf(SqlTable table, SqlMapping mapping, string logical, SeedRow seed)
     {
-        if (field is null) return "NULL";
-        if (value is null) return SqlDialect.SqlDefault(dialect, field.ConverterField()) ?? "NULL";
-        return RenderValue(dialect, field, value);
+        var field = table.Fields.FirstOrDefault(f => f.Name == logical);
+        var spec = field?.ConverterField() ?? new SpecField { Type = "string", Name = logical };
+        var generated = SqlSchema.IsGeneratedIdentity(table) ? SqlSchema.TableIdentity(table) : [];
+        object? value = generated.Contains(logical) ? IdValue(table, seed.Id)
+            : logical == "uuid" ? SeedUuid(table.Name, seed.Id)
+            : seed.Row.GetValueOrDefault(logical);
+        return new SqlSeedColumn(mapping.ColumnName(table, logical), spec, value);
     }
 
     static List<string> ColsForRow(SqlTable table, IReadOnlyDictionary<string, object?> row, IReadOnlyList<string> generated)

@@ -14,14 +14,11 @@ mod mapping;
 mod nested_select_types;
 mod procedure_fields;
 mod procedure_spec;
-mod procedure_specs;
 mod schema;
 mod schema_diff;
 mod seed_generator;
 mod spec;
 mod sql_dialect;
-mod sql_generate_driver;
-mod sql_keywords;
 mod table_statements;
 mod version_migrations;
 mod write_inclusion;
@@ -32,7 +29,6 @@ pub use generate_sql::generate_sql;
 pub use nested_select_types::from_spec as nested_select_from_spec;
 pub use generate_stored_procedures::generate_stored_procedures;
 pub use sql_dialect::register_dialect;
-pub use sql_generate_driver::SqlGenerateDriver;
 
 use std::collections::HashMap;
 
@@ -51,13 +47,13 @@ pub fn schema_sql(
     for table in &live {
         sql.push_str(&sql_dialect::render_sql(
             dialect,
-            &table_statements::create_table(dialect, table, &mapping)?,
+            &table_statements::create_table(table, &mapping)?,
         )?);
         sql.push('\n');
         for index in &table.indexes {
             let index_sql = sql_dialect::render_sql(
                 dialect,
-                &table_statements::create_index(dialect, &mapping, table, index)?,
+                &table_statements::create_index(&mapping, table, index),
             )?;
             if !index_sql.is_empty() {
                 sql.push_str(&index_sql);

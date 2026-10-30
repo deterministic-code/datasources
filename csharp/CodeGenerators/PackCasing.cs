@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace Datasources.CodeGenerators;
 
 public sealed class PackCasing
@@ -40,7 +42,16 @@ public sealed class PackCasing
     public string PluralStem(string entity) => alwaysPlural.PhysicalStem(entity);
     public string ColumnName(string field) => naming.ResolveColumn(field);
     public string Keyword(string text) => Letter(text, keywordFormat);
-    public string ApplyKeywords(string sql) => keywordFormat == "lower" ? SqlKeywords.Apply(sql, Keyword) : sql;
+    public string ApplyKeywords(string sql, string dialect) =>
+        keywordFormat == "lower" ? DriverApply(dialect, sql) : sql;
+
+    string DriverApply(string dialect, string sql)
+    {
+        var method = GenerateSql.Driver(dialect).GetType()
+            .GetMethod("ApplyKeywords", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"\"{dialect}\" has no ApplyKeywords.");
+        return (string)method.Invoke(null, [sql, (Func<string, string>)Keyword])!;
+    }
 
     public string ConstraintName(string entity, params string[] parts) =>
         naming.IsVerbatim(entity)

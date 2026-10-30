@@ -4,14 +4,20 @@ namespace Datasources.Sqlite;
 
 internal sealed class SqliteCreateTriggerStatementRenderer : CreateTriggerStatementTextRenderer
 {
-    public override string Render(CreateTriggerStatement statement) =>
-        $"""
-        CREATE TRIGGER {statement.Name}
-        AFTER UPDATE ON {statement.Table}
-        FOR EACH ROW
-        WHEN NEW.{statement.UpdatedColumn} IS OLD.{statement.UpdatedColumn}
-        BEGIN
-          UPDATE {statement.Table} SET {statement.UpdatedColumn} = {statement.UtcNow} WHERE {statement.KeyColumn} = OLD.{statement.KeyColumn};
-        END
-        """;
+    public override string Render(CreateTriggerStatement statement)
+    {
+        var table = SqliteDriver.Quote(statement.Table);
+        var name = SqliteDriver.Quote(statement.Name);
+        var updated = SqliteDriver.Quote(statement.UpdatedColumn);
+        var key = SqliteDriver.Quote(statement.KeyColumn);
+        return $"""
+            CREATE TRIGGER {name}
+            AFTER UPDATE ON {table}
+            FOR EACH ROW
+            WHEN NEW.{updated} IS OLD.{updated}
+            BEGIN
+              UPDATE {table} SET {updated} = {SqliteDriver.UtcNow()} WHERE {key} = OLD.{key};
+            END
+            """;
+    }
 }

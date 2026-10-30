@@ -4,15 +4,19 @@ import {
   type Column,
   type NotNull,
 } from "@deterministic-code/datasources";
-import { columnTypes } from "./columnTypes.ts";
+import { MysqlDriver } from "./MysqlDriver.ts";
 
 export class MysqlAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
+  protected quote(name: string): string {
+    return MysqlDriver.quote(name);
+  }
+
   protected typeName(column: Column): string {
-    return columnTypes[column.type] ?? column.type;
+    return MysqlDriver.nativeType(column);
   }
 
   protected columnDefault(column: Column): string {
-    return column.default == null ? "" : ` DEFAULT ${column.default.value}`;
+    return column.default == null ? "" : ` DEFAULT ${MysqlDriver.nativeDefault(column)}`;
   }
 
   protected notNullSql(value?: NotNull): string {

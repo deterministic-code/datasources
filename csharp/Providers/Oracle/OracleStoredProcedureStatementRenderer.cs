@@ -4,11 +4,13 @@ namespace Datasources.Oracle;
 
 internal sealed class OracleStoredProcedureStatementRenderer
 {
+    static string TypeOf(RoutineParameter parameter) => OracleDriver.NativeType(parameter);
+
     static string Params(IReadOnlyList<RoutineParameter> list) =>
-        string.Join(",\n", list.Select(parameter => $"  {parameter.Name} IN {parameter.Type}"));
+        string.Join(",\n", list.Select(parameter => $"  {parameter.Name} IN {TypeOf(parameter)}"));
 
     static string JsonColumns(IReadOnlyList<RoutineParameter> columns) =>
-        string.Join(", ", columns.Select(column => $"{column.Name} {column.Type} PATH '$.{column.Name}'"));
+        string.Join(", ", columns.Select(column => $"{column.Name} {TypeOf(column)} PATH '$.{column.Name}'"));
 
     public string Render(CreateCreateStoredProcedureStatement statement) =>
         $"""
@@ -16,7 +18,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
         {Params(statement.Parameters)}
         ) AS
         BEGIN
-          INSERT INTO {statement.Table} ({string.Join(", ", statement.Parameters.Select(parameter => parameter.Name))})
+          INSERT INTO {OracleDriver.Quote(statement.Table)} ({string.Join(", ", statement.Parameters.Select(parameter => parameter.Name))})
           VALUES ({string.Join(", ", statement.Parameters.Select(parameter => parameter.Name))});
         END;
         """;
@@ -25,7 +27,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
     {
         var select = DefaultStatementTextRenderer.Instance.Render(statement.Select);
         var signature = string.Join(", ", statement.Arguments.Select(argument =>
-            $"{argument.Parameter.Name} IN {argument.Parameter.Type}"));
+            $"{argument.Parameter.Name} IN {TypeOf(argument.Parameter)}"));
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({signature}) AS
             BEGIN
@@ -41,16 +43,16 @@ internal sealed class OracleStoredProcedureStatementRenderer
             return $"""
                 CREATE OR REPLACE PROCEDURE {statement.Name} AS
                 BEGIN
-                  SELECT {aliased} FROM {statement.Table} t ORDER BY t.{statement.Key};
+                  SELECT {aliased} FROM {OracleDriver.Quote(statement.Table)} t ORDER BY t.{statement.Key};
                 END;
                 """;
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"{column} IN {statement.Parameters.FirstOrDefault(parameter => parameter.Name == column)?.Type ?? statement.KeyType}"));
+            $"{column} IN {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
         var pred = string.Join(" AND ", statement.ByProperties.Select(column => $"t.{column} = {column}"));
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({signature}) AS
             BEGIN
-              SELECT {aliased} FROM {statement.Table} t WHERE {pred};
+              SELECT {aliased} FROM {OracleDriver.Quote(statement.Table)} t WHERE {pred};
             END;
             """;
     }
@@ -70,7 +72,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
             {Params(statement.Parameters)}
             ) AS
             BEGIN
-              UPDATE {statement.Table} t
+              UPDATE {OracleDriver.Quote(statement.Table)} t
               SET
             {string.Join(",\n", sets)}
               WHERE {pred};
@@ -82,12 +84,12 @@ internal sealed class OracleStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"{column} IN {statement.Parameters.FirstOrDefault(parameter => parameter.Name == column)?.Type ?? statement.KeyType}"));
+            $"{column} IN {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
         var pred = string.Join(" AND ", by.Select(column => $"t.{column} = {column}"));
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({signature}) AS
             BEGIN
-              DELETE FROM {statement.Table} t WHERE {pred};
+              DELETE FROM {OracleDriver.Quote(statement.Table)} t WHERE {pred};
             END;
             """;
     }
@@ -98,7 +100,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({statement.Payload.Name} IN CLOB) AS
             BEGIN
-              INSERT INTO {statement.Table} ({cols})
+              INSERT INTO {OracleDriver.Quote(statement.Table)} ({cols})
               SELECT {cols}
               FROM JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({JsonColumns(statement.Columns)}));
             END;
@@ -111,7 +113,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({statement.Payload.Name} IN CLOB) AS
             BEGIN
-              MERGE INTO {statement.Table} t
+              MERGE INTO {OracleDriver.Quote(statement.Table)} t
               USING (
                 SELECT * FROM JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({JsonColumns(statement.Columns)}))
               ) payload_rows ON (t.{statement.Key} = payload_rows.{statement.Key})
@@ -124,9 +126,9 @@ internal sealed class OracleStoredProcedureStatementRenderer
         $"""
         CREATE OR REPLACE PROCEDURE {statement.Name}({statement.Payload.Name} IN CLOB) AS
         BEGIN
-          DELETE FROM {statement.Table} t
+          DELETE FROM {OracleDriver.Quote(statement.Table)} t
           WHERE t.{statement.Key} IN (
-            SELECT {statement.Key} FROM JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({statement.Key} {statement.KeyType} PATH '$.{statement.Key}'))
+            SELECT {statement.Key} FROM JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({statement.Key} {OracleDriver.NativeSpec(statement.KeyType)} PATH '$.{statement.Key}'))
           );
         END;
         """;

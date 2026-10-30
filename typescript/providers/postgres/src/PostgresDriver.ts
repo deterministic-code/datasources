@@ -1,9 +1,8 @@
 import {
   DatasourceError,
-  DefaultValueConverter,
-  DeterministicTypeConverter,
   StatementTextRenderer,
   type Cell,
+  type Column,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -11,6 +10,7 @@ import {
   type Information,
   type ITransaction,
   type IsolationLevel,
+  type RoutineParameter,
   type TypeConverter,
 } from "@deterministic-code/datasources";
 import { PostgresConnection } from "./connection.ts";
@@ -19,12 +19,64 @@ import { PostgresTransaction } from "./transaction.ts";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
 import { PostgresStatementRenderer } from "./PostgresStatementRenderer.ts";
 import { columnTypes } from "./columnTypes.ts";
+import { procedureSpecs } from "./procedureSpecs.ts";
+import { applyKeywords } from "./applyKeywords.ts";
+import { TypeMap } from "./TypeMap.ts";
+import { DefaultValueConverter } from "./DefaultValueConverter.ts";
 
 export { columnTypes };
 
 const statements = new StatementTextRenderer(t => new PostgresStatementRenderer(t));
+const types = new TypeMap({
+  string: "TEXT",
+  character: "CHAR(1)",
+  integer: "INTEGER",
+  unsignedinteger: "BIGINT",
+  smallinteger: "SMALLINT",
+  unsignedsmallinteger: "INTEGER",
+  biginteger: "BIGINT",
+  unsignedbiginteger: "NUMERIC(20)",
+  float: "DOUBLE PRECISION",
+  decimal: "NUMERIC",
+  boolean: "BOOLEAN",
+  datetime: "TIMESTAMPTZ",
+  binary: "BYTEA",
+  uuid: "UUID",
+  reference: "INTEGER",
+});
+const defaults = new DefaultValueConverter({
+  newId: () => "gen_random_uuid()",
+  now: () => "LOCALTIMESTAMP",
+  utcNow: () => `(NOW() AT TIME ZONE 'UTC')`,
+  booleanOn: "TRUE",
+  booleanOff: "FALSE",
+  hex: (arg) => `'\\x${arg}'`,
+  hexReverse: /^'\\x(.*)'$/,
+});
 
 export class PostgresDriver implements IDriver {
+  static readonly procedurePayloadType = "jsonb";
+  static procedureSpecs = procedureSpecs;
+  static applyKeywords = applyKeywords;
+  static quote = (name: string): string => `"${name}"`;
+  static nativeType = (column: Column): string =>
+    column.field ? types.convertField(column.field) : columnTypes[column.type] ?? column.type;
+  static nativeDefault = (column: Column): string =>
+    column.default == null
+      ? ""
+      : column.field === undefined
+        ? column.default.value
+        : defaults.convert(column.field.type, column.default.value) ?? column.default.value;
+  static utcNow = (): string => defaults.convert("datetime", "UtcNow") ?? "";
+  static nativeParam = (parameter: RoutineParameter): string =>
+    parameter.type === "payload"
+      ? PostgresDriver.procedurePayloadType
+      : parameter.field
+        ? types.convertField(parameter.field)
+        : types.dictionary[parameter.type] ?? parameter.type;
+  static nativeSpec = (spec: string): string =>
+    spec === "payload" ? PostgresDriver.procedurePayloadType : types.dictionary[spec] ?? spec;
+
   readonly statementRenderer = statements;
   readonly information: Information = {
     descriptions: [
@@ -49,41 +101,8 @@ export class PostgresDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
-  readonly typeConverter = new DeterministicTypeConverter(
-    {
-      string: "TEXT",
-      character: "CHAR(1)",
-      integer: "INTEGER",
-      unsignedinteger: "BIGINT",
-      smallinteger: "SMALLINT",
-      unsignedsmallinteger: "INTEGER",
-      biginteger: "BIGINT",
-      unsignedbiginteger: "NUMERIC(20)",
-      float: "DOUBLE PRECISION",
-      decimal: "NUMERIC",
-      boolean: "BOOLEAN",
-      datetime: "TIMESTAMPTZ",
-      binary: "BYTEA",
-      uuid: "UUID",
-      reference: "INTEGER",
-    },
-    {
-      dialectName: "postgres",
-      stringUnlimited: "TEXT",
-      stringSized: (n) => `VARCHAR(${n})`,
-      character: "CHAR",
-      decimal: { kind: "optional", type: "NUMERIC", fallback: "NUMERIC" },
-    },
-  );
-  readonly defaultValueConverter = new DefaultValueConverter({
-    newId: () => "gen_random_uuid()",
-    now: () => "LOCALTIMESTAMP",
-    utcNow: () => `(NOW() AT TIME ZONE 'UTC')`,
-    booleanOn: "TRUE",
-    booleanOff: "FALSE",
-    hex: (arg) => `'\\x${arg}'`,
-    hexReverse: /^'\\x(.*)'$/,
-  });
+  readonly typeConverter = types;
+  readonly defaultValueConverter = defaults;
   columnType = (name: string): string =>
     columnTypes[name] ??
     (() => {

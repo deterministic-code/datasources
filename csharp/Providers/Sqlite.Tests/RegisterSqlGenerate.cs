@@ -1,11 +1,10 @@
 using System.Runtime.CompilerServices;
 using Datasources.CodeGenerators;
-using Datasources.Sqlite;
 
 namespace Datasources.Sqlite.Tests;
 
-static class RegisterSqlGenerate
+public static class RegisterSqlGenerate
 {
     [ModuleInitializer]
-    internal static void Register() => SqlDialect.Register("sqlite", new SqliteDriver());
+    internal static void Register() => GenerateSql.Register("sqlite", new SqliteDriver());
 }

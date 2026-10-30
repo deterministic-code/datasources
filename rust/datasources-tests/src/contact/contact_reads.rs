@@ -94,6 +94,7 @@ pub fn contact_reads_without_phones(email_type: &str) -> CreateNestedReadStoredP
             RoutineParameter {
                 name: "email".into(),
                 r#type: email_type.into(),
+                field: None,
             },
         )],
     )

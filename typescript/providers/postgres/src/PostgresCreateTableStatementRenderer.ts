@@ -4,19 +4,23 @@ import {
   type Column,
 } from "@deterministic-code/datasources";
 import { PostgresRowTypeConverters } from "./converters/PostgresRowTypeConverters.ts";
-import { columnTypes } from "./columnTypes.ts";
+import { PostgresDriver } from "./PostgresDriver.ts";
 
 export class PostgresCreateTableStatementRenderer extends CreateTableStatementTextRenderer {
+  protected quote(name: string): string {
+    return PostgresDriver.quote(name);
+  }
+
   protected typeName(column: Column): string {
-    return columnTypes[column.type] ?? column.type;
+    return PostgresDriver.nativeType(column);
   }
 
   protected columnDefault(column: Column): string {
     const literal = sqlLiteral(column);
     const value = column.default;
-    return value == null || literal == null
-      ? super.columnDefault(column)
-      : super.columnDefault({ ...column, default: new ColumnDefault(literal, value.name) });
+    if (value == null) return "";
+    if (literal != null) return super.columnDefault({ ...column, default: new ColumnDefault(literal, value.name) });
+    return super.columnDefault({ ...column, default: new ColumnDefault(PostgresDriver.nativeDefault(column), value.name) });
   }
 
   protected identity(column: Column): string {

@@ -15,7 +15,7 @@ public static class SchemaSpec
     public static async Task Apply(IConnection connection, string name)
     {
         var command = connection.CreateCommand();
-        foreach (var statement in Tables(name, static id => $"\"{id.Replace("\"", "\"\"")}\""))
+        foreach (var statement in Tables(name, static id => id))
             await command.Execute(statement);
     }
 

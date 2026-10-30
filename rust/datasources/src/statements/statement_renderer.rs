@@ -38,6 +38,8 @@ use super::drop_trigger_statement::DropTriggerStatement;
 use super::drop_trigger_statement_text_renderer::DropTriggerStatementTextRenderer;
 use super::identity_insert_statement::IdentityInsertStatement;
 use super::identity_insert_statement_text_renderer::IdentityInsertStatementTextRenderer;
+use super::sql_seed_statement::SqlSeedStatement;
+use super::foreign_key_statement::ForeignKeyStatement;
 use super::delete_statement::DeleteStatement;
 use super::delete_statement_text_renderer::DeleteStatementTextRenderer;
 use super::execute_stored_procedure_statement::ExecuteStoredProcedureStatement;
@@ -176,6 +178,14 @@ pub trait StatementVisitor: Send + Sync {
         _text: &StatementTextRenderer,
     ) -> String {
         IdentityInsertStatementTextRenderer.render(statement)
+    }
+
+    fn visit_sql_seed(&self, _statement: &SqlSeedStatement, _text: &StatementTextRenderer) -> String {
+        panic!("SqlSeedStatement is rendered by the SQL driver.")
+    }
+
+    fn visit_foreign_key(&self, _statement: &ForeignKeyStatement, _text: &StatementTextRenderer) -> String {
+        panic!("ForeignKeyStatement is rendered by the SQL driver.")
     }
 
     fn visit_drop_routine(

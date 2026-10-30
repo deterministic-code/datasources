@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace Datasources.CodeGenerators;
 
 public static class GenerateProcedures
@@ -22,15 +24,15 @@ public static class GenerateProcedures
         foreach (var t in tables)
         {
             var (statements, names) = ForTable(dialect, t, mapping, casing, byGroups.GetValueOrDefault(t.Name) ?? []);
-            var created = statements.Select(statement => SqlDialect.RenderSql(dialect, statement)).ToList();
-            drops.AddRange(names.Select(name => SqlDialect.RenderSql(dialect, TableStatements.DropRoutine(name))));
+            var created = statements.Select(statement => GenerateSql.Render(dialect, statement)).ToList();
+            drops.AddRange(names.Select(name => GenerateSql.Render(dialect, TableStatements.DropRoutine(name))));
             if (created.Any(sql => sql != "")) bodies.Add($"-- {t.Name}\n\n{JoinBatches.Join(created, separator)}");
         }
         if (bodies.Count == 0) return [];
         return
         [
-            new($"{dialect}/migrations/{order:0000}_stored_procedures_up.sql", WithNl($"-- Stored procedures\n{JoinBatches.Join(bodies, separator)}", casing)),
-            new($"{dialect}/migrations/{order:0000}_stored_procedures_down.sql", WithNl($"-- DROP stored procedures\n{JoinBatches.Join(drops, separator)}", casing)),
+            new($"{dialect}/migrations/{order:0000}_stored_procedures_up.sql", WithNl($"-- Stored procedures\n{JoinBatches.Join(bodies, separator)}", casing, dialect)),
+            new($"{dialect}/migrations/{order:0000}_stored_procedures_down.sql", WithNl($"-- DROP stored procedures\n{JoinBatches.Join(drops, separator)}", casing, dialect)),
         ];
     }
 
@@ -43,69 +45,76 @@ public static class GenerateProcedures
     {
         var pk = ProcedureFields.PkOf(t);
         string Column(string logical) => mapping.ColumnName(t, logical);
+        RoutineParameter Param(SpecTypeField field) =>
+            new(Column(field.Name), field.Type, field.ConverterField());
         var columns = t.Fields.Select(f => Column(f.Name)).ToList();
         var writable = ProcedureFields.UpdateParams(t).Select(f => Column(f.Name)).ToList();
-        string ParamType(SpecTypeField field) => SqlDialect.MapColumnType(dialect, field.ConverterField());
-        var createdParams = ProcedureFields.CreateParams(t).Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
-        var typedColumns = t.Fields.Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
-        var createColumns = ProcedureFields.CreateParams(t).Select(f => new RoutineParameter(Column(f.Name), ParamType(f))).ToList();
+        var createdParams = ProcedureFields.CreateParams(t).Select(Param).ToList();
+        var typedColumns = t.Fields.Select(Param).ToList();
+        var createColumns = ProcedureFields.CreateParams(t).Select(Param).ToList();
         var updateColumns = ProcedureFields.UpdateParams(t)
             .Where(f => f.Name != pk.Name)
-            .Select(f => new RoutineParameter(Column(f.Name), ParamType(f)))
-            .Prepend(new RoutineParameter(Column(pk.Name), ParamType(pk)))
+            .Select(Param)
+            .Prepend(Param(pk))
             .ToList();
-        var payload = new RoutineParameter("payload", PayloadType(dialect));
+        var payload = new RoutineParameter("payload", "payload");
         var key = Column(pk.Name);
-        var keyType = ParamType(pk);
+        var keyType = pk.Type;
         var overlay = SqlSchema.OverlayOf(t);
         var audit = t.Fields.FirstOrDefault(f => f.Name == "updated") is { } updated && WriteInclusion.Update(updated, t.AsType(), overlay)
             ? Column("updated")
             : null;
         var generatedKey = pk.Type == "uuid";
-        var quoted = SqlDialect.Q(dialect, t.TableName);
+        var table = t.TableName;
         var statements = new List<IStatement>();
         var names = new List<string>();
-        foreach (var proc in ProcedureSpecs.Of(t.Name, groups, casing))
+        foreach (var proc in ProcedureSpecsOf(dialect, t.Name, groups, casing))
         {
             names.Add(proc.Name);
             var by = proc.ByProperties.Select(Column).ToList();
             var byParams = proc.ByProperties.Select(logical =>
             {
                 var field = t.Fields.FirstOrDefault(f => f.Name == logical) ?? pk;
-                return new RoutineParameter(Column(field.Name), ParamType(field));
+                return Param(field);
             }).ToList();
             var updateParams = byParams
                 .Concat(ProcedureFields.UpdateParams(t)
                     .Where(f => !proc.ByProperties.Contains(f.Name))
-                    .Select(f => new RoutineParameter(Column(f.Name), ParamType(f))))
+                    .Select(Param))
                 .ToList();
             statements.Add(proc.Op switch
             {
-                "create" => TableStatements.CreateCreateStoredProcedure(proc.Name, quoted, columns, createdParams, key, keyType, writable, generatedKey, audit),
-                "read" => TableStatements.CreateReadStoredProcedure(proc.Name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
-                "update" => TableStatements.CreateUpdateStoredProcedure(proc.Name, quoted, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
-                "delete" => TableStatements.CreateDeleteStoredProcedure(proc.Name, quoted, columns, byParams, key, keyType, writable, by, generatedKey, audit),
-                "bulkCreate" => TableStatements.CreateBulkCreateStoredProcedure(proc.Name, quoted, createColumns, payload, key, keyType),
-                "bulkUpdate" => TableStatements.CreateBulkUpdateStoredProcedure(proc.Name, quoted, updateColumns, payload, key, keyType),
-                "bulkDelete" => TableStatements.CreateBulkDeleteStoredProcedure(proc.Name, quoted, typedColumns, payload, key, keyType),
+                "create" => TableStatements.CreateCreateStoredProcedure(proc.Name, table, columns, createdParams, key, keyType, writable, generatedKey, audit),
+                "read" => TableStatements.CreateReadStoredProcedure(proc.Name, table, columns, byParams, key, keyType, writable, by, generatedKey, audit),
+                "update" => TableStatements.CreateUpdateStoredProcedure(proc.Name, table, columns, updateParams, key, keyType, writable, by, generatedKey, audit),
+                "delete" => TableStatements.CreateDeleteStoredProcedure(proc.Name, table, columns, byParams, key, keyType, writable, by, generatedKey, audit),
+                "bulkCreate" => TableStatements.CreateBulkCreateStoredProcedure(proc.Name, table, createColumns, payload, key, keyType),
+                "bulkUpdate" => TableStatements.CreateBulkUpdateStoredProcedure(proc.Name, table, updateColumns, payload, key, keyType),
+                "bulkDelete" => TableStatements.CreateBulkDeleteStoredProcedure(proc.Name, table, typedColumns, payload, key, keyType),
                 _ => throw new InvalidOperationException($"{proc.Op}: empty step"),
             });
         }
         return (statements, names);
     }
 
-    static string PayloadType(string dialect) => dialect switch
+    static IReadOnlyList<ProcedureSpec> ProcedureSpecsOf(
+        string dialect,
+        string entityName,
+        IReadOnlyList<IReadOnlyList<string>> byGroups,
+        PackCasing casing)
     {
-        "mysql" => "JSON",
-        "postgres" => "jsonb",
-        "sqlserver" => "NVARCHAR(MAX)",
-        "oracle" => "CLOB",
-        _ => "JSON",
-    };
+        var method = GenerateSql.Driver(dialect).GetType()
+            .GetMethod("ProcedureSpecs", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"\"{dialect}\" has no ProcedureSpecs.");
+        var rows = (IReadOnlyList<(string Op, string Name, IReadOnlyList<string> ByProperties)>)method.Invoke(
+            null,
+            [entityName, byGroups, (Func<string, string>)casing.RoutineName, (Func<string, string>)casing.PluralStem])!;
+        return rows.Select(row => new ProcedureSpec(row.Op, row.Name, row.ByProperties)).ToList();
+    }
 
-    static string WithNl(string text, PackCasing casing)
+    static string WithNl(string text, PackCasing casing, string dialect)
     {
-        var output = casing.ApplyKeywords(text);
+        var output = casing.ApplyKeywords(text, dialect);
         return output.EndsWith('\n') ? output : $"{output}\n";
     }
 }

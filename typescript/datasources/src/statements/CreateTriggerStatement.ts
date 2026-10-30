@@ -7,7 +7,6 @@ export class CreateTriggerStatement implements ICreateTriggerStatement {
     readonly name: string,
     readonly updatedColumn: string,
     readonly keyColumn: string,
-    readonly utcNow: string,
   ) {}
 
   accept = (visitor: IStatementVisitor): string => visitor.visit(this);

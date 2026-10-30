@@ -1,10 +1,8 @@
 import {
   DatasourceError,
-  DefaultValueConverter,
-  sqlStringLiteral,
-  DeterministicTypeConverter,
   StatementTextRenderer,
   type Cell,
+  type Column,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -12,6 +10,7 @@ import {
   type Information,
   type ITransaction,
   type IsolationLevel,
+  type RoutineParameter,
   type TypeConverter,
 } from "@deterministic-code/datasources";
 import { MysqlConnection } from "./connection.ts";
@@ -20,12 +19,64 @@ import { MysqlTransaction } from "./transaction.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 import { columnTypes } from "./columnTypes.ts";
+import { procedureSpecs } from "./procedureSpecs.ts";
+import { applyKeywords } from "./applyKeywords.ts";
+import { TypeMap } from "./TypeMap.ts";
+import { DefaultValueConverter, sqlStringLiteral } from "./DefaultValueConverter.ts";
 
 export { columnTypes };
 
 const statements = new StatementTextRenderer(t => new MysqlStatementRenderer(t));
+const types = new TypeMap({
+  string: "TEXT",
+  character: "CHAR(1)",
+  integer: "INT",
+  unsignedinteger: "INT UNSIGNED",
+  smallinteger: "SMALLINT",
+  unsignedsmallinteger: "SMALLINT UNSIGNED",
+  biginteger: "BIGINT",
+  unsignedbiginteger: "BIGINT UNSIGNED",
+  float: "DOUBLE",
+  decimal: "DECIMAL(10, 2)",
+  boolean: "TINYINT(1)",
+  datetime: "DATETIME(3)",
+  binary: "BLOB",
+  uuid: "CHAR(36)",
+  reference: "INT",
+});
+const defaults = new DefaultValueConverter({
+  newId: () => `(UUID())`,
+  now: () => `(NOW(3))`,
+  utcNow: () => `(UTC_TIMESTAMP(3))`,
+  booleanOn: "1",
+  booleanOff: "0",
+  hex: (arg) => `(X'${arg}')`,
+  hexReverse: /^(?:\(X'(.*)'\)|X'(.*)')$/,
+  quote: (arg) => `(${sqlStringLiteral(arg)})`,
+  quoteReverse: /^(?:\('(.*)'\)|'(.*)')$/,
+});
 
 export class MysqlDriver implements IDriver {
+  static readonly procedurePayloadType = "JSON";
+  static procedureSpecs = procedureSpecs;
+  static applyKeywords = applyKeywords;
+  static quote = (name: string): string => `\`${name}\``;
+  static nativeType = (column: Column): string =>
+    column.field ? types.convertField(column.field) : columnTypes[column.type] ?? column.type;
+  static nativeDefault = (column: Column): string =>
+    column.default == null
+      ? ""
+      : column.field === undefined
+        ? column.default.value
+        : defaults.convert(column.field.type, column.default.value) ?? column.default.value;
+  static utcNow = (): string => defaults.convert("datetime", "UtcNow") ?? "";
+  static nativeParam = (parameter: RoutineParameter): string =>
+    parameter.type === "payload"
+      ? MysqlDriver.procedurePayloadType
+      : parameter.field
+        ? types.convertField(parameter.field)
+        : types.dictionary[parameter.type] ?? parameter.type;
+
   readonly statementRenderer = statements;
   readonly information: Information = {
     descriptions: [
@@ -49,45 +100,8 @@ export class MysqlDriver implements IDriver {
   rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = MysqlRowTypeConverters;
   readonly quoteLeft = "`";
   readonly quoteRight = "`";
-  readonly typeConverter = new DeterministicTypeConverter(
-    {
-      string: "TEXT",
-      character: "CHAR(1)",
-      integer: "INT",
-      unsignedinteger: "INT UNSIGNED",
-      smallinteger: "SMALLINT",
-      unsignedsmallinteger: "SMALLINT UNSIGNED",
-      biginteger: "BIGINT",
-      unsignedbiginteger: "BIGINT UNSIGNED",
-      float: "DOUBLE",
-      decimal: "DECIMAL(10, 2)",
-      boolean: "TINYINT(1)",
-      datetime: "DATETIME(3)",
-      binary: "BLOB",
-      uuid: "CHAR(36)",
-      reference: "INT",
-    },
-    {
-      dialectName: "mysql",
-      stringUnlimited: "TEXT",
-      stringSized: (n) => (n <= 16383 ? `VARCHAR(${n})` : "LONGTEXT"),
-      character: "CHAR",
-      decimal: { kind: "optional", type: "DECIMAL", fallback: "DECIMAL(10, 2)" },
-      binaryUnlimited: "BLOB",
-      binarySized: (n) => (n <= 65535 ? `VARBINARY(${n})` : "LONGBLOB"),
-    },
-  );
-  readonly defaultValueConverter = new DefaultValueConverter({
-    newId: () => `(UUID())`,
-    now: () => `(NOW(3))`,
-    utcNow: () => `(UTC_TIMESTAMP(3))`,
-    booleanOn: "1",
-    booleanOff: "0",
-    hex: (arg) => `(X'${arg}')`,
-    hexReverse: /^(?:\(X'(.*)'\)|X'(.*)')$/,
-    quote: (arg) => `(${sqlStringLiteral(arg)})`,
-    quoteReverse: /^(?:\('(.*)'\)|'(.*)')$/,
-  });
+  readonly typeConverter = types;
+  readonly defaultValueConverter = defaults;
   columnType = (name: string): string =>
     columnTypes[name] ??
     (() => {

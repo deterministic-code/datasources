@@ -46,17 +46,17 @@ describe("SqlServerStatementRenderer", () => {
       renderer.render(
         new AlterTableStatement("users", { kind: "addColumn", column: { name: "email", type: "TEXT" } }),
       ),
-    ).toBe("ALTER TABLE users ADD COLUMN email TEXT");
+    ).toBe("ALTER TABLE [users] ADD COLUMN [email] TEXT");
     expect(renderer.render(new DropIndexStatement("ix_users_email", "users"))).toBe(
-      "DROP INDEX ix_users_email ON users",
+      "DROP INDEX [ix_users_email] ON [users]",
     );
-    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id", "GETUTCDATE()"))).toBe(
-      `CREATE TRIGGER tr_users ON users
+    expect(renderer.render(new CreateTriggerStatement("users", "tr_users", "updated", "id"))).toBe(
+      `CREATE TRIGGER [tr_users] ON [users]
 AFTER UPDATE AS
 BEGIN
   SET NOCOUNT ON;
-  UPDATE users SET updated = GETUTCDATE()
-  FROM users t INNER JOIN inserted i ON t.id = i.id;
+  UPDATE [users] SET [updated] = GETUTCDATE()
+  FROM [users] t INNER JOIN inserted i ON t.[id] = i.[id];
 END`,
     );
     const insert = new InsertStatement("users", [{ name: "id", value: 1 }, { name: "name", value: "ada" }]);
