@@ -4,6 +4,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::schema::Schema;
 use crate::value::Value;
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use facet::{Def, Facet, Field, HasFields, Partial, Peek, ScalarType, Shape, Type, UserType};
 use rust_decimal::Decimal;
@@ -54,11 +55,7 @@ fn read_facet<T: Facet<'static>>(row: Row, schema: &Schema) -> Result<T> {
         }
         partial = match field.shape().def {
             Def::List(_) => read_list(partial, name, field.shape(), decode_rows(row.get(name)))?,
-            Def::Map(_) => partial
-                .begin_field(name)
-                .and_then(Partial::init_map)
-                .and_then(Partial::end)
-                .map_err(reflect)?,
+            Def::Map(_) => read_map(partial, name, field.shape(), decode_rows(row.get(name)))?,
             _ => match row.get(name) {
                 Some(cell) if *cell != Value::Null => set_scalar(partial, name, cell, field.shape())?,
                 _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
@@ -81,6 +78,9 @@ fn write_facet<T: Facet<'static>>(item: &T, schema: &Schema) -> Result<Row> {
         }
         if matches!(value.shape().def, Def::List(_)) {
             row.insert(name.to_string(), encode_rows(&peek_list_rows(value, schema)?));
+        }
+        if matches!(value.shape().def, Def::Map(_)) {
+            row.insert(name.to_string(), encode_rows(&peek_map_rows(value)?));
         }
     }
     Ok(row)
@@ -105,6 +105,41 @@ fn read_list<'f>(
     next.end().map_err(reflect)
 }
 
+fn read_map<'f>(
+    partial: Partial<'f>,
+    name: &str,
+    shape: &'static Shape,
+    rows: Vec<Row>,
+) -> Result<Partial<'f>> {
+    let (key_shape, value_shape) = map_kv(shape)?;
+    let mut next = partial
+        .begin_field(name)
+        .and_then(Partial::init_map)
+        .map_err(reflect)?;
+    for row in rows {
+        let key = row
+            .get("key")
+            .or_else(|| row.get("Key"))
+            .cloned()
+            .unwrap_or(Value::Null);
+        next = next.begin_key().map_err(reflect)?;
+        next = set_from_value(next, &key, key_shape)?;
+        next = next.end().map_err(reflect)?;
+        next = next.begin_value().map_err(reflect)?;
+        next = if struct_fields(value_shape).is_ok() {
+            fill_shape(next, value_shape, row)?
+        } else {
+            set_from_value(
+                next,
+                row.get("value").or_else(|| row.get("Value")).unwrap_or(&Value::Null),
+                value_shape,
+            )?
+        };
+        next = next.end().map_err(reflect)?;
+    }
+    next.end().map_err(reflect)
+}
+
 fn fill_shape<'f>(mut partial: Partial<'f>, shape: &'static Shape, row: Row) -> Result<Partial<'f>> {
     let Ok(fields) = struct_fields(shape) else {
         return set_from_value(partial, row.values().next().unwrap_or(&Value::Null), shape);
@@ -124,7 +159,7 @@ fn set_scalar<'a>(
     cell: &Value,
     shape: &'static Shape,
 ) -> Result<Partial<'a>> {
-    if matches!(shape.def, Def::Option(_)) {
+    if is_option(shape) {
         if *cell == Value::Null {
             return partial
                 .begin_field(name)
@@ -132,14 +167,30 @@ fn set_scalar<'a>(
                 .and_then(Partial::end)
                 .map_err(reflect);
         }
-        return set_from_value(partial.begin_field(name).map_err(reflect)?, cell, option_inner(shape)?)
-            .and_then(|next| next.end().map_err(reflect));
+        return set_from_value(
+            partial
+                .begin_field(name)
+                .and_then(Partial::begin_some)
+                .map_err(reflect)?,
+            cell,
+            option_inner(shape)?,
+        )
+        .and_then(|next| next.end().map_err(reflect))
+        .and_then(|next| next.end().map_err(reflect));
     }
     set_from_value(partial.begin_field(name).map_err(reflect)?, cell, shape)
         .and_then(|next| next.end().map_err(reflect))
 }
 
 fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape) -> Result<Partial<'a>> {
+    if is_option(shape) {
+        return if *cell == Value::Null {
+            partial.set_default().map_err(reflect)
+        } else {
+            set_from_value(partial.begin_some().map_err(reflect)?, cell, option_inner(shape)?)
+                .and_then(|next| next.end().map_err(reflect))
+        };
+    }
     let set = match (cell, ScalarType::try_from_shape(shape), shape.type_identifier) {
         (Value::Bool(flag), Some(ScalarType::Bool), _) => partial.set(*flag),
         (Value::Int(n), Some(ScalarType::I8), _) => partial.set(*n as i8),
@@ -150,6 +201,11 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
         (Value::Float(n), Some(ScalarType::F64), _) => partial.set(*n),
         (Value::Text(text), Some(ScalarType::String), _) => partial.set(text.clone()),
         (Value::Text(text), _, "String") => partial.set(text.clone()),
+        (Value::Int(n), _, "String") => partial.set(n.to_string()),
+        (Value::Text(text), _, ident) if ident.contains("DateTime") => match DateTime::parse_from_rfc3339(text) {
+            Ok(parsed) => partial.set(parsed.with_timezone(&Utc)),
+            Err(error) => return Err(reflect(error)),
+        },
         (Value::Uuid(id), _, "String") => partial.set(id.to_string()),
         (Value::Uuid(id), _, ident) if ident.contains("Uuid") => partial.set(*id),
         (Value::DateTime(date), _, "String") => partial.set(Value::iso_datetime(*date)),
@@ -157,9 +213,11 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
         (Value::Decimal(number), _, ident) if ident.contains("Decimal") => partial.set(*number),
         (Value::Int(n), _, "i32") => partial.set(*n as i32),
         (Value::Int(n), _, "i64") => partial.set(*n),
-        (Value::Binary(bytes), _, _) if matches!(shape.def, Def::List(_)) && list_element(shape).is_ok_and(|inner| inner.type_identifier == "u8") => {
-            partial.set(bytes.clone())
-        }
+        (Value::Binary(bytes), _, _) if is_bytes(shape) => partial.set(bytes.clone()),
+        (Value::Text(text), _, _) if is_bytes(shape) => match base64::engine::general_purpose::STANDARD.decode(text) {
+            Ok(bytes) => partial.set(bytes),
+            Err(error) => return Err(reflect(error)),
+        },
         (Value::Null, _, _) => partial.set_default(),
         _ => return Err(DatasourceError::message(format!("cannot set {} from {cell:?}", shape.type_identifier))),
     };
@@ -226,10 +284,47 @@ fn peek_list_rows(value: Peek<'_, '_>, _schema: &Schema) -> Result<Vec<Row>> {
     Ok(rows)
 }
 
+fn peek_map_rows(value: Peek<'_, '_>) -> Result<Vec<Row>> {
+    let map = value.into_map().map_err(reflect)?;
+    let mut rows = Vec::new();
+    for (key, item) in map.iter() {
+        let mut row = Row::new();
+        if let Some(cell) = peek_cell(key) {
+            row.insert("key".into(), cell);
+        }
+        if let Some(cell) = peek_cell(item) {
+            row.insert("value".into(), cell);
+        } else if let Ok(st) = item.into_struct() {
+            for (field, cell) in st.fields() {
+                if let Some(value) = peek_cell(cell) {
+                    row.insert(field.name.to_string(), value);
+                }
+            }
+        }
+        rows.push(row);
+    }
+    Ok(rows)
+}
+
 fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
     match shape.ty {
         Type::User(UserType::Struct(st)) => Ok(st.fields),
         _ => Err(DatasourceError::message(format!("{} is not a struct", shape.type_identifier))),
+    }
+}
+
+fn is_option(shape: &'static Shape) -> bool {
+    matches!(shape.def, Def::Option(_)) || shape.type_identifier == "Option"
+}
+
+fn is_bytes(shape: &'static Shape) -> bool {
+    matches!(shape.def, Def::List(_)) && list_element(shape).is_ok_and(|inner| inner.type_identifier == "u8")
+}
+
+fn map_kv(shape: &'static Shape) -> Result<(&'static Shape, &'static Shape)> {
+    match shape.def {
+        Def::Map(map) => Ok((map.k, map.v)),
+        _ => Err(DatasourceError::message(format!("{} is not a map", shape.type_identifier))),
     }
 }
 
