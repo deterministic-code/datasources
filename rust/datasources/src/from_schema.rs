@@ -4,7 +4,10 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::schema::Schema;
 use crate::value::Value;
+use chrono::{DateTime, Utc};
 use facet::{Def, Facet, Field, HasFields, Partial, Peek, ScalarType, Shape, Type, UserType};
+use rust_decimal::Decimal;
+use uuid::Uuid;
 
 pub trait SchemaObject: Facet<'static> + Clone + Default + Send + Sync + 'static {}
 
@@ -147,6 +150,11 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
         (Value::Float(n), Some(ScalarType::F64), _) => partial.set(*n),
         (Value::Text(text), Some(ScalarType::String), _) => partial.set(text.clone()),
         (Value::Text(text), _, "String") => partial.set(text.clone()),
+        (Value::Uuid(id), _, "String") => partial.set(id.to_string()),
+        (Value::Uuid(id), _, ident) if ident.contains("Uuid") => partial.set(*id),
+        (Value::DateTime(date), _, "String") => partial.set(Value::iso_datetime(*date)),
+        (Value::DateTime(date), _, ident) if ident.contains("DateTime") => partial.set(*date),
+        (Value::Decimal(number), _, ident) if ident.contains("Decimal") => partial.set(*number),
         (Value::Int(n), _, "i32") => partial.set(*n as i32),
         (Value::Int(n), _, "i64") => partial.set(*n),
         (Value::Binary(bytes), _, _) if matches!(shape.def, Def::List(_)) && list_element(shape).is_ok_and(|inner| inner.type_identifier == "u8") => {
@@ -182,6 +190,15 @@ fn peek_cell(value: Peek<'_, '_>) -> Option<Value> {
     }
     if let Ok(text) = value.get::<String>() {
         return Some(Value::from(text.clone()));
+    }
+    if let Ok(id) = value.get::<Uuid>() {
+        return Some(Value::Uuid(*id));
+    }
+    if let Ok(date) = value.get::<DateTime<Utc>>() {
+        return Some(Value::DateTime(*date));
+    }
+    if let Ok(number) = value.get::<Decimal>() {
+        return Some(Value::Decimal(*number));
     }
     if let Ok(bytes) = value.get::<Vec<u8>>() {
         return Some(Value::Binary(bytes.clone()));

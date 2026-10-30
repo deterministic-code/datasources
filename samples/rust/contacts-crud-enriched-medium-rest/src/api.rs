@@ -6,7 +6,7 @@ use crate::json_row::{
 use crate::repositories::contact_group_repository::ContactGroupRepository;
 use crate::repositories::contact_repository::ContactRepository;
 use datasources::{
-    DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository, ICRUDRepository,
+    DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository,
     IReadonlyRepository,
 };
 use serde_json::{Map, Value as Json};
@@ -170,7 +170,12 @@ impl Api {
         keys: &[&str],
     ) -> Result<Vec<Row>, ApiError> {
         let filter = where_query(query, keys);
-        Ok(repo.read(filter.as_ref().map(|item| item as &dyn ReadInput), None, None).try_collect::<Vec<_>>().await?)
+        let none = ();
+        let query: &dyn ReadInput = filter
+            .as_ref()
+            .map(|item| item as &dyn ReadInput)
+            .unwrap_or(&none);
+        Ok(repo.read(query).try_collect::<Vec<_>>().await?)
     }
 
     fn stamp(&self, mut json: Json) -> Result<Row, ApiError> {

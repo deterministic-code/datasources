@@ -2,10 +2,7 @@
 name = "contacts-crud-enriched-medium-rest"
 version = "0.1.0"
 edition = "2021"
-
-[[bin]]
-name = "generate-e2e"
-path = "e2e/main.rs"
+autobins = false
 
 [dependencies]
 ctor = "0.4"

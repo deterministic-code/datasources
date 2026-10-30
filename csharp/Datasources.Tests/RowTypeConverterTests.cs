@@ -76,6 +76,19 @@ public class RowTypeConverterTests
     }
 
     [Fact]
+    public void CoercesGuidOntoString()
+    {
+        var id = System.Guid.Parse("54ef41f2-0cb4-4c72-97a7-776fd183f5ed");
+        var row = new MetaDataRowTypeConverter<Keyed>().Convert(new Row { ["Uuid"] = new Value.Guid(id) });
+        Assert.Equal(id.ToString(), row.Uuid);
+    }
+
+    public class Keyed
+    {
+        public string Uuid { get; set; } = "";
+    }
+
+    [Fact]
     public void SkipsIndexersAndWriteOnlyProperties()
     {
         var mixed = new MetaDataRowTypeConverter<Mixed>().Convert(new Row { ["Label"] = "x", ["Count"] = 1L, ["Item"] = 2 });

@@ -103,8 +103,10 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
         if (raw is null) return null;
         if (ShouldCoerceId && Integral(raw.GetType()) && Integral(type))
             return System.Convert.ChangeType(raw, type);
-        if (type == typeof(System.Guid) && raw is string guidText && System.Guid.TryParse(guidText, out var guid))
-            return guid;
+        if (type == typeof(string) && raw is System.Guid fromGuid)
+            return fromGuid.ToString();
+        if (type == typeof(System.Guid) && raw is string guidText && System.Guid.TryParse(guidText, out var parsed))
+            return parsed;
         if (type == typeof(System.DateTime) && raw is string dateText
             && System.DateTime.TryParse(
                 dateText,

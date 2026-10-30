@@ -260,9 +260,13 @@ export const rustRepositories = (
   spec?: IDeterministic,
 ): GenerateEntry[] => {
   const casing = createCasingStrategy("rust", settings);
-  const typeStems = spec === undefined
-    ? models.map((model) => casing.convertFileName(model.specName))
-    : [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name));
+  const typeStems = [
+    ...new Set(
+      spec === undefined
+        ? models.map((model) => casing.convertFileName(model.specName))
+        : [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name)),
+    ),
+  ];
   const files = models.map((model) =>
     content(repositoryFile("rs", model.specName, casing), childModels(model).length === 0 ? plain(model, spec, casing) : wrapped(model, spec, casing)),
   );
