@@ -26,7 +26,6 @@ cargo init
 cp -R ../quick_starts/contacts_cli/rust/. ./
 cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 cargo add datasources
-cargo add tokio --features macros,rt-multi-thread
 npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect rust
 cargo run
@@ -74,7 +73,6 @@ cp -R ../quick_starts/contacts_cli/rust/. ./
 cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 docker compose up -d --wait
 cargo add datasources
-cargo add tokio --features macros,rt-multi-thread
 npx @deterministic-code/datasources-cli setup --yes mysql postgres
 npx @deterministic-code/datasources-cli generate all --dialect rust
 cargo run
