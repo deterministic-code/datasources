@@ -10,7 +10,7 @@ public class PostgresRowTypeConvertersTests
         var types = new PostgresDriver().RowTypeConverters;
         Assert.Equal(
             [
-                "boolean", "datetime", "uuid", "decimal", "binary", "integer",
+                "boolean", "datetime", "uuid", "decimal", "binary", "integer", "number",
                 "unsignedinteger", "smallinteger", "unsignedsmallinteger", "biginteger",
                 "unsignedbiginteger",
             ],
