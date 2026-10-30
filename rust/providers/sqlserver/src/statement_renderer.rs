@@ -12,13 +12,17 @@ use datasources::{
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateUpdateStoredProcedureStatement,
     CreateTableStatement, CreateTableStatementTextRenderer, CreateTriggerStatement,
     CreateIndexStatement, DropIndexStatement, DropRoutineStatement, DropTableStatement,
-    ForeignKeyStatement, IdentityInsertStatement, SqlSeedStatement,
-    StatementTextRenderer, StatementVisitor,
+    ForeignKeyStatement, IdentityInsertStatement, ProcedureSource, SqlSeedStatement,
+    sql_procedure_statements_of, Statement, StatementTextRenderer, StatementVisitor,
 };
 
 pub struct SqlServerStatementRenderer;
 
 impl StatementVisitor for SqlServerStatementRenderer {
+    fn procedures(&self, source: &ProcedureSource) -> Vec<Box<dyn Statement>> {
+        sql_procedure_statements_of(source)
+    }
+
     fn visit_create_table(
         &self,
         statement: &CreateTableStatement,

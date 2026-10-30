@@ -1,5 +1,5 @@
-use crate::mapping::SqlMapping;
-use crate::schema::{self, SqlTable};
+use crate::schema::{self, field_stem, SqlTable};
+use datasources::{CreateTableStatement, StatementNaming};
 use crate::spec::{self, SeedRow, SpecTypeField};
 use crate::sql_dialect;
 use datasources::{Result, SpecField, SqlSeedColumn, SqlSeedStatement};
@@ -14,7 +14,7 @@ pub fn sections(
     dialect: &str,
     tables: &[SqlTable],
     seeds: &HashMap<String, Vec<SeedRow>>,
-    mapping: &SqlMapping,
+    naming: &StatementNaming,
 ) -> Result<Vec<String>> {
     let mut lines = Vec::new();
     for table in tables {
@@ -39,16 +39,16 @@ pub fn sections(
             let cols = cols_for_row(table, &seed.row, &generated);
             let columns = cols
                 .iter()
-                .map(|c| column_of(table, mapping, c, seed))
+                .map(|c| column_of(table, naming, c, seed))
                 .collect();
             lines.push(sql_dialect::render_sql(
                 dialect,
                 &SqlSeedStatement::new(
-                    mapping.table_name(table),
+                    table.table_name.clone(),
                     columns,
                     "insert",
                     identity,
-                    pk.map(|field| mapping.column_name(table, &field.name)),
+                    pk.map(|field| CreateTableStatement::column_name(&field_stem(table, &field.name), naming)),
                 ),
             )?);
         }
@@ -78,7 +78,7 @@ pub fn deletes(
     dialect: &str,
     tables: &[SqlTable],
     seeds: &HashMap<String, Vec<SeedRow>>,
-    mapping: &SqlMapping,
+    naming: &StatementNaming,
 ) -> Result<Vec<String>> {
     let mut lines = Vec::new();
     for table in tables {
@@ -101,9 +101,9 @@ pub fn deletes(
             lines.push(sql_dialect::render_sql(
                 dialect,
                 &SqlSeedStatement::new(
-                    mapping.table_name(table),
+                    table.table_name.clone(),
                     vec![SqlSeedColumn {
-                        column: mapping.column_name(table, &id),
+                        column: CreateTableStatement::column_name(&field_stem(table, &id), naming),
                         field: spec,
                         value: Some(id_value(table, seed.id)),
                     }],
@@ -163,7 +163,7 @@ fn id_value(table: &SqlTable, id: i32) -> String {
     }
 }
 
-fn column_of(table: &SqlTable, mapping: &SqlMapping, logical: &str, seed: &SeedRow) -> SqlSeedColumn {
+fn column_of(table: &SqlTable, naming: &StatementNaming, logical: &str, seed: &SeedRow) -> SqlSeedColumn {
     let field = table.fields.iter().find(|f| f.name == logical);
     let spec = field.map(SpecTypeField::converter_field).unwrap_or(SpecField {
         type_name: "string".into(),
@@ -183,7 +183,7 @@ fn column_of(table: &SqlTable, mapping: &SqlMapping, logical: &str, seed: &SeedR
         seed.row.get(logical).filter(|v| !matches!(v, Value::Null)).map(spec::yaml_text)
     };
     SqlSeedColumn {
-        column: mapping.column_name(table, logical),
+        column: CreateTableStatement::column_name(&field_stem(table, logical), naming),
         field: spec,
         value,
     }

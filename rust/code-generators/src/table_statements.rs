@@ -1,5 +1,7 @@
-use crate::mapping::SqlMapping;
-use crate::schema::{field_overlay, overlay_of, table_identity, uses_generated_id_column, SqlTable};
+use crate::schema::{
+    field_overlay, field_stem, overlay_of, resolve_reference, table_identity, table_stem,
+    uses_generated_id_column, SqlTable,
+};
 use crate::spec::{is_pk_field, SpecTypeField};
 use datasources::{
     AlterAction, AlterTableStatement, Column, ColumnDefault, CreateBulkCreateStoredProcedureStatement,
@@ -8,23 +10,28 @@ use datasources::{
     CreateReadStoredProcedureStatement, CreateTableStatement, CreateTriggerStatement,
     CreateUpdateStoredProcedureStatement, DropIndexStatement, DropRoutineStatement, DropTableStatement,
     DropTriggerStatement, ForeignKey, ForeignKeyStatement, IdentityInsertStatement, InsertStatement,
-    NotNull, Parameter, PrimaryKey, Result, RoutineParameter, TableConstraint, UniqueConstraint, Value,
+    NotNull, Parameter, PrimaryKey, Result, RoutineParameter, StatementNaming, TableConstraint,
+    UniqueConstraint, Value,
 };
 
-pub fn create_table(table: &SqlTable, mapping: &SqlMapping) -> Result<CreateTableStatement> {
+fn column_name(naming: &StatementNaming, table: &SqlTable, logical: &str) -> String {
+    CreateTableStatement::column_name(&field_stem(table, logical), naming)
+}
+
+pub fn create_table(table: &SqlTable, naming: &StatementNaming, tables: &[SqlTable]) -> Result<CreateTableStatement> {
     let keys = table_identity(table);
     let columns: Vec<Column> = table
         .fields
         .iter()
-        .map(|field| column_of(mapping, table, field))
+        .map(|field| column_of(naming, table, field))
         .collect::<Result<_>>()?;
     let uniques: Vec<TableConstraint> = table
         .fields
         .iter()
         .filter(|field| field_overlay(table, &field.name).and_then(|o| o.is_unique) == Some(true) || field.name == "uuid")
         .map(|field| {
-            let name = mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "unique_constraint"]);
-            let col = mapping.column_name(table, &field.name);
+            let name = UniqueConstraint::name_of(&table_stem(table), naming, &[&field_stem(table, &field.name), "unique_constraint"]);
+            let col = column_name(naming, table, &field.name);
             UniqueConstraint::new(name, &[col.as_str()])
         })
         .collect();
@@ -32,22 +39,22 @@ pub fn create_table(table: &SqlTable, mapping: &SqlMapping) -> Result<CreateTabl
         .fields
         .iter()
         .filter(|field| field.references.is_some() || field.reference_pair.is_some())
-        .map(|field| foreign_key_of(mapping, table, field))
+        .map(|field| foreign_key_of(naming, tables, table, field))
         .collect::<Result<_>>()?;
     let overlay = overlay_of(table);
     let pk: Vec<TableConstraint> = if keys.len() > 1 {
-        let cols: Vec<String> = keys.iter().map(|key| mapping.column_name(table, key)).collect();
+        let cols: Vec<String> = keys.iter().map(|key| column_name(naming, table, key)).collect();
         let refs: Vec<&str> = cols.iter().map(String::as_str).collect();
-        vec![PrimaryKey::new(mapping.constraint_name(table, &["primary_key"]), &refs)]
+        vec![PrimaryKey::new(PrimaryKey::name_of(&table_stem(table), naming, &["primary_key"]), &refs)]
     } else if keys.len() == 1
         && table
             .fields
             .iter()
             .any(|field| is_pk_field(field, &table.as_type(), Some(&overlay)))
     {
-        let col = mapping.column_name(table, &keys[0]);
+        let col = column_name(naming, table, &keys[0]);
         vec![PrimaryKey::new(
-            mapping.constraint_name(table, &["primary_key"]),
+            PrimaryKey::name_of(&table_stem(table), naming, &["primary_key"]),
             &[col.as_str()],
         )]
     } else {
@@ -60,18 +67,18 @@ pub fn create_table(table: &SqlTable, mapping: &SqlMapping) -> Result<CreateTabl
 }
 
 pub fn create_index(
-    mapping: &SqlMapping,
+    naming: &StatementNaming,
     table: &SqlTable,
     index: &crate::spec::DatasourceIndex,
 ) -> CreateIndexStatement {
     let cols: Vec<String> = index
         .fields
         .iter()
-        .map(|column| mapping.column_name(table, column))
+        .map(|column| column_name(naming, table, column))
         .collect();
     let refs: Vec<&str> = cols.iter().map(String::as_str).collect();
     CreateIndexStatement::new(
-        mapping.constraint_name(table, &[&index.name, "index"]),
+        CreateIndexStatement::name_of(&table_stem(table), naming, &[&index.name, "index"]),
         table.table_name.clone(),
         &refs,
         index.is_unique,
@@ -90,20 +97,20 @@ pub fn drop_trigger(name: &str, table: &str) -> DropTriggerStatement {
     DropTriggerStatement::new(name, table)
 }
 
-pub fn column(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {
-    column_of(mapping, table, field)
+pub fn column(naming: &StatementNaming, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {
+    column_of(naming, table, field)
 }
 
-pub fn unique_of(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> TableConstraint {
-    let name = mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "unique_constraint"]);
-    let col = mapping.column_name(table, &field.name);
+pub fn unique_of(naming: &StatementNaming, table: &SqlTable, field: &SpecTypeField) -> TableConstraint {
+    let name = UniqueConstraint::name_of(&table_stem(table), naming, &[&field_stem(table, &field.name), "unique_constraint"]);
+    let col = column_name(naming, table, &field.name);
     UniqueConstraint::new(name, &[col.as_str()])
 }
 
-pub fn foreign_key_of(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<TableConstraint> {
-    let reference = mapping.resolve_reference(field)?;
-    let name = mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "foreign_key"]);
-    let col = mapping.column_name(table, &field.name);
+pub fn foreign_key_of(naming: &StatementNaming, tables: &[SqlTable], table: &SqlTable, field: &SpecTypeField) -> Result<TableConstraint> {
+    let reference = resolve_reference(tables, naming, field)?;
+    let name = ForeignKey::name_of(&table_stem(table), naming, &[&field_stem(table, &field.name), "foreign_key"]);
+    let col = column_name(naming, table, &field.name);
     Ok(ForeignKey::new(
         name,
         &[col.as_str()],
@@ -114,8 +121,8 @@ pub fn foreign_key_of(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeFi
     ))
 }
 
-pub fn add_foreign_key(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<ForeignKeyStatement> {
-    let TableConstraint::ForeignKey(fk) = foreign_key_of(mapping, table, field)? else {
+pub fn add_foreign_key(naming: &StatementNaming, tables: &[SqlTable], table: &SqlTable, field: &SpecTypeField) -> Result<ForeignKeyStatement> {
+    let TableConstraint::ForeignKey(fk) = foreign_key_of(naming, tables, table, field)? else {
         return Err(datasources::DatasourceError::message("expected foreign key"));
     };
     Ok(ForeignKeyStatement::new(
@@ -128,8 +135,8 @@ pub fn add_foreign_key(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeF
     ))
 }
 
-pub fn drop_foreign_key(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<ForeignKeyStatement> {
-    let TableConstraint::ForeignKey(fk) = foreign_key_of(mapping, table, field)? else {
+pub fn drop_foreign_key(naming: &StatementNaming, tables: &[SqlTable], table: &SqlTable, field: &SpecTypeField) -> Result<ForeignKeyStatement> {
+    let TableConstraint::ForeignKey(fk) = foreign_key_of(naming, tables, table, field)? else {
         return Err(datasources::DatasourceError::message("expected foreign key"));
     };
     Ok(ForeignKeyStatement::new(
@@ -146,18 +153,18 @@ pub fn alter_table(table: impl AsRef<str>, action: AlterAction) -> AlterTableSta
     AlterTableStatement::new(table, action)
 }
 
-pub fn create_trigger(table: &SqlTable, mapping: &SqlMapping, key: &str) -> CreateTriggerStatement {
+pub fn create_trigger(table: &SqlTable, naming: &StatementNaming, key: &str) -> CreateTriggerStatement {
     CreateTriggerStatement::new(
         table.table_name.clone(),
-        mapping.trigger_name(table),
-        mapping.column_name(table, "updated"),
-        mapping.column_name(table, key),
+        CreateTriggerStatement::name_of(&table_stem(table), naming),
+        column_name(naming, table, "updated"),
+        column_name(naming, table, key),
     )
 }
 
 pub fn seed_insert(
     table: &SqlTable,
-    mapping: &SqlMapping,
+    naming: &StatementNaming,
     columns: &[String],
     values: &[String],
 ) -> InsertStatement {
@@ -166,7 +173,7 @@ pub fn seed_insert(
         .enumerate()
         .map(|(i, column)| {
             Parameter::new(
-                mapping.column_name(table, column),
+                column_name(naming, table, column),
                 sql_value(values.get(i).map(String::as_str).unwrap_or("NULL")),
             )
         })
@@ -176,14 +183,14 @@ pub fn seed_insert(
 
 pub fn identity_insert(
     table: &SqlTable,
-    mapping: &SqlMapping,
+    naming: &StatementNaming,
     inserts: Vec<InsertStatement>,
     identity: bool,
 ) -> IdentityInsertStatement {
     let keys = table_identity(table);
     IdentityInsertStatement::new(
         table.table_name.clone(),
-        mapping.column_name(table, keys.first().map(String::as_str).unwrap_or("id")),
+        column_name(naming, table, keys.first().map(String::as_str).unwrap_or("id")),
         inserts,
         identity,
     )
@@ -293,15 +300,15 @@ pub fn create_bulk_delete_stored_procedure(
     CreateBulkDeleteStoredProcedureStatement::new(name, table, columns, payload, key, key_type)
 }
 
-fn column_of(mapping: &SqlMapping, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {
+fn column_of(naming: &StatementNaming, table: &SqlTable, field: &SpecTypeField) -> Result<Column> {
     let converter_field = field.converter_field();
     let generated = uses_generated_id_column(table, field);
-    let named = mapping.constraint_name(table, &[&mapping.field_stem(table, &field.name), "default_constraint"]);
+    let named = UniqueConstraint::name_of(&table_stem(table), naming, &[&field_stem(table, &field.name), "default_constraint"]);
     let from_spec = converter_field.default_value.clone();
     let identity = generated && from_spec.is_none();
     let keys = table_identity(table);
     let mut column = Column::new(
-        mapping.column_name(table, &field.name),
+        column_name(naming, table, &field.name),
         converter_field.type_name.clone(),
     )
     .field(converter_field);

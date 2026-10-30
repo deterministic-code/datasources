@@ -91,6 +91,10 @@ type AnyStatement =
 export class StatementRenderer implements IStatementVisitor {
   constructor(protected readonly text: StatementTextRenderer) {}
 
+  procedures(_source: import("./ProcedureSource.ts").ProcedureSource): import("./IStatement.ts").IStatement[] {
+    return [];
+  }
+
   visit(statement: SelectStatement): string;
   visit(statement: InsertStatement): string;
   visit(statement: UpdateStatement): string;

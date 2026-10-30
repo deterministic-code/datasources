@@ -90,4 +90,6 @@ public class StatementRenderer(StatementTextRenderer text) : IStatementVisitor
 
     public virtual string Visit(CreateBulkDeleteStoredProcedureStatement statement) =>
         new CreateBulkDeleteStoredProcedureStatementTextRenderer().Render(statement);
+
+    public virtual IReadOnlyList<IStatement> Procedures(ProcedureSource source) => [];
 }

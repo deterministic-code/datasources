@@ -1,4 +1,5 @@
 use super::statement::Statement;
+use super::statement_naming::StatementNaming;
 use super::statement_text_renderer::StatementTextRenderer;
 
 pub struct CreateTriggerStatement {
@@ -20,6 +21,15 @@ impl CreateTriggerStatement {
             name: name.as_ref().to_string(),
             updated_column: updated_column.as_ref().to_string(),
             key_column: key_column.as_ref().to_string(),
+        }
+    }
+
+    pub fn name_of(entity: &str, naming: &StatementNaming) -> String {
+        if naming.is_verbatim(entity) {
+            format!("trg_{entity}_updated_at")
+        } else {
+            let stem = naming.physical_stem(entity);
+            naming.letter(&naming.convert(&format!("trg_{stem}_updated_at"), naming.trigger_name_casing))
         }
     }
 

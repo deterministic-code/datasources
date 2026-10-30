@@ -1,7 +1,6 @@
-use crate::driver::column_sql;
 use datasources::{
     AlterAction, AlterTableStatement, AlterTableStatementTextRenderer, Column,
-    ColumnDefault, CreateTableStatementTextRenderer, NotNull,
+    CreateTableStatementTextRenderer, NotNull,
 };
 
 pub struct MysqlAlterTableStatementRenderer;

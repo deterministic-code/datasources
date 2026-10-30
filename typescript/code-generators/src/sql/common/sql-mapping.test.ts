@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
+import {
+  CreateTableStatement,
+  CreateTriggerStatement,
+  PrimaryKey,
+} from "@deterministic-code/datasources";
 import type { TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
 import { createCasing } from "./default-casing.ts";
-import { SqlMapping } from "./sql-mapping.ts";
-import type { SqlTable } from "./sql-schema.ts";
+import {
+  fieldStem,
+  resolveReference,
+  tableStem,
+  type SqlTable,
+} from "./sql-schema.ts";
 
 const field = (name: string): TypeField => ({
   name,
@@ -52,15 +61,17 @@ const child = table("child", {
 const person = table("person");
 const oldReviews = table("old_reviews", { mapping: "OldRvwsTbl" });
 const notification = table("notification");
+const tables = [usersBase, child, person, oldReviews, notification];
 
-const mappingOf = (settings: Record<string, string> = {}) =>
-  new SqlMapping(createCasing(settings), [
-    usersBase,
-    child,
-    person,
-    oldReviews,
-    notification,
-  ]);
+const namingOf = (settings: Record<string, string> = {}) => createCasing(settings).naming;
+const tableName = (t: SqlTable, naming = namingOf()) =>
+  CreateTableStatement.tableName(tableStem(t), naming);
+const columnName = (t: SqlTable, logical: string, naming = namingOf()) =>
+  CreateTableStatement.columnName(fieldStem(t, logical), naming);
+const constraintName = (t: SqlTable, ...parts: string[]) =>
+  PrimaryKey.nameOf(tableStem(t), namingOf(), ...parts);
+const triggerName = (t: SqlTable, naming = namingOf()) =>
+  CreateTriggerStatement.nameOf(tableStem(t), naming);
 
 describe("isVerbatim", () => {
   const naming = createDatasourceNaming({});
@@ -75,71 +86,58 @@ describe("isVerbatim", () => {
   });
 });
 
-describe("SqlMapping", () => {
+describe("statement names from stems", () => {
   it("maps users_base / user through pluralize", () => {
-    const mapping = mappingOf();
-    assert.equal(mapping.tableStem(usersBase), "user");
-    assert.equal(mapping.tableName(usersBase), "users");
-    assert.equal(mapping.constraintName(usersBase, "primary_key"), "users_primary_key");
-    assert.equal(mapping.triggerName(usersBase), "trg_users_updated_at");
+    assert.equal(tableStem(usersBase), "user");
+    assert.equal(tableName(usersBase), "users");
+    assert.equal(constraintName(usersBase, "primary_key"), "users_primary_key");
+    assert.equal(triggerName(usersBase), "trg_users_updated_at");
   });
 
   it("keeps the stem when pluralize is off", () => {
-    const mapping = mappingOf({
-      "datasource.pluralize_datatable_names": "false",
-    });
-    assert.equal(mapping.tableName(usersBase), "user");
-    assert.equal(mapping.constraintName(usersBase, "primary_key"), "user_primary_key");
+    const naming = namingOf({ "datasource.pluralize_datatable_names": "false" });
+    assert.equal(tableName(usersBase, naming), "user");
+    assert.equal(PrimaryKey.nameOf(tableStem(usersBase), naming, "primary_key"), "user_primary_key");
   });
 
   it("pluralizes an unmapped type name", () => {
-    const mapping = mappingOf();
-    assert.equal(mapping.tableName(person), "people");
-    assert.equal(mapping.tableName(notification), "notifications");
+    assert.equal(tableName(person), "people");
+    assert.equal(tableName(notification), "notifications");
   });
 
   it("uses field overlay mapping for columns", () => {
-    const mapping = mappingOf();
-    assert.equal(mapping.fieldStem(child, "email"), "email_address");
-    assert.equal(mapping.columnName(child, "email"), "email_address");
-    assert.equal(mapping.columnName(child, "owner_id"), "owner_id");
+    assert.equal(fieldStem(child, "email"), "email_address");
+    assert.equal(columnName(child, "email"), "email_address");
+    assert.equal(columnName(child, "owner_id"), "owner_id");
   });
 
   it("resolves logical FK references to physical names", () => {
-    const mapping = mappingOf();
-    assert.deepEqual(mapping.resolveReference("users_base.id"), {
+    const naming = namingOf();
+    assert.deepEqual(resolveReference(tables, naming, { ...field("owner_id"), references: "users_base.id" }), {
       tableName: "users",
       columnName: "id",
     });
-    const off = mappingOf({
-      "datasource.pluralize_datatable_names": "false",
-    });
-    assert.deepEqual(off.resolveReference("users_base.id"), {
+    const off = namingOf({ "datasource.pluralize_datatable_names": "false" });
+    assert.deepEqual(resolveReference(tables, off, { ...field("owner_id"), references: "users_base.id" }), {
       tableName: "user",
       columnName: "id",
     });
   });
 
   it("keeps non-snake mappings verbatim", () => {
-    const mapping = mappingOf();
-    assert.equal(mapping.tableName(oldReviews), "OldRvwsTbl");
-    assert.equal(
-      mapping.constraintName(oldReviews, "primary_key"),
-      "OldRvwsTbl_primary_key",
-    );
-    assert.equal(mapping.triggerName(oldReviews), "trg_OldRvwsTbl_updated_at");
+    assert.equal(tableName(oldReviews), "OldRvwsTbl");
+    assert.equal(constraintName(oldReviews, "primary_key"), "OldRvwsTbl_primary_key");
+    assert.equal(triggerName(oldReviews), "trg_OldRvwsTbl_updated_at");
   });
 
-  it("matches createCasing.tableName when mapping is omitted", () => {
-    const casing = createCasing({});
-    const mapping = new SqlMapping(casing, [notification]);
-    assert.equal(mapping.tableName(notification), casing.tableName("notification"));
+  it("matches CreateTableStatement.tableName when mapping is omitted", () => {
+    const naming = namingOf();
+    assert.equal(tableName(notification, naming), CreateTableStatement.tableName("notification", naming));
   });
 
   it("throws when an FK target is missing", () => {
-    const mapping = mappingOf();
     assert.throws(
-      () => mapping.resolveReference("missing.id"),
+      () => resolveReference(tables, namingOf(), { ...field("owner_id"), references: "missing.id" }),
       /unknown table "missing"/,
     );
   });

@@ -19,14 +19,13 @@ import { MysqlTransaction } from "./transaction.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
 import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 import { columnTypes } from "./columnTypes.ts";
-import { procedureSpecs } from "./procedureSpecs.ts";
 import { applyKeywords } from "./applyKeywords.ts";
 import { TypeMap } from "./TypeMap.ts";
 import { DefaultValueConverter, sqlStringLiteral } from "./DefaultValueConverter.ts";
 
 export { columnTypes };
 
-const statements = new StatementTextRenderer(t => new MysqlStatementRenderer(t));
+const statements = new StatementTextRenderer(t => new MysqlStatementRenderer(t), undefined, undefined, undefined, applyKeywords);
 const types = new TypeMap({
   string: "TEXT",
   character: "CHAR(1)",
@@ -58,7 +57,6 @@ const defaults = new DefaultValueConverter({
 
 export class MysqlDriver implements IDriver {
   static readonly procedurePayloadType = "JSON";
-  static procedureSpecs = procedureSpecs;
   static applyKeywords = applyKeywords;
   static quote = (name: string): string => `\`${name}\``;
   static nativeType = (column: Column): string =>

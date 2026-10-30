@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import type { TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import { createCasing } from "../../../code-generators/src/sql/common/default-casing.ts";
-import { SqlMapping } from "../../../code-generators/src/sql/common/sql-mapping.ts";
 import { buildLiveTables, type LiveTable, type SqlTable } from "../../../code-generators/src/sql/common/sql-schema.ts";
 import { renderSql } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
 import { schemaDiff } from "../../../code-generators/src/sql/common/schema-diff.ts";
@@ -31,8 +30,8 @@ const table = (name: string, fields: TypeField[], extra: Partial<SqlTable> = {})
 });
 
 const snap = (tables: SqlTable[]) => {
-  const mapping = new SqlMapping(createCasing({}), tables);
-  return { tables: buildLiveTables(tables, mapping), mapping };
+  const naming = createCasing({}).naming;
+  return { tables: buildLiveTables(tables, naming), naming };
 };
 
 const sql = (before: SqlTable[], after: SqlTable[]) =>

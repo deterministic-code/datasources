@@ -1,4 +1,5 @@
 use super::statement::Statement;
+use super::statement_naming::StatementNaming;
 use super::statement_text_renderer::StatementTextRenderer;
 use crate::builders::Column;
 use super::table_constraint::TableConstraint;
@@ -19,6 +20,22 @@ impl CreateTableStatement {
             table: table.as_ref().to_string(),
             columns: columns.to_vec(),
             constraints: constraints.to_vec(),
+        }
+    }
+
+    pub fn table_name(entity: &str, naming: &StatementNaming) -> String {
+        if naming.is_verbatim(entity) {
+            entity.into()
+        } else {
+            naming.letter(&naming.convert(&naming.physical_stem(entity), naming.table_name_casing))
+        }
+    }
+
+    pub fn column_name(field: &str, naming: &StatementNaming) -> String {
+        if naming.is_verbatim(field) {
+            field.into()
+        } else {
+            naming.convert(field, naming.field_name_casing)
         }
     }
 }

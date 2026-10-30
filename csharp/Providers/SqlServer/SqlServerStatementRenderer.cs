@@ -60,4 +60,7 @@ internal sealed class SqlServerStatementRenderer(StatementTextRenderer text) : S
 
     public override string Visit(ForeignKeyStatement key) =>
         new SqlServerForeignKeyStatementRenderer().Render(key);
+
+    public override IReadOnlyList<IStatement> Procedures(ProcedureSource source) =>
+        SqlProcedureStatements.Of(source);
 }

@@ -15,7 +15,9 @@ import {
   DropTableStatement,
   DropTriggerStatement,
   ForeignKeyStatement,
+  type ProcedureSource,
   SqlSeedStatement,
+  sqlProcedureStatementsOf,
   StatementRenderer,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
@@ -32,6 +34,10 @@ import { OracleCreateIndexStatementRenderer, OracleForeignKeyStatementRenderer }
 export class OracleStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
     super(text);
+  }
+
+  override procedures(source: ProcedureSource) {
+    return sqlProcedureStatementsOf(source);
   }
 
   protected override visitCreateTable(create: CreateTableStatement): string {

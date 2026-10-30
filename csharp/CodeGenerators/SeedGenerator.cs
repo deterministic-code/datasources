@@ -11,7 +11,7 @@ public static class SeedGenerator
         string dialect,
         IReadOnlyList<SqlTable> tables,
         IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> seeds,
-        SqlMapping mapping)
+        StatementNaming naming)
     {
         var lines = new List<string>();
         foreach (var table in tables)
@@ -26,13 +26,13 @@ public static class SeedGenerator
             foreach (var seed in rows)
             {
                 var cols = ColsForRow(table, seed.Row, generated);
-                var columns = cols.Select(c => ColumnOf(table, mapping, c, seed)).ToList();
+                var columns = cols.Select(c => ColumnOf(table, naming, c, seed)).ToList();
                 lines.Add(GenerateSql.Render(dialect, new SqlSeedStatement(
-                    mapping.TableName(table),
+                    table.TableName,
                     columns,
                     "insert",
                     identity,
-                    pk is null ? null : mapping.ColumnName(table, pk.Name))));
+                    pk is null ? null : CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, pk.Name), naming))));
             }
         }
         return lines;
@@ -56,7 +56,7 @@ public static class SeedGenerator
         string dialect,
         IReadOnlyList<SqlTable> tables,
         IReadOnlyDictionary<string, IReadOnlyList<SeedRow>> seeds,
-        SqlMapping mapping)
+        StatementNaming naming)
     {
         var lines = new List<string>();
         foreach (var table in tables)
@@ -67,8 +67,8 @@ public static class SeedGenerator
             lines.Add($"-- Seeds: {table.TableName}");
             foreach (var seed in rows)
                 lines.Add(GenerateSql.Render(dialect, new SqlSeedStatement(
-                    mapping.TableName(table),
-                    [new SqlSeedColumn(mapping.ColumnName(table, id), field?.ConverterField() ?? new SpecField { Type = PkType(table) }, IdValue(table, seed.Id))],
+                    table.TableName,
+                    [new SqlSeedColumn(CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, id), naming), field?.ConverterField() ?? new SpecField { Type = PkType(table) }, IdValue(table, seed.Id))],
                     "delete")));
         }
         return lines;
@@ -95,7 +95,7 @@ public static class SeedGenerator
         return id;
     }
 
-    static SqlSeedColumn ColumnOf(SqlTable table, SqlMapping mapping, string logical, SeedRow seed)
+    static SqlSeedColumn ColumnOf(SqlTable table, StatementNaming naming, string logical, SeedRow seed)
     {
         var field = table.Fields.FirstOrDefault(f => f.Name == logical);
         var spec = field?.ConverterField() ?? new SpecField { Type = "string", Name = logical };
@@ -103,7 +103,7 @@ public static class SeedGenerator
         object? value = generated.Contains(logical) ? IdValue(table, seed.Id)
             : logical == "uuid" ? SeedUuid(table.Name, seed.Id)
             : seed.Row.GetValueOrDefault(logical);
-        return new SqlSeedColumn(mapping.ColumnName(table, logical), spec, value);
+        return new SqlSeedColumn(CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, logical), naming), spec, value);
     }
 
     static List<string> ColsForRow(SqlTable table, IReadOnlyDictionary<string, object?> row, IReadOnlyList<string> generated)

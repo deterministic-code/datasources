@@ -1,4 +1,5 @@
 use crate::casing::PackCasing;
+use datasources::{CreateTableStatement, StatementNaming};
 use crate::spec::{
     datasource_types_of, dictionary_unique_columns, identity_columns, persisted_column_fields,
     table_by_name, DatasourceFieldOverlay, DatasourceIndex, DatasourceTable, ParsedSpec, SpecType,
@@ -131,13 +132,47 @@ pub fn has_audit_columns(table: &SqlTable) -> bool {
     table.fields.iter().any(|f| f.name == "created") && table.fields.iter().any(|f| f.name == "updated")
 }
 
-pub fn build_live(types: &[SqlTable], mapping: &crate::mapping::SqlMapping) -> Vec<SqlTable> {
+pub fn table_stem(table: &SqlTable) -> String {
+    table.mapping.clone().unwrap_or_else(|| table.name.clone())
+}
+
+pub fn field_stem(table: &SqlTable, field_name: &str) -> String {
+    field_overlay(table, field_name)
+        .and_then(|o| o.mapping.clone())
+        .unwrap_or_else(|| field_name.into())
+}
+
+pub fn table_of<'a>(tables: &'a [SqlTable], logical_name: &str) -> datasources::Result<&'a SqlTable> {
+    tables
+        .iter()
+        .find(|table| table.name == logical_name)
+        .ok_or_else(|| {
+            datasources::DatasourceError::message(format!(
+                "foreign key references unknown table \"{logical_name}\""
+            ))
+        })
+}
+
+pub fn resolve_reference(
+    tables: &[SqlTable],
+    naming: &StatementNaming,
+    field: &SpecTypeField,
+) -> datasources::Result<(String, String)> {
+    let (logical_table, logical_col) = crate::spec::reference_target(field);
+    let target = table_of(tables, &logical_table)?;
+    Ok((
+        CreateTableStatement::table_name(&table_stem(target), naming),
+        CreateTableStatement::column_name(&field_stem(target, &logical_col), naming),
+    ))
+}
+
+pub fn build_live(types: &[SqlTable], naming: &StatementNaming) -> Vec<SqlTable> {
     topo(
         types
             .iter()
             .map(|t| {
                 let mut next = t.clone();
-                next.table_name = mapping.table_name(t);
+                next.table_name = CreateTableStatement::table_name(&table_stem(t), naming);
                 next
             })
             .collect(),

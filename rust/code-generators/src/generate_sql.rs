@@ -2,7 +2,6 @@ use crate::casing::PackCasing;
 use crate::custom_migrations;
 use crate::generate_entry::GenerateEntry;
 use crate::generate_procedures;
-use crate::mapping::SqlMapping;
 use crate::schema::{self, SqlTable};
 use crate::seed_generator;
 use crate::spec::{self, SeedRow};
@@ -77,14 +76,14 @@ fn initial(
     settings: &HashMap<String, String>,
 ) -> Result<(GenerateEntry, GenerateEntry)> {
     let dialect = sql_dialect::require(language)?;
-    let mapping = SqlMapping::new(casing.clone(), types);
-    let live = schema::build_live(types, &mapping);
-    let seeds = seed_generator::sections(&dialect, &live, seeds_by_table, &mapping)?;
+    let naming = casing.strategy.clone();
+    let live = schema::build_live(types, &naming);
+    let seeds = seed_generator::sections(&dialect, &live, seeds_by_table, &naming)?;
     let separator = crate::join_batches::of(settings)?;
     Ok((
         GenerateEntry::new(
             "0001_initial_up.sql",
-            finalize(&up_sql(&dialect, &live, &mapping, &seeds, &separator)?, casing, &dialect)?,
+            finalize(&up_sql(&dialect, &live, &naming, &seeds, &separator)?, casing, &dialect)?,
         ),
         GenerateEntry::new(
             "0001_initial_down.sql",
@@ -93,15 +92,15 @@ fn initial(
     ))
 }
 
-fn flatten_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<Vec<String>> {
+fn flatten_table(dialect: &str, table: &SqlTable, naming: &datasources::StatementNaming, live: &[SqlTable]) -> Result<Vec<String>> {
     let mut parts = vec![sql_dialect::render_sql(
         dialect,
-        &table_statements::create_table(table, mapping)?,
+        &table_statements::create_table(table, naming, live)?,
     )?];
     for idx in &table.indexes {
         parts.push(sql_dialect::render_sql(
             dialect,
-            &table_statements::create_index(mapping, table, idx),
+            &table_statements::create_index(naming, table, idx),
         )?);
     }
     if schema::has_audit_columns(table) {
@@ -109,7 +108,7 @@ fn flatten_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Resul
         let pk = spec::pk_name(&table.as_type(), Some(&overlay));
         parts.push(sql_dialect::render_sql(
             dialect,
-            &table_statements::create_trigger(table, mapping, &pk),
+            &table_statements::create_trigger(table, naming, &pk),
         )?);
     }
     Ok(parts)
@@ -118,13 +117,13 @@ fn flatten_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Resul
 fn up_sql(
     dialect: &str,
     live: &[SqlTable],
-    mapping: &SqlMapping,
+    naming: &datasources::StatementNaming,
     seeds: &[String],
     separator: &str,
 ) -> Result<String> {
     let mut parts = Vec::new();
     for table in live {
-        parts.extend(flatten_table(dialect, table, mapping)?);
+        parts.extend(flatten_table(dialect, table, naming, live)?);
     }
     if !seeds.is_empty() {
         parts.push(format!(
@@ -154,7 +153,7 @@ fn down_sql(dialect: &str, live: &[SqlTable], separator: &str) -> Result<String>
 
 fn finalize(text: &str, casing: &PackCasing, dialect: &str) -> Result<String> {
     let collapsed = Regex::new(r"\n{3,}").expect("nl").replace_all(text, "\n\n");
-    let output = casing.apply_keywords(&collapsed, dialect)?;
+    let output = sql_dialect::schema_renderer(dialect, casing.strategy.clone())?.apply_keywords(&collapsed);
     Ok(if output.ends_with('\n') {
         output
     } else {

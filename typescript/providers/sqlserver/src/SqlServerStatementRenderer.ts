@@ -16,6 +16,8 @@ import {
   DropTableStatement,
   ForeignKeyStatement,
   IdentityInsertStatement,
+  type ProcedureSource,
+  sqlProcedureStatementsOf,
   SqlSeedStatement,
   StatementRenderer,
   type StatementTextRenderer,
@@ -37,6 +39,10 @@ import {
 export class SqlServerStatementRenderer extends StatementRenderer {
   constructor(text: StatementTextRenderer) {
     super(text);
+  }
+
+  override procedures(source: ProcedureSource) {
+    return sqlProcedureStatementsOf(source);
   }
 
   protected override visitCreateTable(create: CreateTableStatement): string {

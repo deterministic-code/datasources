@@ -6,7 +6,7 @@ namespace Datasources.Sqlite;
 public sealed class SqliteDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
-        new(t => new SqliteStatementRenderer(t));
+        new(t => new SqliteStatementRenderer(t), applyKeywords: ApplyKeywords);
     static readonly TypeMap Types = new(
         new Dictionary<string, string>
         {
@@ -89,13 +89,6 @@ public sealed class SqliteDriver : IDriver
         ColumnTypes.TryGetValue(name, out var sql) ? sql : throw new DatasourceException($"Unknown sqlite type \"{name}\"");
 
     internal const string ProcedurePayloadType = "JSON";
-
-    internal static IReadOnlyList<(string Op, string Name, IReadOnlyList<string> ByProperties)> ProcedureSpecs(
-        string entityName,
-        IReadOnlyList<IReadOnlyList<string>> byGroups,
-        Func<string, string> routineName,
-        Func<string, string> pluralStem) =>
-        SqlProcedureSpecs.Of(entityName, byGroups, routineName, pluralStem);
 
     internal static string ApplyKeywords(string sql, Func<string, string> keyword) =>
         SqlKeywords.Apply(sql, keyword);

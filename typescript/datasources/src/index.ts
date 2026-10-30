@@ -192,6 +192,11 @@ export {
   StatementParser,
   StatementRenderer,
   StatementTextRenderer,
+  StatementNaming,
+  KeywordCasing,
+  constraintNameOf,
+  sqlProcedureStatementsOf,
+  procedureNameOf,
   Native,
   n,
   Subquery,
@@ -265,7 +270,7 @@ export { RowTypeMapper } from "./mappers/RowTypeMapper.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-export type { Column, JoinKind, SelectStatementOptions, ReferentialAction as ReferentialActionName, SortDirection } from "./statements/index.ts";
+export type { Column, JoinKind, SelectStatementOptions, ReferentialAction as ReferentialActionName, SortDirection, ProcedureSource, ProcedureByGroup } from "./statements/index.ts";
 export type { Field, Scalar } from "./builders/index.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export {

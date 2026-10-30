@@ -19,7 +19,6 @@ import { SqliteTransaction } from "./transaction.ts";
 import { SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
 import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 import { columnTypes } from "./columnTypes.ts";
-import { procedureSpecs } from "./procedureSpecs.ts";
 import { applyKeywords } from "./applyKeywords.ts";
 import { TypeMap } from "./TypeMap.ts";
 import { DefaultValueConverter } from "./DefaultValueConverter.ts";
@@ -28,7 +27,7 @@ export { columnTypes };
 
 let statements: StatementTextRenderer | undefined;
 const renderer = (): StatementTextRenderer =>
-  (statements ??= new StatementTextRenderer(t => new SqliteStatementRenderer(t)));
+  (statements ??= new StatementTextRenderer(t => new SqliteStatementRenderer(t), undefined, undefined, undefined, applyKeywords));
 const types = new TypeMap({
   string: "TEXT",
   character: "TEXT",
@@ -59,7 +58,6 @@ const defaults = new DefaultValueConverter({
 
 export class SqliteDriver implements IDriver {
   static readonly procedurePayloadType = "JSON";
-  static procedureSpecs = procedureSpecs;
   static applyKeywords = applyKeywords;
   static quote = (name: string): string => `"${name}"`;
   static nativeType = (column: Column): string =>

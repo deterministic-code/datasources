@@ -102,26 +102,29 @@ public static class GenerateSql
         IReadOnlyDictionary<string, string> settings)
     {
         var dialect = Require(language);
-        var mapping = new SqlMapping(casing, types);
-        var live = SqlSchema.BuildLive(types, mapping);
-        var seeds = SeedGenerator.Sections(dialect, live, seedsByTable, mapping);
+        var naming = casing.Naming;
+        var live = SqlSchema.BuildLive(types, naming);
+        var seeds = SeedGenerator.Sections(dialect, live, seedsByTable, naming);
         var separator = JoinBatches.Of(settings);
         return (
-            new("0001_initial_up.sql", Finalize(UpSql(dialect, live, mapping, seeds, separator), casing, dialect)),
-            new("0001_initial_down.sql", Finalize(DownSql(dialect, live, separator), casing, dialect)));
+            new("0001_initial_up.sql", Finalize(UpSql(dialect, live, naming, seeds, separator), dialect, naming)),
+            new("0001_initial_down.sql", Finalize(DownSql(dialect, live, separator), dialect, naming)));
     }
 
-    static IEnumerable<string> FlattenTable(string dialect, SqlTable table, SqlMapping mapping)
+    public static StatementTextRenderer Schema(string dialect, StatementNaming naming) =>
+        Driver(dialect).StatementRenderer!.WithNaming(naming);
+
+    static IEnumerable<string> FlattenTable(string dialect, SqlTable table, StatementNaming naming, IReadOnlyList<SqlTable> live)
     {
         var indexes = table.Indexes.Select(idx =>
-            Render(dialect, TableStatements.CreateIndex(mapping, table, idx)));
+            Render(dialect, TableStatements.CreateIndex(naming, table, idx)));
         var pk = SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table));
         var trigger = SqlSchema.HasAuditColumns(table)
-            ? Render(dialect, TableStatements.CreateTrigger(table, mapping, pk ?? "id"))
+            ? Render(dialect, TableStatements.CreateTrigger(table, naming, pk ?? "id"))
             : "";
         return
         [
-            Render(dialect, TableStatements.CreateTable(table, mapping)),
+            Render(dialect, TableStatements.CreateTable(table, naming, live)),
             .. indexes,
             trigger,
         ];
@@ -130,11 +133,11 @@ public static class GenerateSql
     static string UpSql(
         string dialect,
         IReadOnlyList<SqlTable> live,
-        SqlMapping mapping,
+        StatementNaming naming,
         IReadOnlyList<string> seeds,
         string separator)
     {
-        var parts = live.SelectMany(table => FlattenTable(dialect, table, mapping)).Concat(
+        var parts = live.SelectMany(table => FlattenTable(dialect, table, naming, live)).Concat(
             seeds.Count == 0 ? [] : [$"-- Seed data\n{JoinBatches.Join(seeds, separator)}"]);
         return $"-- Generated initial migration for {dialect}\n\n-- Create added tables\n{JoinBatches.Join(parts, separator)}";
     }
@@ -142,9 +145,9 @@ public static class GenerateSql
     static string DownSql(string dialect, IReadOnlyList<SqlTable> live, string separator) =>
         $"-- Rollback initial migration for {dialect}\n\n-- DROP tables (reverse dependency order)\n{JoinBatches.Join(live.Reverse().Select(table => Render(dialect, TableStatements.DropTable(table.TableName))), separator)}";
 
-    static string Finalize(string text, PackCasing casing, string dialect)
+    public static string Finalize(string text, string dialect, StatementNaming naming)
     {
-        var output = casing.ApplyKeywords(System.Text.RegularExpressions.Regex.Replace(text, "\n{3,}", "\n\n"), dialect);
+        var output = Schema(dialect, naming).ApplyKeywords(Regex.Replace(text, "\n{3,}", "\n\n"));
         return output.EndsWith('\n') ? output : $"{output}\n";
     }
 }

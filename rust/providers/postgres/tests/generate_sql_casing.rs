@@ -7,7 +7,6 @@ fn register_sql() {
         datasources_code_generators::register_dialect(
             "postgres",
             Arc::new(crate::PostgresDriver),
-            crate::PostgresDriver::apply_keywords,
         )
         .unwrap();
     });

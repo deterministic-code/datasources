@@ -6,7 +6,7 @@ namespace Datasources.SqlServer;
 public sealed class SqlServerDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
-        new(t => new SqlServerStatementRenderer(t));
+        new(t => new SqlServerStatementRenderer(t), applyKeywords: ApplyKeywords);
     static readonly TypeMap Types = new(
         new Dictionary<string, string>
         {
@@ -78,13 +78,6 @@ public sealed class SqlServerDriver : IDriver
         new Dictionary<string, TypeConverter<Value, Value>>();
 
     internal const string ProcedurePayloadType = "NVARCHAR(MAX)";
-
-    internal static IReadOnlyList<(string Op, string Name, IReadOnlyList<string> ByProperties)> ProcedureSpecs(
-        string entityName,
-        IReadOnlyList<IReadOnlyList<string>> byGroups,
-        Func<string, string> routineName,
-        Func<string, string> pluralStem) =>
-        SqlProcedureSpecs.Of(entityName, byGroups, routineName, pluralStem);
 
     internal static string ApplyKeywords(string sql, Func<string, string> keyword) =>
         SqlKeywords.Apply(sql, keyword);

@@ -6,7 +6,7 @@ namespace Datasources.Mysql;
 public sealed class MysqlDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
-        new(t => new MysqlStatementRenderer(t));
+        new(t => new MysqlStatementRenderer(t), applyKeywords: ApplyKeywords);
     static readonly TypeMap Types = new(
         new Dictionary<string, string>
         {
@@ -93,13 +93,6 @@ public sealed class MysqlDriver : IDriver
         ColumnTypes.TryGetValue(name, out var sql) ? sql : throw new DatasourceException($"Unknown mysql type \"{name}\"");
 
     internal const string ProcedurePayloadType = "JSON";
-
-    internal static IReadOnlyList<(string Op, string Name, IReadOnlyList<string> ByProperties)> ProcedureSpecs(
-        string entityName,
-        IReadOnlyList<IReadOnlyList<string>> byGroups,
-        Func<string, string> routineName,
-        Func<string, string> pluralStem) =>
-        SqlProcedureSpecs.Of(entityName, byGroups, routineName, pluralStem);
 
     internal static string ApplyKeywords(string sql, Func<string, string> keyword) =>
         SqlKeywords.Apply(sql, keyword);

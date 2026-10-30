@@ -10,16 +10,12 @@ use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, columns, contact_entity, contact_lookup_ids,
     contact_schema, contact_with, contacts_join_query, contacts_parity, join_entity,
     contacts_service_of, contacts_view, expect_contacts_view, from_mapped_contacts, references,
-    seed_contacts_sql, snake, statements_of, SEED_CONTACT_COUNT,
+    seed_contacts_sql, snake, SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
 
 fn register_sql() {
-    datasources_tests::register_contact_dialect(
-        "sqlite",
-        Arc::new(crate::SqliteDriver),
-        crate::SqliteDriver::apply_keywords,
-    );
+    datasources_tests::register_contact_dialect("sqlite", Arc::new(crate::SqliteDriver));
 }
 
 fn verbose() -> bool {
@@ -32,7 +28,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     conn.open().await.unwrap();
     register_sql();
     let command = SqliteCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("sqlite"));
+    let mut sql = contact_schema("sqlite");
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
@@ -72,7 +68,7 @@ async fn maps_join_rows_to_nested_contacts() {
     conn.open().await.unwrap();
     register_sql();
     let command = SqliteCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("sqlite"));
+    let mut sql = contact_schema("sqlite");
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, "X''"));
     apply_sql(&command, &sql).await.unwrap();
 
@@ -138,7 +134,7 @@ async fn writes_enriched_contact() {
     conn.open().await.unwrap();
     register_sql();
     let command = SqliteCommand::new(conn.clone());
-    apply_sql(&command, &statements_of(&contact_schema("sqlite"))).await.unwrap();
+    apply_sql(&command, &contact_schema("sqlite")).await.unwrap();
 
     let field = super::converters::field;
     let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];

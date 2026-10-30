@@ -17,15 +17,6 @@ impl MysqlDriver {
     pub const QUOTE_LEFT: &'static str = sql_generate::QUOTE_LEFT;
     pub const PROCEDURE_PAYLOAD_TYPE: &'static str = sql_generate::PROCEDURE_PAYLOAD_TYPE;
 
-    pub fn procedure_specs(
-        entity_name: &str,
-        by_groups: &[Vec<String>],
-        routine_name: &dyn Fn(&str) -> String,
-        plural_stem: &dyn Fn(&str) -> String,
-    ) -> Vec<(String, String, Vec<String>)> {
-        sql_generate::procedure_specs(entity_name, by_groups, routine_name, plural_stem)
-    }
-
     pub fn apply_keywords(sql: &str, keyword: &dyn Fn(&str) -> String) -> String {
         sql_generate::apply_keywords(sql, keyword)
     }
@@ -103,7 +94,10 @@ impl MysqlDriver {
 }
 
 static STATEMENTS: LazyLock<StatementTextRenderer> =
-    LazyLock::new(|| StatementTextRenderer::new(Some(Box::new(MysqlStatementRenderer)), None));
+    LazyLock::new(|| {
+        StatementTextRenderer::new(Some(Box::new(MysqlStatementRenderer)), None)
+            .with_keyword_apply(sql_generate::apply_keywords)
+    });
 
 static INFORMATION: LazyLock<Information> = LazyLock::new(|| {
     Information::new(

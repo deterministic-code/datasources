@@ -1,5 +1,4 @@
-use crate::driver::column_sql;
-use datasources::{Column, ColumnDefault, CreateTableStatementTextRenderer, NotNull};
+use datasources::{Column, CreateTableStatementTextRenderer, NotNull};
 
 pub struct MysqlCreateTableStatementRenderer;
 

@@ -73,8 +73,29 @@ public static class SqlSchema
     public static bool HasAuditColumns(SqlTable table) =>
         table.Fields.Any(f => f.Name == "created") && table.Fields.Any(f => f.Name == "updated");
 
-    public static IReadOnlyList<SqlTable> BuildLive(IReadOnlyList<SqlTable> types, SqlMapping mapping) =>
-        Topo(types.Select(t => t with { TableName = mapping.TableName(t) }).ToList());
+    public static string TableStem(SqlTable table) => table.Mapping ?? table.Name;
+
+    public static string FieldStem(SqlTable table, string fieldName) =>
+        FieldOverlay(table, fieldName)?.Mapping ?? fieldName;
+
+    public static IReadOnlyList<SqlTable> BuildLive(IReadOnlyList<SqlTable> types, StatementNaming naming) =>
+        Topo(types.Select(t => t with { TableName = CreateTableStatement.TableName(TableStem(t), naming) }).ToList());
+
+    public static SqlTable TableOf(IReadOnlyList<SqlTable> tables, string logicalName) =>
+        tables.FirstOrDefault(table => table.Name == logicalName)
+        ?? throw new InvalidOperationException($"foreign key references unknown table \"{logicalName}\"");
+
+    public static (string TableName, string ColumnName) ResolveReference(
+        IReadOnlyList<SqlTable> tables,
+        StatementNaming naming,
+        SpecTypeField field)
+    {
+        var (logicalTable, logicalCol) = SpecTables.ReferenceTarget(field);
+        var target = TableOf(tables, logicalTable);
+        return (
+            CreateTableStatement.TableName(TableStem(target), naming),
+            CreateTableStatement.ColumnName(FieldStem(target, logicalCol), naming));
+    }
 
     static List<SqlTable> Topo(List<SqlTable> tables)
     {

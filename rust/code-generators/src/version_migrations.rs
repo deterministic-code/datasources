@@ -2,8 +2,8 @@ use crate::casing::PackCasing;
 use crate::by_groups;
 use crate::generate_entry::GenerateEntry;
 use crate::generate_procedures;
-use crate::mapping::SqlMapping;
 use crate::schema::{self, SqlTable};
+use datasources::StatementNaming;
 use crate::schema_diff::{self, DdlStatement};
 use crate::seed_generator;
 use crate::spec::{self, SeedRow};
@@ -78,8 +78,8 @@ pub fn files(
         let current = compile(snapshot, settings)?;
         let up = schema_diff::of(dialect, &previous.0, &previous.1, &current.0, &current.1)?;
         let down = schema_diff::of(dialect, &current.0, &current.1, &previous.0, &previous.1)?;
-        let up_procs = procedure_sql(dialect, settings, &previous.0, &current.0, &current.1, casing)?;
-        let down_procs = procedure_sql(dialect, settings, &current.0, &previous.0, &previous.1, casing)?;
+        let up_procs = procedure_sql(dialect, settings, &previous.0, &current.0, casing)?;
+        let down_procs = procedure_sql(dialect, settings, &current.0, &previous.0, casing)?;
         let added = seed_generator::added(&previous.2, &current.2);
         let removed = seed_generator::added(&current.2, &previous.2);
         let seed_up = seed_generator::sections(dialect, &current.0, &added, &current.1)?;
@@ -183,7 +183,7 @@ fn covered(files: &HashMap<String, String>, name: &str) -> bool {
 fn compile(
     snapshot: &VersionSnapshot,
     settings: &HashMap<String, String>,
-) -> Result<(Vec<SqlTable>, SqlMapping, HashMap<String, Vec<SeedRow>>)> {
+) -> Result<(Vec<SqlTable>, StatementNaming, HashMap<String, Vec<SeedRow>>)> {
     let mut files = HashMap::new();
     for path in snapshot.documents.keys() {
         files.insert(
@@ -194,8 +194,8 @@ fn compile(
     files.entry("datasource.yaml".into()).or_insert_with(|| DEFAULT_DATASOURCE.into());
     let parsed = spec::parse(&files)?;
     let types = schema::from_spec(&parsed);
-    let mapping = SqlMapping::new(PackCasing::of(settings)?, &types);
-    Ok((schema::build_live(&types, &mapping), mapping, parsed.datasource_seeds))
+    let naming = PackCasing::of(settings)?.strategy;
+    Ok((schema::build_live(&types, &naming), naming, parsed.datasource_seeds))
 }
 
 fn fields_of(table: &SqlTable) -> String {
@@ -212,7 +212,6 @@ fn procedure_sql(
     settings: &HashMap<String, String>,
     before: &[SqlTable],
     after: &[SqlTable],
-    after_map: &SqlMapping,
     casing: &PackCasing,
 ) -> Result<String> {
     if !schema::use_stored_procedures(settings) {
@@ -227,7 +226,7 @@ fn procedure_sql(
             continue;
         }
         let group = groups.get(&table.name).cloned().unwrap_or_default();
-        let (statements, _) = generate_procedures::for_table(dialect, table, after_map, casing, &group)?;
+        let statements = generate_procedures::for_table(dialect, table, casing, &group)?;
         for statement in statements {
             parts.push(sql_dialect::render_sql(dialect, statement.as_ref())?);
         }
@@ -245,7 +244,7 @@ fn render(dialect: &str, statements: &[DdlStatement], separator: &str) -> Result
 
 fn finalize(text: &str, casing: &PackCasing, dialect: &str) -> Result<String> {
     let collapsed = regex::Regex::new(r"\n{3,}").expect("nl").replace_all(text, "\n\n");
-    let output = casing.apply_keywords(&collapsed, dialect)?;
+    let output = sql_dialect::schema_renderer(dialect, casing.strategy.clone())?.apply_keywords(&collapsed);
     Ok(if output.ends_with('\n') {
         output
     } else {

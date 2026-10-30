@@ -29,27 +29,33 @@ import {
   eq,
   type Column,
   type RoutineParameter,
+  type StatementNaming,
 } from "@deterministic-code/datasources";
 import type { DatasourceIndex, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import { isPkField } from "@deterministic-code/generators-common/spec-types";
 import { converterFieldOf } from "./common/converter-field.ts";
 import {
   fieldOverlay,
+  fieldStem,
   overlayOf,
+  resolveReference,
   tableIdentity,
+  tableStem,
   usesGeneratedIdColumn,
   type LiveTable,
+  type SqlTable,
 } from "./common/sql-schema.ts";
-import type { SqlMapping } from "./common/sql-mapping.ts";
-export const columnOf = (mapping: SqlMapping, table: LiveTable, field: TypeField): Column => {
+export const columnOf = (naming: StatementNaming, table: LiveTable, field: TypeField): Column => {
   const converterField = converterFieldOf(field);
   const generated = usesGeneratedIdColumn(table, field);
-  const named = mapping.constraintName(table, mapping.fieldStem(table, field.name), "default_constraint");
+  const named = UniqueConstraint.nameOf(
+    tableStem(table), naming, fieldStem(table, field.name), "default_constraint",
+  );
   const fromSpec = converterField.defaultValue;
   const identity = generated && fromSpec == null;
   const keys = tableIdentity(table);
   return {
-    name: mapping.columnName(table, field.name),
+    name: CreateTableStatement.columnName(fieldStem(table, field.name), naming),
     type: converterField.type,
     ...(fromSpec != null ? { default: new ColumnDefault(String(fromSpec), named) } : {}),
     ...(!field.isNullable || keys.includes(field.name) ? { notNull: new NotNull() } : {}),
@@ -60,40 +66,42 @@ export const columnOf = (mapping: SqlMapping, table: LiveTable, field: TypeField
 
 export const createTableStatementOf = (
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
+  tables: readonly SqlTable[],
 ): CreateTableStatement => {
   const keys = tableIdentity(table);
-  const columns = table.fields.map((field) => columnOf(mapping, table, field));
+  const columns = table.fields.map((field) => columnOf(naming, table, field));
+  const stem = tableStem(table);
   const uniques = table.fields
     .filter((field) => fieldOverlay(table, field.name)?.isUnique === true || field.name === "uuid")
     .map(
       (field) =>
         new UniqueConstraint(
-          mapping.constraintName(table, mapping.fieldStem(table, field.name), "unique_constraint"),
-          [mapping.columnName(table, field.name)],
+          UniqueConstraint.nameOf(stem, naming, fieldStem(table, field.name), "unique_constraint"),
+          [CreateTableStatement.columnName(fieldStem(table, field.name), naming)],
         ),
     );
   const foreignKeys = table.fields
     .filter((field) => field.references !== undefined)
-    .map((field) => foreignKeyOf(mapping, table, field));
+    .map((field) => foreignKeyOf(naming, tables, table, field));
   const pk =
     keys.length > 1
-      ? [new PrimaryKey(mapping.constraintName(table, "primary_key"), keys.map((key) => mapping.columnName(table, key)))]
+      ? [new PrimaryKey(PrimaryKey.nameOf(stem, naming, "primary_key"), keys.map((key) => CreateTableStatement.columnName(fieldStem(table, key), naming)))]
       : keys.length === 1 && table.fields.some((field) => isPkField(field, table, overlayOf(table)))
-        ? [new PrimaryKey(mapping.constraintName(table, "primary_key"), [mapping.columnName(table, keys[0]!)])]
+        ? [new PrimaryKey(PrimaryKey.nameOf(stem, naming, "primary_key"), [CreateTableStatement.columnName(fieldStem(table, keys[0]!), naming)])]
         : [];
   return new CreateTableStatement(table.tableName, columns, [...pk, ...uniques, ...foreignKeys]);
 };
 
 export const createIndexStatementOf = (
-  mapping: SqlMapping,
+  naming: StatementNaming,
   table: LiveTable,
   idx: DatasourceIndex,
 ): CreateIndexStatement =>
   new CreateIndexStatement(
-    mapping.constraintName(table, idx.name, "index"),
+    CreateIndexStatement.nameOf(tableStem(table), naming, idx.name, "index"),
     table.tableName,
-    idx.fields.map((column) => mapping.columnName(table, column)),
+    idx.fields.map((column) => CreateTableStatement.columnName(fieldStem(table, column), naming)),
     idx.isUnique,
   );
 
@@ -107,81 +115,84 @@ export const dropTriggerStatementOf = (name: string, table: string): DropTrigger
   new DropTriggerStatement(name, table);
 
 export const uniqueConstraintOf = (
-  mapping: SqlMapping,
+  naming: StatementNaming,
   table: LiveTable,
   field: TypeField,
 ): UniqueConstraint =>
   new UniqueConstraint(
-    mapping.constraintName(table, mapping.fieldStem(table, field.name), "unique_constraint"),
-    [mapping.columnName(table, field.name)],
+    UniqueConstraint.nameOf(tableStem(table), naming, fieldStem(table, field.name), "unique_constraint"),
+    [CreateTableStatement.columnName(fieldStem(table, field.name), naming)],
   );
 
 export const foreignKeyOf = (
-  mapping: SqlMapping,
+  naming: StatementNaming,
+  tables: readonly SqlTable[],
   table: LiveTable,
   field: TypeField,
 ): ForeignKey => {
-  const ref = mapping.resolveReference(field.references!);
+  const ref = resolveReference(tables, naming, field);
   return new ForeignKey(
-    mapping.constraintName(table, mapping.fieldStem(table, field.name), "foreign_key"),
-    [mapping.columnName(table, field.name)],
+    ForeignKey.nameOf(tableStem(table), naming, fieldStem(table, field.name), "foreign_key"),
+    [CreateTableStatement.columnName(fieldStem(table, field.name), naming)],
     ref.tableName,
     [ref.columnName],
   );
 };
 
 export const addForeignKeyStatementOf = (
-  mapping: SqlMapping,
+  naming: StatementNaming,
+  tables: readonly SqlTable[],
   table: LiveTable,
   field: TypeField,
 ): ForeignKeyStatement => {
-  const fk = foreignKeyOf(mapping, table, field);
+  const fk = foreignKeyOf(naming, tables, table, field);
   return new ForeignKeyStatement(table.tableName, fk.name, fk.columns, fk.referencesTable, fk.referencesColumns);
 };
 
 export const dropForeignKeyStatementOf = (
-  mapping: SqlMapping,
+  naming: StatementNaming,
+  tables: readonly SqlTable[],
   table: LiveTable,
   field: TypeField,
 ): ForeignKeyStatement =>
-  new ForeignKeyStatement(table.tableName, foreignKeyOf(mapping, table, field).name, [], "", [], "drop");
+  new ForeignKeyStatement(table.tableName, foreignKeyOf(naming, tables, table, field).name, [], "", [], "drop");
 
 export const createTriggerStatementOf = (
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
   key: string,
 ): CreateTriggerStatement =>
   new CreateTriggerStatement(
     table.tableName,
-    mapping.triggerName(table),
-    mapping.columnName(table, "updated"),
-    mapping.columnName(table, key),
+    CreateTriggerStatement.nameOf(tableStem(table), naming),
+    CreateTableStatement.columnName(fieldStem(table, "updated"), naming),
+    CreateTableStatement.columnName(fieldStem(table, key), naming),
   );
 
 export const seedInsertStatementOf = (
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
   columns: string[],
   values: string[],
 ): InsertStatement =>
   new InsertStatement(
     table.tableName,
     columns.map((column, i) => ({
-      name: mapping.columnName(table, column),
+      name: CreateTableStatement.columnName(fieldStem(table, column), naming),
       value: values[i] ?? "NULL",
     })),
   );
 
 export const identityInsertStatementOf = (
   table: LiveTable,
-  mapping: SqlMapping,
+  naming: StatementNaming,
   inserts: InsertStatement[],
   identity: boolean,
 ): IdentityInsertStatement => {
   const keys = tableIdentity(table);
   return new IdentityInsertStatement(
     table.tableName,
-    mapping.columnName(table, keys[0] ?? "id"),
+    CreateTableStatement.columnName(fieldStem(table, keys[0] ?? "id"), naming),
     inserts,
     identity,
   );

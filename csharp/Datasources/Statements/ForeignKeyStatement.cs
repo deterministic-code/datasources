@@ -11,4 +11,7 @@ public sealed record ForeignKeyStatement(
     ReferentialAction? OnUpdate = null) : IForeignKeyStatement
 {
     public string Accept(IStatementVisitor visitor) => visitor.Visit(this);
+
+    public static string NameOf(string entity, StatementNaming naming, params string[] parts) =>
+        ConstraintName.Of(entity, naming, parts);
 }

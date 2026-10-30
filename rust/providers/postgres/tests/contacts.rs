@@ -4,8 +4,8 @@ use super::isolate;
 use datasources::Connection;
 use datasources_tests::{
     add_extra_contact, apply_sql, as_contacts_view, contact_lookup_ids, contact_schema,
-    contact_with, contacts_parity, contacts_service_of, expect_contacts_view,     seed_contacts_sql,
-    statements_of, SEED_CONTACT_COUNT,
+    contact_with, contacts_parity, contacts_service_of, expect_contacts_view, seed_contacts_sql,
+    SEED_CONTACT_COUNT,
 };
 use std::sync::Arc;
 
@@ -14,11 +14,7 @@ fn verbose() -> bool {
 }
 
 fn register_sql() {
-    datasources_tests::register_contact_dialect(
-        "postgres",
-        Arc::new(crate::PostgresDriver),
-        crate::PostgresDriver::apply_keywords,
-    );
+    datasources_tests::register_contact_dialect("postgres", Arc::new(crate::PostgresDriver));
 }
 
 #[tokio::test]
@@ -28,7 +24,7 @@ async fn matches_enriched_contacts_service_to_flat_mapper() {
     let conn = Arc::new(PostgresConnection::new(Some(isolated.url.clone()), None));
     conn.open().await.unwrap();
     let command = PostgresCommand::new(conn.clone());
-    let mut sql = statements_of(&contact_schema("postgres"));
+    let mut sql = contact_schema("postgres");
     sql.extend(seed_contacts_sql(SEED_CONTACT_COUNT, r#"'\x'"#));
     apply_sql(&command, &sql).await.unwrap();
 

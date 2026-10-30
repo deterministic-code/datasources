@@ -230,8 +230,9 @@ pub use statements::{
     InsertStatementTextRenderer, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
     ReturnStatement, ReturnStatementTextRenderer, SelectInsertedIdStatement,
     SelectInsertedIdStatementTextRenderer, SelectStatementOptions, SelectStatementTextRenderer,
-    SortDirection, Statement, StatementEvaluator, StatementKind, StatementRenderer,
-    StatementTextRenderer, StatementVisitor, TableConstraint, UniqueConstraint, UpdateStatement,
+    KeywordCasing, ProcedureByGroup, ProcedureSource, SortDirection, Statement, StatementEvaluator, StatementKind, StatementRenderer,
+    StatementNaming, StatementTextRenderer, StatementVisitor, TableConstraint, UniqueConstraint, UpdateStatement,
+    procedure_name_of, sql_procedure_statements_of,
     UpdateStatementTextRenderer, Where,
 };
 pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;

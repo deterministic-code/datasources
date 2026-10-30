@@ -1,5 +1,4 @@
 use crate::converters::field;
-use crate::driver::column_sql;
 use datasources::{Column, ColumnDefault, CreateTableStatementTextRenderer, Value};
 
 pub struct PostgresCreateTableStatementRenderer;

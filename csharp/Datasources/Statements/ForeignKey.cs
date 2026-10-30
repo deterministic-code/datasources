@@ -15,4 +15,8 @@ public sealed record ForeignKey(
     string ReferencesTable,
     IReadOnlyList<string> ReferencesColumns,
     ReferentialAction? OnDelete = null,
-    ReferentialAction? OnUpdate = null) : ITableConstraint;
+    ReferentialAction? OnUpdate = null) : ITableConstraint
+{
+    public static string NameOf(string entity, StatementNaming naming, params string[] parts) =>
+        ConstraintName.Of(entity, naming, parts);
+}

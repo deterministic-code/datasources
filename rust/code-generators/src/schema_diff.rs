@@ -1,4 +1,5 @@
-use crate::mapping::SqlMapping;
+use crate::schema::table_stem;
+use datasources::StatementNaming;
 use crate::schema::{
     field_overlay, has_audit_columns, is_generated_identity, overlay_of, table_identity, SqlTable,
 };
@@ -43,9 +44,9 @@ impl DdlStatement {
 pub fn of(
     dialect: &str,
     before_tables: &[SqlTable],
-    before_map: &SqlMapping,
+    before_map: &StatementNaming,
     after_tables: &[SqlTable],
-    after_map: &SqlMapping,
+    after_map: &StatementNaming,
 ) -> Result<Vec<DdlStatement>> {
     let previous: std::collections::HashMap<_, _> =
         before_tables.iter().map(|table| (table.name.as_str(), table)).collect();
@@ -62,30 +63,32 @@ pub fn of(
             table,
             before_map,
             after_map,
+            before_tables,
+            after_tables,
         )?);
     }
     for table in after_tables.iter().filter(|table| !previous.contains_key(table.name.as_str())) {
-        out.extend(create_table(dialect, table, after_map)?);
+        out.extend(create_table(dialect, table, after_map, after_tables)?);
     }
     Ok(out)
 }
 
-fn create_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<Vec<DdlStatement>> {
+fn create_table(dialect: &str, table: &SqlTable, naming: &StatementNaming, tables: &[SqlTable]) -> Result<Vec<DdlStatement>> {
     let mut out = vec![DdlStatement::CreateTable(table_statements::create_table(
-        table, mapping,
+        table, naming, tables,
     )?)];
     for index in &table.indexes {
         out.push(DdlStatement::CreateIndex(table_statements::create_index(
-            mapping, table, index,
+            naming, table, index,
         )));
     }
     if has_audit_columns(table) {
-        out.push(DdlStatement::CreateTrigger(trigger(dialect, table, mapping)?));
+        out.push(DdlStatement::CreateTrigger(trigger(dialect, table, naming)?));
     }
     Ok(out)
 }
 
-fn drop_table(dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<Vec<DdlStatement>> {
+fn drop_table(dialect: &str, table: &SqlTable, mapping: &StatementNaming) -> Result<Vec<DdlStatement>> {
     let mut out = Vec::new();
     if has_audit_columns(table) {
         out.push(DdlStatement::DropTrigger(drop_trigger(dialect, table, mapping)?));
@@ -101,8 +104,10 @@ fn diff_table(
     dialect: &str,
     before: &SqlTable,
     after: &SqlTable,
-    before_map: &SqlMapping,
-    after_map: &SqlMapping,
+    before_map: &StatementNaming,
+    after_map: &StatementNaming,
+    before_tables: &[SqlTable],
+    after_tables: &[SqlTable],
 ) -> Result<Vec<DdlStatement>> {
     if identity_of(before) != identity_of(after) {
         return Err(DatasourceError::message(format!(
@@ -148,7 +153,7 @@ fn diff_table(
                 .unwrap_or(true)
         {
             out.push(DdlStatement::ForeignKey(table_statements::drop_foreign_key(
-                before_map, before, field,
+                before_map, before_tables, before, field,
             )?));
         }
     }
@@ -225,7 +230,7 @@ fn diff_table(
                 .unwrap_or(true)
         {
             out.push(DdlStatement::ForeignKey(table_statements::add_foreign_key(
-                after_map, after, field,
+                after_map, after_tables, after, field,
             )?));
         }
     }
@@ -244,26 +249,29 @@ fn diff_table(
     Ok(out)
 }
 
-fn trigger(_dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<CreateTriggerStatement> {
+fn trigger(_dialect: &str, table: &SqlTable, naming: &StatementNaming) -> Result<CreateTriggerStatement> {
     Ok(table_statements::create_trigger(
         table,
-        mapping,
+        naming,
         &pk_name(&table.as_type(), Some(&overlay_of(table))),
     ))
 }
 
-fn drop_trigger(_dialect: &str, table: &SqlTable, mapping: &SqlMapping) -> Result<DropTriggerStatement> {
-    Ok(table_statements::drop_trigger(&mapping.trigger_name(table), &table.table_name))
+fn drop_trigger(_dialect: &str, table: &SqlTable, naming: &StatementNaming) -> Result<DropTriggerStatement> {
+    Ok(table_statements::drop_trigger(
+        &datasources::CreateTriggerStatement::name_of(&table_stem(table), naming),
+        &table.table_name,
+    ))
 }
 
 fn drop_index(
     _dialect: &str,
-    mapping: &SqlMapping,
+    naming: &StatementNaming,
     table: &SqlTable,
     index: &DatasourceIndex,
 ) -> Result<DropIndexStatement> {
     Ok(table_statements::drop_index(
-        &mapping.constraint_name(table, &[&index.name, "index"]),
+        &datasources::CreateIndexStatement::name_of(&table_stem(table), naming, &[&index.name, "index"]),
         &table.table_name,
     ))
 }

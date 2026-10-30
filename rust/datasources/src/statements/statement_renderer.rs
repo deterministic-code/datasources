@@ -252,6 +252,10 @@ pub trait StatementVisitor: Send + Sync {
     ) -> String {
         CreateBulkDeleteStoredProcedureStatementTextRenderer.render(statement)
     }
+
+    fn procedures(&self, _source: &super::procedure_source::ProcedureSource) -> Vec<Box<dyn super::statement::Statement>> {
+        Vec::new()
+    }
 }
 
 pub struct StatementRenderer;
