@@ -1,6 +1,6 @@
 use chrono::{TimeZone, Utc};
 use datasources::{
-    Casing, CRUDRepository, CRUDRepositoryOptions, ChangeCasingMapper, Connection, ICRUDRepository,
+    Casing, CRUDRepository, CRUDRepositoryOptions, ChangeCasingMapper, Connection,
     Row, Schema, Value,
 };
 use std::collections::HashMap;
@@ -39,7 +39,7 @@ async fn omits_null_datetime_and_version() {
         .unwrap()
         .unwrap();
     omitted.insert("Name".into(), Value::from("ada-v2"));
-    let updated = repo.update(omitted.clone(), None).await.unwrap();
+    let updated = repo.update(omitted.clone()).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let kept = repo
         .read_single_by_id(omitted.get("Id").unwrap())

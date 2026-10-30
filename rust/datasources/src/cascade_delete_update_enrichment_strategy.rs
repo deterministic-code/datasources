@@ -1,7 +1,7 @@
 use futures_util::TryStreamExt;
 use crate::default_create_enrichment_strategy::{create_children, create_links};
 use crate::default_write_enrichment_strategy::required;
-use crate::delete_enrichment_strategy::{load, children_where};
+use crate::delete_enrichment_strategy::load;
 use crate::enrichment::Enrichment;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
@@ -24,10 +24,7 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
     ) -> Result<()> {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         for row in &existing {
-            match children_where(writer.as_ref(), enrichment, parent) {
-                Some(clause) => writer.delete(row.clone(), Some(&clause)).await?,
-                None => writer.delete(row.clone(), None).await?,
-            };
+            writer.delete(row.clone(), None).await?;
         }
         create_children(writer.as_ref(), enrichment, parent).await
     }
@@ -48,13 +45,10 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
             &enrichment.destination_property,
         )?;
         let existing = writer
-            .read(
-                Some(&Where::new(Operator::equals(
+            .read(&Where::new(Operator::equals(
                     association.parent.clone(),
                     parent_key.clone(),
-                ))),
-                None, None
-        )
+                )))
             .try_collect::<Vec<_>>().await?;
         for row in &existing {
             let Some(related) = row.get(&association.related).cloned() else {
@@ -63,11 +57,7 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
             if related == Value::Null {
                 continue;
             }
-            let clause = Where::new(Operator::and(
-                Operator::equals(association.parent.clone(), parent_key.clone()),
-                Operator::equals(association.related.clone(), related),
-            ));
-            writer.delete(row.clone(), Some(&clause)).await?;
+            writer.delete(row.clone(), None).await?;
         }
         create_links(writer.as_ref(), enrichment, parent).await
     }

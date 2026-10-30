@@ -2,7 +2,7 @@ use super::contact_columns::{columns, snake};
 use super::contact_lookups::ContactLookups;
 use datasources::converters::RowTypeConverter;
 use datasources::{
-    CRUDRepository, CRUDRepositoryOptions, Connection, DatasourceError, IReadonlyRepository,
+    CRUDRepository, CRUDRepositoryOptions, Connection, DatasourceError,
     Operator, Result, Row, Value, Where,
 };
 use std::sync::Arc;
@@ -16,10 +16,7 @@ async fn id_named(connection: Arc<dyn Connection>, entity: &str, name: &str) -> 
     options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options)?;
     let row = repo
-        .read_single(
-            Some(&Where::new(Operator::equals("Name", Value::from(name)))),
-            None, None
-        )
+        .read_single(&Where::new(Operator::equals("Name", Value::from(name))))
         .await?
         .ok_or_else(|| DatasourceError::message(format!("{entity} '{name}' missing")))?;
     match row.get("Id") {

@@ -78,7 +78,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
     );
     let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
     parents.create(parent).await.unwrap();
-    let enriched = parents.read_single(None, None, None).await.unwrap();
+    let enriched = parents.read_single(&()).await.unwrap();
 
     let command = Arc::new(MockCommand::new());
     command.reader_rows.lock().unwrap().extend([
@@ -157,7 +157,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
     let mut options = ReadonlyRepositoryMappingOptions::default();
     options.entity_mapper = Some(Arc::new(join_entity()));
     let items = join_repo
-        .read(Some(&join), None, Some(&options))
+        .read(&join)
         .try_collect::<Vec<_>>().await
         .unwrap();
     assert_eq!(

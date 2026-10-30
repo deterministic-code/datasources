@@ -4,7 +4,6 @@ use crate::i_repository::IRepository;
 use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
-use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -29,18 +28,8 @@ pub trait IReadonlyRepository<T: FromSchema = Row>: IRepository {
         None
     }
 
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<T>>;
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [crate::Parameter]>,
-        options: Option<&'a ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>>;
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>>;
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>>;
 }
 
 #[async_trait]
@@ -67,22 +56,12 @@ impl<T: FromSchema> IRepository for AsReadonly<T> {
 
 #[async_trait]
 impl<T: FromSchema> IReadonlyRepository<T> for AsReadonly<T> {
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<T>> {
-        self.0.read_single(query, parameters, options).await
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
+        self.0.read_single(query).await
     }
 
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [crate::Parameter]>,
-        options: Option<&'a ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        self.0.read(query, parameters, options)
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.0.read(query)
     }
 }
 

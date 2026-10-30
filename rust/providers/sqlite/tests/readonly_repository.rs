@@ -73,15 +73,12 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     options.property_mappings = Some(std::sync::Arc::new(snake()));
     let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
     let by_id = repo
-        .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
+        .read_single(&Where::binary("Id", eq, 1_i64))
         .await
         .unwrap()
         .unwrap();
     let row = repo
-        .read(
-            Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
-            None, None
-        )
+        .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64))
         .try_collect::<Vec<_>>().await
         .unwrap()
         .into_iter()
@@ -141,7 +138,7 @@ async fn maps_an_object_explicitly() {
     options.object_converter = Some(Box::new(UserConverter));
     let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
     let user = users_repo
-        .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
+        .read_single(&Where::binary("Id", eq, 1_i64))
         .await
         .unwrap()
         .unwrap();
@@ -188,25 +185,16 @@ async fn reads_user_by_guid_username_and_created() {
     let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
-        .read_single(
-            Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-            None, None
-        )
+        .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
         .await
         .unwrap()
         .unwrap();
     let by_login = repo
-        .read(
-            Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-            None, None
-        )
+        .read(&Where::binary("Login", eq, "ada").and("Active", eq, true))
         .try_collect::<Vec<_>>().await
         .unwrap();
     let later = repo
-        .read(
-            Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-            None, None
-        )
+        .read(&Where::binary("Active", eq, true).and("Opened", gt, opened))
         .try_collect::<Vec<_>>().await
         .unwrap();
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
@@ -253,7 +241,7 @@ mod user_view {
     use std::collections::HashMap;
     use datasources::{
         create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, Datasource,
-        DictionaryMapper, IReadonlyRepository, ReadonlyRepository, Row, Schema, Value, Where,
+        DictionaryMapper, ReadonlyRepository, Row, Schema, Value, Where,
     };
     use uuid::Uuid;
 
@@ -323,10 +311,7 @@ mod user_view {
             None,
         );
         let account = users_repo
-            .read_single(
-                Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-                None, None
-        )
+            .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
             .await
             .unwrap()
             .unwrap();
@@ -355,7 +340,7 @@ mod users_view_roles {
     use futures_util::TryStreamExt;
     use datasources::{
         create_readonly_repository_mapping_options, eq, Casing, ChangeCasingMapper, Datasource,
-        DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
+        DictionaryMapper, HashsetOptimizedReadonlyEnrichmentStrategy, Join,
         NestedToObjectEnrichmentStrategy, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Row,
         SelectStatement, SelectStatementOptions, TypeMap,
         TypeMapField, TypeMapGroup, Value, Where,
@@ -486,7 +471,7 @@ mod users_view_roles {
             Some(strategy),
         );
         let users_view = users_repo
-            .read_single(Some(&Where::binary("Key", eq, ADA)), None, None)
+            .read_single(&Where::binary("Key", eq, ADA))
             .await
             .unwrap()
             .unwrap();
@@ -562,7 +547,7 @@ mod users_view_roles {
             ))),
         );
         let joined = joined_users();
-        let items = users_repo.read(Some(&joined), None, None).try_collect::<Vec<_>>().await.unwrap();
+        let items = users_repo.read(&joined).try_collect::<Vec<_>>().await.unwrap();
         let view = |login: &str| {
             items
                 .iter()
@@ -621,7 +606,7 @@ mod user_crud {
     use futures_util::TryStreamExt;
     use datasources::{
         create_crud_repository_options, default, eq, CRUDRepository, Casing,
-        ChangeCasingMapper, Datasource, ICRUDRepository, Row,
+        ChangeCasingMapper, Datasource, Row,
         RowTypeConverter, Value, Where,
     };
 
@@ -645,14 +630,11 @@ mod user_crud {
             .unwrap()
             .unwrap();
         let matches = users_repo
-            .read(
-                Some(&Where::binary("Username", eq, "ada").and(
+            .read(&Where::binary("Username", eq, "ada").and(
                     "IsEnabled",
                     eq,
                     Value::Bool(true),
-                )),
-                None, None
-        )
+                ))
             .try_collect::<Vec<_>>().await
             .unwrap();
         created.insert("Username".into(), Value::from("ada-v2"));
@@ -813,11 +795,10 @@ mod user_crud {
         let grace = users_repo.create(grace).await.unwrap();
         let key = user.get("Key").cloned().unwrap();
         let mut loaded = users_repo
-            .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+            .read_single(&Where::binary("Key", eq, key.clone()))
             .await
             .unwrap()
             .unwrap();
-        let version = loaded.get("Version").cloned().unwrap();
         let mut member = datasources::Row::new();
         member.insert("Name".into(), Value::from("member"));
         let member = user_types_repo.create(member).await.unwrap();
@@ -833,27 +814,21 @@ mod user_crud {
             "Roles".into(),
             encode_rows(&[kept_admin, kept_editor, owner_role]),
         );
+        let version = loaded.get("Version").cloned().unwrap();
         loaded.insert("Version".into(), Value::Int(2));
-        let updated = users_repo
-            .update(
-                loaded.clone(),
-                Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
-            )
+        let by_version = Where::binary("Key", eq, key.clone()).and("Version", eq, version);
+        let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
             .await
             .unwrap();
         let current = users_repo
-            .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+            .read_single(&Where::binary("Key", eq, key.clone()))
             .await
             .unwrap()
             .unwrap();
-        let stale = users_repo
-            .update(
-                loaded.clone(),
-                Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
-            )
+        let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
             .await
             .unwrap();
-        let removed = users_repo.delete(loaded, None).await.unwrap();
+        let removed = users_repo.delete(loaded).await.unwrap();
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
         assert_eq!(current.get("Version"), Some(&Value::Int(2)));
         assert_eq!(current.get("Login"), Some(&Value::from("ada-v2")));
@@ -863,7 +838,7 @@ mod user_crud {
         current_names.sort();
         assert_eq!(current_names, ["admin", "editor", "owner"]);
         let roles = user_roles_repo
-            .read(Some(&Where::binary("UserId", eq, key.clone())), None, None)
+            .read(&Where::binary("UserId", eq, key.clone()))
             .try_collect::<Vec<_>>().await
             .unwrap();
         assert_eq!(admin.get("Id"), Some(&Value::Int(1)));
@@ -908,9 +883,9 @@ mod user_crud {
         key.insert("Id".into(), Value::Int(1));
         let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
         ada.insert("Name".into(), Value::from("ada-v2"));
-        let updated = accounts_repo.update(ada.clone(), None).await.unwrap();
+        let updated = accounts_repo.update(ada.clone()).await.unwrap();
         let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-        let removed = accounts_repo.delete(ada, None).await.unwrap();
+        let removed = accounts_repo.delete(ada).await.unwrap();
         let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
         let mut other = datasources::Row::new();
         other.insert("TenantId".into(), Value::Int(2));

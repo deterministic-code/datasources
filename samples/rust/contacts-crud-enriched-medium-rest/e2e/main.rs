@@ -45,7 +45,7 @@ async fn main() {
         _ => panic!("id"),
     };
     let loaded: Option<Row> = contacts
-        .read_single(Some(&Where::new(Operator::equals("id", id))), None, None)
+        .read_single(&Where::new(Operator::equals("id", id)))
         .await
         .expect("read");
     let loaded = loaded.expect("row");

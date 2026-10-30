@@ -62,7 +62,7 @@ async fn creates_using_dynamic_after_register() {
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
     let created = users.create(created).await.unwrap();
-    let loaded: Option<Row> = users.read_single(None, None, None).await.unwrap();
+    let loaded: Option<Row> = users.read_single(&()).await.unwrap();
     let updated: Response = users.update(created.clone(), None).await.unwrap();
     let deleted: Response = users.delete(created.clone(), None).await.unwrap();
     assert_eq!(
@@ -97,11 +97,7 @@ async fn writes_user_through_plural_name() {
         .unwrap()
         .unwrap();
     let matches = users_repo
-        .read(
-            Some(&Where::binary("Username", eq, "ada").and("IsEnabled", eq, Value::Bool(true))),
-            None,
-            None,
-        )
+        .read(&Where::binary("Username", eq, "ada").and("IsEnabled", eq, Value::Bool(true)))
         .try_collect::<Vec<_>>().await
         .unwrap();
     created.insert("Username".into(), Value::from("ada-v2"));
@@ -150,11 +146,7 @@ async fn reads_through_access_create_readonly() {
         .create_readonly()
         .unwrap();
     let loaded = users_repo
-        .read_single(
-            Some(&Where::binary("Id", eq, created.get("Id").unwrap().clone())),
-            None,
-            None,
-        )
+        .read_single(&Where::binary("Id", eq, created.get("Id").unwrap().clone()))
         .await
         .unwrap()
         .unwrap();

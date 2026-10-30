@@ -1,6 +1,8 @@
 use crate::i_where::IWhere;
 use crate::statement::Statement;
 
+impl ReadInput for () {}
+
 pub trait ReadInput: Send + Sync {
     fn as_statement(&self) -> Option<&dyn Statement> {
         None

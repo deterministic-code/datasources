@@ -1,6 +1,5 @@
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
-use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
@@ -54,6 +53,14 @@ impl MockRepository {
     pub fn set_delete_error(&self, message: impl Into<String>) {
         *self.delete_error.lock().expect("mock") = Some(message.into());
     }
+
+    pub async fn update(&self, item: Row) -> Result<Response> {
+        ICRUDRepository::update(self, item, None).await
+    }
+
+    pub async fn delete(&self, item: Row) -> Result<Response> {
+        ICRUDRepository::delete(self, item, None).await
+    }
 }
 
 impl IRepository for MockRepository {}
@@ -64,24 +71,14 @@ impl IReadonlyRepository for MockRepository {
         Some(self)
     }
 
-    async fn read_single(
-        &self,
-        _query: Option<&dyn ReadInput>,
-        _parameters: Option<&[crate::Parameter]>,
-        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<Row>> {
+    async fn read_single(&self, _query: &dyn ReadInput) -> Result<Option<Row>> {
         if let Some(error) = &*self.read_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").first().cloned())
     }
 
-    fn read<'a>(
-        &'a self,
-        _query: Option<&'a dyn ReadInput>,
-        _parameters: Option<&'a [crate::Parameter]>,
-        _options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+    fn read<'a>(&'a self, _query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
             let error = error.clone();
             return Box::pin(once(async move { Err(DatasourceError::message(error)) }));
@@ -101,14 +98,14 @@ impl ICRUDRepository for MockRepository {
         Ok(item)
     }
 
-    async fn update(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, _item: Row, _by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
         if let Some(error) = &*self.update_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(Response::new(Value::Null, 1, None))
     }
 
-    async fn delete(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, _item: Row, _by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
         if let Some(error) = &*self.delete_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
@@ -116,6 +113,6 @@ impl ICRUDRepository for MockRepository {
     }
 
     async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {
-        self.read_single(None, None, None).await
+        self.read_single(&()).await
     }
 }

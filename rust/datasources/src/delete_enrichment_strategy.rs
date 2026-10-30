@@ -35,25 +35,8 @@ pub(crate) async fn load(
         return Ok(Vec::new());
     };
     writer
-        .read(
-            Some(&Where::new(Operator::equals(enrichment.related_key.clone(), key))),
-            None, None
-        )
+        .read(&Where::new(Operator::equals(enrichment.related_key.clone(), key)))
         .try_collect::<Vec<_>>().await
-}
-
-pub(crate) fn children_where(
-    writer: &dyn ICRUDRepository,
-    enrichment: &Enrichment,
-    parent: &Row,
-) -> Option<Where> {
-    if !writer.id_names().is_empty() {
-        return None;
-    }
-    parent
-        .get(&enrichment.source_property)
-        .cloned()
-        .map(|key| Where::new(Operator::equals(enrichment.related_key.clone(), key)))
 }
 
 #[cfg(test)]
@@ -110,10 +93,10 @@ mod tests {
             children.clone(),
             None,
         );
-        parents.delete(created, None).await.unwrap();
-        let left = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+        parents.delete(created).await.unwrap();
+        let left = children.read(&()).try_collect::<Vec<_>>().await.unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].get("label"), Some(&Value::from("a")));
-        assert!(parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+        assert!(parents.read(&()).try_collect::<Vec<_>>().await.unwrap().is_empty());
     }
 }

@@ -1,6 +1,5 @@
 use super::not_implemented::fail;
 use crate::i_repository::IRepository;
-use crate::i_where::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
@@ -44,21 +43,11 @@ impl IReadonlyRepository for StubRepository {
         Some(self)
     }
 
-    async fn read_single(
-        &self,
-        _query: Option<&dyn ReadInput>,
-        _parameters: Option<&[crate::Parameter]>,
-        _options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<Row>> {
+    async fn read_single(&self, _query: &dyn ReadInput) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 
-    fn read<'a>(
-        &'a self,
-        _query: Option<&'a dyn ReadInput>,
-        _parameters: Option<&'a [crate::Parameter]>,
-        _options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+    fn read<'a>(&'a self, _query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         let provider = self.provider.clone();
         Box::pin(once(async move { Err(fail(&provider)) }))
     }
@@ -70,11 +59,11 @@ impl ICRUDRepository for StubRepository {
         Err(fail(&self.provider))
     }
 
-    async fn update(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, _item: Row, _by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 
-    async fn delete(&self, _item: Row, _by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, _item: Row, _by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
         Err(fail(&self.provider))
     }
 

@@ -4,8 +4,8 @@ let write = Arc::new(DefaultWriteEnrichmentStrategy::new(
     None,
     false,
 ));
-let children = Arc::new(CRUDRepository::memory(vec![]));
-let mut parents = CRUDRepository::memory_with(vec![], Some(write));
+let children = Arc::new(CRUDRepository::<Row>::memory(vec![]));
+let mut parents = CRUDRepository::<Row>::memory_with(vec![], Some(write));
 let parent = Row::new();
 let created = parents.create(parent).await.unwrap();
 let mut child = Row::new();
@@ -17,5 +17,5 @@ parents.add_enriched(
     children.clone(),
     None,
 );
-parents.delete(created, None).await.unwrap();
-let left = children.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+parents.delete(created).await.unwrap();
+let left = children.read(&()).try_collect::<Vec<_>>().await.unwrap();

@@ -52,13 +52,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
             let cache_key = key_of(&key);
             if !cache.contains_key(&cache_key) {
                 let related = via
-                    .read_single(
-                        Some(&Where::new(Operator::equals(
+                    .read_single(&Where::new(Operator::equals(
                             enrichment.related_key.clone(),
                             key.clone(),
-                        ))),
-                        None, None
-        )
+                        )))
                     .await?;
                 cache.insert(cache_key.clone(), related);
             }
@@ -89,13 +86,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                 continue;
             };
             let related = via
-                .read(
-                    Some(&Where::new(Operator::equals(
+                .read(&Where::new(Operator::equals(
                         enrichment.related_key.clone(),
                         key,
-                    ))),
-                    None, None
-        )
+                    )))
                 .try_collect::<Vec<_>>().await?;
             parent.insert(
                 enrichment.destination_property.clone(),
@@ -123,13 +117,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                 continue;
             };
             let links = link
-                .read(
-                    Some(&Where::new(Operator::equals(
+                .read(&Where::new(Operator::equals(
                         association.parent.clone(),
                         key,
-                    ))),
-                    None, None
-        )
+                    )))
                 .try_collect::<Vec<_>>().await?;
             let mut related_rows = Vec::new();
             for row in links {
@@ -137,13 +128,10 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
                     continue;
                 };
                 if let Some(entity) = via
-                    .read_single(
-                        Some(&Where::new(Operator::equals(
+                    .read_single(&Where::new(Operator::equals(
                             enrichment.related_key.clone(),
                             id,
-                        ))),
-                        None, None
-        )
+                        )))
                     .await?
                 {
                     related_rows.push(entity);

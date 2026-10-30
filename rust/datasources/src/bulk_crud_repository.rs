@@ -248,22 +248,12 @@ impl IReadonlyRepository for BulkCRUDRepository {
         Some(self)
     }
 
-    async fn read_single(
-        &self,
-        query: Option<&dyn ReadInput>,
-        parameters: Option<&[crate::Parameter]>,
-        options: Option<&crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Result<Option<Row>> {
-        self.crud.read_single(query, parameters, options).await
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<Row>> {
+        self.crud.read_single(query).await
     }
 
-    fn read<'a>(
-        &'a self,
-        query: Option<&'a dyn ReadInput>,
-        parameters: Option<&'a [crate::Parameter]>,
-        options: Option<&'a crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions>,
-    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
-        self.crud.read(query, parameters, options)
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.crud.read(query)
     }
 }
 
@@ -282,11 +272,11 @@ impl ICRUDRepository for BulkCRUDRepository {
     }
 
     async fn update(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.crud.update(item, by_where).await
+        ICRUDRepository::update(&*self.crud, item, by_where).await
     }
 
     async fn delete(&self, item: Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        self.crud.delete(item, by_where).await
+        ICRUDRepository::delete(&*self.crud, item, by_where).await
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {

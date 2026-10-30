@@ -4,7 +4,7 @@ use super::connection::SqliteConnection;
 use datasources::converters::{MetaDataRowTypeConverter, RowTypeConverter};
 use datasources::{
     as_readonly, encode_rows, CRUDRepository, CRUDRepositoryOptions, Connection, FlatToNestedMapper,
-    ICRUDRepository, IReadonlyRepository, Mapper, Operator, Row, TypeConverter, Value, Where,
+    Mapper, Operator, Row, TypeConverter, Value, Where,
 };
 use datasources_code_generators::SqlGenerateDriver;
 use datasources_tests::{
@@ -90,7 +90,7 @@ async fn maps_join_rows_to_nested_contacts() {
     let contacts = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
         join_repo
-            .read(Some(&contacts_join_query(None)), None, None)
+            .read(&contacts_join_query(None))
             .try_collect::<Vec<_>>().await
             .unwrap(),
     ));
@@ -239,10 +239,7 @@ async fn writes_enriched_contact() {
         panic!("expected insert id");
     };
     let loaded = contacts_repo
-        .read_single(
-            Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
-            None, None
-        )
+        .read_single(&Where::new(Operator::equals("Id", Value::Int(id))))
         .await
         .unwrap()
         .unwrap();
