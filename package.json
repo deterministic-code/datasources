@@ -70,6 +70,10 @@
     "yaml": "^2.9.1"
   },
   "dependencies": {
+    "@deterministic-code/datasources": "^0.1.30",
+    "@deterministic-code/datasources-mysql": "^0.1.30",
+    "@deterministic-code/datasources-postgres": "^0.1.30",
+    "@deterministic-code/datasources-sqlite": "^0.1.30",
     "@deterministic-code/migraters": "^0.0.13"
   }
 }
