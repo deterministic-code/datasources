@@ -69,7 +69,7 @@ export class Datasource implements IDatasource {
     const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     const schema = options?.schema ?? new Schema({});
-    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.columns);
+    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.types());
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
@@ -87,7 +87,7 @@ export class Datasource implements IDatasource {
     const built = createReadonlyRepositoryMappingOptions(type, this.driver.rowTypeConverters);
     const types = this.driver.rowTypeConverters;
     const schema = options?.schema ?? new Schema({});
-    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.columns);
+    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.types());
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,

@@ -130,8 +130,28 @@ impl<T: FromSchema> CRUDRepository<T> {
 
     pub fn fill_create_zeros(&self, record: &Row) -> Row {
         let mut filled = record.clone();
-        for (key, value) in &self.create_zeros {
-            filled.entry(key.clone()).or_insert_with(|| value.clone());
+        if self.create_zeros.is_empty() {
+            for (key, column) in &self.readonly.schema().columns {
+                if self.ids.iter().any(|id| id == key)
+                    || !listed(&self.create_properties, key, true)
+                    || column.nullable
+                    || column.has_default
+                {
+                    continue;
+                }
+                let zero = match column.type_name.as_str() {
+                    "string" => Some(Value::from("")),
+                    "boolean" => Some(Value::from(false)),
+                    _ => None,
+                };
+                if let Some(value) = zero {
+                    filled.entry(key.clone()).or_insert(value);
+                }
+            }
+        } else {
+            for (key, value) in &self.create_zeros {
+                filled.entry(key.clone()).or_insert_with(|| value.clone());
+            }
         }
         filled
     }

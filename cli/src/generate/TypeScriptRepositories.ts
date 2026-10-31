@@ -1,13 +1,15 @@
 import { generate as datasource } from "@deterministic-code/typescript-generators/generate-datasource-types";
 import { generate as views } from "@deterministic-code/typescript-generators/generate-view-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
-import { Repositories } from "./Repositories.ts";
+import { RepositoryGenerator } from "./RepositoryGenerator.ts";
+import { schemaPairs } from "./schemaPairs.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
-class TypeScriptRepositories extends Repositories {
+class TypeScriptRepositories extends RepositoryGenerator {
   readonly types = { datasource, views };
 
   typesPrefix = (casing: ICasingStrategy, kind: "datasource" | "views"): string =>
@@ -16,21 +18,21 @@ class TypeScriptRepositories extends Repositories {
   repositoriesPrefix = (casing: ICasingStrategy): string =>
     `typescript/${casing.convertDirectories("repositories")}`;
 
-  generate(models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] {
+  generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("typescript", settings);
     return [
-      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.ts`, fill(repositoryTmpl, this.repository(model, casing)))),
+      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.ts`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
       content(`${casing.convertFileName("repository_registry")}.ts`, fill(registryTmpl, this.registry(models, casing))),
     ];
   }
 
-  private repository(model: RepositoryModel, casing: ICasingStrategy): Record<string, unknown> {
+  private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown> {
     const children = this.childrenOf(model, casing).map((child) => ({
       ...child,
       repoImport: `./${casing.convertFileName(`${child.specName}_repository`)}`,
     }));
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
-    const dialects = this.dialectsBag(model);
+    const dialects = this.dialectsBag(model, spec, casing);
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
@@ -40,11 +42,7 @@ class TypeScriptRepositories extends Repositories {
       enrichments,
       setup: children.length === 0 && enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      createZeros: model.createZeros.map((zero, index) => ({
-        name: zero.name,
-        boolean: zero.kind === "boolean" ? {} : undefined,
-        comma: index > 0 ? {} : undefined,
-      })),
+      schema: this.schemaBag(schemaPairs(model, spec, casing)),
       ...this.optionsOf(model),
       optimisticConcurrency: token === undefined
         ? undefined

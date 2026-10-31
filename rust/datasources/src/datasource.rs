@@ -33,7 +33,7 @@ pub trait Datasource: Send + Sync {
         &self,
     ) -> HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>;
     fn row_converter(&self, schema: &crate::schema::Schema) -> RowTypeConverter {
-        RowTypeConverter::from(|| self.row_type_converters(), &schema.columns)
+        RowTypeConverter::from(|| self.row_type_converters(), &schema.types())
     }
     fn repository_from(
         &self,

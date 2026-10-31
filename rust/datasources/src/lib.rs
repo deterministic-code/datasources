@@ -161,7 +161,7 @@ pub use facet::{self, Facet};
 pub use rust_decimal;
 pub use uuid;
 pub use from_schema::{FromSchema, SchemaObject};
-pub use schema::Schema;
+pub use schema::{Schema, SchemaColumn};
 pub use enrichment::Enrichment;
 pub use enrichment_property_type::EnrichmentPropertyType;
 pub use enrichment_via::EnrichmentVia;

@@ -28,6 +28,7 @@ import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
+import { Schema } from "./Schema.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -36,6 +37,23 @@ const assigned = (value: Cell): boolean =>
 
 const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
   list === undefined ? fallback : list.includes(col);
+
+const zerosFromSchema = (
+  schema: Schema,
+  ids: readonly string[],
+  createProperties: readonly string[] | undefined,
+): Cells =>
+  Object.fromEntries(
+    Object.entries(schema.columns).flatMap(([name, column]) => {
+      if (ids.includes(name) || !listed(createProperties, name, true)) return [];
+      if (column.nullable || column.hasDefault) return [];
+      return column.type === "string"
+        ? [[name, ""]]
+        : column.type === "boolean"
+          ? [[name, false]]
+          : [];
+    }),
+  );
 
 const writable = (
   key: string,
@@ -90,6 +108,7 @@ export class CRUDRepository<T = Cells>
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
   protected createZeros?: Cells;
+  private readonly schema: Schema;
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
@@ -109,6 +128,7 @@ export class CRUDRepository<T = Cells>
     this.ids = opened.built.ids;
     this.createProperties = (options as CRUDRepositoryOptions<T>).createProperties;
     this.updateProperties = (options as CRUDRepositoryOptions<T>).updateProperties;
+    this.schema = (options as CRUDRepositoryOptions<T>).schema ?? new Schema({});
     this.crudStatements = opened.statements;
     this.tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
     this.write = (options as CRUDRepositoryOptions<T>).write ?? new DefaultWriteEnrichmentStrategy<T>();
@@ -280,8 +300,13 @@ export class CRUDRepository<T = Cells>
     return this.idWhere({ [this.ids[0]!]: id });
   };
 
-  fillCreateZeros = (record: Cells): Cells =>
-    this.createZeros === undefined ? record : { ...this.createZeros, ...record };
+  fillCreateZeros = (record: Cells): Cells => {
+    const zeros =
+      this.createZeros !== undefined && Object.keys(this.createZeros).length > 0
+        ? this.createZeros
+        : zerosFromSchema(this.schema, this.ids, this.createProperties);
+    return Object.keys(zeros).length === 0 ? record : { ...zeros, ...record };
+  };
 
   private reverseConvert = (item: T): Cells => {
     const row = this.objectConverter!.reverseConvert(item);

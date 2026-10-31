@@ -12,6 +12,7 @@ import {
   CRUDRepositoryBuilder,
   ReadonlyRepositoryBuilder,
   createCRUDRepositoryOptions,
+  Schema,
 } from "./index.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
@@ -268,6 +269,28 @@ describe("CRUDRepository", () => {
       "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
     );
     expect(command.executeCalls[1]?.parameters?.find((field) => field.name === "is_starred")?.value).toBe(true);
+  });
+
+  it("fills missing string and bool zeros from schema on create", async () => {
+    const { repo, command } = create({
+      entity: "contacts",
+      ids: ["id"],
+      readProperties: ["id", "name", "given_name", "is_starred", "uuid", "gender_type_id"],
+      createProperties: ["name", "given_name", "is_starred", "uuid", "gender_type_id"],
+      schema: new Schema({
+        name: { type: "string", nullable: false, hasDefault: false },
+        given_name: { type: "string", nullable: false, hasDefault: false },
+        is_starred: { type: "boolean", nullable: false, hasDefault: false },
+        uuid: { type: "uuid", nullable: false, hasDefault: true },
+        gender_type_id: { type: "integer", nullable: false, hasDefault: false },
+      }),
+    });
+    command.response = { result: undefined, rowsAffected: 1 };
+    command.reader = new MockReader([{ id: 1 }]);
+    await repo.create({ given_name: "Ada" });
+    expect(command.executeCalls[0]?.text).toBe(
+      "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
+    );
   });
 
   it("writes only readProperties on create and update", async () => {

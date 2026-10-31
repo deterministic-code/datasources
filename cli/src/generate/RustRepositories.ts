@@ -6,11 +6,11 @@ import type { IDeterministic } from "@deterministic-code/deterministic-generator
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { dialectsOf, type RepositoryModel } from "./RepositoryModel.ts";
-import { Repositories } from "./Repositories.ts";
+import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
 
-class RustRepositories extends Repositories {
+class RustRepositories extends RepositoryGenerator {
   readonly types = { datasource, views };
 
   typesPrefix = (): string => "rust";
@@ -41,7 +41,7 @@ class RustRepositories extends Repositories {
     const dialects = dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ entity: model.entity, ...planned }),
-      schema: schemaPairs({ ...model, ...planned }, spec, casing).map((pair) => ({ from: pair.from, to: pair.to })),
+      schema: this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
     }));
     const token = model.optimisticConcurrency;
     const vias = new Map<string, string>();
@@ -56,13 +56,7 @@ class RustRepositories extends Repositories {
       wrapped: child.length === 0 ? undefined : {},
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      schema: schemaPairs(model, spec, casing).map((pair) => ({ from: pair.from, to: pair.to })),
-      createZeros: model.createZeros.map((zero, index) => ({
-        name: zero.name,
-        boolean: zero.kind === "boolean" ? {} : undefined,
-        first: index === 0 ? {} : undefined,
-        last: index === model.createZeros.length - 1 ? {} : undefined,
-      })),
+      schema: this.schemaBag(schemaPairs(model, spec, casing)),
       readonlyChildren: [...vias].map(([specName]) => ({
         field: child.find((item) => item.specName === specName)?.field,
         module: this.ident(casing.convertFileName(`${specName}_repository`)),

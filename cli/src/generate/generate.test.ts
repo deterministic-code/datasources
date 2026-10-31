@@ -21,6 +21,7 @@ import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
 import { defaultDatasourceYaml } from "./loadSpec.ts";
+import { DictionaryMapper } from "@deterministic-code/datasources";
 import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 
@@ -211,13 +212,19 @@ describe("generate", () => {
     expect(contactTs).toContain('.add("postgres", {');
     expect(contactTs).toContain('createProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"]');
     expect(contactTs).toContain('createProperties: ["contactSourceId", "firstName", "lastName", "email", "notes"]');
-    expect(contactTs).toContain("this.createZeros = {");
-    expect(contactTs).toContain("firstName: \"\"");
-    expect(contactTs).toContain("lastName: \"\"");
-    expect(contactTs).not.toContain("uuid:");
+    expect(contactTs).not.toContain("this.createZeros");
+    expect(contactTs).toContain('firstName: { type: "string"');
+    expect(contactTs).toContain('lastName: { type: "string"');
+    expect(contactTs).toContain("hasDefault:");
     expect(contactTs).toContain(".for(connection)");
     expect(contactTs).toContain('entity: "Contact"');
-    expect(contactTs).toContain('["Contact", "contacts"]');
+    expect(contactTs).toContain('new DictionaryMapper([["Contact", "contacts"]])');
+    expect(contactTs).toContain('["contactSourceId", "contact_source_id"]');
+    expect(contactTs).toMatch(/\}\)\n\s*\.for\(connection\)/);
+    for (const list of contactTs.match(/new DictionaryMapper\((\[(?:[^[\]]|\[[^[\]]*\])*\])\)/g) ?? []) {
+      const pairs = new Function(`return ${list.slice("new DictionaryMapper(".length, -1)}`)() as [string, string][];
+      expect(() => new DictionaryMapper(pairs)).not.toThrow();
+    }
     expect(legacyTs).toContain('["key", "CntID"]');
     expect(legacyTs).toContain('["firstName", "FirstNm"]');
     expect(legacyTs).toContain('ids: ["key"]');
@@ -240,7 +247,8 @@ describe("generate", () => {
     expect(contactRs).toContain('"addresses"');
     expect(contactRs).toContain('"settings"');
     expect(contactRs).toContain('"prefs"');
-    expect(contactRs).toContain("with_create_zeros");
+    expect(contactRs).not.toContain("with_create_zeros");
+    expect(contactRs).toContain("SchemaColumn");
     expect(contactRs).toContain("CRUDRepositoryBuilder::new()");
     expect(contactRs).toContain('.add_for("mysql"');
     expect(contactRs).toContain('.add_for("postgres"');
@@ -458,6 +466,11 @@ types:
     expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
     expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
     expect(addressType.slice(0, addressType.indexOf("createReadonly"))).toContain("ids:");
+    expect(addressType).toContain("new DictionaryMapper([])");
+    for (const list of addressType.match(/new DictionaryMapper\((\[(?:[^[\]]|\[[^[\]]*\])*\])\)/g) ?? []) {
+      const pairs = new Function(`return ${list.slice("new DictionaryMapper(".length, -1)}`)() as [string, string][];
+      expect(() => new DictionaryMapper(pairs)).not.toThrow();
+    }
   });
 
   it("uses kebab rust files through #[path] and CLI flags override settings.yaml", async () => {
@@ -867,7 +880,7 @@ types:
     expect(() => planRepositories(mismatch, "csharp", {})).toThrow(/no matching type in types.yaml/);
   });
 
-  it("plans createZeros for string and bool without spec defaults", async () => {
+  it("plans schema column info for string and bool without spec defaults", async () => {
     const spec = await DeterministicParser(
       memoryReader({
         "types.yaml": `version: 1.0.0
@@ -902,15 +915,19 @@ types: []
       }),
     ).parse({});
     const models = planRepositories(spec, "rust", {});
-    expect(models.find((model) => model.specName === "item")?.createZeros).toEqual([
-      { name: "name", kind: "string" },
-      { name: "is_starred", kind: "boolean" },
-    ]);
     const rust = rustRepositories.generate(models, {}, spec);
     const typescript = typescriptRepositories.generate(models, {}, spec);
-    expect(textOf(rust, "itemRepository.rs")).toContain("Value::from(false)");
-    expect(textOf(rust, "itemRepository.rs")).not.toContain("Value::from(0)");
-    expect(textOf(typescript, "itemRepository.ts")).toContain("is_starred: false");
+    const rustText = textOf(rust, "itemRepository.rs");
+    const tsText = textOf(typescript, "itemRepository.ts");
+    expect(rustText).toContain('type_name: "string".into()');
+    expect(rustText).toContain('type_name: "boolean".into()');
+    expect(rustText).toContain("has_default: true");
+    expect(rustText).not.toContain("with_create_zeros");
+    expect(tsText).toContain('name: { type: "string", nullable: false, hasDefault: false }');
+    expect(tsText).toContain('is_starred: { type: "boolean", nullable: false, hasDefault: false }');
+    expect(tsText).toContain('note: { type: "string", nullable: false, hasDefault: true }');
+    expect(tsText).toContain('uuid: { type: "uuid", nullable: false, hasDefault: true }');
+    expect(tsText).not.toContain("this.createZeros");
   });
 
   it("writes each generate target", async () => {

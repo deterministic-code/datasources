@@ -73,6 +73,12 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
         ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
         CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
         UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+        Schema = new(new Dictionary<string, SchemaColumn>
+        {
+{{#schema}}
+            ["{{name}}"] = new("{{type}}", {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}),
+{{/schema}}
+        }),
     };
 {{/builder}}
 {{#builder}}
@@ -92,6 +98,12 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
                 ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
                 CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
                 UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+{{#schema}}
+                    ["{{name}}"] = new("{{type}}", {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}),
+{{/schema}}
+                }),
             })
 {{#dialects}}
             .Add("{{engine}}", new()
@@ -108,6 +120,12 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
                 ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
                 CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
                 UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+{{#schema}}
+                    ["{{name}}"] = new("{{type}}", {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}),
+{{/schema}}
+                }),
             })
 {{/dialects}}
             .For(connection);
