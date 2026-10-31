@@ -276,7 +276,12 @@ describe("generate", () => {
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { Contact as contact } from "../types/generated/views/contact"');
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("use super::super::Contact");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("Contact");
+    expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("use super::super::;");
+    expect(textOf(rust, "repositoryRegistry.rs")).toContain("impl Repositories for Arc<dyn Datasource>");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<CRUDRepository<Contact>>");
+    expect(textOf(rust, "contactRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
@@ -396,6 +401,7 @@ types:
     expect(typescript).toContain("rowsAffected !== 1");
     expect(typescript).not.toContain("optimisticConcurrency:");
     expect(rust).toContain("pub struct AccountOptimistic");
+    expect(rust).not.toContain("{{typeName}}Optimistic");
     expect(rust).toContain("Value::Int(n) => Value::Int(n + 1)");
     expect(rust).toContain("rows_affected != 1");
     expect(rust).not.toContain("optimistic_concurrency");
@@ -603,7 +609,7 @@ types:
       ),
     ).toBe(0);
     expect(store.files[join(cwd, "src/generated.rs")]).toBe(
-      `#[path = "../generated/rust/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
+      `#[path = "../generated/rust/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
     );
     expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
     expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();

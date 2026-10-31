@@ -41,6 +41,9 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
   const dest = join(flags.cwd, "src", "generated.rs");
   const rustMod = join(at(flags.cwd, command.output), "rust", "mod.rs");
   const path = relative(join(flags.cwd, "src"), rustMod).replaceAll("\\", "/");
-  await deps.fs.writeFile(dest, `#[path = "${path}"]\nmod generated_mod;\npub use generated_mod::*;\n`);
+  await deps.fs.writeFile(
+    dest,
+    `#[path = "${path}"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
+  );
   deps.log(dest);
 };

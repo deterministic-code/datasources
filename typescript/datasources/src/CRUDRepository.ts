@@ -29,6 +29,7 @@ import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import { RepositoryTree } from "./RepositoryTree.ts";
 import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { Schema } from "./Schema.ts";
+import { SchemaDefault } from "./SchemaDefault.ts";
 
 type Props = Record<string, Scalar | object>;
 
@@ -38,22 +39,33 @@ const assigned = (value: Cell): boolean =>
 const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
   list === undefined ? fallback : list.includes(col);
 
+const languageZero = (value: Cell): boolean => value === "" || value === false;
+
+const applyEmptyDefaults = (
+  record: Cells,
+  schema: Schema,
+  ids: readonly string[],
+  properties: readonly string[] | undefined,
+  fillMissing: boolean,
+  skip: (name: string) => boolean,
+): Cells => {
+  const filled = { ...record };
+  for (const [name, column] of Object.entries(schema.columns)) {
+    if (ids.includes(name) || !listed(properties, name, true) || column.hasDefault || skip(name))
+      continue;
+    const zero = SchemaDefault.of(column);
+    if (filled[name] === "") filled[name] = zero;
+    else if (fillMissing && filled[name] === undefined && languageZero(zero)) filled[name] = zero;
+  }
+  return filled;
+};
+
 const zerosFromSchema = (
   schema: Schema,
   ids: readonly string[],
   createProperties: readonly string[] | undefined,
-): Cells =>
-  Object.fromEntries(
-    Object.entries(schema.columns).flatMap(([name, column]) => {
-      if (ids.includes(name) || !listed(createProperties, name, true)) return [];
-      if (column.nullable || column.hasDefault) return [];
-      return column.type === "string"
-        ? [[name, ""]]
-        : column.type === "boolean"
-          ? [[name, false]]
-          : [];
-    }),
-  );
+  skip: (name: string) => boolean,
+): Cells => applyEmptyDefaults({}, schema, ids, createProperties, true, skip);
 
 const writable = (
   key: string,
@@ -257,7 +269,14 @@ export class CRUDRepository<T = Cells>
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
     const extras = lookupKeys(item as object);
-    const record = this.reverseConvert(item);
+    const record = applyEmptyDefaults(
+      this.reverseConvert(item),
+      this.schema,
+      this.ids,
+      this.updateProperties,
+      false,
+      (name) => this.enrichmentSource(name),
+    );
     const fields = fieldsOf(
       record,
       (col) => extras.has(col) || listed(this.updateProperties, col, !this.ids.includes(col)),
@@ -301,11 +320,13 @@ export class CRUDRepository<T = Cells>
   };
 
   fillCreateZeros = (record: Cells): Cells => {
+    const skip = (name: string): boolean => this.enrichmentSource(name);
     const zeros =
       this.createZeros !== undefined && Object.keys(this.createZeros).length > 0
         ? this.createZeros
-        : zerosFromSchema(this.schema, this.ids, this.createProperties);
-    return Object.keys(zeros).length === 0 ? record : { ...zeros, ...record };
+        : zerosFromSchema(this.schema, this.ids, this.createProperties, skip);
+    const filled = Object.keys(zeros).length === 0 ? { ...record } : { ...zeros, ...record };
+    return applyEmptyDefaults(filled, this.schema, this.ids, this.createProperties, false, skip);
   };
 
   private reverseConvert = (item: T): Cells => {
@@ -330,6 +351,9 @@ export class CRUDRepository<T = Cells>
 
   protected enrichmentInto = (name: string): boolean =>
     enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.destinationProperty === name);
+
+  private enrichmentSource = (name: string): boolean =>
+    enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.sourceProperty === name);
 }
 
 const writerOf = <TRelated>(via: IReadonlyRepository<TRelated>): ICRUDRepository<TRelated> | undefined =>

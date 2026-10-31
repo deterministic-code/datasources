@@ -64,6 +64,8 @@ export const childField = (casing: ICasingStrategy, specName: string): string =>
 
 export const childClass = (typeName: string): string => `${typeName}Repository`;
 
+export const optimisticClass = (typeName: string): string => `${typeName}Optimistic`;
+
 export type LinkedEnrichment = PlannedEnrichment & {
   link: string;
   linkType: string;

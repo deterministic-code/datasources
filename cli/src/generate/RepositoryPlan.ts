@@ -175,7 +175,7 @@ const relations = (
     const ref = referenceOf(field.references);
     if (!ref) continue;
     const target = types.get(ref.type);
-    const other = target?.fields.find((item) => item.name !== ref.field);
+    const other = target?.fields.find((item) => item.name !== ref.field && referenceOf(item.references) !== undefined);
     const otherRef = other === undefined ? undefined : referenceOf(other.references);
     if (target?.tags.includes("many_to_many") === true && other !== undefined && otherRef !== undefined) {
       const via = named(otherRef.type);
