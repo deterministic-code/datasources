@@ -4,8 +4,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const require = createRequire(join(root, "package.json"));
-const { parse } = require("yaml");
+const parseOf = (pkg) => {
+  try {
+    return createRequire(pkg)("yaml").parse;
+  } catch {
+    return undefined;
+  }
+};
+const parse =
+  parseOf(join(root, "package.json")) ?? parseOf(join(root, "typescript/package.json"));
+if (parse === undefined) throw new Error("Cannot find module 'yaml'");
 
 const columnSql = (column) =>
   `${column.name} ${column.type}${column.default == null ? "" : ` DEFAULT ${column.default}`}${column.notNull ? " NOT NULL" : ""}`;
