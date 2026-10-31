@@ -151,7 +151,7 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
 
   private mappedUpdate = (item: T): Updated => {
     const record = this.reverse(item);
-    const fields = this.fields(record, (col) => listed(this.options.updateProperties, col, !this.ids.includes(col)));
+    const fields = this.fields(record, (col) => listed(this.options.updateProperties, col, !this.ids.includes(col)), false);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements().update(fields, this.idsWhere(record), (name, value) =>
       this.cell(name, value, true),
@@ -167,7 +167,7 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
 
   private updateCommand = (item: T, byWhere?: IWhere): BulkCommand => {
     const record = this.reverse(item);
-    const fields = this.fields(record, (col) => listed(this.options.updateProperties, col, !this.ids.includes(col)));
+    const fields = this.fields(record, (col) => listed(this.options.updateProperties, col, !this.ids.includes(col)), false);
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.statements().update(fields, byWhere ?? this.idsWhere(record), (name, value) =>
       this.cell(name, value, byWhere === undefined),
@@ -212,10 +212,11 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
     );
   };
 
-  private fields = (record: Cells, include: (col: string) => boolean): Field[] =>
+  private fields = (record: Cells, include: (col: string) => boolean, omitNull = true): Field[] =>
     Object.entries(record)
       .filter(
-        ([key, value]) => include(key) && this.writable(key) && value !== null && value !== undefined,
+        ([key, value]) =>
+          include(key) && this.writable(key) && value !== undefined && (!omitNull || value !== null),
       )
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => ({ name, value: this.cell(name, value, true) as Scalar }));

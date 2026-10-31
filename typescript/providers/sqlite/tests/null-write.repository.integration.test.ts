@@ -33,8 +33,8 @@ describe("null write", () => {
     const omitted = await repo.create(Object.assign(new Item(), { Name: "ada" }));
     expect(omitted.Id).toBeGreaterThan(0);
     const stored = await repo.readSingleById(omitted.Id);
-    omitted.Name = "ada-v2";
-    const updated = await repo.update(omitted);
+    stored!.Name = "ada-v2";
+    const updated = await repo.update(stored);
     expect(updated.rowsAffected).toBe(1);
     const kept = await repo.readSingleById(omitted.Id);
     const explicit = Object.assign(new Item(), {

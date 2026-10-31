@@ -1,0 +1,10 @@
+---
+description: Core packages stay dialect-free
+alwaysApply: true
+---
+
+# Core
+
+`typescript/datasources`, `csharp/Datasources`, and `rust/datasources` hold the shared repository contract. Dialect SQL, quoting, type maps, default-value native text, and serial/identity helpers stay in that provider.
+
+A missing dialect, a compile error, or a copied converter is not a reason to move provider code into core.

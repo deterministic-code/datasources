@@ -2307,7 +2307,7 @@ fn comparison_aliases() {
 }
 
 #[tokio::test]
-async fn create_and_update_omit_null_datetime_and_version() {
+async fn create_omits_null_datetime_and_version_and_update_writes_them() {
     let command = Arc::new(MockCommand::new());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
@@ -2348,7 +2348,7 @@ async fn create_and_update_omit_null_datetime_and_version() {
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
-        "UPDATE users SET name = $name WHERE id = $id"
+        "UPDATE users SET created = $created, name = $name, version = $version WHERE id = $id"
     );
     let created_grace = repo
         .create(record(&[

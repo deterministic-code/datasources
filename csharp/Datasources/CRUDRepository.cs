@@ -206,7 +206,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     {
         var record = ReverseConvert(item);
         var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
-        var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras);
+        var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = CRUDStatements.Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
@@ -252,8 +252,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
         return record;
     }
 
-    IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include, IReadOnlySet<string>? extras = null) =>
-        [.. record.Where(pair => include(pair.Key) && pair.Value is not Value.Null
+    IReadOnlyList<Parameter> Params(Row record, Func<string, bool> include, IReadOnlySet<string>? extras = null, bool omitNull = true) =>
+        [.. record.Where(pair => include(pair.Key) && (!omitNull || pair.Value is not Value.Null)
                 && (extras?.Contains(pair.Key) == true || Writable(pair.Key) && !EnrichmentInto(pair.Key)))
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];

@@ -102,7 +102,7 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     (string Table, IReadOnlyList<Parameter> Fields, IReadOnlyList<Parameter> Ids) MappedUpdate(T item)
     {
         var record = Reverse(item);
-        var fields = Fields(record, col => Listed(Options.UpdateProperties, col, !Ids.Contains(col)));
+        var fields = Fields(record, col => Listed(Options.UpdateProperties, col, !Ids.Contains(col)), omitNull: false);
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = Statements().Update(fields, IdWhere(record), (name, value) => Cell(name, value, true));
@@ -119,7 +119,7 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
     BulkCommand UpdateCommand(T item, IWhere? byWhere)
     {
         var record = Reverse(item);
-        var fields = Fields(record, col => Listed(Options.UpdateProperties, col, !Ids.Contains(col)));
+        var fields = Fields(record, col => Listed(Options.UpdateProperties, col, !Ids.Contains(col)), omitNull: false);
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
         var statement = Statements().Update(fields, byWhere ?? IdWhere(record), (name, value) => Cell(name, value, byWhere is null));
@@ -163,8 +163,8 @@ public sealed class BatchCommandIBulkWriteStrategy<T> : IBulkWriteStrategy<T> wh
         return row;
     }
 
-    IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include) =>
-        [.. record.Where(pair => include(pair.Key) && Writable(pair.Key) && pair.Value is not Value.Null)
+    IReadOnlyList<Parameter> Fields(Row record, Func<string, bool> include, bool omitNull = true) =>
+        [.. record.Where(pair => include(pair.Key) && Writable(pair.Key) && (!omitNull || pair.Value is not Value.Null))
             .OrderBy(pair => pair.Key)
             .Select(pair => new Parameter(pair.Key, Cell(pair.Key, pair.Value, fieldsApplied: true)))];
 

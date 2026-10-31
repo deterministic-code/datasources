@@ -20,14 +20,13 @@ describe("commands", () => {
     expect(addCommands("rust", ["sqlite"], ["Cargo.toml"])).toEqual([
       { command: "cargo", args: ["add", "datasources"] },
       { command: "cargo", args: ["add", "tokio", "--features", "macros,rt-multi-thread"] },
-      { command: "cargo", args: ["add", "ctor@0.4"] },
       { command: "cargo", args: ["add", "datasources-sqlite"] },
       {
         command: "npm",
         args: ["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"],
       },
     ]);
-    expect(addCommands("rust", ["json"], ["Cargo.toml"])[3]?.args).toEqual([
+    expect(addCommands("rust", ["json"], ["Cargo.toml"])[2]?.args).toEqual([
       "add",
       "datasources-json",
     ]);

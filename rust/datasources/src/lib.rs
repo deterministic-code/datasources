@@ -156,7 +156,7 @@ pub use delete_nested::DeleteNested;
 pub use downcast_connection::downcast_connection;
 pub use driver::Driver;
 pub use chrono;
-pub use ctor::ctor;
+pub use ctor::{ctor, __support};
 pub use facet::{self, Facet};
 pub use rust_decimal;
 pub use uuid;

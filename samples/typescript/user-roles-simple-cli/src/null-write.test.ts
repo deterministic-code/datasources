@@ -33,8 +33,8 @@ describe("null write", () => {
     const omitted = Object.assign(new UserStamp(), { username: "ada" });
     await repo.create(omitted);
     const stored = await repo.readSingleById(omitted.id);
-    omitted.username = "ada-v2";
-    await repo.update(omitted);
+    stored!.username = "ada-v2";
+    await repo.update(stored);
     const kept = await repo.readSingleById(omitted.id);
     const explicit = Object.assign(new UserStamp(), {
       username: "grace",

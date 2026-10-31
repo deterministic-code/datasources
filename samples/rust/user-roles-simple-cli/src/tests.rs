@@ -549,8 +549,9 @@ async fn omits_null_created_and_updated() {
         .await
         .unwrap()
         .unwrap();
-    omitted.insert("username".into(), Value::from("ada-v2"));
-    repo.update(omitted).await.unwrap();
+    let mut renamed = stored.clone();
+    renamed.insert("username".into(), Value::from("ada-v2"));
+    repo.update(renamed).await.unwrap();
     let kept = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await

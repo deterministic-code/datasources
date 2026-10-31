@@ -194,7 +194,7 @@ public class RepositoryTests
     }
 
     [Fact]
-    public async Task CreateAndUpdateOmitNullDatetimeAndVersion()
+    public async Task CreateOmitsNullDatetimeAndVersionAndUpdateWritesThem()
     {
         var (repo, command) = Create<Stamp>();
         command.Response = new Response(new Value.Int(7), 1);
@@ -204,7 +204,7 @@ public class RepositoryTests
         Assert.Equal("INSERT INTO users (name) VALUES ($name)", command.ExecuteCalls[0].Text);
         var updated = await repo.Update(new Stamp { id = 1, name = "ada" });
         Assert.Equal(1, updated.RowsAffected);
-        Assert.Equal("UPDATE users SET name = $name WHERE id = $id", command.ExecuteCalls[1].Text);
+        Assert.Equal("UPDATE users SET created = $created, name = $name, version = $version WHERE id = $id", command.ExecuteCalls[1].Text);
         var grace = await repo.Create(new Stamp
         {
             name = "grace",
@@ -236,7 +236,7 @@ public class RepositoryTests
             ["version"] = Value.Null.Instance
         });
         Assert.Equal(1, updatedRow.RowsAffected);
-        Assert.Equal("UPDATE users SET name = $name WHERE id = $id", rowCommand.ExecuteCalls[1].Text);
+        Assert.Equal("UPDATE users SET created = $created, name = $name, version = $version WHERE id = $id", rowCommand.ExecuteCalls[1].Text);
     }
 
     [Fact]

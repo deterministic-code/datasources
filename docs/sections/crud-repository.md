@@ -906,7 +906,7 @@ pub ids: Vec<String>
 
 {{Create|create|create}}, {{Update|update|update}}, and {{Delete|delete|delete}} open a closed connection before they run.
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create, so a SQL default applies. Update writes a null cell. A present value is written.
 
 {{ReadSingleById|readSingleById|read_single_by_id}} takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 

@@ -211,7 +211,7 @@ describe("CRUDRepository", () => {
     );
   });
 
-  it("omits null datetime and version on create and update", async () => {
+  it("omits null datetime and version on create and writes them on update", async () => {
     const { repo, command } = create({ type: asType(Stamp) });
     command.response = { result: undefined, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 7 }, { id: 7 }]);
@@ -221,7 +221,7 @@ describe("CRUDRepository", () => {
     const updated = await repo.update({ id: 1, name: "ada", created: null, version: null });
     expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toBe(
-      "UPDATE users SET name = $name WHERE id = $id",
+      "UPDATE users SET created = $created, name = $name, version = $version WHERE id = $id",
     );
     const when = new Date("2024-06-01T00:00:00.000Z");
     const grace = await repo.create({ id: 0, name: "grace", created: when, version: new Uint8Array([9, 9]) });

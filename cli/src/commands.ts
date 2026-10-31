@@ -43,7 +43,6 @@ const npmUninstall = (names: Provider[]): Proc[] => {
 const cargoAdd = (names: Provider[]): Proc[] => [
   { command: "cargo", args: ["add", host.rust.core] },
   { command: "cargo", args: ["add", "tokio", "--features", "macros,rt-multi-thread"] },
-  { command: "cargo", args: ["add", "ctor@0.4"] },
   ...names.map((name) => ({
     command: "cargo",
     args: ["add", catalog[name].cargo],
