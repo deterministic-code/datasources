@@ -9,7 +9,7 @@ command
     )
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<Item>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 let created_reader = command
     .execute_reader(
         "SELECT id, name FROM items WHERE id = $id",

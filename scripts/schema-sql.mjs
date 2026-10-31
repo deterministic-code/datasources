@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const require = createRequire(import.meta.url);
-const { parse } = require("../typescript/node_modules/yaml/dist/index.js");
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(join(root, "package.json"));
+const { parse } = require("yaml");
 
 const columnSql = (column) =>
   `${column.name} ${column.type}${column.default == null ? "" : ` DEFAULT ${column.default}`}${column.notNull ? " NOT NULL" : ""}`;

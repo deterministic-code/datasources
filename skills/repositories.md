@@ -150,19 +150,9 @@ var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L19-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L46-L56) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L42-L44) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L69-L114)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L27-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L23-L25) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L50-L92)
 
 ```rust
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Id", "INTEGER"),
-            ("Username", "TEXT"),
-            ("IsEnabled", "INTEGER"),
-        ]
-    }
-}
-
 fn snake_then_plural() -> TransformMapper<String, String> {
     let snake = Arc::new(snake());
     let forward = snake.clone();
@@ -200,15 +190,12 @@ options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
+    .read_single(&Where::binary("Id", eq, 1_i64))
     .await
     .unwrap()
     .unwrap();
 let row = repo
-    .read(
-        Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
-        None, None
-    )
+    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64))
     .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
@@ -317,19 +304,9 @@ var gone = await usersRepo.ReadSingleById(created.Id);
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L19-L27) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L659-L711)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L613-L662)
 
 ```rust
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Id", "INTEGER"),
-            ("Username", "TEXT"),
-            ("IsEnabled", "INTEGER"),
-        ]
-    }
-}
-
 let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
@@ -345,14 +322,11 @@ let by_id = users_repo
     .unwrap()
     .unwrap();
 let matches = users_repo
-    .read(
-        Some(&Where::binary("Username", eq, "ada").and(
+    .read(&Where::binary("Username", eq, "ada").and(
             "IsEnabled",
             eq,
             Value::Bool(true),
-        )),
-        None, None
-)
+        ))
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
@@ -579,34 +553,9 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L725-L736) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L740-L744) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L748-L752) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L920)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L697-L853)
 
 ```rust
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Key", "INTEGER"),
-            ("Login", "TEXT"),
-            ("Active", "INTEGER"),
-            ("Opened", "TEXT"),
-            ("UserType", "INTEGER"),
-            ("Version", "INTEGER"),
-        ]
-    }
-}
-
-impl ConvertSchema for UserType {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("Id", "INTEGER"), ("Name", "TEXT")]
-    }
-}
-
-impl ConvertSchema for UserRole {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("UserId", "INTEGER"), ("Name", "TEXT")]
-    }
-}
-
 let ds = default().unwrap();
 let mut users_options = create_crud_repository_options::<User>();
 users_options.ids = vec!["Key".into()];
@@ -620,9 +569,16 @@ users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new
     ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
 ])));
-users_options.row_converter = Some(RowTypeConverter::of::<User>());
+users_options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "integer".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+    ("UserType".into(), "integer".into()),
+    ("Version".into(), "binary".into()),
+]));
 users_options.object_converter = Some(Box::new(
-    MetaDataRowTypeConverter::of::<User>().with_references(
+    MetaDataRowTypeConverter::new(Vec::new()).with_references(
         vec!["UserType".into()],
         Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
@@ -636,16 +592,19 @@ users_options.object_converter = Some(Box::new(
 ));
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
+type_options.ids = vec!["Id".into()];
 type_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings = Some(std::sync::Arc::new(casing));
-type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+type_options.schema = Schema::new(HashMap::from([
+    ("Id".into(), "integer".into()),
+    ("Name".into(), "string".into()),
+]));
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
     Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
@@ -693,11 +652,10 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+    .read_single(&Where::binary("Key", eq, key.clone()))
     .await
     .unwrap()
     .unwrap();
-let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
 let member = user_types_repo.create(member).await.unwrap();
@@ -713,27 +671,21 @@ loaded.insert(
     "Roles".into(),
     encode_rows(&[kept_admin, kept_editor, owner_role]),
 );
+let version = loaded.get("Version").cloned().unwrap();
 loaded.insert("Version".into(), Value::Int(2));
-let updated = users_repo
-    .update(
-        loaded.clone(),
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
-    )
+let by_version = Where::binary("Key", eq, key.clone()).and("Version", eq, version);
+let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+    .read_single(&Where::binary("Key", eq, key.clone()))
     .await
     .unwrap()
     .unwrap();
-let stale = users_repo
-    .update(
-        loaded.clone(),
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
-    )
+let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
-let removed = users_repo.delete(loaded, None).await.unwrap();
+let removed = users_repo.delete(loaded).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 
@@ -973,7 +925,7 @@ var parents = await parentsRepo.Read().ToListAsync();
 var children = await childrenRepo.Read().ToListAsync();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1088-L1126)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1076-L1114)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -1004,7 +956,7 @@ let ids = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let stored_parents = parents.read(&()).try_collect::<Vec<_>>().await.unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L49)

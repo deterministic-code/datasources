@@ -25,6 +25,13 @@ users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
 ])));
+users_options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "uuid".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+    ("UserTypeId".into(), "integer".into()),
+]));
 let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
@@ -47,10 +54,7 @@ users_repo.add_enriched(
     None,
 );
 let account = users_repo
-    .read_single(
-        Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None, None
-)
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
     .await
     .unwrap()
     .unwrap();

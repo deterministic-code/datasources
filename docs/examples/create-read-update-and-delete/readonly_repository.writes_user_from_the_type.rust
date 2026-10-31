@@ -13,14 +13,11 @@ let by_id = users_repo
     .unwrap()
     .unwrap();
 let matches = users_repo
-    .read(
-        Some(&Where::binary("Username", eq, "ada").and(
+    .read(&Where::binary("Username", eq, "ada").and(
             "IsEnabled",
             eq,
             Value::Bool(true),
-        )),
-        None, None
-)
+        ))
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));

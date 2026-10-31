@@ -23,27 +23,24 @@ options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
 ])));
+options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "uuid".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+]));
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
-    .read_single(
-        Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None, None
-    )
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
     .await
     .unwrap()
     .unwrap();
 let by_login = repo
-    .read(
-        Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-        None, None
-    )
+    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true))
     .try_collect::<Vec<_>>().await
     .unwrap();
 let later = repo
-    .read(
-        Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-        None, None
-    )
+    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened))
     .try_collect::<Vec<_>>().await
     .unwrap();

@@ -9,13 +9,16 @@ Find the closest title. Open that language's snippet. Topic files already includ
 - Example
   - `docs/examples/example/ReadPipelineIntegrationTests.User.csharp`
   - `docs/examples/example/ReadPipelineIntegrationTests.MapsAndConvertsUsersThroughTheReadPipeline.csharp`
-  - `docs/examples/example/read_pipeline.ConvertSchemaForUser.rust`
   - `docs/examples/example/read_pipeline.maps_and_converts_users_through_the_read_pipeline.rust`
   - `docs/examples/example/read-pipeline.integration.test.User.typescript`
   - `docs/examples/example/read-pipeline.integration.test.maps-and-converts-users-through-the-read-pipeline.typescript`
 
 ## Datasource
 
+- Close the default connection
+  - `docs/examples/close-the-default-connection/DatasourceTests.ClosesTheDefaultConnection.csharp`
+  - `docs/examples/close-the-default-connection/datasource.closes_the_default_connection.rust`
+  - `docs/examples/close-the-default-connection/Datasource.test.closes-the-default-connection.typescript`
 - Create default from .env settings
   - `docs/examples/create-default-from-env-settings/DatasourceTests.CreateDefaultFromEnvSettings.csharp`
   - `docs/examples/create-default-from-env-settings/datasource.create_default_from_env_settings.rust`
@@ -72,14 +75,12 @@ Find the closest title. Open that language's snippet. Topic files already includ
 - Run ExecuteReader and return NameValues
   - `docs/examples/run-executereader-and-return-namevalues/SqliteCommandIntegrationTests.NameValue.csharp`
   - `docs/examples/run-executereader-and-return-namevalues/SqliteCommandIntegrationTests.RunExecuteReaderAndReturnNameValues.csharp`
-  - `docs/examples/run-executereader-and-return-namevalues/command.ConvertSchemaForNameValue.rust`
   - `docs/examples/run-executereader-and-return-namevalues/command.run_execute_reader_and_return_name_values.rust`
   - `docs/examples/run-executereader-and-return-namevalues/sqlite.integration.test.NameValue.typescript`
   - `docs/examples/run-executereader-and-return-namevalues/sqlite.integration.test.run-executereader-and-return-namevalues.typescript`
 - Execute, Insert, Read, Update, and Delete
   - `docs/examples/execute-insert-read-update-and-delete/SqliteCommandIntegrationTests.Item.csharp`
   - `docs/examples/execute-insert-read-update-and-delete/SqliteCommandIntegrationTests.ExecuteInsertReadUpdateAndDelete.csharp`
-  - `docs/examples/execute-insert-read-update-and-delete/command.ConvertSchemaForItem.rust`
   - `docs/examples/execute-insert-read-update-and-delete/command.execute_insert_read_update_and_delete.rust`
   - `docs/examples/execute-insert-read-update-and-delete/sqlite.integration.test.Item.typescript`
   - `docs/examples/execute-insert-read-update-and-delete/sqlite.integration.test.execute-insert-read-update-and-delete.typescript`
@@ -140,7 +141,6 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/simple-readonly/ReadonlyRepositoryIntegrationTests.SnakeThenPlural.csharp`
   - `docs/examples/simple-readonly/ReadonlyRepositoryIntegrationTests.Snake.csharp`
   - `docs/examples/simple-readonly/ReadonlyRepositoryIntegrationTests.ReadsUsersByIdAndByUsernameAndEnabled.csharp`
-  - `docs/examples/simple-readonly/readonly_repository.ConvertSchemaForUser-1.rust`
   - `docs/examples/simple-readonly/readonly_repository.snake_then_plural.rust`
   - `docs/examples/simple-readonly/readonly_repository.snake.rust`
   - `docs/examples/simple-readonly/readonly_repository.reads_users_by_id_and_by_username_and_enabled.rust`
@@ -151,7 +151,6 @@ Find the closest title. Open that language's snippet. Topic files already includ
 - Create, Read, Update, and Delete
   - `docs/examples/create-read-update-and-delete/ReadonlyRepositoryIntegrationTests.User.csharp`
   - `docs/examples/create-read-update-and-delete/ReadonlyRepositoryIntegrationTests.WritesUserFromTheType.csharp`
-  - `docs/examples/create-read-update-and-delete/readonly_repository.ConvertSchemaForUser-1.rust`
   - `docs/examples/create-read-update-and-delete/readonly_repository.writes_user_from_the_type.rust`
   - `docs/examples/create-read-update-and-delete/readonly.repository.integration.test.User-1.typescript`
   - `docs/examples/create-read-update-and-delete/readonly.repository.integration.test.writes-a-user-from-the-type.typescript`
@@ -160,9 +159,6 @@ Find the closest title. Open that language's snippet. Topic files already includ
   - `docs/examples/enriched-create-read-update-and-delete/ReadonlyRepositoryIntegrationTests.UserType.csharp`
   - `docs/examples/enriched-create-read-update-and-delete/ReadonlyRepositoryIntegrationTests.UserRole.csharp`
   - `docs/examples/enriched-create-read-update-and-delete/ReadonlyRepositoryIntegrationTests.UpdatesUsersViewWhenTheVersionMatches.csharp`
-  - `docs/examples/enriched-create-read-update-and-delete/readonly_repository.ConvertSchemaForUser-2.rust`
-  - `docs/examples/enriched-create-read-update-and-delete/readonly_repository.ConvertSchemaForUserType-3.rust`
-  - `docs/examples/enriched-create-read-update-and-delete/readonly_repository.ConvertSchemaForUserRole-2.rust`
   - `docs/examples/enriched-create-read-update-and-delete/readonly_repository.updates_users_view_when_the_version_matches.rust`
   - `docs/examples/enriched-create-read-update-and-delete/readonly.repository.integration.test.users-view-crud-User.typescript`
   - `docs/examples/enriched-create-read-update-and-delete/readonly.repository.integration.test.users-view-crud-UserType.typescript`

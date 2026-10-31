@@ -115,7 +115,7 @@ var columnMappedRows = unmapped
 var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new Dictionary<string, string>
 {
     ["Uuid"] = "uuid",
-    ["IsEnabled"] = "bool",
+    ["IsEnabled"] = "boolean",
     ["Created"] = "datetime",
 });
 var convertedRows = columnMappedRows.Select(rowConverter.Convert).ToList();
@@ -183,21 +183,9 @@ var finalManualEntities = convertedRows.Select(row => new User
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L12-L22) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L24-L160)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L10-L146)
 
 ```rust
-impl ConvertSchema for User {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![
-            ("Id", "INTEGER"),
-            ("Uuid", "TEXT"),
-            ("Username", "TEXT"),
-            ("IsEnabled", "INTEGER"),
-            ("Created", "TEXT"),
-        ]
-    }
-}
-
 let ada = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
 let grace = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
 let lin = Uuid::parse_str("33333333-3333-3333-3333-333333333333").unwrap();
@@ -283,7 +271,7 @@ let converted_rows: Vec<Row> = column_mapped_rows
     .map(|row| row_converter.convert(row).unwrap())
     .collect();
 
-let object_converter = MetaDataRowTypeConverter::of::<User>();
+let object_converter = MetaDataRowTypeConverter::new(Vec::new());
 let final_entities: Vec<Row> = converted_rows
     .iter()
     .map(|row| object_converter.convert(row).unwrap())
@@ -398,7 +386,7 @@ const columnMappedRows = unmapped.map((row) =>
 
 const rowConverter = RowTypeConverter.from(new SqliteDriver().rowTypeConverters, {
   Uuid: "uuid",
-  IsEnabled: "bool",
+  IsEnabled: "boolean",
   Created: "datetime",
 });
 const convertedRows = columnMappedRows.map((row) => rowConverter.convert(row));
@@ -682,7 +670,7 @@ var reversed = mapper.ReverseMap(mapped);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L146-L172)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L148-L174)
 
 ```rust
 let contact = Contact {
@@ -1846,7 +1834,7 @@ Email
 Phone
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L51-L74)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L50-L73)
 
 ```rust
 let mapper = DictionaryMapper::new([
@@ -1946,7 +1934,7 @@ address
 Home
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L76-L88)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/dictionary_mapper.rs#L75-L87)
 
 ```rust
 let mapper = DictionaryMapper::new([
@@ -3010,7 +2998,7 @@ var flat = mapper.Map(nested);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L96-L116)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L98-L118)
 
 ```rust
 let nested = Nested {
@@ -3120,7 +3108,7 @@ contact_email
 email
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L134-L144)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L136-L146)
 
 ```rust
 let mapper = TransformMapper::new(
@@ -3197,7 +3185,7 @@ var reversed = mapper.ReverseMap(mapped);
 }
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L146-L172)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/mappers/mod.rs#L148-L174)
 
 ```rust
 let contact = Contact {

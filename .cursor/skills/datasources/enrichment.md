@@ -168,7 +168,7 @@ parents_repo.add_enriched(
     types_repo,
     None,
 );
-let items = parents_repo.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let items = parents_repo.read(&()).try_collect::<Vec<_>>().await.unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/ReadonlyRepository.test.ts#L94-L106)

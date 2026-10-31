@@ -284,7 +284,7 @@ var rows = await reader.Read().ToListAsync();
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L77-L107)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L50-L80)
 
 ```rust
 let ds = default().unwrap();
@@ -368,7 +368,7 @@ var mapped = await reader.Read().Select(source =>
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L109-L140)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L82-L113)
 
 ```rust
 let ds = default().unwrap();
@@ -444,7 +444,7 @@ await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) V
 await command.Execute(Native.N("INSERT INTO users (id, username, contact_name) VALUES (1, 'bobby', 'roberta')"));
 await using var reader = await command.ExecuteReader("SELECT id, username, contact_name FROM users");
 var rows = await reader.Read().ToListAsync();
-var mapper = new FlatToNestedMapper(new TypeMap
+var mapper = new FlatToNestedMapper(new Datasources.TypeMap
 {
     Key = "id",
     Fields = new Dictionary<string, TypeMapField>
@@ -474,7 +474,7 @@ var nested = mapper.Map(rows);
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L142-L195)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L115-L168)
 
 ```rust
 let ds = default().unwrap();
@@ -633,7 +633,7 @@ var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L26-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L30-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L324-L419)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L10-L12) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L14-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L297-L392)
 
 ```rust
 struct Contact {
@@ -666,7 +666,7 @@ let reader = command
     )
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<User>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 fn user_contacts_mapper() -> TransformMapper<Row, User> {
     fn text_of(row: &Row, key: &str) -> String {
         match row.get(key) {
@@ -841,7 +841,7 @@ var again = await reader.NextResult();
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L421-L444)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L394-L417)
 
 ```rust
 let ds = default().unwrap();
@@ -953,7 +953,7 @@ var again = await reader.NextResult();
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L380-L407)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L376-L403)
 
 ```rust
 async fn call_procedure_returns_two_results(command: &dyn Command) {
@@ -997,7 +997,7 @@ async fn call_procedure_returns_two_results(command: &dyn Command) {
 }
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L45-L64)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L48-L67)
 
 ```typescript
 async function callProcedureReturnsTwoResults(command: MysqlCommand) {

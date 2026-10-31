@@ -540,7 +540,7 @@ The repository uses this converter when `ObjectConverter` / `objectConverter` / 
 
 #### Convert a row
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L28-L47)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L34-L53)
 
 ```csharp
 var created = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
@@ -554,10 +554,10 @@ var user = converter.Convert(new Row
 });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L117-L130)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L99-L112)
 
 ```rust
-let converter = MetaDataRowTypeConverter::of::<User>();
+let converter = MetaDataRowTypeConverter::new(vec!["id".into(), "name".into()]);
 let row = record(&[
     ("id", Value::Int(1)),
     ("name", Value::from("ada")),
@@ -576,7 +576,7 @@ const row = converter.reverseConvert(item);
 
 #### Field converter
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L111-L122)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/RowTypeConverterTests.cs#L164-L175)
 
 ```csharp
 var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dictionary<string, TypeConverter<Value, Value>>
@@ -586,14 +586,13 @@ var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dict
 var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L145-L163)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L136-L153)
 
 ```rust
-let converter =
-    RowTypeConverter::new(vec!["is_enabled".into()]).with_fields(HashMap::from([(
-        "is_enabled".into(),
-        Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-    )]));
+let converter = RowTypeConverter::new(HashMap::from([(
+    "is_enabled".into(),
+    Box::new(OnlyOne) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+)]));
 let row = record(&[("is_enabled", Value::Int(2))]);
 ```
 

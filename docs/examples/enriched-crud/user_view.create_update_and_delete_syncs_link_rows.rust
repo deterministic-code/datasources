@@ -27,23 +27,23 @@ let created = users
     ))
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let created_role_links = seeded.user_roles.read(&()).try_collect::<Vec<_>>().await.unwrap();
+let created_group_links = seeded.user_groups.read(&()).try_collect::<Vec<_>>().await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(next, None).await.unwrap();
+let saved = users.update(next).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let updated_role_links = seeded.user_roles.read(&()).try_collect::<Vec<_>>().await.unwrap();
+let updated_group_links = seeded.user_groups.read(&()).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
+    .delete(record(&[("id", created.get("id").unwrap().clone())]))
     .await
     .unwrap();

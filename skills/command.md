@@ -1019,7 +1019,7 @@ var rows = await reader.Read().ToListAsync();
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L77-L107)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L50-L80)
 
 ```rust
 let ds = default().unwrap();
@@ -1114,15 +1114,9 @@ var items = await reader.Read().Select(row => converter.Convert(row)).ToListAsyn
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L12-L16) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L197-L243)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L170-L216)
 
 ```rust
-impl ConvertSchema for NameValue {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("name", "TEXT"), ("value", "TEXT")]
-    }
-}
-
 let ds = default().unwrap();
 let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
@@ -1152,7 +1146,7 @@ let reader = command
     .execute_reader("SELECT name, value FROM settings", None)
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<NameValue>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 let items: Vec<_> = reader
     .read()
     .map_ok(|row| converter.convert(&row).unwrap())
@@ -1272,15 +1266,9 @@ var gone = await goneReader.Read().Select(row => converter.Convert(row)).ToListA
 []
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L20-L24) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L245-L322)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L218-L295)
 
 ```rust
-impl ConvertSchema for Item {
-    fn schema() -> Vec<(&'static str, &'static str)> {
-        vec![("id", "INTEGER"), ("name", "TEXT")]
-    }
-}
-
 let ds = default().unwrap();
 let connection = ds.create_connection().await.unwrap();
 connection.open().await.unwrap();
@@ -1292,7 +1280,7 @@ command
     )
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<Item>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 let created_reader = command
     .execute_reader(
         "SELECT id, name FROM items WHERE id = $id",
@@ -1510,7 +1498,7 @@ var users = await reader.Read().Select(row => mapper.Map(converter.Convert(row))
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L26-L28) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L30-L37) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L324-L419)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L10-L12) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L14-L21) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/command.rs#L297-L392)
 
 ```rust
 struct Contact {
@@ -1543,7 +1531,7 @@ let reader = command
     )
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<User>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 fn user_contacts_mapper() -> TransformMapper<Row, User> {
     fn text_of(row: &Row, key: &str) -> String {
         match row.get(key) {
@@ -1706,7 +1694,7 @@ var call = await command.Execute(new ExecuteStoredProcedureStatement("bump", [st
 result: 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L354-L378)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/mysql/tests/integration.rs#L350-L374)
 
 ```rust
 async fn fill_output_parameter(command: &dyn Command) {
@@ -1737,7 +1725,7 @@ async fn fill_output_parameter(command: &dyn Command) {
 result: 5
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L29-L43)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/mysql/tests/mysql.integration.test.ts#L32-L46)
 
 ```typescript
 async function fillOutputParameter(command: MysqlCommand) {
@@ -1781,7 +1769,7 @@ var ret = await command.Execute(new ReturnStatement("add_one", [n]), [n]);
 5
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L323-L341)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/postgres/tests/integration.rs#L319-L337)
 
 ```rust
 async fn read_return_value(command: &dyn Command) {
@@ -1809,7 +1797,7 @@ async fn read_return_value(command: &dyn Command) {
 5
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L29-L38)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/providers/postgres/tests/postgres.integration.test.ts#L32-L41)
 
 ```typescript
 async function readReturnValue(command: PostgresCommand) {

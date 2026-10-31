@@ -27,7 +27,7 @@ let reader = command
     .execute_reader("SELECT name, value FROM settings", None)
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<NameValue>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 let items: Vec<_> = reader
     .read()
     .map_ok(|row| converter.convert(&row).unwrap())

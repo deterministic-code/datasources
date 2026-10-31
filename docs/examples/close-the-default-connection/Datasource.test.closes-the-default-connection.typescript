@@ -1,0 +1,2 @@
+await using ds = Datasource.default;
+await ds.createCommand();

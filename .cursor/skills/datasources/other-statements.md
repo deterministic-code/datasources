@@ -980,7 +980,7 @@ let create_table = CreateTableStatement::new(
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L164-L172)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L167-L175)
 
 ```typescript
 const createTable = new CreateTableStatement("users", [
@@ -1057,7 +1057,7 @@ let named_table = CreateTableStatement::new(
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L174-L193)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L177-L196)
 
 ```typescript
 const namedTable = new CreateTableStatement(
@@ -1369,7 +1369,7 @@ let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["use
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L195-L200)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L198-L203)
 
 ```typescript
 const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
@@ -1407,7 +1407,7 @@ let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L202-L207)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L205-L210)
 
 ```typescript
 const createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
@@ -1688,7 +1688,7 @@ var call = new ExecuteStoredProcedureStatement("save", fields);
 CALL save($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L423-L428)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L424-L429)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
@@ -1701,7 +1701,7 @@ let call = ExecuteStoredProcedureStatement::new("save", &fields);
 CALL save($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L273-L280)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L276-L283)
 
 ```typescript
 const fields = [
@@ -1986,7 +1986,7 @@ var ret = new ReturnStatement("add", fields);
 SELECT add($id, $name)
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L430-L435)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/statement_compile.rs#L431-L436)
 
 ```rust
 let fields = [Parameter::new("id", 1_i64), Parameter::new("name", "a")];
@@ -1999,7 +1999,7 @@ let ret = ReturnStatement::new("add", &fields);
 SELECT add($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L282-L289)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L285-L292)
 
 ```typescript
 const fields = [

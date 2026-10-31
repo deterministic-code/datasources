@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const require = createRequire(join(root, "typescript/package.json"));
+const require = createRequire(join(root, "package.json"));
 const { parse } = require("yaml");
 
 const summaryPath = join(root, "docs/DriverSummary.yaml");

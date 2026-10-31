@@ -16,7 +16,7 @@ parents.add_enriched(
 );
 let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
 parents.create(parent).await.unwrap();
-let enriched = parents.read_single(None, None, None).await.unwrap();
+let enriched = parents.read_single(&()).await.unwrap();
 
 let command = Arc::new(MockCommand::new());
 command.reader_rows.lock().unwrap().extend([
@@ -56,7 +56,7 @@ join_repo.add_enriched(
         None,
         EnrichmentPropertyType::List,
     ),
-    Arc::new(CRUDRepository::new(
+    Arc::new(CRUDRepository::<Row>::new(
         Arc::new(StubConnection::new("memory")),
         CRUDRepositoryOptions::default(),
     ).unwrap()),
@@ -95,6 +95,6 @@ let join = SelectStatement::new(SelectStatementOptions {
 let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity_mapper = Some(Arc::new(join_entity()));
 let items = join_repo
-    .read(Some(&join), None, Some(&options))
+    .read(&join)
     .try_collect::<Vec<_>>().await
     .unwrap();

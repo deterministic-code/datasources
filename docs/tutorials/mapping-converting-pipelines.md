@@ -49,8 +49,6 @@ One walkthrough: seed users, read the raw rows, rename columns, convert cell typ
 ```
 ```csharp csharp/Providers/Sqlite.Tests/ReadPipelineIntegrationTests.cs#MapsAndConvertsUsersThroughTheReadPipeline
 ```
-```rust rust/providers/sqlite/tests/read_pipeline.rs#ConvertSchemaForUser
-```
 ```rust rust/providers/sqlite/tests/read_pipeline.rs#maps_and_converts_users_through_the_read_pipeline
 ```
 ```typescript typescript/providers/sqlite/tests/read-pipeline.integration.test.ts#User

@@ -98,8 +98,6 @@ SQL provider default repositories report the row or dictionary type (`Row`, `Dic
 ```
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#ReadsUsersByIdAndByUsernameAndEnabled
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#ConvertSchemaForUser-1
-```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#snake_then_plural
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#snake
@@ -133,8 +131,6 @@ Create omits `id`, then writes the inserted id onto the user. Update and delete 
 ```
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#WritesUserFromTheType
 ```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#ConvertSchemaForUser-1
-```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#writes_user_from_the_type
 ```
 ```typescript typescript/providers/sqlite/tests/readonly.repository.integration.test.ts#User-1
@@ -163,12 +159,6 @@ Create omits `id`, then writes the inserted id onto the user. Update and delete 
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#UserRole
 ```
 ```csharp csharp/Providers/Sqlite.Tests/ReadonlyRepositoryIntegrationTests.cs#UpdatesUsersViewWhenTheVersionMatches
-```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#ConvertSchemaForUser-2
-```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#ConvertSchemaForUserType-3
-```
-```rust rust/providers/sqlite/tests/readonly_repository.rs#ConvertSchemaForUserRole-2
 ```
 ```rust rust/providers/sqlite/tests/readonly_repository.rs#updates_users_view_when_the_version_matches
 ```
