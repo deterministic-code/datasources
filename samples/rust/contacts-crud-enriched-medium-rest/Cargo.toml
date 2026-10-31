@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 autobins = false
 
+[[bin]]
+name = "contacts-crud-enriched-medium-rest"
+path = "e2e/main.rs"
+
 [dependencies]
 ctor = "0.4"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }

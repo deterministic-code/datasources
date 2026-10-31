@@ -1,0 +1,22 @@
+[package]
+name = "contacts-simple-cli"
+version = "0.1.0"
+edition = "2021"
+autobins = false
+
+[[bin]]
+name = "contacts-simple-cli"
+path = "src/main.rs"
+
+[dependencies]
+datasources = { path = "../../../rust/datasources" }
+datasources-mysql = { path = "../../../rust/providers/mysql" }
+datasources-postgres = { path = "../../../rust/providers/postgres" }
+datasources-sqlite = { path = "../../../rust/providers/sqlite" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[dev-dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[lints.rust]
+warnings = "deny"

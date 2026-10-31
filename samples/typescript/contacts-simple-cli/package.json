@@ -1,0 +1,33 @@
+{
+  "name": "contacts-simple-cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test:e2e": "sh sqlite.sh && sh mysql-postgres.sh"
+  },
+  "dependencies": {
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",
+    "@deterministic-code/migraters": "^0.0.12",
+    "better-sqlite3": "^13.0.3",
+    "mysql2": "^3.14.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.3",
+    "@vitest/coverage-v8": "^3.1.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  },
+  "overrides": {
+    "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
+    "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
+    "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite"
+  }
+}

@@ -1,13 +1,7 @@
 using Backend.Types.View;
 using Datasources;
-using Datasources.Sqlite;
 
-var url = Environment.GetEnvironmentVariable("DATASOURCE_URL")
-    ?? throw new InvalidOperationException("DATASOURCE_URL");
-var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?>
-{
-    ["DATASOURCE_URL"] = url,
-});
+await using var ds = Datasource.Default;
 var contacts = ds.CreateRepository<Contact>("Contacts");
 var ada = await contacts.Create(new Contact
 {

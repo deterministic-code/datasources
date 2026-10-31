@@ -21,7 +21,7 @@ const readonlyOptions = (connection: IConnection) =>
     .for(connection);
 
 {{/builder}}
-export class {{typeName}}Repository extends CRUDRepository<{{typeName}}> {
+export class {{className}} extends CRUDRepository<{{typeName}}> {
 {{#children}}
   readonly {{field}}: {{className}};
 {{/children}}

@@ -10,10 +10,12 @@ const cliRoot = join(repo, "cli");
 const argv = process.argv.slice(2);
 const doPublish = argv.includes("--publish");
 const cliOnly = argv.includes("--cli-only");
+const packDestAt = argv.indexOf("--pack-destination");
+const packDestination = packDestAt >= 0 ? argv[packDestAt + 1] : undefined;
 const versionAt = argv.indexOf("--version");
 const stamp = versionAt >= 0 ? argv[versionAt + 1] : undefined;
-if (versionAt >= 0 && !stamp) {
-  console.error("usage: npm run publish:npm -- [--publish] [--cli-only] [--version x.y.z]");
+if ((versionAt >= 0 && !stamp) || (packDestAt >= 0 && !packDestination)) {
+  console.error("usage: npm run publish:npm -- [--publish] [--cli-only] [--version x.y.z] [--pack-destination dir]");
   process.exit(1);
 }
 
@@ -433,7 +435,8 @@ staged.push({
   ),
 });
 
-const packs = await mkdtemp(join(tmpdir(), "ds-pack-"));
+const packs = packDestination ? resolve(packDestination) : await mkdtemp(join(tmpdir(), "ds-pack-"));
+if (packDestination) await mkdir(packs, { recursive: true });
 const tarballs = [];
 for (const pkg of staged) {
   console.log(`packing ${pkg.name}@${pkg.version}`);
@@ -448,7 +451,8 @@ else await smoke(tarballs);
 if (!doPublish) {
   console.log("dry-run complete; pass --publish to release");
   for (const pkg of staged) await rm(pkg.dest, { recursive: true, force: true });
-  await rm(packs, { recursive: true, force: true });
+  if (packDestination) console.log(`packed tarballs in ${packs}`);
+  else await rm(packs, { recursive: true, force: true });
   process.exit(0);
 }
 
