@@ -1,6 +1,6 @@
 use crate::builders::Join;
-use crate::i_select_statement::ISelectStatement;
-use crate::i_where::IWhere;
+use super::i_select_statement::ISelectStatement;
+use super::i_where::IWhere;
 use crate::statements::statement::Statement;
 use crate::statements::{OrderBy, SelectStatementOptions};
 use crate::{DefaultStatementTextRenderer, StatementTextRenderer};
@@ -102,7 +102,7 @@ fn box_where(predicate: &dyn IWhere) -> Box<dyn IWhere> {
         .cloned()
         .map(|clause| Box::new(clause) as Box<dyn IWhere>)
         .unwrap_or_else(|| {
-            Box::new(crate::where_text::WhereText::new(
+            Box::new(super::where_text::WhereText::new(
                 DefaultStatementTextRenderer::instance().render_where(predicate),
             ))
         })

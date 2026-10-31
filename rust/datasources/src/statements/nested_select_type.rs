@@ -1,4 +1,4 @@
-use crate::nested_select_relation::NestedSelectRelation;
+use super::nested_select_relation::NestedSelectRelation;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NestedSelectType {

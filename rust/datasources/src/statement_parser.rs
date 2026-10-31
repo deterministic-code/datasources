@@ -1,8 +1,8 @@
 use crate::builders::{Join, JoinKind};
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
-use crate::select_statement::SelectStatement;
+use crate::SelectStatement;
 use crate::statements::statement::Statement;
 use crate::statements::DefaultStatementTextRenderer;
 use crate::statements::{

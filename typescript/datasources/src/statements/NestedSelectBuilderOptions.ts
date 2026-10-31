@@ -1,4 +1,4 @@
-import type { IWhere } from "./statements/IWhere.ts";
+import type { IWhere } from "./IWhere.ts";
 
 export type NestedSelectBuilderOptions = {
   where?: IWhere;

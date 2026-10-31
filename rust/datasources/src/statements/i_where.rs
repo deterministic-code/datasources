@@ -1,4 +1,4 @@
-use crate::i_condition::ICondition;
+use super::i_condition::ICondition;
 use crate::parameter::Parameter;
 
 pub trait IWhere: ICondition {

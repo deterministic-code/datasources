@@ -52,10 +52,7 @@ mod enrichment_via;
 mod expect_console_middleware;
 mod hashset_optimized_readonly_enrichment_strategy;
 mod i_repository;
-mod i_select_statement;
 mod i_unit_of_work;
-mod i_condition;
-mod i_where;
 mod id_key;
 mod information;
 mod isolation_level;
@@ -84,14 +81,6 @@ mod reset;
 mod response;
 mod result;
 mod row;
-mod select_field_aliases;
-mod select_statement;
-mod nested_select_builder;
-mod nested_select_builder_options;
-mod nested_select_relation;
-mod nested_select_relation_kind;
-mod nested_select_statement;
-mod nested_select_type;
 mod shared_items;
 mod single_command_i_bulk_write_strategy;
 mod split_statements;
@@ -110,7 +99,6 @@ mod transaction;
 mod unit_of_work_transaction;
 mod update_enrichment_strategy;
 mod value;
-mod where_text;
 mod write_enrichment_strategy;
 mod write_mode;
 
@@ -170,10 +158,7 @@ pub use enrichment_via::EnrichmentVia;
 pub use expect_console_middleware::ExpectConsoleMiddleware;
 pub use hashset_optimized_readonly_enrichment_strategy::HashsetOptimizedReadonlyEnrichmentStrategy;
 pub use i_repository::IRepository;
-pub use i_select_statement::ISelectStatement;
 pub use i_unit_of_work::IUnitOfWork;
-pub use i_condition::ICondition;
-pub use i_where::IWhere;
 pub use id_key::IdKey;
 pub use information::Information;
 pub use isolation_level::IsolationLevel;
@@ -208,17 +193,17 @@ pub use reset::reset;
 pub use response::Response;
 pub use result::Result;
 pub use row::Row;
-pub use select_statement::SelectStatement;
 pub use single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy;
 pub use split_statements::{split_statements, statement_parameters, statement_uses_parameter};
 pub use statement_parser::StatementParser;
 pub use statements::statement;
 pub use statements::{
     eq, ge, gt, le, lt, ne, Aggregate, AlterAction, AlterTableStatement, ArrayExpression, CheckConstraint, ColumnDefault, Condition,
-    ConditionRenderer, ConditionVisitor, CreateIndexStatement,
+    ConditionRenderer, ConditionVisitor, ICondition, ISelectStatement, IWhere, CreateIndexStatement,
     CreateTableStatement, CreateTriggerStatement, ForeignKeyStatement, RoutineParameter,
     AlterTableStatementTextRenderer, CreateIndexStatementTextRenderer, CreateCreateStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateNestedReadStoredProcedureStatement, NestedWhereArgument, CreateUpdateStoredProcedureStatement, CreateDeleteStoredProcedureStatement, CreateBulkCreateStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement, CreateBulkDeleteStoredProcedureStatement, CreateCreateStoredProcedureStatementTextRenderer, CreateReadStoredProcedureStatementTextRenderer, CreateNestedReadStoredProcedureStatementTextRenderer, CreateUpdateStoredProcedureStatementTextRenderer, CreateDeleteStoredProcedureStatementTextRenderer, CreateBulkCreateStoredProcedureStatementTextRenderer, CreateBulkUpdateStoredProcedureStatementTextRenderer, CreateBulkDeleteStoredProcedureStatementTextRenderer,
     CreateTableStatementTextRenderer, CreateTriggerStatementTextRenderer,
+    NestedSelectBuilder, NestedSelectBuilderOptions, NestedSelectRelation, NestedSelectRelationKind, NestedSelectStatement, NestedSelectType,
     DropIndexStatement, DropIndexStatementTextRenderer, DropRoutineStatement,
     DropRoutineStatementTextRenderer, DropTableStatement, DropTableStatementTextRenderer,
     DropTriggerStatement, DropTriggerStatementTextRenderer, IdentityInsertStatement, IdentityInsertStatementTextRenderer,
@@ -231,11 +216,11 @@ pub use statements::{
     ExpressionEvaluator, ExpressionRenderer, ForeignKey, Identifier, InsertStatement,
     InsertStatementTextRenderer, Literal, NotNull, Operator, OrderBy, PrimaryKey, ReferentialAction,
     ReturnStatement, ReturnStatementTextRenderer, SelectInsertedIdStatement,
-    SelectInsertedIdStatementTextRenderer, SelectStatementOptions, SelectStatementTextRenderer,
+    SelectInsertedIdStatementTextRenderer, SelectStatement, SelectStatementOptions, SelectStatementTextRenderer,
     KeywordCasing, ProcedureByGroup, ProcedureSource, SortDirection, Statement, StatementEvaluator, StatementKind, StatementRenderer,
     StatementNaming, StatementTextRenderer, StatementVisitor, TableConstraint, UniqueConstraint, UpdateStatement,
     procedure_name_of, sql_procedure_statements_of,
-    UpdateStatementTextRenderer, Where,
+    UpdateStatementTextRenderer, Where, WhereText,
 };
 pub use stored_procedure_bulk_write_strategy::StoredProcedureBulkWriteStrategy;
 pub use stubs::{
@@ -248,17 +233,10 @@ pub use crud_repository_statements::CRUDRepositoryStatements;
 pub use readonly_repository_builder::ReadonlyRepositoryBuilder;
 pub use readonly_repository_statements::ReadonlyRepositoryStatements;
 pub use statement_mappers::StatementMappers;
-pub use nested_select_builder::NestedSelectBuilder;
-pub use nested_select_builder_options::NestedSelectBuilderOptions;
-pub use nested_select_relation::NestedSelectRelation;
-pub use nested_select_relation_kind::NestedSelectRelationKind;
-pub use nested_select_statement::NestedSelectStatement;
-pub use nested_select_type::NestedSelectType;
 pub use transaction::Transaction;
 pub use unit_of_work_transaction::UnitOfWorkTransaction;
 pub use update_enrichment_strategy::UpdateEnrichmentStrategy;
 pub use value::Value;
-pub use where_text::WhereText;
 pub use write_enrichment_strategy::WriteEnrichmentStrategy;
 pub use write_mode::WriteMode;
 

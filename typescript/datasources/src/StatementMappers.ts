@@ -1,7 +1,7 @@
 import type { Cell } from "./converters/Cell.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
-import { applySelectFieldAlias, asIndexOf, functionOf, segments, selectFieldAliases } from "./SelectFieldAliases.ts";
+import { applySelectFieldAlias, asIndexOf, functionOf, segments, selectFieldAliases } from "./statements/SelectFieldAliases.ts";
 import { DeleteStatement } from "./statements/DeleteStatement.ts";
 import type { IStatement } from "./statements/IStatement.ts";
 import type { IWhere } from "./statements/IWhere.ts";

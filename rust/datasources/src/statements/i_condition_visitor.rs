@@ -1,6 +1,6 @@
 use super::r#where::Where;
 use super::statement_text_renderer::StatementTextRenderer;
-use crate::where_text::WhereText;
+use super::where_text::WhereText;
 
 pub trait ConditionVisitor: Send + Sync {
     fn visit_where(&self, where_clause: &Where, text: &StatementTextRenderer) -> String;

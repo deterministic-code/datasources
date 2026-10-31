@@ -1,4 +1,4 @@
-import type { NestedSelectStatement } from "../NestedSelectStatement.ts";
+import type { NestedSelectStatement } from "./NestedSelectStatement.ts";
 import { Operator } from "./Operator.ts";
 import { Identifier } from "./Identifier.ts";
 import type { ICreateNestedReadStoredProcedureStatement } from "./ICreateNestedReadStoredProcedureStatement.ts";

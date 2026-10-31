@@ -1,5 +1,5 @@
 use crate::bulk_write_strategy::BulkWriteStrategy;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::repository::ICRUDRepository;
 use crate::response::Response;
 use crate::result::Result;

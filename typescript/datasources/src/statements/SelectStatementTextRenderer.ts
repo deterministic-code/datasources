@@ -1,7 +1,7 @@
 import type { IWhere } from "./IWhere.ts";
 import type { Join, JoinKind } from "./Join.ts";
 import { orderText, type OrderBy } from "./OrderBy.ts";
-import { applySelectFieldAlias } from "../SelectFieldAliases.ts";
+import { applySelectFieldAlias } from "./SelectFieldAliases.ts";
 import type { SelectStatement } from "./SelectStatement.ts";
 import type { StatementTextRenderer } from "./StatementTextRenderer.ts";
 import { Where } from "./Where.ts";

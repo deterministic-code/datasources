@@ -1,4 +1,4 @@
-use crate::select_statement::SelectStatement;
+use super::select_statement::SelectStatement;
 use super::bulk_delete_statement::BulkDeleteStatement;
 use super::bulk_delete_statement_text_renderer::BulkDeleteStatementTextRenderer;
 use super::bulk_insert_statement::BulkInsertStatement;

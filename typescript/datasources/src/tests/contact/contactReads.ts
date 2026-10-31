@@ -1,5 +1,5 @@
-import { NestedSelectBuilder } from "../../NestedSelectBuilder.ts";
-import type { NestedSelectType } from "../../NestedSelectType.ts";
+import { NestedSelectBuilder } from "../../statements/NestedSelectBuilder.ts";
+import type { NestedSelectType } from "../../statements/NestedSelectType.ts";
 import { CreateNestedReadStoredProcedureStatement } from "../../statements/CreateNestedReadStoredProcedureStatement.ts";
 
 export const contactGraph = (): NestedSelectType => {

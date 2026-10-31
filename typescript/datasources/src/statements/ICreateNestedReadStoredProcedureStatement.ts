@@ -1,4 +1,4 @@
-import type { NestedSelectStatement } from "../NestedSelectStatement.ts";
+import type { NestedSelectStatement } from "./NestedSelectStatement.ts";
 import type { IStatement } from "./IStatement.ts";
 import type { NestedWhereArgument } from "./NestedWhereArgument.ts";
 

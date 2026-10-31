@@ -1,5 +1,5 @@
-import type { TypeMapGroup } from "./mappers/TypeMapGroup.ts";
-import type { SelectStatement } from "./statements/SelectStatement.ts";
+import type { TypeMapGroup } from "../mappers/TypeMapGroup.ts";
+import type { SelectStatement } from "./SelectStatement.ts";
 
 export type NestedSelectMapField = string | TypeMapGroup<Record<string, string>>;
 

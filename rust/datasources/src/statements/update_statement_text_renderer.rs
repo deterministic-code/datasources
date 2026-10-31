@@ -1,4 +1,4 @@
-use crate::i_where::IWhere;
+use super::i_where::IWhere;
 use crate::parameter::Parameter;
 use super::statement_text_renderer::StatementTextRenderer;
 use super::update_statement::UpdateStatement;

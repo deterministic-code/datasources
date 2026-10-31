@@ -1,8 +1,8 @@
 use crate::builders::Join;
-use crate::select_field_aliases::{
+use crate::statements::select_field_aliases::{
     apply_select_field_alias, as_index, function_of, select_field_aliases, segments,
 };
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::result::Result;

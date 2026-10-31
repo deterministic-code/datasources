@@ -2,9 +2,9 @@ use super::default_statement_text_renderer::DefaultStatementTextRenderer;
 use super::statement::Statement;
 use super::statement_text_renderer::StatementTextRenderer;
 use super::update_statement_text_renderer::UpdateStatementTextRenderer;
-use crate::i_where::IWhere;
+use super::i_where::IWhere;
 use crate::parameter::Parameter;
-use crate::where_text::boxed;
+use super::where_text::boxed;
 
 pub struct UpdateStatement {
     table: String,

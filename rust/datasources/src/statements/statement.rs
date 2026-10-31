@@ -1,5 +1,5 @@
 use super::statement_text_renderer::StatementTextRenderer;
-use crate::i_where::IWhere;
+use super::i_where::IWhere;
 use std::any::Any;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
