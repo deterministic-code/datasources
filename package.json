@@ -68,5 +68,8 @@
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17",
     "yaml": "^2.9.1"
+  },
+  "dependencies": {
+    "@deterministic-code/migraters": "^0.0.13"
   }
 }

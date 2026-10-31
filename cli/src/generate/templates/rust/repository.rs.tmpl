@@ -1,4 +1,4 @@
-use datasources::{Association, Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, {{#createZeros}}{{#first}}Value, {{/first}}{{/createZeros}}Result};
+use datasources::{Association, Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
 use super::super::{{typeName}};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -18,9 +18,7 @@ impl {{typeName}}Repository {
 {{#child}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/child}}
-        let mut repo = CRUDRepository::<{{typeName}}>::new(Arc::clone(&connection), options){{#createZeros}}{{#first}}.map(|repo| repo.with_create_zeros([
-{{/first}}        ({{#boolean}}"{{name}}".into(), Value::from(false)),{{/boolean}}{{^boolean}}"{{name}}".into(), Value::from("")),{{/boolean}}
-{{#last}}    ].into_iter().collect())){{/last}}{{/createZeros}}?;
+        let mut repo = CRUDRepository::<{{typeName}}>::new(Arc::clone(&connection), options)?;
 {{#enrichments}}
         {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
 {{/enrichments}}
@@ -42,9 +40,7 @@ pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{ty
 {{^wrapped}}
 pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{typeName}}>> {
 {{>crud}}
-    CRUDRepository::<{{typeName}}>::new(connection, options){{#createZeros}}{{#first}}.map(|repo| repo.with_create_zeros([
-{{/first}}        ({{#boolean}}"{{name}}".into(), Value::from(false)),{{/boolean}}{{^boolean}}"{{name}}".into(), Value::from("")),{{/boolean}}
-{{#last}}    ].into_iter().collect())){{/last}}{{/createZeros}}
+    CRUDRepository::<{{typeName}}>::new(connection, options)
 }
 {{/wrapped}}
 
@@ -80,7 +76,7 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
 {{/propertyMappings}}
     options.schema = Schema::new(HashMap::from([
 {{#schema}}
-        ("{{from}}".into(), "{{to}}".into()),
+        ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}} }),
 {{/schema}}
     ]));
     options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];

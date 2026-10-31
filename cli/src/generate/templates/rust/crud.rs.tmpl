@@ -12,7 +12,7 @@
 {{/propertyMappings}}
     options.schema = Schema::new(HashMap::from([
 {{#schema}}
-        ("{{from}}".into(), "{{to}}".into()),
+        ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}} }),
 {{/schema}}
     ]));
     options.ids = vec![{{#ids}}{{#comma}}, {{/comma}}"{{name}}".into(){{/ids}}];
@@ -36,7 +36,7 @@
 {{/propertyMappings}}
         options.schema = Schema::new(HashMap::from([
 {{#schema}}
-            ("{{from}}".into(), "{{to}}".into()),
+            ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}} }),
 {{/schema}}
         ]));
         options.ids = vec![{{#ids}}{{#comma}}, {{/comma}}"{{name}}".into(){{/ids}}];
@@ -60,7 +60,7 @@
 {{/propertyMappings}}
         options.schema = Schema::new(HashMap::from([
 {{#schema}}
-            ("{{from}}".into(), "{{to}}".into()),
+            ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}} }),
 {{/schema}}
         ]));
         options.ids = vec![{{#ids}}{{#comma}}, {{/comma}}"{{name}}".into(){{/ids}}];

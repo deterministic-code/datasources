@@ -43,7 +43,7 @@ pub(crate) fn assemble(
                     .map(|driver| driver.row_type_converters())
                     .unwrap_or_default()
             },
-            &schema.columns,
+            &schema.types(),
         )
     }));
     let object_converter =

@@ -7,7 +7,7 @@ import { caseDirectories } from "./casing.ts";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
 import type { RepositoryModel } from "./RepositoryModel.ts";
-import { languageOf } from "./Repositories.ts";
+import { languageOf } from "./RepositoryGenerator.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./datasourceYaml.ts";
 import { sqlDialectsFromEnv } from "./sqlDialects.ts";

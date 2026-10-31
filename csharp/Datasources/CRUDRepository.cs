@@ -9,6 +9,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     readonly IReadOnlyList<string> ids;
     readonly IReadOnlyList<string>? createProperties;
     readonly IReadOnlyList<string>? updateProperties;
+    readonly Schema schema;
     readonly CRUDRepositoryStatements crudStatements;
     readonly IRepositoryTree tree;
 
@@ -18,7 +19,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     public CRUDRepository(IConnection connection, CRUDRepositoryOptions<T> options) :
         this(Compose(connection, options)) { }
 
-    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update) Compose(
+    static (BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update, Schema Schema) Compose(
         IConnection connection,
         CRUDRepositoryOptions<T> options)
     {
@@ -28,15 +29,17 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
             builder.CRUDStatements ?? throw new DatasourceException("Statements required"),
             options.Write,
             options.CreateProperties,
-            options.UpdateProperties);
+            options.UpdateProperties,
+            options.Schema ?? new Schema(new Dictionary<string, SchemaColumn>()));
     }
 
-    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update) composed) :
+    private CRUDRepository((BuiltRepository<T> Built, CRUDRepositoryStatements Statements, IWriteEnrichmentStrategy<T>? Write, IReadOnlyList<string>? Create, IReadOnlyList<string>? Update, Schema Schema) composed) :
         base(composed.Built)
     {
         ids = composed.Built.Ids;
         createProperties = composed.Create;
         updateProperties = composed.Update;
+        schema = composed.Schema;
         crudStatements = composed.Statements;
         write = composed.Write ?? new DefaultWriteEnrichmentStrategy<T>();
         tree = new RepositoryTree(new RepositoryTreeNode(this, ""));
@@ -246,6 +249,12 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     Row MergeZeros(Row record)
     {
+        foreach (var (key, column) in schema.Columns)
+            if (Listed(createProperties, key, !ids.Contains(key)) && !column.Nullable && !column.HasDefault)
+                if (column.Type == "string")
+                    record.TryAdd(key, "");
+                else if (column.Type == "boolean")
+                    record.TryAdd(key, false);
         foreach (var (key, value) in ReverseConvert(new T()))
             if (LanguageZero(value) && Listed(createProperties, key, !ids.Contains(key)))
                 record.TryAdd(key, value);

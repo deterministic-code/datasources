@@ -56,8 +56,8 @@ describe("Datasource", () => {
       id = 0;
       name = "";
     }
-    const schema = new Schema({ id: "integer" });
-    const rowConverter = RowTypeConverter.from({}, schema.columns);
+    const schema = new Schema({ id: { type: "integer", nullable: false, hasDefault: false } });
+    const rowConverter = RowTypeConverter.from({}, schema.types());
     expect(ds.createRepository(Item, undefined, { entity: "items", ids: ["id"], schema, rowConverter })).toBeTruthy();
     expect(ds.createReadonlyRepository(Item, undefined, { entity: "items", schema, rowConverter })).toBeTruthy();
     expect(ds.createReadonlyRepository(Item)).toBeTruthy();

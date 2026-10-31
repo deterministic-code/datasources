@@ -59,7 +59,7 @@ public sealed class Datasource(
         var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         var schema = options?.Schema ?? SchemaOf(typeof(T));
-        var rows = RowTypeConverter.From(types, schema.Columns);
+        var rows = RowTypeConverter.From(types, schema.Types);
         return (options ?? built) with
         {
             Entity = options?.Entity ?? built.Entity,
@@ -74,7 +74,7 @@ public sealed class Datasource(
         var built = CreateReadonlyRepositoryMappingOptions.FromType<T>(driver.RowTypeConverters);
         var types = driver.RowTypeConverters;
         var schema = options?.Schema ?? SchemaOf(typeof(T));
-        var rows = RowTypeConverter.From(types, schema.Columns);
+        var rows = RowTypeConverter.From(types, schema.Types);
         return (options ?? built) with
         {
             Entity = options?.Entity ?? built.Entity,
@@ -88,12 +88,16 @@ public sealed class Datasource(
     {
         var mapper = new DeterministicTypeMapper();
         return typeof(IDictionary).IsAssignableFrom(type)
-            ? new Schema(new Dictionary<string, string>())
+            ? new Schema(new Dictionary<string, SchemaColumn>())
             : new Schema(
                 type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                     .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
-                    .Select(prop => (prop.Name, Spec: mapper.Map((Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType).Name)))
-                    .Where(pair => pair.Spec.Length > 0)
-                    .ToDictionary(pair => pair.Name, pair => pair.Spec));
+                    .Select(prop =>
+                    {
+                        var kind = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                        return (prop.Name, Column: new SchemaColumn(mapper.Map(kind.Name), Nullable.GetUnderlyingType(prop.PropertyType) != null));
+                    })
+                    .Where(pair => pair.Column.Type.Length > 0)
+                    .ToDictionary(pair => pair.Name, pair => pair.Column));
     }
 }

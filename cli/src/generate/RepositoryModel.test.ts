@@ -13,7 +13,6 @@ const model = (optionsByProvider?: RepositoryModel["optionsByProvider"]): Reposi
   ids: ["Id"],
   readProperties: ["Id", "Name"],
   createProperties: ["Name"],
-  createZeros: [],
   updateProperties: ["Name"],
   optionsByProvider,
   enrichments: [],

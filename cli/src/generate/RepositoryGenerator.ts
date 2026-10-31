@@ -3,6 +3,7 @@ import type { ICasingStrategy } from "@deterministic-code/generators-common/casi
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import type { IRepositoryGenerator } from "./IRepositoryGenerator.ts";
+import { schemaPairs, type SchemaPair } from "./schemaPairs.ts";
 import {
   childClass,
   childField,
@@ -27,7 +28,7 @@ export const languageOf = async (dialect: string): Promise<IRepositoryGenerator>
   return load();
 };
 
-export abstract class Repositories implements IRepositoryGenerator {
+export abstract class RepositoryGenerator implements IRepositoryGenerator {
   abstract generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[];
   abstract readonly types: IRepositoryGenerator["types"];
   abstract typesPrefix(casing: ICasingStrategy, kind: "datasource" | "views"): string;
@@ -46,6 +47,24 @@ export abstract class Repositories implements IRepositoryGenerator {
     return names.map((name, index) => ({ name: this.quote(name), comma: index > 0 ? {} : undefined }));
   }
 
+  protected pairList(pairs: Array<{ from: string; to: string }>): string {
+    return `[${pairs.map((pair) => `["${this.quote(pair.from)}", "${this.quote(pair.to)}"]`).join(", ")}]`;
+  }
+
+  protected schemaBag(pairs: SchemaPair[]): Record<string, unknown>[] {
+    return pairs.map((column, index) => ({
+      from: this.quote(column.from),
+      name: this.quote(column.from),
+      type: this.quote(column.type),
+      to: this.quote(column.type),
+      nullable: column.nullable ? {} : undefined,
+      hasDefault: column.hasDefault ? {} : undefined,
+      first: index === 0 ? {} : undefined,
+      last: index === pairs.length - 1 ? {} : undefined,
+      comma: index > 0 ? {} : undefined,
+    }));
+  }
+
   protected optionsOf(model: RepositoryOptionsModel & { entity: string }): Record<string, unknown> {
     return {
       entity: this.quote(model.entity),
@@ -61,13 +80,18 @@ export abstract class Repositories implements IRepositoryGenerator {
         last: index === model.propertyMappings.length - 1 ? {} : undefined,
         comma: index > 0 ? {} : undefined,
       })),
+      entityPairs: this.pairList([{ from: model.entity, to: model.table }]),
+      mappingPairs: this.pairList(model.propertyMappings),
     };
   }
 
-  protected dialectsBag(model: RepositoryModel): Record<string, unknown>[] {
+  protected dialectsBag(model: RepositoryModel, spec?: IDeterministic, casing?: ICasingStrategy): Record<string, unknown>[] {
     return dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ entity: model.entity, ...planned }),
+      schema: spec === undefined || casing === undefined
+        ? []
+        : this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
     }));
   }
 
