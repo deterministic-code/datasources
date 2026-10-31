@@ -1,0 +1,5 @@
+let ds = default().expect("default");
+ds.create_command(None).await.unwrap();
+assert!(ds.create_connection().await.unwrap().is_open());
+ds.close().await.unwrap();
+assert!(!ds.create_connection().await.unwrap().is_open());

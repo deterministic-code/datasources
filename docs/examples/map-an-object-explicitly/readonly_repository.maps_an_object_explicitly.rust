@@ -15,7 +15,7 @@ options.property_mappings = Some(std::sync::Arc::new(snake()));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let user = users_repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
+    .read_single(&Where::binary("Id", eq, 1_i64))
     .await
     .unwrap()
     .unwrap();

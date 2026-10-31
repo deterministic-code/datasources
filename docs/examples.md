@@ -8,6 +8,7 @@ Samples from the code reference. Open a link for the explanation and the C#, Rus
 
 ## Datasource
 
+- [Close the default connection](./sections/datasource.md#close-the-default-connection)
 - [Create default from .env settings](./sections/datasource.md#create-default-from-env-settings)
 - [Default using environment variables](./sections/datasource.md#default-using-environment-variables)
 - [Create using Dynamic After Register](./sections/datasource.md#create-using-dynamic-after-register)

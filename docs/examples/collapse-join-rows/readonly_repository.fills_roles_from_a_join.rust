@@ -53,7 +53,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(Some(&joined), None, None).try_collect::<Vec<_>>().await.unwrap();
+let items = users_repo.read(&joined).try_collect::<Vec<_>>().await.unwrap();
 let view = |login: &str| {
     items
         .iter()

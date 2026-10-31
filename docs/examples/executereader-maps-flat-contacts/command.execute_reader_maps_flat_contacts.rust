@@ -15,7 +15,7 @@ let reader = command
     )
     .await
     .unwrap();
-let converter = RowTypeConverter::of::<User>();
+let converter = RowTypeConverter::new(std::collections::HashMap::new());
 fn user_contacts_mapper() -> TransformMapper<Row, User> {
     fn text_of(row: &Row, key: &str) -> String {
         match row.get(key) {

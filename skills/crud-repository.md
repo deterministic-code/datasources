@@ -1111,7 +1111,7 @@ pub struct BuiltRepository
 
 `Create` / `create` / `create`, `Update` / `update` / `update`, and `Delete` / `delete` / `delete` open a closed connection before they run.
 
-Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create and update, so a SQL default applies. A present value is written.
+Update requires at least one non-id field. Missing id values throw. Insert always omits configured id columns. After a table insert with one id column, create reads `SelectInsertedId`, converts the row, and copies the id onto the entity. The driver statement factory formats that statement. A null cell is omitted on create, so a SQL default applies. Update writes a null cell. A present value is written.
 
 `ReadSingleById` / `readSingleById` / `read_single_by_id` takes a value when the repository has one id column, and a row keyed by each id column when the key is composite.
 
@@ -1188,7 +1188,7 @@ ada-v2
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L659-L711)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L613-L662)
 
 ```rust
 let ds = default().unwrap();
@@ -1206,14 +1206,11 @@ let by_id = users_repo
     .unwrap()
     .unwrap();
 let matches = users_repo
-    .read(
-        Some(&Where::binary("Username", eq, "ada").and(
+    .read(&Where::binary("Username", eq, "ada").and(
             "IsEnabled",
             eq,
             Value::Bool(true),
-        )),
-        None, None
-)
+        ))
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));
@@ -1422,24 +1419,24 @@ let created = users
     ))
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
-let created_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let created_role_links = seeded.user_roles.read(&()).try_collect::<Vec<_>>().await.unwrap();
+let created_group_links = seeded.user_groups.read(&()).try_collect::<Vec<_>>().await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(next, None).await.unwrap();
+let saved = users.update(next).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
-let updated_group_links = seeded.user_groups.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let updated_role_links = seeded.user_roles.read(&()).try_collect::<Vec<_>>().await.unwrap();
+let updated_group_links = seeded.user_groups.read(&()).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
+    .delete(record(&[("id", created.get("id").unwrap().clone())]))
     .await
     .unwrap();
 ```
@@ -1587,7 +1584,7 @@ ada-v2
 grace
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L935-L981)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L859-L905)
 
 ```rust
 let built = datasource();
@@ -1606,16 +1603,16 @@ let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.property_mappings = Some(std::sync::Arc::new(casing));
 options.ids = vec!["TenantId".into(), "Id".into()];
-options.row_converter = Some(RowTypeConverter::of::<Account>());
+options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
 let accounts_repo = CRUDRepository::<Row>::new(connection, options).unwrap();
 let mut key = datasources::Row::new();
 key.insert("TenantId".into(), Value::Int(1));
 key.insert("Id".into(), Value::Int(1));
 let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 ada.insert("Name".into(), Value::from("ada-v2"));
-let updated = accounts_repo.update(ada.clone(), None).await.unwrap();
+let updated = accounts_repo.update(ada.clone()).await.unwrap();
 let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-let removed = accounts_repo.delete(ada, None).await.unwrap();
+let removed = accounts_repo.delete(ada).await.unwrap();
 let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
 let mut other = datasources::Row::new();
 other.insert("TenantId".into(), Value::Int(2));
@@ -1763,14 +1760,14 @@ var loaded = await contactsRepo.ReadSingle(new Where("Id", eq, created.Id));
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/contacts.rs#L145-L288)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/contacts.rs#L131-L271)
 
 ```rust
 let conn = Arc::new(SqliteConnection::new(Some(":memory:".into())));
 conn.open().await.unwrap();
 register_sql();
 let command = SqliteCommand::new(conn.clone());
-apply_sql(&command, &statements_of(&contact_schema("sqlite"))).await.unwrap();
+apply_sql(&command, &contact_schema("sqlite")).await.unwrap();
 
 let field = super::converters::field;
 let named = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"];
@@ -1865,10 +1862,7 @@ let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };
 let loaded = contacts_repo
-    .read_single(
-        Some(&Where::new(Operator::equals("Id", Value::Int(id)))),
-        None, None
-    )
+    .read_single(&Where::new(Operator::equals("Id", Value::Int(id))))
     .await
     .unwrap()
     .unwrap();
@@ -2064,7 +2058,7 @@ var gone = await usersRepo.ReadSingleById(loaded.Key);
 no row
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L767-L920)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L697-L853)
 
 ```rust
 let ds = default().unwrap();
@@ -2080,9 +2074,16 @@ users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new
     ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
 ])));
-users_options.row_converter = Some(RowTypeConverter::of::<User>());
+users_options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "integer".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+    ("UserType".into(), "integer".into()),
+    ("Version".into(), "binary".into()),
+]));
 users_options.object_converter = Some(Box::new(
-    MetaDataRowTypeConverter::of::<User>().with_references(
+    MetaDataRowTypeConverter::new(Vec::new()).with_references(
         vec!["UserType".into()],
         Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
@@ -2096,16 +2097,19 @@ users_options.object_converter = Some(Box::new(
 ));
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
+type_options.ids = vec!["Id".into()];
 type_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings = Some(std::sync::Arc::new(casing));
-type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+type_options.schema = Schema::new(HashMap::from([
+    ("Id".into(), "integer".into()),
+    ("Name".into(), "string".into()),
+]));
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
     Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
@@ -2153,11 +2157,10 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+    .read_single(&Where::binary("Key", eq, key.clone()))
     .await
     .unwrap()
     .unwrap();
-let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
 let member = user_types_repo.create(member).await.unwrap();
@@ -2173,27 +2176,21 @@ loaded.insert(
     "Roles".into(),
     encode_rows(&[kept_admin, kept_editor, owner_role]),
 );
+let version = loaded.get("Version").cloned().unwrap();
 loaded.insert("Version".into(), Value::Int(2));
-let updated = users_repo
-    .update(
-        loaded.clone(),
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
-    )
+let by_version = Where::binary("Key", eq, key.clone()).and("Version", eq, version);
+let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+    .read_single(&Where::binary("Key", eq, key.clone()))
     .await
     .unwrap()
     .unwrap();
-let stale = users_repo
-    .update(
-        loaded.clone(),
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
-    )
+let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
-let removed = users_repo.delete(loaded, None).await.unwrap();
+let removed = users_repo.delete(loaded).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 

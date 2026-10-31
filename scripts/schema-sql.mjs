@@ -3,9 +3,17 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const require = createRequire(import.meta.url);
-const { parse } = require("../typescript/node_modules/yaml/dist/index.js");
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const parseOf = (pkg) => {
+  try {
+    return createRequire(pkg)("yaml").parse;
+  } catch {
+    return undefined;
+  }
+};
+const parse =
+  parseOf(join(root, "package.json")) ?? parseOf(join(root, "typescript/package.json"));
+if (parse === undefined) throw new Error("Cannot find module 'yaml'");
 
 const columnSql = (column) =>
   `${column.name} ${column.type}${column.default == null ? "" : ` DEFAULT ${column.default}`}${column.notNull ? " NOT NULL" : ""}`;

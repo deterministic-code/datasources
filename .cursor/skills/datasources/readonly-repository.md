@@ -681,7 +681,7 @@ var row = await repo.Read(new Where("Username", eq, "grace").And("IsEnabled", eq
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L69-L114)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L50-L92)
 
 ```rust
 let ds = default().unwrap();
@@ -705,15 +705,12 @@ options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
+    .read_single(&Where::binary("Id", eq, 1_i64))
     .await
     .unwrap()
     .unwrap();
 let row = repo
-    .read(
-        Some(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64)),
-        None, None
-    )
+    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64))
     .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
@@ -837,7 +834,7 @@ var user = await usersRepo.ReadSingle(new Where("Id", eq, 1));
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L118-L140) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L142-L170)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L96-L118) [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L120-L148)
 
 ```rust
 impl TypeConverter<Row, Row> for UserConverter {
@@ -881,7 +878,7 @@ options.property_mappings = Some(std::sync::Arc::new(snake()));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let user = users_repo
-    .read_single(Some(&Where::binary("Id", eq, 1_i64)), None, None)
+    .read_single(&Where::binary("Id", eq, 1_i64))
     .await
     .unwrap()
     .unwrap();
@@ -998,7 +995,7 @@ var usersView = await usersRepo.ReadSingle(new Where("Key", eq, Ada));
 }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L288-L360)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L254-L335)
 
 ```rust
 let built = datasource();
@@ -1028,6 +1025,13 @@ users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new
     ("Opened".to_string(), "created".to_string()),
     ("UserTypeId".to_string(), "user_type_id".to_string()),
 ])));
+users_options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "uuid".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+    ("UserTypeId".into(), "integer".into()),
+]));
 let mut type_options = create_readonly_repository_mapping_options::<UserType>();
 type_options.entity = "UserType".into();
 type_options.entity_mapper =
@@ -1050,10 +1054,7 @@ users_repo.add_enriched(
     None,
 );
 let account = users_repo
-    .read_single(
-        Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None, None
-)
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
     .await
     .unwrap()
     .unwrap();
@@ -1196,7 +1197,7 @@ await foreach (var row in repo.Read(new Where("Active", eq, true).And("Opened", 
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L172-L236)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L150-L216)
 
 ```rust
 let built = datasource();
@@ -1224,28 +1225,25 @@ options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new([
     ("Active".to_string(), "is_enabled".to_string()),
     ("Opened".to_string(), "created".to_string()),
 ])));
+options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "uuid".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+]));
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
-    .read_single(
-        Some(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap())),
-        None, None
-    )
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
     .await
     .unwrap()
     .unwrap();
 let by_login = repo
-    .read(
-        Some(&Where::binary("Login", eq, "ada").and("Active", eq, true)),
-        None, None
-    )
+    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true))
     .try_collect::<Vec<_>>().await
     .unwrap();
 let later = repo
-    .read(
-        Some(&Where::binary("Active", eq, true).and("Opened", gt, opened)),
-        None, None
-    )
+    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened))
     .try_collect::<Vec<_>>().await
     .unwrap();
 ```
@@ -1379,7 +1377,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1531-L1547)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1528-L1544)
 
 ```rust
         &row
@@ -1438,7 +1436,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1568-L1574)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/tests/mod.rs#L1565-L1571)
 
 ```rust
 
@@ -1585,7 +1583,7 @@ var joined = new SelectStatement(new()
 usersRepo.AddEnriched(
     new("Roles", "Key", "UserId", Type: EnrichmentPropertyType.List),
     usersRepo,
-    new NestedToObjectEnrichmentStrategy<UsersView>(new TypeMap
+    new NestedToObjectEnrichmentStrategy<UsersView>(new Datasources.TypeMap
     {
         Key = "Key",
         Fields = new Dictionary<string, TypeMapField>
@@ -1651,7 +1649,7 @@ var lin = Assert.Single(items, item => item.Login == "lin");
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L535-L647)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/readonly_repository.rs#L489-L601)
 
 ```rust
 let built = datasource();
@@ -1709,7 +1707,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(Some(&joined), None, None).try_collect::<Vec<_>>().await.unwrap();
+let items = users_repo.read(&joined).try_collect::<Vec<_>>().await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -1961,7 +1959,7 @@ parents.add_enriched(
 );
 let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
 parents.create(parent).await.unwrap();
-let enriched = parents.read_single(None, None, None).await.unwrap();
+let enriched = parents.read_single(&()).await.unwrap();
 
 let command = Arc::new(MockCommand::new());
 command.reader_rows.lock().unwrap().extend([
@@ -2001,7 +1999,7 @@ join_repo.add_enriched(
         None,
         EnrichmentPropertyType::List,
     ),
-    Arc::new(CRUDRepository::new(
+    Arc::new(CRUDRepository::<Row>::new(
         Arc::new(StubConnection::new("memory")),
         CRUDRepositoryOptions::default(),
     ).unwrap()),
@@ -2040,7 +2038,7 @@ let join = SelectStatement::new(SelectStatementOptions {
 let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity_mapper = Some(Arc::new(join_entity()));
 let items = join_repo
-    .read(Some(&join), None, Some(&options))
+    .read(&join)
     .try_collect::<Vec<_>>().await
     .unwrap();
 ```

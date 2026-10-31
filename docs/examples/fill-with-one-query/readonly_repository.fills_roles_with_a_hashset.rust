@@ -47,7 +47,7 @@ users_repo.add_enriched(
     Some(strategy),
 );
 let users_view = users_repo
-    .read_single(Some(&Where::binary("Key", eq, ADA)), None, None)
+    .read_single(&Where::binary("Key", eq, ADA))
     .await
     .unwrap()
     .unwrap();

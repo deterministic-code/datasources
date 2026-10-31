@@ -825,8 +825,6 @@ The `Command` trait has no connection getter. Stub `create_command` stores the o
 ```
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#RunExecuteReaderAndReturnNameValues
 ```
-```rust rust/providers/sqlite/tests/command.rs#ConvertSchemaForNameValue
-```
 ```rust rust/providers/sqlite/tests/command.rs#run_execute_reader_and_return_name_values
 ```
 ```typescript typescript/providers/sqlite/tests/sqlite.integration.test.ts#NameValue
@@ -849,8 +847,6 @@ The `Command` trait has no connection getter. Stub `create_command` stores the o
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#Item
 ```
 ```csharp csharp/Providers/Sqlite.Tests/SqliteCommandIntegrationTests.cs#ExecuteInsertReadUpdateAndDelete
-```
-```rust rust/providers/sqlite/tests/command.rs#ConvertSchemaForItem
 ```
 ```rust rust/providers/sqlite/tests/command.rs#execute_insert_read_update_and_delete
 ```

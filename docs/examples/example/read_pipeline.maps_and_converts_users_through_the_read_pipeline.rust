@@ -83,7 +83,7 @@ let converted_rows: Vec<Row> = column_mapped_rows
     .map(|row| row_converter.convert(row).unwrap())
     .collect();
 
-let object_converter = MetaDataRowTypeConverter::of::<User>();
+let object_converter = MetaDataRowTypeConverter::new(Vec::new());
 let final_entities: Vec<Row> = converted_rows
     .iter()
     .map(|row| object_converter.convert(row).unwrap())

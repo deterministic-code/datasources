@@ -364,7 +364,7 @@ var ids = await Repo(parentsRepo, childrenRepo).Create(
     new Parent { children = [new Child { label = "a" }] },
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1088-L1126)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/enriched.rs#L1076-L1114)
 
 ```rust
 let connection = setup(&mut []).await;
@@ -395,7 +395,7 @@ let ids = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(None, None, None).try_collect::<Vec<_>>().await.unwrap();
+let stored_parents = parents.read(&()).try_collect::<Vec<_>>().await.unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L39)

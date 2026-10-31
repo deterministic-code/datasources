@@ -11,9 +11,16 @@ users_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new
     ("UserType".to_string(), "user_type_id".to_string()),
     ("Version".to_string(), "version".to_string()),
 ])));
-users_options.row_converter = Some(RowTypeConverter::of::<User>());
+users_options.schema = Schema::new(HashMap::from([
+    ("Key".into(), "integer".into()),
+    ("Login".into(), "string".into()),
+    ("Active".into(), "boolean".into()),
+    ("Opened".into(), "datetime".into()),
+    ("UserType".into(), "integer".into()),
+    ("Version".into(), "binary".into()),
+]));
 users_options.object_converter = Some(Box::new(
-    MetaDataRowTypeConverter::of::<User>().with_references(
+    MetaDataRowTypeConverter::new(Vec::new()).with_references(
         vec!["UserType".into()],
         Box::new(DictionaryMapper::new([
             ("Key".to_string(), "id".to_string()),
@@ -27,16 +34,19 @@ users_options.object_converter = Some(Box::new(
 ));
 let casing = ChangeCasingMapper::new(Casing::Pascal, Casing::Snake);
 let mut type_options = create_crud_repository_options::<UserType>();
+type_options.ids = vec!["Id".into()];
 type_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings = Some(std::sync::Arc::new(casing));
-type_options.row_converter = Some(RowTypeConverter::of::<UserType>());
+type_options.schema = Schema::new(HashMap::from([
+    ("Id".into(), "integer".into()),
+    ("Name".into(), "string".into()),
+]));
 let mut role_options = create_crud_repository_options::<UserRole>();
 role_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-role_options.row_converter = Some(RowTypeConverter::of::<UserRole>());
 let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
     Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
@@ -84,11 +94,10 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+    .read_single(&Where::binary("Key", eq, key.clone()))
     .await
     .unwrap()
     .unwrap();
-let version = loaded.get("Version").cloned().unwrap();
 let mut member = datasources::Row::new();
 member.insert("Name".into(), Value::from("member"));
 let member = user_types_repo.create(member).await.unwrap();
@@ -104,25 +113,19 @@ loaded.insert(
     "Roles".into(),
     encode_rows(&[kept_admin, kept_editor, owner_role]),
 );
+let version = loaded.get("Version").cloned().unwrap();
 loaded.insert("Version".into(), Value::Int(2));
-let updated = users_repo
-    .update(
-        loaded.clone(),
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version.clone())),
-    )
+let by_version = Where::binary("Key", eq, key.clone()).and("Version", eq, version);
+let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
 let current = users_repo
-    .read_single(Some(&Where::binary("Key", eq, key.clone())), None, None)
+    .read_single(&Where::binary("Key", eq, key.clone()))
     .await
     .unwrap()
     .unwrap();
-let stale = users_repo
-    .update(
-        loaded.clone(),
-        Some(&Where::binary("Key", eq, key.clone()).and("Version", eq, version)),
-    )
+let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
-let removed = users_repo.delete(loaded, None).await.unwrap();
+let removed = users_repo.delete(loaded).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
