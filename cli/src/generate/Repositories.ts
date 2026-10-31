@@ -2,7 +2,7 @@ import { StatementNaming, type Casing } from "@deterministic-code/datasources";
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import type { ILanguageRepositories } from "./Language.ts";
+import type { IRepositoryGenerator } from "./IRepositoryGenerator.ts";
 import {
   childClass,
   childField,
@@ -15,8 +15,23 @@ import {
   type RepositoryOptionsModel,
 } from "./RepositoryModel.ts";
 
-export abstract class Repositories implements ILanguageRepositories {
+const languages: Record<string, () => Promise<IRepositoryGenerator>> = {
+  csharp: () => import("./CSharpRepositories.ts").then((mod) => mod.csharpRepositories),
+  rust: () => import("./RustRepositories.ts").then((mod) => mod.rustRepositories),
+  typescript: () => import("./TypeScriptRepositories.ts").then((mod) => mod.typescriptRepositories),
+};
+
+export const languageOf = async (dialect: string): Promise<IRepositoryGenerator> => {
+  const load = languages[dialect];
+  if (load === undefined) throw new Error(`Unknown dialect: ${dialect}`);
+  return load();
+};
+
+export abstract class Repositories implements IRepositoryGenerator {
   abstract generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[];
+  abstract readonly types: IRepositoryGenerator["types"];
+  abstract typesPrefix(casing: ICasingStrategy, kind: "datasource" | "views"): string;
+  abstract repositoriesPrefix(casing: ICasingStrategy): string;
 
   protected quote(value: string): string {
     return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");

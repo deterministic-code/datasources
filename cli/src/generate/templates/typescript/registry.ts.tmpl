@@ -3,7 +3,7 @@ import { RepositoryFactory } from "@deterministic-code/datasources";
 import { {{className}} } from "{{path}}";
 {{/imports}}
 {{#factories}}
-export { {{name}} } from "{{path}}";
+export { {{typeName}} as {{name}} } from "{{path}}";
 {{/factories}}
 
 export const register = (factory: RepositoryFactory): void => {
