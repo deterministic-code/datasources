@@ -1,0 +1,22 @@
+import { RepositoryFactory } from "@deterministic-code/datasources";
+{{#imports}}
+import { {{className}} } from "{{path}}";
+{{/imports}}
+{{#factories}}
+export { {{name}} } from "{{path}}";
+{{/factories}}
+
+export const register = (factory: RepositoryFactory): void => {
+{{#models}}
+  factory.register("{{entity}}", "{{plural}}", (connection) => new {{className}}(connection), (connection) => {{className}}.createReadonly(connection));
+{{/models}}
+};
+RepositoryFactory.bind(register);
+
+declare module "@deterministic-code/datasources" {
+  interface Datasource {
+{{#models}}
+    readonly {{pluralName}}: {{className}};
+{{/models}}
+  }
+}

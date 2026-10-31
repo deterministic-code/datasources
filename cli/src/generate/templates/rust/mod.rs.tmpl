@@ -1,0 +1,5 @@
+{{#mods}}
+{{#path}}#[path = "{{stem}}.rs"]
+pub mod {{ident}};
+{{/path}}{{^path}}pub mod {{stem}};
+{{/path}}{{/mods}}

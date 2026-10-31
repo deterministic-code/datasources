@@ -1,0 +1,115 @@
+using Datasources;
+{{#optimisticConcurrency}}
+using static Datasources.Cmp;
+{{/optimisticConcurrency}}
+
+public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{#optimisticConcurrency}}, ICRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{/optimisticConcurrency}}
+{
+{{#children}}
+    public {{className}} {{field}} { get; }
+{{/children}}
+{{#setup}}
+
+    public {{typeName}}Repository(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}})
+    {
+{{#children}}
+        {{field}} = new {{className}}(connection);
+{{/children}}
+{{#enrichments}}
+        {{#linked}}AddLinked(new("{{destination}}", "{{source}}", "{{relatedKey}}", Association: new("{{parentFk}}", "{{relatedFk}}")), {{via}}, {{link}});{{/linked}}{{^linked}}AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}{{#dictionary}}, Type: EnrichmentPropertyType.Dictionary{{/dictionary}}{{#list}}, Type: EnrichmentPropertyType.List{{/list}}), {{via}});{{/linked}}
+{{/enrichments}}
+    }
+{{/setup}}
+{{^setup}}
+    public {{typeName}}Repository(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}}) { }
+{{/setup}}
+
+{{#setup}}
+    public static IReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> CreateReadonly(IConnection connection)
+    {
+        var repo = new ReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}});
+{{#children}}
+        var {{field}} = new {{className}}(connection);
+{{/children}}
+{{#enrichments}}
+        repo.AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}{{#dictionary}}, Type: EnrichmentPropertyType.Dictionary{{/dictionary}}{{#list}}, Type: EnrichmentPropertyType.List{{/list}}), {{via}});
+{{/enrichments}}
+        return repo;
+    }
+{{/setup}}
+{{^setup}}
+    public static IReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> CreateReadonly(IConnection connection) =>
+        new ReadonlyRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}});
+{{/setup}}
+{{#optimisticConcurrency}}
+
+    public new async Task<Response> Update({{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}} item, IWhere? byWhere = null)
+    {
+        var expected = item.{{property}};{{#increment}}
+        item.{{property}} += 1;{{/increment}}
+        var response = await base.Update(item, byWhere ?? {{#whereKeys}}{{#first}}new("{{name}}", eq, Value.From({{#token}}expected{{/token}}{{^token}}item.{{name}}{{/token}})){{/first}}{{#rest}}.And("{{name}}", eq, Value.From({{#token}}expected{{/token}}{{^token}}item.{{name}}{{/token}})){{/rest}}{{/whereKeys}});
+        return response.RowsAffected == 1 ? response : throw new DatasourceException($"Update affected {response.RowsAffected} rows");
+    }
+
+    public new async Task<Response> Delete({{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}} item, IWhere? byWhere = null)
+    {
+        var response = await base.Delete(item, byWhere ?? {{#whereKeys}}{{#first}}new("{{name}}", eq, Value.From({{#token}}item.{{property}}{{/token}}{{^token}}item.{{name}}{{/token}})){{/first}}{{#rest}}.And("{{name}}", eq, Value.From({{#token}}item.{{property}}{{/token}}{{^token}}item.{{name}}{{/token}})){{/rest}}{{/whereKeys}});
+        return response.RowsAffected == 1 ? response : throw new DatasourceException($"Delete affected {response.RowsAffected} rows");
+    }
+{{/optimisticConcurrency}}
+
+{{^builder}}
+    static CRUDRepositoryOptions<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options() => new()
+    {
+        Entity = "{{entity}}",
+        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{entity}}"] = "{{table}}" }),
+        PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+        {
+{{#propertyMappings}}
+            ["{{from}}"] = "{{to}}",
+{{/propertyMappings}}
+        }),
+        Ids = [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}],
+        ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
+        CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
+        UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+    };
+{{/builder}}
+{{#builder}}
+    static CRUDRepositoryOptions<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options(IConnection connection) =>
+        new CRUDRepositoryBuilder<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>()
+            .Add(new()
+            {
+                Entity = "{{entity}}",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{entity}}"] = "{{table}}" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+{{#propertyMappings}}
+                    ["{{from}}"] = "{{to}}",
+{{/propertyMappings}}
+                }),
+                Ids = [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}],
+                ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
+                CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
+                UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+            })
+{{#dialects}}
+            .Add("{{engine}}", new()
+            {
+                Entity = "{{entity}}",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{entity}}"] = "{{table}}" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+{{#propertyMappings}}
+                    ["{{from}}"] = "{{to}}",
+{{/propertyMappings}}
+                }),
+                Ids = [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}],
+                ReadProperties = [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}],
+                CreateProperties = [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}],
+                UpdateProperties = [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}],
+            })
+{{/dialects}}
+            .For(connection);
+{{/builder}}
+}

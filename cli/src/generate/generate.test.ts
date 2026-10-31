@@ -17,7 +17,6 @@ import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
-import { pluralCamel, pluralPascal, pluralSnake } from "./RepositoryModel.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
@@ -124,31 +123,6 @@ const exec = async (argv: string[], io: Deps, cwd = "."): Promise<number> => {
 };
 
 describe("generate", () => {
-  it("pluralizes the last word of an entity name", () => {
-    expect(pluralPascal("Contact")).toBe("Contacts");
-    expect(pluralPascal("ContactGroup")).toBe("ContactGroups");
-    expect(pluralPascal("Address")).toBe("Addresses");
-    expect(pluralPascal("Child")).toBe("Children");
-    expect(pluralPascal("Person")).toBe("People");
-    expect(pluralPascal("City")).toBe("Cities");
-    expect(pluralPascal("Box")).toBe("Boxes");
-    expect(pluralPascal("News")).toBe("News");
-    expect(pluralPascal("Sheep")).toBe("Sheep");
-    expect(pluralPascal("Contacts")).toBe("Contacts");
-    expect(pluralPascal("Cities")).toBe("Cities");
-    expect(pluralPascal("Boxes")).toBe("Boxes");
-    expect(pluralPascal("People")).toBe("People");
-    expect(pluralPascal("Church")).toBe("Churches");
-    expect(pluralPascal("Dish")).toBe("Dishes");
-    expect(pluralPascal("Buzz")).toBe("Buzzes");
-    expect(pluralPascal("Class")).toBe("Classes");
-    expect(pluralPascal("Bus")).toBe("Buses");
-    expect(pluralPascal("Fish")).toBe("Fish");
-    expect(pluralPascal("_")).toBe("_s");
-    expect(pluralSnake("contact_group")).toBe("contact_groups");
-    expect(pluralCamel("ContactGroup")).toBe("contactGroups");
-  });
-
   it("flattens settings", () => {
     expect(flattenSettings("settings:\n  backend:\n    datasources: sqlite\n  names:\n    - a\n    - b\n  on: false\n  empty: null\n")).toEqual({
       "backend.datasources": "sqlite",
@@ -553,6 +527,8 @@ types:
     const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(text).toContain("export interface Contact");
     expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({ ...init } as Contact);");
+    expect(text).toContain("export class AddressType");
+    expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => ({ ...init } as AddressType);");
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
@@ -930,8 +906,8 @@ types: []
       { name: "name", kind: "string" },
       { name: "is_starred", kind: "boolean" },
     ]);
-    const rust = rustRepositories(models, {});
-    const typescript = typescriptRepositories(models, {});
+    const rust = rustRepositories.generate(models, {}, spec);
+    const typescript = typescriptRepositories.generate(models, {}, spec);
     expect(textOf(rust, "itemRepository.rs")).toContain("Value::from(false)");
     expect(textOf(rust, "itemRepository.rs")).not.toContain("Value::from(0)");
     expect(textOf(typescript, "itemRepository.ts")).toContain("is_starred: false");

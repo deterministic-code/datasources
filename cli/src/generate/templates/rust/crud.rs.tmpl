@@ -1,0 +1,74 @@
+{{^builder}}
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "{{entity}}".into();
+    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+        ("{{entity}}".into(), "{{table}}".into()),
+    ])));
+{{#propertyMappings}}
+{{#first}}    options.property_mappings = Some(Arc::new(DictionaryMapper::new([
+{{/first}}        ("{{from}}".into(), "{{to}}".into()),
+{{#last}}    ])));
+{{/last}}
+{{/propertyMappings}}
+    options.schema = Schema::new(HashMap::from([
+{{#schema}}
+        ("{{from}}".into(), "{{to}}".into()),
+{{/schema}}
+    ]));
+    options.ids = vec![{{#ids}}{{#comma}}, {{/comma}}"{{name}}".into(){{/ids}}];
+    options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];
+    options.create_properties = Some(vec![{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/createProperties}}]);
+    options.update_properties = Some(vec![{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/updateProperties}}]);
+{{/builder}}
+{{#builder}}
+    let options = CRUDRepositoryBuilder::new()
+    .add({
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "{{entity}}".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("{{entity}}".into(), "{{table}}".into()),
+        ])));
+{{#propertyMappings}}
+{{#first}}        options.property_mappings = Some(Arc::new(DictionaryMapper::new([
+{{/first}}            ("{{from}}".into(), "{{to}}".into()),
+{{#last}}        ])));
+{{/last}}
+{{/propertyMappings}}
+        options.schema = Schema::new(HashMap::from([
+{{#schema}}
+            ("{{from}}".into(), "{{to}}".into()),
+{{/schema}}
+        ]));
+        options.ids = vec![{{#ids}}{{#comma}}, {{/comma}}"{{name}}".into(){{/ids}}];
+        options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];
+        options.create_properties = Some(vec![{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/createProperties}}]);
+        options.update_properties = Some(vec![{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/updateProperties}}]);
+        options
+    })
+{{#dialects}}
+    .add_for("{{engine}}", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "{{entity}}".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("{{entity}}".into(), "{{table}}".into()),
+        ])));
+{{#propertyMappings}}
+{{#first}}        options.property_mappings = Some(Arc::new(DictionaryMapper::new([
+{{/first}}            ("{{from}}".into(), "{{to}}".into()),
+{{#last}}        ])));
+{{/last}}
+{{/propertyMappings}}
+        options.schema = Schema::new(HashMap::from([
+{{#schema}}
+            ("{{from}}".into(), "{{to}}".into()),
+{{/schema}}
+        ]));
+        options.ids = vec![{{#ids}}{{#comma}}, {{/comma}}"{{name}}".into(){{/ids}}];
+        options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];
+        options.create_properties = Some(vec![{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/createProperties}}]);
+        options.update_properties = Some(vec![{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/updateProperties}}]);
+        options
+    })
+{{/dialects}}
+    .for_connection(connection.as_ref())?;
+{{/builder}}

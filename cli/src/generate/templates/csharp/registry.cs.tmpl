@@ -1,0 +1,15 @@
+using System.Runtime.CompilerServices;
+using Datasources;
+
+public static class {{registryClass}}
+{
+    [ModuleInitializer]
+    internal static void Bind() => RepositoryFactory.Bind(Register);
+
+    public static void Register(RepositoryFactory factory)
+    {
+{{#models}}
+        factory.Register("{{entity}}", "{{plural}}", connection => new {{typeName}}Repository(connection), connection => {{typeName}}Repository.CreateReadonly(connection));
+{{/models}}
+    }
+}

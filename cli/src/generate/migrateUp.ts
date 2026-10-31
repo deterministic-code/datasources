@@ -4,7 +4,7 @@ import type { Fs } from "../io.ts";
 import type { Flags, GenerateCommand } from "../parse.ts";
 import type { Deps } from "../io.ts";
 import { loadSpec } from "./loadSpec.ts";
-import { canonical, isSql, sqlDialectsFromEnv } from "./sqlDialects.ts";
+import { isSql, sqlDialectsFromEnv } from "./sqlDialects.ts";
 
 const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
 
@@ -28,7 +28,7 @@ export const applyMigrateUp = async (
   const values = overlayEnv(await readEnv(deps.fs, flags.cwd), env);
   const dialects = sqlDialectsFromEnv(values);
   const connection = values.DATASOURCE_URL ?? "";
-  const provider = canonical(values.PROVIDER || scheme(connection) || "");
+  const provider = values.PROVIDER || scheme(connection) || "";
   if (!provider || !connection) {
     deps.log("migrate-up skipped: set PROVIDER and DATASOURCE_URL, or pass --no-auto-migrate-up");
     return;

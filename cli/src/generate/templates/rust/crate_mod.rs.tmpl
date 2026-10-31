@@ -1,0 +1,11 @@
+{{#typeStems}}
+{{#path}}#[path = "{{stem}}.rs"]
+pub mod {{ident}};
+{{/path}}{{^path}}pub mod {{stem}};
+{{/path}}{{/typeStems}}
+{{#typeStems}}
+pub use {{ident}}::*;
+{{/typeStems}}
+mod schema_objects;
+pub mod repositories;
+pub use repositories::{{registryIdent}}::Repositories;

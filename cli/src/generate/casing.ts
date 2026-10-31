@@ -38,13 +38,9 @@ export const overlayCasingFlags = (
 export const caseDirectories = (path: string, casing: ICasingStrategy): string =>
   path
     .split("/")
-    .map((segment) => (LITERAL_SEGMENTS.has(segment) || segment.includes(".") ? segment : casing.convertDirectories(segment)))
+    .map((segment, index) =>
+      index === 0 || LITERAL_SEGMENTS.has(segment) || segment.includes(".")
+        ? segment
+        : casing.convertDirectories(segment),
+    )
     .join("/");
-
-export const typesPrefix = (dialect: Dialect, casing: ICasingStrategy, kind: "datasource" | "views"): string =>
-  dialect === "typescript"
-    ? ["typescript", casing.convertDirectories("types"), casing.convertDirectories("generated"), casing.convertDirectories(kind)].join("/")
-    : dialect;
-
-export const repositoriesPrefix = (dialect: Dialect, casing: ICasingStrategy): string =>
-  `${dialect}/${casing.convertDirectories("repositories")}`;

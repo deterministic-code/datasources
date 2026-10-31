@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RepositoryModel } from "./RepositoryModel.ts";
-import { dialectsOf, writeList } from "./writeLists.ts";
+import { dialectsOf, type RepositoryModel } from "./RepositoryModel.ts";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { datasourceEnginesOf } from "./datasourceYaml.ts";
 
@@ -23,13 +22,6 @@ const model = (optionsByProvider?: RepositoryModel["optionsByProvider"]): Reposi
 const dialect = (create: string[]): RepositoryModel => ({
   ...model(),
   createProperties: create,
-});
-
-describe("writeList", () => {
-  it("quotes a rust vec", () => {
-    expect(writeList("rust", ["Name"])).toBe('vec!["Name".into()]');
-    expect(writeList("csharp", ["Name"])).toBe('["Name"]');
-  });
 });
 
 describe("dialectsOf", () => {
