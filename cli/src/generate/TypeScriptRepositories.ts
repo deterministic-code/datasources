@@ -34,6 +34,7 @@ class TypeScriptRepositories extends Repositories {
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
+      className: childClass(model.typeName),
       typeImport: this.typeImport(model, casing),
       children,
       enrichments,

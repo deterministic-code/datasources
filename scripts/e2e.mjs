@@ -14,6 +14,7 @@ const ecosystems = { ts: "typescript", rust: "rust", csharp: "csharp" };
 const samples = [
   { name: "user-roles-simple-cli", spec: "samples/user-roles-simple-cli-shared/deterministic" },
   { name: "contacts-crud-enriched-medium-rest", spec: "samples/contacts-crud-enriched-medium-rest-shared/deterministic" },
+  { name: "contacts-simple-cli", spec: "quick_starts/contacts_cli/shared/deterministic" },
 ];
 
 const mysqlUrl = () => process.env.MYSQL_URL || "mysql://ds:ds@127.0.0.1:3306/datasources";
@@ -107,27 +108,20 @@ const tests = () => {
   const failed = [];
   if (sqliteOnly || skipDocker) {
     collect(failed, "ts user-roles", spawn("npm", ["run", "test:e2e", "--prefix", "samples/typescript/user-roles-simple-cli"]));
-    collect(failed, "ts contacts", spawn("npm", ["run", "test:e2e", "--prefix", "samples/typescript/contacts-crud-enriched-medium-rest"]));
+    collect(failed, "ts contacts rest sqlite", spawn("npm", ["run", "test:e2e:contacts:rest:ts:sqlite"]));
+    collect(failed, "ts contacts console sqlite", spawn("npm", ["run", "test:e2e:contacts:console:ts:sqlite"]));
     collect(
       failed,
       "rust user-roles sqlite",
       spawn("cargo", ["test", "--manifest-path", "samples/rust/user-roles-simple-cli/Cargo.toml", "--test", "e2e", "sqlite", "--", "--test-threads=1"], root, cargoEnv()),
     );
-    collect(
-      failed,
-      "rust contacts",
-      spawn("cargo", ["test", "--manifest-path", "samples/rust/contacts-crud-enriched-medium-rest/Cargo.toml", "--test", "e2e", "--test", "api"], root, cargoEnv()),
-    );
+    collect(failed, "rust contacts rest sqlite", spawn("npm", ["run", "test:e2e:contacts:rest:rust:sqlite"]));
     collect(
       failed,
       "csharp user-roles sqlite",
       spawn("dotnet", ["test", "samples/csharp/user-roles-simple-cli/UserRolesSimpleCli.Tests.csproj", "--filter", "Category=e2e&FullyQualifiedName~Sqlite", "--p:CollectCoverage=false"]),
     );
-    collect(
-      failed,
-      "csharp contacts",
-      spawn("dotnet", ["test", "samples/csharp/contacts-crud-enriched-medium-rest/ContactsCrudEnrichedMediumRest.Tests.csproj", "--p:CollectCoverage=false"]),
-    );
+    collect(failed, "csharp contacts rest sqlite", spawn("npm", ["run", "test:e2e:contacts:rest:csharp:sqlite"]));
   } else {
     collect(failed, "test:e2e:ci", spawn("npm", ["run", "test:e2e:ci"]));
     collect(failed, "test:e2e:rust", spawn("npm", ["run", "test:e2e:rust"]));

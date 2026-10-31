@@ -8,6 +8,8 @@ services:
       MYSQL_PASSWORD: ds
     volumes:
       - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    tmpfs:
+      - /var/lib/mysql
     ports:
       - "${MYSQL_PUBLISH_PORT:-3306}:3306"
     healthcheck:
@@ -21,6 +23,8 @@ services:
       POSTGRES_USER: ds
       POSTGRES_PASSWORD: ds
       POSTGRES_DB: datasources
+    tmpfs:
+      - /var/lib/postgresql/data
     ports:
       - "${POSTGRES_PUBLISH_PORT:-5432}:5432"
     healthcheck:

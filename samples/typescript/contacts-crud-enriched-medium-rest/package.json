@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --coverage --exclude tests/**/*.e2e.test.ts",
-    "test:e2e": "vitest run tests/*.e2e.test.ts"
+    "test:e2e": "sh sqlite.sh && sh mysql-postgres.sh"
   },
   "dependencies": {
     "@deterministic-code/datasources": "file:../../../typescript/datasources",
