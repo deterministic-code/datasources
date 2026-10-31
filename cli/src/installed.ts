@@ -16,6 +16,8 @@ export const cargoProviders = (toml: string): Provider[] =>
 export const csharpProviders = (csproj: string): Provider[] =>
   providers.filter((name) => hasCsharpPackage(csproj, catalog[name].nuget));
 
+export const hasCsharpProjectReference = (xml: string, id: string): boolean => xml.includes(`${id}.csproj`);
+
 const hasCargoCrate = (toml: string, crate: string): boolean =>
   new RegExp(`(^|[\\s{,])${crate}\\s*=`, "m").test(toml) ||
   new RegExp(`"${crate}"`).test(toml);

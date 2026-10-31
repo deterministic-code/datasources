@@ -454,7 +454,7 @@ describe("setup", () => {
     expect(files[join(cwd, "deterministic", "datasource.yaml")]).toBeUndefined();
   });
 
-  it("skips package commands when the selection is already installed", async () => {
+  it("installs selected providers even when they already look installed", async () => {
     const { fs } = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({
         dependencies: { "@deterministic-code/datasources-sqlite": "*" },
@@ -463,9 +463,23 @@ describe("setup", () => {
     const io = deps(fs);
     expect(await exec(["setup", "--yes", "--cwd", cwd], io)).toBe(0);
     expect(io.ran).toEqual([
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
       "npm install @deterministic-code/migraters",
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     ]);
+    const csharp = deps(
+      mem(["App.csproj"], {
+        [join(cwd, "App.csproj")]:
+          `<ProjectReference Include="Datasources.csproj" />\n<ProjectReference Include="Datasources.Sqlite.csproj" />`,
+      }).fs,
+    );
+    expect(
+      await exec(["setup", "--yes", "--cwd", cwd, "--languages", "csharp", "--datasources", "sqlite"], csharp),
+    ).toBe(0);
+    expect(csharp.ran.some((line) => line.includes("dotnet add") && line.includes("package"))).toBe(false);
+    expect(csharp.ran).toContain(
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
+    );
   });
 
   it("returns errors for bad usage", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cargoProviders, csharpProviders, npmProviders } from "./installed.ts";
+import { cargoProviders, csharpProviders, hasCsharpProjectReference, npmProviders } from "./installed.ts";
 
 describe("installed", () => {
   it("reads npm workspace packages", () => {
@@ -32,5 +32,11 @@ datasources-sqlite = { path = "../sqlite" }
 `),
     ).toEqual(["json", "sqlite"]);
     expect(csharpProviders("")).toEqual([]);
+    expect(hasCsharpProjectReference(`<ProjectReference Include="Datasources.Sqlite.csproj" />`, "Datasources.Sqlite")).toBe(
+      true,
+    );
+    expect(hasCsharpProjectReference(`<PackageReference Include="Datasources.Sqlite" />`, "Datasources.Sqlite")).toBe(
+      false,
+    );
   });
 });

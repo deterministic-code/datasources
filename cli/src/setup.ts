@@ -115,7 +115,7 @@ export const applySetup = async (flags: Flags, deps: Deps, requested: string[]):
       deps,
       language,
       entries,
-      selected.filter((name) => !installed.includes(name)),
+      selected,
       installed.filter((name) => !selected.includes(name)),
       selected,
     );
@@ -165,7 +165,7 @@ const applyPackages = async (
   remaining: Provider[],
 ): Promise<void> => {
   const procs: Proc[] = [
-    ...(add.length ? addCommands(ecosystem, add, entries) : []),
+    ...(add.length ? addCommands(ecosystem, add, entries, await csharpProject(flags.cwd, ecosystem, entries, deps.fs)) : []),
     ...(remove.length ? removeCommands(ecosystem, remove, remaining, entries) : []),
   ];
   for (const proc of procs) {
@@ -189,6 +189,17 @@ const applyMigrateInit = async (
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
     if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
   }
+};
+
+const csharpProject = async (
+  cwd: string,
+  ecosystem: Ecosystem,
+  entries: string[],
+  fs: Fs,
+): Promise<string | undefined> => {
+  if (ecosystem !== "csharp") return undefined;
+  const target = csharpTarget(entries);
+  return target.endsWith(".csproj") ? optional(fs, join(cwd, target)) : undefined;
 };
 
 const readInstalled = async (

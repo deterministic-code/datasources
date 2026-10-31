@@ -85,13 +85,11 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     };
   }
 
-  protected dialectsBag(model: RepositoryModel, spec?: IDeterministic, casing?: ICasingStrategy): Record<string, unknown>[] {
+  protected dialectsBag(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown>[] {
     return dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ entity: model.entity, ...planned }),
-      schema: spec === undefined || casing === undefined
-        ? []
-        : this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
+      schema: this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
     }));
   }
 

@@ -46,6 +46,14 @@ describe("commands", () => {
       "Datasources",
     ]);
     expect(addCommands("csharp", ["json"], []).some((c) => c.command === "npm")).toBe(false);
+    expect(
+      addCommands(
+        "csharp",
+        ["sqlite"],
+        ["App.csproj"],
+        `<ProjectReference Include="..\\Datasources.csproj" />\n<ProjectReference Include="Datasources.Sqlite.csproj" />`,
+      ).map((c) => c.args),
+    ).toEqual([["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"]]);
   });
 
   it("uninstalls unused dialects", () => {

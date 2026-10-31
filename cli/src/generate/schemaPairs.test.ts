@@ -55,4 +55,12 @@ describe("schemaPairs", () => {
     expect(pairs).toContainEqual({ from: "name", type: "string", nullable: false, hasDefault: false });
     expect(schemaPairs(model("missing"), undefined, createCasingStrategy("rust", {}))).toEqual([]);
   });
+
+  it("omits fields with an empty type", () => {
+    const spec = {
+      types: [{ name: "blank", fields: [{ name: "ghost", type: "" }], tags: [] }],
+      expandedTypes: [{ name: "blank", fields: [{ name: "ghost", type: "" }], tags: [] }],
+    };
+    expect(schemaPairs(model("blank"), spec as never, createCasingStrategy("rust", {}))).toEqual([]);
+  });
 });
