@@ -21,7 +21,7 @@
     "@deterministic-code/deterministic-generators-common": "github:deterministic-code/deterministic-generators-common#main",
     "@deterministic-code/generators-common": "github:deterministic-code/generators-common#main",
     "@deterministic-code/rust-generators": "github:deterministic-code/generators-rust#main",
-    "@deterministic-code/typescript-generators": "github:deterministic-code/generators-typescript#69710b0",
+    "@deterministic-code/typescript-generators": "github:deterministic-code/generators-typescript#main",
     "@inquirer/prompts": "^7.8.0",
     "tsx": "^4.20.5",
     "yaml": "^2.6.0"
