@@ -1,5 +1,5 @@
-use crate::nested_select_relation_kind::NestedSelectRelationKind;
-use crate::nested_select_type::NestedSelectType;
+use super::nested_select_relation_kind::NestedSelectRelationKind;
+use super::nested_select_type::NestedSelectType;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NestedSelectRelation {

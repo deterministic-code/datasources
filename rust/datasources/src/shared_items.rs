@@ -1,5 +1,5 @@
 use crate::datasource_error::DatasourceError;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::{where_of, ReadInput};
 use crate::response::Response;

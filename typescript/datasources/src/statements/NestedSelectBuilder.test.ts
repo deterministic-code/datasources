@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { NestedSelectBuilder } from "./NestedSelectBuilder.ts";
-import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
-import { CreateNestedReadStoredProcedureStatement } from "./statements/CreateNestedReadStoredProcedureStatement.ts";
-import { Operator } from "./statements/Operator.ts";
-import { Where } from "./statements/Where.ts";
-import { contactGraph, contactReads } from "./tests/contact/contactReads.ts";
+import { DefaultStatementTextRenderer } from "./DefaultStatementTextRenderer.ts";
+import { CreateNestedReadStoredProcedureStatement } from "./CreateNestedReadStoredProcedureStatement.ts";
+import { Operator } from "./Operator.ts";
+import { Where } from "./Where.ts";
+import { contactGraph, contactReads } from "../tests/contact/contactReads.ts";
 
 describe("NestedSelectBuilder", () => {
   it("builds contact joins and a type map", () => {

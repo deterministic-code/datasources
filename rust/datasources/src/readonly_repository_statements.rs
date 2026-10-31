@@ -1,4 +1,4 @@
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::statement_mappers::StatementMappers;
 use crate::{SelectStatement, SelectStatementOptions};
 

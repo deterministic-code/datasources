@@ -1,4 +1,4 @@
-use crate::i_where::IWhere;
+use super::i_where::IWhere;
 use crate::StatementTextRenderer;
 use crate::Where;
 

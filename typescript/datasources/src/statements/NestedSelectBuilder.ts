@@ -2,10 +2,10 @@ import type { NestedSelectBuilderOptions } from "./NestedSelectBuilderOptions.ts
 import type { NestedSelectStatement } from "./NestedSelectStatement.ts";
 import type { NestedSelectType } from "./NestedSelectType.ts";
 import { selectFieldAliases } from "./SelectFieldAliases.ts";
-import { Join } from "./statements/Join.ts";
-import { SelectStatement } from "./statements/SelectStatement.ts";
-import type { Join as JoinType } from "./statements/Join.ts";
-import type { TypeMapGroup } from "./mappers/TypeMapGroup.ts";
+import { Join } from "./Join.ts";
+import { SelectStatement } from "./SelectStatement.ts";
+import type { Join as JoinType } from "./Join.ts";
+import type { TypeMapGroup } from "../mappers/TypeMapGroup.ts";
 
 type FieldMap = Record<string, string | TypeMapGroup<Record<string, string>>>;
 

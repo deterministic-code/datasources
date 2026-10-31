@@ -1,7 +1,7 @@
 use super::statement::Statement;
 use super::statement_text_renderer::StatementTextRenderer;
-use crate::i_where::IWhere;
-use crate::where_text::boxed;
+use super::i_where::IWhere;
+use super::where_text::boxed;
 
 pub struct DeleteStatement {
     table: String,

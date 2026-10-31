@@ -1,7 +1,7 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::from_schema::FromSchema;
 use crate::i_repository::IRepository;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::response::Response;

@@ -2,8 +2,8 @@ use super::expression_renderer::ExpressionRenderer;
 use super::i_condition_visitor::ConditionVisitor;
 use super::r#where::Where;
 use super::statement_text_renderer::StatementTextRenderer;
-use crate::i_condition::ICondition;
-use crate::where_text::WhereText;
+use super::i_condition::ICondition;
+use super::where_text::WhereText;
 
 pub struct ConditionRenderer;
 

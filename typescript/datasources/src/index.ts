@@ -95,12 +95,6 @@ export { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 export { CRUDRepositoryBuilder } from "./CRUDRepositoryBuilder.ts";
 export { RepositoryBuilderOptionsFactory } from "./RepositoryBuilderOptionsFactory.ts";
 export { StatementMappers } from "./StatementMappers.ts";
-export { NestedSelectBuilder } from "./NestedSelectBuilder.ts";
-export type { NestedSelectBuilderOptions } from "./NestedSelectBuilderOptions.ts";
-export type { NestedSelectRelation } from "./NestedSelectRelation.ts";
-export type { NestedSelectRelationKind } from "./NestedSelectRelationKind.ts";
-export type { NestedSelectStatement } from "./NestedSelectStatement.ts";
-export type { NestedSelectType } from "./NestedSelectType.ts";
 export { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 export { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 export type { BuiltRepository } from "./BuiltRepository.ts";
@@ -189,6 +183,7 @@ export {
   Aggregate,
   OrderBy,
   SelectStatement,
+  NestedSelectBuilder,
   StatementParser,
   StatementRenderer,
   StatementTextRenderer,
@@ -270,7 +265,7 @@ export { RowTypeMapper } from "./mappers/RowTypeMapper.ts";
 export { parametersToRecord } from "./parametersToRecord.ts";
 export { ProviderNotImplementedError } from "./ProviderNotImplementedError.ts";
 export { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
-export type { Column, JoinKind, SelectStatementOptions, ReferentialAction as ReferentialActionName, SortDirection, ProcedureSource, ProcedureByGroup } from "./statements/index.ts";
+export type { Column, JoinKind, SelectStatementOptions, ReferentialAction as ReferentialActionName, SortDirection, ProcedureSource, ProcedureByGroup, NestedSelectBuilderOptions, NestedSelectRelation, NestedSelectRelationKind, NestedSelectStatement, NestedSelectType } from "./statements/index.ts";
 export type { Field, Scalar } from "./builders/index.ts";
 export { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 export {

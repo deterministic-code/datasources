@@ -4,7 +4,7 @@ use crate::connection::Connection;
 use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::parameter::Parameter;
 use crate::parameter_direction::ParameterDirection;
 use crate::response::Response;

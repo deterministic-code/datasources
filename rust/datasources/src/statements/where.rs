@@ -5,7 +5,7 @@ use super::identifier::Identifier;
 use super::literal::Literal;
 use super::operator::Operator;
 use super::statement_text_renderer::StatementTextRenderer;
-use crate::i_where::IWhere;
+use super::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::value::Value;

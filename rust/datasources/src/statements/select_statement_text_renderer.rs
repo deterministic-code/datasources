@@ -1,8 +1,8 @@
 use crate::builders::{Join, JoinKind};
-use crate::i_where::IWhere;
-use crate::select_field_aliases::apply_select_field_alias;
-use crate::select_statement::SelectStatement;
-use crate::where_text::WhereText;
+use super::i_where::IWhere;
+use super::select_field_aliases::apply_select_field_alias;
+use super::select_statement::SelectStatement;
+use super::where_text::WhereText;
 use super::order_by::OrderBy;
 use super::statement_text_renderer::StatementTextRenderer;
 

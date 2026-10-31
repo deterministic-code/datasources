@@ -11,7 +11,7 @@ use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::parameter::Parameter;
 use crate::read_input::ReadInput;

@@ -6,7 +6,7 @@ use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::mappers::Mapper;
 use crate::native::Native;
 use crate::parameter::Parameter;

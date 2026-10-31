@@ -1,4 +1,4 @@
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::mappers::IdentityMapper;
 use crate::parameter::Parameter;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;

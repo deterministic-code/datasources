@@ -7,7 +7,7 @@ use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrate
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
-use crate::i_where::IWhere;
+use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;

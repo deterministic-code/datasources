@@ -1,5 +1,5 @@
-use crate::i_select_statement::ISelectStatement;
-use crate::i_where::IWhere;
+use crate::ISelectStatement;
+use crate::IWhere;
 use crate::statement::Statement;
 use crate::StatementTextRenderer;
 use std::sync::Mutex;

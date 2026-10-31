@@ -5,8 +5,8 @@ use super::operator::Operator;
 use super::statement::Statement;
 use super::statement_text_renderer::StatementTextRenderer;
 use super::Where;
-use crate::i_where::IWhere;
-use crate::nested_select_statement::NestedSelectStatement;
+use super::i_where::IWhere;
+use super::nested_select_statement::NestedSelectStatement;
 use crate::statements::SelectStatementOptions;
 use crate::SelectStatement;
 

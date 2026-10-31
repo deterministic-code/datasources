@@ -1,5 +1,5 @@
-use crate::i_condition::ICondition;
-use crate::i_where::IWhere;
+use crate::ICondition;
+use crate::IWhere;
 use crate::StatementTextRenderer;
 use std::sync::Mutex;
 
@@ -22,7 +22,7 @@ impl MockWhere {
 }
 
 impl crate::ReadInput for MockWhere {
-    fn as_where(&self) -> Option<&dyn crate::i_where::IWhere> {
+    fn as_where(&self) -> Option<&dyn crate::IWhere> {
         Some(self)
     }
 }
