@@ -63,8 +63,10 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
                 yield return new(ReferenceColumns.Map(prop.Name), Converted(prop.Name, id, reverse: true));
             yield break;
         }
-        if (!IsColumn(prop.PropertyType) || prop.GetValue(source) is not { } raw) yield break;
-        yield return new(prop.Name, Converted(prop.Name, Value.From(raw), reverse: true));
+        if (!IsColumn(prop.PropertyType)) yield break;
+        yield return prop.GetValue(source) is { } raw
+            ? new(prop.Name, Converted(prop.Name, Value.From(raw), reverse: true))
+            : new(prop.Name, Value.Null.Instance);
     }
 
     static void SetReferenceId(T target, PropertyInfo prop, Value cell)

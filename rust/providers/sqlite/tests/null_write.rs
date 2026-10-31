@@ -31,15 +31,16 @@ async fn omits_null_datetime_and_version() {
     omitted.insert("Name".into(), Value::from("ada"));
     omitted.insert("Created".into(), Value::Null);
     omitted.insert("Version".into(), Value::Null);
-    let mut omitted = repo.create(omitted).await.unwrap();
+    let omitted = repo.create(omitted).await.unwrap();
     assert!(matches!(omitted.get("Id"), Some(Value::Int(id)) if *id > 0));
     let stored = repo
         .read_single_by_id(omitted.get("Id").unwrap())
         .await
         .unwrap()
         .unwrap();
-    omitted.insert("Name".into(), Value::from("ada-v2"));
-    let updated = repo.update(omitted.clone()).await.unwrap();
+    let mut renamed = stored.clone();
+    renamed.insert("Name".into(), Value::from("ada-v2"));
+    let updated = repo.update(renamed).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let kept = repo
         .read_single_by_id(omitted.get("Id").unwrap())

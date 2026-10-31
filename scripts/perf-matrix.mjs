@@ -56,10 +56,18 @@ const stop = (code = 0) => {
 process.on("SIGINT", () => stop(130));
 process.on("SIGTERM", () => stop(143));
 
-const up = (service) => {
-  const result = compose("up", "-d", "--force-recreate", "--renew-anon-volumes", "--wait", service);
+const running = (service) =>
+  compose("ps", "-q", "--status", "running", service).stdout.trim().length > 0;
+
+const up = (service, recreate = true) => {
+  if (!recreate && !running(service))
+    throw new Error(`${service} is not running; keep npm run test:perf up (tmpfs does not survive a stop)`);
+  const args = recreate
+    ? ["up", "-d", "--force-recreate", "--renew-anon-volumes", "--wait", service]
+    : ["up", "-d", "--wait", service];
+  const result = compose(...args);
   if ((result.status ?? 1) !== 0) throw new Error(`compose up ${service}: ${result.stderr || result.stdout}`);
-  if (service === "mysql")
+  if (service === "mysql" && recreate)
     compose("exec", "-T", "mysql", "mysql", "-uroot", "-proot", "-e", "GRANT ALL PRIVILEGES ON *.* TO 'ds'@'%'; FLUSH PRIVILEGES;");
 };
 
@@ -128,25 +136,36 @@ const csharpCwd = (sample) => join(root, "samples/csharp", sample, "perf");
 const tsCwd = (sample) => join(root, "samples/typescript", sample);
 
 const rustTarget = (sample) => join(rustCwd(sample), "target");
-const hasRustPerf = (sample) => existsSync(join(rustCwd(sample), "src/bin/perf.rs"));
+const perfEntry = {
+  typescript: (sample) => join(tsCwd(sample), "perf.ts"),
+  rust: (sample) => join(rustCwd(sample), "src/bin/perf.rs"),
+  csharp: (sample) => join(csharpCwd(sample), "Perf.csproj"),
+};
+const hasPerf = (sample, language) => existsSync(perfEntry[language](sample));
 
-const compile = () => {
-  for (const sample of samples) {
-    if (hasRustPerf(sample)) {
-      const rust = spawnSync("cargo", ["build", "--release", "--quiet", "--bin", "perf"], {
-        cwd: rustCwd(sample),
-        encoding: "utf8",
-        env: { ...process.env, CARGO_TARGET_DIR: rustTarget(sample) },
-      });
-      if ((rust.status ?? 1) !== 0) throw new Error(`cargo build ${sample}: ${rust.stderr || rust.stdout}`);
-    }
+const compilers = {
+  rust: (sample) => {
+    const rust = spawnSync("cargo", ["build", "--release", "--quiet", "--bin", "perf"], {
+      cwd: rustCwd(sample),
+      encoding: "utf8",
+      env: { ...process.env, CARGO_TARGET_DIR: rustTarget(sample) },
+    });
+    if ((rust.status ?? 1) !== 0) throw new Error(`cargo build ${sample}: ${rust.stderr || rust.stdout}`);
+  },
+  csharp: (sample) => {
     const csharp = spawnSync(
       "dotnet",
       ["build", "-c", "Release", "-p:CollectCoverage=false", "--nologo", "-v", "q"],
       { cwd: csharpCwd(sample), encoding: "utf8" },
     );
     if ((csharp.status ?? 1) !== 0) throw new Error(`dotnet build ${sample}: ${csharp.stderr || csharp.stdout}`);
-  }
+  },
+};
+
+const compile = () => {
+  for (const sample of samples)
+    for (const language of languages)
+      if (hasPerf(sample, language)) compilers[language]?.(sample);
 };
 
 const run = (sample, language, provider, strategy, url) => {
@@ -347,7 +366,7 @@ if (process.argv.includes("--report-only")) {
 
 mkdirSync(artifacts, { recursive: true });
 const data = writePerfData(join(artifacts, "data"), rows, related);
-const engines = () => [...new Set(providers.filter((provider) => provider !== "sqlite"))];
+const composeServices = ["mysql", "postgres"].filter((name) => providers.includes(name));
 const cells = [];
 const saveStores = (stores) => writeAtomic("stores.json", `${JSON.stringify(stores, null, 2)}\n`);
 
@@ -357,11 +376,10 @@ if (reading) {
   if (!stores.cells?.length) throw new Error("run npm run test:perf first");
   compile();
   try {
-    for (const provider of [...new Set(stores.cells.map((cell) => cell.provider))])
-      if (provider !== "sqlite") up(provider);
+    for (const service of composeServices) up(service, false);
     for (const store of stores.cells) {
       if (languages.length && !languages.includes(store.language)) continue;
-      if (store.language === "rust" && !hasRustPerf(store.sample)) continue;
+      if (!hasPerf(store.sample, store.language)) continue;
       try {
         cells.push(run(store.sample, store.language, store.provider, store.strategy, store.url));
       } catch (error) {
@@ -388,12 +406,12 @@ down();
 compile();
 const stores = { rows, related, cells: [] };
 try {
-  for (const provider of engines()) up(provider);
+  for (const service of composeServices) up(service);
   for (const provider of providers)
     for (const sample of samples)
       for (const language of languages)
         for (const strategy of strategies) {
-          if (language === "rust" && !hasRustPerf(sample)) continue;
+          if (!hasPerf(sample, language)) continue;
           const persist = keepStore(sample, strategy);
           const id = `${sample}_${language}_${provider}_${strategy}`.replaceAll(/[^a-z0-9_]/gi, "_");
           const isolated = isolate(provider, persist, id);

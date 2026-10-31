@@ -116,7 +116,7 @@ impl BatchCommandIBulkWriteStrategy {
         }
     }
 
-    fn fields(&self, record: &Row, include: impl Fn(&str, &Value) -> bool) -> Result<Vec<Parameter>> {
+    fn fields(&self, record: &Row, include: impl Fn(&str, &Value) -> bool, omit_null: bool) -> Result<Vec<Parameter>> {
         let columns = self.statements()?.read_columns().to_vec();
         let mapped: Vec<String> = match &self.options()?.property_mappings {
             Some(map) => columns.iter().map(|name| map.map(name.clone())).collect(),
@@ -129,7 +129,7 @@ impl BatchCommandIBulkWriteStrategy {
                     && (columns.is_empty()
                         || columns.iter().any(|name| name == *key)
                         || mapped.iter().any(|name| name == *key))
-                    && !matches!(value, Value::Null)
+                    && !(omit_null && matches!(value, Value::Null))
             })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect();
@@ -158,13 +158,17 @@ impl BatchCommandIBulkWriteStrategy {
         let record = self.reverse(item)?;
         let ids = self.ids()?.to_vec();
         let create = self.options()?.create_properties.clone();
-        let fields = self.fields(&record, |key, value| {
-            listed(
-                &create,
-                key,
-                !ids.iter().any(|id| id == key) || assigned(value),
-            )
-        })?;
+        let fields = self.fields(
+            &record,
+            |key, value| {
+                listed(
+                    &create,
+                    key,
+                    !ids.iter().any(|id| id == key) || assigned(value),
+                )
+            },
+            true,
+        )?;
         let statement = self.statements()?.insert(&fields);
         Ok(Inserted {
             table: statement.table().to_string(),
@@ -176,9 +180,11 @@ impl BatchCommandIBulkWriteStrategy {
         let record = self.reverse(item)?;
         let ids = self.ids()?.to_vec();
         let update = self.options()?.update_properties.clone();
-        let fields = self.fields(&record, |key, _| {
-            listed(&update, key, !ids.iter().any(|id| id == key))
-        })?;
+        let fields = self.fields(
+            &record,
+            |key, _| listed(&update, key, !ids.iter().any(|id| id == key)),
+            false,
+        )?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",
@@ -217,9 +223,11 @@ impl BatchCommandIBulkWriteStrategy {
         let record = self.reverse(item)?;
         let ids = self.ids()?.to_vec();
         let update = self.options()?.update_properties.clone();
-        let fields = self.fields(&record, |key, _| {
-            listed(&update, key, !ids.iter().any(|id| id == key))
-        })?;
+        let fields = self.fields(
+            &record,
+            |key, _| listed(&update, key, !ids.iter().any(|id| id == key)),
+            false,
+        )?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
                 "Update requires at least one non-Id field",
@@ -263,7 +271,7 @@ impl BatchCommandIBulkWriteStrategy {
             .unwrap_or_default();
         let rendered = DefaultStatementTextRenderer::instance().render(&statement);
         let parameters = if parameters.is_empty() && rendered.contains('$') {
-            self.fields(&record, |_, _| true)?
+            self.fields(&record, |_, _| true, true)?
         } else {
             parameters
         };

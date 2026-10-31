@@ -301,30 +301,39 @@ impl<T: FromSchema> CRUDRepository<T> {
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
-        self.fields(record, |key, _| {
-            let fallback = include_ids || !self.ids.iter().any(|id| id == key);
-            if include_ids {
-                fallback
-            } else {
-                listed(&self.update_properties, key, fallback)
-            }
-        })
+        self.fields(
+            record,
+            |key, _| {
+                let fallback = include_ids || !self.ids.iter().any(|id| id == key);
+                if include_ids {
+                    fallback
+                } else {
+                    listed(&self.update_properties, key, fallback)
+                }
+            },
+            include_ids,
+        )
     }
 
     fn insert_params(&self, record: &Row) -> Result<Vec<Parameter>> {
-        self.fields(record, |key, value| {
-            listed(
-                &self.create_properties,
-                key,
-                !self.ids.iter().any(|id| id == key) || assigned(value),
-            )
-        })
+        self.fields(
+            record,
+            |key, value| {
+                listed(
+                    &self.create_properties,
+                    key,
+                    !self.ids.iter().any(|id| id == key) || assigned(value),
+                )
+            },
+            true,
+        )
     }
 
     fn fields(
         &self,
         record: &Row,
         include: impl Fn(&str, &Value) -> bool,
+        omit_null: bool,
     ) -> Result<Vec<Parameter>> {
         let entries = self.readonly.enrichments.lock().expect("enrichments");
         let columns = self.crud_statements.read_columns();
@@ -338,7 +347,7 @@ impl<T: FromSchema> CRUDRepository<T> {
         let mut pairs: Vec<_> = record
             .iter()
             .filter(|(key, value)| {
-                !matches!(value, Value::Null)
+                !(omit_null && matches!(value, Value::Null))
                     && (extras(key)
                         || include(key, value)
                             && (columns.is_empty()

@@ -32,8 +32,8 @@ public sealed class NullWriteTests
         var omitted = new UserStamp { username = "ada" };
         await repo.Create(omitted);
         var stored = await repo.ReadSingleById(omitted.id);
-        omitted.username = "ada-v2";
-        await repo.Update(omitted);
+        stored!.username = "ada-v2";
+        await repo.Update(stored);
         var kept = await repo.ReadSingleById(omitted.id);
         var explicitUser = new UserStamp
         {

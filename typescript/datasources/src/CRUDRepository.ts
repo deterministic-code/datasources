@@ -52,14 +52,15 @@ const fieldsOf = (
   enrichmentInto: (name: string) => boolean,
   columns: readonly string[],
   column: (property: string) => string,
+  omitNull = true,
 ): Field[] =>
   Object.entries(record)
     .filter(
       ([key, value]) =>
         include(key) &&
         (extras.has(key) || (writable(key, columns, column) && !enrichmentInto(key))) &&
-        value !== null &&
-        value !== undefined,
+        value !== undefined &&
+        (!omitNull || value !== null),
     )
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => ({ name, value: cell(name, value, true) as Scalar }));
@@ -245,6 +246,7 @@ export class CRUDRepository<T = Cells>
       this.enrichmentInto,
       this.crudStatements.readColumns,
       this.column,
+      false,
     );
     if (fields.length === 0) throw new DatasourceError("Update requires at least one non-Id field");
     const statement = this.crudStatements.update(

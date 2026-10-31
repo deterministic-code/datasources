@@ -1,3 +1,4 @@
+mod bind_repositories;
 mod contact;
 mod repository_tests_spec;
 mod schema_spec;

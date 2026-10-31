@@ -57,16 +57,22 @@ fn write_facet<T: Facet<'static>>(item: &T, schema: &Schema) -> Result<Row> {
     let mut row = Row::new();
     for (field, value) in st.fields() {
         let name = field.name;
-        if let Some(cell) = peek_cell(value) {
+        if let Some(cell) = peek_cell(value)? {
             row.insert(name.to_string(), cell);
             continue;
         }
         if matches!(value.shape().def, Def::List(_)) {
             row.insert(name.to_string(), encode_rows(&peek_list_rows(value, schema)?));
+            continue;
         }
         if matches!(value.shape().def, Def::Map(_)) {
             row.insert(name.to_string(), encode_rows(&peek_map_rows(value)?));
+            continue;
         }
+        return Err(DatasourceError::message(format!(
+            "cannot encode field {name} of type {}",
+            value.shape().type_identifier
+        )));
     }
     Ok(row)
 }
@@ -234,47 +240,70 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
     set.map_err(reflect)
 }
 
-fn peek_cell(value: Peek<'_, '_>) -> Option<Value> {
+fn peek_cell(value: Peek<'_, '_>) -> Result<Option<Value>> {
     if let Ok(flag) = value.get::<bool>() {
-        return Some(Value::Bool(*flag));
+        return Ok(Some(Value::Bool(*flag)));
     }
     if let Ok(n) = value.get::<i8>() {
-        return Some(Value::Int(*n as i64));
+        return Ok(Some(Value::Int(*n as i64)));
+    }
+    if let Ok(n) = value.get::<u8>() {
+        return Ok(Some(Value::Int(*n as i64)));
     }
     if let Ok(n) = value.get::<i16>() {
-        return Some(Value::Int(*n as i64));
+        return Ok(Some(Value::Int(*n as i64)));
     }
     if let Ok(n) = value.get::<i32>() {
-        return Some(Value::Int(*n as i64));
+        return Ok(Some(Value::Int(*n as i64)));
     }
     if let Ok(n) = value.get::<i64>() {
-        return Some(Value::Int(*n));
+        return Ok(Some(Value::Int(*n)));
     }
     if let Ok(n) = value.get::<u32>() {
-        return Some(Value::Int(*n as i64));
+        return Ok(Some(Value::Int(*n as i64)));
+    }
+    if let Ok(n) = value.get::<u64>() {
+        return if *n <= i64::MAX as u64 {
+            Ok(Some(Value::Int(*n as i64)))
+        } else {
+            Err(DatasourceError::message(format!("u64 {n} does not fit in i64")))
+        };
+    }
+    if let Ok(n) = value.get::<usize>() {
+        return if *n as u64 <= i64::MAX as u64 {
+            Ok(Some(Value::Int(*n as i64)))
+        } else {
+            Err(DatasourceError::message(format!("usize {n} does not fit in i64")))
+        };
+    }
+    if let Ok(n) = value.get::<f32>() {
+        return Ok(Some(Value::Float(*n as f64)));
     }
     if let Ok(n) = value.get::<f64>() {
-        return Some(Value::Float(*n));
+        return Ok(Some(Value::Float(*n)));
     }
     if let Ok(text) = value.get::<String>() {
-        return Some(Value::from(text.clone()));
+        return Ok(Some(Value::from(text.clone())));
     }
     if let Ok(id) = value.get::<Uuid>() {
-        return Some(Value::Uuid(*id));
+        return Ok(Some(Value::Uuid(*id)));
     }
     if let Ok(date) = value.get::<DateTime<Utc>>() {
-        return Some(Value::DateTime(*date));
+        return Ok(Some(Value::DateTime(*date)));
     }
     if let Ok(number) = value.get::<Decimal>() {
-        return Some(Value::Decimal(*number));
+        return Ok(Some(Value::Decimal(*number)));
     }
     if let Ok(bytes) = value.get::<Vec<u8>>() {
-        return Some(Value::Binary(bytes.clone()));
+        return Ok(Some(Value::Binary(bytes.clone())));
     }
     if let Ok(option) = value.into_option() {
-        return option.value().and_then(peek_cell);
+        return match option.value() {
+            Some(inner) => peek_cell(inner),
+            None => Ok(Some(Value::Null)),
+        };
     }
-    None
+    Ok(None)
 }
 
 fn peek_list_rows(value: Peek<'_, '_>, _schema: &Schema) -> Result<Vec<Row>> {
@@ -284,10 +313,14 @@ fn peek_list_rows(value: Peek<'_, '_>, _schema: &Schema) -> Result<Vec<Row>> {
         if let Ok(st) = item.into_struct() {
             let mut row = Row::new();
             for (field, cell) in st.fields() {
-                if let Some(value) = peek_cell(cell) {
+                if let Some(value) = peek_cell(cell)? {
                     row.insert(field.name.to_string(), value);
                 }
             }
+            rows.push(row);
+        } else if let Some(value) = peek_cell(item)? {
+            let mut row = Row::new();
+            row.insert("value".into(), value);
             rows.push(row);
         }
     }
@@ -299,14 +332,14 @@ fn peek_map_rows(value: Peek<'_, '_>) -> Result<Vec<Row>> {
     let mut rows = Vec::new();
     for (key, item) in map.iter() {
         let mut row = Row::new();
-        if let Some(cell) = peek_cell(key) {
+        if let Some(cell) = peek_cell(key)? {
             row.insert("key".into(), cell);
         }
-        if let Some(cell) = peek_cell(item) {
+        if let Some(cell) = peek_cell(item)? {
             row.insert("value".into(), cell);
         } else if let Ok(st) = item.into_struct() {
             for (field, cell) in st.fields() {
-                if let Some(value) = peek_cell(cell) {
+                if let Some(value) = peek_cell(cell)? {
                     row.insert(field.name.to_string(), value);
                 }
             }

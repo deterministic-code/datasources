@@ -31,8 +31,8 @@ public class NullWriteTests
         var omitted = await repo.Create(new Item { Name = "ada" });
         Assert.True(omitted.Id > 0);
         var stored = await repo.ReadSingleById(omitted.Id);
-        omitted.Name = "ada-v2";
-        var updated = await repo.Update(omitted);
+        stored!.Name = "ada-v2";
+        var updated = await repo.Update(stored);
         Assert.Equal(1, updated.RowsAffected);
         var kept = await repo.ReadSingleById(omitted.Id);
         var explicitItem = new Item
