@@ -1,6 +1,6 @@
 let ds = default().unwrap();
 register(&ds);
-let users = ds.as_ref().users();
+let users = ds.users();
 let mut created = Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));

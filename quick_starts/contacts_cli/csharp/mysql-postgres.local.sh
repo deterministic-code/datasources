@@ -3,7 +3,8 @@ export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
 dotnet new console
 cp -R ../quick_starts/contacts_cli/csharp/. ./
 cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
-docker compose up -d --wait
+docker compose down --remove-orphans
+docker compose up -d --wait --force-recreate
 dotnet add reference ../csharp/Datasources/Datasources.csproj
 dotnet add reference ../csharp/Providers/Mysql/Datasources.Mysql.csproj
 dotnet add reference ../csharp/Providers/Postgres/Datasources.Postgres.csproj

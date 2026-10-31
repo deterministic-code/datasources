@@ -131,29 +131,41 @@ impl<T: FromSchema> CRUDRepository<T> {
     pub fn fill_create_zeros(&self, record: &Row) -> Row {
         let mut filled = record.clone();
         if self.create_zeros.is_empty() {
-            for (key, column) in &self.readonly.schema().columns {
-                if self.ids.iter().any(|id| id == key)
-                    || !listed(&self.create_properties, key, true)
-                    || column.nullable
-                    || column.has_default
-                {
-                    continue;
-                }
-                let zero = match column.type_name.as_str() {
-                    "string" => Some(Value::from("")),
-                    "boolean" => Some(Value::from(false)),
-                    _ => None,
-                };
-                if let Some(value) = zero {
-                    filled.entry(key.clone()).or_insert(value);
-                }
-            }
+            self.apply_empty_defaults(&mut filled, &self.create_properties, true);
         } else {
             for (key, value) in &self.create_zeros {
                 filled.entry(key.clone()).or_insert_with(|| value.clone());
             }
+            self.apply_empty_defaults(&mut filled, &self.create_properties, false);
         }
         filled
+    }
+
+    fn apply_empty_defaults(
+        &self,
+        filled: &mut Row,
+        properties: &Option<Vec<String>>,
+        fill_missing: bool,
+    ) {
+        for (key, column) in &self.readonly.schema().columns {
+            if self.ids.iter().any(|id| id == key)
+                || !listed(properties, key, true)
+                || column.has_default
+                || self.enrichment_source(key)
+            {
+                continue;
+            }
+            let zero = crate::schema_default::of(column);
+            match filled.get(key) {
+                Some(Value::Text(text)) if text.is_empty() => {
+                    filled.insert(key.clone(), zero);
+                }
+                None if fill_missing && language_zero(&zero) => {
+                    filled.insert(key.clone(), zero);
+                }
+                _ => {}
+            }
+        }
     }
 
     pub fn add_enriched(
@@ -491,12 +503,23 @@ impl<T: FromSchema> CRUDRepository<T> {
             .any(|entry| entry.enrichment.destination_property == name)
     }
 
+    fn enrichment_source(&self, name: &str) -> bool {
+        self.readonly
+            .enrichments
+            .lock()
+            .expect("enrichments")
+            .iter()
+            .any(|entry| entry.enrichment.source_property == name)
+    }
+
     async fn save(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
         if self.readonly.memory_items().is_some() {
             let stored = self.without_enrichment(item);
             return Ok(self.readonly.memory_items().expect("memory").save(&stored));
         }
         let record = self.readonly.reverse_convert(item)?;
+        let mut record = record;
+        self.apply_empty_defaults(&mut record, &self.update_properties, false);
         let fields = self.params(&record, false)?;
         if fields.is_empty() {
             return Err(DatasourceError::message(
@@ -708,6 +731,10 @@ fn listed(list: &Option<Vec<String>>, key: &str, fallback: bool) -> bool {
         Some(names) => names.iter().any(|name| name == key),
         None => fallback,
     }
+}
+
+fn language_zero(value: &Value) -> bool {
+    matches!(value, Value::Text(text) if text.is_empty()) || matches!(value, Value::Bool(false))
 }
 
 fn assigned(value: &Value) -> bool {

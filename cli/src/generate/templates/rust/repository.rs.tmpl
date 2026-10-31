@@ -1,46 +1,47 @@
 use datasources::{Association, Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
-use super::super::{{typeName}};
+{{#typed}}use super::super::{{entityType}};
+{{/typed}}
 use std::collections::HashMap;
 use std::sync::Arc;
 {{#wrapped}}
 use std::ops::Deref;
 
-pub struct {{typeName}}Repository {
-    pub repo: Arc<CRUDRepository<{{typeName}}>>,
+pub struct {{className}} {
+    pub repo: Arc<CRUDRepository<{{entityType}}>>,
 {{#child}}
     pub {{field}}: Arc<CRUDRepository>,
 {{/child}}
 }
 
-impl {{typeName}}Repository {
+impl {{className}} {
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
 {{>crud}}
 {{#child}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/child}}
-        let mut repo = CRUDRepository::<{{typeName}}>::new(Arc::clone(&connection), options)?;
+        let mut repo = CRUDRepository::<{{entityType}}>::new(Arc::clone(&connection), options)?;
 {{#enrichments}}
         {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
 {{/enrichments}}
-        Ok(Self { repo: Arc::new(repo), {{#child}}{{#comma}} {{/comma}}{{field}}{{/child}} })
+        Ok(Self { repo: Arc::new(repo){{childFields}} })
     }
 }
 
-impl Deref for {{typeName}}Repository {
-    type Target = CRUDRepository<{{typeName}}>;
+impl Deref for {{className}} {
+    type Target = CRUDRepository<{{entityType}}>;
     fn deref(&self) -> &Self::Target {
         self.repo.as_ref()
     }
 }
 
-pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{typeName}}>> {
-    Arc::try_unwrap({{typeName}}Repository::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))
+pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{entityType}}>> {
+    Arc::try_unwrap({{className}}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))
 }
 {{/wrapped}}
 {{^wrapped}}
-pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{typeName}}>> {
+pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{entityType}}>> {
 {{>crud}}
-    CRUDRepository::<{{typeName}}>::new(connection, options)
+    CRUDRepository::<{{entityType}}>::new(connection, options)
 }
 {{/wrapped}}
 
@@ -62,7 +63,7 @@ pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datas
 {{/setup}}
 }
 
-pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<{{typeName}}>> {
+pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<{{entityType}}>> {
     let mut options = ReadonlyRepositoryMappingOptions::default();
     options.entity = "{{entity}}".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
@@ -83,7 +84,7 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
 {{#readonlyChildren}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/readonlyChildren}}
-        let {{#enrichments}}{{#first}}mut {{/first}}{{/enrichments}}repo = ReadonlyRepository::<{{typeName}}>::new(connection, options)?;
+        let mut repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
 {{#enrichments}}
         repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);
 {{/enrichments}}
@@ -91,57 +92,56 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
 }
 {{#optimisticConcurrency}}
 
-use datasources::{async_trait, CommandMiddleware, DatasourceError, FromSchema, ICRUDRepository, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Result, Value, Where, eq};
-use futures_core::Stream;
+use datasources::{async_trait, CommandMiddleware, DatasourceError, FromSchema, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Stream, Value, Where, eq};
 use std::any::TypeId;
 use std::pin::Pin;
 
-pub struct {{typeName}}Optimistic {
-    repo: CRUDRepository<{{typeName}}>,
+pub struct {{optimisticClass}} {
+    repo: CRUDRepository<{{entityType}}>,
 }
 
-impl {{typeName}}Optimistic {
-    pub fn new(repo: CRUDRepository<{{typeName}}>) -> Self {
+impl {{optimisticClass}} {
+    pub fn new(repo: CRUDRepository<{{entityType}}>) -> Self {
         Self { repo }
     }
 
-    pub async fn update(&self, item: {{typeName}}) -> Result<Response> {
+    pub async fn update(&self, item: {{entityType}}) -> Result<Response> {
         ICRUDRepository::update(self, item, None).await
     }
 
-    pub async fn delete(&self, item: {{typeName}}) -> Result<Response> {
+    pub async fn delete(&self, item: {{entityType}}) -> Result<Response> {
         ICRUDRepository::delete(self, item, None).await
     }
 }
 
-impl IRepository for {{typeName}}Optimistic {
+impl IRepository for {{optimisticClass}} {
     fn entity_type(&self) -> TypeId {
         self.repo.entity_type()
     }
 }
 
 #[async_trait]
-impl IReadonlyRepository<{{typeName}}> for {{typeName}}Optimistic {
-    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<{{typeName}}>>> {
+impl IReadonlyRepository<{{entityType}}> for {{optimisticClass}} {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<{{entityType}}>>> {
         Some(self)
     }
 
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<{{typeName}}>> {
+    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<{{entityType}}>> {
         self.repo.read_single(query).await
     }
 
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<{{typeName}}>> + Send + 'a>> {
+    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
         self.repo.read(query)
     }
 }
 
 #[async_trait]
-impl ICRUDRepository<{{typeName}}> for {{typeName}}Optimistic {
-    async fn create(&self, item: {{typeName}}) -> Result<{{typeName}}> {
+impl ICRUDRepository<{{entityType}}> for {{optimisticClass}} {
+    async fn create(&self, item: {{entityType}}) -> Result<{{entityType}}> {
         self.repo.create(item).await
     }
 
-    async fn update(&self, item: {{typeName}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let mut stored = item.to_schema(self.repo.schema())?;
         let expected = stored.get("{{property}}").cloned().ok_or_else(|| DatasourceError::message("{{property}}"))?;
         let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/rest}}{{/whereKeys}};
@@ -154,7 +154,7 @@ impl ICRUDRepository<{{typeName}}> for {{typeName}}Optimistic {
             });
         }
 {{/increment}}
-        let item = {{typeName}}::from_schema(stored, self.repo.schema())?;
+        let item = {{entityType}}::from_schema(stored, self.repo.schema())?;
         let response = ICRUDRepository::update(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Update affected {} rows", response.rows_affected)));
@@ -162,7 +162,7 @@ impl ICRUDRepository<{{typeName}}> for {{typeName}}Optimistic {
         Ok(response)
     }
 
-    async fn delete(&self, item: {{typeName}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn delete(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let mut stored = item.to_schema(self.repo.schema())?;
         let expected = stored.get("{{property}}").cloned().ok_or_else(|| DatasourceError::message("{{property}}"))?;
         let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/rest}}{{/whereKeys}};
@@ -173,7 +173,7 @@ impl ICRUDRepository<{{typeName}}> for {{typeName}}Optimistic {
         Ok(response)
     }
 
-    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<{{typeName}}>> {
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<{{entityType}}>> {
         self.repo.read_single_by_id(id).await
     }
 

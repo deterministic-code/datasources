@@ -1,9 +1,11 @@
+unset CARGO_TARGET_DIR
 export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
 cargo init
 cp -R ../quick_starts/contacts_cli/rust/. ./
 cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
-docker compose up -d --wait
+docker compose down --remove-orphans
+docker compose up -d --wait --force-recreate
 cargo add --path ../rust/datasources
 cargo add --path ../rust/providers/mysql
 cargo add --path ../rust/providers/postgres

@@ -14,7 +14,7 @@ trait Repositories {
     fn users(&self) -> Arc<dyn ICRUDRepository>;
 }
 
-impl Repositories for dyn Datasource {
+impl Repositories for Arc<dyn Datasource> {
     fn users(&self) -> Arc<dyn ICRUDRepository> {
         self.create_repository_by_name("users", None).expect("users")
     }
@@ -57,7 +57,7 @@ async fn creates_using_dynamic_after_register() {
         .await
         .unwrap();
     register(&ds);
-    let users = ds.as_ref().users();
+    let users = ds.users();
     let mut created = Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
@@ -86,7 +86,7 @@ async fn writes_user_through_plural_name() {
         .await
         .unwrap();
     register(&ds);
-    let users_repo = ds.as_ref().users();
+    let users_repo = ds.users();
     let mut created = datasources::Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
@@ -139,7 +139,7 @@ async fn reads_through_access_create_readonly() {
     let mut created = datasources::Row::new();
     created.insert("Username".into(), Value::from("ada"));
     created.insert("IsEnabled".into(), Value::Bool(true));
-    let created = ds.as_ref().users().create(created).await.unwrap();
+    let created = ds.users().create(created).await.unwrap();
     let users_repo = ds
         .as_ref()
         .access("users", None)

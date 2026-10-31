@@ -207,7 +207,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Save(T item, IWhere? byWhere)
     {
-        var record = ReverseConvert(item);
+        var record = ApplyEmptyDefaults(ReverseConvert(item), updateProperties, fillMissing: false);
         var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
         var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
         if (fields.Count == 0)
@@ -249,15 +249,29 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     Row MergeZeros(Row record)
     {
-        foreach (var (key, column) in schema.Columns)
-            if (Listed(createProperties, key, !ids.Contains(key)) && !column.Nullable && !column.HasDefault)
-                if (column.Type == "string")
-                    record.TryAdd(key, "");
-                else if (column.Type == "boolean")
-                    record.TryAdd(key, false);
+        ApplyEmptyDefaults(record, createProperties, fillMissing: true);
         foreach (var (key, value) in ReverseConvert(new T()))
             if (LanguageZero(value) && Listed(createProperties, key, !ids.Contains(key)))
                 record.TryAdd(key, value);
+        return record;
+    }
+
+    Row ApplyEmptyDefaults(Row record, IReadOnlyList<string>? properties, bool fillMissing)
+    {
+        foreach (var (key, column) in schema.Columns)
+        {
+            if (!Listed(properties, key, !ids.Contains(key)) || column.HasDefault || EnrichmentSource(key))
+                continue;
+            var zero = SchemaDefault.Of(column);
+            if (!record.TryGetValue(key, out var existing))
+            {
+                if (fillMissing && LanguageZero(zero))
+                    record[key] = zero;
+                continue;
+            }
+            if (existing is Value.Text(""))
+                record[key] = zero;
+        }
         return record;
     }
 
@@ -283,6 +297,9 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     protected bool EnrichmentInto(string name) =>
         ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.DestinationProperty == name);
+
+    bool EnrichmentSource(string name) =>
+        ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.SourceProperty == name);
 
     Row ReverseConvert(T item)
     {

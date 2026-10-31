@@ -1,4 +1,5 @@
 pub use async_trait::async_trait;
+pub use futures_core::Stream;
 
 mod array_reader;
 mod first_result_reader;
@@ -45,6 +46,7 @@ mod driver;
 mod enrichment;
 mod from_schema;
 mod schema;
+mod schema_default;
 mod enrichment_property_type;
 mod enrichment_via;
 mod expect_console_middleware;

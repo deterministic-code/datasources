@@ -1,3 +1,4 @@
+unset CARGO_TARGET_DIR
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
 cargo init
