@@ -1,7 +1,7 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, pluralPascal, registryFile, repositoryFile, type RepositoryModel } from "./RepositoryModel.ts";
+import { childClass, pluralPascal, type RepositoryModel } from "./RepositoryModel.ts";
 import { Repositories } from "./Repositories.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
@@ -9,9 +9,9 @@ class CSharpRepositories extends Repositories {
   generate(models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] {
     const casing = createCasingStrategy("csharp", settings);
     return [
-      ...models.map((model) => content(repositoryFile("cs", model.specName, casing), fill(repositoryTmpl, this.repository(model, casing)))),
+      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.cs`, fill(repositoryTmpl, this.repository(model, casing)))),
       content(
-        registryFile("cs", casing),
+        `${casing.convertFileName("repository_registry")}.cs`,
         fill(registryTmpl, {
           registryClass: casing.convertTypes("repository_registry"),
           models: models.map((model) => ({

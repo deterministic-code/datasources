@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dialectsOf, rustIdent, type RepositoryModel } from "./RepositoryModel.ts";
+import { dialectsOf, type RepositoryModel } from "./RepositoryModel.ts";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { datasourceEnginesOf } from "./datasourceYaml.ts";
 
@@ -22,12 +22,6 @@ const model = (optionsByProvider?: RepositoryModel["optionsByProvider"]): Reposi
 const dialect = (create: string[]): RepositoryModel => ({
   ...model(),
   createProperties: create,
-});
-
-describe("rustIdent", () => {
-  it("rewrites a hyphenated stem", () => {
-    expect(rustIdent("legacy-contact")).toBe("legacy_contact");
-  });
 });
 
 describe("dialectsOf", () => {

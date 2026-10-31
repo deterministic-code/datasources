@@ -1,7 +1,7 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, pluralCamel, registryFile, repositoryFile, type RepositoryModel } from "./RepositoryModel.ts";
+import { childClass, pluralCamel, type RepositoryModel } from "./RepositoryModel.ts";
 import { Repositories } from "./Repositories.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
@@ -9,8 +9,8 @@ class TypeScriptRepositories extends Repositories {
   generate(models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] {
     const casing = createCasingStrategy("typescript", settings);
     return [
-      ...models.map((model) => content(repositoryFile("ts", model.specName, casing), fill(repositoryTmpl, this.repository(model, casing)))),
-      content(registryFile("ts", casing), fill(registryTmpl, this.registry(models, casing))),
+      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.ts`, fill(repositoryTmpl, this.repository(model, casing)))),
+      content(`${casing.convertFileName("repository_registry")}.ts`, fill(registryTmpl, this.registry(models, casing))),
     ];
   }
 

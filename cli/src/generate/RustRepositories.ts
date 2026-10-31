@@ -3,7 +3,7 @@ import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/gene
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { dialectsOf, pluralSnake, registryFile, repositoryFile, rustIdent, type RepositoryModel } from "./RepositoryModel.ts";
+import { dialectsOf, pluralSnake, type RepositoryModel } from "./RepositoryModel.ts";
 import { Repositories } from "./Repositories.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
@@ -13,10 +13,10 @@ class RustRepositories extends Repositories {
     const casing = createCasingStrategy("rust", settings);
     const typeStems = [...new Set([...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name)))].map((stem) => this.mod(stem));
     return [
-      ...models.map((model) => content(repositoryFile("rs", model.specName, casing), fill(repositoryTmpl, this.repository(model, spec, casing)))),
-      content(registryFile("rs", casing), fill(registryTmpl, this.registry(models, casing))),
+      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.rs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
+      content(`${casing.convertFileName("repository_registry")}.rs`, fill(registryTmpl, this.registry(models, casing))),
       content("mod.rs", fill(modTmpl, { mods: [...models.map((model) => this.mod(casing.convertFileName(`${model.specName}_repository`))), this.mod(casing.convertFileName("repository_registry"))] })),
-      content("../mod.rs", fill(crateModTmpl, { typeStems, registryIdent: rustIdent(casing.convertFileName("repository_registry")) })),
+      content("../mod.rs", fill(crateModTmpl, { typeStems, registryIdent: this.ident(casing.convertFileName("repository_registry")) })),
       content("../schema_objects.rs", fill(schemaObjectsTmpl, this.schemaTypes(models))),
     ];
   }
@@ -24,7 +24,7 @@ class RustRepositories extends Repositories {
   private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown> {
     const child = this.childrenOf(model, casing).map((item, index) => ({
       ...item,
-      module: rustIdent(casing.convertFileName(`${item.specName}_repository`)),
+      module: this.ident(casing.convertFileName(`${item.specName}_repository`)),
       rowFn: casing.convertFields(`${item.specName}_row_repository`),
       comma: index > 0 ? {} : undefined,
     }));
@@ -56,7 +56,7 @@ class RustRepositories extends Repositories {
       })),
       readonlyChildren: [...vias].map(([specName]) => ({
         field: child.find((item) => item.specName === specName)?.field,
-        module: rustIdent(casing.convertFileName(`${specName}_repository`)),
+        module: this.ident(casing.convertFileName(`${specName}_repository`)),
         rowFn: casing.convertFields(`${specName}_row_repository`),
       })),
       ...this.optionsOf(model),
@@ -72,7 +72,7 @@ class RustRepositories extends Repositories {
         typeName: model.typeName,
         entity: this.quote(model.entity),
         plural: pluralSnake(model.specName),
-        module: rustIdent(casing.convertFileName(`${model.specName}_repository`)),
+        module: this.ident(casing.convertFileName(`${model.specName}_repository`)),
         repoFn: casing.convertFields(`${model.specName}_repository`),
         readonlyFn: casing.convertFields(`${model.specName}_readonly_repository`),
         optimisticConcurrency: model.optimisticConcurrency === undefined ? undefined : {},
@@ -92,8 +92,12 @@ class RustRepositories extends Repositories {
     return { schemaTypes: [...names].map((name) => ({ name })) };
   }
 
+  private ident(stem: string): string {
+    return /^[A-Za-z_][A-Za-z0-9_]*$/.test(stem) ? stem : stem.replaceAll("-", "_");
+  }
+
   private mod(stem: string): Record<string, unknown> {
-    const ident = rustIdent(stem);
+    const ident = this.ident(stem);
     return { stem, ident, path: ident === stem ? undefined : {} };
   }
 }

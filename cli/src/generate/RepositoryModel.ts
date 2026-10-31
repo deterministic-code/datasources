@@ -63,14 +63,6 @@ const sameOptions = (left: RepositoryOptionsModel, right: RepositoryOptionsModel
 export const dialectsOf = (model: RepositoryModel): Array<[string, RepositoryOptionsModel]> =>
   Object.entries(model.optionsByProvider ?? {}).filter(([, planned]) => !sameOptions(model, planned));
 
-export const repositoryFile = (ext: "cs" | "ts" | "rs", specName: string, casing: ICasingStrategy): string =>
-  `${casing.convertFileName(`${specName}_repository`)}.${ext}`;
-
-export const registryFile = (ext: "cs" | "ts" | "rs", casing: ICasingStrategy): string =>
-  `${casing.convertFileName("repository_registry")}.${ext}`;
-
-export const rustIdent = (stem: string): string => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(stem) ? stem : stem.replaceAll("-", "_"));
-
 export const childField = (casing: ICasingStrategy, specName: string): string => casing.convertFields(specName);
 
 export const childClass = (typeName: string): string => `${typeName}Repository`;
