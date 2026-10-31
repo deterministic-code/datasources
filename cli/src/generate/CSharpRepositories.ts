@@ -1,7 +1,7 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, pluralPascal, type RepositoryModel } from "./RepositoryModel.ts";
+import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { Repositories } from "./Repositories.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
@@ -16,7 +16,7 @@ class CSharpRepositories extends Repositories {
           registryClass: casing.convertTypes("repository_registry"),
           models: models.map((model) => ({
             entity: this.quote(model.entity),
-            plural: this.quote(pluralPascal(model.typeName)),
+            plural: this.quote(this.plural(model.typeName, "pascalCase")),
             typeName: model.typeName,
             className: childClass(model.typeName),
           })),

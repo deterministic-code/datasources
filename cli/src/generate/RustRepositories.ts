@@ -3,7 +3,7 @@ import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/gene
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { dialectsOf, pluralSnake, type RepositoryModel } from "./RepositoryModel.ts";
+import { dialectsOf, type RepositoryModel } from "./RepositoryModel.ts";
 import { Repositories } from "./Repositories.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
@@ -71,7 +71,7 @@ class RustRepositories extends Repositories {
       models: models.map((model, index) => ({
         typeName: model.typeName,
         entity: this.quote(model.entity),
-        plural: pluralSnake(model.specName),
+        plural: this.plural(model.specName, "snakeCase"),
         module: this.ident(casing.convertFileName(`${model.specName}_repository`)),
         repoFn: casing.convertFields(`${model.specName}_repository`),
         readonlyFn: casing.convertFields(`${model.specName}_readonly_repository`),

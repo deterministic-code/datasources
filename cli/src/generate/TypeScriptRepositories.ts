@@ -1,7 +1,7 @@
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, pluralCamel, type RepositoryModel } from "./RepositoryModel.ts";
+import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { Repositories } from "./Repositories.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
@@ -53,8 +53,8 @@ class TypeScriptRepositories extends Repositories {
       })),
       models: models.map((model) => ({
         entity: this.quote(model.entity),
-        plural: this.quote(pluralCamel(model.typeName)),
-        pluralName: pluralCamel(model.typeName),
+        plural: this.quote(this.plural(model.typeName, "camelCase")),
+        pluralName: this.plural(model.typeName, "camelCase"),
         className: childClass(model.typeName),
       })),
     };

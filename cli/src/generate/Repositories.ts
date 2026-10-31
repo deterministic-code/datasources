@@ -1,3 +1,4 @@
+import { StatementNaming, type Casing } from "@deterministic-code/datasources";
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
@@ -19,6 +20,11 @@ export abstract class Repositories implements ILanguageRepositories {
 
   protected quote(value: string): string {
     return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
+  }
+
+  protected plural(name: string, casing: Casing): string {
+    const naming = StatementNaming.sql;
+    return naming.convert(naming.physicalStem(naming.convert(name, "snakeCase")), casing);
   }
 
   protected listed(names: string[]): Array<{ name: string; comma?: Record<string, never> }> {
