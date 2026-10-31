@@ -7,7 +7,7 @@ import { caseDirectories } from "./casing.ts";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
 import type { Dialect, GenerateRequest } from "./GenerateRequest.ts";
 import type { RepositoryModel } from "./RepositoryModel.ts";
-import { languageOf } from "./Language.ts";
+import { languageOf } from "./Repositories.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
 import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./datasourceYaml.ts";
 import { sqlDialectsFromEnv } from "./sqlDialects.ts";
@@ -69,7 +69,7 @@ export const deterministic: CodeGenerationProvider = {
     return remap(
       place(
         language.repositoriesPrefix(casing),
-        language.repositories.generate(await withProviderWrites(request, models), request.settings, spec),
+        language.generate(await withProviderWrites(request, models), request.settings, spec),
       ),
       request.settings,
       request.dialect,

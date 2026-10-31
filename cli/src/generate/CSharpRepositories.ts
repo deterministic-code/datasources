@@ -1,4 +1,6 @@
-import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import { generate as datasource } from "@deterministic-code/csharp-generators/generate-datasource-types";
+import { generate as views } from "@deterministic-code/csharp-generators/generate-view-types";
+import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
@@ -6,6 +8,13 @@ import { Repositories } from "./Repositories.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
 class CSharpRepositories extends Repositories {
+  readonly types = { datasource, views };
+
+  typesPrefix = (): string => "csharp";
+
+  repositoriesPrefix = (casing: ICasingStrategy): string =>
+    `csharp/${casing.convertDirectories("repositories")}`;
+
   generate(models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] {
     const casing = createCasingStrategy("csharp", settings);
     return [

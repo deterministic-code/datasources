@@ -185,9 +185,10 @@ const compileCli = async () => {
     },
   };
   const src = join(cliRoot, "src");
+  const outdir = join(cliRoot, "dist");
   await build({
     entryPoints: await walk(src),
-    outdir: join(cliRoot, "dist"),
+    outdir,
     outbase: src,
     format: "esm",
     platform: "node",
@@ -195,6 +196,10 @@ const compileCli = async () => {
     plugins: [rewriteTs],
     logLevel: "warning",
   });
+  const templates = join(src, "generate/templates");
+  for (const dialect of ["csharp", "rust", "typescript"]) {
+    await cp(join(templates, dialect), join(outdir, "generate/templates", dialect), { recursive: true });
+  }
 };
 
 const stageLibrary = async (pkg, version) => {

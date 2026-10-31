@@ -1,3 +1,5 @@
+import { generate as datasource } from "@deterministic-code/rust-generators/generate-datasource-types";
+import { generate as views } from "@deterministic-code/rust-generators/generate-view-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/generators-common/spec-types";
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
@@ -9,6 +11,13 @@ import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
 
 class RustRepositories extends Repositories {
+  readonly types = { datasource, views };
+
+  typesPrefix = (): string => "rust";
+
+  repositoriesPrefix = (casing: ICasingStrategy): string =>
+    `rust/${casing.convertDirectories("repositories")}`;
+
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("rust", settings);
     const typeStems = [...new Set([...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name)))].map((stem) => this.mod(stem));

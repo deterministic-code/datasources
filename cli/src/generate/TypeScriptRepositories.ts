@@ -1,3 +1,5 @@
+import { generate as datasource } from "@deterministic-code/typescript-generators/generate-datasource-types";
+import { generate as views } from "@deterministic-code/typescript-generators/generate-view-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
@@ -6,6 +8,14 @@ import { Repositories } from "./Repositories.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
 class TypeScriptRepositories extends Repositories {
+  readonly types = { datasource, views };
+
+  typesPrefix = (casing: ICasingStrategy, kind: "datasource" | "views"): string =>
+    ["typescript", ...["types", "generated", kind].map((segment) => casing.convertDirectories(segment))].join("/");
+
+  repositoriesPrefix = (casing: ICasingStrategy): string =>
+    `typescript/${casing.convertDirectories("repositories")}`;
+
   generate(models: RepositoryModel[], settings: Record<string, string>): GenerateEntry[] {
     const casing = createCasingStrategy("typescript", settings);
     return [
@@ -48,7 +58,8 @@ class TypeScriptRepositories extends Repositories {
         path: `./${casing.convertFileName(`${model.specName}_repository`)}`,
       })),
       factories: models.map((model) => ({
-        name: `${model.typeName[0]!.toLowerCase()}${model.typeName.slice(1)}`,
+        typeName: casing.convertTypes(model.specName),
+        name: casing.convertFields(model.specName),
         path: this.typeImport(model, casing),
       })),
       models: models.map((model) => ({

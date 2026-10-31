@@ -1,7 +1,7 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { describe, expect, it } from "vitest";
 import { caseDirectories, overlayCasingFlags, parseCaseFlag } from "./casing.ts";
-import { languageOf } from "./Language.ts";
+import { languageOf } from "./Repositories.ts";
 
 describe("languageOf", () => {
   it("rejects an unknown dialect", async () => {
