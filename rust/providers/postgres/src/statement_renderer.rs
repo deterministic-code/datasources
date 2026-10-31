@@ -102,18 +102,7 @@ impl StatementVisitor for PostgresStatementRenderer {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        if statement
-            .fields()
-            .iter()
-            .any(|field| field.name == "id" || field.name == "Id")
-        {
-            return insert;
-        }
-        format!(
-            "{};\n{insert}",
-            PostgresSelectInsertedIdStatementTextRenderer
-                .render(&SelectInsertedIdStatement::new(statement.table(), "id"))
-        )
+        insert
     }
 
     fn visit_bulk_insert(
@@ -439,6 +428,15 @@ mod tests {
         assert_eq!(
             renderer().render(&update),
             "UPDATE contacts SET created = data.created FROM (SELECT $created__0::TIMESTAMPTZ AS created, $id__0::INTEGER AS id) AS data WHERE contacts.id = data.id"
+        );
+    }
+
+    #[test]
+    fn renders_insert_without_prepending_setval() {
+        let insert = InsertStatement::new("users", &[Parameter::new("name", "ada")]);
+        assert_eq!(
+            renderer().render(&insert),
+            "INSERT INTO users (name) VALUES ($name::TEXT)"
         );
     }
 
