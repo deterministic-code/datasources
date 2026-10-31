@@ -54,5 +54,6 @@ describe("schemaPairs", () => {
     expect(pairs).toContainEqual({ from: "id", to: "integer" });
     expect(pairs).toContainEqual({ from: "gender_type_id", to: "integer" });
     expect(pairs).not.toContainEqual({ from: "name", to: "string" });
+    expect(schemaPairs(model("missing"), undefined, createCasingStrategy("rust", {}))).toEqual([]);
   });
 });

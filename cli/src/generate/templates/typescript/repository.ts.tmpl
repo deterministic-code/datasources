@@ -1,0 +1,73 @@
+import type { {{typeName}} } from "{{typeImport}}";
+import { CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}{{#optimisticConcurrency}}DatasourceError, {{/optimisticConcurrency}}DictionaryMapper, {{#optimisticConcurrency}}eq, {{/optimisticConcurrency}}ReadonlyRepository, {{#optimisticConcurrency}}Where, {{/optimisticConcurrency}}type IConnection } from "@deterministic-code/datasources";
+{{#children}}
+import { {{className}} } from "{{repoImport}}";
+{{/children}}
+{{#builder}}
+const options = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<{{typeName}}>()
+    .add({ entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] })
+{{#dialects}}
+    .add("{{engine}}", { entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] })
+{{/dialects}}
+    .for(connection);
+
+const readonlyOptions = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<{{typeName}}>()
+    .add({ entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] })
+{{#dialects}}
+    .add("{{engine}}", { entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] })
+{{/dialects}}
+    .for(connection);
+
+{{/builder}}
+export class {{typeName}}Repository extends CRUDRepository<{{typeName}}> {
+{{#children}}
+  readonly {{field}}: {{className}};
+{{/children}}
+  constructor(connection: IConnection) {
+    super(connection, {{#builder}}options(connection){{/builder}}{{^builder}}{ entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}ids: [{{#ids}}{{#comma}}, {{/comma}}"{{name}}"{{/ids}}], createProperties: [{{#createProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/createProperties}}], updateProperties: [{{#updateProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/updateProperties}}], readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] }{{/builder}});
+{{#createZeros}}
+    this.createZeros = { {{#createZeros}}{{#comma}}, {{/comma}}{{name}}: {{#boolean}}false{{/boolean}}{{^boolean}}""{{/boolean}}{{/createZeros}} };
+{{/createZeros}}
+{{#optimisticConcurrency}}
+    const update = this.update;
+    const remove = this.delete;
+    this.update = async (item, byWhere) => {
+      const expected = item.{{property}};
+{{#increment}}
+      item.{{property}} = Number(expected) + 1;
+{{/increment}}
+      const response = await update(item, byWhere ?? {{#whereKeys}}{{#first}}new Where("{{name}}", eq, {{#token}}expected{{/token}}{{^token}}item.{{name}}{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected{{/token}}{{^token}}item.{{name}}{{/token}}){{/rest}}{{/whereKeys}});
+      if (response.rowsAffected !== 1) throw new DatasourceError(`Update affected ${response.rowsAffected} rows`);
+      return response;
+    };
+    this.delete = async (item, byWhere) => {
+      const response = await remove(item, byWhere ?? {{#whereKeys}}{{#first}}new Where("{{name}}", eq, {{#token}}item.{{property}}{{/token}}{{^token}}item.{{name}}{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}item.{{property}}{{/token}}{{^token}}item.{{name}}{{/token}}){{/rest}}{{/whereKeys}});
+      if (response.rowsAffected !== 1) throw new DatasourceError(`Delete affected ${response.rowsAffected} rows`);
+      return response;
+    };
+{{/optimisticConcurrency}}
+{{#children}}
+    this.{{field}} = new {{className}}(connection);
+{{/children}}
+{{#enrichments}}
+    {{#linked}}this.addLinked({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, association: { parent: "{{parentFk}}", related: "{{relatedFk}}" }, type: "{{^object}}{{^dictionary}}list{{/dictionary}}{{/object}}{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}" }, this.{{via}}, this.{{link}});{{/linked}}{{^linked}}this.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, this.{{via}});{{/linked}}
+{{/enrichments}}
+  }
+{{#setup}}
+  static createReadonly(connection: IConnection) {
+    const repo = new ReadonlyRepository<{{typeName}}>(connection, {{#builder}}readonlyOptions(connection){{/builder}}{{^builder}}{ entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] }{{/builder}});
+{{#children}}
+    const {{field}} = new {{className}}(connection);
+{{/children}}
+{{#enrichments}}
+    repo.addEnriched({ destinationProperty: "{{destination}}", sourceProperty: "{{source}}", relatedKey: "{{relatedKey}}"{{#relatedProperty}}, relatedProperty: "{{relatedProperty}}"{{/relatedProperty}}, type: "{{#object}}object{{/object}}{{#dictionary}}dictionary{{/dictionary}}{{#list}}list{{/list}}" }, {{via}});
+{{/enrichments}}
+    return repo;
+  }
+{{/setup}}
+{{^setup}}
+  static createReadonly = (connection: IConnection) => new ReadonlyRepository<{{typeName}}>(connection, {{#builder}}readonlyOptions(connection){{/builder}}{{^builder}}{ entity: "{{entity}}", entityMapper: new DictionaryMapper([["{{entity}}", "{{table}}"]]), {{#propertyMappings}}{{#first}}propertyMappings: new DictionaryMapper([{{/first}}["{{from}}", "{{to}}"]{{#comma}}, {{/comma}}{{#last}}]), {{/last}}{{/propertyMappings}}readProperties: [{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}"{{/readProperties}}] }{{/builder}});
+{{/setup}}
+}

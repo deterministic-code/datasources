@@ -1,0 +1,7 @@
+use datasources::SchemaObject;
+use super::*;
+
+{{#schemaTypes}}
+impl SchemaObject for {{name}} {}
+
+{{/schemaTypes}}

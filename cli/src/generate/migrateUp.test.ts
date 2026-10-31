@@ -91,7 +91,7 @@ describe("applyMigrateUp", () => {
     expect(json.logs[0]).toMatch(/json has no SQL migrations/);
   });
 
-  it("uses the URL scheme, aliases, and --migrations-root", async () => {
+  it("uses the URL scheme and --migrations-root", async () => {
     const fromUrl = deps(
       mem({
         ...spec("settings:\n  backend:\n    datasources: postgres\n"),
@@ -103,19 +103,19 @@ describe("applyMigrateUp", () => {
       "npx migrate-setup --provider postgres --connection postgres://localhost/db",
       "npx migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
     ]);
-    const aliased = deps(
+    const overlay = deps(
       mem({
         ...spec("settings:\n  backend:\n    datasources: postgres\n"),
         [join("app", ".env")]: "PROVIDER=sqlite\nDATASOURCE_URL=sqlite:///:memory:\n",
       }).fs,
     );
-    await applyMigrateUp(command(), flags(), aliased, {
-      PROVIDER: "PostgreSQL",
-      DATASOURCE_URL: "postgresql://localhost/db",
+    await applyMigrateUp(command(), flags(), overlay, {
+      PROVIDER: "postgres",
+      DATASOURCE_URL: "postgres://localhost/db",
     });
-    expect(aliased.ran).toEqual([
-      "npx migrate-setup --provider postgres --connection postgresql://localhost/db",
-      "npx migrate-up --provider postgres --connection postgresql://localhost/db --migrations-root sql",
+    expect(overlay.ran).toEqual([
+      "npx migrate-setup --provider postgres --connection postgres://localhost/db",
+      "npx migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
     ]);
     const absolute = deps(
       mem({

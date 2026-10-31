@@ -6,7 +6,7 @@ describe("sqlDialectsFromEnv", () => {
   it("uses INSTALLED_PROVIDERS, not settings", () => {
     expect(sqlDialectsFromEnv({ INSTALLED_PROVIDERS: "mysql,postgres" })).toEqual(["mysql", "postgres"]);
     expect(sqlDialectsFromEnv({ INSTALLED_PROVIDERS: "mysql", PROVIDER: "sqlite" })).toEqual(["mysql"]);
-    expect(sqlDialectsFromEnv({ PROVIDER: "PostgreSQL" })).toEqual(["postgres"]);
+    expect(sqlDialectsFromEnv({ PROVIDER: "postgres" })).toEqual(["postgres"]);
     expect(sqlDialectsFromEnv({ DATASOURCE_URL: "sqlite:///./app.sqlite" })).toEqual(["sqlite"]);
     expect(sqlDialectsFromEnv({ INSTALLED_PROVIDERS: "json,mysql" })).toEqual(["mysql"]);
     expect(sqlDialectsFromEnv({})).toEqual([]);

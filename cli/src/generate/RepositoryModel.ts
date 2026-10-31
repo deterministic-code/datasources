@@ -46,6 +46,23 @@ export type RepositoryOptionsModel = Pick<
   "table" | "ids" | "readProperties" | "createProperties" | "updateProperties" | "propertyMappings"
 >;
 
+const same = (left: string[], right: string[]): boolean =>
+  left.length === right.length && left.every((name, index) => name === right[index]);
+
+const samePairs = (left: Pair[], right: Pair[]): boolean =>
+  left.length === right.length && left.every((pair, index) => pair.from === right[index]?.from && pair.to === right[index]?.to);
+
+const sameOptions = (left: RepositoryOptionsModel, right: RepositoryOptionsModel): boolean =>
+  left.table === right.table &&
+  same(left.ids, right.ids) &&
+  same(left.readProperties, right.readProperties) &&
+  same(left.createProperties, right.createProperties) &&
+  same(left.updateProperties, right.updateProperties) &&
+  samePairs(left.propertyMappings, right.propertyMappings);
+
+export const dialectsOf = (model: RepositoryModel): Array<[string, RepositoryOptionsModel]> =>
+  Object.entries(model.optionsByProvider ?? {}).filter(([, planned]) => !sameOptions(model, planned));
+
 export const repositoryFile = (ext: "cs" | "ts" | "rs", specName: string, casing: ICasingStrategy): string =>
   `${casing.convertFileName(`${specName}_repository`)}.${ext}`;
 
@@ -53,9 +70,6 @@ export const registryFile = (ext: "cs" | "ts" | "rs", casing: ICasingStrategy): 
   `${casing.convertFileName("repository_registry")}.${ext}`;
 
 export const rustIdent = (stem: string): string => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(stem) ? stem : stem.replaceAll("-", "_"));
-
-export const rustModLine = (stem: string): string =>
-  rustIdent(stem) === stem ? `pub mod ${stem};` : `#[path = "${stem}.rs"]\npub mod ${rustIdent(stem)};`;
 
 export const childField = (casing: ICasingStrategy, specName: string): string => casing.convertFields(specName);
 

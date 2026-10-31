@@ -553,6 +553,8 @@ types:
     const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(text).toContain("export interface Contact");
     expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({ ...init } as Contact);");
+    expect(text).toContain("export class AddressType");
+    expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => ({ ...init } as AddressType);");
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
     const sql = await deterministic.generateDatasource(request("typescript"));
@@ -930,8 +932,8 @@ types: []
       { name: "name", kind: "string" },
       { name: "is_starred", kind: "boolean" },
     ]);
-    const rust = rustRepositories(models, {});
-    const typescript = typescriptRepositories(models, {});
+    const rust = rustRepositories.generate(models, {}, spec);
+    const typescript = typescriptRepositories.generate(models, {}, spec);
     expect(textOf(rust, "itemRepository.rs")).toContain("Value::from(false)");
     expect(textOf(rust, "itemRepository.rs")).not.toContain("Value::from(0)");
     expect(textOf(typescript, "itemRepository.ts")).toContain("is_starred: false");

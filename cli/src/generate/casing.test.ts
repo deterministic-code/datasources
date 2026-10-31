@@ -1,6 +1,13 @@
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { describe, expect, it } from "vitest";
-import { caseDirectories, overlayCasingFlags, parseCaseFlag, repositoriesPrefix, typesPrefix } from "./casing.ts";
+import { caseDirectories, overlayCasingFlags, parseCaseFlag } from "./casing.ts";
+import { languageOf } from "./Language.ts";
+
+describe("languageOf", () => {
+  it("rejects an unknown dialect", async () => {
+    await expect(languageOf("go")).rejects.toThrow(/Unknown dialect: go/);
+  });
+});
 
 describe("casing", () => {
   it("parses and overlays generate flags", () => {
@@ -23,15 +30,18 @@ describe("casing", () => {
     expect(overlayCasingFlags({ existing: "1" }, "csharp", {})).toEqual({ existing: "1" });
   });
 
-  it("cases layout prefixes and keeps dialect folders literal", () => {
+  it("cases layout prefixes and keeps dialect folders literal", async () => {
     const ts = createCasingStrategy("typescript", { "languages.typescript.casing.directories": "Pascal" });
-    expect(typesPrefix("typescript", ts, "datasource")).toBe("typescript/Types/Generated/Datasource");
-    expect(typesPrefix("csharp", ts, "views")).toBe("csharp");
-    expect(repositoriesPrefix("rust", ts)).toBe("rust/Repositories");
+    const typescript = await languageOf("typescript");
+    const csharp = await languageOf("csharp");
+    const rust = await languageOf("rust");
+    expect(typescript.typesPrefix(ts, "datasource")).toBe("typescript/Types/Generated/Datasource");
+    expect(csharp.typesPrefix(ts, "views")).toBe("csharp");
+    expect(rust.repositoriesPrefix(ts)).toBe("rust/Repositories");
     expect(caseDirectories("typescript/types/generated/datasource/user.ts", ts)).toBe(
       "typescript/Types/Generated/Datasource/user.ts",
     );
     expect(caseDirectories("sql/custom/__tests__/frontend", ts)).toBe("sql/custom/__tests__/frontend");
-    expect(caseDirectories("features/user/custom/file.ts", ts)).toBe("Features/User/custom/file.ts");
+    expect(caseDirectories("features/user/custom/file.ts", ts)).toBe("features/User/custom/file.ts");
   });
 });

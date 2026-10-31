@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RepositoryModel } from "./RepositoryModel.ts";
-import { dialectsOf, writeList } from "./writeLists.ts";
+import { dialectsOf, rustIdent, type RepositoryModel } from "./RepositoryModel.ts";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { datasourceEnginesOf } from "./datasourceYaml.ts";
 
@@ -25,10 +24,9 @@ const dialect = (create: string[]): RepositoryModel => ({
   createProperties: create,
 });
 
-describe("writeList", () => {
-  it("quotes a rust vec", () => {
-    expect(writeList("rust", ["Name"])).toBe('vec!["Name".into()]');
-    expect(writeList("csharp", ["Name"])).toBe('["Name"]');
+describe("rustIdent", () => {
+  it("rewrites a hyphenated stem", () => {
+    expect(rustIdent("legacy-contact")).toBe("legacy_contact");
   });
 });
 
