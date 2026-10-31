@@ -1,5 +1,6 @@
 import { catalog, host, type Ecosystem, type Provider } from "./catalog.ts";
 import { csharpTarget } from "./detect.ts";
+import { hasCsharpProjectReference } from "./installed.ts";
 import { sqlMigrateProviders } from "./migrateInit.ts";
 
 export type Proc = { command: string; args: string[] };
@@ -9,11 +10,16 @@ const npmDialects = (names: Provider[]): Proc[] => {
   return dialects.length === 0 ? [] : npmInstall(dialects);
 };
 
-export const addCommands = (ecosystem: Ecosystem, names: Provider[], entries: string[]): Proc[] =>
+export const addCommands = (
+  ecosystem: Ecosystem,
+  names: Provider[],
+  entries: string[],
+  csproj?: string,
+): Proc[] =>
   ({
     ts: () => npmInstall(names),
     rust: () => [...cargoAdd(names), ...npmDialects(names)],
-    csharp: () => [...dotnetAdd(names, csharpTarget(entries)), ...npmDialects(names)],
+    csharp: () => [...dotnetAdd(names, csharpTarget(entries), csproj), ...npmDialects(names)],
   })[ecosystem]();
 
 export const removeCommands = (
@@ -52,15 +58,13 @@ const cargoAdd = (names: Provider[]): Proc[] => [
 const cargoRemove = (names: Provider[]): Proc[] =>
   names.map((name) => ({ command: "cargo", args: ["remove", catalog[name].cargo] }));
 
-const dotnetAdd = (names: Provider[], project: string): Proc[] => {
+const dotnetAdd = (names: Provider[], project: string, csproj?: string): Proc[] => {
   const prefix = project === "." ? [] : [project];
-  return [
-    { command: "dotnet", args: ["add", ...prefix, "package", host.csharp.core] },
-    ...names.map((name) => ({
-      command: "dotnet",
-      args: ["add", ...prefix, "package", catalog[name].nuget],
-    })),
-  ];
+  const packages = [
+    host.csharp.core,
+    ...names.map((name) => catalog[name].nuget),
+  ].filter((id, index, all) => all.indexOf(id) === index && (csproj === undefined || !hasCsharpProjectReference(csproj, id)));
+  return packages.map((id) => ({ command: "dotnet", args: ["add", ...prefix, "package", id] }));
 };
 
 const dotnetRemove = (names: Provider[], project: string): Proc[] => {

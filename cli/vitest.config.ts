@@ -6,7 +6,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/main.ts", "src/index.ts", "src/io.ts", "src/generate/CodeGenerationProvider.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/main.ts",
+        "src/index.ts",
+        "src/io.ts",
+        "src/generate/CodeGenerationProvider.ts",
+        "src/generate/IRepositoryGenerator.ts",
+      ],
       thresholds: {
         lines: 100,
         branches: 100,

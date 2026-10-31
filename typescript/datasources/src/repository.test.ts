@@ -278,11 +278,13 @@ describe("CRUDRepository", () => {
       readProperties: ["id", "name", "given_name", "is_starred", "uuid", "gender_type_id"],
       createProperties: ["name", "given_name", "is_starred", "uuid", "gender_type_id"],
       schema: new Schema({
+        id: { type: "integer", nullable: false, hasDefault: true },
         name: { type: "string", nullable: false, hasDefault: false },
         given_name: { type: "string", nullable: false, hasDefault: false },
         is_starred: { type: "boolean", nullable: false, hasDefault: false },
         uuid: { type: "uuid", nullable: false, hasDefault: true },
         gender_type_id: { type: "integer", nullable: false, hasDefault: false },
+        secret: { type: "string", nullable: false, hasDefault: false },
       }),
     });
     command.response = { result: undefined, rowsAffected: 1 };
@@ -291,6 +293,21 @@ describe("CRUDRepository", () => {
     expect(command.executeCalls[0]?.text).toBe(
       "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)",
     );
+    const skipped = create({
+      entity: "contacts",
+      ids: ["id"],
+      createProperties: ["name", "note", "flag"],
+      schema: new Schema({
+        name: { type: "string", nullable: false, hasDefault: false },
+        note: { type: "string", nullable: true, hasDefault: false },
+        flag: { type: "boolean", nullable: false, hasDefault: true },
+      }),
+    });
+    Object.assign(skipped.repo, { createZeros: {} });
+    skipped.command.response = { result: undefined, rowsAffected: 1 };
+    skipped.command.reader = new MockReader([{ id: 1 }]);
+    await skipped.repo.create({ name: "Ada" });
+    expect(skipped.command.executeCalls[0]?.text).toBe("INSERT INTO contacts (name) VALUES ($name)");
   });
 
   it("writes only readProperties on create and update", async () => {

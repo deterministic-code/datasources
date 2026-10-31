@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use datasources::converters::RowTypeConverter;
 use datasources::{
     CRUDRepository, CRUDRepositoryOptions, Command, CommandMiddleware, Connection,
-    Schema,
+    Schema, SchemaColumn,
     ConsoleCommandMiddleware, DeleteStatement, Expression, ICRUDRepository, IReadonlyRepository,
     InsertStatement, Literal, Operator, Parameter, Result, Row, SelectStatement,
     SelectStatementOptions, DefaultStatementTextRenderer, Statement, TransformMapper, TypeConverter,
@@ -671,7 +671,14 @@ pub async fn run(
     let mut options = CRUDRepositoryOptions::default();
     options.ids = spec.type_spec.ids.clone();
     options.entity = spec.type_spec.table.clone();
-    options.schema = Schema::new(spec.type_spec.fields.clone().into_iter().collect());
+    options.schema = Schema::new(
+        spec.type_spec
+            .fields
+            .clone()
+            .into_iter()
+            .map(|(name, type_name)| (name, SchemaColumn::from(type_name)))
+            .collect(),
+    );
     options.row_converter = Some(mapping_of(&spec, dialect));
     apply_mappers(&mut options, &spec, dialect);
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
