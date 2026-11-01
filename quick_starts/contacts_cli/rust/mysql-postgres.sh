@@ -18,8 +18,8 @@ if [ -n "${DATASOURCES_PACKS:-}" ]; then
     for dir in "$packs"/crates/*; do
       [ -d "$dir" ] || continue
       name=$(basename "$dir" | sed -E 's/-[0-9]+\.[0-9]+\.[0-9]+$//')
-      echo "$name = { path = \"$dir\" }"
-    done
+      echo "$name $dir"
+    done | awk '{ path[$1] = $2 } END { for (n in path) printf "%s = { path = \"%s\" }\n", n, path[n] }'
   } > .cargo/config.toml
   npm install "$packs"/deterministic-code-datasources-cli-*.tgz
 fi

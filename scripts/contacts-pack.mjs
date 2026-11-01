@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, readdir, rm } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const repo = resolve(import.meta.dirname, "..");
@@ -27,11 +27,17 @@ const crates = join(destCli, "crates");
 await rm(crates, { recursive: true, force: true });
 await mkdir(crates, { recursive: true });
 const packageDir = join(process.env.CARGO_TARGET_DIR || join(repo, "rust/target"), "package");
+const cargoToml = await readFile(join(repo, "rust/Cargo.toml"), "utf8");
+const rustVersion = cargoToml.match(/^version = "([^"]+)"/m)?.[1];
+if (!rustVersion) {
+  console.error("rust/Cargo.toml is missing workspace.package version");
+  process.exit(1);
+}
 const keepCrate = (stem) =>
-  /^datasources-\d/.test(stem) ||
-  /^datasources-sqlite-\d/.test(stem) ||
-  /^datasources-mysql-\d/.test(stem) ||
-  /^datasources-postgres-\d/.test(stem);
+  stem === `datasources-${rustVersion}` ||
+  stem === `datasources-sqlite-${rustVersion}` ||
+  stem === `datasources-mysql-${rustVersion}` ||
+  stem === `datasources-postgres-${rustVersion}`;
 for (const name of await readdir(packageDir).catch(() => [])) {
   if (!name.endsWith(".crate")) continue;
   const stem = name.slice(0, -".crate".length);
