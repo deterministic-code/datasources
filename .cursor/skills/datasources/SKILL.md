@@ -25,8 +25,26 @@ Read one file below. Do not load the rest.
 - Read is convert, then map. Do not fold mapping into the converter.
 - When writing code, find the closest row in [examples.md](examples.md), open that language's snippet, and use the same objects the sample uses (connection, repository, enrichment). Include every type the sample defines.
 - `AddEnriched` is a read fill. A `List` on a CRUD repository is also written with the parent. `AddLinked` reads the related repository and writes the association through the link repository. Register a child repository's own fills on that child, then register the child on the parent. Read [enrichment.md](enrichment.md) before either call.
-- After you change `types.yaml` or `datasource.yaml`, run `version`, then `generate all` for the project's dialect (`csharp`, `typescript`, or `rust`). `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop.
-- Do not create, edit, or delete a file under a directory named `generated`. Edit `types.yaml` or `datasource.yaml` and run `generate all`. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.
+- Types, repositories, and SQL come from `types.yaml` (and `datasource.yaml` when it exists). After you change either file, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop.
+- Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml` or `datasource.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.
+
+## Install and setup
+
+Install the core package for the project language.
+
+```sh
+npm install @deterministic-code/datasources
+dotnet add package Datasources
+cargo add datasources
+```
+
+Then install dialects and write `.env`:
+
+```sh
+npx @deterministic-code/datasources-cli setup --yes --languages ts|rust|csharp --datasources sqlite postgres
+```
+
+`--languages` is the project language. `--datasources` is the engine (`sqlite`, `postgres`, `mysql`, `sqlserver`, `oracle`, and the other catalog names). `add` installs more engines later. Checked SQL dialects also install `@deterministic-code/migraters` and run `migrate-init`. Run `setup` without `--yes` for prompts. Provider package names are in [downloading.md](downloading.md). Flags and `.env` are in [setup.md](setup.md).
 
 ## Open one file
 
