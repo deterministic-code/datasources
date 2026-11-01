@@ -55,10 +55,21 @@ test("skill query headings match evals.json", () => {
 });
 
 test("skill-only text is appended outside the docs", () => {
-  assert.match(files["SKILL.md"], /run `version`, then `generate all`/);
+  assert.match(files["SKILL.md"], /datasources-cli version/);
+  assert.match(files["SKILL.md"], /generate all --dialect csharp\|typescript\|rust/);
   assert.match(files["generation.md"], /## After the spec changes/);
   assert.match(files["generation.md"], /datasources-cli version/);
   assert.ok(SKILL_ONLY.rules.length > 0);
+});
+
+test("SKILL.md includes install, setup, and fail-fast generate all", () => {
+  assert.match(files["SKILL.md"], /npm install @deterministic-code\/datasources/);
+  assert.match(files["SKILL.md"], /dotnet add package Datasources/);
+  assert.match(files["SKILL.md"], /cargo add datasources/);
+  assert.match(files["SKILL.md"], /setup --yes --languages/);
+  assert.match(files["SKILL.md"], /If `generate all` fails, stop immediately/);
+  assert.match(files["SKILL.md"], /Do not patch generated code/);
+  assert.match(files["generation.md"], /If `generate all` fails, stop immediately/);
 });
 
 test("the skill offers the generated-directory hook", () => {

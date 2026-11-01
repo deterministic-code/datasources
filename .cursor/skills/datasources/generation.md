@@ -409,7 +409,7 @@ npx @deterministic-code/datasources-cli version
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 ```
 
-`version` writes `deterministic/version-<stamp>-<seq>/diff.yaml` from the top-level YAML. `--input` selects the deterministic project (default `./deterministic`). An unchanged spec prints `unchanged` and writes nothing; stop there. `generate all` then reads those snapshots and writes the next migration. Pass `--dialect csharp`, `typescript`, or `rust`. Run it once per dialect when the project has more than one.
+`version` writes `deterministic/version-<stamp>-<seq>/diff.yaml` from the top-level YAML. `--input` selects the deterministic project (default `./deterministic`). An unchanged spec prints `unchanged` and writes nothing; stop there. `generate all` then reads those snapshots and writes the next migration. Pass `--dialect csharp`, `typescript`, or `rust`. Run it once per dialect when the project has more than one. If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml` or `datasource.yaml` and run `generate all` again.
 
 ## Generated directory hook
 
