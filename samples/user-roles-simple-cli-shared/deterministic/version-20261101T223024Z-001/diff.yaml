@@ -1,0 +1,110 @@
+datasource.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    includes:
+      - types:
+          filter: tag == "datasource_type"
+    types:
+      - base:
+          fields:
+            - uuid:
+                include_in_create: false
+            - created:
+                include_in_create: false
+                include_in_update: false
+            - updated:
+                include_in_create: false
+                include_in_update: false
+      - group:
+          fields:
+            - name:
+                mapping: ugly_name
+      - user_role:
+          fields:
+            - role_id:
+                mapping: bad_role_id
+settings.yaml:
+  added: true
+  content:
+    settings:
+      backend:
+        datasources: sqlite,mysql,postgres
+      languages:
+        typescript:
+          casing:
+            fields: camel
+types.yaml:
+  added: true
+  content:
+    version: 1.0.0
+    types:
+      - base:
+          fields:
+            - id:
+                type: integer
+                is_id: true
+            - uuid:
+                type: uuid
+                default_value: NewId
+            - created:
+                type: datetime
+            - updated:
+                type: binary
+                default_value: Hex('00')
+      - user:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - username:
+                type: string
+            - password:
+                type: string
+            - is_enabled:
+                type: boolean
+                default_value: true
+      - role:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - name:
+                type: string
+            - description:
+                type: string
+                default_value: ""
+            - is_enabled:
+                type: boolean
+                default_value: true
+      - group:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - name:
+                type: string
+            - description:
+                type: string
+                default_value: ""
+            - is_enabled:
+                type: boolean
+                default_value: true
+      - user_group:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - user_id:
+                references: user.id
+            - group_id:
+                references: group.id
+      - user_role:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - user_id:
+                references: user.id
+            - role_id:
+                references: role.id
