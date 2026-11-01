@@ -10,8 +10,24 @@ wipe() {
 trap wipe EXIT
 wipe
 docker compose up -d --wait --force-recreate --renew-anon-volumes
+if [ -n "${DATASOURCES_PACKS:-}" ]; then
+  packs=$(cd "$DATASOURCES_PACKS" && pwd)
+  mkdir -p .cargo
+  {
+    echo "[patch.crates-io]"
+    for dir in "$packs"/crates/*; do
+      [ -d "$dir" ] || continue
+      name=$(basename "$dir" | sed -E 's/-[0-9]+\.[0-9]+\.[0-9]+$//')
+      echo "$name = { path = \"$dir\" }"
+    done
+  } > .cargo/config.toml
+  npm install "$packs"/deterministic-code-datasources-cli-*.tgz
+fi
 cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres
+if [ -n "${DATASOURCES_PACKS:-}" ]; then
+  npm install "$(cd "$DATASOURCES_PACKS" && pwd)"/deterministic-code-datasources-cli-*.tgz
+fi
 npx @deterministic-code/datasources-cli generate all --dialect rust
 cargo run | diff -u expected.txt -
 export PROVIDER=postgres
