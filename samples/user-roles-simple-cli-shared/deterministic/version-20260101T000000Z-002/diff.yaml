@@ -1,9 +1,0 @@
-types.yaml:
-  types:
-    changed:
-      - user:
-          fields:
-            removed:
-              - nickname
-    removed:
-      - session

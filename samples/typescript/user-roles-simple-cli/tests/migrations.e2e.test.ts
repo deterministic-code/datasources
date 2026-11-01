@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,14 +24,6 @@ const migrate = (command: string, provider: string, connection: string, root: st
     [command, "--provider", provider, "--connection", path, "--migrations-root", root, ...extra],
     { encoding: "utf8", cwd: sample },
   );
-};
-
-const stage = (from: string, to: string, n: number) => {
-  mkdirSync(to, { recursive: true });
-  for (const i of [1, 2, 3].filter((step) => step <= n)) {
-    const name = String(i).padStart(4, "0");
-    for (const side of ["up", "down"]) copyFileSync(join(from, `${name}_${side}.sql`), join(to, `${name}_${side}.sql`));
-  }
 };
 
 const providers = (): string[] => [
@@ -95,40 +87,25 @@ describe("versioned migrations", () => {
     expect(snapshot.yaml("types.yaml")).toBe(live.yaml("types.yaml"));
   });
 
-  it.each(providers())("drops extra fields and tables across three versions (%s)", async (provider) => {
+  it.each(providers())("creates the live schema from the initial version (%s)", async (provider) => {
     const out = mkdtempSync(join(tmpdir(), `user-roles-mig-${provider}-`));
     const isolated = await isolate(provider, out);
     try {
       const source = join(sample, "sql", provider, "migrations");
-      expect(readdirSync(source).filter((name) => /^\d{4}_up\.sql$/.test(name)).sort()).toEqual(["0001_up.sql", "0002_up.sql", "0003_up.sql"]);
-      const staged = join(out, "staged");
-      const apply = (n: number) => {
-        stage(source, join(staged, provider, "migrations"), n);
-        migrate("migrate-up", provider, isolated.url, staged);
-      };
-      apply(1);
-      const first = await catalog(provider, isolated.url);
-      expect(first.tables).toEqual(expect.arrayContaining(["users", "roles", "groups", "sessions", "audit_logs"]));
-      expect(await first.columns("users")).toContain("nickname");
-      expect(await first.columns("roles")).toContain("description");
-      await first.close();
-      apply(2);
-      const second = await catalog(provider, isolated.url);
-      expect(second.tables).not.toContain("sessions");
-      expect(await second.columns("users")).not.toContain("nickname");
-      expect(await second.columns("roles")).toContain("description");
-      await second.close();
-      apply(3);
-      const third = await catalog(provider, isolated.url);
-      expect(third.tables).not.toContain("audit_logs");
-      expect(await third.columns("roles")).not.toContain("description");
-      expect(third.tables).toEqual(expect.arrayContaining(["users", "roles", "groups"]));
-      await third.close();
-      migrate("migrate-down", provider, isolated.url, staged, ["--confirm"]);
+      expect(readdirSync(source).filter((name) => /^\d{4}_up\.sql$/.test(name)).sort()).toEqual(["0001_up.sql"]);
+      migrate("migrate-up", provider, isolated.url, join(sample, "sql"));
+      const applied = await catalog(provider, isolated.url);
+      expect(applied.tables).toEqual(expect.arrayContaining(["users", "roles", "groups", "user_groups", "user_roles"]));
+      expect(applied.tables).not.toEqual(expect.arrayContaining(["sessions", "audit_logs"]));
+      for (const table of ["users", "roles", "groups", "user_groups", "user_roles"]) {
+        expect(await applied.columns(table)).toContain("uuid");
+      }
+      expect(await applied.columns("roles")).toContain("description");
+      expect(await applied.columns("groups")).toContain("description");
+      await applied.close();
+      migrate("migrate-down", provider, isolated.url, join(sample, "sql"), ["--confirm"]);
       const rolled = await catalog(provider, isolated.url);
-      expect(rolled.tables).not.toContain("sessions");
-      expect(await rolled.columns("users")).not.toContain("nickname");
-      expect(await rolled.columns("roles")).toContain("description");
+      expect(rolled.tables).not.toEqual(expect.arrayContaining(["users", "roles", "groups"]));
       await rolled.close();
     } finally {
       await isolated.drop();
