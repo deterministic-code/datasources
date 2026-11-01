@@ -57,7 +57,6 @@ class TypeScriptRepositories extends RepositoryGenerator {
         path: `./${casing.convertFileName(`${model.specName}_repository`)}`,
       })),
       factories: models.map((model) => ({
-        typeName: casing.convertTypes(model.specName),
         name: casing.convertFields(model.specName),
         path: this.typeImport(model, casing),
       })),

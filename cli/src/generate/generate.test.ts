@@ -275,7 +275,7 @@ describe("generate", () => {
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
-    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { Contact as contact } from "../types/generated/views/contact"');
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/generated/views/contact"');
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("use super::super::Contact");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("Contact");
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("use super::super::;");

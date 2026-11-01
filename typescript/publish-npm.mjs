@@ -82,12 +82,12 @@ const tarballReady = async (name, version) => {
 };
 
 const waitPublished = async (name, version) => {
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < 180; i++) {
     if (published(name, version) && (await tarballReady(name, version))) {
       console.log(`ready ${name}@${version}`);
       return;
     }
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10_000);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2_000);
   }
   console.error(`${name}@${version} is not GET 200 on npm yet`);
   process.exit(1);
@@ -481,8 +481,8 @@ for (const pkg of staged) {
     if (result.status !== 0)
       console.log(`skip ${pkg.name}@${pkg.version} (already staged or published)`);
   }
-  await waitPublished(pkg.name, pkg.version);
 }
+await Promise.all(staged.map((pkg) => waitPublished(pkg.name, pkg.version)));
 
 for (const pkg of staged) await rm(pkg.dest, { recursive: true, force: true });
 await rm(packs, { recursive: true, force: true });

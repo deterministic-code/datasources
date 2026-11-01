@@ -7,6 +7,7 @@ const SKIP = new Set([".git", "node_modules", "target", "bin", "obj", "determini
 const DROP_DIRS = [
   "scripts/artifacts",
   "csharp/artifacts",
+  "dest-cli",
   "docs/evals/workspace",
   "docs/.vitepress/cache",
   "docs/.vitepress/dist",
