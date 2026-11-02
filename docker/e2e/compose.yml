@@ -2,6 +2,7 @@ services:
   mysql:
     image: mysql:8
     restart: "no"
+    stop_grace_period: 0s
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: datasources
@@ -12,6 +13,7 @@ services:
     tmpfs:
       - /var/lib/mysql
       - /tmp
+    command: ["--innodb-buffer-pool-size=64M"]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uds", "-pds"]
       interval: 5s
@@ -20,6 +22,7 @@ services:
   postgres:
     image: postgres:16
     restart: "no"
+    stop_grace_period: 0s
     environment:
       POSTGRES_USER: ds
       POSTGRES_PASSWORD: ds
@@ -33,16 +36,19 @@ services:
       timeout: 5s
       retries: 20
   runner:
-    image: datasources-e2e-runner
     build:
       context: ../..
-      dockerfile: docker/e2e-matrix/Dockerfile
+      dockerfile: docker/e2e/Dockerfile.${E2E_LANG}
     restart: "no"
-    working_dir: /work
+    stop_grace_period: 0s
+    working_dir: /run/work
     tmpfs:
       - /tmp
+      - /run/work
+    entrypoint: ["sh", "-c", "cp -a /work/. /run/work && exec \"$@\"", "--"]
     environment:
       E2E_SAMPLE: ${E2E_SAMPLE:-}
+      E2E_LANG: ${E2E_LANG:?}
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
     depends_on:

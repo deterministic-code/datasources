@@ -1,8 +1,7 @@
 set -e
 cd /work
 sample="${E2E_SAMPLE:?}"
-npm install --prefix typescript
-npm install --prefix cli
+npm install --omit=dev --prefix cli
 case "$sample" in
 samples/typescript/*) npm install --prefix "$sample" ;;
 esac
