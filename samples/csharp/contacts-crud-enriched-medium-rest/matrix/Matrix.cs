@@ -15,13 +15,11 @@ var spec = new DeserializerBuilder()
     .IgnoreUnmatchedProperties()
     .Build()
     .Deserialize<RoundTrip>(File.ReadAllText(Path.Combine(Shared(), "round-trip.yaml")));
-var connection = provider switch
-{
-    "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    _ => throw new InvalidOperationException(provider)
-};
+DatasourceFactory.Register("sqlite", new SqliteDriver());
+DatasourceFactory.Register("mysql", new MysqlDriver());
+DatasourceFactory.Register("postgres", new PostgresDriver());
+await using var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = provider, ["DATASOURCE_URL"] = url });
+var connection = await ds.CreateConnection();
 var lines = new List<string>();
 try
 {
@@ -75,15 +73,8 @@ finally
     try { await connection.Close(); } catch { }
 }
 
-static string Shared()
-{
-    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-    {
-        var path = Path.Combine(dir.FullName, "samples", "contacts-crud-enriched-medium-rest-shared");
-        if (Directory.Exists(path)) return path;
-    }
-    throw new InvalidOperationException("shared spec");
-}
+static string Shared() =>
+    Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "contacts-crud-enriched-medium-rest-shared"));
 
 static object? Normalize(object? node) => node switch
 {

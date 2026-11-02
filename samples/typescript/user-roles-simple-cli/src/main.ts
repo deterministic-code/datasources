@@ -7,7 +7,6 @@ DatasourceFactory.register("sqlite", new SqliteDriver());
 DatasourceFactory.register("mysql", new MysqlDriver());
 DatasourceFactory.register("postgres", new PostgresDriver());
 import { existsSync, readFileSync } from "node:fs";
-import { migrateUp } from "../../../../scripts/migraters.mjs";
 import { App } from "./app.ts";
 import { parse } from "./parse.ts";
 
@@ -22,17 +21,9 @@ const env = (key: string): string => {
   return "";
 };
 
-const migrationsRoot = (): string => {
-  const root = env("MIGRATIONS_ROOT");
-  return root && existsSync(root) ? root : "sql";
-};
-
 const run = async (args: string[]): Promise<number> => {
   try {
     const parsed = parse(args);
-    const provider = env("PROVIDER");
-    const url = env("DATASOURCE_URL");
-    migrateUp({ provider, connection: url, migrationsRoot: migrationsRoot() });
     await using ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();

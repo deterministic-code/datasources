@@ -7,7 +7,7 @@ import { usersView } from "../users-view.ts";
 export type ListUsersRolesGroups = { kind: "list-users-roles-groups" };
 
 export const listUsersRolesGroups = async (app: App): Promise<string> => {
-  const reader = await executeReader(app.command, usersRolesGroupsQuery(app.command.connection.provider));
+  const reader = await executeReader(app.command, usersRolesGroupsQuery());
   const rows = [];
   while (await reader.next()) if (reader.current) rows.push(reader.current);
   return JSON.stringify(asUserView(new FlatToNestedMapper(usersView).map(rows)));

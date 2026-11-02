@@ -3,4 +3,7 @@
     <BaseIntermediateOutputPath>obj/UserRolesSimpleCli.Tests/</BaseIntermediateOutputPath>
     <BaseOutputPath>bin/UserRolesSimpleCli.Tests/</BaseOutputPath>
   </PropertyGroup>
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**</DefaultItemExcludes>
+  </PropertyGroup>
 </Project>

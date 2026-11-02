@@ -1,4 +1,4 @@
-import { ConsoleCommandMiddleware } from "@deterministic-code/datasources";
+import { ConsoleCommandMiddleware, Datasource, DatasourceFactory } from "@deterministic-code/datasources";
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
@@ -15,20 +15,16 @@ const spec = parseYaml(readFileSync(resolve(sample, "../../user-roles-simple-cli
   steps: { argv: string[] }[];
 };
 
-const driver = (provider: string) =>
-  ({ sqlite: () => new SqliteDriver(), mysql: () => new MysqlDriver(), postgres: () => new PostgresDriver() })[provider]?.() ??
-  (() => {
-    throw new Error(provider);
-  })();
-
-const provider = process.env.PROVIDER ?? "sqlite";
-const url = process.env.DATASOURCE_URL ?? "sqlite:///:memory:";
 const log = process.env.E2E_MATRIX_LOG ?? "";
-const connection = driver(provider).connection({ DATASOURCE_URL: url });
+DatasourceFactory.register("sqlite", new SqliteDriver());
+DatasourceFactory.register("mysql", new MysqlDriver());
+DatasourceFactory.register("postgres", new PostgresDriver());
+await using const ds = Datasource.default;
+const connection = await ds.createConnection();
 const lines: string[] = [];
 try {
   await connection.open();
-  const command = connection.createCommand();
+  const command = await ds.createCommand(connection);
   const now = () => new Date(spec.now);
   command.addMiddleware(
     new ConsoleCommandMiddleware((line) => lines.push(line), now, { isVerbose: "true" }),

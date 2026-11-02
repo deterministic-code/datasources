@@ -1,4 +1,4 @@
-import { ConsoleCommandMiddleware, type ICommandMiddleware } from "@deterministic-code/datasources";
+import { ConsoleCommandMiddleware, DatasourceFactory, type ICommandMiddleware } from "@deterministic-code/datasources";
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
@@ -21,12 +21,6 @@ type Step = { method: string; path: string; body?: Node; saveId?: boolean; save?
 const spec = parseYaml(
   readFileSync(resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/round-trip.yaml"), "utf8"),
 ) as { now: string; steps: Step[] };
-
-const driver = (provider: string) =>
-  ({ sqlite: () => new SqliteDriver(), mysql: () => new MysqlDriver(), postgres: () => new PostgresDriver() })[provider]?.() ??
-  (() => {
-    throw new Error(provider);
-  })();
 
 const substituteText = (text: string, saved: Record<string, string>) =>
   Object.entries(saved)
@@ -87,7 +81,11 @@ const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, gr
 const provider = process.env.PROVIDER ?? "sqlite";
 const url = process.env.DATASOURCE_URL ?? "sqlite:///:memory:";
 const log = process.env.E2E_MATRIX_LOG ?? "";
-const connection = driver(provider).connection({ DATASOURCE_URL: url });
+DatasourceFactory.register("sqlite", new SqliteDriver());
+DatasourceFactory.register("mysql", new MysqlDriver());
+DatasourceFactory.register("postgres", new PostgresDriver());
+const ds = DatasourceFactory.create({ PROVIDER: provider, DATASOURCE_URL: url });
+const connection = await ds.createConnection();
 const lines: string[] = [];
 try {
   await connection.open();

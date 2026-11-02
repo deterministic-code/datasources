@@ -8,15 +8,14 @@ public sealed record AddGroup(string Name) : CliCommand
     {
         var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var updated = app.Token();
-        var provider = app.Command.Connection.Provider;
         var column = Columns.Names.Map("name");
         await WriteRow.Execute(
             app.Command,
-            Schema.Ident(provider, "groups"),
+            "groups",
             "add_group",
             [
                 new Parameter(column, Name),
-                new Parameter("is_enabled", Schema.Flag(provider, true)),
+                new Parameter("is_enabled", true),
                 new Parameter("created", created),
                 new Parameter("updated", updated)
             ],

@@ -102,21 +102,16 @@ fn iso_at(text: &str, i: usize) -> bool {
         && slice.as_bytes()[10] == b'T'
 }
 
-fn migrate_up(url: &str) {
+fn generate_all(url: &str) {
     let cwd = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let connection = url.strip_prefix("sqlite:///").unwrap_or(url);
-    let setup = std::process::Command::new("npx")
-        .args(["migrate-setup", "--provider", "sqlite", "--connection", connection])
+    let status = std::process::Command::new("node")
+        .args(["../../../cli/bin/datasources.mjs", "generate", "all", "--dialect", "rust"])
         .current_dir(&cwd)
+        .env("PROVIDER", "sqlite")
+        .env("DATASOURCE_URL", url)
         .status()
-        .expect("migrate-setup");
-    assert!(setup.success(), "migrate-setup");
-    let status = std::process::Command::new("npx")
-        .args(["migrate-up", "--provider", "sqlite", "--connection", connection, "--migrations-root", "sql"])
-        .current_dir(&cwd)
-        .status()
-        .expect("migrate-up");
-    assert!(status.success(), "migrate-up");
+        .expect("generate all");
+    assert!(status.success(), "generate all");
 }
 
 async fn connection() -> std::sync::Arc<dyn datasources::Connection> {
@@ -129,10 +124,13 @@ async fn connection() -> std::sync::Arc<dyn datasources::Connection> {
     ));
     std::fs::create_dir_all(&dir).expect("dir");
     let url = format!("sqlite:///{}", dir.join("app.sqlite").display());
-    migrate_up(&url);
+    generate_all(&url);
     let mut options = HashMap::new();
+    options.insert("PROVIDER".into(), "sqlite".into());
     options.insert("DATASOURCE_URL".into(), url);
-    let connection = datasources_sqlite::SqliteDriver.connection(Some(&options));
+    datasources::register("sqlite", std::sync::Arc::new(datasources_sqlite::SqliteDriver));
+    let ds = datasources::create(Some(&options)).unwrap();
+    let connection = ds.create_connection().await.unwrap();
     connection.open().await.unwrap();
     connection
 }

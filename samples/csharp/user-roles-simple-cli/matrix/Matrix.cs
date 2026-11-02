@@ -6,26 +6,22 @@ using UserRolesSimpleCli;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-var provider = Environment.GetEnvironmentVariable("PROVIDER") ?? "sqlite";
-var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? "sqlite:///:memory:";
 var log = Environment.GetEnvironmentVariable("E2E_MATRIX_LOG") ?? throw new InvalidOperationException("E2E_MATRIX_LOG");
 var spec = new DeserializerBuilder()
     .WithNamingConvention(CamelCaseNamingConvention.Instance)
     .IgnoreUnmatchedProperties()
     .Build()
     .Deserialize<CliSpec>(File.ReadAllText(Path.Combine(Shared(), "cli.yaml")));
-var connection = provider switch
-{
-    "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    _ => throw new InvalidOperationException(provider)
-};
+DatasourceFactory.Register("sqlite", new SqliteDriver());
+DatasourceFactory.Register("mysql", new MysqlDriver());
+DatasourceFactory.Register("postgres", new PostgresDriver());
+await using var ds = Datasource.Default;
+var connection = await ds.CreateConnection();
 var lines = new List<string>();
 try
 {
     await connection.Open();
-    var command = connection.CreateCommand();
+    var command = await ds.CreateCommand(connection);
     var now = DateTimeOffset.Parse(spec.Now, null, System.Globalization.DateTimeStyles.RoundtripKind);
     command.AddMiddleware(new ConsoleCommandMiddleware(lines.Add, () => now, new Dictionary<string, string> { ["isVerbose"] = "true" }));
     var app = new App(command, () => now.UtcDateTime, _ => "hash", () => [1, 2, 3], false);
@@ -39,15 +35,8 @@ finally
     try { await connection.Close(); } catch { }
 }
 
-static string Shared()
-{
-    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-    {
-        var path = Path.Combine(dir.FullName, "samples", "user-roles-simple-cli-shared");
-        if (Directory.Exists(path)) return path;
-    }
-    throw new InvalidOperationException("shared spec");
-}
+static string Shared() =>
+    Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "user-roles-simple-cli-shared"));
 
 sealed class CliSpec
 {

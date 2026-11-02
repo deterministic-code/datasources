@@ -1,7 +1,6 @@
 use crate::app::App;
 use crate::columns;
 use crate::commands::write_row;
-use crate::schema;
 use datasources::{Parameter, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,11 +16,11 @@ impl AddGroup {
         write_row::execute(
             app.command(),
             app.provider(),
-            &schema::ident(app.provider(), "groups"),
+            "groups",
             "add_group",
             &[
                 Parameter::new(column.as_str(), self.name.as_str()),
-                Parameter::new("is_enabled", schema::flag(app.provider(), true)),
+                Parameter::new("is_enabled", true),
                 Parameter::new("created", created.as_str()),
                 Parameter::new("updated", updated.clone()),
             ],

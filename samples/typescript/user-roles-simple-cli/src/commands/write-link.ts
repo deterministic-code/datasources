@@ -1,6 +1,5 @@
 import type { Parameter } from "@deterministic-code/datasources";
 import type { App } from "../app.ts";
-import { ident } from "../schema.ts";
 import { lookupId } from "./lookup-id.ts";
 import { writeRow } from "./write-row.ts";
 
@@ -14,9 +13,8 @@ export const writeLink = async (
   linkColumn: string,
   procedure: string,
 ): Promise<string> => {
-  const provider = app.command.connection.provider;
-  const userId = await lookupId(app.command, ident(provider, "users"), "username", username);
-  const rightId = await lookupId(app.command, ident(provider, rightTable), rightColumn, rightValue);
+  const userId = await lookupId(app.command, "users", "username", username);
+  const rightId = await lookupId(app.command, rightTable, rightColumn, rightValue);
   const created = app.stamp();
   const updated = app.token();
   const insert: Parameter[] = [
@@ -31,6 +29,6 @@ export const writeLink = async (
     { name: "p_created", value: created },
     { name: "p_updated", value: app.bytes(updated) },
   ];
-  await writeRow(app.command, ident(provider, linkTable), procedure, insert, call, app.procedures);
+  await writeRow(app.command, linkTable, procedure, insert, call, app.procedures);
   return "";
 };

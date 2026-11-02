@@ -68,7 +68,23 @@ Judge only what the diff changes. Quote `file:line` for every finding. If a rule
    - Name the driver converter that should be used and require the author to call it or extend it.
    - If the conversion truly cannot be done at the driver level, do not accept a workaround. Flag it as a blocker and require the author to surface it to the user for a decision.
 
-10. **Correctness and risk.**
+10. **No if/else-if chains; use a factory.**
+   - Flag `if` / `else if` / `if then if` ladders, `switch`/`match` blocks, and nested conditionals that select behavior by type, kind, provider, dialect, or string key. This applies most to type conversion.
+   - Hard-coded branching on a type or name is a missing factory or registry. Require a factory (or a lookup of strategy objects keyed by the type) that returns the right converter, mapper, or handler. Adding a case must mean adding one registered entry, not editing a ladder.
+   - Name the existing factory or registry in the repo that should be used or extended, with `file:line`. If none exists, name the one to create and where it belongs.
+   - A ladder that converts values is also a violation of rule 9. Report both, and require the factory to resolve to the driver's converters.
+   - Flag the same ladder repeated across C#, Rust, and TypeScript. Each language needs the same factory shape (rule 7).
+   - A short guard clause or a single two-way `if` on a real boolean condition is fine. Do not flag it.
+
+11. **Quick fixes to make a test pass.**
+   - Assume any change that looks aimed at turning a red test green is a hack until proven otherwise. For every fix in the diff, ask what failed and where the defect really lives.
+   - Flag a fix placed in the wrong layer: a special case in a repository, mapper, generator, CLI, or test helper that should be a type converter, driver converter, or other registered extension point. Name the extension point that should have been extended, with `file:line`.
+   - Flag a fix that bypasses the loosely coupled, extensible design: a hard-coded type or column name, a one-off cast, a string replace, a try/catch fallback, a retry, a sleep, or a flag parameter added so one case passes.
+   - Flag a fix that works for the failing case only. Ask whether the same input through another provider, language, or caller still fails. If so, the root cause is untouched.
+   - Ask what the failing test showed and why the real cause was not fixed. If the diff does not answer it, require the author to explain. If the root cause is in a layer the author should not change, flag it as a blocker and require the author to surface it to the user for a decision.
+   - Require the fix to live where every caller benefits, with a test that fails without it (rule 2).
+
+12. **Correctness and risk.**
    - Error handling belongs at boundaries. Flag swallowed errors and silent fallbacks.
    - Flag injection (SQL, shell, path), leaked secrets, and unsafe deserialization.
    - Flag breaking changes to published APIs, migrations, or file formats without a stated path.

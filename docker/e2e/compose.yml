@@ -33,14 +33,16 @@ services:
       timeout: 5s
       retries: 20
   runner:
-    build: ../e2e-matrix
+    image: datasources-e2e-runner
+    build:
+      context: ../..
+      dockerfile: docker/e2e-matrix/Dockerfile
     restart: "no"
     working_dir: /work
-    volumes:
-      - ../..:/work
     tmpfs:
       - /tmp
     environment:
+      E2E_SAMPLE: ${E2E_SAMPLE:-}
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
     depends_on:

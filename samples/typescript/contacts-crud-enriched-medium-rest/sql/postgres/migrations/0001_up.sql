@@ -4,7 +4,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -15,7 +15,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -26,7 +26,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -37,7 +37,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -48,7 +48,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -59,7 +59,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -70,7 +70,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -81,7 +81,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -92,7 +92,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -105,7 +105,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -118,7 +118,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -129,7 +129,7 @@ GO
 -- Shared updated_at function
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW."updated" = NOW() AT TIME ZONE 'UTC';
+  NEW."updated" = (NOW() AT TIME ZONE 'UTC');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

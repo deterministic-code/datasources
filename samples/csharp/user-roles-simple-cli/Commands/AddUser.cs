@@ -9,15 +9,14 @@ public sealed record AddUser(string Username, string Password) : CliCommand
         var hashed = app.Hash(Password);
         var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var updated = app.Token();
-        var provider = app.Command.Connection.Provider;
         await WriteRow.Execute(
             app.Command,
-            Schema.Ident(provider, "users"),
+            "users",
             "add_user",
             [
                 new Parameter("username", Username),
                 new Parameter("password", hashed),
-                new Parameter("is_enabled", Schema.Flag(provider, true)),
+                new Parameter("is_enabled", true),
                 new Parameter("created", created),
                 new Parameter("updated", updated)
             ],

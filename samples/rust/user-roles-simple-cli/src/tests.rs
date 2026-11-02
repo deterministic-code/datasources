@@ -7,7 +7,6 @@ use crate::commands::{
 };
 use crate::parse;
 use crate::password_hash;
-use crate::schema;
 use crate::users_roles_groups_query;
 use crate::users_view;
 use datasources::{
@@ -41,7 +40,7 @@ fn user_table(provider: &str) -> String {
         .map(|(name, canonical, id)| {
             let affinity = types.column_type(canonical).unwrap();
             Column::new(
-                schema::ident(provider, name),
+                (*name).to_string(),
                 if *id {
                     format!("{affinity} PRIMARY KEY")
                 } else {
@@ -50,11 +49,10 @@ fn user_table(provider: &str) -> String {
             )
         })
         .collect();
-    DefaultStatementTextRenderer::instance().render(&CreateTableStatement::new(
-        schema::ident(provider, "user"),
-        &mapped,
-        &[],
-    ))
+    types
+        .statement_renderer()
+        .expect("renderer")
+        .render(&CreateTableStatement::new("user", &mapped, &[]))
 }
 
 fn row(pairs: &[(&str, Value)]) -> Row {
@@ -142,35 +140,19 @@ fn parses_commands() {
 
 #[test]
 fn builds_schema() {
-    for provider in ["sqlite", "mysql", "postgres"] {
-        let sql = schema::tables(provider)
-            .unwrap()
-            .iter()
-            .map(|table| DefaultStatementTextRenderer::instance().render(table))
-            .collect::<Vec<_>>()
-            .join("\n");
-        assert!(sql.contains(&format!(
-            "FOREIGN KEY ({}) REFERENCES",
-            schema::ident(provider, "user_id")
-        )));
-        assert!(sql.contains(&format!(
-            "FOREIGN KEY ({}) REFERENCES",
-            schema::ident(provider, "bad_role_id")
-        )));
-        assert!(sql.contains("ugly_name"));
-    }
-    let sqlite = schema::tables("sqlite").unwrap();
-    assert!(sqlite[0].columns[0].identity);
+    let tables = datasources_tests::schema_tables("user-roles-cli", |id| id.to_string(), None);
+    let sql = tables
+        .iter()
+        .map(|table| DefaultStatementTextRenderer::instance().render(table))
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(sql.contains("FOREIGN KEY (user_id) REFERENCES"));
+    assert!(sql.contains("FOREIGN KEY (bad_role_id) REFERENCES"));
+    assert!(sql.contains("ugly_name"));
+    assert!(tables[0].columns[0].identity);
     assert!(DefaultStatementTextRenderer::instance()
-        .render(&sqlite[0])
+        .render(&tables[0])
         .contains("CONSTRAINT pk_users PRIMARY KEY"));
-    assert!(schema::tables("mysql").unwrap()[0].columns[0].identity);
-    assert!(schema::tables("postgres").unwrap()[0].columns[0].identity);
-    assert_eq!(schema::ident("sqlite", "user"), "\"user\"");
-    assert_eq!(schema::ident("postgres", "a\"b"), "\"a\"\"b\"");
-    assert_eq!(schema::ident("mysql", "a`b"), "`a``b`");
-    assert_eq!(schema::qualified("sqlite", "users.id"), "\"users\".\"id\"");
-    assert_eq!(schema::qualified("mysql", "users.id"), "`users`.`id`");
     assert_eq!(
         user_table("sqlite"),
         "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)"
@@ -189,12 +171,11 @@ fn builds_schema() {
     assert_eq!(columns::reverse_map("ugly_name"), "name");
     assert_eq!(columns::reverse_map("bad_role_id"), "role_id");
     assert_eq!(columns::reverse_map("username"), "username");
-    assert!(schema::mysql_procedures()
-        .join("\n")
+    assert!(include_str!("../../../user-roles-simple-cli-shared/mysql-procedures.sql")
         .contains("INSERT INTO `groups` (ugly_name"));
     assert_eq!(
-        users_roles_groups_query::text("sqlite"),
-        "SELECT \"users\".id AS id, \"users\".username AS username, \"users\".is_enabled AS is_enabled, \"users\".created AS created, \"roles\".id AS role_id, \"roles\".name AS role_name, \"roles\".is_enabled AS role_is_enabled, \"groups\".id AS group_id, \"groups\".ugly_name AS group_name, \"groups\".is_enabled AS group_is_enabled FROM \"users\" LEFT JOIN \"user_roles\" ON \"users\".id = \"user_roles\".user_id LEFT JOIN \"roles\" ON \"user_roles\".bad_role_id = \"roles\".id LEFT JOIN \"user_groups\" ON \"users\".id = \"user_groups\".user_id LEFT JOIN \"groups\" ON \"user_groups\".group_id = \"groups\".id ORDER BY \"users\".id ASC, \"roles\".id ASC, \"groups\".id ASC"
+        users_roles_groups_query::text(),
+        "SELECT users.id AS id, users.username AS username, users.is_enabled AS is_enabled, users.created AS created, roles.id AS role_id, roles.name AS role_name, roles.is_enabled AS role_is_enabled, groups.id AS group_id, groups.ugly_name AS group_name, groups.is_enabled AS group_is_enabled FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.bad_role_id = roles.id LEFT JOIN user_groups ON users.id = user_groups.user_id LEFT JOIN groups ON user_groups.group_id = groups.id ORDER BY users.id ASC, roles.id ASC, groups.id ASC"
     );
 }
 

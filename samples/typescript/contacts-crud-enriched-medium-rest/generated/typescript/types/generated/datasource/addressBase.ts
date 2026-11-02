@@ -1,5 +1,6 @@
 // schema-version: 1.0
 /** Type AddressBase. */
+export const addressBase = (init: Partial<AddressBase>): AddressBase => ({ ...init } as AddressBase);
 export class AddressBase {
   id!: number;
   uuid: string = crypto.randomUUID();

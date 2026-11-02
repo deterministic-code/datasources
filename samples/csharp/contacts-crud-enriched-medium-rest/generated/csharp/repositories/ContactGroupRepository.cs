@@ -41,6 +41,16 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
                 CreateProperties = ["Uuid", "Created", "Updated", "Version", "Name", "Description"],
                 UpdateProperties = ["Uuid", "Created", "Updated", "Version", "Name", "Description"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false, true),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["Name"] = new("string", false, false),
+                    ["Description"] = new("string", true, false),
+                }),
             })
             .Add("sqlite", new()
             {
@@ -60,6 +70,16 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
                 CreateProperties = ["Uuid", "Version", "Name", "Description"],
                 UpdateProperties = ["Uuid", "Version", "Name", "Description"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false, true),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["Name"] = new("string", false, false),
+                    ["Description"] = new("string", true, false),
+                }),
             })
             .Add("mysql", new()
             {
@@ -79,6 +99,16 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
                 CreateProperties = ["Name", "Description"],
                 UpdateProperties = ["Uuid", "Version", "Name", "Description"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false, true),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["Name"] = new("string", false, false),
+                    ["Description"] = new("string", true, false),
+                }),
             })
             .Add("postgres", new()
             {
@@ -98,6 +128,16 @@ public sealed class ContactGroupRepository : CRUDRepository<Backend.Types.View.C
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Name", "Description"],
                 CreateProperties = ["Name", "Description"],
                 UpdateProperties = ["Uuid", "Version", "Name", "Description"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false, true),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["Name"] = new("string", false, false),
+                    ["Description"] = new("string", true, false),
+                }),
             })
             .For(connection);
 }

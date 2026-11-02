@@ -1,52 +1,37 @@
-use crate::schema;
 use datasources::{
     DefaultStatementTextRenderer, Join, OrderBy, SelectStatement, SelectStatementOptions,
 };
 
-pub fn create(provider: &str) -> SelectStatement {
-    let users = schema::ident(provider, "users");
-    let roles = schema::ident(provider, "roles");
-    let groups = schema::ident(provider, "groups");
-    let user_roles = schema::ident(provider, "user_roles");
-    let user_groups = schema::ident(provider, "user_groups");
+pub fn create() -> SelectStatement {
     let fields = [
-        format!("{users}.id AS id"),
-        format!("{users}.username AS username"),
-        format!("{users}.is_enabled AS is_enabled"),
-        format!("{users}.created AS created"),
-        format!("{roles}.id AS role_id"),
-        format!("{roles}.name AS role_name"),
-        format!("{roles}.is_enabled AS role_is_enabled"),
-        format!("{groups}.id AS group_id"),
-        format!("{groups}.ugly_name AS group_name"),
-        format!("{groups}.is_enabled AS group_is_enabled"),
+        "users.id AS id",
+        "users.username AS username",
+        "users.is_enabled AS is_enabled",
+        "users.created AS created",
+        "roles.id AS role_id",
+        "roles.name AS role_name",
+        "roles.is_enabled AS role_is_enabled",
+        "groups.id AS group_id",
+        "groups.ugly_name AS group_name",
+        "groups.is_enabled AS group_is_enabled",
     ];
-    let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
-    let left_ur = format!("{users}.id");
-    let right_ur = format!("{user_roles}.user_id");
-    let left_role = format!("{user_roles}.bad_role_id");
-    let right_role = format!("{roles}.id");
-    let left_ug = format!("{users}.id");
-    let right_ug = format!("{user_groups}.user_id");
-    let left_group = format!("{user_groups}.group_id");
-    let right_group = format!("{groups}.id");
     let order = [
-        OrderBy::asc(format!("{users}.id")),
-        OrderBy::asc(format!("{roles}.id")),
-        OrderBy::asc(format!("{groups}.id")),
+        OrderBy::asc("users.id"),
+        OrderBy::asc("roles.id"),
+        OrderBy::asc("groups.id"),
     ];
     SelectStatement::new(SelectStatementOptions {
         joins: &[
-            Join::left(&user_roles, &left_ur, &right_ur),
-            Join::left(&roles, &left_role, &right_role),
-            Join::left(&user_groups, &left_ug, &right_ug),
-            Join::left(&groups, &left_group, &right_group),
+            Join::left("user_roles", "users.id", "user_roles.user_id"),
+            Join::left("roles", "user_roles.bad_role_id", "roles.id"),
+            Join::left("user_groups", "users.id", "user_groups.user_id"),
+            Join::left("groups", "user_groups.group_id", "groups.id"),
         ],
         order_by: &order,
-        ..SelectStatementOptions::new(&users, &field_refs)
+        ..SelectStatementOptions::new("users", &fields)
     })
 }
 
-pub fn text(provider: &str) -> String {
-    DefaultStatementTextRenderer::instance().render(&create(provider))
+pub fn text() -> String {
+    DefaultStatementTextRenderer::instance().render(&create())
 }

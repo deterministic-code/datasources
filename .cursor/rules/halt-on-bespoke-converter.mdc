@@ -5,6 +5,4 @@ alwaysApply: true
 
 # Halt on a bespoke type converter
 
-Do not invent a converter type. The object converter is `MetaDataRowTypeConverter`, the same type C# and TypeScript already name. Cell rewrites stay on the catalog converters bound from `Schema.types()`.
-
-If the change seems to need a new converter (`FacetRowConverter`, `IdentityRowConverter`, or any other name), stop and say so. A second type that does the same job is not a substitute.
+Call `MetaDataRowTypeConverter` and the catalog converters on `RowTypeConverters` / `rowTypeConverters` / `row_type_converters`. Do not add a converter type.

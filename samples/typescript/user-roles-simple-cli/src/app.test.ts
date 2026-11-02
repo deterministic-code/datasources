@@ -10,7 +10,10 @@ import { asUserView } from "./as-user-view.ts";
 import { columns } from "./columns.ts";
 import { parse, usage } from "./parse.ts";
 import { passwordHash } from "./password-hash.ts";
-import { ident, mysqlProcedures, qualified, schema } from "./schema.ts";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { tables } from "../../../../typescript/schema-spec.ts";
 import { usersRolesGroupsQuery } from "./users-roles-groups-query.ts";
 import { usersView } from "./users-view.ts";
 
@@ -90,11 +93,11 @@ const userTable = (provider: string): string => {
     ["version", "binary", false],
   ] as const;
   const types = driver(provider);
-  return DefaultStatementTextRenderer.instance.render(
+  return types.statementRenderer!.render(
     new CreateTableStatement(
-      ident(provider, "user"),
+      "user",
       columns.map(([name, type, id]) => ({
-        name: ident(provider, name),
+        name,
         type: id ? `${types.columnType(type)} PRIMARY KEY` : types.columnType(type),
       })),
     ),
@@ -103,23 +106,13 @@ const userTable = (provider: string): string => {
 
 describe("schema", () => {
   it("creates tables with foreign keys", () => {
-    for (const provider of ["sqlite", "mysql", "postgres"]) {
-      const sql = schema(provider)
-        .map((table) => DefaultStatementTextRenderer.instance.render(table))
-        .join("\n");
-      expect(sql).toContain(`FOREIGN KEY (${ident(provider, "user_id")}) REFERENCES`);
-      expect(sql).toContain(`FOREIGN KEY (${ident(provider, "bad_role_id")}) REFERENCES`);
-      expect(sql).toContain("ugly_name");
-    }
-    expect(schema("sqlite")[0]!.columns[0]!.identity).toBe(true);
-    expect(DefaultStatementTextRenderer.instance.render(schema("sqlite")[0]!)).toContain("CONSTRAINT pk_users PRIMARY KEY");
-    expect(schema("mysql")[0]!.columns[0]!.identity).toBe(true);
-    expect(schema("postgres")[0]!.columns[0]!.identity).toBe(true);
-    expect(ident("sqlite", "user")).toBe('"user"');
-    expect(ident("postgres", 'a"b')).toBe('"a""b"');
-    expect(ident("mysql", "a`b")).toBe("`a``b`");
-    expect(qualified("sqlite", "users.id")).toBe('"users"."id"');
-    expect(qualified("mysql", "users.id")).toBe("`users`.`id`");
+    const catalog = tables("user-roles-cli", (id) => id);
+    const sql = catalog.map((table) => DefaultStatementTextRenderer.instance.render(table)).join("\n");
+    expect(sql).toContain("FOREIGN KEY (user_id) REFERENCES");
+    expect(sql).toContain("FOREIGN KEY (bad_role_id) REFERENCES");
+    expect(sql).toContain("ugly_name");
+    expect(catalog[0]!.columns[0]!.identity).toBe(true);
+    expect(DefaultStatementTextRenderer.instance.render(catalog[0]!)).toContain("CONSTRAINT pk_users PRIMARY KEY");
     expect(userTable("sqlite")).toBe(
       'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" TEXT, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" REAL, "created" TEXT, "version" BLOB)',
     );
@@ -129,16 +122,20 @@ describe("schema", () => {
     expect(userTable("postgres")).toBe(
       'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" UUID, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" DOUBLE PRECISION, "created" TIMESTAMPTZ, "version" BYTEA)',
     );
-    expect(ident("oracle", "groups")).toBe('"groups"');
     expect(columns.map("name")).toBe("ugly_name");
     expect(columns.map("role_id")).toBe("bad_role_id");
     expect(columns.map("username")).toBe("username");
     expect(columns.reverseMap("ugly_name")).toBe("name");
     expect(columns.reverseMap("bad_role_id")).toBe("role_id");
     expect(columns.reverseMap("username")).toBe("username");
-    expect(mysqlProcedures().join("\n")).toContain("INSERT INTO `groups` (ugly_name");
-    expect(DefaultStatementTextRenderer.instance.render(usersRolesGroupsQuery("sqlite"))).toBe(
-      'SELECT "users".id AS id, "users".username AS username, "users".is_enabled AS is_enabled, "users".created AS created, "roles".id AS role_id, "roles".name AS role_name, "roles".is_enabled AS role_is_enabled, "groups".id AS group_id, "groups".ugly_name AS group_name, "groups".is_enabled AS group_is_enabled FROM "users" LEFT JOIN "user_roles" ON "users".id = "user_roles".user_id LEFT JOIN "roles" ON "user_roles".bad_role_id = "roles".id LEFT JOIN "user_groups" ON "users".id = "user_groups".user_id LEFT JOIN "groups" ON "user_groups".group_id = "groups".id ORDER BY "users".id ASC, "roles".id ASC, "groups".id ASC',
+    expect(
+      readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), "../../../user-roles-simple-cli-shared/mysql-procedures.sql"),
+        "utf8",
+      ),
+    ).toContain("INSERT INTO `groups` (ugly_name");
+    expect(DefaultStatementTextRenderer.instance.render(usersRolesGroupsQuery())).toBe(
+      "SELECT users.id AS id, users.username AS username, users.is_enabled AS is_enabled, users.created AS created, roles.id AS role_id, roles.name AS role_name, roles.is_enabled AS role_is_enabled, groups.id AS group_id, groups.ugly_name AS group_name, groups.is_enabled AS group_is_enabled FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.bad_role_id = roles.id LEFT JOIN user_groups ON users.id = user_groups.user_id LEFT JOIN groups ON user_groups.group_id = groups.id ORDER BY users.id ASC, roles.id ASC, groups.id ASC",
     );
   });
 });

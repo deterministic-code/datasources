@@ -1,6 +1,5 @@
 use crate::app::App;
 use crate::commands::lookup_id;
-use crate::schema;
 use datasources::{
     ExecuteStoredProcedureStatement, IWhere, Operator, Parameter, Result, UpdateStatement, Where,
 };
@@ -10,7 +9,7 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
     if app.use_procedures() && app.provider() == "mysql" {
         let fields = [
             Parameter::new("p_username", username),
-            Parameter::new("p_is_enabled", schema::flag(app.provider(), enabled)),
+            Parameter::new("p_is_enabled", enabled),
             Parameter::new("p_updated", updated),
         ];
         app.command()
@@ -21,10 +20,9 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
             .await?;
         return Ok(String::new());
     }
-    let users = schema::ident(app.provider(), "users");
-    let id = lookup_id::of(app.command(), &users, "username", username).await?;
+    let id = lookup_id::of(app.command(), "users", "username", username).await?;
     let fields = [
-        Parameter::new("is_enabled", schema::flag(app.provider(), enabled)),
+        Parameter::new("is_enabled", enabled),
         Parameter::new("updated", updated),
     ];
     let where_clause = Where::new(Operator::equals("id", id));
@@ -32,7 +30,7 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
     parameters.extend(where_clause.parameters());
     app.command()
         .execute_statement(
-            &UpdateStatement::new(users, &fields, Some(&where_clause)),
+            &UpdateStatement::new("users", &fields, Some(&where_clause)),
             Some(&parameters),
         )
         .await?;

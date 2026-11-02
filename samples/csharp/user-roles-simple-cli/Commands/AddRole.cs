@@ -8,14 +8,13 @@ public sealed record AddRole(string Name) : CliCommand
     {
         var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var updated = app.Token();
-        var provider = app.Command.Connection.Provider;
         await WriteRow.Execute(
             app.Command,
-            Schema.Ident(provider, "roles"),
+            "roles",
             "add_role",
             [
                 new Parameter("name", Name),
-                new Parameter("is_enabled", Schema.Flag(provider, true)),
+                new Parameter("is_enabled", true),
                 new Parameter("created", created),
                 new Parameter("updated", updated)
             ],

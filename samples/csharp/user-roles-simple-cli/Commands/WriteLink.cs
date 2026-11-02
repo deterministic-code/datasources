@@ -14,9 +14,8 @@ public static class WriteLink
         string linkColumn,
         string procedure)
     {
-        var provider = app.Command.Connection.Provider;
-        var userId = await LookupId.Of(app.Command, Schema.Ident(provider, "users"), "username", username);
-        var rightId = await LookupId.Of(app.Command, Schema.Ident(provider, rightTable), rightColumn, rightValue);
+        var userId = await LookupId.Of(app.Command, "users", "username", username);
+        var rightId = await LookupId.Of(app.Command, rightTable, rightColumn, rightValue);
         var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
         var updated = app.Token();
         Parameter[] insert =
@@ -33,7 +32,7 @@ public static class WriteLink
             new("p_created", created),
             new("p_updated", updated)
         ];
-        await WriteRow.Execute(app.Command, Schema.Ident(provider, linkTable), procedure, insert, call, app.Procedures);
+        await WriteRow.Execute(app.Command, linkTable, procedure, insert, call, app.Procedures);
         return "";
     }
 }

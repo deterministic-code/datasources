@@ -1,5 +1,6 @@
 // schema-version: 1.0
 /** Type ContactPreferences. */
+export const contactPreferences = (init: Partial<ContactPreferences>): ContactPreferences => ({ ...init } as ContactPreferences);
 export class ContactPreferences {
   id!: number;
   uuid: string = crypto.randomUUID();

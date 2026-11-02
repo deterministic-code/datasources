@@ -13,14 +13,11 @@ var chunk = int.Parse(Environment.GetEnvironmentVariable("PERF_CHUNK") ?? "500")
 var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? $"sqlite:///{Path.Combine(Path.GetTempPath(), "contacts-perf.sqlite")}";
 var reading = (Environment.GetEnvironmentVariable("PERF_PHASE") ?? "write") == "read";
 var batched = strategyName == "batch" || strategyName == "procedure" && provider == "sqlite";
-MigrateUp(provider, url);
-var connection = provider switch
-{
-    "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    _ => throw new InvalidOperationException(provider)
-};
+DatasourceFactory.Register("sqlite", new SqliteDriver());
+DatasourceFactory.Register("mysql", new MysqlDriver());
+DatasourceFactory.Register("postgres", new PostgresDriver());
+await using var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = provider, ["DATASOURCE_URL"] = url });
+var connection = await ds.CreateConnection();
 await connection.Open();
 try
 {
@@ -375,54 +372,6 @@ static double Median(List<double> values)
     var sorted = values.OrderBy(value => value).ToArray();
     var mid = sorted.Length / 2;
     return sorted.Length % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-static void MigrateUp(string provider, string url)
-{
-    var repo = RepoRoot();
-    var sql = Path.Combine(Path.GetTempPath(), $"contacts-perf-sql-{Guid.NewGuid():N}");
-    Directory.CreateDirectory(sql);
-    var create = Exec("node", [
-        "--import", "tsx", Path.Combine(repo, "cli", "src", "main.ts"),
-        "migrations", "create",
-        "--input", Path.Combine(repo, "samples", "contacts-crud-enriched-medium-rest-shared", "deterministic"),
-        "--migrations-root", Path.Combine(sql, "sql"),
-    ], Path.Combine(repo, "cli"));
-    if (create.Exit != 0) throw new InvalidOperationException($"{create.Stderr}\n{create.Stdout}");
-    var up = Exec("node", [
-        Path.Combine(repo, "scripts", "migraters.mjs"),
-        "up", "--provider", provider, "--connection", url, "--migrations-root", Path.Combine(sql, "sql"),
-    ], repo);
-    if (up.Exit != 0) throw new InvalidOperationException($"{up.Stderr}\n{up.Stdout}");
-}
-
-static (int Exit, string Stdout, string Stderr) Exec(string file, IEnumerable<string> args, string cwd)
-{
-    var start = new ProcessStartInfo(file) { WorkingDirectory = cwd, RedirectStandardOutput = true, RedirectStandardError = true };
-    foreach (var arg in args) start.ArgumentList.Add(arg);
-    var process = Process.Start(start) ?? throw new InvalidOperationException(file);
-    var output = process.StandardOutput.ReadToEndAsync();
-    var error = process.StandardError.ReadToEndAsync();
-    process.WaitForExit();
-    return (process.ExitCode, output.Result, error.Result);
-}
-
-static string RepoRoot()
-{
-    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-        if (File.Exists(Path.Combine(dir.FullName, "package.json")) && File.ReadAllText(Path.Combine(dir.FullName, "package.json")).Contains("\"setup\""))
-            return dir.FullName;
-    throw new InvalidOperationException("repo");
-}
-
-static string Shared(string name)
-{
-    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-    {
-        var path = Path.Combine(dir.FullName, "samples", name);
-        if (Directory.Exists(path)) return path;
-    }
-    throw new InvalidOperationException(name);
 }
 
 sealed class BytesFromArray : JsonConverter<byte[]>

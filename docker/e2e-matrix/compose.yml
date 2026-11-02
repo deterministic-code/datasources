@@ -39,12 +39,13 @@ services:
   matrix:
     profiles: ["runner"]
     restart: "no"
-    build: .
+    image: datasources-e2e-runner
+    build:
+      context: ../..
+      dockerfile: docker/e2e-matrix/Dockerfile
     working_dir: /work
     tmpfs:
       - /tmp
-    volumes:
-      - ${WORK}:/work
     environment:
       E2E_MATRIX_IN_DOCKER: "1"
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources

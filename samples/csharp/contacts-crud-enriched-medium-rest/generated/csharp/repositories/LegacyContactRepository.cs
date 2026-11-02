@@ -25,6 +25,14 @@ public sealed class LegacyContactRepository : CRUDRepository<Backend.Types.View.
                 ReadProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 CreateProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 UpdateProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Key"] = new("string", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["ImportedAt"] = new("datetime", true, false),
+                }),
             })
             .Add("sqlite", new()
             {
@@ -42,6 +50,14 @@ public sealed class LegacyContactRepository : CRUDRepository<Backend.Types.View.
                 ReadProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 CreateProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 UpdateProperties = ["FirstName", "LastName", "Email", "ImportedAt"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Key"] = new("string", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["ImportedAt"] = new("datetime", true, false),
+                }),
             })
             .Add("mysql", new()
             {
@@ -59,6 +75,14 @@ public sealed class LegacyContactRepository : CRUDRepository<Backend.Types.View.
                 ReadProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 CreateProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 UpdateProperties = ["FirstName", "LastName", "Email", "ImportedAt"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Key"] = new("string", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["ImportedAt"] = new("datetime", true, false),
+                }),
             })
             .Add("postgres", new()
             {
@@ -76,6 +100,14 @@ public sealed class LegacyContactRepository : CRUDRepository<Backend.Types.View.
                 ReadProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 CreateProperties = ["Key", "FirstName", "LastName", "Email", "ImportedAt"],
                 UpdateProperties = ["FirstName", "LastName", "Email", "ImportedAt"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Key"] = new("string", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["ImportedAt"] = new("datetime", true, false),
+                }),
             })
             .For(connection);
 }
