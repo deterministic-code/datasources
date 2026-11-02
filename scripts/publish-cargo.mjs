@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { cargoWorkspaceVersion } from "./cargo-workspace-version.mjs";
 
 const repo = resolve(import.meta.dirname, "..");
 const rust = join(repo, "rust");
@@ -40,16 +41,6 @@ const run = (command, args, cwd, opts = {}) => {
   });
   if (result.status !== 0 && !opts.allowFail) process.exit(result.status ?? 1);
   return result;
-};
-
-const tomlVersion = async () => {
-  const text = await readFile(join(rust, "Cargo.toml"), "utf8");
-  const match = text.match(/^version = "([^"]+)"/m);
-  if (!match) {
-    console.error("rust/Cargo.toml is missing workspace.package version");
-    process.exit(1);
-  }
-  return match[1];
 };
 
 const stampVersion = async (ver) => {
@@ -140,7 +131,7 @@ const publish = (name, ver) => {
 };
 
 if (stamp) await stampVersion(stamp);
-const ver = await tomlVersion();
+const ver = await cargoWorkspaceVersion();
 if (stamp && ver !== stamp) {
   console.error(`stamped ${stamp} but cargo metadata is ${ver}`);
   process.exit(1);

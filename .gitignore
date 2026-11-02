@@ -28,4 +28,5 @@ coverage.info
 file:*
 scripts/artifacts/
 csharp/artifacts/
+dest-cli/
 docs/evals/workspace/
