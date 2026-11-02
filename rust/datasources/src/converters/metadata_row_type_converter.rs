@@ -136,9 +136,30 @@ pub(crate) fn set_field<'a>(
     shape: &'static Shape,
     coerce_id: bool,
 ) -> Result<Partial<'a>> {
+    write_field(partial, name, cell, shape, coerce_id, false)
+}
+
+pub(crate) fn set_changed_field<'a>(
+    partial: Partial<'a>,
+    name: &str,
+    cell: &Value,
+    shape: &'static Shape,
+) -> Result<Partial<'a>> {
+    write_field(partial, name, cell, shape, true, true)
+}
+
+fn write_field<'a>(
+    partial: Partial<'a>,
+    name: &str,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+    change: bool,
+) -> Result<Partial<'a>> {
     let partial = partial.begin_field(name).map_err(reflect)?;
+    let assign = if change { change_value } else { set_value };
     let partial = if is_option(shape) {
-        set_value(
+        assign(
             partial.begin_some().map_err(reflect)?,
             cell,
             option_inner(shape)?,
@@ -147,12 +168,43 @@ pub(crate) fn set_field<'a>(
         .end()
         .map_err(reflect)?
     } else {
-        set_value(partial, cell, shape, coerce_id)?
+        assign(partial, cell, shape, coerce_id)?
     };
     partial.end().map_err(reflect)
 }
 
 pub(crate) fn set_value<'a>(
+    partial: Partial<'a>,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+) -> Result<Partial<'a>> {
+    let cell = match assignable(cell, shape, coerce_id) {
+        true => cell.clone(),
+        false => match coerced(cell, shape, coerce_id) {
+            Some(cell) => cell,
+            None => return partial.set_default().map_err(reflect),
+        },
+    };
+    write_value(partial, &cell, shape, coerce_id)
+}
+
+pub(crate) fn change_value<'a>(
+    partial: Partial<'a>,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+) -> Result<Partial<'a>> {
+    let cell = match assignable(cell, shape, coerce_id) {
+        true => cell.clone(),
+        false => changed(cell, shape, coerce_id).ok_or_else(|| {
+            DatasourceError::message(format!("Cannot assign {cell:?} to {}", shape.type_identifier))
+        })?,
+    };
+    write_value(partial, &cell, shape, coerce_id)
+}
+
+fn write_value<'a>(
     partial: Partial<'a>,
     cell: &Value,
     shape: &'static Shape,
@@ -173,6 +225,52 @@ pub(crate) fn set_value<'a>(
         Value::Null => partial.set_default(),
     };
     set.map_err(reflect)
+}
+
+fn assignable(cell: &Value, shape: &'static Shape, coerce_id: bool) -> bool {
+    match (cell, ScalarType::try_from_shape(shape)) {
+        (Value::Bool(_), Some(ScalarType::Bool)) => true,
+        (Value::Int(_), Some(ScalarType::I64)) => true,
+        (Value::Int(_), Some(ScalarType::I32)) if coerce_id => true,
+        (Value::Float(_), Some(ScalarType::F64)) => true,
+        (Value::Text(_), Some(ScalarType::String)) => true,
+        (Value::DateTime(_), None) => true,
+        (Value::Uuid(_), None) => true,
+        (Value::Decimal(_), None) => true,
+        (Value::Binary(_), None) => true,
+        (Value::Null, _) => true,
+        _ => false,
+    }
+}
+
+fn coerced(cell: &Value, shape: &'static Shape, coerce_id: bool) -> Option<Value> {
+    match (cell, ScalarType::try_from_shape(shape)?) {
+        (Value::Int(n), ScalarType::I32) if coerce_id => Some(Value::Int(*n)),
+        (Value::Int(n), ScalarType::I64) => Some(Value::Int(*n)),
+        (Value::Uuid(id), ScalarType::String) => Some(Value::from(id.to_string())),
+        (Value::Text(text), _) if shape.type_identifier.contains("Uuid") => {
+            text.parse().ok().map(Value::Uuid)
+        }
+        (Value::Text(text), _) if shape.type_identifier.contains("Decimal") => {
+            text.parse().ok().map(Value::Decimal)
+        }
+        (Value::Int(n), _) if shape.type_identifier.contains("Decimal") => {
+            Some(Value::Decimal(rust_decimal::Decimal::from(*n)))
+        }
+        _ => None,
+    }
+}
+
+fn changed(cell: &Value, shape: &'static Shape, coerce_id: bool) -> Option<Value> {
+    if let Some(cell) = coerced(cell, shape, coerce_id) {
+        return Some(cell);
+    }
+    match (cell, ScalarType::try_from_shape(shape)?) {
+        (Value::Int(n), ScalarType::String) => Some(Value::from(n.to_string())),
+        (Value::Bool(flag), ScalarType::String) => Some(Value::from(flag.to_string())),
+        (Value::Float(n), ScalarType::String) => Some(Value::from(n.to_string())),
+        _ => None,
+    }
 }
 
 pub(crate) fn peek_value(value: Peek<'_, '_>) -> Option<Value> {

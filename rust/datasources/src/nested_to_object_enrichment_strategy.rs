@@ -22,10 +22,12 @@ impl NestedToObjectEnrichmentStrategy {
 }
 
 #[async_trait]
-impl ReadonlyEnrichmentStrategy for NestedToObjectEnrichmentStrategy {
+impl<TRelated: crate::entity::Entity> ReadonlyEnrichmentStrategy<Row, TRelated>
+    for NestedToObjectEnrichmentStrategy
+{
     async fn apply(
         &self,
-        _via: Arc<dyn IReadonlyRepository>,
+        _via: Arc<dyn IReadonlyRepository<TRelated>>,
         _enrichment: &Enrichment,
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,

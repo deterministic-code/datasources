@@ -1,5 +1,6 @@
 use crate::converters::{
-    is_column, peek_value, reflect, set_field, set_value, struct_fields, SchemaObject,
+    is_column, peek_value, reflect, set_changed_field, set_field, set_value, struct_fields,
+    SchemaObject,
 };
 use crate::default_write_enrichment_strategy::{decode_rows, encode_rows};
 use crate::result::Result;
@@ -41,6 +42,96 @@ pub fn payload_from_struct<T: SchemaObject>(item: &T, name: &str) -> Vec<Row> {
             .collect();
     }
     Vec::new()
+}
+
+pub fn cell_from_row(row: &Row, name: &str) -> Option<Value> {
+    row.get(name).cloned()
+}
+
+pub fn set_cell_on_row(row: &mut Row, name: &str, value: Value) {
+    row.insert(name.to_string(), value);
+}
+
+pub fn cell_from_struct<T: SchemaObject>(item: &T, name: &str) -> Option<Value> {
+    let st = Peek::new(item).into_struct().ok()?;
+    peek_value(st.field_by_name(name).ok()?)
+}
+
+pub fn set_cell_on_struct<T: SchemaObject>(item: &T, name: &str, cell: Value) -> Result<T> {
+    let st = Peek::new(item).into_struct().map_err(reflect)?;
+    let fields = struct_fields(T::SHAPE)?;
+    let mut partial = Partial::alloc::<T>().map_err(reflect)?;
+    for (index, field) in fields.iter().enumerate() {
+        partial = if field.name == name && is_column(field.shape()) && cell != Value::Null {
+            set_changed_field(partial, field.name, &cell, field.shape())?
+        } else {
+            copy_field(partial, index, field.shape(), st.field(index).map_err(reflect)?)?
+        };
+    }
+    partial.build().map_err(reflect)?.materialize().map_err(reflect)
+}
+
+pub fn typed_list_from_struct<T: SchemaObject, R: SchemaObject>(item: &T, name: &str) -> Vec<R> {
+    let Ok(st) = Peek::new(item).into_struct() else {
+        return Vec::new();
+    };
+    let Ok(field) = st.field_by_name(name) else {
+        return Vec::new();
+    };
+    let Ok(list) = field.into_list() else {
+        return Vec::new();
+    };
+    list.iter()
+        .filter_map(|value| value.get::<R>().ok().cloned())
+        .collect()
+}
+
+pub fn set_typed_list_on_struct<T: SchemaObject, R: SchemaObject>(
+    item: &T,
+    name: &str,
+    items: Vec<R>,
+) -> Result<T> {
+    let st = Peek::new(item).into_struct().map_err(reflect)?;
+    let fields = struct_fields(T::SHAPE)?;
+    let mut partial = Partial::alloc::<T>().map_err(reflect)?;
+    for (index, field) in fields.iter().enumerate() {
+        partial = if field.name == name {
+            let mut partial = partial
+                .begin_field(field.name)
+                .map_err(reflect)?
+                .init_list_with_capacity(items.len())
+                .map_err(reflect)?;
+            for child in &items {
+                partial = partial.begin_list_item().map_err(reflect)?;
+                partial = partial.set(child.clone()).map_err(reflect)?;
+                partial = partial.end().map_err(reflect)?;
+            }
+            partial.end().map_err(reflect)?
+        } else {
+            copy_field(partial, index, field.shape(), st.field(index).map_err(reflect)?)?
+        };
+    }
+    partial.build().map_err(reflect)?.materialize().map_err(reflect)
+}
+
+pub fn set_one_on_struct<T: SchemaObject, R: SchemaObject>(item: &T, name: &str, related: R) -> Result<T> {
+    let st = Peek::new(item).into_struct().map_err(reflect)?;
+    let fields = struct_fields(T::SHAPE)?;
+    let mut partial = Partial::alloc::<T>().map_err(reflect)?;
+    for (index, field) in fields.iter().enumerate() {
+        partial = if field.name == name {
+            partial
+                .begin_field(field.name)
+                .map_err(reflect)?
+                .set(related.clone())
+                .map_err(reflect)?
+                .end()
+                .map_err(reflect)?
+        } else {
+            copy_field(partial, index, field.shape(), st.field(index).map_err(reflect)?)?
+        };
+    }
+    partial.build().map_err(reflect)?.materialize().map_err(reflect)
 }
 
 pub fn set_payload_on_struct<T: SchemaObject>(item: &T, name: &str, rows: Vec<Row>) -> Result<T> {

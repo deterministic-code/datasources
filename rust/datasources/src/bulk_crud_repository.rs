@@ -2,6 +2,7 @@ use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::crud_repository::CRUDRepository;
+use crate::entity::Entity;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
@@ -93,11 +94,11 @@ impl BulkCRUDRepository {
         }
     }
 
-    pub fn add_enriched(
+    pub fn add_enriched<TRelated: Entity>(
         &mut self,
         enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+        via: impl EnrichmentVia<TRelated>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, TRelated>>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let persist_bulk = via.bulk_repo();

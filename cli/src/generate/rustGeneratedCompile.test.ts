@@ -339,7 +339,7 @@ describe("generated rust compiles", () => {
       { "languages.rust.casing.fields": "snake" },
     );
     expect(textOf(texts, "contactRepository.rs")).toContain("pub fn contact_repository");
-    expect(textOf(texts, "contactRepository.rs")).toContain("address_row_repository");
+    expect(textOf(texts, "contactRepository.rs")).toContain("address_repository");
   });
 
   it("fields camel", async () => {

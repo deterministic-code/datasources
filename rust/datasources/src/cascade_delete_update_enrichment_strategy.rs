@@ -3,9 +3,9 @@ use crate::default_create_enrichment_strategy::{create_children, create_links};
 use crate::default_write_enrichment_strategy::required;
 use crate::delete_enrichment_strategy::load;
 use crate::enrichment::Enrichment;
+use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
-use crate::row::Row;
 use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::{Operator, Where};
@@ -15,12 +15,12 @@ use std::sync::Arc;
 pub struct CascadeDeleteUpdateEnrichmentStrategy;
 
 #[async_trait]
-impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
+impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStrategy {
     async fn update_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &mut Row,
+        parent: &mut T,
     ) -> Result<()> {
         let existing = load(writer.as_ref(), enrichment, parent).await?;
         for row in &existing {
@@ -33,7 +33,7 @@ impl UpdateEnrichmentStrategy for CascadeDeleteUpdateEnrichmentStrategy {
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &mut Row,
+        parent: &mut T,
     ) -> Result<()> {
         let association = enrichment
             .association

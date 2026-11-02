@@ -1,5 +1,4 @@
-use futures_util::TryStreamExt;
-use crate::default_write_enrichment_strategy::{encode_row, encode_rows};
+use crate::entity::{assign_one, assign_related, Entity};
 use crate::enrichment::Enrichment;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
@@ -7,16 +6,17 @@ use crate::row::Row;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
+use futures_util::TryStreamExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait ReadonlyEnrichmentStrategy: Send + Sync {
+pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + Sync {
     async fn apply(
         &self,
-        via: Arc<dyn IReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository<TRelated>>,
         enrichment: &Enrichment,
-        parents: &mut Vec<Row>,
+        parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         match enrichment.r#type {
@@ -35,126 +35,109 @@ pub trait ReadonlyEnrichmentStrategy: Send + Sync {
 
     async fn apply_object(
         &self,
-        via: Arc<dyn IReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository<TRelated>>,
         enrichment: &Enrichment,
-        parents: &mut Vec<Row>,
+        parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        let mut cache: HashMap<String, Option<Row>> = HashMap::new();
+        let mut cache: HashMap<String, Option<TRelated>> = HashMap::new();
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(
-                parent,
-                &enrichment.source_property,
-                source_at(sources, index),
-            ) else {
+            let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
+            else {
                 continue;
             };
             let cache_key = key_of(&key);
             if !cache.contains_key(&cache_key) {
                 let related = via
                     .read_single(&Where::new(Operator::equals(
-                            enrichment.related_key.clone(),
-                            key.clone(),
-                        )))
+                        enrichment.related_key.clone(),
+                        key.clone(),
+                    )))
                     .await?;
                 cache.insert(cache_key.clone(), related);
             }
             let Some(related) = cache.get(&cache_key).cloned().flatten() else {
                 continue;
             };
-            parent.insert(
-                enrichment.destination_property.clone(),
-                selected(enrichment, &related),
-            );
+            match enrichment.related_property.as_deref() {
+                Some(select) => {
+                    if let Some(cell) = related.cell(select) {
+                        parent.set_cell(&enrichment.destination_property, cell)?;
+                    }
+                }
+                None => assign_one(parent, &enrichment.destination_property, related)?,
+            }
         }
         Ok(())
     }
 
     async fn apply_list(
         &self,
-        via: Arc<dyn IReadonlyRepository>,
+        via: Arc<dyn IReadonlyRepository<TRelated>>,
         enrichment: &Enrichment,
-        parents: &mut Vec<Row>,
+        parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(
-                parent,
-                &enrichment.source_property,
-                source_at(sources, index),
-            ) else {
+            let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
+            else {
                 continue;
             };
             let related = via
                 .read(&Where::new(Operator::equals(
-                        enrichment.related_key.clone(),
-                        key,
-                    )))
-                .try_collect::<Vec<_>>().await?;
-            parent.insert(
-                enrichment.destination_property.clone(),
-                encode_rows(&related),
-            );
+                    enrichment.related_key.clone(),
+                    key,
+                )))
+                .try_collect::<Vec<_>>()
+                .await?;
+            assign_related(parent, &enrichment.destination_property, related)?;
         }
         Ok(())
     }
+}
 
-    async fn apply_linked(
-        &self,
-        via: Arc<dyn IReadonlyRepository>,
-        link: Arc<dyn IReadonlyRepository>,
-        enrichment: &Enrichment,
-        parents: &mut Vec<Row>,
-        sources: Option<&[Option<Row>]>,
-    ) -> Result<()> {
-        let association = enrichment.association.as_ref().expect("association");
-        for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key(
-                parent,
-                &enrichment.source_property,
-                source_at(sources, index),
-            ) else {
+pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
+    via: Arc<dyn IReadonlyRepository<TRelated>>,
+    link: Arc<dyn IReadonlyRepository<TLink>>,
+    enrichment: &Enrichment,
+    parents: &mut Vec<T>,
+    sources: Option<&[Option<Row>]>,
+) -> Result<()> {
+    let association = enrichment.association.as_ref().expect("association");
+    for (index, parent) in parents.iter_mut().enumerate() {
+        let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
+        else {
+            continue;
+        };
+        let links = link
+            .read(&Where::new(Operator::equals(association.parent.clone(), key)))
+            .try_collect::<Vec<_>>()
+            .await?;
+        let mut related = Vec::new();
+        for row in links {
+            let Some(id) = row.cell(&association.related) else {
                 continue;
             };
-            let links = link
-                .read(&Where::new(Operator::equals(
-                        association.parent.clone(),
-                        key,
-                    )))
-                .try_collect::<Vec<_>>().await?;
-            let mut related_rows = Vec::new();
-            for row in links {
-                let Some(id) = row.get(&association.related).cloned() else {
-                    continue;
-                };
-                if let Some(entity) = via
-                    .read_single(&Where::new(Operator::equals(
-                            enrichment.related_key.clone(),
-                            id,
-                        )))
-                    .await?
-                {
-                    related_rows.push(entity);
-                }
+            if let Some(entity) = via
+                .read_single(&Where::new(Operator::equals(
+                    enrichment.related_key.clone(),
+                    id,
+                )))
+                .await?
+            {
+                related.push(entity);
             }
-            parent.insert(
-                enrichment.destination_property.clone(),
-                encode_rows(&related_rows),
-            );
         }
-        Ok(())
+        assign_related(parent, &enrichment.destination_property, related)?;
     }
+    Ok(())
 }
 
-fn selected(enrichment: &Enrichment, related: &Row) -> Value {
-    enrichment
-        .related_property
-        .as_ref()
-        .and_then(|select| related.get(select).cloned())
-        .unwrap_or_else(|| encode_row(related))
-}
-
-pub(crate) fn source_key(parent: &Row, name: &str, source: Option<&Row>) -> Option<Value> {
+pub(crate) fn source_key_of<T: Entity>(
+    parent: &T,
+    name: &str,
+    source: Option<&Row>,
+) -> Option<Value> {
     if let Some(source) = source {
         if let Some(cell) = source.get(name) {
             if *cell != Value::Null {
@@ -162,10 +145,7 @@ pub(crate) fn source_key(parent: &Row, name: &str, source: Option<&Row>) -> Opti
             }
         }
     }
-    parent
-        .get(name)
-        .filter(|value| **value != Value::Null)
-        .cloned()
+    parent.cell(name).filter(|value| *value != Value::Null)
 }
 
 pub(crate) fn source_at<'a>(sources: Option<&'a [Option<Row>]>, index: usize) -> Option<&'a Row> {

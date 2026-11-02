@@ -59,7 +59,7 @@ pub struct ReadonlyRepository<T: Entity = Row> {
     readonly_statements: ReadonlyRepositoryStatements,
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
-    pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
+    pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment<T>>>>,
     pub(crate) schema: Schema,
     entity: PhantomData<T>,
 }
@@ -127,11 +127,11 @@ impl<T: Entity> ReadonlyRepository<T> {
         }
     }
 
-    pub fn add_enriched(
+    pub fn add_enriched<TRelated: Entity>(
         &mut self,
         enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+        via: impl EnrichmentVia<TRelated>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let via = via.read_via();
@@ -148,21 +148,6 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     pub(crate) fn enriched(&self) -> bool {
         !self.enrichments.lock().expect("enrichments").is_empty()
-    }
-
-    pub(crate) fn list_destinations(&self) -> Vec<String> {
-        self.enrichments
-            .lock()
-            .expect("enrichments")
-            .iter()
-            .filter(|entry| {
-                matches!(
-                    entry.enrichment.r#type,
-                    crate::EnrichmentPropertyType::List | crate::EnrichmentPropertyType::Dictionary
-                )
-            })
-            .map(|entry| entry.enrichment.destination_property.clone())
-            .collect()
     }
 
     pub(crate) fn memory_items(&self) -> Option<&Arc<SharedItems>> {
@@ -210,7 +195,7 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     pub(crate) async fn fill(
         &self,
-        parents: &mut Vec<Row>,
+        parents: &mut Vec<T>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         let entries = self.enrichments.lock().expect("enrichments").clone();
@@ -457,15 +442,17 @@ impl<T: Entity> ReadonlyRepository<T> {
     }
 
     async fn apply(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<(Row, Option<Row>)>> {
-        if !self.enriched() {
-            return Ok(pairs);
-        }
-        let (mut items, sources): (Vec<Row>, Vec<Option<Row>>) = pairs.into_iter().unzip();
+        Ok(pairs)
+    }
+
+    async fn fill_rows(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<T>> {
+        let (rows, sources): (Vec<Row>, Vec<Option<Row>>) = pairs.into_iter().unzip();
+        let mut items = rows
+            .into_iter()
+            .map(crate::repository::map_row)
+            .collect::<Result<Vec<_>>>()?;
         self.fill(&mut items, Some(&sources)).await?;
-        Ok(match items.len() == sources.len() {
-            true => items.into_iter().zip(sources).collect(),
-            false => items.into_iter().map(|item| (item, None)).collect(),
-        })
+        Ok(items)
     }
 
     fn column_to_property_name(&self, row: Row, mappers: &StatementMappers) -> Row {
@@ -568,8 +555,27 @@ impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
     }
 
     fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        map_stream(self.read_rows(Some(query), None, None), self.list_destinations())
+        if !self.enriched() {
+            return map_stream(self.read_rows(Some(query), None, None));
+        }
+        Box::pin(try_unfold(None, move |state| async move {
+            match state {
+                None => {
+                    let pairs = self.read_tracked(Some(query), None, None).await?;
+                    next_entities(self.fill_rows(pairs).await?)
+                }
+                Some(items) => next_entities_iter(items),
+            }
+        }))
     }
+}
+
+fn next_entities<T>(items: Vec<T>) -> Result<Option<(T, Option<std::vec::IntoIter<T>>)>> {
+    next_entities_iter(items.into_iter())
+}
+
+fn next_entities_iter<T>(mut items: std::vec::IntoIter<T>) -> Result<Option<(T, Option<std::vec::IntoIter<T>>)>> {
+    Ok(items.next().map(|item| (item, Some(items))))
 }
 
 fn next_buffered(items: Vec<Row>) -> Result<Option<(Row, ReadRun)>> {

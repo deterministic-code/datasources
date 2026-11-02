@@ -1,25 +1,22 @@
-use crate::create_enrichment_strategy::CreateEnrichmentStrategy;
+use crate::create_enrichment_strategy::{set, CreateEnrichmentStrategy};
 use crate::datasource_error::DatasourceError;
-use crate::default_write_enrichment_strategy::{
-    decode_rows, encode_rows, related_ids, required,
-};
+use crate::default_write_enrichment_strategy::{related_ids, required};
 use crate::enrichment::Enrichment;
+use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
-use crate::row::Row;
-use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::Arc;
 
 pub struct DefaultCreateEnrichmentStrategy;
 
 #[async_trait]
-impl CreateEnrichmentStrategy for DefaultCreateEnrichmentStrategy {
+impl<T: Entity> CreateEnrichmentStrategy<T> for DefaultCreateEnrichmentStrategy {
     async fn create_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &mut Row,
+        parent: &mut T,
     ) -> Result<()> {
         create_children(writer.as_ref(), enrichment, parent).await
     }
@@ -28,39 +25,35 @@ impl CreateEnrichmentStrategy for DefaultCreateEnrichmentStrategy {
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &mut Row,
+        parent: &mut T,
     ) -> Result<()> {
         create_links(writer.as_ref(), enrichment, parent).await
     }
 }
 
-pub(crate) async fn create_children(
-    writer: &dyn ICRUDRepository,
+pub(crate) async fn create_children<T: Entity, TChild: Entity>(
+    writer: &dyn ICRUDRepository<TChild>,
     enrichment: &Enrichment,
-    parent: &mut Row,
+    parent: &mut T,
 ) -> Result<()> {
-    let mut related = decode_rows(parent.get(&enrichment.destination_property));
+    let mut related = parent.related::<TChild>(&enrichment.destination_property);
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
         related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
     }
-    let key = parent.get(&enrichment.source_property).cloned();
-    for row in &mut related {
+    let key = parent.cell(&enrichment.source_property);
+    for child in &mut related {
         if let Some(key) = &key {
-            row.insert(enrichment.related_key.clone(), key.clone());
+            set(child, &enrichment.related_key, key.clone())?;
         }
-        *row = writer.create(row.clone()).await?;
+        *child = writer.create(child.clone()).await?;
     }
-    parent.insert(
-        enrichment.destination_property.clone(),
-        encode_rows(&related),
-    );
-    Ok(())
+    parent.set_related(&enrichment.destination_property, related)
 }
 
-pub(crate) async fn create_links(
-    writer: &dyn ICRUDRepository,
+pub(crate) async fn create_links<T: Entity, TLink: Entity>(
+    writer: &dyn ICRUDRepository<TLink>,
     enrichment: &Enrichment,
-    parent: &Row,
+    parent: &T,
 ) -> Result<()> {
     let association = enrichment
         .association
@@ -72,17 +65,18 @@ pub(crate) async fn create_links(
         &enrichment.destination_property,
     )?;
     for id in related_ids(parent, enrichment)? {
-        let mut row = Row::new();
-        row.insert(association.parent.clone(), parent_key.clone());
-        row.insert(association.related.clone(), id);
-        writer.create(row.clone()).await?;
+        let mut row = TLink::default();
+        set(&mut row, &association.parent, parent_key.clone())?;
+        set(&mut row, &association.related, id)?;
+        writer.create(row).await?;
     }
     Ok(())
 }
 
-fn dict_key(row: &Row) -> String {
-    row.get("Key")
-        .or_else(|| row.get("key"))
-        .map(Value::wire_text)
+fn dict_key<TChild: Entity>(child: &TChild) -> String {
+    child
+        .cell("Key")
+        .or_else(|| child.cell("key"))
+        .map(|value| value.wire_text())
         .unwrap_or_default()
 }

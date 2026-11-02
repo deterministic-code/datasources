@@ -1,11 +1,12 @@
 use crate::bulk_crud_repository::BulkCRUDRepository;
+use crate::entity::Entity;
 use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::row::Row;
 use std::any::Any;
 use std::sync::Arc;
 
-pub trait EnrichmentVia {
-    fn read_via(self) -> Arc<dyn IReadonlyRepository>
+pub trait EnrichmentVia<TRelated: Entity = Row> {
+    fn read_via(self) -> Arc<dyn IReadonlyRepository<TRelated>>
     where
         Self: Sized,
     {
@@ -15,8 +16,8 @@ pub trait EnrichmentVia {
     fn into_repos(
         self,
     ) -> (
-        Arc<dyn IReadonlyRepository>,
-        Option<Arc<dyn ICRUDRepository>>,
+        Arc<dyn IReadonlyRepository<TRelated>>,
+        Option<Arc<dyn ICRUDRepository<TRelated>>>,
     );
 
     fn bulk_repo(&self) -> Option<Arc<BulkCRUDRepository>> {
@@ -24,15 +25,16 @@ pub trait EnrichmentVia {
     }
 }
 
-impl<T> EnrichmentVia for Arc<T>
+impl<T, TRelated> EnrichmentVia<TRelated> for Arc<T>
 where
-    T: IReadonlyRepository<Row> + Any + 'static,
+    T: IReadonlyRepository<TRelated> + Any + 'static,
+    TRelated: Entity,
 {
     fn into_repos(
         self,
     ) -> (
-        Arc<dyn IReadonlyRepository>,
-        Option<Arc<dyn ICRUDRepository>>,
+        Arc<dyn IReadonlyRepository<TRelated>>,
+        Option<Arc<dyn ICRUDRepository<TRelated>>>,
     ) {
         let write = self.clone().to_crud();
         (self, write)
@@ -44,23 +46,23 @@ where
     }
 }
 
-impl EnrichmentVia for Arc<dyn IReadonlyRepository> {
+impl<TRelated: Entity> EnrichmentVia<TRelated> for Arc<dyn IReadonlyRepository<TRelated>> {
     fn into_repos(
         self,
     ) -> (
-        Arc<dyn IReadonlyRepository>,
-        Option<Arc<dyn ICRUDRepository>>,
+        Arc<dyn IReadonlyRepository<TRelated>>,
+        Option<Arc<dyn ICRUDRepository<TRelated>>>,
     ) {
         (self, None)
     }
 }
 
-impl EnrichmentVia for Arc<dyn ICRUDRepository> {
+impl<TRelated: Entity> EnrichmentVia<TRelated> for Arc<dyn ICRUDRepository<TRelated>> {
     fn into_repos(
         self,
     ) -> (
-        Arc<dyn IReadonlyRepository>,
-        Option<Arc<dyn ICRUDRepository>>,
+        Arc<dyn IReadonlyRepository<TRelated>>,
+        Option<Arc<dyn ICRUDRepository<TRelated>>>,
     ) {
         let write = self.clone();
         (as_readonly(self), Some(write))

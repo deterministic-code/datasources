@@ -59,7 +59,7 @@ impl dyn Datasource {
         self.repository_from(bound, apply_crud::<T>(options))
     }
 
-    pub fn create_typed_repository<T: Entity + 'static>(
+    pub fn create_typed_repository<T: Entity + crate::converters::SchemaObject + 'static>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<CRUDRepositoryOptions>,
