@@ -47,7 +47,7 @@ role_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 role_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-let users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
+let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let user_types_repo =
     Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
 let user_roles_repo = Arc::new(CRUDRepository::<Row>::new(connection, role_options).unwrap());

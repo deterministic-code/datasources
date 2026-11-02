@@ -53,16 +53,10 @@ export const applyMigrateUp = async (
     connection,
     ...extra,
   ];
-  const init = [
-    "migrate-init",
-    "--language",
-    command.dialect,
-    ...dialects.flatMap((name) => ["--dialect", name]),
-  ];
   const setup = npx("migrate-setup");
   const up = npx("migrate-up", ["--migrations-root", command.migrationsRoot]);
-  for (const args of [init, setup, up]) {
-    deps.log(`$ npx ${args.join(" ")}`);
-    if (!flags.dryRun) await deps.run("npx", args, flags.cwd);
-  }
+  deps.log(`$ npx ${setup.join(" ")}`);
+  if (!flags.dryRun) await deps.run("npx", setup, flags.cwd);
+  deps.log(`$ npx ${up.join(" ")}`);
+  if (!flags.dryRun) await deps.run("npx", up, flags.cwd);
 };

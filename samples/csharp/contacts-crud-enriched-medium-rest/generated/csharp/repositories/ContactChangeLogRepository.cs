@@ -23,13 +23,5 @@ public sealed class ContactChangeLogRepository : CRUDRepository<Backend.Types.Vi
         ReadProperties = ["Id", "OccurredAt", "ContactId", "ChangedBy", "ChangeSummary"],
         CreateProperties = ["OccurredAt", "ContactId", "ChangedBy", "ChangeSummary"],
         UpdateProperties = ["OccurredAt", "ContactId", "ChangedBy", "ChangeSummary"],
-        Schema = new(new Dictionary<string, SchemaColumn>
-        {
-            ["Id"] = new("integer", false, false),
-            ["OccurredAt"] = new("datetime", false, false),
-            ["ContactId"] = new("integer", false, false),
-            ["ChangedBy"] = new("string", false, false),
-            ["ChangeSummary"] = new("string", false, false),
-        }),
     };
 }

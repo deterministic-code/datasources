@@ -1,6 +1,5 @@
 // schema-version: 1.0
 /** Type ContactsBase. */
-export const contactsBase = (init: Partial<ContactsBase>): ContactsBase => ({ ...init } as ContactsBase);
 export class ContactsBase {
   id!: number;
   uuid: string = crypto.randomUUID();

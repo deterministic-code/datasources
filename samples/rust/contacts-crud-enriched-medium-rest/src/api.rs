@@ -1,13 +1,14 @@
-use crate::clock::Clock;
-use crate::generated::repositories::contact_group_repository::ContactGroupRepository;
-use crate::generated::repositories::contact_repository::ContactRepository;
-use crate::generated::{Address, Contact, ContactGroup, LegacyContact, Phone};
-use crate::json_row::{json_to_row, object_from, row_to_json, rows_to_json};
-use datasources::{
-    chrono::{DateTime, Utc}, DatasourceError, FromSchema, Operator, ReadInput, Schema, Value, Where,
-    CRUDRepository, IReadonlyRepository,
-};
 use futures_util::TryStreamExt;
+use crate::clock::Clock;
+use crate::json_row::{
+    ensure_text, json_to_row, object_from, row_to_json, rows_to_json, set_text, text,
+};
+use crate::repositories::contact_group_repository::ContactGroupRepository;
+use crate::repositories::contact_repository::ContactRepository;
+use datasources::{
+    DatasourceError, Operator, ReadInput, Row, Value, Where, CRUDRepository,
+    IReadonlyRepository,
+};
 use serde_json::{Map, Value as Json};
 use std::collections::HashMap;
 
@@ -18,7 +19,7 @@ pub struct HttpResult {
 
 pub struct Api {
     contacts: ContactRepository,
-    legacy: CRUDRepository<LegacyContact>,
+    legacy: CRUDRepository,
     groups_repo: ContactGroupRepository,
     clock: Clock,
 }
@@ -26,7 +27,7 @@ pub struct Api {
 impl Api {
     pub fn new(
         contacts: ContactRepository,
-        legacy: CRUDRepository<LegacyContact>,
+        legacy: CRUDRepository,
         groups_repo: ContactGroupRepository,
         clock: Clock,
     ) -> Self {
@@ -65,12 +66,12 @@ impl Api {
     }
 
     async fn get_contacts(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
-        Ok(ok(200, self.list_json(&*self.contacts, self.contacts.schema(), query, &["id", "first_name", "last_name", "email"]).await?))
+        Ok(ok(200, rows_to_json(&self.read_rows(&*self.contacts, query, &["id", "first_name", "last_name", "email"]).await?)))
     }
 
     async fn post_contact(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let contact = self.read_contact(body)?;
-        Ok(ok(201, self.entity_json(&self.contacts.create(contact).await?, self.contacts.schema())?))
+        let row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
+        Ok(ok(201, row_to_json(&self.contacts.create(row).await?)))
     }
 
     async fn put_contact(
@@ -83,29 +84,29 @@ impl Api {
         if self.contacts.read_single(&by).await?.is_none() {
             return Ok(empty(404));
         }
-        let mut contact = self.read_contact(body)?;
-        contact.id = id as i32;
-        self.contacts.update(contact).await?;
-        Ok(ok(200, self.entity_json(&self.contacts.read_single(&by).await?.unwrap_or_default(), self.contacts.schema())?))
+        let mut row = self.stamp(object_from(body).map_err(ApiError::bad)?)?;
+        row.insert("id".into(), Value::Int(id));
+        self.contacts.update(row).await?;
+        Ok(ok(200, row_to_json(&self.contacts.read_single(&by).await?.unwrap_or_default())))
     }
 
     async fn delete_contact(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        let Some(contact) = self.contacts.read_single(&by).await? else {
+        let Some(row) = self.contacts.read_single(&by).await? else {
             return Ok(empty(404));
         };
-        self.contacts.delete(contact).await?;
+        self.contacts.delete(row).await?;
         Ok(empty(204))
     }
 
     async fn get_groups(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
-        Ok(ok(200, self.list_json(&*self.groups_repo, self.groups_repo.schema(), query, &["id"]).await?))
+        Ok(ok(200, rows_to_json(&self.read_rows(&*self.groups_repo, query, &["id"]).await?)))
     }
 
     async fn post_group(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let group = self.read_group(body)?;
-        Ok(ok(201, self.entity_json(&self.groups_repo.create(group).await?, self.groups_repo.schema())?))
+        let row = self.stamp_group(object_from(body).map_err(ApiError::bad)?)?;
+        Ok(ok(201, row_to_json(&self.groups_repo.create(row).await?)))
     }
 
     async fn put_group(
@@ -118,22 +119,22 @@ impl Api {
         if self.groups_repo.read_single(&by).await?.is_none() {
             return Ok(empty(404));
         }
-        let mut group = self.read_group(body)?;
-        group.id = id as i32;
-        self.groups_repo.update(group).await?;
-        Ok(ok(200, self.entity_json(&self.groups_repo.read_single(&by).await?.unwrap_or_default(), self.groups_repo.schema())?))
+        let mut row = self.stamp_group(object_from(body).map_err(ApiError::bad)?)?;
+        row.insert("id".into(), Value::Int(id));
+        self.groups_repo.update(row).await?;
+        Ok(ok(200, row_to_json(&self.groups_repo.read_single(&by).await?.unwrap_or_default())))
     }
 
     async fn get_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
-        Ok(ok(200, self.list_json(&self.legacy, self.legacy.schema(), query, &["key", "first_name", "last_name", "email"]).await?))
+        Ok(ok(200, rows_to_json(&self.read_rows(&self.legacy, query, &["key", "first_name", "last_name", "email"]).await?)))
     }
 
     async fn post_legacy(&self, body: Option<&str>) -> Result<HttpResult, ApiError> {
-        let row = text_legacy(self.read_entity::<LegacyContact>(body, self.legacy.schema())?, &self.clock);
-        if row.key.is_empty() {
+        let row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
+        if text(row.get("key")).is_empty() {
             return Err(ApiError::bad("key is required"));
         }
-        Ok(ok(201, self.entity_json(&self.legacy.create(row).await?, self.legacy.schema())?))
+        Ok(ok(201, row_to_json(&self.legacy.create(row).await?)))
     }
 
     async fn put_legacy(
@@ -146,10 +147,10 @@ impl Api {
         if self.legacy.read_single(&by).await?.is_none() {
             return Ok(empty(404));
         }
-        let mut row = text_legacy(self.read_entity::<LegacyContact>(body, self.legacy.schema())?, &self.clock);
-        row.key = key;
+        let mut row = text_legacy(json_to_row(&object_from(body).map_err(ApiError::bad)?)?, &self.clock);
+        row.insert("key".into(), Value::Text(key));
         self.legacy.update(row).await?;
-        Ok(ok(200, self.entity_json(&self.legacy.read_single(&by).await?.unwrap_or_default(), self.legacy.schema())?))
+        Ok(ok(200, row_to_json(&self.legacy.read_single(&by).await?.unwrap_or_default())))
     }
 
     async fn delete_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
@@ -162,27 +163,12 @@ impl Api {
         Ok(empty(204))
     }
 
-    async fn list_json<T: FromSchema>(
+    async fn read_rows(
         &self,
-        repo: &impl IReadonlyRepository<T>,
-        schema: &Schema,
+        repo: &datasources::CRUDRepository,
         query: &HashMap<String, String>,
         keys: &[&str],
-    ) -> Result<Json, ApiError> {
-        let items = self.read_items(repo, query, keys).await?;
-        let mut rows = Vec::new();
-        for item in items {
-            rows.push(item.to_schema(schema)?);
-        }
-        Ok(rows_to_json(&rows))
-    }
-
-    async fn read_items<T: FromSchema>(
-        &self,
-        repo: &impl IReadonlyRepository<T>,
-        query: &HashMap<String, String>,
-        keys: &[&str],
-    ) -> Result<Vec<T>, ApiError> {
+    ) -> Result<Vec<Row>, ApiError> {
         let filter = where_query(query, keys);
         let none = ();
         let query: &dyn ReadInput = filter
@@ -192,31 +178,16 @@ impl Api {
         Ok(repo.read(query).try_collect::<Vec<_>>().await?)
     }
 
-    fn read_contact(&self, body: Option<&str>) -> Result<Contact, ApiError> {
-        let mut json = object_from(body).map_err(ApiError::bad)?;
+    fn stamp(&self, mut json: Json) -> Result<Row, ApiError> {
         let object = json.as_object_mut().ok_or_else(|| ApiError::bad("invalid json"))?;
-        stamp_contact_json(object, &self.clock);
-        let mut contact = Contact::from_schema(json_to_row(&json).map_err(ApiError::bad)?, self.contacts.schema())?;
-        stamp_contact(&mut contact, &self.clock);
-        Ok(contact)
+        stamp_contact(object, &self.clock);
+        json_to_row(&json).map_err(ApiError::from)
     }
 
-    fn read_group(&self, body: Option<&str>) -> Result<ContactGroup, ApiError> {
-        let mut json = object_from(body).map_err(ApiError::bad)?;
+    fn stamp_group(&self, mut json: Json) -> Result<Row, ApiError> {
         let object = json.as_object_mut().ok_or_else(|| ApiError::bad("invalid json"))?;
-        stamp_group_json(object, &self.clock);
-        let mut group = ContactGroup::from_schema(json_to_row(&json).map_err(ApiError::bad)?, self.groups_repo.schema())?;
-        stamp_group(&mut group, &self.clock);
-        Ok(group)
-    }
-
-    fn read_entity<T: FromSchema>(&self, body: Option<&str>, schema: &Schema) -> Result<T, ApiError> {
-        let json = object_from(body).map_err(ApiError::bad)?;
-        T::from_schema(json_to_row(&json).map_err(ApiError::bad)?, schema).map_err(ApiError::from)
-    }
-
-    fn entity_json<T: FromSchema>(&self, item: &T, schema: &Schema) -> Result<Json, ApiError> {
-        Ok(row_to_json(&item.to_schema(schema)?))
+        stamp_group(object, &self.clock);
+        json_to_row(&json).map_err(ApiError::from)
     }
 }
 
@@ -335,70 +306,7 @@ fn decode(text: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn stamp_contact(contact: &mut Contact, clock: &Clock) {
-    if contact.email.as_deref().unwrap_or("").is_empty() {
-        contact.email = Some(String::new());
-    }
-    if contact.notes.as_deref().unwrap_or("").is_empty() {
-        contact.notes = Some("none".into());
-    }
-    stamp_base(&mut contact.uuid, &mut contact.created, &mut contact.updated, &mut contact.version, clock);
-    for address in &mut contact.addresses {
-        stamp_address(address, clock);
-    }
-    for phone in &mut contact.phones {
-        stamp_phone(phone, clock);
-    }
-}
-
-fn stamp_group(group: &mut ContactGroup, clock: &Clock) {
-    stamp_base(&mut group.uuid, &mut group.created, &mut group.updated, &mut group.version, clock);
-}
-
-fn stamp_address(address: &mut Address, clock: &Clock) {
-    if address.line2.as_deref().unwrap_or("").is_empty() {
-        address.line2 = Some(String::new());
-    }
-    if address.region.as_deref().unwrap_or("").is_empty() {
-        address.region = Some(String::new());
-    }
-    if address.postal_code.as_deref().unwrap_or("").is_empty() {
-        address.postal_code = Some(String::new());
-    }
-    if address.country.as_deref().unwrap_or("").is_empty() {
-        address.country = Some("US".into());
-    }
-    stamp_base(&mut address.uuid, &mut address.created, &mut address.updated, &mut address.version, clock);
-}
-
-fn stamp_phone(phone: &mut Phone, clock: &Clock) {
-    if phone.label.as_deref().unwrap_or("").is_empty() {
-        phone.label = Some("Main".into());
-    }
-    stamp_base(&mut phone.uuid, &mut phone.created, &mut phone.updated, &mut phone.version, clock);
-}
-
-fn stamp_base(
-    uuid: &mut String,
-    created: &mut DateTime<Utc>,
-    updated: &mut DateTime<Utc>,
-    version: &mut Vec<u8>,
-    clock: &Clock,
-) {
-    if uuid.is_empty() {
-        *uuid = clock.uuid();
-    }
-    let now = parse_clock(clock);
-    if *created == DateTime::<Utc>::UNIX_EPOCH {
-        *created = now;
-    }
-    *updated = now;
-    if version.is_empty() {
-        *version = vec![0];
-    }
-}
-
-fn stamp_contact_json(object: &mut Map<String, Json>, clock: &Clock) {
+fn stamp_contact(object: &mut Map<String, Json>, clock: &Clock) {
     set_json_text(object, "email", "");
     set_json_text(object, "notes", "none");
     if object.get("uuid").and_then(Json::as_str).unwrap_or("").is_empty() {
@@ -411,8 +319,8 @@ fn stamp_contact_json(object: &mut Map<String, Json>, clock: &Clock) {
     if object.get("version").and_then(Json::as_str).unwrap_or("").is_empty() {
         object.insert("version".into(), Json::String("AA==".into()));
     }
-    stamp_list(object, "addresses", clock, stamp_address_json);
-    stamp_list(object, "phones", clock, stamp_phone_json);
+    stamp_list(object, "addresses", clock, stamp_address);
+    stamp_list(object, "phones", clock, stamp_phone);
 }
 
 fn stamp_list(
@@ -440,27 +348,27 @@ fn stamp_list(
     );
 }
 
-fn stamp_group_json(object: &mut Map<String, Json>, clock: &Clock) {
+fn stamp_group(object: &mut Map<String, Json>, clock: &Clock) {
     set_json_text(object, "name", "");
-    stamp_base_json(object, clock);
+    stamp_base(object, clock);
     stamp_list(object, "members", clock, |_, _| {});
 }
 
-fn stamp_address_json(object: &mut Map<String, Json>, clock: &Clock) {
+fn stamp_address(object: &mut Map<String, Json>, clock: &Clock) {
     for key in ["line1", "line2", "city", "region", "postal_code"] {
         set_json_text(object, key, "");
     }
     set_json_text(object, "country", "US");
-    stamp_base_json(object, clock);
+    stamp_base(object, clock);
 }
 
-fn stamp_phone_json(object: &mut Map<String, Json>, clock: &Clock) {
+fn stamp_phone(object: &mut Map<String, Json>, clock: &Clock) {
     set_json_text(object, "number", "");
     set_json_text(object, "label", "Main");
-    stamp_base_json(object, clock);
+    stamp_base(object, clock);
 }
 
-fn stamp_base_json(object: &mut Map<String, Json>, clock: &Clock) {
+fn stamp_base(object: &mut Map<String, Json>, clock: &Clock) {
     if object.get("uuid").and_then(Json::as_str).unwrap_or("").is_empty() {
         object.insert("uuid".into(), Json::String(clock.uuid()));
     }
@@ -482,15 +390,13 @@ fn set_json_text(object: &mut Map<String, Json>, key: &str, fallback: &str) {
     object.insert(key.into(), Json::String(value));
 }
 
-fn parse_clock(clock: &Clock) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(&clock.now())
-        .map(|value| value.with_timezone(&Utc))
-        .unwrap_or_else(|_| Utc::now())
-}
-
-fn text_legacy(mut row: LegacyContact, clock: &Clock) -> LegacyContact {
-    if row.imported_at.is_none() {
-        row.imported_at = Some(parse_clock(clock));
+fn text_legacy(mut row: Row, clock: &Clock) -> Row {
+    ensure_text(&mut row, "key");
+    ensure_text(&mut row, "first_name");
+    ensure_text(&mut row, "last_name");
+    ensure_text(&mut row, "email");
+    if text(row.get("imported_at")).is_empty() {
+        set_text(&mut row, "imported_at", clock.now());
     }
     row
 }

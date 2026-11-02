@@ -100,7 +100,6 @@ describe("applyMigrateUp", () => {
     );
     await applyMigrateUp(command(), flags(), fromUrl, {});
     expect(fromUrl.ran).toEqual([
-      "npx migrate-init --language typescript --dialect postgres",
       "npx migrate-setup --provider postgres --connection postgres://localhost/db",
       "npx migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
     ]);
@@ -115,7 +114,6 @@ describe("applyMigrateUp", () => {
       DATASOURCE_URL: "postgres://localhost/db",
     });
     expect(overlay.ran).toEqual([
-      "npx migrate-init --language typescript --dialect postgres",
       "npx migrate-setup --provider postgres --connection postgres://localhost/db",
       "npx migrate-up --provider postgres --connection postgres://localhost/db --migrations-root sql",
     ]);
@@ -129,7 +127,7 @@ describe("applyMigrateUp", () => {
       PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///./app.sqlite",
     });
-    expect(absolute.ran[2]).toContain("--migrations-root sql");
+    expect(absolute.ran[1]).toContain("--migrations-root sql");
   });
 
   it("rejects a provider that is not installed", async () => {

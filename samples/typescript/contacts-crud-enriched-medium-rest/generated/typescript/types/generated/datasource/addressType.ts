@@ -1,6 +1,5 @@
 // schema-version: 1.0
 /** Type AddressType. */
-export const addressType = (init: Partial<AddressType>): AddressType => ({ ...init } as AddressType);
 export class AddressType {
   id!: number;
   uuid: string = crypto.randomUUID();

@@ -1,6 +1,5 @@
 // schema-version: 1.0
 /** Type ContactSource. */
-export const contactSource = (init: Partial<ContactSource>): ContactSource => ({ ...init } as ContactSource);
 export class ContactSource {
   id!: number;
   uuid: string = crypto.randomUUID();

@@ -1,4 +1,4 @@
-use datasources::{encode_rows, FromSchema, MetaDataRowTypeConverter, Row, Schema, SchemaObject, TypeConverter, Value};
+use datasources::{encode_rows, FromSchema, Row, Schema, SchemaObject, Value};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -44,7 +44,11 @@ fn from_schema_sets_string_from_uuid_and_datetime() {
     let mut row = datasources::Row::new();
     row.insert("uuid".into(), Value::Uuid(id));
     row.insert("created".into(), Value::DateTime(created));
-    let item = converted::<GeneratedShape>(row);
+    let schema = Schema::new(HashMap::from([
+        ("uuid".into(), "uuid".into()),
+        ("created".into(), "datetime".into()),
+    ]));
+    let item = GeneratedShape::from_schema(row, &schema).unwrap();
     assert_eq!(item.uuid, id.to_string());
     assert_eq!(item.created, created);
 }
@@ -54,16 +58,24 @@ fn from_schema_sets_datetime_from_iso_text() {
     let mut row = datasources::Row::new();
     row.insert("uuid".into(), Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"));
     row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
-    let item = converted::<GeneratedShape>(row);
+    let schema = Schema::new(HashMap::from([
+        ("uuid".into(), "uuid".into()),
+        ("created".into(), "datetime".into()),
+    ]));
+    let item = GeneratedShape::from_schema(row, &schema).unwrap();
     assert_eq!(item.created.to_rfc3339_opts(datasources::chrono::SecondsFormat::Millis, true), "2026-10-30T02:04:49.339Z");
 }
 
 #[test]
 fn from_schema_sets_bytes_from_base64_text() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert("version".into(), Value::from("AA=="));
-    let item = converted::<GeneratedShape>(row);
+    let schema = Schema::new(HashMap::from([
+        ("created".into(), "datetime".into()),
+        ("version".into(), "binary".into()),
+    ]));
+    let item = GeneratedShape::from_schema(row, &schema).unwrap();
     assert_eq!(item.version, vec![0]);
 }
 
@@ -77,23 +89,28 @@ fn from_schema_sets_i32_from_empty_text() {
     impl SchemaObject for WithId {}
     let mut row = datasources::Row::new();
     row.insert("id".into(), Value::from(""));
-    let item = converted::<WithId>(row);
+    let schema = Schema::new(HashMap::from([("id".into(), "integer".into())]));
+    let item = WithId::from_schema(row, &schema).unwrap();
     assert_eq!(item.id, 0);
 }
 
 #[test]
 fn from_schema_sets_string_from_int() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert("contact_id".into(), Value::Int(1));
-    let item = converted::<GeneratedShape>(row);
+    let schema = Schema::new(HashMap::from([
+        ("created".into(), "datetime".into()),
+        ("contact_id".into(), "integer".into()),
+    ]));
+    let item = GeneratedShape::from_schema(row, &schema).unwrap();
     assert_eq!(item.contact_id, "1");
 }
 
 #[test]
 fn from_schema_sets_option_string_from_text() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert("line2".into(), Value::from("flat 2"));
     let schema = Schema::new(HashMap::from([
         ("created".into(), "datetime".into()),
@@ -106,7 +123,7 @@ fn from_schema_sets_option_string_from_text() {
 #[test]
 fn from_schema_sets_option_none_from_null() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert("line2".into(), Value::Null);
     let schema = Schema::new(HashMap::from([
         ("created".into(), "datetime".into()),
@@ -127,7 +144,7 @@ fn encoded(pairs: &[(&str, Value)]) -> Value {
 #[test]
 fn from_schema_sets_empty_map_from_empty_text() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert("settings".into(), Value::from(""));
     let schema = Schema::new(HashMap::from([("created".into(), "datetime".into())]));
     let item = GeneratedShape::from_schema(row, &schema).unwrap();
@@ -160,7 +177,7 @@ fn from_schema_sets_nested_empty_map_from_empty_text() {
 #[test]
 fn from_schema_sets_string_map_from_encoded_rows() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert("settings".into(), encoded(&[("key", Value::from("theme")), ("value", Value::from("dark"))]));
     let schema = Schema::new(HashMap::from([("created".into(), "datetime".into())]));
     let item = GeneratedShape::from_schema(row, &schema).unwrap();
@@ -170,7 +187,7 @@ fn from_schema_sets_string_map_from_encoded_rows() {
 #[test]
 fn from_schema_sets_struct_map_from_encoded_rows() {
     let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
     row.insert(
         "prefs".into(),
         encoded(&[
@@ -205,73 +222,4 @@ fn to_schema_encodes_maps() {
     let back = GeneratedShape::from_schema(row, &schema).unwrap();
     assert_eq!(back.settings.get("theme").map(String::as_str), Some("dark"));
     assert_eq!(back.prefs.get("home").map(|pref| pref.locale.as_str()), Some("en-GB"));
-}
-
-#[test]
-fn from_schema_sets_option_bool_none_from_empty_text() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Flag {
-        is_verified: Option<bool>,
-    }
-    impl SchemaObject for Flag {}
-    let mut row = datasources::Row::new();
-    row.insert("is_verified".into(), Value::from(""));
-    let item = converted::<Flag>(row);
-    assert_eq!(item.is_verified, None);
-}
-
-#[test]
-fn from_schema_sets_option_datetime_none_from_empty_text() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Stamp {
-        verified_at: Option<datasources::chrono::DateTime<datasources::chrono::Utc>>,
-    }
-    impl SchemaObject for Stamp {}
-    let mut row = datasources::Row::new();
-    row.insert("verified_at".into(), Value::from(""));
-    let item = converted::<Stamp>(row);
-    assert_eq!(item.verified_at, None);
-}
-
-#[test]
-fn from_schema_sets_option_bool_from_int() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Flag {
-        is_verified: Option<bool>,
-    }
-    impl SchemaObject for Flag {}
-    let mut row = datasources::Row::new();
-    row.insert("is_verified".into(), Value::Int(1));
-    let item = converted::<Flag>(row);
-    assert_eq!(item.is_verified, Some(true));
-}
-
-#[test]
-fn from_schema_sets_string_from_decimal() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Score {
-        score: Option<String>,
-    }
-    impl SchemaObject for Score {}
-    let mut row = datasources::Row::new();
-    row.insert("score".into(), Value::Decimal(datasources::rust_decimal::Decimal::new(1050, 2)));
-    let item = converted::<Score>(row);
-    assert_eq!(item.score.as_deref(), Some("10.50"));
-}
-
-fn stamp() -> Value {
-    Value::DateTime(
-        datasources::chrono::DateTime::parse_from_rfc3339("2026-10-30T02:04:49.339Z")
-            .unwrap()
-            .with_timezone(&datasources::chrono::Utc),
-    )
-}
-
-fn converted<T: SchemaObject>(row: Row) -> T {
-    let converter = MetaDataRowTypeConverter::<T>::new(Vec::new());
-    TypeConverter::convert(&converter, &row).unwrap()
 }

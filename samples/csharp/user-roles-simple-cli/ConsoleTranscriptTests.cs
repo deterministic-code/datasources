@@ -163,7 +163,6 @@ public sealed class ConsoleTranscriptTests
         var spec = Spec();
         var db = provider == "sqlite" && url.StartsWith("sqlite:///") ? url["sqlite:///".Length..] : url;
         var ts = Path.GetFullPath(Path.Combine(Shared(), "../typescript/user-roles-simple-cli"));
-        Require(Exec("npx", ["migrate-init", "--language", "typescript", "--dialect", provider], ts));
         Require(Exec("npx", ["migrate-setup", "--provider", provider, "--connection", db], ts));
         Require(Exec(
             "npx",

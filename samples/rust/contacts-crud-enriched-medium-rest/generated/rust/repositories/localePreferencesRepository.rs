@@ -1,7 +1,8 @@
-use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
+use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, Value, Result};
 use super::super::LocalePreferences;
 use std::collections::HashMap;
 use std::sync::Arc;
+
 pub fn locale_preferences_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<LocalePreferences>> {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "LocalePreferences".into();
@@ -9,15 +10,16 @@ pub fn locale_preferences_repository(connection: Arc<dyn Connection>) -> Result<
         ("LocalePreferences".into(), "locale_preferences".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-        ("locale".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-        ("timezone".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-    ]));
+    
+        ]));
     options.ids = vec![];
     options.read_properties = vec!["locale".into(), "timezone".into()];
     options.create_properties = Some(vec!["locale".into(), "timezone".into()]);
     options.update_properties = Some(vec!["locale".into(), "timezone".into()]);
-
-    CRUDRepository::<LocalePreferences>::new(connection, options)
+    CRUDRepository::<LocalePreferences>::new(connection, options).map(|repo| repo.with_create_zeros([
+        ("locale".into(), Value::from("")),
+        ("timezone".into(), Value::from("")),
+    ].into_iter().collect()))
 }
 
 pub fn locale_preferences_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
@@ -27,14 +29,12 @@ pub fn locale_preferences_row_repository(connection: Arc<dyn Connection>) -> Res
         ("LocalePreferences".into(), "locale_preferences".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-        ("locale".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-        ("timezone".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-    ]));
+    
+        ]));
     options.ids = vec![];
     options.read_properties = vec!["locale".into(), "timezone".into()];
     options.create_properties = Some(vec!["locale".into(), "timezone".into()]);
     options.update_properties = Some(vec!["locale".into(), "timezone".into()]);
-
     CRUDRepository::<datasources::Row>::new(connection, options)
 }
 
@@ -45,10 +45,9 @@ pub fn locale_preferences_readonly_repository(connection: Arc<dyn Connection>) -
         ("LocalePreferences".into(), "locale_preferences".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-        ("locale".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-        ("timezone".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-    ]));
-    options.read_properties = vec!["locale".into(), "timezone".into()];
-        let mut repo = ReadonlyRepository::<LocalePreferences>::new(connection, options)?;
+    
+        ]));
+        options.read_properties = vec!["locale".into(), "timezone".into()];
+        let repo = ReadonlyRepository::<LocalePreferences>::new(connection, options)?;
         Ok(repo)
 }

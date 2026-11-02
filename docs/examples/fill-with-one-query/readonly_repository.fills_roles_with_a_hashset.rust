@@ -27,7 +27,7 @@ role_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new(
     ("UserId".to_string(), "user_id".to_string()),
     ("Name".to_string(), "name".to_string()),
 ])));
-let users_repo =
+let mut users_repo =
     ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let types = ds.create_readonly_repository::<UserType>(
     Some(connection.clone()),

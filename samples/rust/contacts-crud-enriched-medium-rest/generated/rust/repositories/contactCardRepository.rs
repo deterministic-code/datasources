@@ -1,7 +1,8 @@
-use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
+use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, Value, Result};
 use super::super::ContactCard;
 use std::collections::HashMap;
 use std::sync::Arc;
+
 pub fn contact_card_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<ContactCard>> {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "ContactCard".into();
@@ -9,14 +10,15 @@ pub fn contact_card_repository(connection: Arc<dyn Connection>) -> Result<CRUDRe
         ("ContactCard".into(), "contact_cards".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-        ("display_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-    ]));
+    
+        ]));
     options.ids = vec![];
     options.read_properties = vec!["display_name".into()];
     options.create_properties = Some(vec!["display_name".into()]);
     options.update_properties = Some(vec!["display_name".into()]);
-
-    CRUDRepository::<ContactCard>::new(connection, options)
+    CRUDRepository::<ContactCard>::new(connection, options).map(|repo| repo.with_create_zeros([
+        ("display_name".into(), Value::from("")),
+    ].into_iter().collect()))
 }
 
 pub fn contact_card_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
@@ -26,13 +28,12 @@ pub fn contact_card_row_repository(connection: Arc<dyn Connection>) -> Result<CR
         ("ContactCard".into(), "contact_cards".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-        ("display_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-    ]));
+    
+        ]));
     options.ids = vec![];
     options.read_properties = vec!["display_name".into()];
     options.create_properties = Some(vec!["display_name".into()]);
     options.update_properties = Some(vec!["display_name".into()]);
-
     CRUDRepository::<datasources::Row>::new(connection, options)
 }
 
@@ -43,9 +44,9 @@ pub fn contact_card_readonly_repository(connection: Arc<dyn Connection>) -> Resu
         ("ContactCard".into(), "contact_cards".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-        ("display_name".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
-    ]));
-    options.read_properties = vec!["display_name".into()];
-        let mut repo = ReadonlyRepository::<ContactCard>::new(connection, options)?;
+    
+        ]));
+        options.read_properties = vec!["display_name".into()];
+        let repo = ReadonlyRepository::<ContactCard>::new(connection, options)?;
         Ok(repo)
 }
