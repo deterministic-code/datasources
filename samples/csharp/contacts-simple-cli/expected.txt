@@ -1,0 +1,8 @@
+created 1 Ada ada@example.com 555-0100 12 Analytical Engine
+created 2 Alan alan@work.example 555-0200 1 Bletchley Park
+read 1 Ada emails=1 phones=1 addresses=1
+read 2 Alan emails=1 phones=1 addresses=1
+updated 1 Ada Byron rows=1 emails=ada@byron.example,ada@example.com phones=555-0111 Cambridge
+updated 2 Alan rows=1 emails=alan@bletchley.example phones=555-0201 2 Hut 8
+deleted 1 rows=1
+deleted 2 rows=1

@@ -7,7 +7,7 @@ import { writePerfData } from "./perf-data.mjs";
 
 const root = dirname(fileURLToPath(new URL(".", import.meta.url)));
 const artifacts = join(root, "scripts/artifacts/perf");
-const composeFile = join(root, "docker/perf/compose.yml");
+const composeFile = join(root, "scripts/perf.compose.yml");
 const project = "datasources-perf";
 const list = (name, fallback) =>
   (process.env[name] ?? fallback).split(",").map((part) => part.trim()).filter(Boolean);

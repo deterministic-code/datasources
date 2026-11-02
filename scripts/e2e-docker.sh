@@ -1,5 +1,5 @@
 set -e
-compose="docker compose -f docker/e2e/compose.yml"
+repo="$(cd "$(dirname "$0")/.." && pwd)"
 samples="
 samples/typescript/contacts-simple-cli
 samples/typescript/contacts-crud-enriched-medium-rest
@@ -15,18 +15,6 @@ down_flags="down -v --remove-orphans --rmi local -t 0"
 parallel="${E2E_PARALLEL:-3}"
 fail=0
 live=""
-
-lang() {
-  case "$1" in
-    samples/typescript/*|typescript) printf typescript ;;
-    samples/csharp/*|csharp) printf csharp ;;
-    samples/rust/*|rust) printf rust ;;
-    *)
-      echo "unknown e2e language for $1" >&2
-      exit 1
-      ;;
-  esac
-}
 
 slug() {
   printf '%s' "$1" | tr '/_' '-'
@@ -57,11 +45,20 @@ await_all() {
   live=""
 }
 
+run_compose() {
+  dir="$1"
+  project="$2"
+  shift 2
+  (
+    cd "$repo/$dir"
+    COMPOSE_PROJECT_NAME=$project docker compose run --rm --build "$@"
+  )
+}
+
 if [ $# -gt 0 ] && [ ! -d "$1" ]; then
-  projects="e2e-quickstart-typescript e2e-quickstart-csharp e2e-quickstart-rust"
   down() {
-    for project in $projects; do
-      COMPOSE_PROJECT_NAME=$project $compose $down_flags
+    for language in typescript csharp rust; do
+      COMPOSE_PROJECT_NAME=e2e-quickstart-$language docker compose -f "$repo/samples/$language/contacts-simple-cli/compose.yml" $down_flags
     done
   }
   trap down EXIT
@@ -69,7 +66,8 @@ if [ $# -gt 0 ] && [ ! -d "$1" ]; then
     await_slot
     project="e2e-quickstart-$language"
     (
-      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language $compose run --rm --build runner "$@"
+      cd "$repo/samples/$language/contacts-simple-cli"
+      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo" -w /repo -e E2E_LANG runner "$@"
     ) &
     live="$live $!"
   done
@@ -82,14 +80,11 @@ if [ $# -eq 0 ]; then
   set -- $samples
 fi
 
-projects=""
-for dir in "$@"; do
-  projects="$projects e2e-$(slug "$dir")"
-done
-
+sample_dirs="$*"
 down() {
-  for project in $projects; do
-    COMPOSE_PROJECT_NAME=$project $compose $down_flags
+  for dir in $sample_dirs; do
+    project="e2e-$(slug "$dir")"
+    COMPOSE_PROJECT_NAME=$project docker compose -f "$repo/$dir/compose.yml" $down_flags
   done
 }
 trap down EXIT
@@ -97,9 +92,8 @@ trap down EXIT
 for dir in "$@"; do
   await_slot
   project="e2e-$(slug "$dir")"
-  language="$(lang "$dir")"
   (
-    COMPOSE_PROJECT_NAME=$project E2E_SAMPLE=$dir E2E_LANG=$language $compose run --rm --build runner
+    run_compose "$dir" "$project" runner
   ) &
   live="$live $!"
 done

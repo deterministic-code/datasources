@@ -8,7 +8,7 @@ import { dialectTranscript } from "./e2e-matrix-normalize.mjs";
 
 const root = dirname(fileURLToPath(new URL(".", import.meta.url)));
 const artifacts = join(root, "scripts/artifacts/e2e-matrix");
-const composeFile = join(root, "docker/e2e-matrix/compose.yml");
+const composeFile = join(root, "scripts/e2e-matrix.compose.yml");
 const project = "datasources-e2e-matrix";
 const dialects = ["typescript", "rust", "csharp"];
 const providers = ["sqlite", "mysql", "postgres"];

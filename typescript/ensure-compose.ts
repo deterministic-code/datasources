@@ -40,7 +40,7 @@ const services = {
 } as const;
 
 const compose = (...args: string[]) =>
-  execFileSync("docker", ["compose", "-p", "datasources", "-f", "docker/compose.yml", ...args], {
+  execFileSync("docker", ["compose", "-p", "datasources", "-f", "cli/compose.yml", ...args], {
     cwd: root,
     stdio: "inherit",
   });
