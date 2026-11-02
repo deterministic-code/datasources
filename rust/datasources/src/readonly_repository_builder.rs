@@ -46,8 +46,11 @@ pub(crate) fn assemble(
             &schema.types(),
         )
     }));
-    let object_converter =
-        object_converter.unwrap_or_else(|| Box::new(MetaDataRowTypeConverter::new(Vec::new())));
+    let object_converter = object_converter.unwrap_or_else(|| {
+        let mut converter = MetaDataRowTypeConverter::new();
+        converter.should_coerce_id = true;
+        Box::new(converter)
+    });
     let entity_mapper: Arc<dyn Mapper<String, String> + Send + Sync> =
         entity_mapper.unwrap_or_else(|| Arc::new(IdentityMapper::new()));
     let property_mappings: Arc<dyn Mapper<String, String> + Send + Sync> =

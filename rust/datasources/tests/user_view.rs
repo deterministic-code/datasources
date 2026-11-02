@@ -151,7 +151,7 @@ async fn create_ada(users: &mut CRUDRepository, seeded: &Seed, roles: Value, gro
 
 #[tokio::test]
 async fn create_update_and_delete_syncs_link_rows() {
-    let (users, seeded) = open(None).await;
+    let (mut users, seeded) = open(None).await;
     users
         .add_enriched(
             Enrichment::new("user_type", "user_type_id", "id", None, datasources::EnrichmentPropertyType::Object),

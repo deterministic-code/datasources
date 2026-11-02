@@ -1,9 +1,7 @@
-use crate::from_schema::FromSchema;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use async_trait::async_trait;
 
 pub struct DefaultReadonlyEnrichmentStrategy;
 
-impl<T: FromSchema, TRelated: FromSchema> ReadonlyEnrichmentStrategy<T, TRelated>
-    for DefaultReadonlyEnrichmentStrategy
-{
-}
+#[async_trait]
+impl ReadonlyEnrichmentStrategy for DefaultReadonlyEnrichmentStrategy {}

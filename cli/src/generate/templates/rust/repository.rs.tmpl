@@ -1,6 +1,6 @@
-use datasources::{ {{#hasLinked}}Association, {{/hasLinked}}Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, {{#hasEnrichments}}Enrichment, EnrichmentPropertyType, IReadonlyRepository, {{/hasEnrichments}}{{#hasLinked}}ICRUDRepository, {{/hasLinked}}ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
-{{#typeImports}}use super::super::{{typeName}};
-{{/typeImports}}
+use datasources::{Association, Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
+{{#typed}}use super::super::{{entityType}};
+{{/typed}}
 use std::collections::HashMap;
 use std::sync::Arc;
 {{#wrapped}}
@@ -9,7 +9,7 @@ use std::ops::Deref;
 pub struct {{className}} {
     pub repo: Arc<CRUDRepository<{{entityType}}>>,
 {{#child}}
-    pub {{field}}: Arc<{{#wrapped}}super::{{module}}::{{className}}{{/wrapped}}{{^wrapped}}CRUDRepository<{{typeName}}>{{/wrapped}}>,
+    pub {{field}}: Arc<CRUDRepository>,
 {{/child}}
 }
 
@@ -17,11 +17,11 @@ impl {{className}} {
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
 {{>crud}}
 {{#child}}
-        let {{field}} = Arc::new({{#wrapped}}super::{{module}}::{{className}}::new(Arc::clone(&connection))?{{/wrapped}}{{^wrapped}}super::{{module}}::{{repoFn}}(Arc::clone(&connection))?{{/wrapped}});
+        let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/child}}
-        let repo = CRUDRepository::<{{entityType}}>::new(Arc::clone(&connection), options)?;
+        let mut repo = CRUDRepository::<{{entityType}}>::new(Arc::clone(&connection), options)?;
 {{#enrichments}}
-        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), {{#viaWrapped}}Arc::clone(&{{via}}.repo){{/viaWrapped}}{{^viaWrapped}}Arc::clone(&{{via}}){{/viaWrapped}} as Arc<dyn IReadonlyRepository<{{viaType}}>>, {{#linkWrapped}}Arc::clone(&{{link}}.repo){{/linkWrapped}}{{^linkWrapped}}Arc::clone(&{{link}}){{/linkWrapped}} as Arc<dyn ICRUDRepository<{{linkType}}>>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), {{#viaWrapped}}Arc::clone(&{{via}}.repo){{/viaWrapped}}{{^viaWrapped}}Arc::clone(&{{via}}){{/viaWrapped}} as Arc<dyn IReadonlyRepository<{{viaType}}>>, None);{{/linked}}
+        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
 {{/enrichments}}
         Ok(Self { repo: Arc::new(repo){{childFields}} })
     }
@@ -51,9 +51,9 @@ pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datas
 {{#child}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/child}}
-        let repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
+        let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
 {{#enrichments}}
-        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}) as Arc<dyn IReadonlyRepository>, Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}) as Arc<dyn IReadonlyRepository>, None);{{/linked}}
+        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
 {{/enrichments}}
         Ok(repo)
 {{/setup}}
@@ -82,17 +82,17 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
     ]));
     options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];
 {{#readonlyChildren}}
-        let {{field}} = Arc::new({{#wrapped}}super::{{module}}::{{className}}::new(Arc::clone(&connection))?{{/wrapped}}{{^wrapped}}super::{{module}}::{{repoFn}}(Arc::clone(&connection))?{{/wrapped}});
+        let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/readonlyChildren}}
-        let repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
+        let mut repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
 {{#enrichments}}
-        repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), {{#viaWrapped}}Arc::clone(&{{via}}.repo){{/viaWrapped}}{{^viaWrapped}}Arc::clone(&{{via}}){{/viaWrapped}} as Arc<dyn IReadonlyRepository<{{viaType}}>>, None);
+        repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);
 {{/enrichments}}
         Ok(repo)
 }
 {{#optimisticConcurrency}}
 
-use datasources::{async_trait, CommandMiddleware, DatasourceError, FromSchema, ICRUDRepository, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Stream, Value, Where, eq};
+use datasources::{async_trait, CommandMiddleware, DatasourceError, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Stream, Value, Where, eq};
 use std::any::TypeId;
 use std::pin::Pin;
 
@@ -141,20 +141,12 @@ impl ICRUDRepository<{{entityType}}> for {{optimisticClass}} {
         self.repo.create(item).await
     }
 
-    async fn update(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut stored = item.to_schema(self.repo.schema())?;
-        let expected = stored.get("{{property}}").cloned().ok_or_else(|| DatasourceError::message("{{property}}"))?;
-        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/rest}}{{/whereKeys}};
+    async fn update(&self, mut item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        let expected = item.{{property}}.clone();
 {{#increment}}
-        if let Some(value) = stored.get("{{property}}").cloned() {
-            stored.insert("{{property}}".into(), match value {
-                Value::Int(n) => Value::Int(n + 1),
-                Value::Float(n) => Value::Float(n + 1.0),
-                other => other,
-            });
-        }
+        item.{{property}} += 1;
 {{/increment}}
-        let item = {{entityType}}::from_schema(stored, self.repo.schema())?;
+        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, Value::from({{#token}}expected.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}})){{/first}}{{#rest}}.and("{{name}}", eq, Value::from({{#token}}expected.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}}){{/rest}}{{/whereKeys}});
         let response = ICRUDRepository::update(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Update affected {} rows", response.rows_affected)));
@@ -163,9 +155,7 @@ impl ICRUDRepository<{{entityType}}> for {{optimisticClass}} {
     }
 
     async fn delete(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut stored = item.to_schema(self.repo.schema())?;
-        let expected = stored.get("{{property}}").cloned().ok_or_else(|| DatasourceError::message("{{property}}"))?;
-        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/rest}}{{/whereKeys}};
+        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, Value::from({{#token}}item.{{property}}.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}})){{/first}}{{#rest}}.and("{{name}}", eq, Value::from({{#token}}item.{{property}}.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}}){{/rest}}{{/whereKeys}});
         let response = ICRUDRepository::delete(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Delete affected {} rows", response.rows_affected)));

@@ -19,9 +19,5 @@ public sealed class ContactCardRepository : CRUDRepository<Backend.Types.View.Co
         ReadProperties = ["DisplayName"],
         CreateProperties = ["DisplayName"],
         UpdateProperties = ["DisplayName"],
-        Schema = new(new Dictionary<string, SchemaColumn>
-        {
-            ["DisplayName"] = new("string", false, false),
-        }),
     };
 }

@@ -52,30 +52,6 @@ public sealed class AddressRepository : CRUDRepository<Backend.Types.View.Addres
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 CreateProperties = ["Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 UpdateProperties = ["Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["Latitude"] = new("integer", true, false),
-                    ["LabelNote"] = new("string", true, false),
-                    ["Floor"] = new("unsignedinteger", true, false),
-                    ["Score"] = new("decimal", true, false),
-                    ["ExternalId"] = new("uuid", true, false),
-                    ["IsVerified"] = new("boolean", true, false),
-                    ["VerifiedAt"] = new("datetime", true, false),
-                    ["Stamp"] = new("binary", true, false),
-                    ["ContactId"] = new("integer", false, false),
-                    ["AddressTypeId"] = new("integer", false, false),
-                    ["Line1"] = new("string", false, false),
-                    ["Line2"] = new("string", true, false),
-                    ["City"] = new("string", false, false),
-                    ["Region"] = new("string", true, false),
-                    ["PostalCode"] = new("string", true, false),
-                    ["Country"] = new("string", true, false),
-                }),
             })
             .Add("sqlite", new()
             {
@@ -109,30 +85,6 @@ public sealed class AddressRepository : CRUDRepository<Backend.Types.View.Addres
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 CreateProperties = ["Uuid", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 UpdateProperties = ["Uuid", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["Latitude"] = new("integer", true, false),
-                    ["LabelNote"] = new("string", true, false),
-                    ["Floor"] = new("unsignedinteger", true, false),
-                    ["Score"] = new("decimal", true, false),
-                    ["ExternalId"] = new("uuid", true, false),
-                    ["IsVerified"] = new("boolean", true, false),
-                    ["VerifiedAt"] = new("datetime", true, false),
-                    ["Stamp"] = new("binary", true, false),
-                    ["ContactId"] = new("integer", false, false),
-                    ["AddressTypeId"] = new("integer", false, false),
-                    ["Line1"] = new("string", false, false),
-                    ["Line2"] = new("string", true, false),
-                    ["City"] = new("string", false, false),
-                    ["Region"] = new("string", true, false),
-                    ["PostalCode"] = new("string", true, false),
-                    ["Country"] = new("string", true, false),
-                }),
             })
             .Add("mysql", new()
             {
@@ -166,30 +118,6 @@ public sealed class AddressRepository : CRUDRepository<Backend.Types.View.Addres
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 CreateProperties = ["Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 UpdateProperties = ["Uuid", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["Latitude"] = new("integer", true, false),
-                    ["LabelNote"] = new("string", true, false),
-                    ["Floor"] = new("unsignedinteger", true, false),
-                    ["Score"] = new("decimal", true, false),
-                    ["ExternalId"] = new("uuid", true, false),
-                    ["IsVerified"] = new("boolean", true, false),
-                    ["VerifiedAt"] = new("datetime", true, false),
-                    ["Stamp"] = new("binary", true, false),
-                    ["ContactId"] = new("integer", false, false),
-                    ["AddressTypeId"] = new("integer", false, false),
-                    ["Line1"] = new("string", false, false),
-                    ["Line2"] = new("string", true, false),
-                    ["City"] = new("string", false, false),
-                    ["Region"] = new("string", true, false),
-                    ["PostalCode"] = new("string", true, false),
-                    ["Country"] = new("string", true, false),
-                }),
             })
             .Add("postgres", new()
             {
@@ -223,30 +151,6 @@ public sealed class AddressRepository : CRUDRepository<Backend.Types.View.Addres
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 CreateProperties = ["Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
                 UpdateProperties = ["Uuid", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "AddressTypeId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["Latitude"] = new("integer", true, false),
-                    ["LabelNote"] = new("string", true, false),
-                    ["Floor"] = new("unsignedinteger", true, false),
-                    ["Score"] = new("decimal", true, false),
-                    ["ExternalId"] = new("uuid", true, false),
-                    ["IsVerified"] = new("boolean", true, false),
-                    ["VerifiedAt"] = new("datetime", true, false),
-                    ["Stamp"] = new("binary", true, false),
-                    ["ContactId"] = new("integer", false, false),
-                    ["AddressTypeId"] = new("integer", false, false),
-                    ["Line1"] = new("string", false, false),
-                    ["Line2"] = new("string", true, false),
-                    ["City"] = new("string", false, false),
-                    ["Region"] = new("string", true, false),
-                    ["PostalCode"] = new("string", true, false),
-                    ["Country"] = new("string", true, false),
-                }),
             })
             .For(connection);
 }

@@ -1,18 +1,5 @@
 use datasources::{CRUDRepository, Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
-use super::super::Address;
-use super::super::AddressType;
-use super::super::Contact;
-use super::super::ContactCard;
-use super::super::ContactChangeLog;
-use super::super::ContactGroup;
-use super::super::ContactGroupMember;
-use super::super::ContactPreferences;
-use super::super::ContactSettings;
-use super::super::ContactSource;
-use super::super::LegacyContact;
-use super::super::LocalePreferences;
-use super::super::Phone;
-use super::super::PhoneType;
+use super::super::{Address, AddressType, Contact, ContactCard, ContactChangeLog, ContactGroup, ContactGroupMember, ContactPreferences, ContactSettings, ContactSource, LegacyContact, LocalePreferences, Phone, PhoneType};
 use std::sync::Arc;
 
 pub fn register(factory: &RepositoryFactory) {
@@ -121,7 +108,7 @@ pub trait Repositories {
     fn phone_types(&self) -> Arc<CRUDRepository<PhoneType>>;
 }
 
-impl Repositories for Arc<dyn Datasource> {
+impl Repositories for dyn Datasource {
     fn addresses(&self) -> Arc<CRUDRepository<Address>> {
         Arc::new(super::addressRepository::address_repository(self.bind_connection(None)).expect("addresses"))
     }

@@ -12,6 +12,7 @@
     <Compile Remove="*Tests.cs" />
     <Compile Remove="matrix/**" />
     <Compile Remove="perf/**" />
+    <Compile Include="generated/csharp/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />

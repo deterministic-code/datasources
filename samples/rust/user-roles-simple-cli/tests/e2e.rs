@@ -66,12 +66,6 @@ fn migrate_connection(provider: &str, url: &str) -> String {
 
 fn migrate_up(provider: &str, url: &str, root: &Path) {
     let connection = migrate_connection(provider, url);
-    let init = Command::new("npx")
-        .args(["migrate-init", "--language", "rust", "--dialect", provider])
-        .current_dir(sample())
-        .status()
-        .expect("migrate-init");
-    assert!(init.success(), "migrate-init");
     let setup = Command::new("npx")
         .args(["migrate-setup", "--provider", provider, "--connection", &connection])
         .current_dir(sample())

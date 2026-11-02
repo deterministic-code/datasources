@@ -87,8 +87,8 @@ await contacts.update({
 });
 const valued = await contacts.readSingle(new Where(new Operator.Equals("id", omitted.id)));
 if (valued?.addresses[0].latitude !== 51 || valued.addresses[0].labelNote !== "side"
-  || Number(valued.addresses[0].floor) !== 2 || Number(valued.addresses[0].score) !== 10.5
-  || Boolean(valued.addresses[0].isVerified) !== true)
+  || valued.addresses[0].floor !== 2 || valued.addresses[0].score !== "10.5"
+  || valued.addresses[0].isVerified !== true)
   throw new Error("outlier value");
 await contacts.update({
   id: omitted.id,
@@ -113,8 +113,8 @@ await contacts.update({
   prefs: {},
 });
 const zeroed = await contacts.readSingle(new Where(new Operator.Equals("id", omitted.id)));
-if (zeroed?.addresses[0].latitude !== 0 || (zeroed.addresses[0].labelNote ?? "") !== ""
-  || Number(zeroed.addresses[0].floor) !== 0 || Boolean(zeroed.addresses[0].isVerified) !== false)
+if (zeroed?.addresses[0].latitude !== 0 || zeroed.addresses[0].labelNote !== ""
+  || zeroed.addresses[0].floor !== 0 || zeroed.addresses[0].isVerified !== false)
   throw new Error("outlier zero");
 
 await contacts.delete(after);

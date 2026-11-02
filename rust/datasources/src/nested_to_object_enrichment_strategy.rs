@@ -1,12 +1,10 @@
 use crate::default_write_enrichment_strategy::encode_rows;
 use crate::enrichment::Enrichment;
-use crate::from_schema::FromSchema;
 use crate::mappers::{FlatToNestedMapper, MappedRow, MappedValue, Mapper, TypeMap};
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
-use crate::schema::Schema;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -24,14 +22,12 @@ impl NestedToObjectEnrichmentStrategy {
 }
 
 #[async_trait]
-impl<T: FromSchema, TRelated: FromSchema> ReadonlyEnrichmentStrategy<T, TRelated>
-    for NestedToObjectEnrichmentStrategy
-{
+impl ReadonlyEnrichmentStrategy for NestedToObjectEnrichmentStrategy {
     async fn apply(
         &self,
-        _via: Arc<dyn IReadonlyRepository<TRelated>>,
+        _via: Arc<dyn IReadonlyRepository>,
         _enrichment: &Enrichment,
-        parents: &mut Vec<T>,
+        parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         let rows = sources
@@ -40,14 +36,10 @@ impl<T: FromSchema, TRelated: FromSchema> ReadonlyEnrichmentStrategy<T, TRelated
             .flatten()
             .cloned()
             .collect::<Vec<_>>();
-        let mapped = Mapper::map(&self.nested, rows)
+        *parents = Mapper::map(&self.nested, rows)
             .into_iter()
             .map(row_of)
-            .collect::<Vec<_>>();
-        *parents = mapped
-            .into_iter()
-            .map(|row| crate::repository::map_row(row, &Schema::default()))
-            .collect::<Result<Vec<_>>>()?;
+            .collect();
         Ok(())
     }
 }

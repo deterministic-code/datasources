@@ -1394,7 +1394,7 @@ await foreach (var row in repo.Read(call, parameters))
 ]
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L108-L115)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L107-L114)
 
 ```typescript
 command.reader = new MockReader([{ id: 1, name: "a" }]);
@@ -1456,7 +1456,7 @@ Assert.Single(rows);
 { id: 1, name: 'a' }
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L69-L79)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/repository.test.ts#L68-L78)
 
 ```typescript
 const { repo, command } = create();

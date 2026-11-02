@@ -3,6 +3,7 @@ mod bool_converter;
 mod datetime_converter;
 mod decimal_converter;
 mod integer_converter;
+mod string_converter;
 mod uuid_converter;
 
 use datasources::{TypeConverter, Value};
@@ -13,6 +14,7 @@ pub use bool_converter::BoolConverter;
 pub use datetime_converter::DateTimeConverter;
 pub use decimal_converter::DecimalConverter;
 pub use integer_converter::IntegerConverter;
+pub use string_converter::StringConverter;
 pub use uuid_converter::UuidConverter;
 
 fn catalog() -> Vec<(&'static str, Box<dyn TypeConverter<Value, Value> + Send + Sync>)> {
@@ -23,6 +25,7 @@ fn catalog() -> Vec<(&'static str, Box<dyn TypeConverter<Value, Value> + Send + 
         ("decimal", Box::new(DecimalConverter)),
         ("binary", Box::new(BinaryConverter)),
         ("integer", Box::new(IntegerConverter)),
+        ("string", Box::new(StringConverter)),
     ]
 }
 
@@ -55,6 +58,7 @@ mod tests {
             "decimal",
             "binary",
             "integer",
+            "string",
         ] {
             assert!(catalog.contains_key(key));
             assert!(field(key).is_some());

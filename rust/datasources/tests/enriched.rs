@@ -92,13 +92,13 @@ async fn drop_row(connection: &Arc<dyn Connection>, row: &Row) {
 }
 
 fn open_contacts(
-    contacts: CRUDRepository,
+    mut contacts: CRUDRepository,
     types: Arc<dyn IReadonlyRepository>,
     sources: Arc<dyn IReadonlyRepository>,
     address_types: Arc<dyn IReadonlyRepository>,
     phone_types: Arc<dyn IReadonlyRepository>,
-    addresses: CRUDRepository,
-    phones: CRUDRepository,
+    mut addresses: CRUDRepository,
+    mut phones: CRUDRepository,
 ) -> CRUDRepository {
     addresses.add_enriched(
         Enrichment::new("AddressType", "AddressType", "Id", None, datasources::EnrichmentPropertyType::Object),
@@ -149,7 +149,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
         record(&[("type_id", gone.get("id").unwrap().clone())]),
     ];
     let connection = setup(&mut parents).await;
-    let parents_repo = mapped(connection, "Parent");
+    let mut parents_repo = mapped(connection, "Parent");
     let types_repo = Arc::new(mapped(types_connection, "UserType"));
     parents_repo.add_enriched(
         Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
@@ -164,7 +164,7 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
 #[tokio::test]
 async fn deep_create_writes_children_stamps_fk() {
     let connection = setup(&mut []).await;
-    let parents = mapped_crud(connection.clone(), "Parent");
+    let mut parents = mapped_crud(connection.clone(), "Parent");
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
     let children = Arc::new(mapped_crud(connection, "Child"));
     let kind = types
@@ -214,7 +214,7 @@ async fn deep_create_writes_children_stamps_fk() {
 async fn create_resolves_lookup_name() {
     let connection = setup(&mut []).await;
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
-    let parents = mapped_crud(connection, "Parent");
+    let mut parents = mapped_crud(connection, "Parent");
     types
         .create(record(&[("Name", Value::from("work"))]))
         .await
@@ -240,7 +240,7 @@ async fn create_resolves_lookup_name() {
 async fn update_resolves_lookup_name() {
     let connection = setup(&mut []).await;
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
-    let parents = mapped_crud(connection, "Parent");
+    let mut parents = mapped_crud(connection, "Parent");
     let home = types
         .create(record(&[("Name", Value::from("home"))]))
         .await
@@ -275,7 +275,7 @@ async fn update_resolves_lookup_name() {
 async fn create_keeps_existing_lookup_key() {
     let connection = setup(&mut []).await;
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
-    let parents = mapped_crud(connection, "Parent");
+    let mut parents = mapped_crud(connection, "Parent");
     let home = types
         .create(record(&[("Name", Value::from("home"))]))
         .await
@@ -310,7 +310,7 @@ async fn create_keeps_existing_lookup_key() {
 async fn create_resolves_lookup_name_without_source_property() {
     let connection = setup(&mut []).await;
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
-    let parents = mapped_crud(connection, "Named");
+    let mut parents = mapped_crud(connection, "Named");
     types
         .create(record(&[("Name", Value::from("work"))]))
         .await
@@ -336,7 +336,7 @@ async fn create_resolves_lookup_name_without_source_property() {
 async fn create_unknown_lookup_name_throws() {
     let connection = setup(&mut []).await;
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
-    let parents = mapped_crud(connection, "Parent");
+    let mut parents = mapped_crud(connection, "Parent");
     parents.add_enriched(
         Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
         types,
@@ -352,8 +352,8 @@ async fn create_unknown_lookup_name_throws() {
 #[tokio::test]
 async fn nested_child_resolves_lookup_name() {
     let connection = setup(&mut []).await;
-    let parents = mapped_crud(connection.clone(), "Parent");
-    let children = mapped_crud(connection.clone(), "Child");
+    let mut parents = mapped_crud(connection.clone(), "Parent");
+    let mut children = mapped_crud(connection.clone(), "Child");
     let types = Arc::new(mapped_crud(connection, "UserType"));
     types
         .create(record(&[("Name", Value::from("home"))]))
@@ -392,7 +392,7 @@ async fn nested_child_resolves_lookup_name() {
 #[tokio::test]
 async fn round_trips_string_and_object_dictionaries() {
     let connection = setup(&mut []).await;
-    let hosts = mapped_crud(connection.clone(), "Host");
+    let mut hosts = mapped_crud(connection.clone(), "Host");
     let settings = Arc::new(mapped_crud(connection.clone(), "Setting"));
     let prefs = Arc::new(mapped_crud(connection, "Pref"));
     hosts
@@ -609,7 +609,7 @@ fn domain_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository 
     options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
     options.property_mappings = Some(std::sync::Arc::new(contact_columns()));
     options.object_converter = Some(Box::new(
-        MetaDataRowTypeConverter::new(Vec::new())
+        MetaDataRowTypeConverter::new()
             .with_references(contact_references(), Box::new(contact_columns())),
     ));
     CRUDRepository::<Row>::new(connection, options).unwrap()
@@ -660,7 +660,7 @@ fn contact_columns() -> TransformMapper<String, String> {
 #[tokio::test]
 async fn deep_update_replace_syncs_children() {
     let connection = setup(&mut []).await;
-    let parents = mapped_crud(connection.clone(), "Parent");
+    let mut parents = mapped_crud(connection.clone(), "Parent");
     let children = Arc::new(mapped_crud(connection, "Child"));
     let parent = parents
         .create(record(&[("Label", Value::from("p"))]))
@@ -732,7 +732,7 @@ async fn deep_update_replace_syncs_children() {
 #[tokio::test]
 async fn cascade_update_deletes_children_and_recreates() {
     let connection = setup(&mut []).await;
-    let parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
+    let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
         DefaultWriteEnrichmentStrategy::new(
             None,
             Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
@@ -740,7 +740,7 @@ async fn cascade_update_deletes_children_and_recreates() {
             false,
         ),
     ));
-    let children_repo = mapped_crud(connection.clone(), "Child");
+    let mut children_repo = mapped_crud(connection.clone(), "Child");
     let notes = Arc::new(mapped_crud(connection, "Note"));
     let parent = parents
         .create(record(&[("Label", Value::from("p"))]))
@@ -812,7 +812,7 @@ async fn cascade_update_deletes_children_and_recreates() {
 #[tokio::test]
 async fn cascade_update_replaces_links_and_keeps_related() {
     let connection = setup(&mut []).await;
-    let parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
+    let mut parents = mapped_crud(connection.clone(), "Parent").with_write(Arc::new(
         DefaultWriteEnrichmentStrategy::new(
             None,
             Some(Arc::new(CascadeDeleteUpdateEnrichmentStrategy)),
@@ -996,7 +996,7 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
 async fn deep_delete_cascades_children_then_parent() {
     let connection = setup(&mut []).await;
     let parents = mapped_crud(connection.clone(), "Parent");
-    let children_repo = mapped_crud(connection.clone(), "Child");
+    let mut children_repo = mapped_crud(connection.clone(), "Child");
     let notes = Arc::new(mapped_crud(connection, "Note"));
     let parent = parents
         .create(record(&[("Label", Value::from("p"))]))
@@ -1035,7 +1035,7 @@ async fn deep_delete_cascades_children_then_parent() {
         None,
     );
     let children = Arc::new(children_repo);
-    let parents = parents;
+    let mut parents = parents;
     parents.add_enriched(
         Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
         children.clone(),
@@ -1057,7 +1057,7 @@ async fn deep_delete_cascades_children_then_parent() {
 #[tokio::test]
 async fn deep_many_readonly_via_throws() {
     let connection = setup(&mut []).await;
-    let parents = mapped_crud(connection.clone(), "Parent");
+    let mut parents = mapped_crud(connection.clone(), "Parent");
     parents.add_enriched(
         Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
         Arc::new(mapped(connection, "Child")),

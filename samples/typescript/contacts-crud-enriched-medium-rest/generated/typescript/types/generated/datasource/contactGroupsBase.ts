@@ -1,6 +1,5 @@
 // schema-version: 1.0
 /** Type ContactGroupsBase. */
-export const contactGroupsBase = (init: Partial<ContactGroupsBase>): ContactGroupsBase => ({ ...init } as ContactGroupsBase);
 export class ContactGroupsBase {
   id!: number;
   uuid: string = crypto.randomUUID();

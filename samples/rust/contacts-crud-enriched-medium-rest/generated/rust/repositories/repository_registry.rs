@@ -1,167 +1,136 @@
-use datasources::{CRUDRepository, Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
-use super::super::Address;
-use super::super::AddressType;
-use super::super::Contact;
-use super::super::ContactCard;
-use super::super::ContactChangeLog;
-use super::super::ContactGroup;
-use super::super::ContactGroupMember;
-use super::super::ContactPreferences;
-use super::super::ContactSettings;
-use super::super::ContactSource;
-use super::super::LegacyContact;
-use super::super::LocalePreferences;
-use super::super::Phone;
-use super::super::PhoneType;
+use datasources::{Datasource, ICRUDRepository, IReadonlyRepository, RepositoryFactory};
 use std::sync::Arc;
 
 pub fn register(factory: &RepositoryFactory) {
     factory.register_named(
         "Address",
         "addresses",
-        |connection| Arc::new(super::address_repository::address_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<Address>>,
-        |connection| Arc::new(super::address_repository::address_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Address>>,
+        |connection| Arc::new(super::address_repository::address_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::address_repository::address_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "AddressType",
         "address_types",
-        |connection| Arc::new(super::address_type_repository::address_type_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<AddressType>>,
-        |connection| Arc::new(super::address_type_repository::address_type_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<AddressType>>,
+        |connection| Arc::new(super::address_type_repository::address_type_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::address_type_repository::address_type_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "Contact",
         "contacts",
-        |connection| Arc::new(super::contact_repository::contact_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<Contact>>,
-        |connection| Arc::new(super::contact_repository::contact_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Contact>>,
-    );
-    factory.register_named(
-        "ContactCard",
-        "contact_cards",
-        |connection| Arc::new(super::contact_card_repository::contact_card_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactCard>>,
-        |connection| Arc::new(super::contact_card_repository::contact_card_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactCard>>,
+        |connection| Arc::new(super::contact_repository::contact_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_repository::contact_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "ContactChangeLog",
         "contact_change_logs",
-        |connection| Arc::new(super::contact_change_log_repository::contact_change_log_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactChangeLog>>,
-        |connection| Arc::new(super::contact_change_log_repository::contact_change_log_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactChangeLog>>,
+        |connection| Arc::new(super::contact_change_log_repository::contact_change_log_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_change_log_repository::contact_change_log_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "ContactGroup",
         "contact_groups",
-        |connection| Arc::new(super::contact_group_repository::contact_group_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactGroup>>,
-        |connection| Arc::new(super::contact_group_repository::contact_group_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactGroup>>,
+        |connection| Arc::new(super::contact_group_repository::contact_group_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_group_repository::contact_group_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "ContactGroupMember",
         "contact_group_members",
-        |connection| Arc::new(super::contact_group_member_repository::contact_group_member_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactGroupMember>>,
-        |connection| Arc::new(super::contact_group_member_repository::contact_group_member_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactGroupMember>>,
+        |connection| Arc::new(super::contact_group_member_repository::contact_group_member_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_group_member_repository::contact_group_member_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "ContactPreferences",
         "contact_preferences",
-        |connection| Arc::new(super::contact_preferences_repository::contact_preferences_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactPreferences>>,
-        |connection| Arc::new(super::contact_preferences_repository::contact_preferences_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactPreferences>>,
+        |connection| Arc::new(super::contact_preferences_repository::contact_preferences_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_preferences_repository::contact_preferences_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "ContactSettings",
         "contact_settings",
-        |connection| Arc::new(super::contact_settings_repository::contact_settings_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactSettings>>,
-        |connection| Arc::new(super::contact_settings_repository::contact_settings_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactSettings>>,
+        |connection| Arc::new(super::contact_settings_repository::contact_settings_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_settings_repository::contact_settings_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "ContactSource",
         "contact_sources",
-        |connection| Arc::new(super::contact_source_repository::contact_source_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<ContactSource>>,
-        |connection| Arc::new(super::contact_source_repository::contact_source_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<ContactSource>>,
+        |connection| Arc::new(super::contact_source_repository::contact_source_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::contact_source_repository::contact_source_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "LegacyContact",
         "legacy_contacts",
-        |connection| Arc::new(super::legacy_contact_repository::legacy_contact_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<LegacyContact>>,
-        |connection| Arc::new(super::legacy_contact_repository::legacy_contact_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<LegacyContact>>,
-    );
-    factory.register_named(
-        "LocalePreferences",
-        "locale_preferences",
-        |connection| Arc::new(super::locale_preferences_repository::locale_preferences_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<LocalePreferences>>,
-        |connection| Arc::new(super::locale_preferences_repository::locale_preferences_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<LocalePreferences>>,
+        |connection| Arc::new(super::legacy_contact_repository::legacy_contact_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::legacy_contact_repository::legacy_contact_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "Phone",
         "phones",
-        |connection| Arc::new(super::phone_repository::phone_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<Phone>>,
-        |connection| Arc::new(super::phone_repository::phone_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<Phone>>,
+        |connection| Arc::new(super::phone_repository::phone_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::phone_repository::phone_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
     factory.register_named(
         "PhoneType",
         "phone_types",
-        |connection| Arc::new(super::phone_type_repository::phone_type_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository<PhoneType>>,
-        |connection| Arc::new(super::phone_type_repository::phone_type_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository<PhoneType>>,
+        |connection| Arc::new(super::phone_type_repository::phone_type_repository(connection).expect("repository")) as Arc<dyn ICRUDRepository>,
+        |connection| Arc::new(super::phone_type_repository::phone_type_readonly_repository(connection).expect("repository")) as Arc<dyn IReadonlyRepository>,
     );
 }
 
-datasources::bind_repositories!(register);
-
-pub trait Repositories {
-    fn addresses(&self) -> Arc<CRUDRepository<Address>>;
-    fn address_types(&self) -> Arc<CRUDRepository<AddressType>>;
-    fn contacts(&self) -> Arc<CRUDRepository<Contact>>;
-    fn contact_cards(&self) -> Arc<CRUDRepository<ContactCard>>;
-    fn contact_change_logs(&self) -> Arc<CRUDRepository<ContactChangeLog>>;
-    fn contact_groups(&self) -> Arc<CRUDRepository<ContactGroup>>;
-    fn contact_group_members(&self) -> Arc<CRUDRepository<ContactGroupMember>>;
-    fn contact_preferences(&self) -> Arc<CRUDRepository<ContactPreferences>>;
-    fn contact_settings(&self) -> Arc<CRUDRepository<ContactSettings>>;
-    fn contact_sources(&self) -> Arc<CRUDRepository<ContactSource>>;
-    fn legacy_contacts(&self) -> Arc<CRUDRepository<LegacyContact>>;
-    fn locale_preferences(&self) -> Arc<CRUDRepository<LocalePreferences>>;
-    fn phones(&self) -> Arc<CRUDRepository<Phone>>;
-    fn phone_types(&self) -> Arc<CRUDRepository<PhoneType>>;
+#[ctor::ctor]
+fn bind() {
+    RepositoryFactory::bind(register);
 }
 
-impl Repositories for Arc<dyn Datasource> {
-    fn addresses(&self) -> Arc<CRUDRepository<Address>> {
-        Arc::new(super::address_repository::address_repository(self.bind_connection(None)).expect("addresses"))
+pub trait Repositories {
+    fn addresses(&self) -> Arc<dyn ICRUDRepository>;
+    fn address_types(&self) -> Arc<dyn ICRUDRepository>;
+    fn contacts(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_change_logs(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_groups(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_group_members(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_preferences(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_settings(&self) -> Arc<dyn ICRUDRepository>;
+    fn contact_sources(&self) -> Arc<dyn ICRUDRepository>;
+    fn legacy_contacts(&self) -> Arc<dyn ICRUDRepository>;
+    fn phones(&self) -> Arc<dyn ICRUDRepository>;
+    fn phone_types(&self) -> Arc<dyn ICRUDRepository>;
+}
+
+impl Repositories for dyn Datasource {
+    fn addresses(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("addresses", None).expect("addresses")
     }
-    fn address_types(&self) -> Arc<CRUDRepository<AddressType>> {
-        Arc::new(super::address_type_repository::address_type_repository(self.bind_connection(None)).expect("address_types"))
+    fn address_types(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("address_types", None).expect("address_types")
     }
-    fn contacts(&self) -> Arc<CRUDRepository<Contact>> {
-        Arc::new(super::contact_repository::contact_repository(self.bind_connection(None)).expect("contacts"))
+    fn contacts(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contacts", None).expect("contacts")
     }
-    fn contact_cards(&self) -> Arc<CRUDRepository<ContactCard>> {
-        Arc::new(super::contact_card_repository::contact_card_repository(self.bind_connection(None)).expect("contact_cards"))
+    fn contact_change_logs(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_change_logs", None).expect("contact_change_logs")
     }
-    fn contact_change_logs(&self) -> Arc<CRUDRepository<ContactChangeLog>> {
-        Arc::new(super::contact_change_log_repository::contact_change_log_repository(self.bind_connection(None)).expect("contact_change_logs"))
+    fn contact_groups(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_groups", None).expect("contact_groups")
     }
-    fn contact_groups(&self) -> Arc<CRUDRepository<ContactGroup>> {
-        Arc::new(super::contact_group_repository::contact_group_repository(self.bind_connection(None)).expect("contact_groups"))
+    fn contact_group_members(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_group_members", None).expect("contact_group_members")
     }
-    fn contact_group_members(&self) -> Arc<CRUDRepository<ContactGroupMember>> {
-        Arc::new(super::contact_group_member_repository::contact_group_member_repository(self.bind_connection(None)).expect("contact_group_members"))
+    fn contact_preferences(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_preferences", None).expect("contact_preferences")
     }
-    fn contact_preferences(&self) -> Arc<CRUDRepository<ContactPreferences>> {
-        Arc::new(super::contact_preferences_repository::contact_preferences_repository(self.bind_connection(None)).expect("contact_preferences"))
+    fn contact_settings(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_settings", None).expect("contact_settings")
     }
-    fn contact_settings(&self) -> Arc<CRUDRepository<ContactSettings>> {
-        Arc::new(super::contact_settings_repository::contact_settings_repository(self.bind_connection(None)).expect("contact_settings"))
+    fn contact_sources(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("contact_sources", None).expect("contact_sources")
     }
-    fn contact_sources(&self) -> Arc<CRUDRepository<ContactSource>> {
-        Arc::new(super::contact_source_repository::contact_source_repository(self.bind_connection(None)).expect("contact_sources"))
+    fn legacy_contacts(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("legacy_contacts", None).expect("legacy_contacts")
     }
-    fn legacy_contacts(&self) -> Arc<CRUDRepository<LegacyContact>> {
-        Arc::new(super::legacy_contact_repository::legacy_contact_repository(self.bind_connection(None)).expect("legacy_contacts"))
+    fn phones(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("phones", None).expect("phones")
     }
-    fn locale_preferences(&self) -> Arc<CRUDRepository<LocalePreferences>> {
-        Arc::new(super::locale_preferences_repository::locale_preferences_repository(self.bind_connection(None)).expect("locale_preferences"))
-    }
-    fn phones(&self) -> Arc<CRUDRepository<Phone>> {
-        Arc::new(super::phone_repository::phone_repository(self.bind_connection(None)).expect("phones"))
-    }
-    fn phone_types(&self) -> Arc<CRUDRepository<PhoneType>> {
-        Arc::new(super::phone_type_repository::phone_type_repository(self.bind_connection(None)).expect("phone_types"))
+    fn phone_types(&self) -> Arc<dyn ICRUDRepository> {
+        self.create_repository_by_name("phone_types", None).expect("phone_types")
     }
 }

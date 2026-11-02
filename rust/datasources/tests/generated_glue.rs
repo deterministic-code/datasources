@@ -1,13 +1,6 @@
-use datasources::{encode_rows, FromSchema, MetaDataRowTypeConverter, Row, Schema, SchemaObject, TypeConverter, Value};
+use datasources::{MetaDataRowTypeConverter, Row, SchemaObject, TypeConverter, Value};
 use std::collections::HashMap;
 use uuid::Uuid;
-
-#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-#[facet(crate = ::datasources::facet)]
-struct LocalePref {
-    locale: String,
-    timezone: String,
-}
 
 #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
 #[facet(crate = ::datasources::facet)]
@@ -17,8 +10,6 @@ struct GeneratedShape {
     version: Vec<u8>,
     contact_id: String,
     line2: Option<String>,
-    settings: HashMap<String, String>,
-    prefs: HashMap<String, LocalePref>,
 }
 
 impl SchemaObject for GeneratedShape {}
@@ -31,247 +22,76 @@ fn generated_shape_tokens_compile() {
         version: vec![0],
         contact_id: "1".into(),
         line2: None,
-        settings: HashMap::new(),
-        prefs: HashMap::new(),
     };
     assert!(!item.uuid.is_empty());
 }
 
 #[test]
-fn from_schema_sets_string_from_uuid_and_datetime() {
-    let id = Uuid::parse_str("54ef41f2-0cb4-4c72-97a7-776fd183f5ed").unwrap();
+fn object_converter_assigns_matching_cells() {
     let created = datasources::chrono::Utc::now();
-    let mut row = datasources::Row::new();
-    row.insert("uuid".into(), Value::Uuid(id));
-    row.insert("created".into(), Value::DateTime(created));
-    let item = converted::<GeneratedShape>(row);
-    assert_eq!(item.uuid, id.to_string());
-    assert_eq!(item.created, created);
-}
-
-#[test]
-fn from_schema_sets_datetime_from_iso_text() {
-    let mut row = datasources::Row::new();
+    let mut row = Row::new();
     row.insert("uuid".into(), Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"));
-    row.insert("created".into(), Value::from("2026-10-30T02:04:49.339Z"));
-    let item = converted::<GeneratedShape>(row);
-    assert_eq!(item.created.to_rfc3339_opts(datasources::chrono::SecondsFormat::Millis, true), "2026-10-30T02:04:49.339Z");
-}
-
-#[test]
-fn from_schema_sets_bytes_from_base64_text() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
-    row.insert("version".into(), Value::from("AA=="));
-    let item = converted::<GeneratedShape>(row);
-    assert_eq!(item.version, vec![0]);
-}
-
-#[test]
-fn from_schema_sets_i32_from_empty_text() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct WithId {
-        id: i32,
-    }
-    impl SchemaObject for WithId {}
-    let mut row = datasources::Row::new();
-    row.insert("id".into(), Value::from(""));
-    let item = converted::<WithId>(row);
-    assert_eq!(item.id, 0);
-}
-
-#[test]
-fn from_schema_sets_string_from_int() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
-    row.insert("contact_id".into(), Value::Int(1));
-    let item = converted::<GeneratedShape>(row);
-    assert_eq!(item.contact_id, "1");
-}
-
-#[test]
-fn from_schema_sets_option_string_from_text() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+    row.insert("created".into(), Value::DateTime(created));
+    row.insert("version".into(), Value::Binary(vec![0]));
+    row.insert("contact_id".into(), Value::from("1"));
     row.insert("line2".into(), Value::from("flat 2"));
-    let schema = Schema::new(HashMap::from([
-        ("created".into(), "datetime".into()),
-        ("line2".into(), "string".into()),
-    ]));
-    let item = GeneratedShape::from_schema(row, &schema).unwrap();
+    let item = MetaDataRowTypeConverter::<GeneratedShape>::new()
+        .convert(&row)
+        .unwrap();
+    assert_eq!(item.uuid, "54ef41f2-0cb4-4c72-97a7-776fd183f5ed");
+    assert_eq!(item.created, created);
+    assert_eq!(item.version, vec![0]);
+    assert_eq!(item.contact_id, "1");
     assert_eq!(item.line2.as_deref(), Some("flat 2"));
 }
 
 #[test]
-fn from_schema_sets_option_none_from_null() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
+fn object_converter_uses_default_for_null() {
+    let created = datasources::chrono::Utc::now();
+    let mut row = Row::new();
+    row.insert("uuid".into(), Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"));
+    row.insert("created".into(), Value::DateTime(created));
+    row.insert("version".into(), Value::Binary(vec![0]));
+    row.insert("contact_id".into(), Value::from("1"));
     row.insert("line2".into(), Value::Null);
-    let schema = Schema::new(HashMap::from([
-        ("created".into(), "datetime".into()),
-        ("line2".into(), "string".into()),
-    ]));
-    let item = GeneratedShape::from_schema(row, &schema).unwrap();
+    let item = MetaDataRowTypeConverter::<GeneratedShape>::new()
+        .convert(&row)
+        .unwrap();
     assert_eq!(item.line2, None);
 }
 
-fn encoded(pairs: &[(&str, Value)]) -> Value {
-    let mut row = Row::new();
-    for (key, value) in pairs {
-        row.insert((*key).into(), value.clone());
-    }
-    encode_rows(&[row])
-}
-
 #[test]
-fn from_schema_sets_empty_map_from_empty_text() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
-    row.insert("settings".into(), Value::from(""));
-    let schema = Schema::new(HashMap::from([("created".into(), "datetime".into())]));
-    let item = GeneratedShape::from_schema(row, &schema).unwrap();
+fn object_converter_leaves_children_at_default() {
+    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
+    #[facet(crate = ::datasources::facet)]
+    struct WithMap {
+        settings: HashMap<String, String>,
+    }
+    impl SchemaObject for WithMap {}
+    let mut row = Row::new();
+    row.insert("settings".into(), Value::from("key=theme,value=dark"));
+    let item = MetaDataRowTypeConverter::<WithMap>::new()
+        .convert(&row)
+        .unwrap();
     assert!(item.settings.is_empty());
 }
 
-#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-#[facet(crate = ::datasources::facet)]
-struct ChildShape {
-    attributes: HashMap<String, String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-#[facet(crate = ::datasources::facet)]
-struct ParentShape {
-    children: Vec<ChildShape>,
-}
-
-impl SchemaObject for ParentShape {}
-
 #[test]
-fn from_schema_sets_nested_empty_map_from_empty_text() {
-    let mut row = datasources::Row::new();
-    row.insert("children".into(), encoded(&[("attributes", Value::from(""))]));
-    let item = ParentShape::from_schema(row, &Schema::new(HashMap::new())).unwrap();
-    assert_eq!(item.children.len(), 1);
-    assert!(item.children[0].attributes.is_empty());
-}
-
-#[test]
-fn from_schema_sets_string_map_from_encoded_rows() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
-    row.insert("settings".into(), encoded(&[("key", Value::from("theme")), ("value", Value::from("dark"))]));
-    let schema = Schema::new(HashMap::from([("created".into(), "datetime".into())]));
-    let item = GeneratedShape::from_schema(row, &schema).unwrap();
-    assert_eq!(item.settings.get("theme").map(String::as_str), Some("dark"));
-}
-
-#[test]
-fn from_schema_sets_struct_map_from_encoded_rows() {
-    let mut row = datasources::Row::new();
-    row.insert("created".into(), stamp());
-    row.insert(
-        "prefs".into(),
-        encoded(&[
-            ("key", Value::from("home")),
-            ("locale", Value::from("en-GB")),
-            ("timezone", Value::from("Europe/London")),
-        ]),
-    );
-    let schema = Schema::new(HashMap::from([("created".into(), "datetime".into())]));
-    let item = GeneratedShape::from_schema(row, &schema).unwrap();
-    let pref = item.prefs.get("home").expect("home");
-    assert_eq!(pref.locale, "en-GB");
-    assert_eq!(pref.timezone, "Europe/London");
-}
-
-#[test]
-fn to_schema_encodes_maps() {
+fn object_converter_writes_columns_only() {
+    let id = Uuid::parse_str("54ef41f2-0cb4-4c72-97a7-776fd183f5ed").unwrap();
+    let created = datasources::chrono::Utc::now();
     let item = GeneratedShape {
-        created: datasources::chrono::Utc::now(),
-        settings: HashMap::from([("theme".into(), "dark".into())]),
-        prefs: HashMap::from([(
-            "home".into(),
-            LocalePref {
-                locale: "en-GB".into(),
-                timezone: "Europe/London".into(),
-            },
-        )]),
-        ..Default::default()
+        uuid: id.to_string(),
+        created,
+        version: vec![0],
+        contact_id: "1".into(),
+        line2: Some("flat 2".into()),
     };
-    let schema = Schema::new(HashMap::new());
-    let row = item.to_schema(&schema).unwrap();
-    let back = GeneratedShape::from_schema(row, &schema).unwrap();
-    assert_eq!(back.settings.get("theme").map(String::as_str), Some("dark"));
-    assert_eq!(back.prefs.get("home").map(|pref| pref.locale.as_str()), Some("en-GB"));
-}
-
-#[test]
-fn from_schema_sets_option_bool_none_from_empty_text() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Flag {
-        is_verified: Option<bool>,
-    }
-    impl SchemaObject for Flag {}
-    let mut row = datasources::Row::new();
-    row.insert("is_verified".into(), Value::from(""));
-    let item = converted::<Flag>(row);
-    assert_eq!(item.is_verified, None);
-}
-
-#[test]
-fn from_schema_sets_option_datetime_none_from_empty_text() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Stamp {
-        verified_at: Option<datasources::chrono::DateTime<datasources::chrono::Utc>>,
-    }
-    impl SchemaObject for Stamp {}
-    let mut row = datasources::Row::new();
-    row.insert("verified_at".into(), Value::from(""));
-    let item = converted::<Stamp>(row);
-    assert_eq!(item.verified_at, None);
-}
-
-#[test]
-fn from_schema_sets_option_bool_from_int() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Flag {
-        is_verified: Option<bool>,
-    }
-    impl SchemaObject for Flag {}
-    let mut row = datasources::Row::new();
-    row.insert("is_verified".into(), Value::Int(1));
-    let item = converted::<Flag>(row);
-    assert_eq!(item.is_verified, Some(true));
-}
-
-#[test]
-fn from_schema_sets_string_from_decimal() {
-    #[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]
-    #[facet(crate = ::datasources::facet)]
-    struct Score {
-        score: Option<String>,
-    }
-    impl SchemaObject for Score {}
-    let mut row = datasources::Row::new();
-    row.insert("score".into(), Value::Decimal(datasources::rust_decimal::Decimal::new(1050, 2)));
-    let item = converted::<Score>(row);
-    assert_eq!(item.score.as_deref(), Some("10.50"));
-}
-
-fn stamp() -> Value {
-    Value::DateTime(
-        datasources::chrono::DateTime::parse_from_rfc3339("2026-10-30T02:04:49.339Z")
-            .unwrap()
-            .with_timezone(&datasources::chrono::Utc),
-    )
-}
-
-fn converted<T: SchemaObject>(row: Row) -> T {
-    let converter = MetaDataRowTypeConverter::<T>::new(Vec::new());
-    TypeConverter::convert(&converter, &row).unwrap()
+    let row = MetaDataRowTypeConverter::<GeneratedShape>::new()
+        .reverse_convert(&item)
+        .unwrap();
+    assert_eq!(row.get("uuid"), Some(&Value::from(id.to_string())));
+    assert_eq!(row.get("created"), Some(&Value::DateTime(created)));
+    assert_eq!(row.get("version"), Some(&Value::Binary(vec![0])));
+    assert_eq!(row.get("settings"), None);
 }

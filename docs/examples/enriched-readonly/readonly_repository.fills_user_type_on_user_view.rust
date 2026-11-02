@@ -38,7 +38,7 @@ type_options.entity_mapper =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 type_options.property_mappings =
     Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-let users_repo =
+let mut users_repo =
     ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let types =
     ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));

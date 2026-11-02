@@ -8,6 +8,9 @@ impl TypeConverter<Value, Value> for DecimalConverter {
     fn convert(&self, from: &Value) -> Result<Value> {
         Ok(match from {
             Value::Int(number) => Value::Decimal(Decimal::from(*number)),
+            Value::Float(number) => Decimal::from_f64_retain(*number)
+                .map(Value::Decimal)
+                .unwrap_or_else(|| from.clone()),
             Value::Text(text) => Decimal::from_str(text)
                 .map(Value::Decimal)
                 .unwrap_or_else(|_| from.clone()),

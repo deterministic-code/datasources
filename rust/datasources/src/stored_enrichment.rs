@@ -1,100 +1,102 @@
-use crate::child_writes::ChildWrites;
+use crate::bulk_crud_repository::BulkCRUDRepository;
 use crate::enrichment::Enrichment;
-use crate::from_schema::FromSchema;
-use crate::readonly_enrichment_strategy::{apply_linked, ReadonlyEnrichmentStrategy};
-use crate::repository::IReadonlyRepository;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use crate::repository::{as_readonly, ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 
-type EnrichApply<T> = Arc<
-    dyn for<'a> Fn(
-            &'a Enrichment,
-            &'a mut Vec<T>,
-            Option<&'a [Option<Row>]>,
-        ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>
-        + Send
-        + Sync,
->;
-
-pub(crate) type LookupFn<T> = Arc<
-    dyn for<'a> Fn(&'a mut T) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> + Send + Sync,
->;
-
-pub(crate) struct WriteEnrichment<T: FromSchema = Row> {
+pub(crate) struct StoredEnrichment {
     pub enrichment: Enrichment,
-    pub persist: Option<Arc<dyn ChildWrites<T>>>,
-    pub link: Option<Arc<dyn ChildWrites<T>>>,
-    pub lookup: Option<LookupFn<T>>,
+    pub via: Arc<dyn IReadonlyRepository>,
+    pub persist: Option<Arc<dyn ICRUDRepository>>,
+    pub persist_bulk: Option<Arc<BulkCRUDRepository>>,
+    pub link: Option<Arc<dyn ICRUDRepository>>,
+    pub strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    linked: bool,
 }
 
-impl<T: FromSchema> Clone for WriteEnrichment<T> {
-    fn clone(&self) -> Self {
+impl StoredEnrichment {
+    pub(crate) fn direct(
+        enrichment: Enrichment,
+        via: Arc<dyn IReadonlyRepository>,
+        persist: Option<Arc<dyn ICRUDRepository>>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
+        Self::direct_bulk(enrichment, via, persist, None, strategy)
+    }
+
+    pub(crate) fn direct_bulk(
+        enrichment: Enrichment,
+        via: Arc<dyn IReadonlyRepository>,
+        persist: Option<Arc<dyn ICRUDRepository>>,
+        persist_bulk: Option<Arc<BulkCRUDRepository>>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
         Self {
-            enrichment: self.enrichment.clone(),
-            persist: self.persist.clone(),
-            link: self.link.clone(),
-            lookup: self.lookup.clone(),
+            enrichment,
+            via,
+            persist,
+            persist_bulk,
+            link: None,
+            strategy,
+            linked: false,
         }
     }
-}
 
-pub(crate) struct StoredEnrichment<T: FromSchema> {
-    pub enrichment: Enrichment,
-    apply: EnrichApply<T>,
-}
-
-impl<T: FromSchema> StoredEnrichment<T> {
-    pub(crate) fn boxed_apply<TRelated, S>(
-        via: Arc<dyn IReadonlyRepository<TRelated>>,
-        strategy: Arc<S>,
-    ) -> EnrichApply<T>
-    where
-        TRelated: FromSchema,
-        S: ReadonlyEnrichmentStrategy<T, TRelated> + ?Sized + 'static,
-    {
-        Arc::new(move |enrichment, parents, sources| {
-            let via = via.clone();
-            let strategy = strategy.clone();
-            Box::pin(async move { strategy.apply(via, enrichment, parents, sources).await })
-        })
-    }
-
-    pub(crate) fn boxed_linked<TRelated, TLink>(
-        via: Arc<dyn IReadonlyRepository<TRelated>>,
-        link: Arc<dyn IReadonlyRepository<TLink>>,
-    ) -> EnrichApply<T>
-    where
-        TRelated: FromSchema,
-        TLink: FromSchema,
-    {
-        Arc::new(move |enrichment, parents, sources| {
-            let via = via.clone();
-            let link = link.clone();
-            Box::pin(async move { apply_linked(via, link, enrichment, parents, sources).await })
-        })
-    }
-
-    pub(crate) fn new(enrichment: Enrichment, apply: EnrichApply<T>) -> Self {
-        Self { enrichment, apply }
+    pub(crate) fn linked(
+        enrichment: Enrichment,
+        via: Arc<dyn IReadonlyRepository>,
+        link: Arc<dyn ICRUDRepository>,
+        strategy: Arc<dyn ReadonlyEnrichmentStrategy>,
+    ) -> Self {
+        Self {
+            enrichment,
+            via,
+            persist: None,
+            persist_bulk: None,
+            link: Some(link),
+            strategy,
+            linked: true,
+        }
     }
 
     pub(crate) async fn apply(
         &self,
-        parents: &mut Vec<T>,
+        parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
-        (self.apply)(&self.enrichment, parents, sources).await
+        match self.linked {
+            true => {
+                self.strategy
+                    .apply_linked(
+                        self.via.clone(),
+                        as_readonly(self.link.clone().expect("linked enrichment")),
+                        &self.enrichment,
+                        parents,
+                        sources,
+                    )
+                    .await
+            }
+            false => {
+                self.strategy
+                    .apply(self.via.clone(), &self.enrichment, parents, sources)
+                    .await
+            }
+        }
     }
 }
 
-impl<T: FromSchema> Clone for StoredEnrichment<T> {
+impl Clone for StoredEnrichment {
     fn clone(&self) -> Self {
         Self {
             enrichment: self.enrichment.clone(),
-            apply: self.apply.clone(),
+            via: self.via.clone(),
+            persist: self.persist.clone(),
+            persist_bulk: self.persist_bulk.clone(),
+            link: self.link.clone(),
+            strategy: self.strategy.clone(),
+            linked: self.linked,
         }
     }
 }

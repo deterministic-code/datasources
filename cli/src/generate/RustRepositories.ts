@@ -23,7 +23,7 @@ class RustRepositories extends RepositoryGenerator {
     const typeStems = [...new Set([...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name)))].map((stem) => this.mod(stem));
     const mods = [...models.map((model) => this.mod(casing.convertFileName(`${model.specName}_repository`))), this.mod(casing.convertFileName("repository_registry"))];
     return [
-      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.rs`, fill(repositoryTmpl, this.repository(model, spec, casing, models)))),
+      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.rs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
       content(`${casing.convertFileName("repository_registry")}.rs`, fill(registryTmpl, this.registry(models, casing, spec))),
       content("mod.rs", fill(modTmpl, { mods, allowNonSnakeCase: this.allowNonSnakeCase(mods) })),
       content("../mod.rs", fill(crateModTmpl, { typeStems, registryIdent: this.ident(casing.convertFileName("repository_registry")), allowNonSnakeCase: this.allowNonSnakeCase(typeStems) })),
@@ -31,30 +31,14 @@ class RustRepositories extends RepositoryGenerator {
     ];
   }
 
-  private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy, models: RepositoryModel[]): Record<string, unknown> {
-    const wrappedNames = new Set(models.filter((item) => this.childrenOf(item, casing).length > 0).map((item) => item.specName));
+  private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown> {
     const child = this.childrenOf(model, casing).map((item, index) => ({
       ...item,
       module: this.ident(casing.convertFileName(`${item.specName}_repository`)),
-      repoFn: casing.convertFields(`${item.specName}_repository`),
       rowFn: casing.convertFields(`${item.specName}_row_repository`),
-      wrapped: wrappedNames.has(item.specName) ? {} : undefined,
       comma: index > 0 ? {} : undefined,
     }));
-    const enrichments = model.enrichments.map((item) => {
-      const planned = this.enrichmentOf(item, casing);
-      return {
-        ...planned,
-        viaWrapped: wrappedNames.has(item.via) ? {} : undefined,
-        linked: planned.linked === undefined
-          ? undefined
-          : {
-              ...planned.linked,
-              linkType: item.linkType,
-              linkWrapped: item.link !== undefined && wrappedNames.has(item.link) ? {} : undefined,
-            },
-      };
-    });
+    const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
     const dialects = dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ entity: model.entity, ...planned }),
@@ -64,19 +48,10 @@ class RustRepositories extends RepositoryGenerator {
     const vias = new Map<string, string>();
     for (const item of model.enrichments) vias.set(item.via, item.viaType);
     const rowEntity = this.isRustEnum(spec, model.specName);
-    const typeNames = new Set<string>();
-    if (!rowEntity) typeNames.add(model.typeName);
-    for (const item of child) {
-      if (item.wrapped === undefined && !this.isRustEnum(spec, item.specName)) typeNames.add(item.typeName);
-    }
-    for (const item of model.enrichments) {
-      if (!this.isRustEnum(spec, item.via)) typeNames.add(item.viaType);
-      if (item.link !== undefined && item.linkType !== undefined && !this.isRustEnum(spec, item.link)) typeNames.add(item.linkType);
-    }
     return {
       typeName: model.typeName,
       entityType: rowEntity ? "datasources::Row" : model.typeName,
-      typeImports: [...typeNames].map((typeName) => ({ typeName })),
+      typed: rowEntity ? undefined : {},
       className: childClass(model.typeName),
       optimisticClass: optimisticClass(model.typeName),
       repoFn: casing.convertFields(`${model.specName}_repository`),
@@ -85,24 +60,15 @@ class RustRepositories extends RepositoryGenerator {
       child,
       childFields: child.length === 0 ? "" : `, ${child.map((item) => item.field).join(", ")}`,
       enrichments,
-      hasEnrichments: enrichments.length === 0 ? undefined : {},
-      hasLinked: enrichments.some((item) => item.linked !== undefined) ? {} : undefined,
       wrapped: child.length === 0 ? undefined : {},
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
       schema: this.schemaBag(schemaPairs(model, spec, casing)),
-      readonlyChildren: [...vias].map(([specName, typeName]) => {
-        const found = child.find((item) => item.specName === specName);
-        return {
-          field: found?.field,
-          typeName,
-          className: childClass(typeName),
-          module: this.ident(casing.convertFileName(`${specName}_repository`)),
-          repoFn: casing.convertFields(`${specName}_repository`),
-          rowFn: casing.convertFields(`${specName}_row_repository`),
-          wrapped: wrappedNames.has(specName) ? {} : undefined,
-        };
-      }),
+      readonlyChildren: [...vias].map(([specName]) => ({
+        field: child.find((item) => item.specName === specName)?.field,
+        module: this.ident(casing.convertFileName(`${specName}_repository`)),
+        rowFn: casing.convertFields(`${specName}_row_repository`),
+      })),
       ...this.optionsOf(model),
       optimisticConcurrency: token === undefined
         ? undefined

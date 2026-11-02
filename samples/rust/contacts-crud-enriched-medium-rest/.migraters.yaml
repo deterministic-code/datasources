@@ -1,9 +1,6 @@
 language: rust
-providers:
-  - name: sqlite
-    location: providers/sqlite
-  - name: postgres
-    location: providers/postgres
-  - name: mysql
-    location: providers/mysql
+dialects:
+  - sqlite
+  - postgres
+  - mysql
 binDir: rust/target/debug

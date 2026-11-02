@@ -2367,32 +2367,19 @@ async fn create_omits_null_datetime_and_version_and_update_writes_them() {
 }
 
 #[derive(Clone, Default, Facet)]
-struct Tag {
-    id: i64,
-    name: String,
-}
-
-impl SchemaObject for Tag {}
-
-#[derive(Clone, Default, Facet)]
 struct Note {
     id: i64,
     title: String,
-    tags: Vec<Tag>,
 }
 
 impl SchemaObject for Note {}
 
 #[tokio::test]
 async fn typed_entity_create_and_read_single() {
-    let encoded = encode_rows(&[record(&[("id", Value::Int(2)), ("name", Value::from("work"))])]);
-    let row = record(&[("id", Value::Int(1)), ("title", Value::from("Ada"))]);
-    assert_eq!(row.get("title"), Some(&Value::from("Ada")));
     let command = Arc::new(MockCommand::new());
     command.reader_rows.lock().unwrap().push(record(&[
         ("id", Value::Int(1)),
         ("title", Value::from("Ada")),
-        ("tags", encoded),
     ]));
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
@@ -2408,10 +2395,6 @@ async fn typed_entity_create_and_read_single() {
     let created = repo
         .create(Note {
             title: "Ada".into(),
-            tags: vec![Tag {
-                name: "work".into(),
-                ..Default::default()
-            }],
             ..Default::default()
         })
         .await
@@ -2424,6 +2407,4 @@ async fn typed_entity_create_and_read_single() {
         .expect("note");
     assert_eq!(found.id, 1);
     assert_eq!(found.title, "Ada");
-    assert_eq!(found.tags.len(), 1);
-    assert_eq!(found.tags[0].name, "work");
 }

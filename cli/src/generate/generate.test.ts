@@ -36,9 +36,6 @@ const postgresDatasourceYaml = readFileSync(join(specDir, "datasource.postgres.y
 const userRolesFiles = (): Record<string, string> => ({
   "types.yaml": readFileSync(join(userRolesDir, "types.yaml"), "utf8"),
   "datasource.yaml": readFileSync(join(userRolesDir, "datasource.yaml"), "utf8"),
-  "datasource.sqlite.yaml": readFileSync(join(userRolesDir, "datasource.sqlite.yaml"), "utf8"),
-  "datasource.mysql.yaml": readFileSync(join(userRolesDir, "datasource.mysql.yaml"), "utf8"),
-  "datasource.postgres.yaml": readFileSync(join(userRolesDir, "datasource.postgres.yaml"), "utf8"),
 });
 const contactsFiles = (): Record<string, string> => ({
   "types.yaml": typesYaml,
@@ -258,9 +255,9 @@ describe("generate", () => {
     expect(contactRs).toContain('vec!["contact_source_id".into()');
     expect(contactRs).toContain("for_connection(connection.as_ref())");
     expect(contactRs).toContain("pub struct ContactRepository");
-    expect(contactRs).toContain("pub address: Arc<super::addressRepository::AddressRepository>");
-    expect(contactRs).toContain("pub phone: Arc<super::phoneRepository::PhoneRepository>");
-    expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository<ContactSource>>");
+    expect(contactRs).toContain("pub address: Arc<CRUDRepository>");
+    expect(contactRs).toContain("pub phone: Arc<CRUDRepository>");
+    expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository>");
     expect(contactRs).toContain("address_row_repository");
     expect(contactRs).toContain("Arc::clone(&address)");
     expect(textOf(rust, "schema_objects.rs")).toContain("impl SchemaObject for Contact");
@@ -284,7 +281,7 @@ describe("generate", () => {
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("use super::super::;");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("impl Repositories for Arc<dyn Datasource>");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<CRUDRepository<Contact>>");
-    expect(textOf(rust, "contactRepository.rs")).toContain("let repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
+    expect(textOf(rust, "contactRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
@@ -405,7 +402,7 @@ types:
     expect(typescript).not.toContain("optimisticConcurrency:");
     expect(rust).toContain("pub struct AccountOptimistic");
     expect(rust).not.toContain("{{typeName}}Optimistic");
-    expect(rust).toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(rust).toContain("item.version += 1");
     expect(rust).toContain("rows_affected != 1");
     expect(rust).not.toContain("optimistic_concurrency");
     expect(registry).toContain("AccountOptimistic::new");
@@ -459,7 +456,7 @@ types:
     expect(stampTs).toContain("await update(item,");
     expect(stampTs).not.toContain("Number(expected)");
     expect(stampRs).toContain("pub struct StampOptimistic");
-    expect(stampRs).not.toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(stampRs).not.toContain("item.version += 1");
     expect(skippedCs).not.toContain("public new async Task<Response> Update");
   });
 
@@ -1070,7 +1067,6 @@ types: []
       expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
       expect(ran).toEqual([
-        "npx migrate-init --language typescript --dialect sqlite",
         "npx migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
         "npx migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql",
       ]);
@@ -1082,7 +1078,6 @@ types: []
       };
       expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--dry-run"], dryIo, cwd)).toBe(0);
       expect(dry.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
-      expect(dryIo.logs.some((line) => line.includes("migrate-init --language typescript --dialect sqlite"))).toBe(true);
       expect(dryIo.logs.some((line) => line.includes("migrate-setup --provider sqlite"))).toBe(true);
       expect(dryIo.logs.some((line) => line.includes("migrate-up --provider sqlite"))).toBe(true);
       expect(dryRan).toEqual([]);

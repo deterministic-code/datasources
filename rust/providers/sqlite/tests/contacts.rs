@@ -116,7 +116,7 @@ fn contact_repo(
     .collect();
     options.row_converter = Some(RowTypeConverter::new(converters));
     options.object_converter = Some(Box::new(
-        MetaDataRowTypeConverter::new(Vec::new()).with_references(references(), Box::new(columns())),
+        MetaDataRowTypeConverter::new().with_references(references(), Box::new(columns())),
     ));
     CRUDRepository::<Row>::new(connection, options).expect("contacts repo")
 }
@@ -149,19 +149,19 @@ async fn writes_enriched_contact() {
         "Id", "Uuid", "Created", "Updated", "Version", "ContactSource", "ContactType", "FirstName",
         "LastName", "Email", "Notes",
     ];
-    let addresses_repo = contact_repo(conn.clone(), "Address", &address, false, field);
+    let mut addresses_repo = contact_repo(conn.clone(), "Address", &address, false, field);
     addresses_repo.add_enriched(
         datasources::Enrichment::new("AddressType", "AddressType", "Id", None, datasources::EnrichmentPropertyType::Object),
         as_readonly(Arc::new(contact_repo(conn.clone(), "AddressType", &named, false, field))),
         None,
     );
-    let phones_repo = contact_repo(conn.clone(), "Phone", &phone, false, field);
+    let mut phones_repo = contact_repo(conn.clone(), "Phone", &phone, false, field);
     phones_repo.add_enriched(
         datasources::Enrichment::new("PhoneType", "PhoneType", "Id", None, datasources::EnrichmentPropertyType::Object),
         as_readonly(Arc::new(contact_repo(conn.clone(), "PhoneType", &named, false, field))),
         None,
     );
-    let contacts_repo = contact_repo(conn.clone(), "Contact", &base, true, field);
+    let mut contacts_repo = contact_repo(conn.clone(), "Contact", &base, true, field);
     contacts_repo
         .add_enriched(
             datasources::Enrichment::new("ContactType", "ContactType", "Id", None, datasources::EnrichmentPropertyType::Object),

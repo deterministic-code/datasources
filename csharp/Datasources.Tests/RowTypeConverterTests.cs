@@ -1,4 +1,3 @@
-using System.Globalization;
 using Datasources;
 
 namespace Datasources.Tests;
@@ -90,37 +89,9 @@ public class RowTypeConverterTests
         Assert.Equal(id.ToString(), row.Uuid);
     }
 
-    [Fact]
-    public void CoercesDecimalOntoString()
-    {
-        var fromDecimal = new MetaDataRowTypeConverter<Priced>().Convert(new Row { ["Score"] = new Value.Decimal(10.50m) });
-        Assert.Equal("10.50", fromDecimal.Score);
-        var fromText = new MetaDataRowTypeConverter<Priced>(new Dictionary<string, TypeConverter<Value, Value>>
-        {
-            ["Score"] = new ParseDecimal(),
-        }).Convert(new Row { ["Score"] = "10.50" });
-        Assert.Equal("10.50", fromText.Score);
-    }
-
     public class Keyed
     {
         public string Uuid { get; set; } = "";
-    }
-
-    public class Priced
-    {
-        public string? Score { get; set; }
-    }
-
-    sealed class ParseDecimal : TypeConverter<Value, Value>
-    {
-        public override Value Convert(Value from) =>
-            from is Value.Text(var text)
-            && decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
-                ? new Value.Decimal(number)
-                : from;
-
-        public override Value ReverseConvert(Value to) => to;
     }
 
     [Fact]

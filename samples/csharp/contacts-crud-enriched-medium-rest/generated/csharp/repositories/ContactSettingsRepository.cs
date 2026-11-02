@@ -28,17 +28,6 @@ public sealed class ContactSettingsRepository : CRUDRepository<Backend.Types.Dat
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Value"],
                 CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Value"],
                 UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Value"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["ContactId"] = new("integer", false, false),
-                    ["Key"] = new("string", false, false),
-                    ["Value"] = new("string", false, false),
-                }),
             })
             .Add("sqlite", new()
             {
@@ -59,17 +48,6 @@ public sealed class ContactSettingsRepository : CRUDRepository<Backend.Types.Dat
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Value"],
                 CreateProperties = ["Uuid", "Version", "ContactId", "Key", "Value"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Value"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["ContactId"] = new("integer", false, false),
-                    ["Key"] = new("string", false, false),
-                    ["Value"] = new("string", false, false),
-                }),
             })
             .Add("mysql", new()
             {
@@ -90,17 +68,6 @@ public sealed class ContactSettingsRepository : CRUDRepository<Backend.Types.Dat
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Value"],
                 CreateProperties = ["ContactId", "Key", "Value"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Value"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["ContactId"] = new("integer", false, false),
-                    ["Key"] = new("string", false, false),
-                    ["Value"] = new("string", false, false),
-                }),
             })
             .Add("postgres", new()
             {
@@ -121,17 +88,6 @@ public sealed class ContactSettingsRepository : CRUDRepository<Backend.Types.Dat
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Value"],
                 CreateProperties = ["ContactId", "Key", "Value"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Value"],
-                Schema = new(new Dictionary<string, SchemaColumn>
-                {
-                    ["Id"] = new("integer", false, false),
-                    ["Uuid"] = new("uuid", false, true),
-                    ["Created"] = new("datetime", false, true),
-                    ["Updated"] = new("datetime", false, true),
-                    ["Version"] = new("binary", false, true),
-                    ["ContactId"] = new("integer", false, false),
-                    ["Key"] = new("string", false, false),
-                    ["Value"] = new("string", false, false),
-                }),
             })
             .For(connection);
 }

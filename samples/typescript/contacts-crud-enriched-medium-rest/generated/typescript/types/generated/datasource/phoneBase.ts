@@ -1,6 +1,5 @@
 // schema-version: 1.0
 /** Type PhoneBase. */
-export const phoneBase = (init: Partial<PhoneBase>): PhoneBase => ({ ...init } as PhoneBase);
 export class PhoneBase {
   id!: number;
   uuid: string = crypto.randomUUID();

@@ -1,23 +1,16 @@
 use crate::converters::type_converter::TypeConverter;
 use crate::datasource_error::DatasourceError;
-use crate::default_write_enrichment_strategy::{decode_rows, encode_rows};
-use crate::from_schema::{FromSchema, SchemaObject};
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::result::Result;
 use crate::row::Row;
-use crate::schema::Schema;
 use crate::value::Value;
-use base64::Engine;
-use chrono::{DateTime, Utc};
-use facet::{Def, Field, ScalarType, Shape, Type, UserType};
-use rust_decimal::Decimal;
+use facet::{Def, Facet, Field, HasFields, Partial, Peek, ScalarType, Shape, Type, UserType};
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::str::FromStr;
-use uuid::Uuid;
 
-pub struct MetaDataRowTypeConverter<T: FromSchema = Row> {
-    columns: Vec<String>,
+pub trait SchemaObject: Facet<'static> + Clone + Default + Send + Sync + 'static {}
+
+pub struct MetaDataRowTypeConverter<T = Row> {
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     references: Vec<String>,
     reference_columns: Box<dyn Mapper<String, String> + Send + Sync>,
@@ -25,14 +18,13 @@ pub struct MetaDataRowTypeConverter<T: FromSchema = Row> {
     entity: PhantomData<T>,
 }
 
-impl<T: FromSchema> MetaDataRowTypeConverter<T> {
-    pub fn new(columns: Vec<String>) -> Self {
+impl<T> MetaDataRowTypeConverter<T> {
+    pub fn new() -> Self {
         Self {
-            columns,
             fields: HashMap::new(),
             references: Vec::new(),
             reference_columns: Box::new(IdentityMapper::new()),
-            should_coerce_id: true,
+            should_coerce_id: false,
             entity: PhantomData,
         }
     }
@@ -55,28 +47,18 @@ impl<T: FromSchema> MetaDataRowTypeConverter<T> {
         self
     }
 
-    fn apply(&self, row: &Row, reverse: bool) -> Result<Row> {
-        let names = match self.columns.is_empty() {
-            true => row.keys().cloned().collect(),
-            false => self.columns.clone(),
-        };
-        names
-            .into_iter()
-            .filter_map(|key| row.get(&key).cloned().map(|value| (key, value)))
-            .map(|(key, value)| {
-                let cell = match self.fields.get(&key) {
-                    Some(field) if reverse => field.reverse_convert(&value)?,
-                    Some(field) => field.convert(&value)?,
-                    None => value,
-                };
-                let key = if reverse && self.references.iter().any(|name| name == &key) {
-                    Mapper::map(self.reference_columns.as_ref(), key)
-                } else {
-                    key
-                };
-                Ok((key, cell))
-            })
-            .collect()
+    fn converted(&self, key: &str, value: Value, reverse: bool) -> Result<Value> {
+        match self.fields.get(key) {
+            Some(field) if reverse => field.reverse_convert(&value),
+            Some(field) => field.convert(&value),
+            None => Ok(value),
+        }
+    }
+}
+
+impl Default for MetaDataRowTypeConverter<Row> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -92,156 +74,136 @@ impl MetaDataRowTypeConverter<Row> {
 
 impl TypeConverter<Row, Row> for MetaDataRowTypeConverter<Row> {
     fn convert(&self, from: &Row) -> Result<Row> {
-        self.apply(from, false)
+        from.iter()
+            .map(|(key, value)| Ok((key.clone(), self.converted(key, value.clone(), false)?)))
+            .collect()
     }
 
     fn reverse_convert(&self, to: &Row) -> Result<Row> {
-        self.apply(to, true)
+        to.iter()
+            .map(|(key, value)| {
+                let key = if self.references.iter().any(|name| name == key) {
+                    Mapper::map(self.reference_columns.as_ref(), key.clone())
+                } else {
+                    key.clone()
+                };
+                Ok((key.clone(), self.converted(&key, value.clone(), true)?))
+            })
+            .collect()
     }
 }
 
 impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
     fn convert(&self, from: &Row) -> Result<T> {
-        let cells = self.apply(from, false)?;
-        let coerced = coerce_struct(T::SHAPE, &cells, self.should_coerce_id)?;
-        T::from_schema(coerced, &Schema::default())
+        let mut partial = Partial::alloc::<T>().map_err(reflect)?;
+        for (index, field) in struct_fields(T::SHAPE)?.iter().enumerate() {
+            let cell = from
+                .get(field.name)
+                .cloned()
+                .map(|value| self.converted(field.name, value, false))
+                .transpose()?;
+            partial = match (is_column(field.shape()), cell.as_ref()) {
+                (true, Some(cell)) if *cell != Value::Null => {
+                    set_field(partial, field.name, cell, field.shape(), self.should_coerce_id)?
+                }
+                _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
+            };
+        }
+        partial.build().map_err(reflect)?.materialize().map_err(reflect)
     }
 
     fn reverse_convert(&self, to: &T) -> Result<Row> {
-        self.apply(&to.to_schema(&Schema::default())?, true)
-    }
-}
-
-pub(crate) fn coerce_entity(shape: &'static Shape, row: &Row, coerce_id: bool) -> Result<Row> {
-    coerce_struct(shape, row, coerce_id)
-}
-
-fn coerce_struct(shape: &'static Shape, row: &Row, coerce_id: bool) -> Result<Row> {
-    let Ok(fields) = struct_fields(shape) else {
-        return Ok(row.clone());
-    };
-    let mut out = row.clone();
-    for field in fields {
-        let name = field.name;
-        let field_shape = field.shape();
-        if is_map(field_shape) {
-            out.insert(name.to_string(), coerce_encoded(field_shape, row.get(name), coerce_id, true)?);
-            continue;
-        }
-        if is_list(field_shape) && !is_bytes(field_shape) {
-            out.insert(name.to_string(), coerce_encoded(field_shape, row.get(name), coerce_id, false)?);
-            continue;
-        }
-        let cell = row.get(name).cloned().unwrap_or(Value::Null);
-        out.insert(name.to_string(), coerce_cell(&cell, field_shape, coerce_id)?);
-    }
-    Ok(out)
-}
-
-fn coerce_encoded(shape: &'static Shape, cell: Option<&Value>, coerce_id: bool, map: bool) -> Result<Value> {
-    let rows = decode_rows(cell);
-    if rows.is_empty() {
-        return Ok(cell.cloned().unwrap_or(Value::Null));
-    }
-    let mut next = Vec::new();
-    for row in rows {
-        if map {
-            let (key_shape, value_shape) = map_kv(shape)?;
-            let mut stored = Row::new();
-            let key = row.get("key").cloned().unwrap_or(Value::Null);
-            stored.insert("key".into(), coerce_cell(&key, key_shape, coerce_id)?);
-            if struct_fields(value_shape).is_ok() {
-                let coerced = coerce_struct(value_shape, &row, coerce_id)?;
-                for (name, value) in coerced {
-                    if name != "key" {
-                        stored.insert(name, value);
-                    }
-                }
-            } else {
-                let value = row.get("value").cloned().unwrap_or(Value::Null);
-                stored.insert("value".into(), coerce_cell(&value, value_shape, coerce_id)?);
+        let mut row = Row::new();
+        for (field, value) in Peek::new(to).into_struct().map_err(reflect)?.fields() {
+            if !is_column(field.shape()) {
+                continue;
             }
-            next.push(stored);
-        } else if struct_fields(list_element(shape)?).is_ok() {
-            next.push(coerce_struct(list_element(shape)?, &row, coerce_id)?);
-        } else {
-            next.push(row);
+            if let Some(cell) = peek_value(value) {
+                row.insert(
+                    field.name.to_string(),
+                    self.converted(field.name, cell, true)?,
+                );
+            }
         }
+        Ok(row)
     }
-    Ok(encode_rows(&next))
 }
 
-fn coerce_cell(cell: &Value, shape: &'static Shape, coerce_id: bool) -> Result<Value> {
-    if is_option(shape) {
-        let inner = option_inner(shape)?;
-        if *cell == Value::Null || empty_text_non_string(cell, inner) {
-            return Ok(Value::Null);
+fn set_field<'a>(
+    partial: Partial<'a>,
+    name: &str,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+) -> Result<Partial<'a>> {
+    let partial = partial.begin_field(name).map_err(reflect)?;
+    let partial = if is_option(shape) {
+        set_value(
+            partial.begin_some().map_err(reflect)?,
+            cell,
+            option_inner(shape)?,
+            coerce_id,
+        )?
+        .end()
+        .map_err(reflect)?
+    } else {
+        set_value(partial, cell, shape, coerce_id)?
+    };
+    partial.end().map_err(reflect)
+}
+
+fn set_value<'a>(
+    partial: Partial<'a>,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+) -> Result<Partial<'a>> {
+    let set = match cell {
+        Value::Bool(flag) => partial.set(*flag),
+        Value::Int(n) if coerce_id && ScalarType::try_from_shape(shape) == Some(ScalarType::I32) => {
+            partial.set(*n as i32)
         }
-        return coerce_cell(cell, inner, coerce_id);
-    }
-    if is_bytes(shape) {
-        return match cell {
-            Value::Binary(bytes) => Ok(Value::Binary(bytes.clone())),
-            Value::Text(text) if !text.is_empty() => match base64::engine::general_purpose::STANDARD.decode(text) {
-                Ok(bytes) => Ok(Value::Binary(bytes)),
-                Err(error) => Err(DatasourceError::message(error.to_string())),
-            },
-            other => Ok(other.clone()),
+        Value::Int(n) => partial.set(*n),
+        Value::Float(n) => partial.set(*n),
+        Value::Text(text) => partial.set(text.clone()),
+        Value::DateTime(date) => partial.set(*date),
+        Value::Uuid(id) => partial.set(*id),
+        Value::Decimal(number) => partial.set(*number),
+        Value::Binary(bytes) => partial.set(bytes.clone()),
+        Value::Null => partial.set_default(),
+    };
+    set.map_err(reflect)
+}
+
+fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
+    if let Ok(option) = value.into_option() {
+        return match option.value() {
+            Some(inner) => peek_value(inner),
+            None => Some(Value::Null),
         };
     }
-    let ident = shape.type_identifier;
-    match (cell, ScalarType::try_from_shape(shape), ident) {
-        (Value::Bool(flag), Some(ScalarType::Bool), _) => Ok(Value::Bool(*flag)),
-        (Value::Int(n), Some(ScalarType::Bool), _) => Ok(Value::Bool(*n != 0)),
-        (Value::Text(text), Some(ScalarType::Bool), _) if text.is_empty() => Ok(Value::Bool(false)),
-        (Value::Int(n), Some(ScalarType::I64), _) => Ok(Value::Int(*n)),
-        (Value::Int(n), Some(ScalarType::I8), _) => narrow(*n, i8::MIN as i64, i8::MAX as i64, coerce_id),
-        (Value::Int(n), Some(ScalarType::I16), _) => narrow(*n, i16::MIN as i64, i16::MAX as i64, coerce_id),
-        (Value::Int(n), Some(ScalarType::I32), _) => narrow(*n, i32::MIN as i64, i32::MAX as i64, coerce_id),
-        (Value::Int(n), Some(ScalarType::U32), _) => narrow(*n, 0, u32::MAX as i64, coerce_id),
-        (Value::Text(text), Some(ScalarType::I8 | ScalarType::I16 | ScalarType::I32 | ScalarType::I64 | ScalarType::U32), _)
-            if text.is_empty() =>
-        {
-            Ok(Value::Int(0))
-        }
-        (Value::Text(text), Some(ScalarType::String), _) => Ok(Value::Text(text.clone())),
-        (Value::Text(text), _, "String") => Ok(Value::Text(text.clone())),
-        (Value::Int(n), _, "String") => Ok(Value::Text(n.to_string())),
-        (Value::Uuid(id), _, "String") => Ok(Value::Text(id.to_string())),
-        (Value::DateTime(date), _, "String") => Ok(Value::Text(Value::iso_datetime(*date))),
-        (Value::Decimal(number), _, "String") => Ok(Value::Text(number.to_string())),
-        (Value::Text(text), _, ident) if ident.contains("DateTime") => match DateTime::parse_from_rfc3339(text) {
-            Ok(parsed) => Ok(Value::DateTime(parsed.with_timezone(&Utc))),
-            Err(error) => Err(DatasourceError::message(error.to_string())),
-        },
-        (Value::DateTime(date), _, ident) if ident.contains("DateTime") => Ok(Value::DateTime(*date)),
-        (Value::Text(text), _, ident) if ident.contains("Uuid") => match Uuid::parse_str(text) {
-            Ok(id) => Ok(Value::Uuid(id)),
-            Err(error) => Err(DatasourceError::message(error.to_string())),
-        },
-        (Value::Uuid(id), _, ident) if ident.contains("Uuid") => Ok(Value::Uuid(*id)),
-        (Value::Decimal(number), _, ident) if ident.contains("Decimal") => Ok(Value::Decimal(*number)),
-        (Value::Text(text), _, ident) if ident.contains("Decimal") => match Decimal::from_str(text) {
-            Ok(number) => Ok(Value::Decimal(number)),
-            Err(error) => Err(DatasourceError::message(error.to_string())),
-        },
-        (Value::Int(n), _, ident) if ident.contains("Decimal") => Ok(Value::Decimal(Decimal::from(*n))),
-        (Value::Float(n), _, ident) if ident.contains("Decimal") => match Decimal::from_str(&n.to_string()) {
-            Ok(number) => Ok(Value::Decimal(number)),
-            Err(error) => Err(DatasourceError::message(error.to_string())),
-        },
-        (other, _, _) => Ok(other.clone()),
-    }
-}
-
-fn narrow(n: i64, min: i64, max: i64, coerce_id: bool) -> Result<Value> {
-    if !coerce_id {
-        return Ok(Value::Null);
-    }
-    if n < min || n > max {
-        return Err(DatasourceError::message(format!("{n} does not fit")));
-    }
-    Ok(Value::Int(n))
+    value
+        .get::<bool>()
+        .ok()
+        .map(|flag| Value::from(*flag))
+        .or_else(|| value.get::<i32>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<i64>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<f64>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<String>().ok().map(|text| Value::from(text.clone())))
+        .or_else(|| {
+            value
+                .get::<chrono::DateTime<chrono::Utc>>()
+                .ok()
+                .map(|date| Value::from(*date))
+        })
+        .or_else(|| value.get::<uuid::Uuid>().ok().map(|id| Value::from(*id)))
+        .or_else(|| {
+            value
+                .get::<rust_decimal::Decimal>()
+                .ok()
+                .map(|number| Value::from(*number))
+        })
+        .or_else(|| value.get::<Vec<u8>>().ok().map(|bytes| Value::from(bytes.clone())))
 }
 
 fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
@@ -251,34 +213,24 @@ fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
     }
 }
 
+fn is_column(shape: &'static Shape) -> bool {
+    let shape = if is_option(shape) {
+        match option_inner(shape) {
+            Ok(inner) => inner,
+            Err(_) => return false,
+        }
+    } else {
+        shape
+    };
+    match shape.def {
+        Def::Map(_) => false,
+        Def::List(list) => list.t.type_identifier == "u8",
+        _ => !matches!(shape.ty, Type::User(UserType::Struct(_))),
+    }
+}
+
 fn is_option(shape: &'static Shape) -> bool {
-    matches!(shape.def, Def::Option(_)) || shape.type_identifier == "Option"
-}
-
-fn is_bytes(shape: &'static Shape) -> bool {
-    matches!(shape.def, Def::List(_)) && list_element(shape).is_ok_and(|inner| inner.type_identifier == "u8")
-}
-
-fn is_map(shape: &'static Shape) -> bool {
-    matches!(shape.def, Def::Map(_)) || shape.type_identifier.contains("HashMap")
-}
-
-fn is_list(shape: &'static Shape) -> bool {
-    matches!(shape.def, Def::List(_)) || shape.type_identifier.starts_with("Vec")
-}
-
-fn map_kv(shape: &'static Shape) -> Result<(&'static Shape, &'static Shape)> {
-    match shape.def {
-        Def::Map(map) => Ok((map.k, map.v)),
-        _ => Err(DatasourceError::message(format!("{} is not a map", shape.type_identifier))),
-    }
-}
-
-fn list_element(shape: &'static Shape) -> Result<&'static Shape> {
-    match shape.def {
-        Def::List(list) => Ok(list.t),
-        _ => Err(DatasourceError::message(format!("{} is not a list", shape.type_identifier))),
-    }
+    matches!(shape.def, Def::Option(_))
 }
 
 fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
@@ -288,10 +240,8 @@ fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
     }
 }
 
-fn empty_text_non_string(cell: &Value, inner: &'static Shape) -> bool {
-    matches!(cell, Value::Text(text) if text.is_empty())
-        && ScalarType::try_from_shape(inner) != Some(ScalarType::String)
-        && inner.type_identifier != "String"
+fn reflect(error: impl std::fmt::Display) -> DatasourceError {
+    DatasourceError::message(error.to_string())
 }
 
 #[cfg(test)]
@@ -306,101 +256,40 @@ mod tests {
     }
 
     #[test]
-    fn copies_schema_columns_and_drops_the_rest() {
-        let converter = MetaDataRowTypeConverter::new(vec!["id".into(), "name".into()]);
+    fn copies_every_cell_on_a_row() {
+        let converter = MetaDataRowTypeConverter::new();
         let row = record(&[
             ("id", Value::Int(1)),
             ("name", Value::from("ada")),
             ("extra", Value::from("no")),
         ]);
-        let converted = converter.convert(&row).unwrap();
-        assert_eq!(converted.get("id"), Some(&Value::Int(1)));
-        assert_eq!(converted.get("name"), Some(&Value::from("ada")));
-        assert_eq!(converted.get("extra"), None);
-        assert_eq!(converter.reverse_convert(&converted).unwrap(), converted);
-    }
-
-    #[test]
-    fn empty_schema_copies_every_cell() {
-        let converter = MetaDataRowTypeConverter::new(Vec::new());
-        let row = record(&[("id", Value::Int(1)), ("label", Value::from("a"))]);
         assert_eq!(converter.convert(&row).unwrap(), row);
     }
 
-    #[derive(Clone, Debug, PartialEq, Default, facet::Facet)]
-    #[facet(crate = facet)]
-    struct Priced {
-        score: String,
-    }
+    struct Stamp;
 
-    impl SchemaObject for Priced {}
+    impl TypeConverter<Value, Value> for Stamp {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(match from {
+                Value::Text(text) => Value::from(text.to_uppercase()),
+                other => other.clone(),
+            })
+        }
 
-    #[derive(Clone, Debug, PartialEq, Default, facet::Facet)]
-    #[facet(crate = facet)]
-    struct Keyed {
-        uuid: String,
-    }
-
-    impl SchemaObject for Keyed {}
-
-    #[derive(Clone, Debug, PartialEq, Default, facet::Facet)]
-    #[facet(crate = facet)]
-    struct Counted {
-        id: i32,
-    }
-
-    impl SchemaObject for Counted {}
-
-    #[derive(Clone, Debug, PartialEq, Default, facet::Facet)]
-    #[facet(crate = facet)]
-    struct Dated {
-        created: chrono::DateTime<chrono::Utc>,
-    }
-
-    impl SchemaObject for Dated {}
-
-    #[test]
-    fn coerces_decimal_onto_string() {
-        let converter = MetaDataRowTypeConverter::<Priced>::new(Vec::new());
-        let row = record(&[("score", Value::Decimal("10.50".parse().unwrap()))]);
-        let priced = TypeConverter::convert(&converter, &row).unwrap();
-        assert_eq!(priced.score, "10.50");
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(to.clone())
+        }
     }
 
     #[test]
-    fn coerces_guid_onto_string() {
-        let id = uuid::Uuid::parse_str("54ef41f2-0cb4-4c72-97a7-776fd183f5ed").unwrap();
-        let converter = MetaDataRowTypeConverter::<Keyed>::new(Vec::new());
-        let row = record(&[("uuid", Value::Uuid(id))]);
-        let keyed = TypeConverter::convert(&converter, &row).unwrap();
-        assert_eq!(keyed.uuid, id.to_string());
-    }
-
-    #[test]
-    fn coerces_int_property_when_should_coerce_id() {
-        let converter = MetaDataRowTypeConverter::<Counted>::new(Vec::new());
-        let row = record(&[("id", Value::Int(1))]);
-        assert_eq!(TypeConverter::convert(&converter, &row).unwrap().id, 1);
-        let overflow = record(&[("id", Value::Int(i32::MAX as i64 + 1))]);
-        assert!(TypeConverter::convert(&converter, &overflow).is_err());
-    }
-
-    #[test]
-    fn leaves_int_property_when_cell_is_long() {
-        let mut converter = MetaDataRowTypeConverter::<Counted>::new(Vec::new());
-        converter.should_coerce_id = false;
-        let row = record(&[("id", Value::Int(1))]);
-        assert_eq!(TypeConverter::convert(&converter, &row).unwrap().id, 0);
-    }
-
-    #[test]
-    fn coerces_iso_text_onto_datetime() {
-        let converter = MetaDataRowTypeConverter::<Dated>::new(Vec::new());
-        let row = record(&[("created", Value::from("2020-01-02T03:04:05.000Z"))]);
-        let dated = TypeConverter::convert(&converter, &row).unwrap();
-        assert_eq!(
-            dated.created.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-            "2020-01-02T03:04:05.000Z"
-        );
+    fn field_converter_rewrites_the_cell() {
+        let converter = MetaDataRowTypeConverter::new().with_fields(HashMap::from([(
+            "name".into(),
+            Box::new(Stamp) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+        )]));
+        let converted = converter
+            .convert(&record(&[("name", Value::from("ada"))]))
+            .unwrap();
+        assert_eq!(converted.get("name"), Some(&Value::from("ADA")));
     }
 }

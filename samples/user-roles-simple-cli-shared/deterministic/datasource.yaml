@@ -5,6 +5,8 @@ includes:
 types:
   - base:
       fields:
+        - uuid:
+            include_in_create: false
         - created:
             include_in_create: false
             include_in_update: false
