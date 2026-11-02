@@ -6,23 +6,17 @@ public sealed record AddRole(string Name) : CliCommand
 {
     public override async Task<string> Run(App app)
     {
-        var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
-        var updated = app.Token();
         await WriteRow.Execute(
             app.Command,
             "roles",
             "add_role",
             [
                 new Parameter("name", Name),
-                new Parameter("is_enabled", true),
-                new Parameter("created", created),
-                new Parameter("updated", updated)
+                new Parameter("is_enabled", true)
             ],
             [
                 new Parameter("p_name", Name),
-                new Parameter("p_is_enabled", true),
-                new Parameter("p_created", created),
-                new Parameter("p_updated", updated)
+                new Parameter("p_is_enabled", true)
             ],
             app.Procedures);
         return "";

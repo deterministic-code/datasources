@@ -31,7 +31,7 @@ const run = async (args: string[]): Promise<number> => {
     const frozen = env("CLI_NOW");
     const now = frozen ? () => new Date(frozen) : () => new Date();
     command.addMiddleware(new ConsoleCommandMiddleware((line) => console.error(line), now));
-    process.stdout.write(await new App(command, frozen ? now : undefined).run(parsed));
+    process.stdout.write(await new App(command).run(parsed));
     return 0;
   } catch (error) {
     process.stderr.write(error instanceof Error ? error.message : "Unknown error");

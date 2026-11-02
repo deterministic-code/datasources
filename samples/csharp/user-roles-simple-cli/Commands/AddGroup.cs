@@ -6,8 +6,6 @@ public sealed record AddGroup(string Name) : CliCommand
 {
     public override async Task<string> Run(App app)
     {
-        var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
-        var updated = app.Token();
         var column = Columns.Names.Map("name");
         await WriteRow.Execute(
             app.Command,
@@ -15,15 +13,11 @@ public sealed record AddGroup(string Name) : CliCommand
             "add_group",
             [
                 new Parameter(column, Name),
-                new Parameter("is_enabled", true),
-                new Parameter("created", created),
-                new Parameter("updated", updated)
+                new Parameter("is_enabled", true)
             ],
             [
                 new Parameter("p_name", Name),
-                new Parameter("p_is_enabled", true),
-                new Parameter("p_created", created),
-                new Parameter("p_updated", updated)
+                new Parameter("p_is_enabled", true)
             ],
             app.Procedures);
         return "";

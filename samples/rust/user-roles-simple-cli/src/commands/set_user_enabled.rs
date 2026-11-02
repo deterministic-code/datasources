@@ -5,12 +5,10 @@ use datasources::{
 };
 
 pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<String> {
-    let updated = app.token_bytes();
     if app.use_procedures() && app.provider() == "mysql" {
         let fields = [
             Parameter::new("p_username", username),
             Parameter::new("p_is_enabled", enabled),
-            Parameter::new("p_updated", updated),
         ];
         app.command()
             .execute_statement(
@@ -21,10 +19,7 @@ pub async fn execute(app: &App<'_>, username: &str, enabled: bool) -> Result<Str
         return Ok(String::new());
     }
     let id = lookup_id::of(app.command(), "users", "username", username).await?;
-    let fields = [
-        Parameter::new("is_enabled", enabled),
-        Parameter::new("updated", updated),
-    ];
+    let fields = [Parameter::new("is_enabled", enabled)];
     let where_clause = Where::new(Operator::equals("id", id));
     let mut parameters = fields.to_vec();
     parameters.extend(where_clause.parameters());

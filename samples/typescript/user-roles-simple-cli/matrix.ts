@@ -29,7 +29,7 @@ try {
   command.addMiddleware(
     new ConsoleCommandMiddleware((line) => lines.push(line), now, { isVerbose: "true" }),
   );
-  const app = new App(command, now, () => "hash", () => new Uint8Array([1, 2, 3]), false);
+  const app = new App(command, () => "hash", false);
   for (const step of spec.steps) await app.run(parse(step.argv));
 } finally {
   if (log) {

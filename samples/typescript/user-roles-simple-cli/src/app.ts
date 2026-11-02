@@ -1,4 +1,4 @@
-import type { ICommand, Scalar } from "@deterministic-code/datasources";
+import type { ICommand } from "@deterministic-code/datasources";
 import { addGroup } from "./commands/add-group.ts";
 import { addRole } from "./commands/add-role.ts";
 import { addUser } from "./commands/add-user.ts";
@@ -13,9 +13,7 @@ import { passwordHash } from "./password-hash.ts";
 export class App {
   constructor(
     readonly command: ICommand,
-    readonly now: () => Date = () => new Date(),
     readonly hash: (password: string) => string = passwordHash,
-    readonly token: () => Uint8Array = () => crypto.getRandomValues(new Uint8Array(16)),
     readonly procedures = true,
   ) {}
 
@@ -30,8 +28,4 @@ export class App {
       "disable-user": () => disableUser(this, parsed as Extract<CliCommand, { kind: "disable-user" }>),
       "list-users-roles-groups": () => listUsersRolesGroups(this),
     }[parsed.kind] ?? (() => Promise.reject(new Error("empty command"))))();
-
-  stamp = (): string => this.now().toISOString();
-
-  bytes = (value: Uint8Array): Scalar => Buffer.from(value) as unknown as Scalar;
 }

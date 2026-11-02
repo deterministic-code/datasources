@@ -254,11 +254,7 @@ fn maps_nested_views() {
 async fn writes_sqlite_and_lists() {
     let command = MockCommand::new();
     *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(7))])];
-    let app = App::new(&command, "sqlite").with_clock(
-        || "2026-09-22T00:00:00.000Z".into(),
-        |password| Ok(format!("#{password}")),
-        || vec![1, 2, 3],
-    );
+    let app = App::new(&command, "sqlite").with_hash(|password| Ok(format!("#{password}")));
     app.run(CliCommand::AddUser(AddUser {
         username: "alice".into(),
         password: "secret".into(),
@@ -327,11 +323,7 @@ async fn writes_sqlite_and_lists() {
 async fn writes_mysql_procedures() {
     let command = MockCommand::new();
     *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(1))])];
-    let app = App::new(&command, "mysql").with_clock(
-        || "2026-09-22T00:00:00.000Z".into(),
-        |password| Ok(format!("#{password}")),
-        || vec![1, 2, 3],
-    );
+    let app = App::new(&command, "mysql").with_hash(|password| Ok(format!("#{password}")));
     app.run(CliCommand::AddUser(AddUser {
         username: "alice".into(),
         password: "secret".into(),
@@ -377,11 +369,9 @@ async fn writes_mysql_procedures() {
 async fn mysql_sql_path_inserts_and_updates() {
     let command = MockCommand::new();
     *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(1))])];
-    let app = App::new(&command, "mysql").procedures(false).with_clock(
-        || "2026-09-22T00:00:00.000Z".into(),
-        |password| Ok(format!("#{password}")),
-        || vec![1, 2, 3],
-    );
+    let app = App::new(&command, "mysql")
+        .procedures(false)
+        .with_hash(|password| Ok(format!("#{password}")));
     app.run(CliCommand::AddUser(AddUser {
         username: "alice".into(),
         password: "secret".into(),

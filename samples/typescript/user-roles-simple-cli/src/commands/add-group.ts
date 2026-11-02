@@ -5,8 +5,6 @@ import { writeRow } from "./write-row.ts";
 export type AddGroup = { kind: "add-group"; name: string };
 
 export const addGroup = async (app: App, parsed: AddGroup): Promise<string> => {
-  const created = app.stamp();
-  const updated = app.token();
   const column = columns.map("name");
   await writeRow(
     app.command,
@@ -15,14 +13,10 @@ export const addGroup = async (app: App, parsed: AddGroup): Promise<string> => {
     [
       { name: column, value: parsed.name },
       { name: "is_enabled", value: true },
-      { name: "created", value: created },
-      { name: "updated", value: app.bytes(updated) },
     ],
     [
       { name: "p_name", value: parsed.name },
       { name: "p_is_enabled", value: true },
-      { name: "p_created", value: created },
-      { name: "p_updated", value: app.bytes(updated) },
     ],
     app.procedures,
   );

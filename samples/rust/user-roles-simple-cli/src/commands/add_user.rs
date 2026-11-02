@@ -10,8 +10,6 @@ pub struct AddUser {
 
 impl AddUser {
     pub async fn run(&self, app: &App<'_>) -> Result<String> {
-        let created = app.stamp();
-        let updated = app.token_bytes();
         let hashed = app.hash_password(&self.password)?;
         write_row::execute(
             app.command(),
@@ -22,15 +20,11 @@ impl AddUser {
                 Parameter::new("username", self.username.as_str()),
                 Parameter::new("password", hashed.as_str()),
                 Parameter::new("is_enabled", true),
-                Parameter::new("created", created.as_str()),
-                Parameter::new("updated", updated.clone()),
             ],
             &[
                 Parameter::new("p_username", self.username.as_str()),
                 Parameter::new("p_password", hashed.as_str()),
                 Parameter::new("p_is_enabled", true),
-                Parameter::new("p_created", created.as_str()),
-                Parameter::new("p_updated", updated),
             ],
             app.use_procedures(),
         )

@@ -27,14 +27,11 @@ const driver = (provider: string): IDriver =>
       throw new Error(`unknown provider ${provider}`);
     }))();
 
-const frozen = new Date("2026-09-22T00:00:00.000Z");
-const token = () => new Uint8Array([1, 2, 3]);
-
 const create = (provider: string, procedures = true) => {
   const connection = new MockConnection(undefined, provider);
   const command = new MockCommand(connection);
   connection.command = command;
-  return { app: new App(command, () => frozen, (password) => `#${password}`, token, procedures), command };
+  return { app: new App(command, (password) => `#${password}`, procedures), command };
 };
 
 describe("parse", () => {

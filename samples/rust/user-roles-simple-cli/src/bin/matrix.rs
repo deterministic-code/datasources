@@ -45,10 +45,9 @@ async fn main() {
         )
         .options(HashMap::from([("isVerbose".into(), "true".into())])),
     ));
-    let now = spec.now.clone();
     let app = App::new(command.as_ref(), connection.provider())
         .procedures(false)
-        .with_clock(move || now.clone(), |_| Ok("hash".into()), || vec![1, 2, 3]);
+        .with_hash(|_| Ok("hash".into()));
     let result = async {
         for step in spec.steps {
             app.run(parse::args(&step.argv)?)

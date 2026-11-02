@@ -16,21 +16,15 @@ public static class WriteLink
     {
         var userId = await LookupId.Of(app.Command, "users", "username", username);
         var rightId = await LookupId.Of(app.Command, rightTable, rightColumn, rightValue);
-        var created = app.Now().ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'");
-        var updated = app.Token();
         Parameter[] insert =
         [
             new("user_id", userId),
-            new(linkColumn, rightId),
-            new("created", created),
-            new("updated", updated)
+            new(linkColumn, rightId)
         ];
         Parameter[] call =
         [
             new("p_user_id", userId),
-            new(linkColumn == "bad_role_id" ? "p_role_id" : "p_group_id", rightId),
-            new("p_created", created),
-            new("p_updated", updated)
+            new(linkColumn == "bad_role_id" ? "p_role_id" : "p_group_id", rightId)
         ];
         await WriteRow.Execute(app.Command, linkTable, procedure, insert, call, app.Procedures);
         return "";

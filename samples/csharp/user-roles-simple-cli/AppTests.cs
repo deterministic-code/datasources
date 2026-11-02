@@ -4,9 +4,6 @@ namespace UserRolesSimpleCli.Tests;
 
 public sealed class AppTests
 {
-    static readonly DateTime Frozen = new(2026, 9, 22, 0, 0, 0, DateTimeKind.Utc);
-    static readonly byte[] Token = [1, 2, 3];
-
     [Fact]
     public async Task WritesSqliteInsertsAndLists()
     {
@@ -107,7 +104,7 @@ public sealed class AppTests
         var connection = new MockConnection { Provider = provider };
         var command = new MockCommand(connection);
         connection.Command = command;
-        return (new App(command, () => Frozen, password => $"#{password}", () => Token, procedures), command);
+        return (new App(command, password => $"#{password}", procedures), command);
     }
 
     sealed record FakeCommand : CliCommand

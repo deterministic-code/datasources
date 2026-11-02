@@ -22,9 +22,7 @@ static async Task<int> Run(string[] args)
         command.AddMiddleware(new ConsoleCommandMiddleware(
             Console.Error.WriteLine,
             stamp is null ? null : () => DateTimeOffset.Parse(stamp, null, System.Globalization.DateTimeStyles.RoundtripKind)));
-        Console.Write(await new App(command, stamp is null
-            ? null
-            : () => DateTime.Parse(stamp, null, System.Globalization.DateTimeStyles.RoundtripKind)).Run(parsed));
+        Console.Write(await new App(command).Run(parsed));
         return 0;
     }
     catch (Exception ex)

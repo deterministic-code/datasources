@@ -14,13 +14,9 @@ pub async fn execute(
 ) -> Result<String> {
     let user_id = lookup_id::of(app.command(), "users", "username", username).await?;
     let right_id = lookup_id::of(app.command(), right_table, right_column, right_value).await?;
-    let created = app.stamp();
-    let updated = app.token_bytes();
     let insert = [
         Parameter::new("user_id", user_id),
         Parameter::new(link_column, right_id),
-        Parameter::new("created", created.as_str()),
-        Parameter::new("updated", updated.clone()),
     ];
     let call = [
         Parameter::new("p_user_id", user_id),
@@ -32,8 +28,6 @@ pub async fn execute(
             },
             right_id,
         ),
-        Parameter::new("p_created", created.as_str()),
-        Parameter::new("p_updated", updated),
     ];
     write_row::execute(
         app.command(),

@@ -35,10 +35,6 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
         },
     )));
     let app = App::new(command.as_ref(), ds.provider());
-    let app = match stamp {
-        Some(stamp) => app.with_now(move || stamp.clone()),
-        None => app,
-    };
     print!("{}", app.run(parsed).await?);
     ds.close().await?;
     Ok(())
