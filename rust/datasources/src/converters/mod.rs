@@ -12,7 +12,7 @@ mod type_converter;
 
 pub use change_casing_converter::{Casing, ChangeCasingConverter};
 pub use mapping::Mapping;
-pub use metadata_row_type_converter::MetaDataRowTypeConverter;
+pub use metadata_row_type_converter::{MetaDataRowTypeConverter, SchemaObject};
 pub use pluralizer_converter::PluralizerConverter;
 pub use regex_converter::RegexConverter;
 pub use replace_converter::ReplaceConverter;

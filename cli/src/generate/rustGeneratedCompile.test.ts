@@ -309,13 +309,13 @@ describe("generated rust compiles", () => {
   it("optimistic increment", async () => {
     const texts = await generate(account);
     expect(textOf(texts, "accountRepository.rs")).toContain("pub struct AccountOptimistic");
-    expect(textOf(texts, "accountRepository.rs")).toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(textOf(texts, "accountRepository.rs")).toContain("item.version += 1");
   });
 
   it("optimistic stamp", async () => {
     const texts = await generate(stamp);
     expect(textOf(texts, "stampRepository.rs")).toContain("pub struct StampOptimistic");
-    expect(textOf(texts, "stampRepository.rs")).not.toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(textOf(texts, "stampRepository.rs")).not.toContain("item.version += 1");
   });
 
   it("file names snake", async () => {

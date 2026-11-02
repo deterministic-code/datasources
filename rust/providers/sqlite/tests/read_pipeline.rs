@@ -101,7 +101,7 @@ async fn maps_and_converts_users_through_the_read_pipeline() {
         .map(|row| row_converter.convert(row).unwrap())
         .collect();
 
-    let object_converter = MetaDataRowTypeConverter::new(Vec::new());
+    let object_converter = MetaDataRowTypeConverter::new();
     let final_entities: Vec<Row> = converted_rows
         .iter()
         .map(|row| object_converter.convert(row).unwrap())

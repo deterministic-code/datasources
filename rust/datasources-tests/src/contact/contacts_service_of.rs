@@ -41,7 +41,7 @@ fn open(
     options.row_converter =
         Some(RowTypeConverter::new(stamp_fields(field)));
     options.object_converter = Some(Box::new(
-        MetaDataRowTypeConverter::new(Vec::new())
+        MetaDataRowTypeConverter::new()
             .with_references(references(), Box::new(columns())),
     ));
     let repo = CRUDRepository::<Row>::new(connection, options).expect("contacts repo");

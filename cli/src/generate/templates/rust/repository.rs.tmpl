@@ -92,7 +92,7 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
 }
 {{#optimisticConcurrency}}
 
-use datasources::{async_trait, CommandMiddleware, DatasourceError, FromSchema, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Stream, Value, Where, eq};
+use datasources::{async_trait, CommandMiddleware, DatasourceError, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Stream, Value, Where, eq};
 use std::any::TypeId;
 use std::pin::Pin;
 
@@ -141,20 +141,12 @@ impl ICRUDRepository<{{entityType}}> for {{optimisticClass}} {
         self.repo.create(item).await
     }
 
-    async fn update(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut stored = item.to_schema(self.repo.schema())?;
-        let expected = stored.get("{{property}}").cloned().ok_or_else(|| DatasourceError::message("{{property}}"))?;
-        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/rest}}{{/whereKeys}};
+    async fn update(&self, mut item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        let expected = item.{{property}}.clone();
 {{#increment}}
-        if let Some(value) = stored.get("{{property}}").cloned() {
-            stored.insert("{{property}}".into(), match value {
-                Value::Int(n) => Value::Int(n + 1),
-                Value::Float(n) => Value::Float(n + 1.0),
-                other => other,
-            });
-        }
+        item.{{property}} += 1;
 {{/increment}}
-        let item = {{entityType}}::from_schema(stored, self.repo.schema())?;
+        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, Value::from({{#token}}expected.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}})){{/first}}{{#rest}}.and("{{name}}", eq, Value::from({{#token}}expected.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}}){{/rest}}{{/whereKeys}});
         let response = ICRUDRepository::update(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Update affected {} rows", response.rows_affected)));
@@ -163,9 +155,7 @@ impl ICRUDRepository<{{entityType}}> for {{optimisticClass}} {
     }
 
     async fn delete(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut stored = item.to_schema(self.repo.schema())?;
-        let expected = stored.get("{{property}}").cloned().ok_or_else(|| DatasourceError::message("{{property}}"))?;
-        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/first}}{{#rest}}.and("{{name}}", eq, {{#token}}expected.clone(){{/token}}{{^token}}stored.get("{{name}}").cloned().ok_or_else(|| DatasourceError::message("{{name}}"))?{{/token}}){{/rest}}{{/whereKeys}};
+        let clause = Where::binary({{#whereKeys}}{{#first}}"{{name}}", eq, Value::from({{#token}}item.{{property}}.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}})){{/first}}{{#rest}}.and("{{name}}", eq, Value::from({{#token}}item.{{property}}.clone(){{/token}}{{^token}}item.{{name}}.clone(){{/token}}){{/rest}}{{/whereKeys}});
         let response = ICRUDRepository::delete(&self.repo, item, Some(by_where.unwrap_or(&clause))).await?;
         if response.rows_affected != 1 {
             return Err(DatasourceError::message(format!("Delete affected {} rows", response.rows_affected)));

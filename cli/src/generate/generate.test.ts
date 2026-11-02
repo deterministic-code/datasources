@@ -402,7 +402,7 @@ types:
     expect(typescript).not.toContain("optimisticConcurrency:");
     expect(rust).toContain("pub struct AccountOptimistic");
     expect(rust).not.toContain("{{typeName}}Optimistic");
-    expect(rust).toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(rust).toContain("item.version += 1");
     expect(rust).toContain("rows_affected != 1");
     expect(rust).not.toContain("optimistic_concurrency");
     expect(registry).toContain("AccountOptimistic::new");
@@ -456,7 +456,7 @@ types:
     expect(stampTs).toContain("await update(item,");
     expect(stampTs).not.toContain("Number(expected)");
     expect(stampRs).toContain("pub struct StampOptimistic");
-    expect(stampRs).not.toContain("Value::Int(n) => Value::Int(n + 1)");
+    expect(stampRs).not.toContain("item.version += 1");
     expect(skippedCs).not.toContain("public new async Task<Response> Update");
   });
 

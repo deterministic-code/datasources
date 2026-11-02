@@ -18,3 +18,17 @@ impl TypeConverter<Value, Value> for IntegerConverter {
         Ok(to.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_integer() {
+        let converter = IntegerConverter;
+        assert_eq!(converter.convert(&Value::from("10")).unwrap(), Value::Int(10));
+        assert_eq!(converter.convert(&Value::from("")).unwrap(), Value::Int(0));
+        assert_eq!(converter.convert(&Value::Int(7)).unwrap(), Value::Int(7));
+        assert_eq!(converter.reverse_convert(&Value::Int(7)).unwrap(), Value::Int(7));
+    }
+}

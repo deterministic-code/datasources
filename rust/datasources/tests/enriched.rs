@@ -609,7 +609,7 @@ fn domain_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository 
     options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
     options.property_mappings = Some(std::sync::Arc::new(contact_columns()));
     options.object_converter = Some(Box::new(
-        MetaDataRowTypeConverter::new(Vec::new())
+        MetaDataRowTypeConverter::new()
             .with_references(contact_references(), Box::new(contact_columns())),
     ));
     CRUDRepository::<Row>::new(connection, options).unwrap()

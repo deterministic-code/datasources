@@ -116,7 +116,7 @@ fn contact_repo(
     .collect();
     options.row_converter = Some(RowTypeConverter::new(converters));
     options.object_converter = Some(Box::new(
-        MetaDataRowTypeConverter::new(Vec::new()).with_references(references(), Box::new(columns())),
+        MetaDataRowTypeConverter::new().with_references(references(), Box::new(columns())),
     ));
     CRUDRepository::<Row>::new(connection, options).expect("contacts repo")
 }

@@ -1,26 +1,31 @@
 use crate::converters::type_converter::TypeConverter;
+use crate::datasource_error::DatasourceError;
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
+use facet::{Def, Facet, Field, HasFields, Partial, Peek, ScalarType, Shape, Type, UserType};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
-pub struct MetaDataRowTypeConverter {
-    columns: Vec<String>,
+pub trait SchemaObject: Facet<'static> + Clone + Default + Send + Sync + 'static {}
+
+pub struct MetaDataRowTypeConverter<T = Row> {
     pub fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
     references: Vec<String>,
     reference_columns: Box<dyn Mapper<String, String> + Send + Sync>,
     pub should_coerce_id: bool,
+    entity: PhantomData<T>,
 }
 
-impl MetaDataRowTypeConverter {
-    pub fn new(columns: Vec<String>) -> Self {
+impl<T> MetaDataRowTypeConverter<T> {
+    pub fn new() -> Self {
         Self {
-            columns,
             fields: HashMap::new(),
             references: Vec::new(),
             reference_columns: Box::new(IdentityMapper::new()),
             should_coerce_id: false,
+            entity: PhantomData,
         }
     }
 
@@ -42,6 +47,22 @@ impl MetaDataRowTypeConverter {
         self
     }
 
+    fn converted(&self, key: &str, value: Value, reverse: bool) -> Result<Value> {
+        match self.fields.get(key) {
+            Some(field) if reverse => field.reverse_convert(&value),
+            Some(field) => field.convert(&value),
+            None => Ok(value),
+        }
+    }
+}
+
+impl Default for MetaDataRowTypeConverter<Row> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MetaDataRowTypeConverter<Row> {
     pub fn convert(&self, row: &Row) -> Result<Row> {
         TypeConverter::convert(self, row)
     }
@@ -49,40 +70,178 @@ impl MetaDataRowTypeConverter {
     pub fn reverse_convert(&self, row: &Row) -> Result<Row> {
         TypeConverter::reverse_convert(self, row)
     }
+}
 
-    fn apply(&self, row: &Row, reverse: bool) -> Result<Row> {
-        let names = match self.columns.is_empty() {
-            true => row.keys().cloned().collect(),
-            false => self.columns.clone(),
-        };
-        names
-            .into_iter()
-            .filter_map(|key| row.get(&key).cloned().map(|value| (key, value)))
+impl TypeConverter<Row, Row> for MetaDataRowTypeConverter<Row> {
+    fn convert(&self, from: &Row) -> Result<Row> {
+        from.iter()
+            .map(|(key, value)| Ok((key.clone(), self.converted(key, value.clone(), false)?)))
+            .collect()
+    }
+
+    fn reverse_convert(&self, to: &Row) -> Result<Row> {
+        to.iter()
             .map(|(key, value)| {
-                let cell = match self.fields.get(&key) {
-                    Some(field) if reverse => field.reverse_convert(&value)?,
-                    Some(field) => field.convert(&value)?,
-                    None => value,
-                };
-                let key = if reverse && self.references.iter().any(|name| name == &key) {
-                    Mapper::map(self.reference_columns.as_ref(), key)
+                let key = if self.references.iter().any(|name| name == key) {
+                    Mapper::map(self.reference_columns.as_ref(), key.clone())
                 } else {
-                    key
+                    key.clone()
                 };
-                Ok((key, cell))
+                Ok((key.clone(), self.converted(&key, value.clone(), true)?))
             })
             .collect()
     }
 }
 
-impl TypeConverter<Row, Row> for MetaDataRowTypeConverter {
-    fn convert(&self, from: &Row) -> Result<Row> {
-        self.apply(from, false)
+impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
+    fn convert(&self, from: &Row) -> Result<T> {
+        let mut partial = Partial::alloc::<T>().map_err(reflect)?;
+        for (index, field) in struct_fields(T::SHAPE)?.iter().enumerate() {
+            let cell = from
+                .get(field.name)
+                .cloned()
+                .map(|value| self.converted(field.name, value, false))
+                .transpose()?;
+            partial = match (is_column(field.shape()), cell.as_ref()) {
+                (true, Some(cell)) if *cell != Value::Null => {
+                    set_field(partial, field.name, cell, field.shape(), self.should_coerce_id)?
+                }
+                _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
+            };
+        }
+        partial.build().map_err(reflect)?.materialize().map_err(reflect)
     }
 
-    fn reverse_convert(&self, to: &Row) -> Result<Row> {
-        self.apply(to, true)
+    fn reverse_convert(&self, to: &T) -> Result<Row> {
+        let mut row = Row::new();
+        for (field, value) in Peek::new(to).into_struct().map_err(reflect)?.fields() {
+            if !is_column(field.shape()) {
+                continue;
+            }
+            if let Some(cell) = peek_value(value) {
+                row.insert(
+                    field.name.to_string(),
+                    self.converted(field.name, cell, true)?,
+                );
+            }
+        }
+        Ok(row)
     }
+}
+
+fn set_field<'a>(
+    partial: Partial<'a>,
+    name: &str,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+) -> Result<Partial<'a>> {
+    let partial = partial.begin_field(name).map_err(reflect)?;
+    let partial = if is_option(shape) {
+        set_value(
+            partial.begin_some().map_err(reflect)?,
+            cell,
+            option_inner(shape)?,
+            coerce_id,
+        )?
+        .end()
+        .map_err(reflect)?
+    } else {
+        set_value(partial, cell, shape, coerce_id)?
+    };
+    partial.end().map_err(reflect)
+}
+
+fn set_value<'a>(
+    partial: Partial<'a>,
+    cell: &Value,
+    shape: &'static Shape,
+    coerce_id: bool,
+) -> Result<Partial<'a>> {
+    let set = match cell {
+        Value::Bool(flag) => partial.set(*flag),
+        Value::Int(n) if coerce_id && ScalarType::try_from_shape(shape) == Some(ScalarType::I32) => {
+            partial.set(*n as i32)
+        }
+        Value::Int(n) => partial.set(*n),
+        Value::Float(n) => partial.set(*n),
+        Value::Text(text) => partial.set(text.clone()),
+        Value::DateTime(date) => partial.set(*date),
+        Value::Uuid(id) => partial.set(*id),
+        Value::Decimal(number) => partial.set(*number),
+        Value::Binary(bytes) => partial.set(bytes.clone()),
+        Value::Null => partial.set_default(),
+    };
+    set.map_err(reflect)
+}
+
+fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
+    if let Ok(option) = value.into_option() {
+        return match option.value() {
+            Some(inner) => peek_value(inner),
+            None => Some(Value::Null),
+        };
+    }
+    value
+        .get::<bool>()
+        .ok()
+        .map(|flag| Value::from(*flag))
+        .or_else(|| value.get::<i32>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<i64>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<f64>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<String>().ok().map(|text| Value::from(text.clone())))
+        .or_else(|| {
+            value
+                .get::<chrono::DateTime<chrono::Utc>>()
+                .ok()
+                .map(|date| Value::from(*date))
+        })
+        .or_else(|| value.get::<uuid::Uuid>().ok().map(|id| Value::from(*id)))
+        .or_else(|| {
+            value
+                .get::<rust_decimal::Decimal>()
+                .ok()
+                .map(|number| Value::from(*number))
+        })
+        .or_else(|| value.get::<Vec<u8>>().ok().map(|bytes| Value::from(bytes.clone())))
+}
+
+fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
+    match shape.ty {
+        Type::User(UserType::Struct(st)) => Ok(st.fields),
+        _ => Err(DatasourceError::message(format!("{} is not a struct", shape.type_identifier))),
+    }
+}
+
+fn is_column(shape: &'static Shape) -> bool {
+    let shape = if is_option(shape) {
+        match option_inner(shape) {
+            Ok(inner) => inner,
+            Err(_) => return false,
+        }
+    } else {
+        shape
+    };
+    match shape.def {
+        Def::Map(_) => false,
+        Def::List(list) => list.t.type_identifier == "u8",
+        _ => !matches!(shape.ty, Type::User(UserType::Struct(_))),
+    }
+}
+
+fn is_option(shape: &'static Shape) -> bool {
+    matches!(shape.def, Def::Option(_))
+}
+
+fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
+    match shape.def {
+        Def::Option(option) => Ok(option.t()),
+        _ => Err(DatasourceError::message(format!("{} is not an option", shape.type_identifier))),
+    }
+}
+
+fn reflect(error: impl std::fmt::Display) -> DatasourceError {
+    DatasourceError::message(error.to_string())
 }
 
 #[cfg(test)]
@@ -97,24 +256,40 @@ mod tests {
     }
 
     #[test]
-    fn copies_schema_columns_and_drops_the_rest() {
-        let converter = MetaDataRowTypeConverter::new(vec!["id".into(), "name".into()]);
+    fn copies_every_cell_on_a_row() {
+        let converter = MetaDataRowTypeConverter::new();
         let row = record(&[
             ("id", Value::Int(1)),
             ("name", Value::from("ada")),
             ("extra", Value::from("no")),
         ]);
-        let converted = converter.convert(&row).unwrap();
-        assert_eq!(converted.get("id"), Some(&Value::Int(1)));
-        assert_eq!(converted.get("name"), Some(&Value::from("ada")));
-        assert_eq!(converted.get("extra"), None);
-        assert_eq!(converter.reverse_convert(&converted).unwrap(), converted);
+        assert_eq!(converter.convert(&row).unwrap(), row);
+    }
+
+    struct Stamp;
+
+    impl TypeConverter<Value, Value> for Stamp {
+        fn convert(&self, from: &Value) -> Result<Value> {
+            Ok(match from {
+                Value::Text(text) => Value::from(text.to_uppercase()),
+                other => other.clone(),
+            })
+        }
+
+        fn reverse_convert(&self, to: &Value) -> Result<Value> {
+            Ok(to.clone())
+        }
     }
 
     #[test]
-    fn empty_schema_copies_every_cell() {
-        let converter = MetaDataRowTypeConverter::new(Vec::new());
-        let row = record(&[("id", Value::Int(1)), ("label", Value::from("a"))]);
-        assert_eq!(converter.convert(&row).unwrap(), row);
+    fn field_converter_rewrites_the_cell() {
+        let converter = MetaDataRowTypeConverter::new().with_fields(HashMap::from([(
+            "name".into(),
+            Box::new(Stamp) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+        )]));
+        let converted = converter
+            .convert(&record(&[("name", Value::from("ada"))]))
+            .unwrap();
+        assert_eq!(converted.get("name"), Some(&Value::from("ADA")));
     }
 }

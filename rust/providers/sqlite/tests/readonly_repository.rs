@@ -721,7 +721,7 @@ mod user_crud {
             ("Version".into(), "binary".into()),
         ]));
         users_options.object_converter = Some(Box::new(
-            MetaDataRowTypeConverter::new(Vec::new()).with_references(
+            MetaDataRowTypeConverter::new().with_references(
                 vec!["UserType".into()],
                 Box::new(DictionaryMapper::new([
                     ("Key".to_string(), "id".to_string()),
