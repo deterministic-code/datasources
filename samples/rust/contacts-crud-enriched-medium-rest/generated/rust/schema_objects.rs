@@ -28,3 +28,4 @@ impl SchemaObject for LegacyContact {}
 impl SchemaObject for LocalePreferences {}
 
 impl SchemaObject for PhoneType {}
+

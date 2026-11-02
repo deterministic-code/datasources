@@ -1,4 +1,4 @@
-use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, Value, Result};
+use datasources::{Association, Connection, CRUDRepository, CRUDRepositoryBuilder, CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
 use super::super::Address;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -11,117 +11,151 @@ pub struct AddressRepository {
 
 impl AddressRepository {
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
-        let options = CRUDRepositoryBuilder::new()
-            .add({
-                let mut options = CRUDRepositoryOptions::default();
-                options.entity = "Address".into();
-                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                    ("Address".into(), "address_bases".into()),
-                ])));
-                options.schema = Schema::new(HashMap::from([
-                        ("id".into(), "integer".into()),
-                        ("uuid".into(), "uuid".into()),
-                        ("created".into(), "datetime".into()),
-                        ("updated".into(), "datetime".into()),
-                        ("version".into(), "binary".into()),
-                        ("latitude".into(), "integer".into()),
-                        ("floor".into(), "unsignedinteger".into()),
-                        ("score".into(), "decimal".into()),
-                        ("external_id".into(), "uuid".into()),
-                        ("is_verified".into(), "boolean".into()),
-                        ("verified_at".into(), "datetime".into()),
-                        ("stamp".into(), "binary".into()),
-                    ]));
-                options.ids = vec!["id".into()];
-                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-                options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options
-            })
-            .add_for("sqlite", {
-                let mut options = CRUDRepositoryOptions::default();
-                options.entity = "Address".into();
-                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                    ("Address".into(), "addresses".into()),
-                ])));
-                options.schema = Schema::new(HashMap::from([
-                        ("id".into(), "integer".into()),
-                        ("uuid".into(), "uuid".into()),
-                        ("created".into(), "datetime".into()),
-                        ("updated".into(), "datetime".into()),
-                        ("version".into(), "binary".into()),
-                        ("latitude".into(), "integer".into()),
-                        ("floor".into(), "unsignedinteger".into()),
-                        ("score".into(), "decimal".into()),
-                        ("external_id".into(), "uuid".into()),
-                        ("is_verified".into(), "boolean".into()),
-                        ("verified_at".into(), "datetime".into()),
-                        ("stamp".into(), "binary".into()),
-                    ]));
-                options.ids = vec!["id".into()];
-                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-                options.create_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options
-            })
-            .add_for("mysql", {
-                let mut options = CRUDRepositoryOptions::default();
-                options.entity = "Address".into();
-                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                    ("Address".into(), "addresses".into()),
-                ])));
-                options.schema = Schema::new(HashMap::from([
-                        ("id".into(), "integer".into()),
-                        ("uuid".into(), "uuid".into()),
-                        ("created".into(), "datetime".into()),
-                        ("updated".into(), "datetime".into()),
-                        ("version".into(), "binary".into()),
-                        ("latitude".into(), "integer".into()),
-                        ("floor".into(), "unsignedinteger".into()),
-                        ("score".into(), "decimal".into()),
-                        ("external_id".into(), "uuid".into()),
-                        ("is_verified".into(), "boolean".into()),
-                        ("verified_at".into(), "datetime".into()),
-                        ("stamp".into(), "binary".into()),
-                    ]));
-                options.ids = vec!["id".into()];
-                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-                options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options
-            })
-            .add_for("postgres", {
-                let mut options = CRUDRepositoryOptions::default();
-                options.entity = "Address".into();
-                options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                    ("Address".into(), "addresses".into()),
-                ])));
-                options.schema = Schema::new(HashMap::from([
-                        ("id".into(), "integer".into()),
-                        ("uuid".into(), "uuid".into()),
-                        ("created".into(), "datetime".into()),
-                        ("updated".into(), "datetime".into()),
-                        ("version".into(), "binary".into()),
-                        ("latitude".into(), "integer".into()),
-                        ("floor".into(), "unsignedinteger".into()),
-                        ("score".into(), "decimal".into()),
-                        ("external_id".into(), "uuid".into()),
-                        ("is_verified".into(), "boolean".into()),
-                        ("verified_at".into(), "datetime".into()),
-                        ("stamp".into(), "binary".into()),
-                    ]));
-                options.ids = vec!["id".into()];
-                options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-                options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-                options
-            })
-            .for_connection(connection.as_ref())?;
+    let options = CRUDRepositoryBuilder::new()
+    .add({
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "address_bases".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .add_for("sqlite", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "addresses".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .add_for("mysql", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "addresses".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .add_for("postgres", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "addresses".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .for_connection(connection.as_ref())?;
+
         let address_type = Arc::new(super::addressTypeRepository::address_type_row_repository(Arc::clone(&connection))?);
-        let mut repo = CRUDRepository::<Address>::new(Arc::clone(&connection), options).map(|repo| repo.with_create_zeros([
-        ("line1".into(), Value::from("")),
-        ("city".into(), Value::from("")),
-    ].into_iter().collect()))?;
+        let mut repo = CRUDRepository::<Address>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), Arc::clone(&address_type), None);
         Ok(Self { repo: Arc::new(repo), address_type })
     }
@@ -140,111 +174,148 @@ pub fn address_repository(connection: Arc<dyn Connection>) -> Result<CRUDReposit
 
 pub fn address_row_repository(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
     let options = CRUDRepositoryBuilder::new()
-        .add({
-            let mut options = CRUDRepositoryOptions::default();
-            options.entity = "Address".into();
-            options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                ("Address".into(), "address_bases".into()),
-            ])));
-            options.schema = Schema::new(HashMap::from([
-                    ("id".into(), "integer".into()),
-                    ("uuid".into(), "uuid".into()),
-                    ("created".into(), "datetime".into()),
-                    ("updated".into(), "datetime".into()),
-                    ("version".into(), "binary".into()),
-                    ("latitude".into(), "integer".into()),
-                    ("floor".into(), "unsignedinteger".into()),
-                    ("score".into(), "decimal".into()),
-                    ("external_id".into(), "uuid".into()),
-                    ("is_verified".into(), "boolean".into()),
-                    ("verified_at".into(), "datetime".into()),
-                    ("stamp".into(), "binary".into()),
-                ]));
-            options.ids = vec!["id".into()];
-            options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-            options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options
-        })
-        .add_for("sqlite", {
-            let mut options = CRUDRepositoryOptions::default();
-            options.entity = "Address".into();
-            options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                ("Address".into(), "addresses".into()),
-            ])));
-            options.schema = Schema::new(HashMap::from([
-                    ("id".into(), "integer".into()),
-                    ("uuid".into(), "uuid".into()),
-                    ("created".into(), "datetime".into()),
-                    ("updated".into(), "datetime".into()),
-                    ("version".into(), "binary".into()),
-                    ("latitude".into(), "integer".into()),
-                    ("floor".into(), "unsignedinteger".into()),
-                    ("score".into(), "decimal".into()),
-                    ("external_id".into(), "uuid".into()),
-                    ("is_verified".into(), "boolean".into()),
-                    ("verified_at".into(), "datetime".into()),
-                    ("stamp".into(), "binary".into()),
-                ]));
-            options.ids = vec!["id".into()];
-            options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-            options.create_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options
-        })
-        .add_for("mysql", {
-            let mut options = CRUDRepositoryOptions::default();
-            options.entity = "Address".into();
-            options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                ("Address".into(), "addresses".into()),
-            ])));
-            options.schema = Schema::new(HashMap::from([
-                    ("id".into(), "integer".into()),
-                    ("uuid".into(), "uuid".into()),
-                    ("created".into(), "datetime".into()),
-                    ("updated".into(), "datetime".into()),
-                    ("version".into(), "binary".into()),
-                    ("latitude".into(), "integer".into()),
-                    ("floor".into(), "unsignedinteger".into()),
-                    ("score".into(), "decimal".into()),
-                    ("external_id".into(), "uuid".into()),
-                    ("is_verified".into(), "boolean".into()),
-                    ("verified_at".into(), "datetime".into()),
-                    ("stamp".into(), "binary".into()),
-                ]));
-            options.ids = vec!["id".into()];
-            options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-            options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options
-        })
-        .add_for("postgres", {
-            let mut options = CRUDRepositoryOptions::default();
-            options.entity = "Address".into();
-            options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-                ("Address".into(), "addresses".into()),
-            ])));
-            options.schema = Schema::new(HashMap::from([
-                    ("id".into(), "integer".into()),
-                    ("uuid".into(), "uuid".into()),
-                    ("created".into(), "datetime".into()),
-                    ("updated".into(), "datetime".into()),
-                    ("version".into(), "binary".into()),
-                    ("latitude".into(), "integer".into()),
-                    ("floor".into(), "unsignedinteger".into()),
-                    ("score".into(), "decimal".into()),
-                    ("external_id".into(), "uuid".into()),
-                    ("is_verified".into(), "boolean".into()),
-                    ("verified_at".into(), "datetime".into()),
-                    ("stamp".into(), "binary".into()),
-                ]));
-            options.ids = vec!["id".into()];
-            options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
-            options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
-            options
-        })
-        .for_connection(connection.as_ref())?;
+    .add({
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "address_bases".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .add_for("sqlite", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "addresses".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .add_for("mysql", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "addresses".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .add_for("postgres", {
+        let mut options = CRUDRepositoryOptions::default();
+        options.entity = "Address".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("Address".into(), "addresses".into()),
+        ])));
+        options.schema = Schema::new(HashMap::from([
+            ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+            ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+            ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+            ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+            ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+            ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+            ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+            ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+            ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+            ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+            ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+            ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+            ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+            ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ]));
+        options.ids = vec!["id".into()];
+        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        options.create_properties = Some(vec!["latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options.update_properties = Some(vec!["uuid".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()]);
+        options
+    })
+    .for_connection(connection.as_ref())?;
+
         let address_type = Arc::new(super::addressTypeRepository::address_type_row_repository(Arc::clone(&connection))?);
         let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), Arc::clone(&address_type), None);
@@ -258,20 +329,29 @@ pub fn address_readonly_repository(connection: Arc<dyn Connection>) -> Result<Re
         ("Address".into(), "address_bases".into()),
     ])));
     options.schema = Schema::new(HashMap::from([
-            ("id".into(), "integer".into()),
-            ("uuid".into(), "uuid".into()),
-            ("created".into(), "datetime".into()),
-            ("updated".into(), "datetime".into()),
-            ("version".into(), "binary".into()),
-            ("latitude".into(), "integer".into()),
-            ("floor".into(), "unsignedinteger".into()),
-            ("score".into(), "decimal".into()),
-            ("external_id".into(), "uuid".into()),
-            ("is_verified".into(), "boolean".into()),
-            ("verified_at".into(), "datetime".into()),
-            ("stamp".into(), "binary".into()),
-        ]));
-        options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
+        ("id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+        ("uuid".into(), SchemaColumn { type_name: "uuid".into(), nullable: false, has_default: true }),
+        ("created".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+        ("updated".into(), SchemaColumn { type_name: "datetime".into(), nullable: false, has_default: true }),
+        ("version".into(), SchemaColumn { type_name: "binary".into(), nullable: false, has_default: true }),
+        ("latitude".into(), SchemaColumn { type_name: "integer".into(), nullable: true, has_default: false }),
+        ("label_note".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ("floor".into(), SchemaColumn { type_name: "unsignedinteger".into(), nullable: true, has_default: false }),
+        ("score".into(), SchemaColumn { type_name: "decimal".into(), nullable: true, has_default: false }),
+        ("external_id".into(), SchemaColumn { type_name: "uuid".into(), nullable: true, has_default: false }),
+        ("is_verified".into(), SchemaColumn { type_name: "boolean".into(), nullable: true, has_default: false }),
+        ("verified_at".into(), SchemaColumn { type_name: "datetime".into(), nullable: true, has_default: false }),
+        ("stamp".into(), SchemaColumn { type_name: "binary".into(), nullable: true, has_default: false }),
+        ("contact_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+        ("address_type_id".into(), SchemaColumn { type_name: "integer".into(), nullable: false, has_default: false }),
+        ("line1".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+        ("line2".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ("city".into(), SchemaColumn { type_name: "string".into(), nullable: false, has_default: false }),
+        ("region".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ("postal_code".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+        ("country".into(), SchemaColumn { type_name: "string".into(), nullable: true, has_default: false }),
+    ]));
+    options.read_properties = vec!["id".into(), "uuid".into(), "created".into(), "updated".into(), "version".into(), "latitude".into(), "label_note".into(), "floor".into(), "score".into(), "external_id".into(), "is_verified".into(), "verified_at".into(), "stamp".into(), "contact_id".into(), "address_type_id".into(), "line1".into(), "line2".into(), "city".into(), "region".into(), "postal_code".into(), "country".into()];
         let address_type = Arc::new(super::addressTypeRepository::address_type_row_repository(Arc::clone(&connection))?);
         let mut repo = ReadonlyRepository::<Address>::new(connection, options)?;
         repo.add_enriched(Enrichment::new("address_type_name", "address_type_id", "id", Some("name".into()), EnrichmentPropertyType::Object), Arc::clone(&address_type), None);

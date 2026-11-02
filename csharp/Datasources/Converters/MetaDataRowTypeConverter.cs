@@ -107,6 +107,8 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             return System.Convert.ChangeType(raw, type);
         if (type == typeof(string) && raw is System.Guid fromGuid)
             return fromGuid.ToString();
+        if (type == typeof(string) && raw is decimal number)
+            return number.ToString(CultureInfo.InvariantCulture);
         if (type == typeof(System.Guid) && raw is string guidText && System.Guid.TryParse(guidText, out var parsed))
             return parsed;
         if (type == typeof(System.DateTime) && raw is string dateText

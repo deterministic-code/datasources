@@ -18,13 +18,13 @@ pub struct ContactsService {
 
 impl ContactsService {
     pub fn new(
-        mut contacts: CRUDRepository,
+        contacts: CRUDRepository,
         types: Arc<dyn IReadonlyRepository>,
         sources: Arc<dyn IReadonlyRepository>,
         address_types: Arc<dyn IReadonlyRepository>,
         phone_types: Arc<dyn IReadonlyRepository>,
-        mut addresses: CRUDRepository,
-        mut phones: CRUDRepository,
+        addresses: CRUDRepository,
+        phones: CRUDRepository,
     ) -> Self {
         addresses.add_enriched(
             crate::enrichment::Enrichment::new(

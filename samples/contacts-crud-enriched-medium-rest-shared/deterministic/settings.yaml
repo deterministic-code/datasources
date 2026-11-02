@@ -5,3 +5,6 @@ settings:
     typescript:
       casing:
         fields: camel
+    rust:
+      casing:
+        file_names: snake

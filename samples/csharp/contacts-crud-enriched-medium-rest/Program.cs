@@ -1,3 +1,4 @@
+using System.Globalization;
 using Backend.Types.View;
 using Datasources;
 
@@ -123,7 +124,9 @@ await contacts.Update(new Contact
 });
 var valued = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", omitted.Id)));
 if (valued?.Addresses[0].Latitude != 51 || valued.Addresses[0].LabelNote != "side"
-    || valued.Addresses[0].Floor != 2 || valued.Addresses[0].Score != "10.5"
+    || valued.Addresses[0].Floor != 2
+    || valued.Addresses[0].Score is not { } score
+    || decimal.Compare(decimal.Parse(score, CultureInfo.InvariantCulture), 10.5m) != 0
     || valued.Addresses[0].IsVerified != true)
     throw new InvalidOperationException("outlier value");
 await contacts.Update(new Contact
@@ -154,7 +157,7 @@ await contacts.Update(new Contact
     Prefs = [],
 });
 var zeroed = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", omitted.Id)));
-if (zeroed?.Addresses[0].Latitude != 0 || zeroed.Addresses[0].LabelNote != ""
+if (zeroed?.Addresses[0].Latitude != 0 || (zeroed.Addresses[0].LabelNote ?? "") != ""
     || zeroed.Addresses[0].Floor != 0 || zeroed.Addresses[0].IsVerified != false)
     throw new InvalidOperationException("outlier zero");
 

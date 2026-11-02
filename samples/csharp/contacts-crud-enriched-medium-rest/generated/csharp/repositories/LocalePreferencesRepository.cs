@@ -20,5 +20,10 @@ public sealed class LocalePreferencesRepository : CRUDRepository<Backend.Types.V
         ReadProperties = ["Locale", "Timezone"],
         CreateProperties = ["Locale", "Timezone"],
         UpdateProperties = ["Locale", "Timezone"],
+        Schema = new(new Dictionary<string, SchemaColumn>
+        {
+            ["Locale"] = new("string", false, false),
+            ["Timezone"] = new("string", false, false),
+        }),
     };
 }

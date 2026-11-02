@@ -5,33 +5,33 @@ use crate::default_create_enrichment_strategy::DefaultCreateEnrichmentStrategy;
 use crate::default_update_enrichment_strategy::DefaultUpdateEnrichmentStrategy;
 use crate::delete_enrichment_strategy::DeleteEnrichmentStrategy;
 use crate::enrichment::Enrichment;
+use crate::from_schema::FromSchema;
 use crate::repository_tree::RepositoryTree;
 use crate::result::Result;
 use crate::row::Row;
-use crate::stored_enrichment::StoredEnrichment;
+use crate::schema::Schema;
+use crate::stored_enrichment::WriteEnrichment;
 use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
 use async_trait::async_trait;
 use std::collections::HashSet;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 
-pub struct DefaultWriteEnrichmentStrategy {
-    create: Arc<dyn CreateEnrichmentStrategy>,
-    delete: Arc<dyn DeleteEnrichmentStrategy>,
-    update: Arc<dyn UpdateEnrichmentStrategy>,
+pub struct DefaultWriteEnrichmentStrategy<T: FromSchema = Row> {
+    create: Arc<dyn CreateEnrichmentStrategy<T>>,
+    delete: Arc<dyn DeleteEnrichmentStrategy<T>>,
+    update: Arc<dyn UpdateEnrichmentStrategy<T>>,
     skip_unloaded: bool,
     use_transaction: bool,
 }
 
-impl DefaultWriteEnrichmentStrategy {
+impl<T: FromSchema> DefaultWriteEnrichmentStrategy<T> {
     pub fn new(
-        delete: Option<Arc<dyn DeleteEnrichmentStrategy>>,
-        update: Option<Arc<dyn UpdateEnrichmentStrategy>>,
-        create: Option<Arc<dyn CreateEnrichmentStrategy>>,
+        delete: Option<Arc<dyn DeleteEnrichmentStrategy<T>>>,
+        update: Option<Arc<dyn UpdateEnrichmentStrategy<T>>>,
+        create: Option<Arc<dyn CreateEnrichmentStrategy<T>>>,
         use_transaction: bool,
     ) -> Self {
         Self {
@@ -44,9 +44,9 @@ impl DefaultWriteEnrichmentStrategy {
     }
 
     pub fn lazy(
-        delete: Option<Arc<dyn DeleteEnrichmentStrategy>>,
-        update: Option<Arc<dyn UpdateEnrichmentStrategy>>,
-        create: Option<Arc<dyn CreateEnrichmentStrategy>>,
+        delete: Option<Arc<dyn DeleteEnrichmentStrategy<T>>>,
+        update: Option<Arc<dyn UpdateEnrichmentStrategy<T>>>,
+        create: Option<Arc<dyn CreateEnrichmentStrategy<T>>>,
         use_transaction: bool,
     ) -> Self {
         Self {
@@ -56,60 +56,43 @@ impl DefaultWriteEnrichmentStrategy {
     }
 }
 
-impl Default for DefaultWriteEnrichmentStrategy {
+impl<T: FromSchema> Default for DefaultWriteEnrichmentStrategy<T> {
     fn default() -> Self {
         Self::new(None, None, None, false)
     }
 }
 
 #[async_trait]
-impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
+impl<T: FromSchema> WriteEnrichmentStrategy<T> for DefaultWriteEnrichmentStrategy<T> {
     fn use_transaction(&self) -> bool {
         self.use_transaction
     }
 
-    async fn resolve_lookups(&self, tree: &RepositoryTree, items: &mut [Row]) -> Result<()> {
+    async fn resolve_lookups(&self, tree: &RepositoryTree<T>, items: &mut [T]) -> Result<()> {
         let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
         for item in items.iter_mut() {
             for entry in &entries {
                 let enrichment = &entry.enrichment;
                 if enrichment.r#type != crate::EnrichmentPropertyType::Object
                     || enrichment.association.is_some()
+                    || enrichment.related_property.is_none()
                 {
                     continue;
                 }
-                let Some(related) = enrichment.related_property.as_deref() else {
+                let row = field_row(item)?;
+                let Some(name) = row.get(&enrichment.destination_property).filter(|value| !missing(value)) else {
                     continue;
                 };
-                let Some(name) = item.get(&enrichment.destination_property).filter(|value| !missing(value)) else {
-                    continue;
-                };
-                if item
+                if row
                     .get(&enrichment.source_property)
                     .is_some_and(|value| !missing(value))
                 {
                     continue;
                 }
-                let found = entry
-                    .via
-                    .read_single(&crate::Where::new(crate::Operator::equals(
-                            related,
-                            name.clone(),
-                        )))
-                    .await?;
-                let id = found
-                    .as_ref()
-                    .and_then(|row| row.get(&enrichment.related_key))
-                    .filter(|value| !missing(value))
-                    .cloned()
-                    .ok_or_else(|| {
-                        DatasourceError::message(format!(
-                            "Unknown {} \"{}\"",
-                            enrichment.destination_property,
-                            name.wire_text()
-                        ))
-                    })?;
-                item.insert(enrichment.source_property.clone(), id);
+                let _ = name;
+                if let Some(lookup) = &entry.lookup {
+                    lookup(item).await?;
+                }
             }
         }
         Ok(())
@@ -117,216 +100,143 @@ impl WriteEnrichmentStrategy for DefaultWriteEnrichmentStrategy {
 
     async fn persist(
         &self,
-        tree: &RepositoryTree,
-        items: &mut [Row],
+        tree: &RepositoryTree<T>,
+        items: &mut [T],
         mode: WriteMode,
     ) -> Result<()> {
         let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
-        self.walk(&entries, items, mode).await
+        for entry in &entries {
+            self.persist_entry(entry, items, mode).await?;
+        }
+        Ok(())
     }
 
     async fn persist_bulk(
         &self,
-        tree: &RepositoryTree,
-        items: &mut [Row],
+        tree: &RepositoryTree<T>,
+        items: &mut [T],
         mode: WriteMode,
     ) -> Result<()> {
         if mode == WriteMode::Delete {
             return self.persist(tree, items, mode).await;
         }
         let entries = tree.parent.enrichments.lock().expect("enrichments").clone();
-        self.walk_bulk(&entries, items, mode).await
-    }
-}
-
-impl DefaultWriteEnrichmentStrategy {
-    fn walk<'a>(
-        &'a self,
-        entries: &'a [StoredEnrichment],
-        parents: &'a mut [Row],
-        mode: WriteMode,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            for entry in entries {
-                self.persist_entry(entry, parents, mode).await?;
-            }
-            Ok(())
-        })
-    }
-
-    fn walk_bulk<'a>(
-        &'a self,
-        entries: &'a [StoredEnrichment],
-        parents: &'a mut [Row],
-        mode: WriteMode,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            for entry in entries {
-                self.persist_entry_bulk(entry, parents, mode).await?;
-            }
-            Ok(())
-        })
-    }
-
-    fn persist_entry_bulk<'a>(
-        &'a self,
-        entry: &'a StoredEnrichment,
-        parents: &'a mut [Row],
-        mode: WriteMode,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
+        for entry in &entries {
             let enrichment = &entry.enrichment;
-            if matches!(enrichment.r#type, crate::EnrichmentPropertyType::Custom) {
-                return Err(DatasourceError::message(format!(
-                    "Unsupported enrichment type \"{:?}\"",
-                    enrichment.r#type
-                )));
-            }
-            if enrichment.association.is_some() {
-                return self.persist_entry(entry, parents, mode).await;
-            }
-            if enrichment.r#type == crate::EnrichmentPropertyType::List
-                && enrichment.related_property.is_some()
+            if enrichment.association.is_some()
+                || (enrichment.r#type == crate::EnrichmentPropertyType::List
+                    && enrichment.related_property.is_some())
+                || (enrichment.r#type != crate::EnrichmentPropertyType::List
+                    && enrichment.r#type != crate::EnrichmentPropertyType::Dictionary)
             {
-                return Ok(());
+                self.persist_entry(entry, items, mode).await?;
+                continue;
             }
-            if enrichment.r#type != crate::EnrichmentPropertyType::List
-                && enrichment.r#type != crate::EnrichmentPropertyType::Dictionary
-            {
-                return Ok(());
-            }
+            let Some(writes) = &entry.persist else {
+                self.persist_entry(entry, items, mode).await?;
+                continue;
+            };
             let mut children = Vec::new();
-            for parent in parents.iter() {
-                if self.skip(parent, &enrichment.destination_property, mode) {
+            for parent in items.iter() {
+                if self.skip(parent, &enrichment.destination_property, mode)? {
                     continue;
                 }
                 children.extend(collect_children(parent, enrichment)?);
             }
             if children.is_empty() {
-                return Ok(());
+                continue;
             }
-            if let Some(bulk) = &entry.persist_bulk {
-                return match mode {
-                    WriteMode::Create => bulk.create_bulk(&mut children).await.map(|_| ()),
-                    WriteMode::Update => bulk.update_bulk(&children, None).await.map(|_| ()),
-                    WriteMode::Delete => Ok(()),
-                };
+            if !writes.write_collected(&mut children, mode).await? {
+                self.persist_entry(entry, items, mode).await?;
             }
-            let writer = entry.persist.as_ref().ok_or_else(|| {
-                DatasourceError::message(format!(
-                    "Deep write requires a CRUD repository for \"{}\"",
-                    enrichment.destination_property
-                ))
-            })?;
-            for row in &mut children {
-                match mode {
-                    WriteMode::Create => {
-                        *row = writer.create(row.clone()).await?;
-                    }
-                    WriteMode::Update => {
-                        writer.update(row.clone(), None).await?;
-                    }
-                    WriteMode::Delete => {}
-                }
-            }
-            Ok(())
-        })
+        }
+        Ok(())
     }
+}
 
-    fn persist_entry<'a>(
-        &'a self,
-        entry: &'a StoredEnrichment,
-        parents: &'a mut [Row],
+pub(crate) fn collect_children<T: FromSchema>(parent: &T, enrichment: &Enrichment) -> Result<Vec<Row>> {
+    let row = field_row(parent)?;
+    let mut related = decode_rows(row.get(&enrichment.destination_property));
+    if related.is_empty() {
+        return Ok(related);
+    }
+    let key = required_field(parent, &enrichment.source_property, &enrichment.destination_property)?;
+    for child in &mut related {
+        child.insert(enrichment.related_key.clone(), key.clone());
+    }
+    Ok(related)
+}
+
+impl<T: FromSchema> DefaultWriteEnrichmentStrategy<T> {
+    async fn persist_entry(
+        &self,
+        entry: &WriteEnrichment<T>,
+        parents: &mut [T],
         mode: WriteMode,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
-        Box::pin(async move {
-            let enrichment = &entry.enrichment;
-            if matches!(enrichment.r#type, crate::EnrichmentPropertyType::Custom) {
-                return Err(DatasourceError::message(format!(
-                    "Unsupported enrichment type \"{:?}\"",
-                    enrichment.r#type
-                )));
-            }
-            if enrichment.association.is_some() {
-                let writer = entry.link.as_ref().ok_or_else(|| {
-                    DatasourceError::message(format!(
-                        "Deep write requires a CRUD repository for \"{}\"",
-                        enrichment.destination_property
-                    ))
-                })?;
-                for parent in parents.iter_mut() {
-                    if self.skip(parent, &enrichment.destination_property, mode) {
-                        continue;
-                    }
-                    match mode {
-                        WriteMode::Create => {
-                            self.create
-                                .create_linked(writer.clone(), enrichment, parent)
-                                .await?
-                        }
-                        WriteMode::Update => {
-                            self.update
-                                .update_linked(writer.clone(), enrichment, parent)
-                                .await?
-                        }
-                        WriteMode::Delete => {
-                            self.delete
-                                .delete_linked(writer.clone(), enrichment, parent)
-                                .await?
-                        }
-                    }
-                }
-                return Ok(());
-            }
-            if enrichment.r#type == crate::EnrichmentPropertyType::List
-                && enrichment.related_property.is_some()
-            {
-                return Ok(());
-            }
-            if enrichment.r#type != crate::EnrichmentPropertyType::List
-                && enrichment.r#type != crate::EnrichmentPropertyType::Dictionary
-            {
-                return Ok(());
-            }
-            let writer = entry.persist.as_ref().ok_or_else(|| {
+    ) -> Result<()> {
+        let enrichment = &entry.enrichment;
+        if matches!(enrichment.r#type, crate::EnrichmentPropertyType::Custom) {
+            return Err(DatasourceError::message(format!(
+                "Unsupported enrichment type \"{:?}\"",
+                enrichment.r#type
+            )));
+        }
+        if enrichment.association.is_some() {
+            let writes = entry.link.as_ref().ok_or_else(|| {
                 DatasourceError::message(format!(
                     "Deep write requires a CRUD repository for \"{}\"",
                     enrichment.destination_property
                 ))
             })?;
             for parent in parents.iter_mut() {
-                if self.skip(parent, &enrichment.destination_property, mode) {
+                if self.skip(parent, &enrichment.destination_property, mode)? {
                     continue;
                 }
                 match mode {
-                    WriteMode::Create => {
-                        self.create
-                            .create_children(writer.clone(), enrichment, parent)
-                            .await?
-                    }
-                    WriteMode::Update => {
-                        self.update
-                            .update_children(writer.clone(), enrichment, parent)
-                            .await?
-                    }
-                    WriteMode::Delete => {
-                        self.delete
-                            .delete_children(writer.clone(), enrichment, parent, self)
-                            .await?
-                    }
+                    WriteMode::Create => self.create.create_linked(enrichment, parent, writes.as_ref()).await?,
+                    WriteMode::Update => self.update.update_linked(enrichment, parent, writes.as_ref()).await?,
+                    WriteMode::Delete => self.delete.delete_linked(enrichment, parent, writes.as_ref()).await?,
                 }
             }
-            Ok(())
-        })
+            return Ok(());
+        }
+        if enrichment.r#type == crate::EnrichmentPropertyType::List && enrichment.related_property.is_some() {
+            return Ok(());
+        }
+        if enrichment.r#type != crate::EnrichmentPropertyType::List
+            && enrichment.r#type != crate::EnrichmentPropertyType::Dictionary
+        {
+            return Ok(());
+        }
+        let writes = entry.persist.as_ref().ok_or_else(|| {
+            DatasourceError::message(format!(
+                "Deep write requires a CRUD repository for \"{}\"",
+                enrichment.destination_property
+            ))
+        })?;
+        for parent in parents.iter_mut() {
+            if self.skip(parent, &enrichment.destination_property, mode)? {
+                continue;
+            }
+            match mode {
+                WriteMode::Create => self.create.create_children(enrichment, parent, writes.as_ref()).await?,
+                WriteMode::Update => self.update.update_children(enrichment, parent, writes.as_ref()).await?,
+                WriteMode::Delete => self.delete.delete_children(enrichment, parent, writes.as_ref()).await?,
+            }
+        }
+        Ok(())
     }
 
-    fn skip(&self, parent: &Row, into: &str, mode: WriteMode) -> bool {
-        self.skip_unloaded && mode != WriteMode::Delete && !parent.contains_key(into)
+    fn skip(&self, parent: &T, into: &str, mode: WriteMode) -> Result<bool> {
+        if !self.skip_unloaded || mode == WriteMode::Delete {
+            return Ok(false);
+        }
+        Ok(!field_row(parent)?.contains_key(into))
     }
 }
 
 #[async_trait]
-impl crate::delete_nested::DeleteNested for DefaultWriteEnrichmentStrategy {
+impl<T: FromSchema> crate::delete_nested::DeleteNested for DefaultWriteEnrichmentStrategy<T> {
     async fn delete_nested(&self, _rows: &mut [Row]) -> Result<()> {
         Ok(())
     }
@@ -358,31 +268,19 @@ pub(crate) fn related_ids(parent: &Row, enrichment: &Enrichment) -> Result<Vec<V
     Ok(ids)
 }
 
-pub(crate) fn collect_children(parent: &Row, enrichment: &Enrichment) -> Result<Vec<Row>> {
-    let mut related = decode_rows(parent.get(&enrichment.destination_property));
-    if related.is_empty() {
-        return Ok(related);
-    }
-    let key = required(
-        parent,
-        &enrichment.source_property,
-        &enrichment.destination_property,
-    )?;
-    for row in &mut related {
-        row.insert(enrichment.related_key.clone(), key.clone());
-    }
-    Ok(related)
+pub(crate) fn field_row<T: FromSchema>(item: &T) -> Result<Row> {
+    item.to_schema(&Schema::default())
 }
 
-pub(crate) fn required(parent: &Row, name: &str, into: &str) -> Result<Value> {
-    parent
+pub(crate) fn required_field<T: FromSchema>(parent: &T, name: &str, into: &str) -> Result<Value> {
+    field_row(parent)?
         .get(name)
         .filter(|value| !missing(value))
         .cloned()
         .ok_or_else(|| DatasourceError::message(format!("{into} requires \"{name}\"")))
 }
 
-fn missing(value: &Value) -> bool {
+pub(crate) fn missing(value: &Value) -> bool {
     matches!(value, Value::Null | Value::Int(0))
         || matches!(value, Value::Text(text) if text.is_empty())
 }

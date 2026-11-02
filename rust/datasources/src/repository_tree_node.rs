@@ -1,18 +1,20 @@
+use crate::from_schema::FromSchema;
 use crate::repository::IReadonlyRepository;
-use crate::stored_enrichment::StoredEnrichment;
+use crate::row::Row;
+use crate::stored_enrichment::WriteEnrichment;
 use std::sync::{Arc, Mutex};
 
-pub struct RepositoryTreeNode {
+pub struct RepositoryTreeNode<T: FromSchema = Row> {
     pub value: Arc<dyn IReadonlyRepository>,
     pub property_name: String,
-    pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
+    pub(crate) enrichments: Arc<Mutex<Vec<WriteEnrichment<T>>>>,
 }
 
-impl RepositoryTreeNode {
+impl<T: FromSchema> RepositoryTreeNode<T> {
     pub(crate) fn new(
         value: Arc<dyn IReadonlyRepository>,
         property_name: impl Into<String>,
-        enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
+        enrichments: Arc<Mutex<Vec<WriteEnrichment<T>>>>,
     ) -> Self {
         Self {
             value,

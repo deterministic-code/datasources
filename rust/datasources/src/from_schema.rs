@@ -4,7 +4,6 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::schema::Schema;
 use crate::value::Value;
-use base64::Engine;
 use chrono::{DateTime, Utc};
 use facet::{Def, Facet, Field, HasFields, Partial, Peek, ScalarType, Shape, Type, UserType};
 use rust_decimal::Decimal;
@@ -13,6 +12,9 @@ use uuid::Uuid;
 pub trait SchemaObject: Facet<'static> + Clone + Default + Send + Sync + 'static {}
 
 pub trait FromSchema: Clone + Default + Send + Sync + 'static {
+    fn prepare_cells(row: Row) -> Result<Row> {
+        Ok(row)
+    }
     fn from_schema(row: Row, schema: &Schema) -> Result<Self>;
     fn to_schema(&self, schema: &Schema) -> Result<Row>;
 }
@@ -28,6 +30,10 @@ impl FromSchema for Row {
 }
 
 impl<T: SchemaObject> FromSchema for T {
+    fn prepare_cells(row: Row) -> Result<Row> {
+        crate::converters::coerce_entity(T::SHAPE, &row, true)
+    }
+
     fn from_schema(row: Row, schema: &Schema) -> Result<Self> {
         read_facet::<T>(row, schema)
     }
@@ -147,6 +153,10 @@ fn apply_field<'f>(
     }
     match row.get(name) {
         Some(cell) if *cell != Value::Null => set_scalar(partial, name, cell, shape),
+        _ if is_option(shape) => set_scalar(partial, name, &Value::Null, shape),
+        _ if shape.type_identifier.contains("DateTime") => {
+            set_scalar(partial, name, &Value::DateTime(DateTime::<Utc>::UNIX_EPOCH), shape)
+        }
         _ => partial.set_nth_field_to_default(index).map_err(reflect),
     }
 }
@@ -206,35 +216,16 @@ fn set_from_value<'a>(partial: Partial<'a>, cell: &Value, shape: &'static Shape)
         (Value::Int(n), Some(ScalarType::I32), _) => partial.set(*n as i32),
         (Value::Int(n), Some(ScalarType::I64), _) => partial.set(*n),
         (Value::Int(n), Some(ScalarType::U32), _) => partial.set(*n as u32),
-        (Value::Text(text), Some(ScalarType::I8), _) if text.is_empty() => partial.set(0i8),
-        (Value::Text(text), Some(ScalarType::I16), _) if text.is_empty() => partial.set(0i16),
-        (Value::Text(text), Some(ScalarType::I32), _) if text.is_empty() => partial.set(0i32),
-        (Value::Text(text), Some(ScalarType::I64), _) if text.is_empty() => partial.set(0i64),
-        (Value::Text(text), Some(ScalarType::U32), _) if text.is_empty() => partial.set(0u32),
         (Value::Float(n), Some(ScalarType::F64), _) => partial.set(*n),
         (Value::Text(text), Some(ScalarType::String), _) => partial.set(text.clone()),
         (Value::Text(text), _, "String") => partial.set(text.clone()),
-        (Value::Int(n), _, "String") => partial.set(n.to_string()),
-        (Value::Text(text), _, ident) if ident.contains("DateTime") => match DateTime::parse_from_rfc3339(text) {
-            Ok(parsed) => partial.set(parsed.with_timezone(&Utc)),
-            Err(error) => return Err(reflect(error)),
-        },
-        (Value::Uuid(id), _, "String") => partial.set(id.to_string()),
-        (Value::Uuid(id), _, ident) if ident.contains("Uuid") => partial.set(*id),
-        (Value::DateTime(date), _, "String") => partial.set(Value::iso_datetime(*date)),
         (Value::DateTime(date), _, ident) if ident.contains("DateTime") => partial.set(*date),
+        (Value::Uuid(id), _, ident) if ident.contains("Uuid") => partial.set(*id),
         (Value::Decimal(number), _, ident) if ident.contains("Decimal") => partial.set(*number),
         (Value::Int(n), _, "i32") => partial.set(*n as i32),
         (Value::Int(n), _, "i64") => partial.set(*n),
-        (Value::Text(text), _, "i32") if text.is_empty() => partial.set(0i32),
-        (Value::Text(text), _, "i64") if text.is_empty() => partial.set(0i64),
         (Value::Binary(bytes), _, _) if is_bytes(shape) => partial.set(bytes.clone()),
-        (Value::Text(text), _, _) if is_bytes(shape) => match base64::engine::general_purpose::STANDARD.decode(text) {
-            Ok(bytes) => partial.set(bytes),
-            Err(error) => return Err(reflect(error)),
-        },
         (Value::Null, _, _) => partial.set_default(),
-        (Value::Text(text), _, _) if text.is_empty() && (is_map(shape) || is_list(shape)) => partial.set_default(),
         _ => return Err(DatasourceError::message(format!("cannot set {} from {cell:?}", shape.type_identifier))),
     };
     set.map_err(reflect)
@@ -393,3 +384,4 @@ fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
         _ => Err(DatasourceError::message(format!("{} is not an option", shape.type_identifier))),
     }
 }
+

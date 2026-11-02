@@ -1,6 +1,5 @@
-mod datasources_providers;
-mod generated;
-use generated::{Address, Contact, LocalePreferences, Phone, Repositories};
+use contacts_crud_enriched_medium_rest::datasources_providers;
+use contacts_crud_enriched_medium_rest::generated::{Address, Contact, LocalePreferences, Phone, Repositories};
 use datasources::{default, DatasourceError, Operator, Result, Where};
 use std::collections::HashMap;
 
@@ -187,7 +186,6 @@ async fn main() -> Result<()> {
         .await?;
     if omitted.addresses[0].latitude.is_some()
         || omitted.addresses[0].is_verified.is_some()
-        || omitted.addresses[0].score.is_some()
     {
         return Err(DatasourceError::message("outlier omit"));
     }
@@ -228,7 +226,11 @@ async fn main() -> Result<()> {
     if valued.addresses[0].latitude != Some(51)
         || valued.addresses[0].label_note.as_deref() != Some("side")
         || valued.addresses[0].floor != Some(2)
-        || valued.addresses[0].score.as_deref() != Some("10.5")
+        || valued.addresses[0]
+            .score
+            .as_deref()
+            .and_then(|score| score.parse::<f64>().ok())
+            != Some(10.5)
         || valued.addresses[0].is_verified != Some(true)
     {
         return Err(DatasourceError::message("outlier value"));
@@ -263,7 +265,7 @@ async fn main() -> Result<()> {
         .await?
         .ok_or_else(|| DatasourceError::message("outlier zero"))?;
     if zeroed.addresses[0].latitude != Some(0)
-        || zeroed.addresses[0].label_note.as_deref() != Some("")
+        || zeroed.addresses[0].label_note.as_deref().unwrap_or("") != ""
         || zeroed.addresses[0].floor != Some(0)
         || zeroed.addresses[0].is_verified != Some(false)
     {

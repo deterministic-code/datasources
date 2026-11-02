@@ -1,42 +1,30 @@
-use futures_util::TryStreamExt;
-use crate::delete_nested::DeleteNested;
+use crate::child_writes::ChildWrites;
 use crate::enrichment::Enrichment;
-use crate::repository::ICRUDRepository;
+use crate::from_schema::FromSchema;
 use crate::result::Result;
-use crate::row::Row;
-use crate::{Operator, Where};
 use async_trait::async_trait;
-use std::sync::Arc;
 
 #[async_trait]
-pub trait DeleteEnrichmentStrategy: Send + Sync {
+pub trait DeleteEnrichmentStrategy<T: FromSchema>: Send + Sync {
     async fn delete_children(
         &self,
-        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &Row,
-        delete_nested: &dyn DeleteNested,
-    ) -> Result<()>;
+        parent: &T,
+        writes: &dyn ChildWrites<T>,
+    ) -> Result<()> {
+        let _ = self;
+        writes.delete_children(enrichment, parent).await
+    }
 
     async fn delete_linked(
         &self,
-        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &Row,
-    ) -> Result<()>;
-}
-
-pub(crate) async fn load(
-    writer: &dyn ICRUDRepository,
-    enrichment: &Enrichment,
-    parent: &Row,
-) -> Result<Vec<Row>> {
-    let Some(key) = parent.get(&enrichment.source_property).cloned() else {
-        return Ok(Vec::new());
-    };
-    writer
-        .read(&Where::new(Operator::equals(enrichment.related_key.clone(), key)))
-        .try_collect::<Vec<_>>().await
+        parent: &T,
+        writes: &dyn ChildWrites<T>,
+    ) -> Result<()> {
+        let _ = self;
+        writes.delete_linked(enrichment, parent).await
+    }
 }
 
 #[cfg(test)]
@@ -45,28 +33,29 @@ mod tests {
     use crate::crud_repository::CRUDRepository;
     use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
     use crate::repository::IReadonlyRepository;
+    use crate::row::Row;
     use crate::value::Value;
+    use futures_util::TryStreamExt;
     use std::sync::Arc;
 
     struct SkipDelete;
 
     #[async_trait]
-    impl DeleteEnrichmentStrategy for SkipDelete {
+    impl<T: FromSchema> DeleteEnrichmentStrategy<T> for SkipDelete {
         async fn delete_children(
             &self,
-            _writer: Arc<dyn ICRUDRepository>,
             _enrichment: &Enrichment,
-            _parent: &Row,
-            _delete_nested: &dyn DeleteNested,
+            _parent: &T,
+            _writes: &dyn ChildWrites<T>,
         ) -> Result<()> {
             Ok(())
         }
 
         async fn delete_linked(
             &self,
-            _writer: Arc<dyn ICRUDRepository>,
             _enrichment: &Enrichment,
-            _parent: &Row,
+            _parent: &T,
+            _writes: &dyn ChildWrites<T>,
         ) -> Result<()> {
             Ok(())
         }
@@ -81,7 +70,7 @@ mod tests {
             false,
         ));
         let children = Arc::new(CRUDRepository::<Row>::memory(vec![]));
-        let mut parents = CRUDRepository::<Row>::memory_with(vec![], Some(write));
+        let parents = CRUDRepository::<Row>::memory_with(vec![], Some(write));
         let parent = Row::new();
         let created = parents.create(parent).await.unwrap();
         let mut child = Row::new();
