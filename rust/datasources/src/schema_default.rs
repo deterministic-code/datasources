@@ -21,6 +21,7 @@ mod tests {
             type_name: "integer".into(),
             nullable: true,
             has_default: false,
+            is_id: false,
         };
         assert_eq!(of(&column), Value::Null);
     }

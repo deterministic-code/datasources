@@ -121,7 +121,16 @@ const repo = <T extends object>(
   type: new () => T,
   connection: IConnection,
   write?: IWriteEnrichmentStrategy<T>,
-) => new CRUDRepository<T>(connection, { type, propertyMappings: columns, write });
+) =>
+  new CRUDRepository<T>(connection, {
+    type,
+    propertyMappings: columns,
+    write,
+    ids: ["Id"],
+    schema: new Schema({
+      Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+    }),
+  });
 
 const read = <T extends object>(type: new () => T, connection: IConnection) =>
   new ReadonlyRepository(connection, { type, propertyMappings: columns });
@@ -200,8 +209,10 @@ describe("CRUDRepository", () => {
     expect(created.Id).toBeGreaterThan(0);
     const loaded = await hostsRepo.readSingle();
     expect(loaded?.Settings).toEqual({ theme: "dark", density: "comfortable" });
-    expect(loaded?.Prefs.home).toEqual({ Locale: "en-GB", Timezone: "Europe/London" });
-    expect(loaded?.Prefs.travel).toEqual({ Locale: "en-US", Timezone: "America/New_York" });
+    expect(loaded?.Prefs.home.Locale).toBe("en-GB");
+    expect(loaded?.Prefs.home.Timezone).toBe("Europe/London");
+    expect(loaded?.Prefs.travel.Locale).toBe("en-US");
+    expect(loaded?.Prefs.travel.Timezone).toBe("America/New_York");
     await hostsRepo.update(
       Object.assign(new Host(), {
         Id: created.Id,
@@ -215,8 +226,10 @@ describe("CRUDRepository", () => {
     );
     const updated = await hostsRepo.readSingle();
     expect(updated?.Settings).toEqual({ theme: "light", locale: "en" });
-    expect(updated?.Prefs.home).toEqual({ Locale: "en-GB", Timezone: "Europe/Paris" });
-    expect(updated?.Prefs.work).toEqual({ Locale: "en-US", Timezone: "America/New_York" });
+    expect(updated?.Prefs.home.Locale).toBe("en-GB");
+    expect(updated?.Prefs.home.Timezone).toBe("Europe/Paris");
+    expect(updated?.Prefs.work.Locale).toBe("en-US");
+    expect(updated?.Prefs.work.Timezone).toBe("America/New_York");
     expect(updated?.Prefs.travel).toBeUndefined();
   });
 

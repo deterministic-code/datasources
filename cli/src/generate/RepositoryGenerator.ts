@@ -59,6 +59,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
       to: this.quote(column.type),
       nullable: column.nullable ? {} : undefined,
       hasDefault: column.hasDefault ? {} : undefined,
+      isId: column.isId ? {} : undefined,
       first: index === 0 ? {} : undefined,
       last: index === pairs.length - 1 ? {} : undefined,
       comma: index > 0 ? {} : undefined,

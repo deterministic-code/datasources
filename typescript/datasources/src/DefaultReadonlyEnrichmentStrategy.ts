@@ -5,6 +5,7 @@ import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
+import { identityKey } from "./identity.ts";
 import { Operator, Where } from "./statements/index.ts";
 
 type Props = Record<string, Scalar | object>;
@@ -38,7 +39,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
       throw new DatasourceError("Missing association");
     })();
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
+      const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
       const related: TRelated[] = [];
       for await (const row of link.read(
@@ -61,7 +62,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   ): Promise<void> {
     const cache = new Map<string, TRelated | undefined>();
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
+      const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
       const cacheKey = this.keyOf(key);
       if (!cache.has(cacheKey))
@@ -84,7 +85,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     sources?: (Row | undefined)[],
   ): Promise<void> {
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
+      const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
       const related: TRelated[] = [];
       for await (const item of via.read(
@@ -103,7 +104,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   ): Promise<void> {
     const mapKey = mapKeyName(enrichment.relatedKey);
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, index);
+      const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
       const map: Record<string, Scalar | object> = {};
       for await (const item of via.read(
@@ -114,16 +115,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
         if (entry === undefined || entry === null || typeof entry === "object") continue;
         map[String(entry)] = enrichment.relatedProperty
           ? (row[enrichment.relatedProperty] ?? null)
-          : Object.fromEntries(
-              Object.entries(row).filter(
-                ([name]) =>
-                  name !== mapKey &&
-                  name !== enrichment.relatedKey &&
-                  !["id", "Id", "uuid", "Uuid", "created", "Created", "updated", "Updated", "version", "Version"].includes(
-                    name,
-                  ),
-              ),
-            );
+          : this.copyValue(item, (parent as Props)[enrichment.destinationProperty], enrichment, mapKey);
       }
       Object.assign(parent, { [enrichment.destinationProperty]: map });
     }
@@ -131,23 +123,53 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
 
   protected sourceKey(
     parent: T,
-    name: string,
+    enrichment: Enrichment,
     sources: (Row | undefined)[] | undefined,
     index: number,
   ): Scalar | object | undefined {
-    const cell = sources?.[index]?.[name];
-    const raw = cell !== undefined && cell !== null ? cell : this.props(parent)[name];
-    return this.lookupKey(raw);
+    const cell = sources?.[index]?.[enrichment.sourceProperty];
+    const raw = cell !== undefined && cell !== null ? cell : this.props(parent)[enrichment.sourceProperty];
+    return this.lookupKey(raw, enrichment.relatedKey);
   }
 
   protected props = <TItem>(item: TItem): Props => item as never as Props;
 
-  protected keyOf = (key: Scalar | object): string => String(this.lookupKey(key));
+  protected keyOf = (key: Scalar | object, name = ""): string => String(this.lookupKey(key, name));
 
-  protected lookupKey = (value: Scalar | object | undefined): Scalar | object | undefined => {
-    if (value === undefined || value === null || typeof value !== "object") return value;
-    const id = this.props(value).Id ?? this.props(value).id;
-    return id !== undefined && id !== null && typeof id !== "object" ? id : value;
+  protected lookupKey = (value: Scalar | object | undefined, name: string): Scalar | object | undefined =>
+    identityKey(value, name);
+
+  private copyValue = (
+    item: object,
+    dest: Scalar | object | undefined,
+    enrichment: Enrichment,
+    mapKey: string,
+  ): Scalar | object => {
+    const row = this.props(item);
+    if (this.stringMap(dest)) return (row.Value ?? row.value ?? null) as Scalar;
+    const names = this.destValueNames(dest);
+    const copy: Props = {};
+    for (const [name, value] of Object.entries(row)) {
+      if (names.size > 0 ? names.has(name) : name !== mapKey && name !== enrichment.relatedKey)
+        copy[name] = value;
+    }
+    return copy;
+  };
+
+  private stringMap = (dest: Scalar | object | undefined): boolean => {
+    if (!dest || typeof dest !== "object") return false;
+    const values = Object.values(dest);
+    return values.length > 0 && values.every((value) => typeof value === "string");
+  };
+
+  private destValueNames = (dest: Scalar | object | undefined): Set<string> => {
+    const sample = dest && typeof dest === "object"
+      ? Object.values(dest).find((value) => value !== null && typeof value === "object" && !Array.isArray(value))
+      : undefined;
+    if (!sample || typeof sample !== "object") return new Set();
+    const ctor = sample.constructor;
+    const blank = typeof ctor === "function" && ctor !== Object ? new (ctor as new () => object)() : sample;
+    return new Set(Object.keys(this.props(blank)));
   };
 
   protected scalar = (value: Scalar | object): Scalar => {

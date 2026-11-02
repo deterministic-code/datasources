@@ -50,9 +50,9 @@ describe("schemaPairs", () => {
   it("puts inferred integer foreign keys on the table schema for a view", async () => {
     const spec = await DeterministicParser(memoryReader({ "types.yaml": yaml })).parse({});
     const pairs = schemaPairs(model("contact"), spec, createCasingStrategy("rust", {}));
-    expect(pairs).toContainEqual({ from: "id", type: "integer", nullable: false, hasDefault: false });
-    expect(pairs).toContainEqual({ from: "gender_type_id", type: "integer", nullable: false, hasDefault: false });
-    expect(pairs).toContainEqual({ from: "name", type: "string", nullable: false, hasDefault: false });
+    expect(pairs).toContainEqual({ from: "id", type: "integer", nullable: false, hasDefault: false, isId: true });
+    expect(pairs).toContainEqual({ from: "gender_type_id", type: "integer", nullable: false, hasDefault: false, isId: false });
+    expect(pairs).toContainEqual({ from: "name", type: "string", nullable: false, hasDefault: false, isId: false });
     expect(schemaPairs(model("missing"), undefined, createCasingStrategy("rust", {}))).toEqual([]);
   });
 

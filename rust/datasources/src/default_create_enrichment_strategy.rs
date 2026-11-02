@@ -36,7 +36,7 @@ pub(crate) async fn create_children<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &mut T,
 ) -> Result<()> {
-    let mut related = parent.related::<TChild>(&enrichment.destination_property);
+    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent)?;
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
         related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
     }
@@ -45,9 +45,9 @@ pub(crate) async fn create_children<T: Entity, TChild: Entity>(
         if let Some(key) = &key {
             set(child, &enrichment.related_key, key.clone())?;
         }
-        *child = writer.create(child.clone()).await?;
+        writer.create(child.clone()).await?;
     }
-    parent.set_related(&enrichment.destination_property, related)
+    Ok(())
 }
 
 pub(crate) async fn create_links<T: Entity, TLink: Entity>(

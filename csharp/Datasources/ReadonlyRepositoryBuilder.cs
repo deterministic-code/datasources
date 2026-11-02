@@ -23,6 +23,7 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
         {
             meta.References.Clear();
             meta.ReferenceColumns = property;
+            meta.Ids = options.Schema?.Ids is { Count: > 0 } keyed ? keyed : Ids(options);
             foreach (var name in names)
                 if (typeof(T).GetProperty(name) is { } prop && IsReference(prop.PropertyType))
                     meta.References.Add(name);

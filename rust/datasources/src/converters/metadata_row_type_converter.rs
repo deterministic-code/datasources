@@ -106,6 +106,13 @@ impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
                 (true, Some(cell)) if *cell != Value::Null => {
                     set_field(partial, field.name, cell, field.shape(), self.should_coerce_id)?
                 }
+                (true, _) if field.shape().type_identifier.contains("DateTime") => set_field(
+                    partial,
+                    field.name,
+                    &Value::DateTime(chrono::DateTime::<chrono::Utc>::default()),
+                    field.shape(),
+                    self.should_coerce_id,
+                )?,
                 _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
             };
         }
@@ -215,6 +222,9 @@ fn write_value<'a>(
         Value::Int(n) if coerce_id && ScalarType::try_from_shape(shape) == Some(ScalarType::I32) => {
             partial.set(*n as i32)
         }
+        Value::Int(n) if ScalarType::try_from_shape(shape) == Some(ScalarType::U32) => {
+            partial.set(*n as u32)
+        }
         Value::Int(n) => partial.set(*n),
         Value::Float(n) => partial.set(*n),
         Value::Text(text) => partial.set(text.clone()),
@@ -222,6 +232,9 @@ fn write_value<'a>(
         Value::Uuid(id) => partial.set(*id),
         Value::Decimal(number) => partial.set(*number),
         Value::Binary(bytes) => partial.set(bytes.clone()),
+        Value::Null if shape.type_identifier.contains("DateTime") => {
+            partial.set(chrono::DateTime::<chrono::Utc>::default())
+        }
         Value::Null => partial.set_default(),
     };
     set.map_err(reflect)
@@ -232,6 +245,7 @@ fn assignable(cell: &Value, shape: &'static Shape, coerce_id: bool) -> bool {
         (Value::Bool(_), Some(ScalarType::Bool)) => true,
         (Value::Int(_), Some(ScalarType::I64)) => true,
         (Value::Int(_), Some(ScalarType::I32)) if coerce_id => true,
+        (Value::Int(_), Some(ScalarType::U32)) => true,
         (Value::Float(_), Some(ScalarType::F64)) => true,
         (Value::Text(_), Some(ScalarType::String)) => true,
         (Value::DateTime(_), None) => true,
@@ -244,6 +258,15 @@ fn assignable(cell: &Value, shape: &'static Shape, coerce_id: bool) -> bool {
 }
 
 fn coerced(cell: &Value, shape: &'static Shape, coerce_id: bool) -> Option<Value> {
+    if shape.type_identifier.contains("DateTime") {
+        return match cell {
+            Value::DateTime(date) => Some(Value::DateTime(*date)),
+            Value::Text(text) => chrono::DateTime::parse_from_rfc3339(text)
+                .ok()
+                .map(|date| Value::DateTime(date.with_timezone(&chrono::Utc))),
+            _ => None,
+        };
+    }
     match (cell, ScalarType::try_from_shape(shape)?) {
         (Value::Int(n), ScalarType::I32) if coerce_id => Some(Value::Int(*n)),
         (Value::Int(n), ScalarType::I64) => Some(Value::Int(*n)),
@@ -285,6 +308,7 @@ pub(crate) fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
         .ok()
         .map(|flag| Value::from(*flag))
         .or_else(|| value.get::<i32>().ok().map(|n| Value::from(*n)))
+        .or_else(|| value.get::<u32>().ok().map(|n| Value::from(*n as i64)))
         .or_else(|| value.get::<i64>().ok().map(|n| Value::from(*n)))
         .or_else(|| value.get::<f64>().ok().map(|n| Value::from(*n)))
         .or_else(|| value.get::<String>().ok().map(|text| Value::from(text.clone())))

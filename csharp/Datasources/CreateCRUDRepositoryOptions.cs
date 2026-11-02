@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Reflection;
-
 namespace Datasources;
 
 public static class CreateCRUDRepositoryOptions
@@ -18,19 +15,17 @@ public static class CreateCRUDRepositoryOptions
         var read = CreateReadonlyRepositoryMappingOptions.FromType<T>(type, types);
         return new()
         {
-            Ids = DefaultId(type),
+            Ids = read.Schema?.Ids is { Count: > 0 } ids ? ids : NamedId(type),
             Entity = read.Entity,
+            Schema = read.Schema,
             RowTypeConverters = read.RowTypeConverters
         };
     }
 
-    static IReadOnlyList<string> DefaultId(Type type)
+    static IReadOnlyList<string> NamedId(Type type)
     {
-        if (typeof(IDictionary).IsAssignableFrom(type))
-            return [];
-        var fields = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(prop => prop.CanRead && prop.GetIndexParameters().Length == 0)
-            .Select(prop => prop.Name);
-        return fields.Contains("id") ? ["id"] : fields.Contains("Id") ? ["Id"] : [];
+        if (type.GetProperty("id") is not null) return ["id"];
+        if (type.GetProperty("Id") is not null) return ["Id"];
+        return [];
     }
 }

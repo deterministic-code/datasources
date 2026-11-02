@@ -54,10 +54,10 @@ public abstract class CreateEnrichmentStrategy<T>
             if (entry is not StoredEnrichment<T> stored) continue;
             var name = Value.From(TryGet(item, entry.Enrichment.DestinationProperty));
             if (Missing(name)) continue;
-            if (!Missing(Value.From(Key(TryGet(item, entry.Enrichment.SourceProperty))))) continue;
+            if (!Missing(Value.From(Key(TryGet(item, entry.Enrichment.SourceProperty), entry.Enrichment.RelatedKey)))) continue;
             var id = await stored.Read.Lookup(related, name, entry.Enrichment.RelatedKey)
                 ?? throw new DatasourceException($"Unknown {entry.Enrichment.DestinationProperty} \"{name.ToObject()}\"");
-            Set(item, entry.Enrichment.SourceProperty, id.ToObject());
+            Set(item, entry.Enrichment.SourceProperty, id.ToObject(), entry.Enrichment.RelatedKey);
         }
     }
 
@@ -130,14 +130,14 @@ public abstract class CreateEnrichmentStrategy<T>
             ? dict.Contains(name) ? dict[name] : null
             : obj!.GetType().GetProperty(name)?.GetValue(obj);
 
-    protected static object? Key(object? value) =>
-        value is null or string || value is Value || value.GetType().IsPrimitive
-            ? value
-            : value.GetType().GetProperty("Id")?.GetValue(value)
-                ?? value.GetType().GetProperty("id")?.GetValue(value)
-                ?? value;
+    protected static object? Key(object? value, string name)
+    {
+        if (value is null or string || value is Value || value.GetType().IsPrimitive)
+            return value;
+        return value.GetType().GetProperty(name)?.GetValue(value) ?? value;
+    }
 
-    protected static void Set<TItem>(TItem obj, string name, object? value)
+    protected static void Set<TItem>(TItem obj, string name, object? value, string? id = null)
     {
         if (obj is IDictionary dict)
         {
@@ -155,10 +155,10 @@ public abstract class CreateEnrichmentStrategy<T>
         {
             var current = prop.GetValue(obj) ?? Activator.CreateInstance(target)
                 ?? throw new DatasourceException($"Cannot create \"{name}\"");
-            var id = target.GetProperty("Id") ?? target.GetProperty("id")
-                ?? throw new DatasourceException($"\"{name}\" requires Id");
-            var idType = Nullable.GetUnderlyingType(id.PropertyType) ?? id.PropertyType;
-            id.SetValue(current, idType.IsInstanceOfType(value) ? value : Convert.ChangeType(value, idType));
+            var key = IdentityProperty(target, id)
+                ?? throw new DatasourceException($"\"{name}\" requires is_id");
+            var idType = Nullable.GetUnderlyingType(key.PropertyType) ?? key.PropertyType;
+            key.SetValue(current, idType.IsInstanceOfType(value) ? value : Convert.ChangeType(value, idType));
             prop.SetValue(obj, current);
             return;
         }
@@ -166,6 +166,11 @@ public abstract class CreateEnrichmentStrategy<T>
             ? value
             : Convert.ChangeType(value, target));
     }
+
+    static PropertyInfo? IdentityProperty(Type target, string? id) =>
+        !string.IsNullOrEmpty(id) && target.GetProperty(id) is { } named
+            ? named
+            : target.GetProperty("id") ?? target.GetProperty("Id");
 
     static bool IsReference(Type type) =>
         type.IsClass && type != typeof(string) && !typeof(IEnumerable).IsAssignableFrom(type);

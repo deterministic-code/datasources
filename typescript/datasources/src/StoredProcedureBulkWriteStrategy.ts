@@ -160,6 +160,9 @@ const parseIds = (value: Cell | undefined): number[] => {
 };
 
 const stamp = <T extends object>(item: T, column: string, id: number): void => {
-  const key = column in item ? column : "id" in item ? "id" : "Id" in item ? "Id" : column;
+  const key =
+    column in item
+      ? column
+      : (Object.keys(item).find((name) => name.toLowerCase() === column.toLowerCase()) ?? column);
   (item as Record<string, Cell>)[key] = id;
 };

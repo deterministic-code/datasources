@@ -28,7 +28,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         var association = enrichment.Association ?? throw new DatasourceException("Missing association");
         for (var i = 0; i < parents.Count; i++)
         {
-            var key = SourceKey(parents[i], enrichment.SourceProperty, At(sources, i));
+            var key = SourceKey(parents[i], enrichment, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
             await foreach (var row in link.Read(new Where(new Operator.Equals(association.Parent, Value.From(key)))))
@@ -52,7 +52,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
+            var key = SourceKey(parent, enrichment, At(sources, i));
             if (key is null) continue;
             var cacheKey = KeyOf(key);
             if (!cache.TryGetValue(cacheKey, out var related))
@@ -74,7 +74,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
+            var key = SourceKey(parent, enrichment, At(sources, i));
             if (key is null) continue;
             var related = new List<TRelated>();
             await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
@@ -92,7 +92,7 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
+            var key = SourceKey(parent, enrichment, At(sources, i));
             if (key is null) continue;
             var map = (IDictionary)Activator.CreateInstance(Prop(parent, enrichment.DestinationProperty).PropertyType)!;
             await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
@@ -115,39 +115,23 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
         if (valueType == typeof(string) || valueType.IsValueType)
             return Get(item, "Value") ?? Get(item, "value");
         var copy = Activator.CreateInstance(valueType)!;
-        var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            MapKey(enrichment.RelatedKey),
-            enrichment.RelatedKey,
-            "id",
-            "uuid",
-            "created",
-            "updated",
-            "version",
-        };
         foreach (var prop in item.GetType().GetProperties())
-        {
-            if (skip.Contains(prop.Name)) continue;
             valueType.GetProperty(prop.Name)?.SetValue(copy, prop.GetValue(item));
-        }
         return copy;
     }
 
     protected static Row? At(IReadOnlyList<Row?>? sources, int index) =>
         sources is not null && index < sources.Count ? sources[index] : null;
 
-    protected static object? SourceKey<TParent>(TParent parent, string name, Row? source) =>
-        LookupKey(
-            source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
-                ? cell.ToObject()
-                : parent!.GetType().GetProperty(name)?.GetValue(parent));
-
-    static object? LookupKey(object? value)
+    protected static object? SourceKey<TParent>(TParent parent, Enrichment enrichment, Row? source)
     {
-        if (value is null || value is string || value.GetType().IsPrimitive || value is Value) return value;
-        return value.GetType().GetProperty("Id")?.GetValue(value)
-            ?? value.GetType().GetProperty("id")?.GetValue(value)
-            ?? value;
+        var name = enrichment.SourceProperty;
+        var raw = source is not null && source.TryGetValue(name, out var cell) && cell is not Value.Null
+            ? cell.ToObject()
+            : parent!.GetType().GetProperty(name)?.GetValue(parent);
+        if (raw is null or string || raw is Value || raw.GetType().IsPrimitive)
+            return raw;
+        return raw.GetType().GetProperty(enrichment.RelatedKey)?.GetValue(raw) ?? raw;
     }
 
     protected static string KeyOf(object? key) => key?.ToString() ?? "";

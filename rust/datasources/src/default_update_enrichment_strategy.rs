@@ -42,7 +42,7 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
     parent: &mut T,
 ) -> Result<()> {
     let existing = load(writer, enrichment, parent).await?;
-    let mut related = parent.related::<TChild>(&enrichment.destination_property);
+    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent)?;
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
         related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
     }
@@ -60,7 +60,7 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
     }) {
         writer.delete(child.clone(), None).await?;
     }
-    for child in &mut related {
+    for child in &related {
         match child_key(child, &ids) {
             Some(key)
                 if existing
@@ -70,11 +70,11 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
                 writer.update(child.clone(), None).await?;
             }
             _ => {
-                *child = writer.create(child.clone()).await?;
+                writer.create(child.clone()).await?;
             }
         }
     }
-    parent.set_related(&enrichment.destination_property, related)
+    Ok(())
 }
 
 pub(crate) async fn update_linked<T: Entity, TLink: Entity>(

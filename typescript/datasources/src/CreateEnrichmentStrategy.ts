@@ -2,6 +2,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
+import { identityKey } from "./identity.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import { Operator, Where } from "./statements/index.ts";
@@ -30,7 +31,7 @@ export abstract class CreateEnrichmentStrategy<T> {
           continue;
         const name = this.getCell(item, enrichment.destinationProperty);
         if (!this.presentCell(name)) continue;
-        if (this.presentCell(this.keyOf(this.getCell(item, enrichment.sourceProperty)))) continue;
+        if (this.presentCell(this.keyOf(this.getCell(item, enrichment.sourceProperty), enrichment.relatedKey))) continue;
         const via = entry.via ?? entry.persist;
         if (!via) continue;
         const found = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedProperty, name)));
@@ -39,7 +40,7 @@ export abstract class CreateEnrichmentStrategy<T> {
         const id = this.getCell(found, enrichment.relatedKey);
         if (!this.presentCell(id))
           throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
-        this.stamp(item as T & object, enrichment.sourceProperty, id);
+        this.stamp(item as T & object, enrichment.sourceProperty, id, enrichment.relatedKey);
       }
     }
   }
@@ -52,10 +53,9 @@ export abstract class CreateEnrichmentStrategy<T> {
     return children;
   }
 
-  protected keyOf = (value: Scalar | object | undefined): Scalar | object | undefined => {
-    if (value === undefined || value === null || typeof value !== "object") return value;
-    const id = (value as Props).Id ?? (value as Props).id;
-    return id === undefined || typeof id === "object" ? undefined : id;
+  protected keyOf = (value: Scalar | object | undefined, name: string): Scalar | object | undefined => {
+    const key = identityKey(value, name);
+    return key !== undefined && key !== null && typeof key !== "object" ? key : undefined;
   };
 
   protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
@@ -70,13 +70,18 @@ export abstract class CreateEnrichmentStrategy<T> {
     enrichment?: Enrichment,
   ): TChild[] => mapPayload(this.getCell(parent, into), enrichment) as TChild[];
 
-  protected stamp = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
+  protected stamp = <TItem extends object>(
+    related: TItem,
+    by: string,
+    key: Scalar | object | undefined,
+    id = by,
+  ): void => {
     if (key === undefined || key === null || typeof key === "object") return;
     const current = this.getCell(related, by);
     if (current !== null && typeof current === "object" && !Array.isArray(current)) {
       const target = current as Props;
-      const id = "Id" in target ? "Id" : "id";
-      target[id] = key;
+      const name = id in target ? id : "Id" in target ? "Id" : "id";
+      target[name] = key;
       return;
     }
     if (by in related) {
