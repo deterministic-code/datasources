@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { providers, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
+import { requireDatasourcesRepo } from "./localRepo.ts";
 import { csharpTarget, detect, isEcosystem, requireProjects, resolveLanguages } from "./detect.ts";
 import { answersFromEnv, ensureProviders, parseEnv, scheme, serializeEnv, updateEnvProviders, withSchema, type EnvMap } from "./env.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
@@ -165,7 +166,15 @@ const applyPackages = async (
   remaining: Provider[],
 ): Promise<void> => {
   const procs: Proc[] = [
-    ...(add.length ? addCommands(ecosystem, add, entries, await csharpProject(flags.cwd, ecosystem, entries, deps.fs)) : []),
+    ...(add.length
+      ? addCommands(
+          ecosystem,
+          add,
+          entries,
+          await csharpProject(flags.cwd, ecosystem, entries, deps.fs),
+          flags.local ? { repo: requireDatasourcesRepo(), cwd: flags.cwd } : undefined,
+        )
+      : []),
     ...(remove.length ? removeCommands(ecosystem, remove, remaining, entries) : []),
   ];
   for (const proc of procs) {

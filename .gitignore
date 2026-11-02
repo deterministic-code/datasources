@@ -29,4 +29,5 @@ file:*
 scripts/artifacts/
 csharp/artifacts/
 dest-cli/
+dest/
 docs/evals/workspace/

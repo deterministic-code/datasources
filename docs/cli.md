@@ -29,6 +29,7 @@ npx @deterministic-code/datasources-cli setup --yes --languages csharp rust --da
 | `--datasources <name...>` | Datasources to install (default: existing `.env`) |
 | `--dry-run` | Print package-manager commands without running them |
 | `--yes` | Setup without prompts |
+| `--local` | Dev only. Install from this datasources checkout (`file:`, `--path`, project reference) |
 
 ## Add
 

@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: datasources
+      MYSQL_USER: ds
+      MYSQL_PASSWORD: ds
+    volumes:
+      - ../mysql/init:/docker-entrypoint-initdb.d:ro
+    tmpfs:
+      - /var/lib/mysql
+      - /tmp
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uds", "-pds"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  postgres:
+    image: postgres:16
+    restart: "no"
+    environment:
+      POSTGRES_USER: ds
+      POSTGRES_PASSWORD: ds
+      POSTGRES_DB: datasources
+    tmpfs:
+      - /var/lib/postgresql/data
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ds -d datasources"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  runner:
+    build: ../e2e-matrix
+    restart: "no"
+    working_dir: /work
+    volumes:
+      - ../..:/work
+    tmpfs:
+      - /tmp
+    environment:
+      MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
+      POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: ["sh", "scripts/e2e-samples.sh"]

@@ -1,0 +1,9 @@
+language: csharp
+providers:
+  - name: sqlite
+    location: MigrateSqlite.dll!Deterministic.MigrateRunner.SqliteProvider
+  - name: postgres
+    location: MigratePostgres.dll!Deterministic.MigrateRunner.PostgresProvider
+  - name: mysql
+    location: MigrateMysql.dll!Deterministic.MigrateRunner.MysqlProvider
+binDir: csharp/bin/Debug/net9.0

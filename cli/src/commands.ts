@@ -1,3 +1,4 @@
+import { relative } from "node:path";
 import { catalog, host, type Ecosystem, type Provider } from "./catalog.ts";
 import { csharpTarget } from "./detect.ts";
 import { hasCsharpProjectReference } from "./installed.ts";
@@ -5,9 +6,11 @@ import { sqlMigrateProviders } from "./migrateInit.ts";
 
 export type Proc = { command: string; args: string[] };
 
-const npmDialects = (names: Provider[]): Proc[] => {
+export type LocalInstall = { repo: string; cwd: string };
+
+const npmDialects = (names: Provider[], local?: LocalInstall): Proc[] => {
   const dialects = sqlMigrateProviders(names);
-  return dialects.length === 0 ? [] : npmInstall(dialects);
+  return dialects.length === 0 ? [] : npmInstall(dialects, local);
 };
 
 export const addCommands = (
@@ -15,11 +18,12 @@ export const addCommands = (
   names: Provider[],
   entries: string[],
   csproj?: string,
+  local?: LocalInstall,
 ): Proc[] =>
   ({
-    ts: () => npmInstall(names),
-    rust: () => [...cargoAdd(names), ...npmDialects(names)],
-    csharp: () => [...dotnetAdd(names, csharpTarget(entries), csproj), ...npmDialects(names)],
+    ts: () => npmInstall(names, local),
+    rust: () => [...cargoAdd(names, local), ...npmDialects(names, local)],
+    csharp: () => [...dotnetAdd(names, csharpTarget(entries), csproj, local), ...npmDialects(names, local)],
   })[ecosystem]();
 
 export const removeCommands = (
@@ -34,10 +38,22 @@ export const removeCommands = (
     csharp: () => [...dotnetRemove(names, csharpTarget(entries)), ...npmUninstall(sqlMigrateProviders(names))],
   })[ecosystem]();
 
-const npmInstall = (names: Provider[]): Proc[] => [
+const fileSpec = (local: LocalInstall, path: string): string =>
+  `file:${relative(local.cwd, `${local.repo}/${path}`) || "."}`;
+
+const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
   {
     command: "npm",
-    args: ["install", host.ts.core, ...names.map((name) => catalog[name].npm)],
+    args: [
+      "install",
+      ...(local
+        ? [
+            fileSpec(local, "typescript/datasources"),
+            fileSpec(local, "typescript/code-generators"),
+            ...names.map((name) => fileSpec(local, `typescript/providers/${name}`)),
+          ]
+        : [host.ts.core, ...names.map((name) => catalog[name].npm)]),
+    ],
   },
 ];
 
@@ -46,25 +62,41 @@ const npmUninstall = (names: Provider[]): Proc[] => {
   return pkgs.length ? [{ command: "npm", args: ["uninstall", ...pkgs] }] : [];
 };
 
-const cargoAdd = (names: Provider[]): Proc[] => [
-  { command: "cargo", args: ["add", host.rust.core] },
+const cargoAdd = (names: Provider[], local?: LocalInstall): Proc[] => [
+  {
+    command: "cargo",
+    args: local ? ["add", "--path", relative(local.cwd, `${local.repo}/rust/datasources`)] : ["add", host.rust.core],
+  },
   { command: "cargo", args: ["add", "tokio", "--features", "macros,rt-multi-thread"] },
   ...names.map((name) => ({
     command: "cargo",
-    args: ["add", catalog[name].cargo],
+    args: local
+      ? ["add", "--path", relative(local.cwd, `${local.repo}/rust/providers/${name}`)]
+      : ["add", catalog[name].cargo],
   })),
 ];
 
 const cargoRemove = (names: Provider[]): Proc[] =>
   names.map((name) => ({ command: "cargo", args: ["remove", catalog[name].cargo] }));
 
-const dotnetAdd = (names: Provider[], project: string, csproj?: string): Proc[] => {
+const csharpCsproj = (local: LocalInstall, nuget: string): string =>
+  relative(
+    local.cwd,
+    nuget === host.csharp.core
+      ? `${local.repo}/csharp/Datasources/Datasources.csproj`
+      : `${local.repo}/csharp/Providers/${nuget.slice("Datasources.".length)}/${nuget}.csproj`,
+  );
+
+const dotnetAdd = (names: Provider[], project: string, csproj?: string, local?: LocalInstall): Proc[] => {
   const prefix = project === "." ? [] : [project];
-  const packages = [
-    host.csharp.core,
-    ...names.map((name) => catalog[name].nuget),
-  ].filter((id, index, all) => all.indexOf(id) === index && (csproj === undefined || !hasCsharpProjectReference(csproj, id)));
-  return packages.map((id) => ({ command: "dotnet", args: ["add", ...prefix, "package", id] }));
+  const ids = [host.csharp.core, ...names.map((name) => catalog[name].nuget)].filter(
+    (id, index, all) => all.indexOf(id) === index && (csproj === undefined || !hasCsharpProjectReference(csproj, id)),
+  );
+  return ids.map((id) =>
+    local
+      ? { command: "dotnet", args: ["add", ...prefix, "reference", csharpCsproj(local, id)] }
+      : { command: "dotnet", args: ["add", ...prefix, "package", id] },
+  );
 };
 
 const dotnetRemove = (names: Provider[], project: string): Proc[] => {

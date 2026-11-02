@@ -4,9 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/main.ts",
-    "test": "vitest run --coverage --exclude tests/**/*.e2e.test.ts",
-    "test:e2e": "vitest run tests/*.e2e.test.ts",
-    "test:e2e:verbose": "VERBOSE=1 vitest run tests/*.e2e.test.ts"
+    "test": "vitest run --coverage"
   },
   "dependencies": {
     "@deterministic-code/datasources": "file:../../../typescript/datasources",
