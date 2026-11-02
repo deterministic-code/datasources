@@ -13,8 +13,8 @@ import { CRUDRepository } from "./CRUDRepository.ts";
 import { ReadonlyRepository } from "./ReadonlyRepository.ts";
 import { RepositoryFactory } from "./RepositoryFactory.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
-import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { Schema } from "./Schema.ts";
+import { bindDatasource } from "./DatasourceFactory.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
 import { createReadonlyRepositoryMappingOptions } from "./createReadonlyRepositoryMappingOptions.ts";
 
@@ -66,16 +66,11 @@ export class Datasource implements IDatasource {
     type: Constructable<T>,
     options?: CRUDRepositoryOptions<T>,
   ): CRUDRepositoryOptions<T> => {
-    const built = createCRUDRepositoryOptions(type, this.driver.rowTypeConverters);
-    const types = this.driver.rowTypeConverters;
-    const schema = options?.schema ?? new Schema({});
-    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.types());
+    const built = createCRUDRepositoryOptions(type);
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
-      schema,
-      rowConverter: rows,
-      rowTypeConverters: types,
+      schema: options?.schema ?? new Schema({}),
       type,
     };
   };
@@ -84,16 +79,11 @@ export class Datasource implements IDatasource {
     type: Constructable<T>,
     options?: ReadonlyRepositoryMappingOptions<T>,
   ): ReadonlyRepositoryMappingOptions<T> => {
-    const built = createReadonlyRepositoryMappingOptions(type, this.driver.rowTypeConverters);
-    const types = this.driver.rowTypeConverters;
-    const schema = options?.schema ?? new Schema({});
-    const rows = options?.rowConverter ?? RowTypeConverter.from(this.driver.rowTypeConverters, schema.types());
+    const built = createReadonlyRepositoryMappingOptions(type);
     return {
       ...(options ?? built),
       entity: options?.entity ?? built.entity,
-      schema,
-      rowConverter: rows,
-      rowTypeConverters: types,
+      schema: options?.schema ?? new Schema({}),
       type,
     };
   };
@@ -142,3 +132,5 @@ export class Datasource implements IDatasource {
     return Datasource.create();
   }
 }
+
+bindDatasource(Datasource);

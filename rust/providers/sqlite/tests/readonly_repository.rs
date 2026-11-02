@@ -200,7 +200,7 @@ async fn reads_user_by_guid_username_and_created() {
     assert_eq!(by_id.get("Login"), Some(&Value::from("ada")));
     assert_eq!(
         by_id.get("Key"),
-        Some(&Value::Uuid(Uuid::parse_str(ADA).unwrap()))
+        Some(&Value::from(ADA))
     );
     assert_eq!(by_id.get("Active"), Some(&Value::Bool(true)));
     assert_eq!(
@@ -322,7 +322,7 @@ mod user_view {
         assert_eq!(users_view.get("Login"), Some(&Value::from("ada")));
         assert_eq!(
             users_view.get("Key"),
-            Some(&Value::Uuid(Uuid::parse_str(ADA).unwrap()))
+            Some(&Value::from(ADA))
         );
         assert_eq!(users_view.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(

@@ -150,6 +150,21 @@ impl<T: Entity> ReadonlyRepository<T> {
         !self.enrichments.lock().expect("enrichments").is_empty()
     }
 
+    pub(crate) fn list_destinations(&self) -> Vec<String> {
+        self.enrichments
+            .lock()
+            .expect("enrichments")
+            .iter()
+            .filter(|entry| {
+                matches!(
+                    entry.enrichment.r#type,
+                    crate::EnrichmentPropertyType::List | crate::EnrichmentPropertyType::Dictionary
+                )
+            })
+            .map(|entry| entry.enrichment.destination_property.clone())
+            .collect()
+    }
+
     pub(crate) fn memory_items(&self) -> Option<&Arc<SharedItems>> {
         self.memory.as_ref()
     }
@@ -553,7 +568,7 @@ impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
     }
 
     fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        map_stream(self.read_rows(Some(query), None, None))
+        map_stream(self.read_rows(Some(query), None, None), self.list_destinations())
     }
 }
 

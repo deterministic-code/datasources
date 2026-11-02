@@ -9,9 +9,12 @@ import {
   MockDriver,
   ProviderNotInstalledError,
   ReadonlyRepository,
+  ReadonlyRepositoryBuilder,
+  Schema,
   untyped,
 } from "./index.ts";
 import type { IConnection } from "./IConnection.ts";
+import { TypeConverter } from "./converters/TypeConverter.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 
@@ -70,6 +73,9 @@ describe("DatasourceFactory", () => {
 
   it("mock driver builds command and transaction", () => {
     const driver = new MockDriver();
+    expect(DatasourceFactory.rowTypeConverters("missing")).toBeUndefined();
+    DatasourceFactory.register("sqlite", driver);
+    expect(DatasourceFactory.rowTypeConverters("sqlite")).toEqual({});
     expect(driver.rowTypeConverters).toEqual({});
     const connection = driver.connection();
     expect(driver.command(connection)).toBeInstanceOf(MockCommand);
@@ -77,6 +83,19 @@ describe("DatasourceFactory", () => {
     expect(driver.transaction(connection, "readCommitted").isolation).toBe(
       "readCommitted",
     );
+  });
+
+  it("builder binds catalog converters from the factory", () => {
+    class Pass extends TypeConverter<string, string> {
+      convert = (from: string) => from;
+      reverseConvert = (to: string) => to;
+    }
+    const driver = new MockDriver();
+    driver.rowTypeConverters = { decimal: new Pass() };
+    DatasourceFactory.register("sqlite", driver);
+    const schema = new Schema({ amount: { type: "decimal", nullable: false, hasDefault: false } });
+    const parts = new ReadonlyRepositoryBuilder().parts(new MockConnection(undefined, "sqlite"), { schema });
+    expect(parts.rowConverter?.convert({ amount: "1.50" })).toEqual({ amount: "1.50" });
   });
 });
 

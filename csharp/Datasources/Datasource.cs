@@ -56,31 +56,21 @@ public sealed class Datasource(
 
     CRUDRepositoryOptions<T> Apply<T>(CRUDRepositoryOptions<T>? options) where T : new()
     {
-        var built = CreateCRUDRepositoryOptions.FromType<T>(driver.RowTypeConverters);
-        var types = driver.RowTypeConverters;
-        var schema = options?.Schema ?? SchemaOf(typeof(T));
-        var rows = RowTypeConverter.From(types, schema.Types);
+        var built = CreateCRUDRepositoryOptions.FromType<T>();
         return (options ?? built) with
         {
             Entity = options?.Entity ?? built.Entity,
-            Schema = schema,
-            RowConverter = options?.RowConverter ?? rows,
-            RowTypeConverters = types,
+            Schema = options?.Schema ?? SchemaOf(typeof(T)),
         };
     }
 
     ReadonlyRepositoryMappingOptions<T> Apply<T>(ReadonlyRepositoryMappingOptions<T>? options) where T : new()
     {
-        var built = CreateReadonlyRepositoryMappingOptions.FromType<T>(driver.RowTypeConverters);
-        var types = driver.RowTypeConverters;
-        var schema = options?.Schema ?? SchemaOf(typeof(T));
-        var rows = RowTypeConverter.From(types, schema.Types);
+        var built = CreateReadonlyRepositoryMappingOptions.FromType<T>();
         return (options ?? built) with
         {
             Entity = options?.Entity ?? built.Entity,
-            Schema = schema,
-            RowConverter = options?.RowConverter ?? rows,
-            RowTypeConverters = types,
+            Schema = options?.Schema ?? SchemaOf(typeof(T)),
         };
     }
 

@@ -105,6 +105,24 @@ public class CRUDRepositoryTests
         name => References.ReverseMap(name) is var from && from != name ? from : Snake.ReverseMap(name));
 
     [Fact]
+    public async Task UpdateKeepsExplicitEmptyStringOnNullable()
+    {
+        var connection = new MemoryDriver().Connection(null);
+        var repo = new CRUDRepository<Dictionary<string, Value>>(connection, new CRUDRepositoryOptions<Dictionary<string, Value>>
+        {
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["id"] = new("integer"),
+                ["note"] = new("string", Nullable: true),
+            }),
+            UpdateProperties = ["note"],
+        });
+        await repo.Create(new Row { ["id"] = 1, ["note"] = "side" });
+        await repo.Update(new Row { ["id"] = 1, ["note"] = "" });
+        Assert.Equal("", (await repo.ReadSingle())!["note"]);
+    }
+
+    [Fact]
     public async Task CreateOpensAClosedConnection()
     {
         var connection = new MemoryDriver().Connection(null);

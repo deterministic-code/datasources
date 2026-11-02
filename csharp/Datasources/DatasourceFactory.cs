@@ -9,6 +9,9 @@ public sealed class DatasourceFactory : IDatasourceFactory
     public static void Register(string provider, IDriver driver) =>
         Factories[provider] = driver;
 
+    internal static IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters(string provider) =>
+        Factories.TryGetValue(provider, out var driver) ? driver.RowTypeConverters : null;
+
     public static IDatasource Create(IReadOnlyDictionary<string, string?>? options = null) =>
         Resolve(options);
 

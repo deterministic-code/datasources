@@ -22,7 +22,7 @@ import {
 } from "@deterministic-code/datasources";
 import type { SqliteConnection } from "./connection.ts";
 import type { SqliteStatement } from "./i-sqlite-driver.ts";
-import { reverse, SqliteRowTypeConverters } from "./converters/SqliteRowTypeConverters.ts";
+import { reverse } from "./converters/SqliteRowTypeConverters.ts";
 import { SqliteStatementRenderer } from "./SqliteStatementRenderer.ts";
 
 const bound = (parameters?: Parameter[]): Record<string, Scalar> => {
@@ -135,22 +135,15 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
     const statement = this.connection.require().prepare(sql) as ColumnStatement;
     const columns = statement.columns?.() ?? [];
     const names = qualified(columns);
-    const declared = columns.map((column) => column.type ?? null);
     const raw = names.some((name, index) => name !== columns[index]?.name)
       ? statement.raw?.(true).iterate(params)
       : undefined;
-    const rows = raw ? namedRows(raw, names, declared) : closable(statement.iterate(params), columns);
+    const rows = raw ? namedRows(raw, names) : closable(statement.iterate(params));
     return rows[Symbol.iterator]();
   }
 }
 
 type SqliteColumn = { name: string; column: string | null; table: string | null; type?: string | null };
-
-const booleanDeclared = (declared?: string | null): boolean =>
-  declared?.toUpperCase() === "BOOLEAN";
-
-const cell = (value: Cell | null | undefined, declared?: string | null): Cell | null =>
-  value == null ? null : booleanDeclared(declared) ? SqliteRowTypeConverters.boolean.convert(value) : value;
 
 type ColumnStatement = SqliteStatement & {
   columns?: () => SqliteColumn[];
@@ -161,20 +154,13 @@ type ColumnStatement = SqliteStatement & {
 
 const closable = (
   iter: IterableIterator<Cells>,
-  columns: SqliteColumn[],
 ): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
   const stop = iter.return ? iter.return.bind(iter) : undefined;
   const rows: IterableIterator<Cells> & { return(): IteratorResult<Cells> } = {
     next: () => {
       const step = iter.next();
       if (step.done || !step.value) return step;
-      const value = Object.fromEntries(
-        Object.entries(step.value).map(([name, item]) => [
-          name,
-          cell(item, columns.find((column) => column.name === name)?.type),
-        ]),
-      ) as Cells;
-      return { done: false, value };
+      return { done: false, value: step.value };
     },
     return: () => {
       if (stop) stop();
@@ -190,7 +176,6 @@ const closable = (
 const namedRows = (
   iter: IterableIterator<Cell[]>,
   names: string[],
-  declared: (string | null)[],
 ): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
   /* v8 ignore next */
   const stop = iter.return ? iter.return.bind(iter) : undefined;
@@ -201,9 +186,7 @@ const namedRows = (
         ? { done: true, value: undefined }
         : {
             done: false,
-            value: Object.fromEntries(
-              names.map((name, index) => [name, cell(step.value[index], declared[index])]),
-            ),
+            value: Object.fromEntries(names.map((name, index) => [name, step.value[index] ?? null])),
           };
     },
     return: () => {

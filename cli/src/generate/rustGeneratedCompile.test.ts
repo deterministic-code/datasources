@@ -63,10 +63,7 @@ const typesMod = (filenames: string[]): string => {
     const path = name === stem ? `pub mod ${stem};\n` : `#[path = "${stem}.rs"]\npub mod ${name};\n`;
     return { name, path };
   });
-  const allow = entries.some((entry) => !/^[a-z][a-z0-9_]*$/.test(entry.name))
-    ? "#![allow(non_snake_case)]\n"
-    : "";
-  return `${allow}${entries.flatMap((entry) => [entry.path, `pub use ${entry.name}::*;\n`]).join("")}`;
+  return `#![allow(dead_code, unused_imports, non_snake_case)]\n${entries.flatMap((entry) => [entry.path, `pub use ${entry.name}::*;\n`]).join("")}`;
 };
 
 const writeCrate = (
@@ -77,7 +74,7 @@ const writeCrate = (
   mkdirSync(join(crateDir, "src"), { recursive: true });
   writeFileSync(
     join(crateDir, "Cargo.toml"),
-    `[package]\nname = "generated_compile"\nversion = "0.0.0"\nedition = "2021"\npublish = false\n\n[dependencies]\ndatasources = { path = "${datasourcesPath}" }\n`,
+    `[package]\nname = "generated_compile"\nversion = "0.0.0"\nedition = "2021"\npublish = false\n\n[dependencies]\ndatasources = { path = "${datasourcesPath}" }\n\n[lints.rust]\nwarnings = "deny"\n`,
   );
   const texts: Record<string, string> = {};
   for (const entry of entries) {

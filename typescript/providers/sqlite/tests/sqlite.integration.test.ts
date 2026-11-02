@@ -85,7 +85,7 @@ describe("command", () => {
     await command.executeNative(new Native("INSERT INTO flags (enabled, count) VALUES (1, 1)"));
     await using reader = await command.executeReaderNative(new Native("SELECT enabled, count, 1 AS one FROM flags"));
     expect(await reader.next()).toBe(true);
-    expect(reader.current).toEqual({ enabled: true, count: 1, one: 1 });
+    expect(reader.current).toEqual({ enabled: 1, count: 1, one: 1 });
   });
 
   it("run executeReader on a simple list", async () => {

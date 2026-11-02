@@ -5,7 +5,7 @@ import { authoredViewTypesOf, datasourceTypesOf } from "@deterministic-code/gene
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, dialectsOf, optimisticClass, type RepositoryModel } from "./RepositoryModel.ts";
+import { childClass, dialectsOf, isLinked, optimisticClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
@@ -60,6 +60,9 @@ class RustRepositories extends RepositoryGenerator {
       child,
       childFields: child.length === 0 ? "" : `, ${child.map((item) => item.field).join(", ")}`,
       enrichments,
+      hasEnrichments: enrichments.length === 0 ? undefined : {},
+      hasLinked: model.enrichments.some(isLinked) ? {} : undefined,
+      hasIcrud: model.enrichments.some(isLinked) || token !== undefined ? {} : undefined,
       wrapped: child.length === 0 ? undefined : {},
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },

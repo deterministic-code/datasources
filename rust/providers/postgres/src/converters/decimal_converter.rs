@@ -6,21 +6,30 @@ pub struct DecimalConverter;
 
 impl TypeConverter<Value, Value> for DecimalConverter {
     fn convert(&self, from: &Value) -> Result<Value> {
-        Ok(match from {
-            Value::Int(number) => Value::Decimal(Decimal::from(*number)),
-            Value::Float(number) => Decimal::from_f64_retain(*number)
-                .map(Value::Decimal)
-                .unwrap_or_else(|| from.clone()),
-            Value::Text(text) => Decimal::from_str(text)
-                .map(Value::Decimal)
-                .unwrap_or_else(|_| from.clone()),
-            other => other.clone(),
-        })
+        Ok(canonical(from))
     }
 
     fn reverse_convert(&self, to: &Value) -> Result<Value> {
-        self.convert(to)
+        Ok(canonical(to))
     }
+}
+
+fn canonical(value: &Value) -> Value {
+    match value {
+        Value::Int(number) => text(Decimal::from(*number)),
+        Value::Float(number) => Decimal::from_f64_retain(*number)
+            .map(text)
+            .unwrap_or_else(|| value.clone()),
+        Value::Decimal(number) => text(*number),
+        Value::Text(body) => Decimal::from_str(body)
+            .map(text)
+            .unwrap_or_else(|_| value.clone()),
+        other => other.clone(),
+    }
+}
+
+fn text(number: Decimal) -> Value {
+    Value::Text(number.normalize().to_string())
 }
 
 #[cfg(test)]
@@ -31,23 +40,29 @@ mod tests {
     #[test]
     fn maps_decimal() {
         let converter = DecimalConverter;
+        assert_eq!(converter.convert(&Value::Int(7)).unwrap(), Value::from("7"));
         assert_eq!(
-            converter.convert(&Value::Int(7)).unwrap(),
-            Value::Decimal(7.into())
+            converter.convert(&Value::Float(10.5)).unwrap(),
+            Value::from("10.5")
         );
         assert_eq!(
             converter.convert(&Value::from("10.5")).unwrap(),
-            Value::Decimal("10.5".parse().unwrap())
+            Value::from("10.5")
+        );
+        assert_eq!(
+            converter.convert(&Value::from("10.50")).unwrap(),
+            Value::from("10.5")
+        );
+        assert_eq!(converter.convert(&Value::Int(0)).unwrap(), Value::from("0"));
+        assert_eq!(
+            converter.convert(&Value::from("0.00")).unwrap(),
+            Value::from("0")
         );
         assert_eq!(
             converter
                 .reverse_convert(&Value::Decimal("10.5".parse().unwrap()))
                 .unwrap(),
-            Value::Decimal("10.5".parse().unwrap())
-        );
-        assert_eq!(
-            converter.reverse_convert(&Value::from("10.5")).unwrap(),
-            Value::Decimal("10.5".parse().unwrap())
+            Value::from("10.5")
         );
         assert_eq!(
             converter.convert(&Value::from("nope")).unwrap(),

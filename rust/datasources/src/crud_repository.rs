@@ -7,7 +7,9 @@ use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
 use crate::entity::Entity;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
+use crate::default_write_enrichment_strategy::{
+    encode_rows, DefaultWriteEnrichmentStrategy,
+};
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
@@ -17,7 +19,7 @@ use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
-use crate::repository::{map_row, to_stored, ICRUDRepository, IReadonlyRepository};
+use crate::repository::{map_enriched, to_stored, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
@@ -157,7 +159,7 @@ impl<T: Entity> CRUDRepository<T> {
             }
             let zero = crate::schema_default::of(column);
             match filled.get(key) {
-                Some(Value::Text(text)) if text.is_empty() => {
+                Some(Value::Text(text)) if text.is_empty() && !column.nullable => {
                     filled.insert(key.clone(), zero);
                 }
                 None if fill_missing && language_zero(&zero) => {
@@ -620,6 +622,19 @@ impl<T: Entity> CRUDRepository<T> {
     pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<T>> {
         ICRUDRepository::read_single_by_id(self, id).await
     }
+
+    fn overlay_payloads(&self, item: &T, row: &mut Row) {
+        for name in self.readonly.list_destinations() {
+            let children = item.payload(&name);
+            if !children.is_empty() {
+                row.insert(name, encode_rows(&children));
+            }
+        }
+    }
+
+    fn into_entity(&self, row: Row) -> Result<T> {
+        map_enriched(row, &self.readonly.list_destinations())
+    }
 }
 
 impl<T: Entity> Deref for CRUDRepository<T> {
@@ -661,17 +676,19 @@ impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
 impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     async fn create(&self, item: T) -> Result<T> {
         let mut row = to_stored(&item)?;
+        self.overlay_payloads(&item, &mut row);
         let created = Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
             || self.create_core(&mut row),
         )
         .await?;
-        map_row(created)
+        self.into_entity(created)
     }
 
     async fn update(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let row = to_stored(&item)?;
+        let mut row = to_stored(&item)?;
+        self.overlay_payloads(&item, &mut row);
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
@@ -681,7 +698,8 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     }
 
     async fn delete(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let row = to_stored(&item)?;
+        let mut row = to_stored(&item)?;
+        self.overlay_payloads(&item, &mut row);
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
@@ -701,7 +719,7 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<T>> {
         self.read_row_by_id(id)
             .await?
-            .map(map_row)
+            .map(|row| self.into_entity(row))
             .transpose()
     }
 }

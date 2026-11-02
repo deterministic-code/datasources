@@ -93,7 +93,7 @@ public class ReadPipelineIntegrationTests
         var finalManualEntities = convertedRows.Select(row => new User
         {
             Id = (long)row["Id"].ToObject()!,
-            Uuid = (Guid)row["Uuid"].ToObject()!,
+            Uuid = Guid.Parse((string)row["Uuid"].ToObject()!),
             Username = (string)row["Username"].ToObject()!,
             IsEnabled = (bool)row["IsEnabled"].ToObject()!,
             Created = (DateTime)row["Created"].ToObject()!,
@@ -108,7 +108,7 @@ public class ReadPipelineIntegrationTests
 
         Assert.Equal(new Value.Int(1), columnMappedRows[0]["Id"]);
         Assert.Equal(new Value.Text("ada"), columnMappedRows[0]["Username"]);
-        Assert.Equal(new Value.Guid(ada), convertedRows[0]["Uuid"]);
+        Assert.Equal(new Value.Text(ada.ToString()), convertedRows[0]["Uuid"]);
         Assert.Equal(new Value.Bool(true), convertedRows[0]["IsEnabled"]);
         Assert.True(convertedRows[0]["Created"] is Value.DateTime);
 
