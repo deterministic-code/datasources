@@ -5,7 +5,7 @@ describe("parseArgs", () => {
   it("parses commands and flags", () => {
     expect(parseArgs(["setup", "--yes", "--cwd", "app"], ".")).toEqual({
       command: { kind: "setup", providers: [] },
-      flags: { cwd: "app", languages: [], datasources: [], dryRun: false, yes: true },
+      flags: { cwd: "app", languages: [], datasources: [], dryRun: false, yes: true, local: false },
     });
     expect(
       parseArgs(["setup", "--yes", "--languages", "csharp", "--datasources", "sqlite", "postgres"]).command,
@@ -24,7 +24,7 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["setup", "--yes", "--languages", "csharp", "sqlite"])).toThrow(/Unknown --languages sqlite/);
     expect(parseArgs(["add", "sqlite", "--cwd=app", "--dry-run"])).toEqual({
       command: { kind: "add", providers: ["sqlite"] },
-      flags: { cwd: "app", languages: [], datasources: [], dryRun: true, yes: false },
+      flags: { cwd: "app", languages: [], datasources: [], dryRun: true, yes: false, local: false },
     });
     expect(parseArgs(["add", "--datasources", "sqlite", "postgres", "sqlite"]).command.providers).toEqual([
       "sqlite",
@@ -41,6 +41,8 @@ describe("parseArgs", () => {
     expect(parseArgs([]).command).toEqual({ kind: "help" });
     expect(help).toMatch(/datasources <command>/);
     expect(help).toMatch(/setup[\s\S]*--yes/);
+    expect(help).toMatch(/--local/);
+    expect(parseArgs(["setup", "--local"]).flags.local).toBe(true);
     expect(help).toMatch(/--languages/);
     expect(help).toMatch(/--datasources/);
     expect(help).not.toMatch(/^Options:/m);

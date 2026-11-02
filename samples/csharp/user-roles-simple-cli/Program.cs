@@ -13,7 +13,7 @@ static async Task<int> Run(string[] args)
         var parsed = Parse.Args(args);
         var provider = Env("PROVIDER") ?? "sqlite";
         var url = Env("DATASOURCE_URL") ?? "sqlite:///./app.sqlite";
-        Migraters.Up(provider, url, Env("MIGRATIONS_ROOT") ?? "sql");
+        Migraters.Up(provider, url, MigrationsRoot());
         DatasourceFactory.Register("sqlite", new SqliteDriver());
         DatasourceFactory.Register("mysql", new MysqlDriver());
         DatasourceFactory.Register("postgres", new PostgresDriver());
@@ -35,6 +35,12 @@ static async Task<int> Run(string[] args)
         Console.Error.WriteLine(ex.Message);
         return 1;
     }
+}
+
+static string MigrationsRoot()
+{
+    var root = Env("MIGRATIONS_ROOT");
+    return root is not null && Directory.Exists(root) ? root : "sql";
 }
 
 static string? Env(string key)

@@ -11,6 +11,7 @@ export type Flags = {
   datasources: string[];
   dryRun: boolean;
   yes: boolean;
+  local: boolean;
 };
 
 export const generateTargets = ["all", "types", "repositories", "datasource"] as const;
@@ -61,12 +62,14 @@ setup [name...]       Interactive .env, datasource install, and optional determi
   --datasources <name...>     Datasources to install (default: existing .env)
   --dry-run                   Print package-manager commands without running them
   --yes                       Setup without prompts (defaults / existing .env)
+  --local                     Dev only. Install from this datasources checkout
 
 add [name...]         Add datasource packages
   --cwd <dir>                 Consumer project directory (default: .)
   --languages ts|rust|csharp  Project languages (default: every type found)
   --datasources <name...>     Datasources to add
   --dry-run                   Print package-manager commands without running them
+  --local                     Dev only. Install from this datasources checkout
 
 remove [name...]      Remove datasource packages
   --cwd <dir>                 Consumer project directory (default: .)
@@ -126,7 +129,7 @@ const parseBatchSeparator = (raw: string): string => {
 };
 
 export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags: Flags } => {
-  const flags: Flags = { cwd, languages: [], datasources: [], dryRun: false, yes: false };
+  const flags: Flags = { cwd, languages: [], datasources: [], dryRun: false, yes: false, local: false };
   const generate = {
     dialect: "",
     provider: "deterministic",
@@ -162,6 +165,7 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
       flags.datasources.push(...splitList(arg.slice("--datasources=".length), "--datasources"));
     else if (arg === "--dry-run") flags.dryRun = true;
     else if (arg === "--yes" || arg === "-y") flags.yes = true;
+    else if (arg === "--local") flags.local = true;
     else if (arg === "--dialect") generate.dialect = take(argv, ++i, "--dialect");
     else if (arg.startsWith("--dialect=")) generate.dialect = arg.slice("--dialect=".length);
     else if (arg === "--provider") generate.provider = take(argv, ++i, "--provider");

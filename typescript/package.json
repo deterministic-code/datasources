@@ -10,9 +10,6 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test -w @deterministic-code/datasources -w @deterministic-code/datasources-code-generators -w @deterministic-code/datasources-sqlite -w @deterministic-code/datasources-memory --if-present",
-    "test:e2e": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e",
-    "test:e2e:verbose": "VERBOSE=1 npm run test:e2e",
-    "test:e2e:ci": "MYSQL_URL=${MYSQL_URL:-mysql://ds:ds@127.0.0.1:3306/datasources} POSTGRES_URL=${POSTGRES_URL:-postgres://ds:ds@127.0.0.1:5432/datasources} node ./run-e2e.mjs test:e2e:ci",
     "typecheck": "npm run build && npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

@@ -167,19 +167,16 @@ const grantMysql = () =>
   );
 
 export const ensureCompose = (service: "mysql" | "postgres") => {
-  if (process.env.SKIP_DOCKER) return;
   up(service);
   if (service === "mysql") grantMysql();
 };
 
 export const freshCompose = (service: "mysql" | "postgres") => {
-  if (process.env.SKIP_DOCKER) return;
   remove(service);
   up(service);
   if (service === "mysql") grantMysql();
 };
 
 export const stopCompose = (service: "mysql" | "postgres") => {
-  if (process.env.SKIP_DOCKER) return;
   remove(service);
 };

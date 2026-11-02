@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "tsx src/main.ts",
-    "test:e2e": "sh sqlite.sh && sh mysql-postgres.sh"
+    "start": "tsx src/main.ts"
   },
   "dependencies": {
     "@deterministic-code/datasources": "file:../../../typescript/datasources",
+    "@deterministic-code/datasources-code-generators": "file:../../../typescript/code-generators",
     "@deterministic-code/datasources-mysql": "file:../../../typescript/providers/mysql",
     "@deterministic-code/datasources-postgres": "file:../../../typescript/providers/postgres",
     "@deterministic-code/datasources-sqlite": "file:../../../typescript/providers/sqlite",

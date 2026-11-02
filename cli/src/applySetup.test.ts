@@ -130,6 +130,19 @@ describe("setup", () => {
     expect(files[join(cwd, "deterministic", "types.yaml")]).toBeUndefined();
   });
 
+  it("installs from this checkout with --local", async () => {
+    const { fs } = mem(["package.json"], { [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }) });
+    const io = deps(fs);
+    expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], io)).toBe(0);
+    expect(io.ran[0]).toMatch(/file:.*typescript\/datasources/);
+    expect(io.ran[0]).toMatch(/file:.*typescript\/code-generators/);
+    expect(io.ran[0]).toMatch(/file:.*typescript\/providers\/sqlite/);
+    expect(io.ran[0]).not.toMatch(/npm install @deterministic-code\/datasources /);
+    expect(io.ran).toContain(
+      "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
+    );
+  });
+
   it("inits migraters for checked SQL dialects and skips json-only", async () => {
     const sql = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }),
