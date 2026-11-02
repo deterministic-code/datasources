@@ -5,7 +5,7 @@ let write = Arc::new(DefaultWriteEnrichmentStrategy::new(
     false,
 ));
 let children = Arc::new(CRUDRepository::<Row>::memory(vec![]));
-let mut parents = CRUDRepository::<Row>::memory_with(vec![], Some(write));
+let parents = CRUDRepository::<Row>::memory_with(vec![], Some(write));
 let parent = Row::new();
 let created = parents.create(parent).await.unwrap();
 let mut child = Row::new();

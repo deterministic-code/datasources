@@ -300,10 +300,25 @@ describe("generated rust compiles", () => {
             references: contact.id
         - group_id:
             references: group.id
+        - notes:
+            type: note[]
+            references: note.group_member_id
+` +
+          `  - note:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - group_member_id:
+            references: group_member.id
+        - body:
+            type: string
 `,
       ),
     );
     expect(textOf(texts, "groupRepository.rs")).toContain("add_linked");
+    expect(textOf(texts, "groupRepository.rs")).toContain("Arc::clone(&group_member.repo)");
   });
 
   it("optimistic increment", async () => {

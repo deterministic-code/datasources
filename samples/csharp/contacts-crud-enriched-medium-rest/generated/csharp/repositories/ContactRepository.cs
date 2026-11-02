@@ -61,6 +61,19 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactSourceId"] = new("integer", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["Notes"] = new("string", true, false),
+                }),
             })
             .Add("sqlite", new()
             {
@@ -83,6 +96,19 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 CreateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactSourceId"] = new("integer", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["Notes"] = new("string", true, false),
+                }),
             })
             .Add("mysql", new()
             {
@@ -105,6 +131,19 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 CreateProperties = ["ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactSourceId"] = new("integer", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["Notes"] = new("string", true, false),
+                }),
             })
             .Add("postgres", new()
             {
@@ -127,6 +166,19 @@ public sealed class ContactRepository : CRUDRepository<Backend.Types.View.Contac
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 CreateProperties = ["ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
                 UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactSourceId"] = new("integer", false, false),
+                    ["FirstName"] = new("string", false, false),
+                    ["LastName"] = new("string", false, false),
+                    ["Email"] = new("string", true, false),
+                    ["Notes"] = new("string", true, false),
+                }),
             })
             .For(connection);
 }

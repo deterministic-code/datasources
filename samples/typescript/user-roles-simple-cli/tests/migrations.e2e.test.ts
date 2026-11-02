@@ -17,8 +17,10 @@ const file = (provider: string, connection: string) =>
 
 const migrate = (command: string, provider: string, connection: string, root: string, extra: string[] = []) => {
   const path = file(provider, connection);
-  if (command === "migrate-up")
+  if (command === "migrate-up") {
+    execFileSync("npx", ["migrate-init", "--language", "typescript", "--dialect", provider], { encoding: "utf8", cwd: sample });
     execFileSync("npx", ["migrate-setup", "--provider", provider, "--connection", path], { encoding: "utf8", cwd: sample });
+  }
   execFileSync(
     "npx",
     [command, "--provider", provider, "--connection", path, "--migrations-root", root, ...extra],

@@ -29,6 +29,18 @@ public sealed class ContactPreferencesRepository : CRUDRepository<Backend.Types.
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["Key"] = new("string", false, false),
+                    ["Locale"] = new("string", false, false),
+                    ["Timezone"] = new("string", false, false),
+                }),
             })
             .Add("sqlite", new()
             {
@@ -50,6 +62,18 @@ public sealed class ContactPreferencesRepository : CRUDRepository<Backend.Types.
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 CreateProperties = ["Uuid", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Locale", "Timezone"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["Key"] = new("string", false, false),
+                    ["Locale"] = new("string", false, false),
+                    ["Timezone"] = new("string", false, false),
+                }),
             })
             .Add("mysql", new()
             {
@@ -71,6 +95,18 @@ public sealed class ContactPreferencesRepository : CRUDRepository<Backend.Types.
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 CreateProperties = ["ContactId", "Key", "Locale", "Timezone"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Locale", "Timezone"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["Key"] = new("string", false, false),
+                    ["Locale"] = new("string", false, false),
+                    ["Timezone"] = new("string", false, false),
+                }),
             })
             .Add("postgres", new()
             {
@@ -92,6 +128,18 @@ public sealed class ContactPreferencesRepository : CRUDRepository<Backend.Types.
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "Key", "Locale", "Timezone"],
                 CreateProperties = ["ContactId", "Key", "Locale", "Timezone"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "Key", "Locale", "Timezone"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["Key"] = new("string", false, false),
+                    ["Locale"] = new("string", false, false),
+                    ["Timezone"] = new("string", false, false),
+                }),
             })
             .For(connection);
 }

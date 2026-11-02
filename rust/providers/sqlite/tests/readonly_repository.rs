@@ -295,7 +295,7 @@ mod user_view {
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         type_options.property_mappings =
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-        let mut users_repo =
+        let users_repo =
             ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
         let types =
             ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
@@ -451,7 +451,7 @@ mod users_view_roles {
             ("UserId".to_string(), "user_id".to_string()),
             ("Name".to_string(), "name".to_string()),
         ])));
-        let mut users_repo =
+        let users_repo =
             ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
         let types = ds.create_readonly_repository::<UserType>(
             Some(connection.clone()),
@@ -515,7 +515,7 @@ mod users_view_roles {
             ("Name".into(), "roles.name".into()),
             ("Id".into(), "id".into()),
         ])));
-        let mut users_repo = ReadonlyRepository::<Row>::new(connection.clone(), options).unwrap();
+        let users_repo = ReadonlyRepository::<Row>::new(connection.clone(), options).unwrap();
         users_repo.add_enriched(
             datasources::Enrichment::new("Roles", "Key", "UserId", None, datasources::EnrichmentPropertyType::List),
             Arc::new(ReadonlyRepository::<Row>::new(
@@ -748,7 +748,7 @@ mod user_crud {
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         role_options.property_mappings =
             Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-        let mut users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
+        let users_repo = CRUDRepository::<Row>::new(connection.clone(), users_options).unwrap();
         let user_types_repo =
             Arc::new(CRUDRepository::<Row>::new(connection.clone(), type_options).unwrap());
         let user_roles_repo = Arc::new(CRUDRepository::<Row>::new(connection, role_options).unwrap());

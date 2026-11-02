@@ -64,7 +64,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
     connection.open().await.unwrap();
     let types = Arc::new(types_repo(connection.clone()));
     let created_type = types.create(record(&[("Name", Value::from("person"))])).await.unwrap();
-    let mut parents = parents_repo(connection);
+    let parents = parents_repo(connection);
     parents.add_enriched(
         Enrichment::new(
             "TypeName",
@@ -95,7 +95,7 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
             ("Label", Value::from("b")),
         ]),
     ]);
-    let mut join_repo = parents_repo(MockConnection::with_command_provider(
+    let join_repo = parents_repo(MockConnection::with_command_provider(
         command,
         "memory",
     ));

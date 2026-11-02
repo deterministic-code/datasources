@@ -127,7 +127,7 @@ pub fn contacts_service_of(
         middleware.clone(),
         field,
     ));
-    let mut addresses_repo = open(
+    let addresses_repo = open(
         connection.clone(),
         "Address",
         &address,
@@ -146,7 +146,7 @@ pub fn contacts_service_of(
         address_types,
         None,
     );
-    let mut phones_repo = open(
+    let phones_repo = open(
         connection.clone(),
         "Phone",
         &phone,
@@ -165,7 +165,7 @@ pub fn contacts_service_of(
         phone_types,
         None,
     );
-    let mut contacts = open(
+    let contacts = open(
         connection.clone(),
         "Contact",
         &base,

@@ -3,8 +3,7 @@ use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
-use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::enrichment_via::EnrichmentVia;
+use crate::from_schema::FromSchema;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
 use crate::IWhere;
@@ -16,7 +15,6 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy;
-use crate::stored_enrichment::StoredEnrichment;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
@@ -93,26 +91,17 @@ impl BulkCRUDRepository {
         }
     }
 
-    pub fn add_enriched(
+    pub fn add_enriched<TRelated, R>(
         &mut self,
         enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
-    ) -> &mut Self {
-        let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
-        let persist_bulk = via.bulk_repo();
-        let (via, persist) = via.into_repos();
-        self.crud
-            .enrichments
-            .lock()
-            .expect("enrichments")
-            .push(StoredEnrichment::direct_bulk(
-                enrichment,
-                via,
-                persist,
-                persist_bulk,
-                strategy,
-            ));
+        via: Arc<R>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, TRelated>>>,
+    ) -> &mut Self
+    where
+        TRelated: FromSchema,
+        R: IReadonlyRepository<TRelated> + Send + Sync + 'static,
+    {
+        self.crud.add_enriched(enrichment, via, strategy);
         self
     }
 
@@ -160,7 +149,7 @@ impl BulkCRUDRepository {
                 if self.strategy.persist_children() {
                     crate::bulk_write_enrichment::after_bulk_write(
                         Some(&self.write),
-                        Some(&self.crud.enrichments),
+                        Some(&self.crud.write_enrichments),
                         items,
                         WriteMode::Create,
                     )
@@ -188,7 +177,7 @@ impl BulkCRUDRepository {
             let mut owned = items.to_vec();
             crate::bulk_write_enrichment::after_bulk_write(
                 Some(&self.write),
-                Some(&self.crud.enrichments),
+                Some(&self.crud.write_enrichments),
                 &mut owned,
                 WriteMode::Update,
             )
@@ -212,7 +201,7 @@ impl BulkCRUDRepository {
             let mut owned = items.to_vec();
             crate::bulk_write_enrichment::after_bulk_write(
                 Some(&self.write),
-                Some(&self.crud.enrichments),
+                Some(&self.crud.write_enrichments),
                 &mut owned,
                 WriteMode::Delete,
             )
@@ -281,5 +270,23 @@ impl ICRUDRepository for BulkCRUDRepository {
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
         self.crud.read_single_by_id(id).await
+    }
+
+    fn bulk_create<'a>(
+        &'a self,
+        items: &'a mut [Row],
+    ) -> Option<Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>>> {
+        Some(Box::pin(async move {
+            self.create_bulk(items).await.map(|_| ())
+        }))
+    }
+
+    fn bulk_update<'a>(
+        &'a self,
+        items: &'a [Row],
+    ) -> Option<Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + 'a>>> {
+        Some(Box::pin(async move {
+            self.update_bulk(items, None).await.map(|_| ())
+        }))
     }
 }

@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::StreamExt;
 use std::any::TypeId;
+use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -21,10 +22,7 @@ pub trait IReadonlyRepository<T: FromSchema = Row>: IRepository {
         true
     }
 
-    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<T>>>
-    where
-        Self: Sized,
-    {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<T>>> {
         None
     }
 
@@ -44,6 +42,20 @@ pub trait ICRUDRepository<T: FromSchema = Row>: IReadonlyRepository<T> {
     }
 
     fn add_middleware(&self, _middleware: Arc<dyn CommandMiddleware>) {}
+
+    fn bulk_create<'a>(
+        &'a self,
+        _items: &'a mut [Row],
+    ) -> Option<Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>> {
+        None
+    }
+
+    fn bulk_update<'a>(
+        &'a self,
+        _items: &'a [Row],
+    ) -> Option<Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>> {
+        None
+    }
 }
 
 struct AsReadonly<T: FromSchema>(Arc<dyn ICRUDRepository<T>>);
@@ -70,7 +82,7 @@ pub fn as_readonly<T: FromSchema>(repo: Arc<dyn ICRUDRepository<T>>) -> Arc<dyn 
 }
 
 pub(crate) fn map_row<T: FromSchema>(row: Row, schema: &Schema) -> Result<T> {
-    T::from_schema(row, schema)
+    T::from_schema(T::prepare_cells(row)?, schema)
 }
 
 pub(crate) fn to_stored<T: FromSchema>(item: &T, schema: &Schema) -> Result<Row> {
@@ -81,5 +93,5 @@ pub(crate) fn map_stream<'a, T: FromSchema>(
     rows: Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>,
     schema: Schema,
 ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-    Box::pin(rows.map(move |row| row.and_then(|row| T::from_schema(row, &schema))))
+    Box::pin(rows.map(move |row| row.and_then(|row| map_row(row, &schema))))
 }

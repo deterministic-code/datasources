@@ -40,6 +40,18 @@ public sealed class PhoneRepository : CRUDRepository<Backend.Types.View.Phone>
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
                 CreateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
                 UpdateProperties = ["Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["PhoneTypeId"] = new("integer", false, false),
+                    ["Number"] = new("string", false, false),
+                    ["Label"] = new("string", true, false),
+                }),
             })
             .Add("sqlite", new()
             {
@@ -61,6 +73,18 @@ public sealed class PhoneRepository : CRUDRepository<Backend.Types.View.Phone>
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
                 CreateProperties = ["Uuid", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["PhoneTypeId"] = new("integer", false, false),
+                    ["Number"] = new("string", false, false),
+                    ["Label"] = new("string", true, false),
+                }),
             })
             .Add("mysql", new()
             {
@@ -82,6 +106,18 @@ public sealed class PhoneRepository : CRUDRepository<Backend.Types.View.Phone>
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
                 CreateProperties = ["ContactId", "PhoneTypeId", "Number", "Label"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["PhoneTypeId"] = new("integer", false, false),
+                    ["Number"] = new("string", false, false),
+                    ["Label"] = new("string", true, false),
+                }),
             })
             .Add("postgres", new()
             {
@@ -103,6 +139,18 @@ public sealed class PhoneRepository : CRUDRepository<Backend.Types.View.Phone>
                 ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
                 CreateProperties = ["ContactId", "PhoneTypeId", "Number", "Label"],
                 UpdateProperties = ["Uuid", "Version", "ContactId", "PhoneTypeId", "Number", "Label"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("integer", false, false),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["ContactId"] = new("integer", false, false),
+                    ["PhoneTypeId"] = new("integer", false, false),
+                    ["Number"] = new("string", false, false),
+                    ["Label"] = new("string", true, false),
+                }),
             })
             .For(connection);
 }

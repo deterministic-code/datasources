@@ -1,23 +1,28 @@
+use crate::child_writes::ChildWrites;
 use crate::enrichment::Enrichment;
-use crate::repository::ICRUDRepository;
+use crate::from_schema::FromSchema;
 use crate::result::Result;
-use crate::row::Row;
 use async_trait::async_trait;
-use std::sync::Arc;
 
 #[async_trait]
-pub trait CreateEnrichmentStrategy: Send + Sync {
+pub trait CreateEnrichmentStrategy<T: FromSchema>: Send + Sync {
     async fn create_children(
         &self,
-        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &mut Row,
-    ) -> Result<()>;
+        parent: &mut T,
+        writes: &dyn ChildWrites<T>,
+    ) -> Result<()> {
+        let _ = self;
+        writes.create_children(enrichment, parent).await
+    }
 
     async fn create_linked(
         &self,
-        writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &mut Row,
-    ) -> Result<()>;
+        parent: &T,
+        writes: &dyn ChildWrites<T>,
+    ) -> Result<()> {
+        let _ = self;
+        writes.create_linked(enrichment, parent).await
+    }
 }

@@ -6,7 +6,6 @@ use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter, TypeConverte
 use crate::from_schema::FromSchema;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::IWhere;
 use crate::mappers::{IdentityMapper, Mapper};
@@ -24,7 +23,7 @@ use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
 use crate::statements::Where;
 use crate::statement_mappers::StatementMappers;
-use crate::stored_enrichment::StoredEnrichment;
+use crate::stored_enrichment::{LookupFn, StoredEnrichment, WriteEnrichment};
 use crate::mocks::MockConnection;
 use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
@@ -59,7 +58,8 @@ pub struct ReadonlyRepository<T: FromSchema = Row> {
     readonly_statements: ReadonlyRepositoryStatements,
     pub(crate) entity_type: TypeId,
     pub(crate) memory: Option<Arc<SharedItems>>,
-    pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment>>>,
+    pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment<T>>>>,
+    pub(crate) write_enrichments: Arc<Mutex<Vec<WriteEnrichment<T>>>>,
     pub(crate) schema: Schema,
     entity: PhantomData<T>,
 }
@@ -93,6 +93,7 @@ impl<T: FromSchema> ReadonlyRepository<T> {
             entity_type: TypeId::of::<T>(),
             memory: None,
             enrichments,
+            write_enrichments: Arc::new(Mutex::new(Vec::new())),
             schema: built.schema,
             entity: PhantomData,
         }
@@ -122,23 +123,34 @@ impl<T: FromSchema> ReadonlyRepository<T> {
             entity_type: TypeId::of::<T>(),
             memory: Some(SharedItems::new(items)),
             enrichments,
+            write_enrichments: Arc::new(Mutex::new(Vec::new())),
             schema: Schema::default(),
             entity: PhantomData,
         }
     }
 
-    pub fn add_enriched(
-        &mut self,
+    pub fn add_enriched<TRelated: FromSchema + 'static>(
+        &self,
         enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
-    ) -> &mut Self {
+        via: Arc<dyn IReadonlyRepository<TRelated>>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
+    ) -> &Self
+    where
+        T: 'static,
+    {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
-        let via = via.read_via();
-        self.enrichments
-            .lock()
-            .expect("enrichments")
-            .push(StoredEnrichment::direct(enrichment, via, None, strategy));
+        let persist = via.clone().to_crud().map(crate::write_children::child_writes::<T, TRelated>);
+        let lookup = enrichment.related_property.as_ref().map(|_| lookup_of(via.clone(), enrichment.clone()));
+        self.write_enrichments.lock().expect("enrichments").push(WriteEnrichment {
+            enrichment: enrichment.clone(),
+            persist,
+            link: None,
+            lookup,
+        });
+        self.enrichments.lock().expect("enrichments").push(StoredEnrichment::new(
+            enrichment,
+            StoredEnrichment::boxed_apply(via, strategy),
+        ));
         self
     }
 
@@ -198,10 +210,18 @@ impl<T: FromSchema> ReadonlyRepository<T> {
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
+        let mut items = parents
+            .iter()
+            .map(|row| crate::repository::map_row(row.clone(), &self.schema))
+            .collect::<Result<Vec<_>>>()?;
         let entries = self.enrichments.lock().expect("enrichments").clone();
         for entry in entries {
-            entry.apply(parents, sources).await?;
+            entry.apply(&mut items, sources).await?;
         }
+        *parents = items
+            .iter()
+            .map(|item| item.to_schema(&self.schema))
+            .collect::<Result<Vec<_>>>()?;
         Ok(())
     }
 
@@ -563,6 +583,45 @@ fn next_buffered(items: Vec<Row>) -> Result<Option<(Row, ReadRun)>> {
 
 fn next_buffered_iter(mut items: std::vec::IntoIter<Row>) -> Result<Option<(Row, ReadRun)>> {
     Ok(items.next().map(|row| (row, ReadRun::Buffered(items))))
+}
+
+fn lookup_of<T, TRelated>(
+    via: Arc<dyn IReadonlyRepository<TRelated>>,
+    enrichment: crate::enrichment::Enrichment,
+) -> LookupFn<T>
+where
+    T: FromSchema + 'static,
+    TRelated: FromSchema + 'static,
+{
+    Arc::new(move |item| {
+        let via = Arc::clone(&via);
+        let enrichment = enrichment.clone();
+        Box::pin(async move {
+            let related = enrichment.related_property.clone().unwrap_or_default();
+            let row = crate::default_write_enrichment_strategy::field_row(item)?;
+            let name = row
+                .get(&enrichment.destination_property)
+                .cloned()
+                .unwrap_or(Value::Null);
+            let found = via
+                .read_single(&crate::Where::new(crate::Operator::equals(related, name.clone())))
+                .await?;
+            let id = match &found {
+                Some(related_item) => crate::default_write_enrichment_strategy::field_row(related_item)?
+                    .get(&enrichment.related_key)
+                    .cloned(),
+                None => None,
+            };
+            let id = id.filter(|value| !crate::default_write_enrichment_strategy::missing(value)).ok_or_else(|| {
+                DatasourceError::message(format!(
+                    "Unknown {} \"{}\"",
+                    enrichment.destination_property,
+                    name.wire_text()
+                ))
+            })?;
+            crate::write_children::stamp(item, &enrichment.source_property, &id)
+        })
+    })
 }
 
 pub(crate) fn push_middleware<T: FromSchema>(
