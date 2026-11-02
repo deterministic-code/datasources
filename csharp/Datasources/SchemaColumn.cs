@@ -1,3 +1,3 @@
 namespace Datasources;
 
-public sealed record SchemaColumn(string Type, bool Nullable = false, bool HasDefault = false);
+public sealed record SchemaColumn(string Type, bool Nullable = false, bool HasDefault = false, bool IsId = false);

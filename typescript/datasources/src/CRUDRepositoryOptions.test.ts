@@ -29,7 +29,7 @@ describe("CRUDRepositoryOptions", () => {
     };
     expect(new CRUDRepositoryBuilder<{ id: number }>().parts(new MockConnection(), fromType).ids).toEqual(["id"]);
     expect(new ReadonlyRepositoryBuilder().parts(new MockConnection(), {}).ids).toEqual([]);
-    expect(new CRUDRepositoryBuilder().parts(new MockConnection(), { entity: "users" }).ids).toEqual([]);
+    expect(new CRUDRepositoryBuilder().parts(new MockConnection(), { entity: "users" }).ids).toEqual(["id"]);
     expect(
       new CRUDRepositoryBuilder().parts(new MockConnection(), {
         write: new DefaultWriteEnrichmentStrategy(),

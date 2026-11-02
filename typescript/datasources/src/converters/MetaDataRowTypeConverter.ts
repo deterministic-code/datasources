@@ -3,12 +3,16 @@ import { TypeConverter } from "./TypeConverter.ts";
 import type { Constructable } from "./Constructable.ts";
 import type { IMapper } from "../mappers/IMapper.ts";
 import { IdentityMapper } from "../mappers/IdentityMapper.ts";
+import { identityKey } from "../identity.ts";
 
-const scalarId = (value: Cell | object | undefined): Cell | undefined => {
+const scalarId = (value: Cell | object | undefined, names: readonly string[]): Cell | undefined => {
   if (value === undefined || value === null || typeof value !== "object")
     return value === undefined ? undefined : (value as Cell);
-  const record = value as Record<string, Cell | undefined>;
-  return record.Id !== undefined ? record.Id : record.id;
+  for (const name of [...names, "Id", "id"]) {
+    const key = identityKey(value, name);
+    if (key !== value) return key as Cell;
+  }
+  return undefined;
 };
 
 export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells> {
@@ -16,6 +20,7 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
   references = new Set<string>();
   referenceColumns: IMapper<string, string> = new IdentityMapper<string>();
   shouldCoerceId = false;
+  ids: string[] = [];
 
   constructor(fields: Record<string, TypeConverter<Cell, Cell>> = {}) {
     super();
@@ -39,7 +44,7 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
         const target = current !== null && typeof current === "object" && !Array.isArray(current)
           ? current as Record<string, Cell>
           : {};
-        const id = "Id" in target ? "Id" : "id";
+        const id = this.ids.find((name) => name in target) ?? ("Id" in target ? "Id" : "id");
         target[id] = value;
         record[key] = target;
         continue;
@@ -63,7 +68,7 @@ export class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
       )
         continue;
       if (this.references.has(key)) {
-        const id = scalarId(value);
+        const id = scalarId(value, this.ids);
         if (id !== undefined && id !== null) cells[this.referenceColumns.map(key)] = this.converted(key, id);
         continue;
       }

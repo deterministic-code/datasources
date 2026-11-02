@@ -54,6 +54,62 @@ pub(crate) fn key(value: Option<Value>) -> Option<Value> {
     }
 }
 
+pub(crate) fn map_key(related_key: &str) -> &'static str {
+    match related_key.chars().next() {
+        Some(first) if related_key.contains('_') || first.is_lowercase() => "key",
+        _ => "Key",
+    }
+}
+
+pub(crate) fn children<T: Entity, TChild: Entity>(
+    enrichment: &Enrichment,
+    parent: &T,
+) -> Result<Vec<TChild>> {
+    if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
+        dictionary_children(enrichment, parent)
+    } else {
+        Ok(parent.related(&enrichment.destination_property))
+    }
+}
+
+fn dictionary_children<T: Entity, TChild: Entity>(
+    enrichment: &Enrichment,
+    parent: &T,
+) -> Result<Vec<TChild>> {
+    let key_name = map_key(&enrichment.related_key);
+    parent
+        .payload(&enrichment.destination_property)
+        .into_iter()
+        .map(|row| {
+            let mut child = TChild::default();
+            let key = row
+                .get(key_name)
+                .or_else(|| row.get("key"))
+                .or_else(|| row.get("Key"))
+                .cloned()
+                .unwrap_or(Value::Null);
+            set(&mut child, key_name, key)?;
+            if let Some(select) = enrichment.related_property.as_deref() {
+                let value = row
+                    .get(select)
+                    .or_else(|| row.get("value"))
+                    .or_else(|| row.get("Value"))
+                    .cloned()
+                    .unwrap_or(Value::Null);
+                set(&mut child, select, value)?;
+            } else {
+                for (name, cell) in row {
+                    if name.eq_ignore_ascii_case(key_name) {
+                        continue;
+                    }
+                    set(&mut child, &name, cell)?;
+                }
+            }
+            Ok(child)
+        })
+        .collect()
+}
+
 pub(crate) fn set<T: Entity>(item: &mut T, name: &str, value: Value) -> Result<()> {
     if T::is_dictionary() || item.has(name) {
         return item.set_cell(name, value);

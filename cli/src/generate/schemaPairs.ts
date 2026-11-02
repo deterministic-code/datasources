@@ -9,6 +9,7 @@ export type SchemaPair = {
   type: string;
   nullable: boolean;
   hasDefault: boolean;
+  isId: boolean;
 };
 
 const tableNameOf = (authored: Type, specName: string): string =>
@@ -36,6 +37,7 @@ export const schemaPairs = (
           type: field.type,
           nullable: field.isNullable === true,
           hasDefault: field.defaultValue !== undefined && field.defaultValue !== null,
+          isId: field.isId === true,
         }],
   );
 };

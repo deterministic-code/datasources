@@ -17,6 +17,7 @@ struct Child {
     id: i64,
     parent_id: i64,
     label: String,
+    line2: Option<String>,
     created: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -34,23 +35,33 @@ fn parent_options() -> CRUDRepositoryOptions {
             type_name: "integer".into(),
             nullable: false,
             has_default: true,
+            is_id: true,
         }),
         ("label".into(), SchemaColumn {
             type_name: "string".into(),
             nullable: false,
             has_default: false,
+            is_id: false,
         }),
     ]));
     options
 }
 
-fn child_repo(connection: Arc<dyn Connection>) -> Arc<CRUDRepository> {
+fn child_options() -> CRUDRepositoryOptions {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "Child".into();
     options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "parent_id".into(), "label".into(), "created".into()];
-    options.create_properties = Some(vec!["parent_id".into(), "label".into(), "created".into()]);
-    Arc::new(CRUDRepository::<Row>::new(connection, options).unwrap())
+    options.read_properties = vec!["id".into(), "parent_id".into(), "label".into(), "line2".into(), "created".into()];
+    options.create_properties = Some(vec!["parent_id".into(), "label".into(), "line2".into(), "created".into()]);
+    options
+}
+
+fn child_repo(connection: Arc<dyn Connection>) -> Arc<CRUDRepository> {
+    Arc::new(CRUDRepository::<Row>::new(connection, child_options()).unwrap())
+}
+
+fn child_typed_repo(connection: Arc<dyn Connection>) -> Arc<CRUDRepository<Child>> {
+    Arc::new(CRUDRepository::<Child>::new(connection, child_options()).unwrap())
 }
 
 #[test]
@@ -96,6 +107,7 @@ async fn typed_create_persists_and_reads_list_children() {
             label: "p".into(),
             children: vec![Child {
                 label: "a".into(),
+                line2: Some("Room 12".into()),
                 created: Some(stamp),
                 ..Default::default()
             }],
@@ -107,10 +119,54 @@ async fn typed_create_persists_and_reads_list_children() {
     assert_eq!(created.children.len(), 1);
     assert_eq!(created.children[0].label, "a");
     assert_eq!(created.children[0].parent_id, created.id);
+    assert_eq!(created.children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(created.children[0].created, Some(stamp));
     let read = parents.read(&()).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(read.len(), 1);
     assert_eq!(read[0].children[0].label, "a");
+    assert_eq!(read[0].children[0].line2.as_deref(), Some("Room 12"));
+    assert_eq!(read[0].children[0].created, Some(stamp));
+}
+
+#[tokio::test]
+async fn typed_create_persists_list_children_on_typed_repo() {
+    let connection = MemoryDriver.connection(None);
+    connection.open().await.unwrap();
+    let mut parents = CRUDRepository::<Parent>::new(Arc::clone(&connection), parent_options()).unwrap();
+    let children = child_typed_repo(connection);
+    parents.add_enriched(
+        Enrichment::new(
+            "children",
+            "id",
+            "parent_id",
+            None,
+            EnrichmentPropertyType::List,
+        ),
+        children.clone(),
+        None,
+    );
+    let stamp = chrono::DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+        .unwrap()
+        .with_timezone(&chrono::Utc);
+    let created = parents
+        .create(Parent {
+            label: "p".into(),
+            children: vec![Child {
+                label: "a".into(),
+                line2: Some("Room 12".into()),
+                created: Some(stamp),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert!(created.id > 0);
+    assert_eq!(created.children.len(), 1);
+    assert_eq!(created.children[0].line2.as_deref(), Some("Room 12"));
+    assert_eq!(created.children[0].parent_id, created.id);
+    let read = parents.read(&()).try_collect::<Vec<_>>().await.unwrap();
+    assert_eq!(read[0].children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(read[0].children[0].created, Some(stamp));
 }
 
@@ -134,23 +190,42 @@ fn person_options() -> CRUDRepositoryOptions {
             type_name: "integer".into(),
             nullable: false,
             has_default: true,
+            is_id: true,
         }),
         ("gender_type_id".into(), SchemaColumn {
             type_name: "integer".into(),
             nullable: false,
             has_default: false,
+            is_id: false,
         }),
     ]));
     options
 }
 
-fn gender_repo(connection: Arc<dyn Connection>) -> Arc<CRUDRepository> {
+#[derive(Clone, Debug, Default, PartialEq, Facet)]
+#[facet(crate = ::datasources::facet)]
+struct Gender {
+    id: i64,
+    name: String,
+}
+
+impl SchemaObject for Gender {}
+
+fn gender_options() -> CRUDRepositoryOptions {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "Gender".into();
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "name".into()];
     options.create_properties = Some(vec!["name".into()]);
-    Arc::new(CRUDRepository::<Row>::new(connection, options).unwrap())
+    options
+}
+
+fn gender_repo(connection: Arc<dyn Connection>) -> Arc<CRUDRepository> {
+    Arc::new(CRUDRepository::<Row>::new(connection, gender_options()).unwrap())
+}
+
+fn gender_typed_repo(connection: Arc<dyn Connection>) -> Arc<CRUDRepository<Gender>> {
+    Arc::new(CRUDRepository::<Gender>::new(connection, gender_options()).unwrap())
 }
 
 #[tokio::test]
@@ -197,6 +272,44 @@ async fn typed_create_resolves_lookup_name_without_source_property() {
     assert!(unknown.to_string().contains("Unknown gender_type_name"));
 }
 
+#[tokio::test]
+async fn typed_create_resolves_lookup_on_typed_gender_repo() {
+    let connection = MemoryDriver.connection(None);
+    connection.open().await.unwrap();
+    let genders = gender_typed_repo(Arc::clone(&connection));
+    let female = genders
+        .create(Gender {
+            name: "Female".into(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    let mut people = CRUDRepository::<Person>::new(connection, person_options()).unwrap();
+    people.add_enriched(
+        Enrichment::new(
+            "gender_type_name",
+            "gender_type_id",
+            "id",
+            Some("name".into()),
+            EnrichmentPropertyType::Object,
+        ),
+        genders.clone(),
+        None,
+    );
+    let created = people
+        .create(Person {
+            gender_type_name: "Female".into(),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert!(created.id > 0);
+    assert_eq!(created.gender_type_name, "Female");
+    assert_eq!(female.name, "Female");
+    let read = people.read(&()).try_collect::<Vec<_>>().await.unwrap();
+    assert_eq!(read[0].gender_type_name, "Female");
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Facet)]
 #[facet(crate = ::datasources::facet)]
 struct AddressView {
@@ -231,6 +344,7 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
                 type_name: "integer".into(),
                 nullable: false,
                 has_default: true,
+                is_id: true,
             },
         )]));
         options
@@ -249,6 +363,7 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
                     type_name: "integer".into(),
                     nullable: false,
                     has_default: true,
+                    is_id: true,
                 },
             ),
             (
@@ -256,16 +371,18 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
                 SchemaColumn {
                     type_name: "integer".into(),
                     nullable: false,
-                    has_default: false,
-                },
+                has_default: false,
+                is_id: false,
+            },
             ),
             (
                 "line".into(),
                 SchemaColumn {
                     type_name: "string".into(),
                     nullable: false,
-                    has_default: false,
-                },
+                has_default: false,
+                is_id: false,
+            },
             ),
         ]));
         options

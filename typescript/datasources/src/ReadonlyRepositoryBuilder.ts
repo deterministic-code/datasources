@@ -32,6 +32,7 @@ export class ReadonlyRepositoryBuilder<T = object> {
       const instance = new options.type() as Record<string, string | number | boolean | bigint | null | object>;
       objectConverter.references.clear();
       objectConverter.referenceColumns = propertyMappings;
+      objectConverter.ids = options.schema?.ids().length ? options.schema.ids() : this.ids(options);
       for (const name of names) {
         const value = instance[name];
         if (

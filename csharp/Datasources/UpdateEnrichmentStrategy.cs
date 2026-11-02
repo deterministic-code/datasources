@@ -97,10 +97,10 @@ public abstract class UpdateEnrichmentStrategy<T>
         {
             var current = prop.GetValue(obj) ?? Activator.CreateInstance(target)
                 ?? throw new DatasourceException($"Cannot create \"{name}\"");
-            var id = target.GetProperty("Id") ?? target.GetProperty("id")
-                ?? throw new DatasourceException($"\"{name}\" requires Id");
-            var idType = Nullable.GetUnderlyingType(id.PropertyType) ?? id.PropertyType;
-            id.SetValue(current, idType.IsInstanceOfType(value) ? value : Convert.ChangeType(value, idType));
+            var key = IdentityProperty(target)
+                ?? throw new DatasourceException($"\"{name}\" requires is_id");
+            var idType = Nullable.GetUnderlyingType(key.PropertyType) ?? key.PropertyType;
+            key.SetValue(current, idType.IsInstanceOfType(value) ? value : Convert.ChangeType(value, idType));
             prop.SetValue(obj, current);
             return;
         }
@@ -108,6 +108,9 @@ public abstract class UpdateEnrichmentStrategy<T>
             ? value
             : Convert.ChangeType(value, target));
     }
+
+    static PropertyInfo? IdentityProperty(Type target) =>
+        target.GetProperty("id") ?? target.GetProperty("Id");
 
     static bool IsReference(Type type) =>
         type.IsClass && type != typeof(string) && !typeof(IEnumerable).IsAssignableFrom(type);

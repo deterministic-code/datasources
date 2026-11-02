@@ -5,6 +5,7 @@ pub struct SchemaColumn {
     pub type_name: String,
     pub nullable: bool,
     pub has_default: bool,
+    pub is_id: bool,
 }
 
 impl SchemaColumn {
@@ -13,6 +14,7 @@ impl SchemaColumn {
             type_name: type_name.into(),
             nullable: false,
             has_default: false,
+            is_id: false,
         }
     }
 }
@@ -39,10 +41,39 @@ impl Schema {
         Self { columns }
     }
 
+    pub fn ids(&self) -> Vec<String> {
+        self.columns
+            .iter()
+            .filter(|(_, column)| column.is_id)
+            .map(|(name, _)| name.clone())
+            .collect()
+    }
+
     pub fn types(&self) -> HashMap<String, String> {
         self.columns
             .iter()
             .map(|(name, column)| (name.clone(), column.type_name.clone()))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ids_uses_is_id() {
+        let schema = Schema::new(HashMap::from([
+            (
+                "Key".into(),
+                SchemaColumn {
+                    type_name: "string".into(),
+                    is_id: true,
+                    ..SchemaColumn::new("string")
+                },
+            ),
+            ("Name".into(), SchemaColumn::new("string")),
+        ]));
+        assert_eq!(schema.ids(), vec!["Key".to_string()]);
     }
 }

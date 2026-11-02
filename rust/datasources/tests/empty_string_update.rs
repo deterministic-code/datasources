@@ -21,6 +21,7 @@ async fn update_keeps_explicit_empty_string_on_nullable() {
                 type_name: "string".into(),
                 nullable: true,
                 has_default: false,
+                is_id: false,
             },
         ),
     ]));

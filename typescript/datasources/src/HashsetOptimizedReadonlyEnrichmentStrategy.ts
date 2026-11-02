@@ -17,7 +17,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const keys = this.keysOf(parents, sources, enrichment.sourceProperty);
+    const keys = this.keysOf(parents, sources, enrichment);
     if (keys.size === 0) return;
     const index = new Map<string, TRelated>();
     for await (const item of via.read(
@@ -27,7 +27,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
       if (hasKey(by)) index.set(this.keyOf(by), item);
     }
     for (const [indexOfParent, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, indexOfParent);
+      const key = this.sourceKey(parent, enrichment, sources, indexOfParent);
       if (key === undefined || key === null) continue;
       const related = index.get(this.keyOf(key));
       if (!related) continue;
@@ -43,7 +43,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const keys = this.keysOf(parents, sources, enrichment.sourceProperty);
+    const keys = this.keysOf(parents, sources, enrichment);
     if (keys.size === 0) return;
     const index = new Map<string, TRelated[]>();
     for await (const item of via.read(
@@ -58,7 +58,7 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
       }
     }
     for (const [indexOfParent, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, enrichment.sourceProperty, sources, indexOfParent);
+      const key = this.sourceKey(parent, enrichment, sources, indexOfParent);
       if (key === undefined || key === null) continue;
       Object.assign(parent, { [enrichment.destinationProperty]: index.get(this.keyOf(key)) ?? [] });
     }
@@ -67,11 +67,11 @@ export class HashsetOptimizedReadonlyEnrichmentStrategy<T extends object>
   private keysOf(
     parents: T[],
     sources: (Row | undefined)[] | undefined,
-    from: string,
+    enrichment: Enrichment,
   ): Map<string, Scalar> {
     const keys = new Map<string, Scalar>();
     for (const [index, parent] of parents.entries()) {
-      const key = this.sourceKey(parent, from, sources, index);
+      const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
       keys.set(this.keyOf(key), this.scalar(key));
     }

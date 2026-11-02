@@ -29,8 +29,8 @@ export abstract class UpdateEnrichmentStrategy<T> {
     const current = this.getCell(related, by);
     if (current !== null && typeof current === "object" && !Array.isArray(current)) {
       const target = current as Props;
-      const id = "Id" in target ? "Id" : "id";
-      target[id] = key;
+      const name = by in target ? by : "Id" in target ? "Id" : "id";
+      target[name] = key;
       return;
     }
     Object.assign(related, { [by]: key });
@@ -43,7 +43,7 @@ export abstract class UpdateEnrichmentStrategy<T> {
     keys.map((name) => String(this.getCell(item, name) ?? "")).join("\u001f");
 
   protected namesOf = <TChild extends object>(writer: ICRUDRepository<TChild>, item: TChild): readonly string[] =>
-    writer.ids.length > 0 ? writer.ids : defaultId(Object.keys(item));
+    writer.ids.length > 0 ? writer.ids : defaultId(undefined, Object.keys(item as object));
 
   protected linkWhere = (
     association: NonNullable<Enrichment["association"]>,

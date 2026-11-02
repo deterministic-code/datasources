@@ -80,7 +80,7 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
 {{/propertyMappings}}
     options.schema = Schema::new(HashMap::from([
 {{#schema}}
-        ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}} }),
+        ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}, is_id: {{#isId}}true{{/isId}}{{^isId}}false{{/isId}} }),
 {{/schema}}
     ]));
     options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];

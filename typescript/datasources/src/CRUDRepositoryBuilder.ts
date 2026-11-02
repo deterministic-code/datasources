@@ -1,5 +1,5 @@
 import type { IConnection } from "./IConnection.ts";
-import { defaultId, fieldNamesOf, createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";
+import { defaultId, createCRUDRepositoryOptions, fieldNamesOf } from "./createCRUDRepositoryOptions.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
@@ -18,7 +18,7 @@ const withIds = <T>(options: CRUDRepositoryOptions<T>): CRUDRepositoryOptions<T>
     ? options
     : {
         ...options,
-        ids: options.type ? defaultId(fieldNamesOf(options.type)) : ["id"],
+        ids: defaultId(options.schema, options.type ? fieldNamesOf(options.type) : []),
       };
 
 export const repositoryParts = <T>(
@@ -52,9 +52,8 @@ export class CRUDRepositoryBuilder<T = object> extends ReadonlyRepositoryBuilder
   for = (connection: IConnection): CRUDRepositoryOptions<T> => this.factory.for(connection.provider);
 
   protected override ids = (options: ReadonlyRepositoryMappingOptions<T>): string[] =>
-    isCrud(options)
-      ? (options.ids ?? (options.type ? defaultId(fieldNamesOf(options.type)) : ["id"]))
-      : [];
+    (isCrud(options) ? options.ids : undefined)
+      ?? defaultId(options.schema, options.type ? fieldNamesOf(options.type) : []);
 
   protected override statements = (table: string, columns: string[]): ReadonlyRepositoryStatements => {
     this.crudStatements = new CRUDRepositoryStatements(table, columns, this.entityMapper, this.propertyMapper);

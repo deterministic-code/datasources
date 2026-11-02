@@ -93,7 +93,11 @@ impl<T: Entity> CRUDRepository<T> {
         create_properties: Option<Vec<String>>,
         update_properties: Option<Vec<String>>,
     ) -> Result<Self> {
-        let id = built.ids.clone();
+        let id = if built.ids.is_empty() {
+            built.schema.ids()
+        } else {
+            built.ids.clone()
+        };
         let readonly = ReadonlyRepository::from_built(built);
         let tree = tree_for(&readonly);
         Ok(Self {

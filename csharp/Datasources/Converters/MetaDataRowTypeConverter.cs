@@ -10,6 +10,7 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
     public HashSet<string> References { get; } = [];
     public IMapper<string, string> ReferenceColumns { get; set; } = new IdentityMapper<string>();
     public bool ShouldCoerceId { get; set; }
+    public IReadOnlyList<string> Ids { get; set; } = [];
 
     public MetaDataRowTypeConverter(IReadOnlyDictionary<string, TypeConverter<Value, Value>>? fields = null)
     {
@@ -32,7 +33,7 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             if (prop is null || !prop.CanWrite || prop.GetIndexParameters().Length > 0) continue;
             if (References.Contains(prop.Name))
             {
-                SetReferenceId(target, prop, Converted(key, value, reverse: false));
+                SetReferenceId(target, prop, Converted(key, value, reverse: false), Ids);
                 continue;
             }
             if (!IsColumn(prop.PropertyType)) continue;
@@ -59,7 +60,7 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
     {
         if (References.Contains(prop.Name))
         {
-            if (ReferenceId(prop.GetValue(source)) is { } id)
+            if (ReferenceId(prop.GetValue(source), Ids) is { } id)
                 yield return new(ReferenceColumns.Map(prop.Name), Converted(prop.Name, id, reverse: true));
             yield break;
         }
@@ -69,23 +70,25 @@ public sealed class MetaDataRowTypeConverter<T> : TypeConverter<T, Row> where T 
             : new(prop.Name, Value.Null.Instance);
     }
 
-    static void SetReferenceId(T target, PropertyInfo prop, Value cell)
+    static void SetReferenceId(T target, PropertyInfo prop, Value cell, IReadOnlyList<string> ids)
     {
         if (cell.ToObject() is not { } raw) return;
         var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
         var current = prop.GetValue(target) ?? Activator.CreateInstance(type);
         if (current is null) return;
-        var id = type.GetProperty("Id") ?? type.GetProperty("id");
+        var id = ids.Select(type.GetProperty).FirstOrDefault(found => found is not null)
+            ?? type.GetProperty("Id") ?? type.GetProperty("id");
         if (id is null) return;
         var idType = Nullable.GetUnderlyingType(id.PropertyType) ?? id.PropertyType;
         id.SetValue(current, idType.IsInstanceOfType(raw) ? raw : System.Convert.ChangeType(raw, idType));
         prop.SetValue(target, current);
     }
 
-    static Value? ReferenceId(object? value)
+    static Value? ReferenceId(object? value, IReadOnlyList<string> ids)
     {
         if (value is null) return null;
-        var id = value.GetType().GetProperty("Id") ?? value.GetType().GetProperty("id");
+        var id = ids.Select(value.GetType().GetProperty).FirstOrDefault(found => found is not null)
+            ?? value.GetType().GetProperty("Id") ?? value.GetType().GetProperty("id");
         return id?.GetValue(value) is { } raw ? Value.From(raw) : null;
     }
 

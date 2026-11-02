@@ -62,6 +62,9 @@ mod repository_spec;
 #[cfg(test)]
 #[path = "../tests/generate_sql.rs"]
 mod generate_sql;
+#[cfg(test)]
+#[path = "../tests/typed_list_enrichment.rs"]
+mod typed_list_enrichment;
 
 #[cfg(test)]
 mod tests {

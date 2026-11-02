@@ -104,7 +104,7 @@ public class UserViewCRUDRepositoryTests
                 ? new DictionaryMapper<string>(new Dictionary<string, string> { ["UserView"] = "users" })
                 : Plural,
             PropertyMappings = Snake,
-            Ids = CreateCRUDRepositoryOptions.FromType<T>().Ids,
+            Ids = ["Id"],
             ReadProperties = typeof(T) == typeof(UserView)
                 ? ["Id", "Username", "IsEnabled", "UserTypeId"]
                 : null,

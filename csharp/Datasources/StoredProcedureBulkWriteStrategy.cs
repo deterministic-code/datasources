@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 
 namespace Datasources;
@@ -98,7 +99,8 @@ public sealed class StoredProcedureBulkWriteStrategy<T> : IBulkWriteStrategy<T> 
 
     static void Stamp(T item, string column, long id)
     {
-        var property = typeof(T).GetProperty(column) ?? typeof(T).GetProperty("Id");
+        var property = typeof(T).GetProperty(column)
+            ?? typeof(T).GetProperty(column, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (property is not { CanWrite: true }) return;
         var type = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
         property.SetValue(item, Convert.ChangeType(id, type, CultureInfo.InvariantCulture));

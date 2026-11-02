@@ -8,7 +8,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
-        var keys = Keys(parents, sources, enrichment.SourceProperty);
+        var keys = Keys(parents, sources, enrichment);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, TRelated>();
         await foreach (var item in via.Read(new Where(new Operator.In(enrichment.RelatedKey, keys.Values.ToList()))))
@@ -20,7 +20,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
+            var key = SourceKey(parent, enrichment, At(sources, i));
             if (key is null || !index.TryGetValue(KeyOf(key), out var related))
                 continue;
             Set(
@@ -36,7 +36,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         IList<T> parents,
         IReadOnlyList<Row?>? sources)
     {
-        var keys = Keys(parents, sources, enrichment.SourceProperty);
+        var keys = Keys(parents, sources, enrichment);
         if (keys.Count == 0) return;
         var index = new Dictionary<string, List<TRelated>>();
         await foreach (var item in via.Read(new Where(new Operator.In(enrichment.RelatedKey, keys.Values.ToList()))))
@@ -51,7 +51,7 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         for (var i = 0; i < parents.Count; i++)
         {
             var parent = parents[i];
-            var key = SourceKey(parent, enrichment.SourceProperty, At(sources, i));
+            var key = SourceKey(parent, enrichment, At(sources, i));
             if (key is null) continue;
             Set(
                 parent,
@@ -60,12 +60,12 @@ public sealed class HashsetOptimizedReadonlyEnrichmentStrategy<T> : DefaultReado
         }
     }
 
-    static Dictionary<string, Value> Keys(IList<T> parents, IReadOnlyList<Row?>? sources, string from)
+    static Dictionary<string, Value> Keys(IList<T> parents, IReadOnlyList<Row?>? sources, Enrichment enrichment)
     {
         var keys = new Dictionary<string, Value>();
         for (var i = 0; i < parents.Count; i++)
         {
-            var key = SourceKey(parents[i], from, At(sources, i));
+            var key = SourceKey(parents[i], enrichment, At(sources, i));
             if (key is not null)
                 keys.TryAdd(KeyOf(key), Value.From(key));
         }

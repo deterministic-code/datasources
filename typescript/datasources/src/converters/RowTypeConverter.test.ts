@@ -48,6 +48,7 @@ describe("MetaDataRowTypeConverter", () => {
     }
     const converter = new MetaDataRowTypeConverter<Item>();
     converter.references.add("Type");
+    converter.ids = ["Id"];
     const nested = converter.convert({ Type: 4 }, Item);
     expect(nested.Type).toEqual({ Id: 4 });
     class Bare {
@@ -56,6 +57,7 @@ describe("MetaDataRowTypeConverter", () => {
     const bare = new MetaDataRowTypeConverter<Bare>();
     bare.references.add("Type");
     expect(bare.convert({ Type: 4 }, Bare).Type).toEqual({ id: 4 });
+    expect(converter.reverseConvert(Object.assign(new Item(), { Type: { Name: "x" } })).Type).toBeUndefined();
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: { Id: 3 } })).Type).toBe(3);
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: { id: 5 } })).Type).toBe(5);
     expect(converter.reverseConvert(Object.assign(new Item(), { Type: 9 as never })).Type).toBe(9);
