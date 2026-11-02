@@ -112,7 +112,7 @@ mod tests {
         let (_, missing) = to_postgres("SELECT $missing", &HashMap::new());
         assert_eq!(missing, vec![Value::Null]);
         let stamp = Value::from("2020-01-02T03:04:05.000Z");
-        assert_eq!(param_type(&stamp), Type::UNKNOWN);
+        assert_eq!(param_type(&stamp).oid(), 0);
         assert_eq!(
             param_type(&Value::DateTime(
                 chrono::DateTime::parse_from_rfc3339("2020-01-02T03:04:05.000Z")
@@ -121,12 +121,16 @@ mod tests {
             )),
             Type::TIMESTAMPTZ
         );
-        assert_eq!(param_type(&Value::from("ada")), Type::UNKNOWN);
+        assert_eq!(param_type(&Value::from("ada")).oid(), 0);
+        assert_eq!(
+            param_type(&Value::from("550e8400-e29b-41d4-a716-446655440000")).oid(),
+            0
+        );
         assert!(matches!(
             BinaryConverter.convert(&Value::from("AQ==")).unwrap(),
             Value::Binary(_)
         ));
-        assert_eq!(param_type(&Value::from("AA==")), Type::UNKNOWN);
+        assert_eq!(param_type(&Value::from("AA==")).oid(), 0);
         assert_eq!(param_type(&Value::Binary(vec![0])), Type::BYTEA);
         assert_eq!(param_type(&Value::Int(1)), Type::INT4);
         assert_eq!(param_type(&Value::Int(i64::MAX)), Type::INT8);

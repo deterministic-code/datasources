@@ -50,7 +50,7 @@ fn encode(
         ty if ty == &Type::NUMERIC => decimal_of(value)?.to_sql(ty, out),
         ty if ty == &Type::TIMESTAMPTZ => datetime_of(value)?.to_sql(ty, out),
         ty if ty == &Type::TIMESTAMP => datetime_of(value)?.naive_utc().to_sql(ty, out),
-        ty if ty == &Type::UNKNOWN => value.wire_text().to_sql(&Type::TEXT, out),
+        ty if ty == &Type::UNKNOWN => value.wire_text().to_sql(ty, out),
         ty if ty == &Type::UUID => uuid_of(value)?.to_sql(ty, out),
         ty if ty == &Type::BYTEA => binary_of(value)?.to_sql(ty, out),
         ty if ty == &Type::JSONB => {
@@ -129,5 +129,25 @@ fn binary_of(value: &Value) -> Result<Vec<u8>, Box<dyn Error + Sync + Send>> {
             text,
         )?),
         _ => Err(format!("not binary: {}", value.wire_text()).into()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use datasources::Value;
+
+    #[test]
+    fn unknown_text_uuid_encodes_as_unknown() {
+        let id = "550e8400-e29b-41d4-a716-446655440000";
+        let mut encoded = BytesMut::new();
+        let mut unknown = BytesMut::new();
+        PgValue(Value::from(id))
+            .to_sql(&Type::UNKNOWN, &mut encoded)
+            .unwrap();
+        id.to_string()
+            .to_sql(&Type::UNKNOWN, &mut unknown)
+            .unwrap();
+        assert_eq!(encoded, unknown);
     }
 }
