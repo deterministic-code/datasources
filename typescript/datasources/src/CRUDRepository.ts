@@ -54,7 +54,7 @@ const applyEmptyDefaults = (
     if (ids.includes(name) || !listed(properties, name, true) || column.hasDefault || skip(name))
       continue;
     const zero = SchemaDefault.of(column);
-    if (filled[name] === "") filled[name] = zero;
+    if (filled[name] === "" && !column.nullable) filled[name] = zero;
     else if (fillMissing && filled[name] === undefined && languageZero(zero)) filled[name] = zero;
   }
   return filled;

@@ -1,5 +1,5 @@
-{{#allowNonSnakeCase}}#![allow(non_snake_case)]
-{{/allowNonSnakeCase}}{{#typeStems}}
+#![allow(dead_code, unused_imports, non_snake_case)]
+{{#typeStems}}
 {{#path}}#[path = "{{stem}}.rs"]
 pub mod {{ident}};
 {{/path}}{{^path}}pub mod {{stem}};

@@ -2,7 +2,6 @@ import type { IDatasource } from "./IDatasource.ts";
 import type { IDatasourceFactory } from "./IDatasourceFactory.ts";
 import type { IDriver } from "./IDriver.ts";
 import type { DatasourceOptions } from "./DatasourceOptions.ts";
-import { Datasource } from "./Datasource.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { DatasourceUrlParser } from "./DatasourceUrlParser.ts";
 import { DriverLoader } from "./DriverLoader.ts";
@@ -11,6 +10,9 @@ import { ProviderCatalog } from "./ProviderCatalog.ts";
 import { ProviderNotInstalledError } from "./ProviderNotInstalledError.ts";
 
 const factories = new Map<string, IDriver>();
+
+type Built = new (provider: string, driver: IDriver, options?: DatasourceOptions) => IDatasource;
+let built: Built;
 
 const get = (options: DatasourceOptions | undefined, key: string): string | undefined => {
   const value = options?.[key];
@@ -53,7 +55,7 @@ const registerInstalled = (options: DatasourceOptions): void => {
   for (const name of installed(options)) {
     const catalog = ProviderCatalog.default[name];
     if (!catalog) throw new ProviderNotInstalledError(name);
-    if (factories.has(name)) continue;
+    if (factories.get(name)) continue;
     DatasourceFactory.register(name, DriverLoader.load(catalog));
   }
 };
@@ -65,7 +67,7 @@ const resolve = (options?: DatasourceOptions): IDatasource => {
     ?? (() => { throw new DatasourceError("Datasource defaults are not specified"); })();
   const driver = factories.get(name);
   if (!driver) throw new ProviderNotInstalledError(name);
-  return new Datasource(name, driver, listed);
+  return new built(name, driver, listed);
 };
 
 export class DatasourceFactory implements IDatasourceFactory {
@@ -84,4 +86,10 @@ export class DatasourceFactory implements IDatasourceFactory {
   };
 
   static registered = (): string[] => [...factories.keys()].sort();
+
+  static rowTypeConverters = (provider: string) => factories.get(provider)?.rowTypeConverters;
 }
+
+export const bindDatasource = (type: Built): void => {
+  built = type;
+};

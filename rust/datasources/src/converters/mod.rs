@@ -13,6 +13,9 @@ mod type_converter;
 pub use change_casing_converter::{Casing, ChangeCasingConverter};
 pub use mapping::Mapping;
 pub use metadata_row_type_converter::{MetaDataRowTypeConverter, SchemaObject};
+pub(crate) use metadata_row_type_converter::{
+    is_column, peek_value, reflect, set_field, set_value, struct_fields,
+};
 pub use pluralizer_converter::PluralizerConverter;
 pub use regex_converter::RegexConverter;
 pub use replace_converter::ReplaceConverter;

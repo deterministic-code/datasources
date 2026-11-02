@@ -1,4 +1,4 @@
-use datasources::{Association, Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, Enrichment, EnrichmentPropertyType, ICRUDRepository, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
+use datasources::{Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, {{#hasEnrichments}}Enrichment, EnrichmentPropertyType, {{/hasEnrichments}}{{#hasLinked}}Association, {{/hasLinked}}{{#hasIcrud}}ICRUDRepository, {{/hasIcrud}}ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
 {{#typed}}use super::super::{{entityType}};
 {{/typed}}
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ impl {{className}} {
 {{#child}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/child}}
-        let mut repo = CRUDRepository::<{{entityType}}>::new(Arc::clone(&connection), options)?;
+        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = CRUDRepository::<{{entityType}}>::new(Arc::clone(&connection), options)?;
 {{#enrichments}}
         {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
 {{/enrichments}}
@@ -51,7 +51,7 @@ pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datas
 {{#child}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/child}}
-        let mut repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
+        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = CRUDRepository::<datasources::Row>::new(Arc::clone(&connection), options)?;
 {{#enrichments}}
         {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", None, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
 {{/enrichments}}
@@ -84,7 +84,7 @@ pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyReposit
 {{#readonlyChildren}}
         let {{field}} = Arc::new(super::{{module}}::{{rowFn}}(Arc::clone(&connection))?);
 {{/readonlyChildren}}
-        let mut repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
+        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
 {{#enrichments}}
         repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);
 {{/enrichments}}
@@ -141,7 +141,7 @@ impl ICRUDRepository<{{entityType}}> for {{optimisticClass}} {
         self.repo.create(item).await
     }
 
-    async fn update(&self, mut item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+    async fn update(&self, {{#increment}}mut {{/increment}}item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
         let expected = item.{{property}}.clone();
 {{#increment}}
         item.{{property}} += 1;

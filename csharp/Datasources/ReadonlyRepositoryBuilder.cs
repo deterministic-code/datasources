@@ -27,9 +27,14 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
                 if (typeof(T).GetProperty(name) is { } prop && IsReference(prop.PropertyType))
                     meta.References.Add(name);
         }
+        var types = options.RowTypeConverters ?? DatasourceFactory.RowTypeConverters(connection.Provider);
+        var rows = options.RowConverter
+            ?? (options.Schema is { } schema && types is not null
+                ? RowTypeConverter.From(types, schema.Types)
+                : null);
         return new(
             connection,
-            options.RowConverter,
+            rows,
             converter,
             property,
             entity,

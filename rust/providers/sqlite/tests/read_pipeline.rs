@@ -122,7 +122,10 @@ async fn maps_and_converts_users_through_the_read_pipeline() {
         column_mapped_rows[0].get("Username"),
         Some(&Value::from("ada"))
     );
-    assert!(matches!(converted_rows[0].get("Uuid"), Some(Value::Uuid(_))));
+    assert_eq!(
+        converted_rows[0].get("Uuid"),
+        Some(&Value::from(ada.to_string()))
+    );
     assert_eq!(converted_rows[0].get("IsEnabled"), Some(&Value::Bool(true)));
     assert!(matches!(
         converted_rows[0].get("Created"),
@@ -130,7 +133,10 @@ async fn maps_and_converts_users_through_the_read_pipeline() {
     ));
 
     assert_eq!(final_entities[0].get("Id"), Some(&Value::Int(1)));
-    assert!(matches!(final_entities[0].get("Uuid"), Some(Value::Uuid(_))));
+    assert_eq!(
+        final_entities[0].get("Uuid"),
+        Some(&Value::from(ada.to_string()))
+    );
     assert_eq!(
         final_entities[0].get("Username"),
         Some(&Value::from("ada"))

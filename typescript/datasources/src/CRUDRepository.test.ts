@@ -14,6 +14,7 @@ import { ChangeCasingMapper } from "./mappers/ChangeCasingMapper.ts";
 import { DictionaryMapper } from "./mappers/DictionaryMapper.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { TransformMapper } from "./mappers/TransformMapper.ts";
+import { Schema } from "./Schema.ts";
 
 class UserType {
   Id = 0;
@@ -157,6 +158,20 @@ describe("CRUDRepository", () => {
     const closed = new MemoryDriver().connection();
     expect(await collectAsync(new ReadonlyRepository(closed, {}).read())).toEqual([]);
     expect(closed.isOpen).toBe(true);
+  });
+
+  it("update keeps an explicit empty string on a nullable column", async () => {
+    const connection = new MemoryDriver().connection();
+    const repo = new CRUDRepository(connection, {
+      schema: new Schema({
+        id: { type: "integer", nullable: false, hasDefault: false },
+        note: { type: "string", nullable: true, hasDefault: false },
+      }),
+      updateProperties: ["note"],
+    });
+    await repo.create({ id: 1, note: "side" });
+    await repo.update({ id: 1, note: "" });
+    expect((await repo.readSingle())?.note).toBe("");
   });
 
   it("round-trips string and object dictionaries", async () => {

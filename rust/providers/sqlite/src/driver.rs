@@ -219,7 +219,10 @@ mod tests {
             ("Created".into(), Value::from("2020-01-02T03:04:05.000Z")),
         ]);
         let converted = converter.convert(&row).unwrap();
-        assert!(matches!(converted.get("Key"), Some(Value::Uuid(_))));
+        assert_eq!(
+            converted.get("Key"),
+            Some(&Value::from("11111111-1111-1111-1111-111111111111"))
+        );
         assert_eq!(converted.get("Active"), Some(&Value::Bool(true)));
         assert_eq!(converted.get("Login"), Some(&Value::from("ada")));
         assert!(matches!(converted.get("Created"), Some(Value::DateTime(_))));

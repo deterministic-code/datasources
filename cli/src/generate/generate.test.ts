@@ -282,6 +282,9 @@ describe("generate", () => {
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("impl Repositories for Arc<dyn Datasource>");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<CRUDRepository<Contact>>");
     expect(textOf(rust, "contactRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
+    expect(textOf(rust, "addressTypeRepository.rs")).toContain("let repo = ReadonlyRepository::<AddressType>::new(connection, options)?;");
+    expect(textOf(rust, "addressTypeRepository.rs")).not.toContain("Association");
+    expect(textOf(rust, "addressTypeRepository.rs")).not.toContain("Enrichment");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
@@ -593,6 +596,7 @@ types:
     expect(types.filter((entry) => /pub type (\w+) = \1;/.test(entry.contents ?? "")).length).toBe(0);
     const rust = await deterministic.generateRepositories(request("rust"));
     const root = rust.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "rust/mod.rs");
+    expect(root?.contents).toContain("#![allow(dead_code, unused_imports, non_snake_case)]");
     expect(root?.contents).toContain("pub use repositories::repositoryRegistry::Repositories;");
     expect(root?.contents?.split("\n").filter((line) => line === "pub mod legacyContact;").length).toBe(1);
     const cwd = "app";

@@ -129,7 +129,7 @@ impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
     }
 }
 
-fn set_field<'a>(
+pub(crate) fn set_field<'a>(
     partial: Partial<'a>,
     name: &str,
     cell: &Value,
@@ -152,7 +152,7 @@ fn set_field<'a>(
     partial.end().map_err(reflect)
 }
 
-fn set_value<'a>(
+pub(crate) fn set_value<'a>(
     partial: Partial<'a>,
     cell: &Value,
     shape: &'static Shape,
@@ -175,7 +175,7 @@ fn set_value<'a>(
     set.map_err(reflect)
 }
 
-fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
+pub(crate) fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
     if let Ok(option) = value.into_option() {
         return match option.value() {
             Some(inner) => peek_value(inner),
@@ -206,14 +206,14 @@ fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
         .or_else(|| value.get::<Vec<u8>>().ok().map(|bytes| Value::from(bytes.clone())))
 }
 
-fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
+pub(crate) fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
     match shape.ty {
         Type::User(UserType::Struct(st)) => Ok(st.fields),
         _ => Err(DatasourceError::message(format!("{} is not a struct", shape.type_identifier))),
     }
 }
 
-fn is_column(shape: &'static Shape) -> bool {
+pub(crate) fn is_column(shape: &'static Shape) -> bool {
     let shape = if is_option(shape) {
         match option_inner(shape) {
             Ok(inner) => inner,
@@ -240,7 +240,7 @@ fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
     }
 }
 
-fn reflect(error: impl std::fmt::Display) -> DatasourceError {
+pub(crate) fn reflect(error: impl std::fmt::Display) -> DatasourceError {
     DatasourceError::message(error.to_string())
 }
 

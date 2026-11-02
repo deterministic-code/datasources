@@ -63,7 +63,7 @@ var finalEntities = convertedRows.Select(objectConverter.Convert).ToList();
 var finalManualEntities = convertedRows.Select(row => new User
 {
     Id = (long)row["Id"].ToObject()!,
-    Uuid = (Guid)row["Uuid"].ToObject()!,
+    Uuid = Guid.Parse((string)row["Uuid"].ToObject()!),
     Username = (string)row["Username"].ToObject()!,
     IsEnabled = (bool)row["IsEnabled"].ToObject()!,
     Created = (DateTime)row["Created"].ToObject()!,

@@ -269,7 +269,7 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
                     record[key] = zero;
                 continue;
             }
-            if (existing is Value.Text(""))
+            if (existing is Value.Text("") && !column.Nullable)
                 record[key] = zero;
         }
         return record;

@@ -72,12 +72,21 @@ pub(crate) fn map_row<T: Entity>(row: Row) -> Result<T> {
     T::object_converter().convert(&row)
 }
 
+pub(crate) fn map_enriched<T: Entity>(row: Row, destinations: &[String]) -> Result<T> {
+    let mut item: T = map_row(row.clone())?;
+    for name in destinations {
+        item.set_payload(name, crate::decode_rows(row.get(name)))?;
+    }
+    Ok(item)
+}
+
 pub(crate) fn to_stored<T: Entity>(item: &T) -> Result<Row> {
     T::object_converter().reverse_convert(item)
 }
 
 pub(crate) fn map_stream<'a, T: Entity>(
     rows: Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>,
+    destinations: Vec<String>,
 ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-    Box::pin(rows.map(move |row| row.and_then(map_row)))
+    Box::pin(rows.map(move |row| row.and_then(|row| map_enriched(row, &destinations))))
 }

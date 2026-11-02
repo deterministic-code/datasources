@@ -56,7 +56,7 @@ impl dyn Datasource {
         options: Option<CRUDRepositoryOptions>,
     ) -> Arc<dyn ICRUDRepository<Row>> {
         let bound = self.bind_connection(connection);
-        self.repository_from(bound, apply_crud::<T>(self, options))
+        self.repository_from(bound, apply_crud::<T>(options))
     }
 
     pub fn create_typed_repository<T: Entity + 'static>(
@@ -67,7 +67,7 @@ impl dyn Datasource {
         let bound = self.bind_connection(connection);
         let options = options.unwrap_or_else(create_crud_repository_options::<T>);
         Arc::new(
-            CRUDRepository::<T>::new(bound, apply_crud::<T>(self, Some(options))).expect("repository"),
+            CRUDRepository::<T>::new(bound, apply_crud::<T>(Some(options))).expect("repository"),
         )
     }
 
@@ -77,7 +77,7 @@ impl dyn Datasource {
         options: Option<ReadonlyRepositoryMappingOptions>,
     ) -> Arc<dyn IReadonlyRepository<Row>> {
         let bound = self.bind_connection(connection);
-        self.readonly_repository_from(bound, apply_readonly::<T>(self, options))
+        self.readonly_repository_from(bound, apply_readonly::<T>(options))
     }
 
     pub fn create_repository_by_name<T: Entity>(
@@ -104,39 +104,25 @@ impl dyn Datasource {
     }
 }
 
-fn apply_crud<T: 'static>(
-    datasource: &dyn Datasource,
-    custom: Option<CRUDRepositoryOptions>,
-) -> CRUDRepositoryOptions {
+fn apply_crud<T: 'static>(custom: Option<CRUDRepositoryOptions>) -> CRUDRepositoryOptions {
     let built = create_crud_repository_options::<T>();
-    let types = datasource.row_type_converters();
     let entity = built.entity.clone();
     let mut options = custom.unwrap_or(built);
     if options.entity.is_empty() {
         options.entity = entity;
     }
-    if options.row_converter.is_none() {
-        options.row_converter = Some(datasource.row_converter(&options.schema));
-    }
-    options.row_type_converters = types;
     options
 }
 
 fn apply_readonly<T: 'static>(
-    datasource: &dyn Datasource,
     custom: Option<ReadonlyRepositoryMappingOptions>,
 ) -> ReadonlyRepositoryMappingOptions {
     let built = create_readonly_repository_mapping_options::<T>();
-    let types = datasource.row_type_converters();
     let entity = built.entity.clone();
     let mut options = custom.unwrap_or(built);
     if options.entity.is_empty() {
         options.entity = entity;
     }
-    if options.row_converter.is_none() {
-        options.row_converter = Some(datasource.row_converter(&options.schema));
-    }
-    options.row_type_converters = types;
     options
 }
 
