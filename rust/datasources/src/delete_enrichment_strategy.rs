@@ -1,6 +1,7 @@
 use futures_util::TryStreamExt;
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
+use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
 use crate::row::Row;
@@ -9,12 +10,12 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 #[async_trait]
-pub trait DeleteEnrichmentStrategy: Send + Sync {
+pub trait DeleteEnrichmentStrategy<T: Entity = Row>: Send + Sync {
     async fn delete_children(
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &Row,
+        parent: &T,
         delete_nested: &dyn DeleteNested,
     ) -> Result<()>;
 
@@ -22,16 +23,16 @@ pub trait DeleteEnrichmentStrategy: Send + Sync {
         &self,
         writer: Arc<dyn ICRUDRepository>,
         enrichment: &Enrichment,
-        parent: &Row,
+        parent: &T,
     ) -> Result<()>;
 }
 
-pub(crate) async fn load(
-    writer: &dyn ICRUDRepository,
+pub(crate) async fn load<T: Entity, TChild: Entity>(
+    writer: &dyn ICRUDRepository<TChild>,
     enrichment: &Enrichment,
-    parent: &Row,
-) -> Result<Vec<Row>> {
-    let Some(key) = parent.get(&enrichment.source_property).cloned() else {
+    parent: &T,
+) -> Result<Vec<TChild>> {
+    let Some(key) = parent.cell(&enrichment.source_property) else {
         return Ok(Vec::new());
     };
     writer

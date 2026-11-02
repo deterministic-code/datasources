@@ -1,7 +1,7 @@
 use crate::statement_renderer::quote_identifiers;
 use datasources::Value;
 use std::collections::HashMap;
-use tokio_postgres::types::Type;
+use tokio_postgres::types::{Kind, Type};
 
 pub fn to_postgres(sql: &str, params: &HashMap<String, Value>) -> (String, Vec<Value>) {
     let sql = quote_identifiers(sql);
@@ -51,8 +51,12 @@ pub fn param_type(value: &Value) -> Type {
         Value::Uuid(_) => Type::UUID,
         Value::Decimal(_) => Type::NUMERIC,
         Value::Binary(_) => Type::BYTEA,
-        _ => Type::UNKNOWN,
+        _ => unspecified(),
     }
+}
+
+fn unspecified() -> Type {
+    Type::new("unspecified".into(), 0, Kind::Simple, "pg_catalog".into())
 }
 
 pub fn param_types(values: &[Value]) -> Vec<Type> {

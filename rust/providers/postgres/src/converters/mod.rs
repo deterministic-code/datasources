@@ -76,9 +76,9 @@ mod tests {
             &HashMap::from([("uuid".into(), "uuid".into())]),
         );
         let row = HashMap::from([("uuid".into(), Value::from(text))]);
-        assert!(matches!(
+        assert_eq!(
             converter.reverse_convert(&row).unwrap()["uuid"],
-            Value::Uuid(_)
-        ));
+            Value::from(text)
+        );
     }
 }

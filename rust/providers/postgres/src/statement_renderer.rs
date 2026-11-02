@@ -98,7 +98,7 @@ impl StatementVisitor for PostgresStatementRenderer {
             statement
                 .fields()
                 .iter()
-                .map(|field| pg_named(&field.name, &field.value))
+                .map(|field| format!("${}", field.name))
                 .collect::<Vec<_>>()
                 .join(", ")
         );
@@ -114,19 +114,13 @@ impl StatementVisitor for PostgresStatementRenderer {
             .rows()
             .iter()
             .enumerate()
-            .map(|(index, row)| {
-                let by_name: std::collections::HashMap<_, _> =
-                    row.iter().map(|field| (field.name.as_str(), &field.value)).collect();
+            .map(|(index, _)| {
                 format!(
                     "({})",
                     statement
                         .columns()
                         .iter()
-                        .map(|column| pg_param(
-                            column,
-                            index,
-                            by_name.get(column.as_str()).copied().unwrap_or(&Value::Null)
-                        ))
+                        .map(|column| format!("${column}__{index}"))
                         .collect::<Vec<_>>()
                         .join(", ")
                 )
@@ -279,13 +273,6 @@ pub(crate) fn quote_identifiers(sql: &str) -> String {
     out
 }
 
-fn pg_named(column: &str, value: &Value) -> String {
-    match crate::driver::column_sql(logical(value).unwrap_or_default()) {
-        Some(sql) => format!("${column}::{sql}"),
-        None => format!("${column}"),
-    }
-}
-
 fn pg_param(column: &str, index: usize, value: &Value) -> String {
     match crate::driver::column_sql(logical(value).unwrap_or_default()) {
         Some(sql) => format!("${column}__{index}::{sql}"),
@@ -436,7 +423,7 @@ mod tests {
         let insert = InsertStatement::new("users", &[Parameter::new("name", "ada")]);
         assert_eq!(
             renderer().render(&insert),
-            "INSERT INTO users (name) VALUES ($name::TEXT)"
+            "INSERT INTO users (name) VALUES ($name)"
         );
     }
 
@@ -451,7 +438,7 @@ mod tests {
         );
         assert_eq!(
             renderer().render(&insert),
-            "INSERT INTO contacts (version, id) VALUES ($version::BYTEA, $id::INTEGER)"
+            "INSERT INTO contacts (version, id) VALUES ($version, $id)"
         );
     }
 
@@ -467,7 +454,7 @@ mod tests {
         );
         assert_eq!(
             renderer().render(&insert),
-            "INSERT INTO contacts (version, id) VALUES ($version__0::BYTEA, $id__0::INTEGER)"
+            "INSERT INTO contacts (version, id) VALUES ($version__0, $id__0)"
         );
     }
 

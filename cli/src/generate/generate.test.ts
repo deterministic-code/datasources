@@ -255,10 +255,10 @@ describe("generate", () => {
     expect(contactRs).toContain('vec!["contact_source_id".into()');
     expect(contactRs).toContain("for_connection(connection.as_ref())");
     expect(contactRs).toContain("pub struct ContactRepository");
-    expect(contactRs).toContain("pub address: Arc<CRUDRepository>");
-    expect(contactRs).toContain("pub phone: Arc<CRUDRepository>");
-    expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository>");
-    expect(contactRs).toContain("address_row_repository");
+    expect(contactRs).toContain("pub address: Arc<CRUDRepository<Address>>");
+    expect(contactRs).toContain("pub phone: Arc<CRUDRepository<Phone>>");
+    expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository<ContactSource>>");
+    expect(contactRs).toContain("address_repository");
     expect(contactRs).toContain("Arc::clone(&address)");
     expect(textOf(rust, "schema_objects.rs")).toContain("impl SchemaObject for Contact");
     expect(textOf(rust, "contactRepository.rs")).toContain("Schema::new");

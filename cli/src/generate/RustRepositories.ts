@@ -35,6 +35,7 @@ class RustRepositories extends RepositoryGenerator {
     const child = this.childrenOf(model, casing).map((item, index) => ({
       ...item,
       module: this.ident(casing.convertFileName(`${item.specName}_repository`)),
+      repoFn: casing.convertFields(`${item.specName}_repository`),
       rowFn: casing.convertFields(`${item.specName}_row_repository`),
       comma: index > 0 ? {} : undefined,
     }));
@@ -70,6 +71,7 @@ class RustRepositories extends RepositoryGenerator {
       readonlyChildren: [...vias].map(([specName]) => ({
         field: child.find((item) => item.specName === specName)?.field,
         module: this.ident(casing.convertFileName(`${specName}_repository`)),
+        repoFn: casing.convertFields(`${specName}_repository`),
         rowFn: casing.convertFields(`${specName}_row_repository`),
       })),
       ...this.optionsOf(model),

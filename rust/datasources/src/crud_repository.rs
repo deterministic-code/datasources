@@ -7,9 +7,8 @@ use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
 use crate::entity::Entity;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::default_write_enrichment_strategy::{
-    encode_rows, DefaultWriteEnrichmentStrategy,
-};
+use crate::converters::SchemaObject;
+use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
@@ -19,7 +18,8 @@ use crate::parameter::Parameter;
 use crate::read_input::ReadInput;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
-use crate::repository::{map_enriched, to_stored, ICRUDRepository, IReadonlyRepository};
+use crate::create_enrichment_strategy::merge_lookups;
+use crate::repository::{map_row, to_stored, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
@@ -48,12 +48,12 @@ pub struct CRUDRepository<T: Entity = Row> {
     update_properties: Option<Vec<String>>,
     create_zeros: Row,
     crud_statements: CRUDRepositoryStatements,
-    tree: RepositoryTree,
-    write: Arc<dyn WriteEnrichmentStrategy>,
+    tree: RepositoryTree<T>,
+    write: Arc<dyn WriteEnrichmentStrategy<T>>,
     entity: PhantomData<T>,
 }
 
-fn tree_for<T: Entity>(readonly: &ReadonlyRepository<T>) -> RepositoryTree {
+pub(crate) fn tree_for<T: Entity>(readonly: &ReadonlyRepository<T>) -> RepositoryTree<T> {
     RepositoryTree::new(RepositoryTreeNode::new(
         Arc::new(StubRepository::new("crud")),
         "",
@@ -61,18 +61,30 @@ fn tree_for<T: Entity>(readonly: &ReadonlyRepository<T>) -> RepositoryTree {
     ))
 }
 
-impl<T: Entity> CRUDRepository<T> {
+impl CRUDRepository<Row> {
     pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
         let write = options.write.clone();
-        let create_properties = options.create_properties.clone();
-        let update_properties = options.update_properties.clone();
-        let built = CRUDRepositoryBuilder::parts(connection, options)?;
-        let crud_statements = write_statements(&built.statements);
-        let mut repo = Self::from_built(built, crud_statements, create_properties, update_properties)?;
+        let mut repo = Self::from_options(connection, options)?;
         if let Some(write) = write {
             repo.write = write;
         }
         Ok(repo)
+    }
+}
+
+impl<T: SchemaObject> CRUDRepository<T> {
+    pub fn new(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
+        Self::from_options(connection, options)
+    }
+}
+
+impl<T: Entity> CRUDRepository<T> {
+    fn from_options(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
+        let create_properties = options.create_properties.clone();
+        let update_properties = options.update_properties.clone();
+        let built = CRUDRepositoryBuilder::parts(connection, options)?;
+        let crud_statements = write_statements(&built.statements);
+        Self::from_built(built, crud_statements, create_properties, update_properties)
     }
 
     fn from_built(
@@ -92,7 +104,7 @@ impl<T: Entity> CRUDRepository<T> {
             update_properties,
             create_zeros: Row::new(),
             tree,
-            write: Arc::new(DefaultWriteEnrichmentStrategy::default()),
+            write: Arc::new(DefaultWriteEnrichmentStrategy::<T>::default()),
             entity: PhantomData,
         })
     }
@@ -103,7 +115,7 @@ impl<T: Entity> CRUDRepository<T> {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy<T>>>) -> Self {
         let ids = vec!["id".into()];
         let readonly = ReadonlyRepository::memory(items);
         let tree = tree_for(&readonly);
@@ -115,12 +127,12 @@ impl<T: Entity> CRUDRepository<T> {
             update_properties: None,
             create_zeros: Row::new(),
             tree,
-            write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::default())),
+            write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::<T>::default())),
             entity: PhantomData,
         }
     }
 
-    pub fn with_write(mut self, write: Arc<dyn WriteEnrichmentStrategy>) -> Self {
+    pub fn with_write(mut self, write: Arc<dyn WriteEnrichmentStrategy<T>>) -> Self {
         self.write = write;
         self
     }
@@ -170,11 +182,11 @@ impl<T: Entity> CRUDRepository<T> {
         }
     }
 
-    pub fn add_enriched(
+    pub fn add_enriched<TRelated: Entity>(
         &mut self,
         enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+        via: impl EnrichmentVia<TRelated>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let (via, persist) = via.into_repos();
@@ -186,12 +198,12 @@ impl<T: Entity> CRUDRepository<T> {
         self
     }
 
-    pub fn add_linked(
+    pub fn add_linked<TRelated: Entity, TLink: Entity>(
         &mut self,
         enrichment: crate::enrichment::Enrichment,
-        via: impl EnrichmentVia,
-        link: Arc<dyn ICRUDRepository<Row>>,
-        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy>>,
+        via: impl EnrichmentVia<TRelated>,
+        link: Arc<dyn ICRUDRepository<TLink>>,
+        strategy: Option<Arc<dyn ReadonlyEnrichmentStrategy<T, TRelated>>>,
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let (via, _) = via.into_repos();
@@ -247,13 +259,7 @@ impl<T: Entity> CRUDRepository<T> {
         result
     }
 
-    async fn create_core(&self, item: &mut Row) -> Result<Row> {
-        self.write
-            .resolve_lookups(&self.tree, std::slice::from_mut(item))
-            .await?;
-        if !self.enriched() {
-            return self.inserted(item).await;
-        }
+    async fn insert_parent(&self, item: &mut Row) -> Result<Row> {
         if let Some(memory) = self.readonly.memory_items().cloned() {
             let mut stored = self.without_enrichment(item);
             let created = memory.insert(&mut stored);
@@ -262,21 +268,11 @@ impl<T: Entity> CRUDRepository<T> {
                     item.insert(column.clone(), id.clone());
                 }
             }
-        } else {
-            let stored = item.clone();
-            self.execute_insert(&stored, item).await?;
-        }
-        self.write
-            .persist(&self.tree, std::slice::from_mut(item), WriteMode::Create)
-            .await?;
-        let id = self.id_value(item);
-        if self.ids.len() != 1 || matches!(id, Value::Null) {
             return Ok(item.clone());
         }
-        Ok(self
-            .read_row_by_id(&id)
-            .await?
-            .unwrap_or_else(|| item.clone()))
+        let stored = item.clone();
+        self.execute_insert(&stored, item).await?;
+        Ok(item.clone())
     }
 
     async fn read_row_by_id(&self, id: &dyn IdKey) -> Result<Option<Row>> {
@@ -284,9 +280,7 @@ impl<T: Entity> CRUDRepository<T> {
             let mut row = memory.by_id(id)?;
             if self.enriched() {
                 if let Some(item) = row.take() {
-                    let mut rows = vec![item];
-                    self.readonly.fill(&mut rows, None).await?;
-                    return Ok(rows.into_iter().next());
+                    return Ok(Some(item));
                 }
             }
             return Ok(row);
@@ -299,39 +293,6 @@ impl<T: Entity> CRUDRepository<T> {
             .try_next()
             .await?;
         Ok(row)
-    }
-
-    async fn update_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut resolved = item.clone();
-        self.write
-            .resolve_lookups(&self.tree, std::slice::from_mut(&mut resolved))
-            .await?;
-        let response = self.save(&resolved, by_where).await?;
-        if self.enriched() {
-            let mut parent = item.clone();
-            self.write
-                .persist(
-                    &self.tree,
-                    std::slice::from_mut(&mut parent),
-                    WriteMode::Update,
-                )
-                .await?;
-        }
-        Ok(response)
-    }
-
-    async fn delete_core(&self, item: &Row, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        if self.enriched() {
-            let mut parent = item.clone();
-            self.write
-                .persist(
-                    &self.tree,
-                    std::slice::from_mut(&mut parent),
-                    WriteMode::Delete,
-                )
-                .await?;
-        }
-        self.remove(item, by_where).await
     }
 
     fn params(&self, record: &Row, include_ids: bool) -> Result<Vec<Parameter>> {
@@ -424,13 +385,14 @@ impl<T: Entity> CRUDRepository<T> {
         Ok(Where::new(and_all(children)))
     }
 
-    async fn inserted(&self, item: &mut Row) -> Result<Row> {
-        if let Some(memory) = self.readonly.memory_items() {
-            return Ok(memory.insert(item));
-        }
-        let stored = item.clone();
-        self.execute_insert(&stored, item).await?;
-        Ok(item.clone())
+    fn reverse_convert(&self, item: &T) -> Result<Row> {
+        let row = to_stored(item)?;
+        let mut row = match &self.readonly.row_converter {
+            Some(converter) => converter.reverse_convert(&row)?,
+            None => row,
+        };
+        merge_lookups(item, &mut row);
+        Ok(row)
     }
 
     async fn execute_insert(&self, stored: &Row, target: &mut Row) -> Result<Response> {
@@ -623,17 +585,13 @@ impl<T: Entity> CRUDRepository<T> {
         ICRUDRepository::read_single_by_id(self, id).await
     }
 
-    fn overlay_payloads(&self, item: &T, row: &mut Row) {
-        for name in self.readonly.list_destinations() {
-            let children = item.payload(&name);
-            if !children.is_empty() {
-                row.insert(name, encode_rows(&children));
-            }
+    async fn into_entity(&self, row: Row) -> Result<T> {
+        let source = row.clone();
+        let mut items = vec![map_row(row)?];
+        if self.enriched() {
+            self.readonly.fill(&mut items, Some(&[Some(source)])).await?;
         }
-    }
-
-    fn into_entity(&self, row: Row) -> Result<T> {
-        map_enriched(row, &self.readonly.list_destinations())
+        Ok(items.pop().expect("mapped row"))
     }
 }
 
@@ -675,35 +633,69 @@ impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
 #[async_trait]
 impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     async fn create(&self, item: T) -> Result<T> {
-        let mut row = to_stored(&item)?;
-        self.overlay_payloads(&item, &mut row);
-        let created = Self::in_transaction(
-            self.use_transaction(),
-            Arc::clone(&self.readonly.connection),
-            || self.create_core(&mut row),
-        )
-        .await?;
-        self.into_entity(created)
-    }
-
-    async fn update(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut row = to_stored(&item)?;
-        self.overlay_payloads(&item, &mut row);
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
-            || self.update_core(&row, by_where),
+            || async {
+                let mut item = Box::new(item);
+                self.write
+                    .resolve_lookups(&self.tree, std::slice::from_mut(&mut *item))
+                    .await?;
+                let mut row = self.reverse_convert(&*item)?;
+                let created = self.insert_parent(&mut row).await?;
+                copy_cells(&created, &mut *item, &self.ids)?;
+                if !self.enriched() {
+                    return map_row(created);
+                }
+                self.write
+                    .persist(&self.tree, std::slice::from_mut(&mut *item), WriteMode::Create)
+                    .await?;
+                let id = self.id_value(&created);
+                if self.ids.len() == 1 && !matches!(id, Value::Null) {
+                    if let Some(row) = self.read_row_by_id(&id).await? {
+                        return self.into_entity(row).await;
+                    }
+                }
+                Ok(*item)
+            },
         )
         .await
     }
 
-    async fn delete(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
-        let mut row = to_stored(&item)?;
-        self.overlay_payloads(&item, &mut row);
+    async fn update(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
         Self::in_transaction(
             self.use_transaction(),
             Arc::clone(&self.readonly.connection),
-            || self.delete_core(&row, by_where),
+            || async {
+                let mut item = Box::new(item);
+                self.write
+                    .resolve_lookups(&self.tree, std::slice::from_mut(&mut *item))
+                    .await?;
+                let row = self.reverse_convert(&*item)?;
+                let response = self.save(&row, by_where).await?;
+                if self.enriched() {
+                    self.write
+                        .persist(&self.tree, std::slice::from_mut(&mut *item), WriteMode::Update)
+                        .await?;
+                }
+                Ok(response)
+            },
+        )
+        .await
+    }
+
+    async fn delete(&self, mut item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        Self::in_transaction(
+            self.use_transaction(),
+            Arc::clone(&self.readonly.connection),
+            || async {
+                if self.enriched() {
+                    self.write
+                        .persist(&self.tree, std::slice::from_mut(&mut item), WriteMode::Delete)
+                        .await?;
+                }
+                self.remove(&self.reverse_convert(&item)?, by_where).await
+            },
         )
         .await
     }
@@ -717,11 +709,20 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
     }
 
     async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<T>> {
-        self.read_row_by_id(id)
-            .await?
-            .map(|row| self.into_entity(row))
-            .transpose()
+        match self.read_row_by_id(id).await? {
+            Some(row) => Ok(Some(self.into_entity(row).await?)),
+            None => Ok(None),
+        }
     }
+}
+
+fn copy_cells<T: Entity>(from: &Row, into: &mut T, names: &[String]) -> Result<()> {
+    for name in names {
+        if let Some(value) = from.get(name).cloned() {
+            into.set_cell(name, value)?;
+        }
+    }
+    Ok(())
 }
 
 fn named(mut row: Row, property: &str, sql_column: &str) -> Row {
