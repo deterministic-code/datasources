@@ -8,6 +8,10 @@ repository.workspace = true
 description = "MySQL datasource provider"
 autotests = false
 
+[features]
+default = ["tls"]
+tls = ["mysql_async/native-tls-tls"]
+
 [dependencies]
 async-trait = { workspace = true }
 base64 = "0.22"
@@ -16,7 +20,7 @@ ctor = { workspace = true }
 datasources = { workspace = true }
 regex = "1"
 futures-core = "0.3"
-mysql_async = "0.34"
+mysql_async = { version = "0.34", default-features = false, features = ["minimal-rust", "bigdecimal", "rust_decimal", "time", "frunk", "derive", "binlog"] }
 rust_decimal = "1"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "net", "time", "sync"] }
 uuid = "1"

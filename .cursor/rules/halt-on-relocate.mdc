@@ -1,0 +1,8 @@
+---
+description: Stop instead of relocating code that was asked to be deleted
+alwaysApply: true
+---
+
+# Halt on relocate-as-delete
+
+Delete and remove drop the declaration, file, or block and the tests that only assert it. Do not copy it into another file, function, command, or map. A remaining caller uses the owner that already has the behavior. If nothing owns it, it is gone.

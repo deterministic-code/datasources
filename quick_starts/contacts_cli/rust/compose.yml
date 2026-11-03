@@ -32,3 +32,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+  runner:
+    build:
+      context: ../../..
+      dockerfile: quick_starts/contacts_cli/rust/Dockerfile
+    restart: "no"
+    stop_grace_period: 0s
+    tmpfs:
+      - /tmp
+      - /work
+    working_dir: /work
+    environment:
+      E2E_LANG: rust
+      MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
+      POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy

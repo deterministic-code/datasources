@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { join } from "node:path";
 import { catalog, host, type Ecosystem, type Provider } from "./catalog.ts";
 import { csharpTarget } from "./detect.ts";
 import { hasCsharpProjectReference } from "./installed.ts";
@@ -38,8 +38,7 @@ export const removeCommands = (
     csharp: () => [...dotnetRemove(names, csharpTarget(entries)), ...npmUninstall(sqlMigrateProviders(names))],
   })[ecosystem]();
 
-const fileSpec = (local: LocalInstall, path: string): string =>
-  `file:${relative(local.cwd, `${local.repo}/${path}`) || "."}`;
+const fileSpec = (local: LocalInstall, path: string): string => `file:${join(local.repo, path)}`;
 
 const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
   {
@@ -65,27 +64,23 @@ const npmUninstall = (names: Provider[]): Proc[] => {
 const cargoAdd = (names: Provider[], local?: LocalInstall): Proc[] => [
   {
     command: "cargo",
-    args: local ? ["add", "--path", relative(local.cwd, `${local.repo}/rust/datasources`)] : ["add", host.rust.core],
+    args: local ? ["add", "--path", join(local.repo, "rust/datasources")] : ["add", host.rust.core],
   },
   { command: "cargo", args: ["add", "tokio", "--features", "macros,rt-multi-thread"] },
   ...names.map((name) => ({
     command: "cargo",
-    args: local
-      ? ["add", "--path", relative(local.cwd, `${local.repo}/rust/providers/${name}`)]
-      : ["add", catalog[name].cargo],
+    args: local ? ["add", "--path", join(local.repo, `rust/providers/${name}`)] : ["add", catalog[name].cargo],
   })),
+  ...(local ? [{ command: "cargo", args: ["add", "--path", join(local.repo, "rust/datasources-tests")] }] : []),
 ];
 
 const cargoRemove = (names: Provider[]): Proc[] =>
   names.map((name) => ({ command: "cargo", args: ["remove", catalog[name].cargo] }));
 
 const csharpCsproj = (local: LocalInstall, nuget: string): string =>
-  relative(
-    local.cwd,
-    nuget === host.csharp.core
-      ? `${local.repo}/csharp/Datasources/Datasources.csproj`
-      : `${local.repo}/csharp/Providers/${nuget.slice("Datasources.".length)}/${nuget}.csproj`,
-  );
+  nuget === host.csharp.core
+    ? join(local.repo, "csharp/Datasources/Datasources.csproj")
+    : join(local.repo, `csharp/Providers/${nuget.slice("Datasources.".length)}/${nuget}.csproj`);
 
 const dotnetAdd = (names: Provider[], project: string, csproj?: string, local?: LocalInstall): Proc[] => {
   const prefix = project === "." ? [] : [project];

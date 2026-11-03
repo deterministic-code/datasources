@@ -78,29 +78,25 @@ describe("commands", () => {
   });
 
   it("adds from this checkout with --local", () => {
-    const local = { repo: "/repo", cwd: "/repo/samples/typescript/app" };
+    const root = "/Users/ryan/Projects/datasources";
+    const local = { repo: root, cwd: "app" };
     expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local)[0]?.args).toEqual([
       "install",
-      "file:../../../typescript/datasources",
-      "file:../../../typescript/code-generators",
-      "file:../../../typescript/providers/sqlite",
+      `file:${root}/typescript/datasources`,
+      `file:${root}/typescript/code-generators`,
+      `file:${root}/typescript/providers/sqlite`,
     ]);
-    expect(addCommands("rust", ["sqlite"], ["Cargo.toml"], undefined, { repo: "/repo", cwd: "/repo/samples/rust/app" }).map((c) => c.args)).toEqual([
-      ["add", "--path", "../../../rust/datasources"],
+    expect(addCommands("rust", ["sqlite"], ["Cargo.toml"], undefined, local).map((c) => c.args)).toEqual([
+      ["add", "--path", `${root}/rust/datasources`],
       ["add", "tokio", "--features", "macros,rt-multi-thread"],
-      ["add", "--path", "../../../rust/providers/sqlite"],
-      ["install", "file:../../../typescript/datasources", "file:../../../typescript/code-generators", "file:../../../typescript/providers/sqlite"],
+      ["add", "--path", `${root}/rust/providers/sqlite`],
+      ["add", "--path", `${root}/rust/datasources-tests`],
+      ["install", `file:${root}/typescript/datasources`, `file:${root}/typescript/code-generators`, `file:${root}/typescript/providers/sqlite`],
     ]);
-    expect(addCommands("csharp", ["sqlite"], ["App.csproj"], undefined, { repo: "/repo", cwd: "/repo/samples/csharp/app" }).map((c) => c.args)).toEqual([
-      ["add", "App.csproj", "reference", "../../../csharp/Datasources/Datasources.csproj"],
-      ["add", "App.csproj", "reference", "../../../csharp/Providers/Sqlite/Datasources.Sqlite.csproj"],
-      ["install", "file:../../../typescript/datasources", "file:../../../typescript/code-generators", "file:../../../typescript/providers/sqlite"],
-    ]);
-    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, { repo: "/repo", cwd: "/repo/typescript/datasources" })[0]?.args).toEqual([
-      "install",
-      "file:.",
-      "file:../code-generators",
-      "file:../providers/sqlite",
+    expect(addCommands("csharp", ["sqlite"], ["App.csproj"], undefined, local).map((c) => c.args)).toEqual([
+      ["add", "App.csproj", "reference", `${root}/csharp/Datasources/Datasources.csproj`],
+      ["add", "App.csproj", "reference", `${root}/csharp/Providers/Sqlite/Datasources.Sqlite.csproj`],
+      ["install", `file:${root}/typescript/datasources`, `file:${root}/typescript/code-generators`, `file:${root}/typescript/providers/sqlite`],
     ]);
   });
 });

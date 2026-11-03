@@ -1,10 +1,21 @@
 #!/bin/sh
 set -e
 find /work -mindepth 1 -delete
-cp -a /opt/src/. /work
-if [ -n "${DATASOURCES_REPO:-}" ]; then
-  npm install --prefix /work "file:${DATASOURCES_REPO}/cli"
-  node /work/node_modules/@deterministic-code/datasources-cli/scripts/build-generators.mjs
+
+# Quick starts: empty workdir. dest copies quick_starts files, then npx from the registry.
+if [ -n "${E2E_LANG:-}" ]; then
+  unset DATASOURCES_REPO
+  cd /work
+  exec "$@"
 fi
-cd /work
+
+# Samples: sample on tmpfs. --local file: and cargo --path read /opt/repo (image or :ro mount).
+sample="${SAMPLE:?}"
+mkdir -p "/work/$sample"
+cp -a /opt/src/. "/work/$sample"
+cd "/work/$sample"
+export DATASOURCES_REPO=/opt/repo
+npm install --prefix /opt/repo/cli
+npm install --prefix "/work/$sample" --install-links "file:/opt/repo/cli"
+node /opt/repo/cli/scripts/build-generators.mjs
 exec "$@"

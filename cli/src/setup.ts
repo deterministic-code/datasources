@@ -165,6 +165,7 @@ const applyPackages = async (
   remove: Provider[],
   remaining: Provider[],
 ): Promise<void> => {
+  const local = flags.local ? { repo: requireDatasourcesRepo(flags.cwd), cwd: flags.cwd } : undefined;
   const procs: Proc[] = [
     ...(add.length
       ? addCommands(
@@ -172,7 +173,7 @@ const applyPackages = async (
           add,
           entries,
           await csharpProject(flags.cwd, ecosystem, entries, deps.fs),
-          flags.local ? { repo: requireDatasourcesRepo(flags.cwd), cwd: flags.cwd } : undefined,
+          local,
         )
       : []),
     ...(remove.length ? removeCommands(ecosystem, remove, remaining, entries) : []),
