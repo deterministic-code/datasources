@@ -16,7 +16,7 @@ services:
     command: ["--innodb-buffer-pool-size=64M", "--tls-version=", "--mysql-native-password=ON"]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uds", "-pds"]
-      interval: 5s
+      interval: 1s
       timeout: 5s
       retries: 20
   postgres:
@@ -32,7 +32,7 @@ services:
       - /tmp
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ds -d datasources"]
-      interval: 5s
+      interval: 1s
       timeout: 5s
       retries: 20
   runner:

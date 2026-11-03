@@ -28,16 +28,29 @@ maybe_prune() {
   docker system prune -f
 }
 
+e2e_log() {
+  printf 'e2e-docker: %s %s\n' "$(date +%H:%M:%S)" "$*"
+}
+
+e2e_step() {
+  label=$1
+  shift
+  start=$(date +%s)
+  e2e_log "start $label"
+  "$@"
+  e2e_log "done $label $(($(date +%s) - start))s"
+}
+
 build_image() {
   tag=$1
   file=$2
   if [ -n "${GITHUB_ACTIONS:-}" ]; then
-    docker buildx build --load \
+    e2e_step "image $tag" docker buildx build --load \
       --cache-from "type=gha,scope=$tag" \
       --cache-to "type=gha,mode=max,scope=$tag" \
       -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
   else
-    docker build -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
+    e2e_step "image $tag" docker build -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
   fi
 }
 
@@ -129,9 +142,11 @@ run_compose() {
   (
     cd "$repo/$dir"
     export COMPOSE_PROJECT_NAME=$project
-    run_runner sh -e sqlite.sh --local
-    docker compose up -d --wait mysql postgres
-    run_runner sh -e mysql-postgres.sh --local
+    start=$(date +%s)
+    e2e_log "start $dir"
+    docker compose up -d mysql postgres
+    run_runner sh -ec 'sh -e sqlite.sh --local && sh /e2e-wait-engines.sh && sh -e mysql-postgres.sh --local'
+    e2e_log "done $dir $(($(date +%s) - start))s"
   )
 }
 
@@ -190,6 +205,8 @@ down() {
 }
 trap down EXIT
 
+suite_start=$(date +%s)
+e2e_log "suite start"
 # shellcheck disable=SC2086
 build_toolchains $sample_dirs
 
@@ -200,10 +217,11 @@ for dir in "$@"; do
   (
     status=0
     run_compose "$dir" "$project" || status=$?
-    down_one "$project" "$compose"
+    e2e_step "down $dir" down_one "$project" "$compose"
     exit $status
   ) &
   live="$live $!"
 done
 await_all
+e2e_log "suite done $(($(date +%s) - suite_start))s"
 exit "$fail"
