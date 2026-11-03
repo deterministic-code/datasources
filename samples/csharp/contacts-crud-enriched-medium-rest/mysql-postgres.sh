@@ -1,6 +1,6 @@
 export PROVIDER=mysql
 export DATASOURCE_URL="${MYSQL_URL:-mysql://ds:ds@mysql:3306/datasources}"
-npx @deterministic-code/datasources-cli setup --yes sqlite mysql postgres
+npx @deterministic-code/datasources-cli setup --yes "$@" sqlite mysql postgres
 npx @deterministic-code/datasources-cli generate all --dialect csharp
 dotnet run
 export PROVIDER=postgres

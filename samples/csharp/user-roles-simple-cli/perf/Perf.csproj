@@ -9,18 +9,11 @@
     <RootNamespace>UserRolesSimpleCli.Perf</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\..\csharp\Providers\SchemaSpec.cs" Link="SchemaSpec.cs" />
-    <EmbeddedResource Include="..\..\..\user-roles-simple-cli-shared\mysql-procedures.sql" Link="mysql-procedures.sql">
+    <EmbeddedResource Include="..\mysql-procedures.sql">
       <LogicalName>mysql-procedures.sql</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\csharp\Datasources\Datasources.csproj" />
-    <ProjectReference Include="..\..\..\..\csharp\Providers\Sqlite\Datasources.Sqlite.csproj" />
-    <ProjectReference Include="..\..\..\..\csharp\Providers\Mysql\Datasources.Mysql.csproj" />
-    <ProjectReference Include="..\..\..\..\csharp\Providers\Postgres\Datasources.Postgres.csproj" />
   </ItemGroup>
 </Project>

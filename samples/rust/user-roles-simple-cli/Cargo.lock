@@ -548,6 +548,7 @@ dependencies = [
  "futures-util",
  "regex",
  "rust_decimal",
+ "serde_json",
  "tokio",
  "uuid",
 ]

@@ -11,19 +11,16 @@
     <Compile Remove="*Tests.cs" />
     <Compile Remove="matrix/**" />
     <Compile Remove="perf/**" />
-    <Compile Include="..\..\..\csharp\Providers\SchemaSpec.cs" Link="SchemaSpec.cs" />
-    <EmbeddedResource Include="..\..\user-roles-simple-cli-shared\mysql-procedures.sql" Link="mysql-procedures.sql">
+    <EmbeddedResource Include="mysql-procedures.sql">
       <LogicalName>mysql-procedures.sql</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Datasources" Version="0.1.22" />
+    <PackageReference Include="Datasources.Mysql" Version="0.1.22" />
+    <PackageReference Include="Datasources.Postgres" Version="0.1.22" />
+    <PackageReference Include="Datasources.Sqlite" Version="0.1.22" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\csharp\Datasources\Datasources.csproj" />
-    <ProjectReference Include="..\..\..\csharp\Providers\Sqlite\Datasources.Sqlite.csproj" />
-    <ProjectReference Include="..\..\..\csharp\Providers\Mysql\Datasources.Mysql.csproj" />
-    <ProjectReference Include="..\..\..\csharp\Providers\Postgres\Datasources.Postgres.csproj" />
   </ItemGroup>
 </Project>

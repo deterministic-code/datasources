@@ -143,6 +143,38 @@ describe("setup", () => {
     );
   });
 
+  it("writes package.json in a csharp cwd so --local npm install does not use the parent", async () => {
+    const parent = JSON.stringify({ name: "root", dependencies: { keep: "1" } });
+    const { files, fs } = mem(["App.csproj"], {
+      [join(cwd, "App.csproj")]: `<PackageReference Include="Datasources" />`,
+      "package.json": parent,
+    });
+    const io = deps(fs);
+    expect(
+      await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "csharp", "--datasources", "sqlite"], io),
+    ).toBe(0);
+    expect(files[join(cwd, "package.json")]).toMatch(/"private": true/);
+    expect(files["package.json"]).toBe(parent);
+    expect(io.ran.some((line) => /npm install file:.*typescript\/providers\/sqlite/.test(line))).toBe(true);
+    expect(io.ran.some((line) => line.includes("dotnet add") && line.includes("reference"))).toBe(true);
+  });
+
+  it("writes package.json in a rust cwd so --local npm install does not use the parent", async () => {
+    const parent = JSON.stringify({ name: "root", dependencies: { keep: "1" } });
+    const { files, fs } = mem(["Cargo.toml"], {
+      [join(cwd, "Cargo.toml")]: "[package]\nname = \"app\"\n",
+      "package.json": parent,
+    });
+    const io = deps(fs);
+    expect(
+      await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "rust", "--datasources", "sqlite"], io),
+    ).toBe(0);
+    expect(files[join(cwd, "package.json")]).toMatch(/"private": true/);
+    expect(files["package.json"]).toBe(parent);
+    expect(io.ran.some((line) => /npm install file:.*typescript\/providers\/sqlite/.test(line))).toBe(true);
+    expect(io.ran.some((line) => line.includes("cargo add --path"))).toBe(true);
+  });
+
   it("inits migraters for checked SQL dialects and skips json-only", async () => {
     const sql = mem(["package.json"], {
       [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }),

@@ -2,8 +2,7 @@ use datasources::ConsoleCommandMiddleware;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use user_roles_simple_cli::app::App;
-use user_roles_simple_cli::parse;
+use user_roles_simple_cli::program;
 
 #[derive(Deserialize)]
 struct CliSpec {
@@ -45,13 +44,9 @@ async fn main() {
         )
         .options(HashMap::from([("isVerbose".into(), "true".into())])),
     ));
-    let app = App::new(command.as_ref(), connection.provider())
-        .procedures(false)
-        .with_hash(|_| Ok("hash".into()));
     let result = async {
         for step in spec.steps {
-            app.run(parse::args(&step.argv)?)
-                .await?;
+            program::run(command.as_ref(), &step.argv, |_| Ok("hash".into()), false).await?;
         }
         Ok::<(), datasources::DatasourceError>(())
     }

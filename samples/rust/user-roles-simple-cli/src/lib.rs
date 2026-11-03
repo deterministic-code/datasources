@@ -1,16 +1,5 @@
-mod datasources_providers;
-pub mod app;
-pub mod as_user_view;
-pub mod columns;
-pub mod commands;
 pub mod console_log;
-pub mod group_view;
-pub mod parse;
-pub mod password_hash;
-pub mod role_view;
-pub mod user_view;
-pub mod users_roles_groups_query;
-pub mod users_view;
+pub mod program;
 
 #[cfg(test)]
 mod tests;

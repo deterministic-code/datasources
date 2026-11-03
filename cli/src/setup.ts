@@ -172,15 +172,12 @@ const applyPackages = async (
           add,
           entries,
           await csharpProject(flags.cwd, ecosystem, entries, deps.fs),
-          flags.local ? { repo: requireDatasourcesRepo(), cwd: flags.cwd } : undefined,
+          flags.local ? { repo: requireDatasourcesRepo(flags.cwd), cwd: flags.cwd } : undefined,
         )
       : []),
     ...(remove.length ? removeCommands(ecosystem, remove, remaining, entries) : []),
   ];
-  for (const proc of procs) {
-    deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
-    if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
-  }
+  await runProcs(flags, deps, procs);
   await {
     rust: () => wireRustProviders(flags.cwd, remaining, flags.dryRun, deps),
     csharp: () => wireCsharpBuildProps(flags.cwd, flags.dryRun, deps),
@@ -194,7 +191,21 @@ const applyMigrateInit = async (
   ecosystem: Ecosystem,
   remaining: Provider[],
 ): Promise<void> => {
-  for (const proc of migrateInitCommands(sqlMigrateProviders(remaining), migrateLanguage(ecosystem))) {
+  await runProcs(flags, deps, migrateInitCommands(sqlMigrateProviders(remaining), migrateLanguage(ecosystem)));
+};
+
+const npmProject = `${JSON.stringify({ private: true }, null, 2)}\n`;
+
+const ensureNpmProject = async (flags: Flags, deps: Deps): Promise<void> => {
+  const path = join(flags.cwd, "package.json");
+  if ((await optional(deps.fs, path)) !== undefined) return;
+  deps.log(path);
+  if (!flags.dryRun) await deps.fs.writeFile(path, npmProject);
+};
+
+const runProcs = async (flags: Flags, deps: Deps, procs: Proc[]): Promise<void> => {
+  if (procs.some((proc) => proc.command === "npm")) await ensureNpmProject(flags, deps);
+  for (const proc of procs) {
     deps.log(`$ ${proc.command} ${proc.args.join(" ")}`);
     if (!flags.dryRun) await deps.run(proc.command, proc.args, flags.cwd);
   }

@@ -6,8 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
-import { App } from "./src/app.ts";
-import { parse } from "./src/parse.ts";
+import { run } from "./src/main.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
 const spec = parseYaml(readFileSync(resolve(sample, "../../user-roles-simple-cli-shared/cli.yaml"), "utf8")) as {
@@ -29,8 +28,7 @@ try {
   command.addMiddleware(
     new ConsoleCommandMiddleware((line) => lines.push(line), now, { isVerbose: "true" }),
   );
-  const app = new App(command, () => "hash", false);
-  for (const step of spec.steps) await app.run(parse(step.argv));
+  for (const step of spec.steps) await run(command, step.argv, () => "hash", false);
 } finally {
   if (log) {
     mkdirSync(dirname(log), { recursive: true });

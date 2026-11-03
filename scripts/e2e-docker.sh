@@ -15,6 +15,11 @@ down_flags="down -v --remove-orphans --rmi local -t 0"
 parallel="${E2E_PARALLEL:-3}"
 fail=0
 live=""
+local=""
+if [ "${1:-}" = --local ]; then
+  local=--local
+  shift
+fi
 
 slug() {
   printf '%s' "$1" | tr '/_' '-'
@@ -48,10 +53,14 @@ await_all() {
 run_compose() {
   dir="$1"
   project="$2"
-  shift 2
   (
     cd "$repo/$dir"
-    COMPOSE_PROJECT_NAME=$project docker compose run --rm --build "$@"
+    if [ -n "$local" ]; then
+      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build -v "$repo:/repo" -w "/repo/$dir" runner \
+        sh -ec "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"
+    else
+      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build runner
+    fi
   )
 }
 
@@ -93,7 +102,7 @@ for dir in "$@"; do
   await_slot
   project="e2e-$(slug "$dir")"
   (
-    run_compose "$dir" "$project" runner
+    run_compose "$dir" "$project"
   ) &
   live="$live $!"
 done

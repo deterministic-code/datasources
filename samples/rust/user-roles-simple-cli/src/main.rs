@@ -1,8 +1,7 @@
 use datasources::{utc_iso_millis, ConsoleCommandMiddleware, DatasourceError};
 use std::sync::Arc;
 use std::time::SystemTime;
-use user_roles_simple_cli::app::App;
-use user_roles_simple_cli::parse;
+use user_roles_simple_cli::program;
 
 #[tokio::main]
 async fn main() {
@@ -16,7 +15,6 @@ async fn main() {
 }
 
 async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
-    let parsed = parse::args(&args)?;
     datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
     datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
     datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
@@ -34,8 +32,10 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
                 .unwrap_or_else(|| utc_iso_millis(SystemTime::now()))
         },
     )));
-    let app = App::new(command.as_ref(), ds.provider());
-    print!("{}", app.run(parsed).await?);
+    print!(
+        "{}",
+        program::run(command.as_ref(), &args, program::hash, true).await?
+    );
     ds.close().await?;
     Ok(())
 }

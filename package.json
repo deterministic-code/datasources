@@ -6,6 +6,7 @@
     "clean": "node scripts/clean-worktree.mjs",
     "review:branches": "node scripts/adversarial-review.mjs",
     "test:e2e": "sh scripts/e2e-docker.sh",
+    "test:e2e:local": "sh scripts/e2e-docker.sh --local",
     "test:quickstarts": "sh scripts/e2e-docker.sh sh scripts/e2e-quickstarts.sh",
     "docs": "vitepress dev docs",
     "docs:examples": "node scripts/sync-examples.mjs",

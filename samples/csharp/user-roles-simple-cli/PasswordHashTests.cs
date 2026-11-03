@@ -5,7 +5,7 @@ public sealed class PasswordHashTests
     [Fact]
     public void HashesPassword()
     {
-        var hash = PasswordHash.Hash("secret");
+        var hash = Program.Hash("secret");
         Assert.NotEqual("secret", hash);
         Assert.True(BCrypt.Net.BCrypt.Verify("secret", hash));
     }
