@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { requireProviders } from "./catalog.ts";
+import { cliDatasourcesRepo } from "./localRepo.ts";
 import { missingProject } from "./detect.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Deps, Fs } from "./io.ts";
@@ -173,6 +174,34 @@ describe("setup", () => {
     expect(files["package.json"]).toBe(parent);
     expect(io.ran.some((line) => /npm install file:.*typescript\/providers\/sqlite/.test(line))).toBe(true);
     expect(io.ran.some((line) => line.includes("cargo add --path"))).toBe(true);
+  });
+
+  it("setup and add --local run package managers against this checkout", async () => {
+    const repo = cliDatasourcesRepo;
+    const rust = mem(["Cargo.toml"], { [join(cwd, "Cargo.toml")]: "[package]\nname = \"app\"\n" });
+    const rustIo = deps(rust.fs);
+    expect(
+      await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "rust", "--datasources", "sqlite"], rustIo),
+    ).toBe(0);
+    expect(rustIo.ran).toContain(`cargo add --path ${join(repo, "rust/datasources")}`);
+    expect(rustIo.ran).toContain(`cargo add --path ${join(repo, "rust/providers/sqlite")}`);
+    expect(rustIo.ran).toContain(`cargo add --path ${join(repo, "rust/datasources-tests")}`);
+
+    const npmIo = deps(mem(["package.json"], { [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }) }).fs);
+    expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], npmIo)).toBe(0);
+    expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/datasources")}`);
+    expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/providers/sqlite")}`);
+
+    const csIo = deps(mem(["App.csproj"], { [join(cwd, "App.csproj")]: `<PackageReference Include="Datasources" />` }).fs);
+    expect(
+      await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "csharp", "--datasources", "sqlite"], csIo),
+    ).toBe(0);
+    expect(csIo.ran.some((line) => line.includes("dotnet add") && line.includes(`reference ${join(repo, "csharp/Datasources/Datasources.csproj")}`))).toBe(true);
+
+    const addIo = deps(mem(["Cargo.toml"], { [join(cwd, "Cargo.toml")]: "[package]\nname = \"app\"\n" }).fs);
+    expect(await exec(["add", "--local", "--cwd", cwd, "--languages", "rust", "--datasources", "mysql"], addIo)).toBe(0);
+    expect(addIo.ran).toContain(`cargo add --path ${join(repo, "rust/providers/mysql")}`);
+    expect(addIo.ran).toContain(`cargo add --path ${join(repo, "rust/datasources-tests")}`);
   });
 
   it("inits migraters for checked SQL dialects and skips json-only", async () => {
