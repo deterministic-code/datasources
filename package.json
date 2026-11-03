@@ -7,7 +7,7 @@
     "review:branches": "node scripts/adversarial-review.mjs",
     "test:e2e": "sh scripts/e2e-docker.sh",
     "test:e2e:local": "sh scripts/e2e-docker.sh --local",
-    "test:quickstarts": "sh scripts/e2e-docker.sh sh scripts/e2e-quickstarts.sh",
+    "test:quickstarts": "sh scripts/e2e-docker.sh --quickstarts",
     "docs": "vitepress dev docs",
     "docs:examples": "node scripts/sync-examples.mjs",
     "docs:drivers": "node scripts/generate-drivers.mjs",

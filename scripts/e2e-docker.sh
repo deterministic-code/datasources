@@ -20,6 +20,11 @@ if [ "${1:-}" = --local ]; then
   local=--local
   shift
 fi
+quickstarts=""
+if [ "${1:-}" = --quickstarts ]; then
+  quickstarts=1
+  shift
+fi
 
 case "${1:-}" in
   typescript|csharp|rust)
@@ -82,18 +87,20 @@ run_compose() {
   (
     cd "$repo/$dir"
     if [ -n "$local" ]; then
-      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build -v "$repo:/repo:ro" -e DATASOURCES_REPO=/repo runner \
+      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build -v "$repo:/opt/repo:ro" runner \
         sh -ec "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"
     else
-      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build runner
+      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build runner \
+        sh -ec "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"
     fi
   )
 }
 
-if [ $# -gt 0 ] && [ ! -d "$1" ]; then
+if [ -n "$quickstarts" ]; then
+  parallel=1
   down() {
     for language in typescript csharp rust; do
-      COMPOSE_PROJECT_NAME=e2e-quickstart-$language docker compose -f "$repo/samples/$language/contacts-simple-cli/compose.yml" $down_flags
+      COMPOSE_PROJECT_NAME=e2e-quickstart-$language docker compose -f "$repo/quick_starts/contacts_cli/$language/compose.yml" $down_flags
     done
   }
   trap down EXIT
@@ -101,9 +108,8 @@ if [ $# -gt 0 ] && [ ! -d "$1" ]; then
     await_slot
     project="e2e-quickstart-$language"
     (
-      cd "$repo/samples/$language/contacts-simple-cli"
-      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_LANG runner \
-        sh /repo/scripts/e2e-quickstarts.sh
+      cd "$repo/quick_starts/contacts_cli/$language"
+      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_LANG runner
     ) &
     live="$live $!"
   done
@@ -117,6 +123,16 @@ if [ $# -eq 0 ]; then
 fi
 
 sample_dirs="$*"
+if [ -z "${E2E_PARALLEL:-}" ]; then
+  rust_only=1
+  for dir in $sample_dirs; do
+    case "$dir" in
+      samples/rust/*) ;;
+      *) rust_only= ;;
+    esac
+  done
+  [ -n "$rust_only" ] && parallel=1
+fi
 down() {
   for dir in $sample_dirs; do
     project="e2e-$(slug "$dir")"

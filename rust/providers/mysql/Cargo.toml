@@ -8,6 +8,10 @@ repository.workspace = true
 description = "MySQL datasource provider"
 autotests = false
 
+[features]
+default = ["tls"]
+tls = ["mysql_async/native-tls-tls"]
+
 [dependencies]
 async-trait = { workspace = true }
 base64 = "0.22"
