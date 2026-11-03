@@ -14,7 +14,7 @@ services:
       - "3306:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uds", "-pds"]
-      interval: 5s
+      interval: 1s
       timeout: 5s
       retries: 20
   postgres:
@@ -29,25 +29,28 @@ services:
       - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ds -d datasources"]
-      interval: 5s
+      interval: 1s
       timeout: 5s
       retries: 20
   runner:
+    image: datasources-e2e-dotnet
     build:
-      context: ../../..
-      dockerfile: quick_starts/contacts_cli/csharp/Dockerfile
+      context: ../../../scripts
+      dockerfile: e2e-dotnet.Dockerfile
+    pull_policy: never
     restart: "no"
     stop_grace_period: 0s
     tmpfs:
       - /tmp
       - /work
+    volumes:
+      - ${HOME}/.cache/datasources-npm:/npm-cache
+      - ${HOME}/.cache/datasources-nuget:/nuget
+      - ${HOME}/.cache/datasources-e2e:/e2e-cache
     working_dir: /work
     environment:
+      npm_config_cache: /npm-cache
+      NUGET_PACKAGES: /nuget
       E2E_LANG: csharp
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
-    depends_on:
-      mysql:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy

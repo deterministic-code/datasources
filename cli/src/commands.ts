@@ -31,11 +31,16 @@ export const removeCommands = (
   names: Provider[],
   _remaining: Provider[],
   entries: string[],
+  csproj?: string,
+  local?: LocalInstall,
 ): Proc[] =>
   ({
     ts: () => npmUninstall(names),
     rust: () => [...cargoRemove(names), ...npmUninstall(sqlMigrateProviders(names))],
-    csharp: () => [...dotnetRemove(names, csharpTarget(entries)), ...npmUninstall(sqlMigrateProviders(names))],
+    csharp: () => [
+      ...dotnetRemove(names, csharpTarget(entries), csproj, local),
+      ...npmUninstall(sqlMigrateProviders(names)),
+    ],
   })[ecosystem]();
 
 const fileSpec = (local: LocalInstall, path: string): string => `file:${join(local.repo, path)}`;
@@ -101,10 +106,31 @@ const dotnetAdd = (names: Provider[], project: string, csproj?: string, local?: 
   );
 };
 
-const dotnetRemove = (names: Provider[], project: string): Proc[] => {
+const projectReferenceInclude = (xml: string, id: string): string | undefined => {
+  for (const match of xml.matchAll(/Include="([^"]+)"/g)) {
+    const include = match[1];
+    if (include !== undefined && include.endsWith(`${id}.csproj`)) return include;
+  }
+};
+
+const hasPackageReference = (xml: string, id: string): boolean => xml.includes(`PackageReference Include="${id}"`);
+
+const dotnetRemove = (names: Provider[], project: string, csproj?: string, local?: LocalInstall): Proc[] => {
   const prefix = project === "." ? [] : [project];
-  return names.map((name) => ({
-    command: "dotnet",
-    args: ["remove", ...prefix, "package", catalog[name].nuget],
-  }));
+  if (local === undefined) {
+    return names.map((name) => ({
+      command: "dotnet",
+      args: ["remove", ...prefix, "package", catalog[name].nuget],
+    }));
+  }
+  return names.flatMap((name) => {
+    const id = catalog[name].nuget;
+    const include = csproj === undefined ? undefined : projectReferenceInclude(csproj, id);
+    return [
+      ...(include === undefined ? [] : [{ command: "dotnet", args: ["remove", ...prefix, "reference", include] }]),
+      ...(csproj !== undefined && hasPackageReference(csproj, id)
+        ? [{ command: "dotnet", args: ["remove", ...prefix, "package", id] }]
+        : []),
+    ];
+  });
 };

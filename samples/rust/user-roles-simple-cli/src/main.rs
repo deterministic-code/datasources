@@ -1,3 +1,4 @@
+mod datasources_providers;
 use datasources::{utc_iso_millis, ConsoleCommandMiddleware, DatasourceError};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -15,9 +16,7 @@ async fn main() {
 }
 
 async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
-    datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
-    datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
-    datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
+    datasources_providers::register();
     let ds = datasources::default()?;
     let connection = ds.create_connection().await?;
     connection.open().await?;

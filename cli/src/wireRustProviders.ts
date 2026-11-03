@@ -61,7 +61,7 @@ export const wireRustProviders = async (
   dryRun: boolean,
   deps: { fs: Fs; log: (line: string) => void },
 ): Promise<void> => {
-  const entry = await firstFile(deps.fs, cwd, ["src/lib.rs", "src/main.rs", "lib.rs", "main.rs"]);
+  const entry = await firstFile(deps.fs, cwd, ["src/main.rs", "src/lib.rs", "main.rs", "lib.rs"]);
   const bind = join(entry ? dirname(entry.path) : cwd, "datasources_providers.rs");
   const text = rustBindContents(names);
   if (dryRun) {

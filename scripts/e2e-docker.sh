@@ -11,22 +11,64 @@ samples/rust/contacts-simple-cli
 samples/rust/contacts-crud-enriched-medium-rest
 samples/rust/user-roles-simple-cli
 "
-down_flags="down -v --remove-orphans --rmi local -t 0"
+down_flags="down -v --remove-orphans -t 0"
 parallel="${E2E_PARALLEL:-3}"
 fail=0
 live=""
 
 down_one() {
-  COMPOSE_PROJECT_NAME=$1 docker compose -f "$2" $down_flags
+  project=$1
+  file=$2
+  COMPOSE_PROJECT_NAME=$project docker compose -f "$file" $down_flags
 }
 
-prune() {
+maybe_prune() {
+  [ "${E2E_PRUNE:-}" = 1 ] || return 0
   docker builder prune -af
   docker system prune -f
 }
-local=""
+
+e2e_log() {
+  printf 'e2e-docker: %s %s\n' "$(date +%H:%M:%S)" "$*"
+}
+
+e2e_step() {
+  label=$1
+  shift
+  start=$(date +%s)
+  e2e_log "start $label"
+  "$@"
+  e2e_log "done $label $(($(date +%s) - start))s"
+}
+
+build_image() {
+  tag=$1
+  file=$2
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then
+    e2e_step "image $tag" docker buildx build --load \
+      --cache-from "type=gha,scope=$tag" \
+      --cache-to "type=gha,mode=max,scope=$tag" \
+      -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
+  else
+    e2e_step "image $tag" docker build -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
+  fi
+}
+
+build_toolchains() {
+  node= dotnet= rust=
+  for dir in "$@"; do
+    case "$dir" in
+      samples/typescript/*) node=1 ;;
+      samples/csharp/*) dotnet=1 ;;
+      samples/rust/*) rust=1 ;;
+    esac
+  done
+  [ -n "$node" ] && build_image datasources-e2e-node e2e-node.Dockerfile
+  [ -n "$dotnet" ] && build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
+  [ -n "$rust" ] && build_image datasources-e2e-rust e2e-rust.Dockerfile
+}
+
 if [ "${1:-}" = --local ]; then
-  local=--local
   shift
 fi
 quickstarts=""
@@ -86,6 +128,10 @@ await_all() {
   live=""
 }
 
+run_runner() {
+  docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" runner "$@"
+}
+
 run_compose() {
   dir="$1"
   project="$2"
@@ -95,13 +141,12 @@ run_compose() {
   fi
   (
     cd "$repo/$dir"
-    if [ -n "$local" ]; then
-      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build -v "$repo:/opt/repo:ro" runner \
-        sh -ec "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"
-    else
-      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build runner \
-        sh -ec "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"
-    fi
+    export COMPOSE_PROJECT_NAME=$project
+    start=$(date +%s)
+    e2e_log "start $dir"
+    docker compose up -d mysql postgres
+    run_runner sh -ec 'sh -e sqlite.sh --local && sh /e2e-wait-engines.sh && sh -e mysql-postgres.sh --local'
+    e2e_log "done $dir $(($(date +%s) - start))s"
   )
 }
 
@@ -111,9 +156,12 @@ if [ -n "$quickstarts" ]; then
     for language in typescript csharp rust; do
       down_one "e2e-quickstart-$language" "$repo/quick_starts/contacts_cli/$language/compose.yml"
     done
-    prune
+    maybe_prune
   }
   trap down EXIT
+  build_image datasources-e2e-node e2e-node.Dockerfile
+  build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
+  build_image datasources-e2e-rust e2e-rust.Dockerfile
   for language in typescript csharp rust; do
     await_slot
     project="e2e-quickstart-$language"
@@ -121,7 +169,9 @@ if [ -n "$quickstarts" ]; then
     (
       cd "$repo/quick_starts/contacts_cli/$language"
       status=0
-      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_LANG runner || status=$?
+      export COMPOSE_PROJECT_NAME=$project
+      docker compose up -d --wait mysql postgres
+      docker compose run --rm --no-deps -v "$repo:/repo:ro" -e E2E_LANG="$language" runner sh /e2e-quickstarts.sh || status=$?
       down_one "$project" "$compose"
       exit $status
     ) &
@@ -151,9 +201,14 @@ down() {
   for dir in $sample_dirs; do
     down_one "e2e-$(slug "$dir")" "$repo/$dir/compose.yml"
   done
-  prune
+  maybe_prune
 }
 trap down EXIT
+
+suite_start=$(date +%s)
+e2e_log "suite start"
+# shellcheck disable=SC2086
+build_toolchains $sample_dirs
 
 for dir in "$@"; do
   await_slot
@@ -162,10 +217,11 @@ for dir in "$@"; do
   (
     status=0
     run_compose "$dir" "$project" || status=$?
-    down_one "$project" "$compose"
+    e2e_step "down $dir" down_one "$project" "$compose"
     exit $status
   ) &
   live="$live $!"
 done
 await_all
+e2e_log "suite done $(($(date +%s) - suite_start))s"
 exit "$fail"
