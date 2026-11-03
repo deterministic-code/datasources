@@ -15,6 +15,7 @@ import { sqlFlagsOf } from "./sqlFlags.ts";
 import { deterministic } from "./DeterministicProvider.ts";
 import type { Dialect } from "./GenerateRequest.ts";
 import { planRepositories } from "./RepositoryPlan.ts";
+import { csharpRepositories } from "./CSharpRepositories.ts";
 import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { providerByName } from "./providers.ts";
@@ -890,7 +891,7 @@ types:
     expect(() => planRepositories(mismatch, "csharp", {})).toThrow(/no matching type in types.yaml/);
   });
 
-  it("plans schema column info for string and bool without spec defaults", async () => {
+  it("plans schema column info for string, bool, and decimal without spec defaults", async () => {
     const spec = await DeterministicParser(
       memoryReader({
         "types.yaml": `version: 1.0.0
@@ -905,6 +906,8 @@ types:
             type: string
         - is_starred:
             type: boolean
+        - score:
+            type: decimal
         - uuid:
             type: uuid
             default_value: NewId
@@ -927,8 +930,10 @@ types: []
     const models = planRepositories(spec, "rust", {});
     const rust = rustRepositories.generate(models, {}, spec);
     const typescript = typescriptRepositories.generate(models, {}, spec);
+    const csharp = csharpRepositories.generate(planRepositories(spec, "csharp", {}), {}, spec);
     const rustText = textOf(rust, "itemRepository.rs");
     const tsText = textOf(typescript, "itemRepository.ts");
+    const csharpText = textOf(csharp, "ItemRepository.cs");
     expect(rustText).toContain('type_name: "string".into()');
     expect(rustText).toContain('type_name: "boolean".into()');
     expect(rustText).toContain("has_default: true");
@@ -938,6 +943,10 @@ types: []
     expect(tsText).toContain('note: { type: "string", nullable: false, hasDefault: true }');
     expect(tsText).toContain('uuid: { type: "uuid", nullable: false, hasDefault: true }');
     expect(tsText).not.toContain("this.createZeros");
+    expect(csharpText).toContain("Schema = new");
+    expect(csharpText).toContain('["Name"] = new("string"');
+    expect(csharpText).toContain('["IsStarred"] = new("boolean"');
+    expect(csharpText).toContain('["Score"] = new("decimal"');
   });
 
   it("writes each generate target", async () => {

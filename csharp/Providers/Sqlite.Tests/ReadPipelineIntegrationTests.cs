@@ -122,4 +122,15 @@ public class ReadPipelineIntegrationTests
         Assert.Equal("grace", finalManualEntities[1].Username);
         Assert.False(finalManualEntities[2].IsEnabled);
     }
+
+    [Fact]
+    public void BindsCatalogDecimalForScore()
+    {
+        var rowConverter = RowTypeConverter.From(new SqliteDriver().RowTypeConverters, new Dictionary<string, string>
+        {
+            ["Score"] = "decimal",
+        });
+        var converted = rowConverter.Convert(new Row { ["Score"] = new Value.Float(10.5) });
+        Assert.Equal(new Value.Text("10.5"), converted["Score"]);
+    }
 }
