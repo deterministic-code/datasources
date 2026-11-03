@@ -9,7 +9,7 @@ describe("migrateInit", () => {
     expect(migrateLanguage("rust")).toBe("rust");
     expect(migrateInitCommands([], "csharp")).toEqual([]);
     expect(migrateInitCommands(["sqlite", "postgres"], "csharp")).toEqual([
-      { command: "npm", args: ["install", "@deterministic-code/migraters"] },
+      { command: "npm", args: ["install", "--install-links", "@deterministic-code/migraters"] },
       {
         command: "npx",
         args: [

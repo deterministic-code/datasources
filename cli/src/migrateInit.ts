@@ -15,7 +15,7 @@ export const migrateInitCommands = (dialects: Provider[], language: MigrateLangu
   dialects.length === 0
     ? []
     : [
-        { command: "npm", args: ["install", "@deterministic-code/migraters"] },
+        { command: "npm", args: ["install", "--install-links", "@deterministic-code/migraters"] },
         {
           command: "npx",
           args: [

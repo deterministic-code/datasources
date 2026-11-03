@@ -15,6 +15,15 @@ down_flags="down -v --remove-orphans --rmi local -t 0"
 parallel="${E2E_PARALLEL:-3}"
 fail=0
 live=""
+
+down_one() {
+  COMPOSE_PROJECT_NAME=$1 docker compose -f "$2" $down_flags
+}
+
+prune() {
+  docker builder prune -af
+  docker system prune -f
+}
 local=""
 if [ "${1:-}" = --local ]; then
   local=--local
@@ -100,16 +109,21 @@ if [ -n "$quickstarts" ]; then
   parallel=1
   down() {
     for language in typescript csharp rust; do
-      COMPOSE_PROJECT_NAME=e2e-quickstart-$language docker compose -f "$repo/quick_starts/contacts_cli/$language/compose.yml" $down_flags
+      down_one "e2e-quickstart-$language" "$repo/quick_starts/contacts_cli/$language/compose.yml"
     done
+    prune
   }
   trap down EXIT
   for language in typescript csharp rust; do
     await_slot
     project="e2e-quickstart-$language"
+    compose="$repo/quick_starts/contacts_cli/$language/compose.yml"
     (
       cd "$repo/quick_starts/contacts_cli/$language"
-      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_LANG runner
+      status=0
+      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_LANG runner || status=$?
+      down_one "$project" "$compose"
+      exit $status
     ) &
     live="$live $!"
   done
@@ -135,17 +149,21 @@ if [ -z "${E2E_PARALLEL:-}" ]; then
 fi
 down() {
   for dir in $sample_dirs; do
-    project="e2e-$(slug "$dir")"
-    COMPOSE_PROJECT_NAME=$project docker compose -f "$repo/$dir/compose.yml" $down_flags
+    down_one "e2e-$(slug "$dir")" "$repo/$dir/compose.yml"
   done
+  prune
 }
 trap down EXIT
 
 for dir in "$@"; do
   await_slot
   project="e2e-$(slug "$dir")"
+  compose="$repo/$dir/compose.yml"
   (
-    run_compose "$dir" "$project"
+    status=0
+    run_compose "$dir" "$project" || status=$?
+    down_one "$project" "$compose"
+    exit $status
   ) &
   live="$live $!"
 done

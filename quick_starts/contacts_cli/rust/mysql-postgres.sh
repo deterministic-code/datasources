@@ -8,7 +8,9 @@ cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres
 npx @deterministic-code/datasources-cli generate all --dialect rust
 cargo run | diff -u expected.txt -
+rm -rf target
 export PROVIDER=postgres
 export DATASOURCE_URL="${POSTGRES_URL:-postgres://ds:ds@postgres:5432/datasources}"
 npx @deterministic-code/datasources-cli generate all --dialect rust
 cargo run | diff -u expected.txt -
+rm -rf target
