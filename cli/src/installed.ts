@@ -1,4 +1,4 @@
-import { catalog, providers, type Provider } from "./catalog.ts";
+import { catalog, host, providers, type Provider } from "./catalog.ts";
 
 export type NpmManifest = {
   dependencies?: Record<string, string>;
@@ -8,6 +8,11 @@ export type NpmManifest = {
 export const npmProviders = (manifest: NpmManifest): Provider[] => {
   const deps = { ...manifest.dependencies, ...manifest.devDependencies };
   return providers.filter((name) => catalog[name].npm in deps);
+};
+
+export const hasDatasourcesNpm = (manifest: NpmManifest): boolean => {
+  const deps = { ...manifest.dependencies, ...manifest.devDependencies };
+  return host.ts.core in deps || npmProviders(manifest).length > 0;
 };
 
 export const cargoProviders = (toml: string): Provider[] =>

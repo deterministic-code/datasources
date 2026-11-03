@@ -100,51 +100,27 @@ describe("commands", () => {
   it("adds from this checkout with --local", () => {
     const root = cliDatasourcesRepo;
     const local = { repo: root, cwd: "app" };
-    const generatorsPrefix = [
+    const npmLocal = [
       "install",
-      "--prefix",
-      join(root, "typescript/code-generators"),
+      "--install-links",
+      `file:${join(root, "typescript/datasources")}`,
+      `file:${join(root, "typescript/code-generators")}`,
+      `file:${join(root, "typescript/providers/sqlite")}`,
       "@deterministic-code/generators-common",
       "@deterministic-code/deterministic-generators-common",
     ];
-    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([
-      [
-        "install",
-        `file:${join(root, "typescript/datasources")}`,
-        `file:${join(root, "typescript/code-generators")}`,
-        `file:${join(root, "typescript/providers/sqlite")}`,
-        "@deterministic-code/generators-common",
-        "@deterministic-code/deterministic-generators-common",
-      ],
-      generatorsPrefix,
-    ]);
+    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([npmLocal]);
     expect(addCommands("rust", ["sqlite"], ["Cargo.toml"], undefined, local).map((c) => c.args)).toEqual([
       ["add", "--path", join(root, "rust/datasources")],
       ["add", "tokio", "--features", "macros,rt-multi-thread"],
       ["add", "--path", join(root, "rust/providers/sqlite")],
       ["add", "--path", join(root, "rust/datasources-tests")],
-      [
-        "install",
-        `file:${join(root, "typescript/datasources")}`,
-        `file:${join(root, "typescript/code-generators")}`,
-        `file:${join(root, "typescript/providers/sqlite")}`,
-        "@deterministic-code/generators-common",
-        "@deterministic-code/deterministic-generators-common",
-      ],
-      generatorsPrefix,
+      npmLocal,
     ]);
     expect(addCommands("csharp", ["sqlite"], ["App.csproj"], undefined, local).map((c) => c.args)).toEqual([
       ["add", "App.csproj", "reference", join(root, "csharp/Datasources/Datasources.csproj")],
       ["add", "App.csproj", "reference", join(root, "csharp/Providers/Sqlite/Datasources.Sqlite.csproj")],
-      [
-        "install",
-        `file:${join(root, "typescript/datasources")}`,
-        `file:${join(root, "typescript/code-generators")}`,
-        `file:${join(root, "typescript/providers/sqlite")}`,
-        "@deterministic-code/generators-common",
-        "@deterministic-code/deterministic-generators-common",
-      ],
-      generatorsPrefix,
+      npmLocal,
     ]);
   });
 });

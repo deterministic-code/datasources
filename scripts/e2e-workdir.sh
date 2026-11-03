@@ -15,7 +15,5 @@ mkdir -p "/work/$sample"
 cp -a /opt/src/. "/work/$sample"
 cd "/work/$sample"
 export DATASOURCES_REPO=/opt/repo
-npm install --prefix /opt/repo/cli
-npm install --prefix "/work/$sample" --install-links "file:/opt/repo/cli"
-node /opt/repo/cli/scripts/build-generators.mjs
+npm install --install-links "file:/opt/repo/cli"
 exec "$@"

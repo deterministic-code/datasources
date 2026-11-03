@@ -108,7 +108,7 @@ describe("setup", () => {
         scaffold: false,
       }),
     ).toEqual({
-      INSTALLED_PROVIDERS: "json,sqlite",
+      INSTALLED_PROVIDERS: "sqlite",
       PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///:memory:",
     });
