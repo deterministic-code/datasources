@@ -20,7 +20,7 @@ serde_yaml = "0.9"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
-mysql_async = "0.34"
+mysql_async = { version = "0.34", default-features = false, features = ["minimal-rust", "bigdecimal", "rust_decimal", "time", "frunk", "derive", "binlog"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"

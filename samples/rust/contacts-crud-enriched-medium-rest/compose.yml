@@ -42,8 +42,8 @@ services:
     restart: "no"
     stop_grace_period: 0s
     tmpfs:
-      - /tmp
-      - /work
+      - /tmp:exec
+      - /work:exec
     working_dir: /work
     environment:
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources

@@ -21,6 +21,28 @@ if [ "${1:-}" = --local ]; then
   shift
 fi
 
+case "${1:-}" in
+  typescript|csharp|rust)
+    out=""
+    for language in "$@"; do
+      case "$language" in
+        typescript|csharp|rust) ;;
+        *)
+          printf 'e2e-docker: expected a language or sample path, got %s\n' "$language" >&2
+          exit 1
+          ;;
+      esac
+      for dir in $samples; do
+        case "$dir" in
+          samples/"$language"/*) out="$out $dir" ;;
+        esac
+      done
+    done
+    # shellcheck disable=SC2086
+    set -- $out
+    ;;
+esac
+
 slug() {
   printf '%s' "$1" | tr '/_' '-'
 }
@@ -53,6 +75,10 @@ await_all() {
 run_compose() {
   dir="$1"
   project="$2"
+  if [ ! -f "$repo/$dir/compose.yml" ]; then
+    printf 'e2e-docker: %s has no compose.yml\n' "$dir" >&2
+    exit 1
+  fi
   (
     cd "$repo/$dir"
     if [ -n "$local" ]; then

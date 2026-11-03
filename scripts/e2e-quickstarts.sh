@@ -1,5 +1,6 @@
 set -e
 cd /work
+ln -sfn /repo/quick_starts /work/quick_starts
 lang="${E2E_LANG:?}"
 for script in sqlite.sh mysql-postgres.sh; do
   rm -rf dest
