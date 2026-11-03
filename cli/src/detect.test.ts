@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { csharpTarget, detect, isEcosystem, missingProject, requireProjects, resolveLanguages } from "./detect.ts";
+import { csharpTarget, detect, isEcosystem, missingProject, requireProjects, resolveLanguages, setupLanguages } from "./detect.ts";
 
 describe("detect", () => {
   it("finds npm, cargo, and csharp manifests", () => {
@@ -22,6 +22,11 @@ describe("detect", () => {
     expect(resolveLanguages([], ["csharp"])).toEqual(["csharp"]);
     expect(resolveLanguages(["ts", "rust"])).toEqual(["ts", "rust"]);
     expect(() => resolveLanguages([])).toThrow(/No package.json/);
+    expect(setupLanguages(["ts", "rust"], [], false)).toEqual(["rust"]);
+    expect(setupLanguages(["ts", "csharp"], [], false)).toEqual(["csharp"]);
+    expect(setupLanguages(["ts", "rust"], [], true)).toEqual(["ts", "rust"]);
+    expect(setupLanguages(["ts", "rust"], ["ts"], false)).toEqual(["ts"]);
+    expect(setupLanguages(["ts"], [], false)).toEqual(["ts"]);
   });
 
   it("picks a non-test csproj", () => {

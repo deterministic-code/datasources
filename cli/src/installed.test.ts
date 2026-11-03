@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cargoProviders, csharpProviders, hasCsharpProjectReference, npmProviders } from "./installed.ts";
+import { cargoProviders, csharpProviders, hasCsharpProjectReference, hasDatasourcesNpm, npmProviders } from "./installed.ts";
 
 describe("installed", () => {
   it("reads npm workspace packages", () => {
@@ -10,6 +10,10 @@ describe("installed", () => {
       }),
     ).toEqual(["json", "sqlite"]);
     expect(npmProviders({})).toEqual([]);
+    expect(hasDatasourcesNpm({ dependencies: { "@deterministic-code/datasources": "*" } })).toBe(true);
+    expect(hasDatasourcesNpm({ dependencies: { "@deterministic-code/datasources-sqlite": "*" } })).toBe(true);
+    expect(hasDatasourcesNpm({ dependencies: { "@deterministic-code/datasources-cli": "*" } })).toBe(false);
+    expect(hasDatasourcesNpm({})).toBe(false);
   });
 
   it("reads cargo crates", () => {

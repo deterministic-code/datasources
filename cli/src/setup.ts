@@ -1,12 +1,12 @@
 import { join } from "node:path";
-import { providers, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
+import { isProvider, providers, requireProviders, type Ecosystem, type Provider } from "./catalog.ts";
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
 import { requireDatasourcesRepo } from "./localRepo.ts";
-import { csharpTarget, detect, isEcosystem, requireProjects, resolveLanguages } from "./detect.ts";
-import { answersFromEnv, ensureProviders, parseEnv, scheme, serializeEnv, updateEnvProviders, withSchema, type EnvMap } from "./env.ts";
+import { csharpTarget, detect, isEcosystem, requireProjects, setupLanguages } from "./detect.ts";
+import { answersFromEnv, parseEnv, scheme, serializeEnv, updateEnvProviders, withSchema, type EnvMap } from "./env.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Deps, Fs, Prompter } from "./io.ts";
-import { cargoProviders, csharpProviders, npmProviders, type NpmManifest } from "./installed.ts";
+import { cargoProviders, csharpProviders, hasDatasourcesNpm, npmProviders, type NpmManifest } from "./installed.ts";
 import { migrateInitCommands, migrateLanguage, sqlMigrateProviders } from "./migrateInit.ts";
 import type { Flags } from "./parse.ts";
 import { wireCsharpBuildProps } from "./wireCsharpBuildProps.ts";
@@ -83,7 +83,7 @@ export const promptSetup = async (
 export const envFromAnswers = (answers: SetupAnswers): EnvMap => {
   const provider = scheme(answers.url) ?? answers.providers[0] ?? "sqlite";
   return {
-    INSTALLED_PROVIDERS: ensureProviders(answers.providers, provider).join(","),
+    INSTALLED_PROVIDERS: provider,
     PROVIDER: provider,
     DATASOURCE_URL: withSchema(answers.url, answers.schema),
   };
@@ -105,10 +105,12 @@ export const applySetup = async (flags: Flags, deps: Deps, requested: string[]):
   const answers: SetupAnswers = flags.yes
     ? { ...answersForSetup(existing, requested), languages: flags.languages, scaffold: false }
     : await promptSetup(deps.prompt, existing, found, flags.languages, missingSpec, requested);
-  const languages = resolveLanguages(found, answers.languages ?? flags.languages);
+  const explicit = answers.languages ?? flags.languages;
+  const languages = setupLanguages(found, explicit, await npmHasDatasources(deps.fs, flags.cwd));
   requireProjects(languages, entries);
-  const selected = requireProviders(answers.providers);
-  if (!flags.dryRun) await writeEnv(deps.fs, flags.cwd, { ...existing, ...envFromAnswers(answers) });
+  const env = envFromAnswers(answers);
+  const selected = isProvider(env.PROVIDER) ? [env.PROVIDER] : requireProviders(answers.providers);
+  if (!flags.dryRun) await writeEnv(deps.fs, flags.cwd, { ...existing, ...env });
   for (const language of languages) {
     const installed = await readInstalled(deps.fs, flags.cwd, language, entries);
     await applyPackages(
@@ -141,7 +143,7 @@ export const applyAddRemove = async (
 ): Promise<void> => {
   const entries = await deps.fs.readdir(flags.cwd);
   const found = detect(entries);
-  const languages = resolveLanguages(found, flags.languages);
+  const languages = setupLanguages(found, flags.languages, await npmHasDatasources(deps.fs, flags.cwd));
   requireProjects(languages, entries);
   const env = await readEnvFile(deps.fs, join(flags.cwd, ".env"));
   if (env && !flags.dryRun) await writeEnv(deps.fs, flags.cwd, updateEnvProviders(env, add, remove));
@@ -152,7 +154,7 @@ export const applyAddRemove = async (
       ...add.filter((name) => !installed.includes(name)),
     ];
     await applyPackages(flags, deps, language, entries, add, remove, remaining);
-    await applyMigrateInit(flags, deps, language, remaining);
+    await applyMigrateInit(flags, deps, language, add);
   }
 };
 
@@ -193,6 +195,11 @@ const applyMigrateInit = async (
   remaining: Provider[],
 ): Promise<void> => {
   await runProcs(flags, deps, migrateInitCommands(sqlMigrateProviders(remaining), migrateLanguage(ecosystem)));
+};
+
+const npmHasDatasources = async (fs: Fs, cwd: string): Promise<boolean> => {
+  const text = await optional(fs, join(cwd, "package.json"));
+  return text !== undefined && hasDatasourcesNpm(JSON.parse(text) as NpmManifest);
 };
 
 const npmProject = `${JSON.stringify({ private: true }, null, 2)}\n`;

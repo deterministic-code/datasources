@@ -52,6 +52,7 @@ const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
       "install",
       ...(local
         ? [
+            "--install-links",
             fileSpec(local, "typescript/datasources"),
             fileSpec(local, "typescript/code-generators"),
             ...names.map((name) => fileSpec(local, `typescript/providers/${name}`)),
@@ -60,14 +61,6 @@ const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
         : [host.ts.core, ...names.map((name) => catalog[name].npm)]),
     ],
   },
-  ...(local
-    ? [
-        {
-          command: "npm",
-          args: ["install", "--prefix", join(local.repo, "typescript/code-generators"), ...generatorPkgs],
-        },
-      ]
-    : []),
 ];
 
 const npmUninstall = (names: Provider[]): Proc[] => {

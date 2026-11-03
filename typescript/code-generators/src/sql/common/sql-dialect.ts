@@ -1,6 +1,10 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   DriverLoader,
   ProviderCatalog,
+  ProviderNotInstalledError,
   type IDriver,
   type IStatement,
   type StatementNaming,
@@ -22,6 +26,10 @@ export const register = (dialect: string, driver: IDriver): void => {
   loaded.set(named(dialect), driver);
 };
 
+export const forgetDialects = (): void => {
+  loaded.clear();
+};
+
 export const dialectDriver = (dialect: string): IDriver => {
   const key = named(dialect);
   const hit = loaded.get(key);
@@ -36,6 +44,42 @@ export const dialectDriver = (dialect: string): IDriver => {
 export const requireDialect = (language: string): SqlDialect => {
   dialectDriver(language);
   return language;
+};
+
+const entryOf = (manifest: {
+  main?: string;
+  module?: string;
+  exports?: { "."?: string | { import?: string; default?: string; require?: string } };
+}): string => {
+  const exp = manifest.exports?.["."];
+  return typeof exp === "string"
+    ? exp
+    : (exp?.import ?? exp?.default ?? exp?.require ?? manifest.main ?? manifest.module ?? "index.js");
+};
+
+const consumerPackage = (location: string): string =>
+  join(process.cwd(), "node_modules", location, "package.json");
+
+export const ensureDialect = async (language: string): Promise<SqlDialect> => {
+  const dialect = named(language);
+  if (loaded.has(dialect)) return dialect;
+  try {
+    dialectDriver(dialect);
+    return dialect;
+  } catch {
+    const catalog = ProviderCatalog.default[dialect];
+    const pkg = consumerPackage(catalog.location);
+    if (!existsSync(pkg)) throw new ProviderNotInstalledError(dialect);
+    const entry = entryOf(JSON.parse(readFileSync(pkg, "utf8")) as Parameters<typeof entryOf>[0]);
+    const loadedModule = (await import(pathToFileURL(join(process.cwd(), "node_modules", catalog.location, entry)).href)) as Record<
+      string,
+      new () => IDriver
+    >;
+    const Type = loadedModule[catalog.module];
+    if (typeof Type !== "function") throw new ProviderNotInstalledError(dialect);
+    register(dialect, new Type());
+    return dialect;
+  }
 };
 
 export const schemaRenderer = (dialect: string, naming: StatementNaming) =>

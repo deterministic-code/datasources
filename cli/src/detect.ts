@@ -17,6 +17,18 @@ export const resolveLanguages = (found: Ecosystem[], explicit: Ecosystem[] = [])
           throw new Error("No package.json, Cargo.toml, or .csproj/.sln in this directory");
         })();
 
+export const setupLanguages = (
+  found: Ecosystem[],
+  explicit: Ecosystem[],
+  hasDatasourcesNpm: boolean,
+): Ecosystem[] => {
+  const languages = resolveLanguages(found, explicit);
+  if (explicit.includes("ts") || hasDatasourcesNpm) return languages;
+  if (!languages.includes("ts") || (!languages.includes("rust") && !languages.includes("csharp")))
+    return languages;
+  return languages.filter((language) => language !== "ts");
+};
+
 export const hasProject = (language: Ecosystem, entries: string[]): boolean =>
   ({
     csharp: csharpTarget(entries) !== ".",
