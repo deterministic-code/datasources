@@ -27,6 +27,7 @@ coverage.info
 .deterministic-cache/
 file:*
 scripts/artifacts/
+samples/**/sql/
 csharp/artifacts/
 dest-cli/
 dest/
