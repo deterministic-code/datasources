@@ -1,18 +1,28 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { addCommands, removeCommands } from "./commands.ts";
+import { cliDatasourcesRepo } from "./localRepo.ts";
 
 describe("commands", () => {
   it("adds sqlite on npm", () => {
     expect(addCommands("ts", ["sqlite"], ["package.json"])).toEqual([
       {
         command: "npm",
-        args: ["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"],
+        args: [
+          "install",
+          "@deterministic-code/datasources",
+          "@deterministic-code/datasources-sqlite",
+          "@deterministic-code/generators-common",
+          "@deterministic-code/deterministic-generators-common",
+        ],
       },
     ]);
     expect(addCommands("ts", ["xml"], ["package.json"])[0]?.args).toEqual([
       "install",
       "@deterministic-code/datasources",
       "@deterministic-code/datasources-xml",
+      "@deterministic-code/generators-common",
+      "@deterministic-code/deterministic-generators-common",
     ]);
   });
 
@@ -23,7 +33,13 @@ describe("commands", () => {
       { command: "cargo", args: ["add", "datasources-sqlite"] },
       {
         command: "npm",
-        args: ["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"],
+        args: [
+          "install",
+          "@deterministic-code/datasources",
+          "@deterministic-code/datasources-sqlite",
+          "@deterministic-code/generators-common",
+          "@deterministic-code/deterministic-generators-common",
+        ],
       },
     ]);
     expect(addCommands("rust", ["json"], ["Cargo.toml"])[2]?.args).toEqual([
@@ -38,7 +54,13 @@ describe("commands", () => {
     expect(cmds.map((c) => c.args)).toEqual([
       ["add", "App.csproj", "package", "Datasources"],
       ["add", "App.csproj", "package", "Datasources.Sqlite"],
-      ["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"],
+      [
+        "install",
+        "@deterministic-code/datasources",
+        "@deterministic-code/datasources-sqlite",
+        "@deterministic-code/generators-common",
+        "@deterministic-code/deterministic-generators-common",
+      ],
     ]);
     expect(addCommands("csharp", ["json"], [])[0]?.args).toEqual([
       "add",
@@ -53,7 +75,15 @@ describe("commands", () => {
         ["App.csproj"],
         `<ProjectReference Include="..\\Datasources.csproj" />\n<ProjectReference Include="Datasources.Sqlite.csproj" />`,
       ).map((c) => c.args),
-    ).toEqual([["install", "@deterministic-code/datasources", "@deterministic-code/datasources-sqlite"]]);
+    ).toEqual([
+      [
+        "install",
+        "@deterministic-code/datasources",
+        "@deterministic-code/datasources-sqlite",
+        "@deterministic-code/generators-common",
+        "@deterministic-code/deterministic-generators-common",
+      ],
+    ]);
   });
 
   it("uninstalls unused dialects", () => {
@@ -78,25 +108,41 @@ describe("commands", () => {
   });
 
   it("adds from this checkout with --local", () => {
-    const root = "/Users/ryan/Projects/datasources";
+    const root = cliDatasourcesRepo;
     const local = { repo: root, cwd: "app" };
     expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local)[0]?.args).toEqual([
       "install",
-      `file:${root}/typescript/datasources`,
-      `file:${root}/typescript/code-generators`,
-      `file:${root}/typescript/providers/sqlite`,
+      `file:${join(root, "typescript/datasources")}`,
+      `file:${join(root, "typescript/code-generators")}`,
+      `file:${join(root, "typescript/providers/sqlite")}`,
+      "@deterministic-code/generators-common",
+      "@deterministic-code/deterministic-generators-common",
     ]);
     expect(addCommands("rust", ["sqlite"], ["Cargo.toml"], undefined, local).map((c) => c.args)).toEqual([
-      ["add", "--path", `${root}/rust/datasources`],
+      ["add", "--path", join(root, "rust/datasources")],
       ["add", "tokio", "--features", "macros,rt-multi-thread"],
-      ["add", "--path", `${root}/rust/providers/sqlite`],
-      ["add", "--path", `${root}/rust/datasources-tests`],
-      ["install", `file:${root}/typescript/datasources`, `file:${root}/typescript/code-generators`, `file:${root}/typescript/providers/sqlite`],
+      ["add", "--path", join(root, "rust/providers/sqlite")],
+      ["add", "--path", join(root, "rust/datasources-tests")],
+      [
+        "install",
+        `file:${join(root, "typescript/datasources")}`,
+        `file:${join(root, "typescript/code-generators")}`,
+        `file:${join(root, "typescript/providers/sqlite")}`,
+        "@deterministic-code/generators-common",
+        "@deterministic-code/deterministic-generators-common",
+      ],
     ]);
     expect(addCommands("csharp", ["sqlite"], ["App.csproj"], undefined, local).map((c) => c.args)).toEqual([
-      ["add", "App.csproj", "reference", `${root}/csharp/Datasources/Datasources.csproj`],
-      ["add", "App.csproj", "reference", `${root}/csharp/Providers/Sqlite/Datasources.Sqlite.csproj`],
-      ["install", `file:${root}/typescript/datasources`, `file:${root}/typescript/code-generators`, `file:${root}/typescript/providers/sqlite`],
+      ["add", "App.csproj", "reference", join(root, "csharp/Datasources/Datasources.csproj")],
+      ["add", "App.csproj", "reference", join(root, "csharp/Providers/Sqlite/Datasources.Sqlite.csproj")],
+      [
+        "install",
+        `file:${join(root, "typescript/datasources")}`,
+        `file:${join(root, "typescript/code-generators")}`,
+        `file:${join(root, "typescript/providers/sqlite")}`,
+        "@deterministic-code/generators-common",
+        "@deterministic-code/deterministic-generators-common",
+      ],
     ]);
   });
 });

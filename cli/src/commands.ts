@@ -40,6 +40,11 @@ export const removeCommands = (
 
 const fileSpec = (local: LocalInstall, path: string): string => `file:${join(local.repo, path)}`;
 
+const generatorPkgs = [
+  "@deterministic-code/generators-common",
+  "@deterministic-code/deterministic-generators-common",
+];
+
 const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
   {
     command: "npm",
@@ -52,6 +57,7 @@ const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
             ...names.map((name) => fileSpec(local, `typescript/providers/${name}`)),
           ]
         : [host.ts.core, ...names.map((name) => catalog[name].npm)]),
+      ...generatorPkgs,
     ],
   },
 ];
