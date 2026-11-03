@@ -62,14 +62,14 @@ setup [name...]       Interactive .env, datasource install, and optional determi
   --datasources <name...>     Datasources to install (default: existing .env)
   --dry-run                   Print package-manager commands without running them
   --yes                       Setup without prompts (defaults / existing .env)
-  --local                     Dev only. Install from this datasources checkout
+  --local                     Dev only. Install from this datasources checkout (from --cwd)
 
 add [name...]         Add datasource packages
   --cwd <dir>                 Consumer project directory (default: .)
   --languages ts|rust|csharp  Project languages (default: every type found)
   --datasources <name...>     Datasources to add
   --dry-run                   Print package-manager commands without running them
-  --local                     Dev only. Install from this datasources checkout
+  --local                     Dev only. Install from this datasources checkout (from --cwd)
 
 remove [name...]      Remove datasource packages
   --cwd <dir>                 Consumer project directory (default: .)

@@ -1,0 +1,8 @@
+---
+description: Stop instead of rewriting a type conversion by hand
+alwaysApply: true
+---
+
+# Halt on a reinvented type conversion
+
+Call `Convert` / `ReverseConvert` on the provider converter (`boolean`, `datetime`, `uuid`, `decimal`, `binary`, `integer`). Do not write a cell conversion outside `converters/` / `Converters/`.

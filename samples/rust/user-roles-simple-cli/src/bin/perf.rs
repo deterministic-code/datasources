@@ -1,13 +1,11 @@
 use chrono::{DateTime, TimeZone, Utc};
 use datasources::{
     BatchCommandIBulkWriteStrategy, BulkCRUDRepository, BulkWriteStrategy, CRUDRepositoryOptions,
-    Driver, Native, Row, RowTypeConverter, StoredProcedureBulkWriteStrategy, Value,
+    Native, Row, RowTypeConverter, StoredProcedureBulkWriteStrategy, Value,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-use user_roles_simple_cli::schema;
-
 #[tokio::main]
 async fn main() {
     run().await.unwrap_or_else(|error| {
@@ -30,10 +28,14 @@ async fn run() -> datasources::Result<()> {
                 .display()
         ),
     );
-    migrate_up(&provider, &url);
     let mut options = HashMap::new();
+    options.insert("PROVIDER".into(), provider.clone());
     options.insert("DATASOURCE_URL".into(), url);
-    let connection = driver(&provider).connection(Some(&options));
+    datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
+    datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
+    datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
+    let ds = datasources::create(Some(&options))?;
+    let connection = ds.create_connection().await?;
     connection.open().await?;
     let result = work(
         Arc::clone(&connection),
@@ -77,7 +79,7 @@ async fn work(
         "updated".into(),
     ]));
     let users_repo = BulkCRUDRepository::with_strategy(Arc::clone(&connection), options, strategy)?;
-    let mut users = load_users(provider, rows)?;
+    let mut users = load_users(rows)?;
     let create_started = Instant::now();
     create_chunks(&users_repo, &mut users, batched, chunk).await?;
     let create_ms = create_started.elapsed().as_secs_f64() * 1000.0;
@@ -85,7 +87,7 @@ async fn work(
         return Err(datasources::DatasourceError::message("create count"));
     }
     for user in &mut users {
-        user.insert("is_enabled".into(), schema::flag(provider, false));
+        user.insert("is_enabled".into(), Value::Bool(false));
     }
     let update_started = Instant::now();
     update_chunks(&users_repo, &users, batched, chunk).await?;
@@ -109,13 +111,13 @@ async fn work(
     Ok(())
 }
 
-fn load_users(provider: &str, rows: usize) -> datasources::Result<Vec<Row>> {
+fn load_users(rows: usize) -> datasources::Result<Vec<Row>> {
     if let Ok(path) = std::env::var("PERF_DATA") {
         let text = std::fs::read_to_string(&path)
             .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
         let items: Vec<serde_json::Value> = serde_json::from_str(&text)
             .map_err(|error| datasources::DatasourceError::message(error.to_string()))?;
-        return items.iter().map(|item| user_from_json(provider, item)).collect();
+        return items.iter().map(user_from_json).collect();
     }
     let created = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     Ok((1..=rows as i64)
@@ -124,7 +126,7 @@ fn load_users(provider: &str, rows: usize) -> datasources::Result<Vec<Row>> {
                 ("id", Value::Int(id)),
                 ("username", Value::from(format!("user{id}"))),
                 ("password", Value::from("hash")),
-                ("is_enabled", schema::flag(provider, true)),
+                ("is_enabled", Value::Bool(true)),
                 ("created", created.into()),
                 ("updated", Value::from(vec![1_u8, 2, 3])),
             ])
@@ -132,7 +134,7 @@ fn load_users(provider: &str, rows: usize) -> datasources::Result<Vec<Row>> {
         .collect())
 }
 
-fn user_from_json(provider: &str, item: &serde_json::Value) -> datasources::Result<Row> {
+fn user_from_json(item: &serde_json::Value) -> datasources::Result<Row> {
     let id = item["id"].as_i64().unwrap_or(0);
     let enabled = item["is_enabled"].as_bool().unwrap_or(true);
     let created = item["created"]
@@ -154,7 +156,7 @@ fn user_from_json(provider: &str, item: &serde_json::Value) -> datasources::Resu
             "password",
             Value::from(item["password"].as_str().unwrap_or("").to_string()),
         ),
-        ("is_enabled", schema::flag(provider, enabled)),
+        ("is_enabled", Value::Bool(enabled)),
         ("created", created.into()),
         ("updated", Value::from(updated)),
     ]))
@@ -208,15 +210,6 @@ async fn count(command: &dyn datasources::Command, table: &str) -> datasources::
     }
 }
 
-fn driver(provider: &str) -> Box<dyn Driver> {
-    match provider {
-        "sqlite" => Box::new(datasources_sqlite::SqliteDriver),
-        "mysql" => Box::new(datasources_mysql::MysqlDriver),
-        "postgres" => Box::new(datasources_postgres::PostgresDriver),
-        name => panic!("{name}"),
-    }
-}
-
 fn row(pairs: &[(&str, Value)]) -> Row {
     pairs
         .iter()
@@ -228,39 +221,3 @@ fn env(name: &str, default: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| default.into())
 }
 
-fn migrate_up(provider: &str, url: &str) {
-    let repo = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
-    let sql = std::env::temp_dir().join(format!(
-        "user-roles-perf-sql-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("time")
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&sql).expect("sql");
-    let status = std::process::Command::new("node")
-        .args([
-            "--import",
-            "tsx",
-            repo.join("cli/src/main.ts").to_str().expect("cli"),
-            "migrations",
-            "create",
-            "--input",
-            repo.join("samples/user-roles-simple-cli-shared/deterministic")
-                .to_str()
-                .expect("spec"),
-            "--migrations-root",
-            sql.join("sql").to_str().expect("root"),
-        ])
-        .current_dir(repo.join("cli"))
-        .status()
-        .expect("migrations create");
-    assert!(status.success(), "migrations create");
-    let status = std::process::Command::new("node")
-        .arg(repo.join("scripts/migraters.mjs"))
-        .args(["up", "--provider", provider, "--connection", url, "--migrations-root"])
-        .arg(sql.join("sql"))
-        .status()
-        .expect("migrate-up");
-    assert!(status.success(), "migrate-up");
-}

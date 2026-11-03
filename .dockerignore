@@ -1,0 +1,9 @@
+**/obj/
+**/node_modules/
+**/target/
+csharp/**/bin/
+samples/**/bin/
+.git
+scripts/artifacts
+**/.migraters.yaml
+**/.env

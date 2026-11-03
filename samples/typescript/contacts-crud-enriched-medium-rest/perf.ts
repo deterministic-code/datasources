@@ -12,6 +12,7 @@ import {
   StoredProcedureBulkWriteStrategy,
   WhereText,
   collectAsync,
+  DatasourceFactory,
   type IBulkWriteStrategy,
   type IConnection,
   type IWhere,
@@ -20,13 +21,10 @@ import {
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { contacts as seedContacts } from "../../../scripts/perf-data.mjs";
-import { migrateUp } from "../../../scripts/migraters.mjs";
 
 type SeedStamp = {
   id: number;
@@ -94,19 +92,12 @@ class Setting {
 }
 
 const sample = dirname(fileURLToPath(import.meta.url));
-const spec = resolve(sample, "../../contacts-crud-enriched-medium-rest-shared/deterministic");
 const provider = process.env.PROVIDER ?? "sqlite";
 const strategyName = process.env.PERF_STRATEGY ?? "batch";
 const rows = Number(process.env.PERF_ROWS ?? 1000);
 const chunk = Number(process.env.PERF_CHUNK ?? 500);
 const url = process.env.DATASOURCE_URL ?? `sqlite:///${resolve(sample, "perf.sqlite")}`;
 const reading = process.env.PERF_PHASE === "read";
-
-const driver = () =>
-  ({ sqlite: () => new SqliteDriver(), mysql: () => new MysqlDriver(), postgres: () => new PostgresDriver() })[provider]?.() ??
-  (() => {
-    throw new Error(provider);
-  })();
 
 const batched = strategyName === "batch" || (strategyName === "procedure" && provider === "sqlite");
 
@@ -129,14 +120,11 @@ const count = async (connection: IConnection, table: string) => {
   return typeof n === "number" ? n : Number(n);
 };
 
-const sqlRoot = mkdtempSync(join(tmpdir(), "contacts-perf-sql-"));
-execFileSync(
-  process.execPath,
-  ["--import", "tsx", resolve(sample, "../../../cli/src/main.ts"), "migrations", "create", "--input", spec, "--migrations-root", join(sqlRoot, "sql")],
-  { encoding: "utf8", cwd: resolve(sample, "../../../cli") },
-);
-migrateUp({ provider, connection: url, migrationsRoot: join(sqlRoot, "sql") });
-const connection = driver().connection({ DATASOURCE_URL: url });
+DatasourceFactory.register("sqlite", new SqliteDriver());
+DatasourceFactory.register("mysql", new MysqlDriver());
+DatasourceFactory.register("postgres", new PostgresDriver());
+const ds = DatasourceFactory.create({ PROVIDER: provider, DATASOURCE_URL: url });
+const connection = await ds.createConnection();
 await connection.open();
 try {
   const settingsRepo = new BulkCRUDRepository(connection, {

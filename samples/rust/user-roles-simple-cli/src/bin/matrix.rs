@@ -1,9 +1,8 @@
-use datasources::{ConsoleCommandMiddleware, Driver};
+use datasources::ConsoleCommandMiddleware;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use user_roles_simple_cli::app::App;
-use user_roles_simple_cli::parse;
+use user_roles_simple_cli::program;
 
 #[derive(Deserialize)]
 struct CliSpec {
@@ -18,8 +17,6 @@ struct Step {
 
 #[tokio::main]
 async fn main() {
-    let provider = std::env::var("PROVIDER").unwrap_or_else(|_| "sqlite".into());
-    let url = std::env::var("DATASOURCE_URL").unwrap_or_else(|_| "sqlite:///:memory:".into());
     let log = std::env::var("E2E_MATRIX_LOG").expect("E2E_MATRIX_LOG");
     let spec: CliSpec = serde_yaml::from_str(
         &std::fs::read_to_string(
@@ -28,17 +25,13 @@ async fn main() {
         .expect("spec"),
     )
     .expect("yaml");
-    let mut options = HashMap::new();
-    options.insert("DATASOURCE_URL".into(), url);
-    let driver: Box<dyn Driver> = match provider.as_str() {
-        "sqlite" => Box::new(datasources_sqlite::SqliteDriver),
-        "mysql" => Box::new(datasources_mysql::MysqlDriver),
-        "postgres" => Box::new(datasources_postgres::PostgresDriver),
-        name => panic!("{name}"),
-    };
-    let connection = driver.connection(Some(&options));
+    datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
+    datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
+    datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
+    let ds = datasources::default().expect("datasource");
+    let connection = ds.create_connection().await.expect("connection");
     connection.open().await.expect("open");
-    let command = connection.create_command();
+    let command = ds.create_command(Some(connection.clone())).await.expect("command");
     let lines = Arc::new(Mutex::new(Vec::<String>::new()));
     let stamp = spec.now.clone();
     command.add_middleware(Arc::new(
@@ -51,14 +44,9 @@ async fn main() {
         )
         .options(HashMap::from([("isVerbose".into(), "true".into())])),
     ));
-    let now = spec.now.clone();
-    let app = App::new(command.as_ref(), connection.provider())
-        .procedures(false)
-        .with_clock(move || now.clone(), |_| Ok("hash".into()), || vec![1, 2, 3]);
     let result = async {
         for step in spec.steps {
-            app.run(parse::args(&step.argv)?)
-                .await?;
+            program::run(command.as_ref(), &step.argv, |_| Ok("hash".into()), false).await?;
         }
         Ok::<(), datasources::DatasourceError>(())
     }

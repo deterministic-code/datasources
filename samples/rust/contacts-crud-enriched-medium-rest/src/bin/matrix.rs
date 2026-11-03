@@ -1,7 +1,7 @@
 use contacts_crud_enriched_medium_rest::api::Api;
 use contacts_crud_enriched_medium_rest::clock::Clock;
 use contacts_crud_enriched_medium_rest::repos;
-use datasources::{ConsoleCommandMiddleware, Driver};
+use datasources::ConsoleCommandMiddleware;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -46,14 +46,13 @@ async fn main() {
     )
     .expect("yaml");
     let mut options = HashMap::new();
+    options.insert("PROVIDER".into(), provider);
     options.insert("DATASOURCE_URL".into(), url);
-    let driver: Box<dyn Driver> = match provider.as_str() {
-        "sqlite" => Box::new(datasources_sqlite::SqliteDriver),
-        "mysql" => Box::new(datasources_mysql::MysqlDriver),
-        "postgres" => Box::new(datasources_postgres::PostgresDriver),
-        name => panic!("{name}"),
-    };
-    let connection = driver.connection(Some(&options));
+    datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
+    datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
+    datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
+    let ds = datasources::create(Some(&options)).expect("datasource");
+    let connection = ds.create_connection().await.expect("connection");
     connection.open().await.expect("open");
     let n = Arc::new(Mutex::new(0u32));
     let clock = Clock::new();

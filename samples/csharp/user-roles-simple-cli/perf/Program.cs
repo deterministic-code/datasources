@@ -5,8 +5,6 @@ using Datasources;
 using Datasources.Mysql;
 using Datasources.Postgres;
 using Datasources.Sqlite;
-using UserRolesSimpleCli;
-
 
 var provider = Environment.GetEnvironmentVariable("PROVIDER") ?? "sqlite";
 var strategyName = Environment.GetEnvironmentVariable("PERF_STRATEGY") ?? "batch";
@@ -14,14 +12,11 @@ var rows = int.Parse(Environment.GetEnvironmentVariable("PERF_ROWS") ?? "1000");
 var chunk = int.Parse(Environment.GetEnvironmentVariable("PERF_CHUNK") ?? "500");
 var url = Environment.GetEnvironmentVariable("DATASOURCE_URL") ?? $"sqlite:///{Path.Combine(Path.GetTempPath(), "user-roles-perf.sqlite")}";
 var batched = strategyName == "batch" || strategyName == "procedure" && provider == "sqlite";
-Migraters.CreateAndUp(provider, url);
-var connection = provider switch
-{
-    "sqlite" => new SqliteDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "mysql" => new MysqlDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    "postgres" => new PostgresDriver().Connection(new Dictionary<string, string?> { ["DATASOURCE_URL"] = url }),
-    _ => throw new InvalidOperationException(provider)
-};
+DatasourceFactory.Register("sqlite", new SqliteDriver());
+DatasourceFactory.Register("mysql", new MysqlDriver());
+DatasourceFactory.Register("postgres", new PostgresDriver());
+await using var ds = DatasourceFactory.Create(new Dictionary<string, string?> { ["PROVIDER"] = provider, ["DATASOURCE_URL"] = url });
+var connection = await ds.CreateConnection();
 await connection.Open();
 try
 {

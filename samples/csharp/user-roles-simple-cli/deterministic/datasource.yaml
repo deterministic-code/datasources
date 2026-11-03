@@ -1,0 +1,23 @@
+version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - base:
+      fields:
+        - uuid:
+            include_in_create: false
+        - created:
+            include_in_create: false
+            include_in_update: false
+        - updated:
+            include_in_create: false
+            include_in_update: false
+  - group:
+      fields:
+        - name:
+            mapping: ugly_name
+  - user_role:
+      fields:
+        - role_id:
+            mapping: bad_role_id

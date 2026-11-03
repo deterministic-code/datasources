@@ -1,6 +1,6 @@
-mod datasources_providers;
-mod generated;
-use generated::{Address, Contact, LocalePreferences, Phone, Repositories};
+use contacts_crud_enriched_medium_rest::{
+    register, Address, Contact, LocalePreferences, Phone, Repositories,
+};
 use datasources::{default, DatasourceError, Operator, Result, Where};
 use std::collections::HashMap;
 
@@ -81,7 +81,7 @@ fn alan() -> Contact {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    datasources_providers::register();
+    register();
     let ds = default()?;
     let contacts_repo = ds.contacts();
     let ada = contacts_repo.create(ada()).await?;

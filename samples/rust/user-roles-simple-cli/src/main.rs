@@ -1,8 +1,7 @@
 use datasources::{utc_iso_millis, ConsoleCommandMiddleware, DatasourceError};
 use std::sync::Arc;
 use std::time::SystemTime;
-use user_roles_simple_cli::app::App;
-use user_roles_simple_cli::parse;
+use user_roles_simple_cli::program;
 
 #[tokio::main]
 async fn main() {
@@ -16,13 +15,9 @@ async fn main() {
 }
 
 async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
-    let parsed = parse::args(&args)?;
     datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
     datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
     datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
-    let provider = env("PROVIDER").unwrap_or_else(|| "sqlite".into());
-    let url = env("DATASOURCE_URL").unwrap_or_else(|| "sqlite:///./app.sqlite".into());
-    migrate_up(&provider, &url, &migrations_root());
     let ds = datasources::default()?;
     let connection = ds.create_connection().await?;
     connection.open().await?;
@@ -37,39 +32,12 @@ async fn run(args: Vec<String>) -> Result<(), DatasourceError> {
                 .unwrap_or_else(|| utc_iso_millis(SystemTime::now()))
         },
     )));
-    let app = App::new(command.as_ref(), ds.provider());
-    let app = match stamp {
-        Some(stamp) => app.with_now(move || stamp.clone()),
-        None => app,
-    };
-    print!("{}", app.run(parsed).await?);
+    print!(
+        "{}",
+        program::run(command.as_ref(), &args, program::hash, true).await?
+    );
     ds.close().await?;
     Ok(())
-}
-
-fn migrations_root() -> String {
-    env("MIGRATIONS_ROOT")
-        .filter(|root| std::path::Path::new(root).is_dir())
-        .unwrap_or_else(|| "sql".into())
-}
-
-fn migrate_up(provider: &str, url: &str, root: &str) {
-    let output = std::process::Command::new("node")
-        .arg(
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../..")
-                .join("scripts/migraters.mjs"),
-        )
-        .args(["up", "--provider", provider, "--connection", url, "--migrations-root", root])
-        .output()
-        .expect("migrate-up");
-    if !output.status.success() {
-        panic!(
-            "migrate-up\n{}\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
 }
 
 fn env(key: &str) -> Option<String> {

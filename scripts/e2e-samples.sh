@@ -1,26 +1,13 @@
 set -e
 cd /work
-npm install --prefix typescript
+sample="${E2E_SAMPLE:?}"
 npm install --prefix cli
-for dir in \
-  samples/typescript/contacts-simple-cli \
-  samples/typescript/contacts-crud-enriched-medium-rest \
-  samples/typescript/user-roles-simple-cli
-do
-  npm install --prefix "$dir"
-  (cd "$dir" && sh -e sqlite.sh)
-  sh scripts/e2e-reset-engines.sh
-  (cd "$dir" && sh -e mysql-postgres.sh)
-done
-for dir in \
-  samples/csharp/contacts-simple-cli \
-  samples/csharp/contacts-crud-enriched-medium-rest \
-  samples/csharp/user-roles-simple-cli \
-  samples/rust/contacts-simple-cli \
-  samples/rust/contacts-crud-enriched-medium-rest \
-  samples/rust/user-roles-simple-cli
-do
-  (cd "$dir" && sh -e sqlite.sh)
-  sh scripts/e2e-reset-engines.sh
-  (cd "$dir" && sh -e mysql-postgres.sh)
-done
+node cli/scripts/build-generators.mjs
+npm install --omit=dev --prefix typescript/datasources
+npm install --omit=dev --prefix typescript/code-generators
+case "$sample" in
+samples/typescript/*) npm install --prefix "$sample" ;;
+esac
+(cd "$sample" && sh -e sqlite.sh)
+sh scripts/e2e-reset-engines.sh
+(cd "$sample" && sh -e mysql-postgres.sh)

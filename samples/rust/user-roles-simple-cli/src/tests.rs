@@ -1,19 +1,5 @@
-use crate::app::App;
-use crate::as_user_view;
-use crate::columns;
-use crate::commands::{
-    AddGroup, AddRole, AddUser, AddUserGroup, AddUserRole, CliCommand, DisableUser, EnableUser,
-    ListUsersRolesGroups,
-};
-use crate::parse;
-use crate::password_hash;
-use crate::schema;
-use crate::users_roles_groups_query;
-use crate::users_view;
-use datasources::{
-    Column, CreateTableStatement, DefaultStatementTextRenderer, Driver, FlatToNestedMapper,
-    MappedRow, MappedValue, Mapper, MockCommand, Row, Value,
-};
+use crate::program;
+use datasources::{Column, CreateTableStatement, DefaultStatementTextRenderer, Driver};
 
 fn driver(provider: &str) -> Box<dyn Driver> {
     match provider {
@@ -41,7 +27,7 @@ fn user_table(provider: &str) -> String {
         .map(|(name, canonical, id)| {
             let affinity = types.column_type(canonical).unwrap();
             Column::new(
-                schema::ident(provider, name),
+                (*name).to_string(),
                 if *id {
                     format!("{affinity} PRIMARY KEY")
                 } else {
@@ -50,78 +36,54 @@ fn user_table(provider: &str) -> String {
             )
         })
         .collect();
-    DefaultStatementTextRenderer::instance().render(&CreateTableStatement::new(
-        schema::ident(provider, "user"),
-        &mapped,
-        &[],
-    ))
-}
-
-fn row(pairs: &[(&str, Value)]) -> Row {
-    pairs
-        .iter()
-        .map(|(key, value)| ((*key).to_string(), value.clone()))
-        .collect()
-}
-
-fn mapped(pairs: &[(&str, MappedValue)]) -> MappedRow {
-    pairs
-        .iter()
-        .map(|(key, value)| ((*key).to_string(), value.clone()))
-        .collect()
+    types
+        .statement_renderer()
+        .expect("renderer")
+        .render(&CreateTableStatement::new("user", &mapped, &[]))
 }
 
 #[test]
 fn parses_commands() {
     let s = |value: &str| value.to_string();
     assert_eq!(
-        parse::args(&[s("add-user"), s("a"), s("b")]).unwrap(),
-        CliCommand::AddUser(AddUser {
-            username: "a".into(),
-            password: "b".into()
-        })
+        program::parse(&[s("add-user"), s("a"), s("b")])
+            .unwrap()
+            .values,
+        ["a", "b"]
     );
     assert_eq!(
-        parse::args(&[s("add-role"), s("admin")]).unwrap(),
-        CliCommand::AddRole(AddRole {
-            name: "admin".into()
-        })
+        program::parse(&[s("add-role"), s("admin")]).unwrap().verb,
+        "add-role"
     );
     assert_eq!(
-        parse::args(&[s("add-group"), s("staff")]).unwrap(),
-        CliCommand::AddGroup(AddGroup {
-            name: "staff".into()
-        })
+        program::parse(&[s("add-group"), s("staff")]).unwrap().verb,
+        "add-group"
     );
     assert_eq!(
-        parse::args(&[s("add-user-role"), s("a"), s("admin")]).unwrap(),
-        CliCommand::AddUserRole(AddUserRole {
-            username: "a".into(),
-            role: "admin".into()
-        })
+        program::parse(&[s("add-user-role"), s("a"), s("admin")])
+            .unwrap()
+            .verb,
+        "add-user-role"
     );
     assert_eq!(
-        parse::args(&[s("add-user-group"), s("a"), s("staff")]).unwrap(),
-        CliCommand::AddUserGroup(AddUserGroup {
-            username: "a".into(),
-            group: "staff".into()
-        })
+        program::parse(&[s("add-user-group"), s("a"), s("staff")])
+            .unwrap()
+            .verb,
+        "add-user-group"
     );
     assert_eq!(
-        parse::args(&[s("enable-user"), s("a")]).unwrap(),
-        CliCommand::EnableUser(EnableUser {
-            username: "a".into()
-        })
+        program::parse(&[s("enable-user"), s("a")]).unwrap().verb,
+        "enable-user"
     );
     assert_eq!(
-        parse::args(&[s("disable-user"), s("a")]).unwrap(),
-        CliCommand::DisableUser(DisableUser {
-            username: "a".into()
-        })
+        program::parse(&[s("disable-user"), s("a")]).unwrap().verb,
+        "disable-user"
     );
     assert_eq!(
-        parse::args(&[s("list-users-roles-groups")]).unwrap(),
-        CliCommand::ListUsersRolesGroups(ListUsersRolesGroups)
+        program::parse(&[s("list-users-roles-groups")])
+            .unwrap()
+            .verb,
+        "list-users-roles-groups"
     );
     for verb in [
         "add-user",
@@ -133,44 +95,28 @@ fn parses_commands() {
         "disable-user",
         "nope",
     ] {
-        assert!(parse::args(&[s(verb)]).is_err());
+        assert!(program::parse(&[s(verb)]).is_err());
     }
-    assert!(parse::args(&[]).is_err());
-    assert!(parse::args(&[s("add-user"), s("a"), s("b"), s("extra")]).is_err());
-    assert!(parse::args(&[s("list-users-roles-groups"), s("extra")]).is_err());
+    assert!(program::parse(&[]).is_err());
+    assert!(program::parse(&[s("add-user"), s("a"), s("b"), s("extra")]).is_err());
+    assert!(program::parse(&[s("list-users-roles-groups"), s("extra")]).is_err());
 }
 
 #[test]
 fn builds_schema() {
-    for provider in ["sqlite", "mysql", "postgres"] {
-        let sql = schema::tables(provider)
-            .unwrap()
-            .iter()
-            .map(|table| DefaultStatementTextRenderer::instance().render(table))
-            .collect::<Vec<_>>()
-            .join("\n");
-        assert!(sql.contains(&format!(
-            "FOREIGN KEY ({}) REFERENCES",
-            schema::ident(provider, "user_id")
-        )));
-        assert!(sql.contains(&format!(
-            "FOREIGN KEY ({}) REFERENCES",
-            schema::ident(provider, "bad_role_id")
-        )));
-        assert!(sql.contains("ugly_name"));
-    }
-    let sqlite = schema::tables("sqlite").unwrap();
-    assert!(sqlite[0].columns[0].identity);
+    let tables = datasources_tests::schema_tables("user-roles-cli", |id| id.to_string(), None);
+    let sql = tables
+        .iter()
+        .map(|table| DefaultStatementTextRenderer::instance().render(table))
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(sql.contains("FOREIGN KEY (user_id) REFERENCES"));
+    assert!(sql.contains("FOREIGN KEY (bad_role_id) REFERENCES"));
+    assert!(sql.contains("ugly_name"));
+    assert!(tables[0].columns[0].identity);
     assert!(DefaultStatementTextRenderer::instance()
-        .render(&sqlite[0])
+        .render(&tables[0])
         .contains("CONSTRAINT pk_users PRIMARY KEY"));
-    assert!(schema::tables("mysql").unwrap()[0].columns[0].identity);
-    assert!(schema::tables("postgres").unwrap()[0].columns[0].identity);
-    assert_eq!(schema::ident("sqlite", "user"), "\"user\"");
-    assert_eq!(schema::ident("postgres", "a\"b"), "\"a\"\"b\"");
-    assert_eq!(schema::ident("mysql", "a`b"), "`a``b`");
-    assert_eq!(schema::qualified("sqlite", "users.id"), "\"users\".\"id\"");
-    assert_eq!(schema::qualified("mysql", "users.id"), "`users`.`id`");
     assert_eq!(
         user_table("sqlite"),
         "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)"
@@ -183,259 +129,25 @@ fn builds_schema() {
         user_table("postgres"),
         "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" UUID, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" DOUBLE PRECISION, \"created\" TIMESTAMPTZ, \"version\" BYTEA)"
     );
-    assert_eq!(columns::map("name"), "ugly_name");
-    assert_eq!(columns::map("role_id"), "bad_role_id");
-    assert_eq!(columns::map("username"), "username");
-    assert_eq!(columns::reverse_map("ugly_name"), "name");
-    assert_eq!(columns::reverse_map("bad_role_id"), "role_id");
-    assert_eq!(columns::reverse_map("username"), "username");
-    assert!(schema::mysql_procedures()
-        .join("\n")
+    assert_eq!(program::map_name("name"), "ugly_name");
+    assert_eq!(program::map_name("role_id"), "bad_role_id");
+    assert_eq!(program::map_name("username"), "username");
+    assert_eq!(program::reverse_map_name("ugly_name"), "name");
+    assert_eq!(program::reverse_map_name("bad_role_id"), "role_id");
+    assert_eq!(program::reverse_map_name("username"), "username");
+    assert!(include_str!("../../../user-roles-simple-cli-shared/mysql-procedures.sql")
         .contains("INSERT INTO `groups` (ugly_name"));
     assert_eq!(
-        users_roles_groups_query::text("sqlite"),
-        "SELECT \"users\".id AS id, \"users\".username AS username, \"users\".is_enabled AS is_enabled, \"users\".created AS created, \"roles\".id AS role_id, \"roles\".name AS role_name, \"roles\".is_enabled AS role_is_enabled, \"groups\".id AS group_id, \"groups\".ugly_name AS group_name, \"groups\".is_enabled AS group_is_enabled FROM \"users\" LEFT JOIN \"user_roles\" ON \"users\".id = \"user_roles\".user_id LEFT JOIN \"roles\" ON \"user_roles\".bad_role_id = \"roles\".id LEFT JOIN \"user_groups\" ON \"users\".id = \"user_groups\".user_id LEFT JOIN \"groups\" ON \"user_groups\".group_id = \"groups\".id ORDER BY \"users\".id ASC, \"roles\".id ASC, \"groups\".id ASC"
+        program::list_query_text(),
+        "SELECT users.id AS id, users.username AS username, users.is_enabled AS is_enabled, users.created AS created, roles.id AS role_id, roles.name AS role_name, roles.is_enabled AS role_is_enabled, groups.id AS group_id, groups.ugly_name AS group_name, groups.is_enabled AS group_is_enabled FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.bad_role_id = roles.id LEFT JOIN user_groups ON users.id = user_groups.user_id LEFT JOIN groups ON user_groups.group_id = groups.id ORDER BY users.id ASC, roles.id ASC, groups.id ASC"
     );
 }
 
 #[test]
 fn hashes_password() {
-    let hash = password_hash::hash("secret").unwrap();
+    let hash = program::hash("secret").unwrap();
     assert_ne!(hash, "secret");
     assert!(bcrypt::verify("secret", &hash).unwrap());
-}
-
-#[test]
-fn maps_nested_views() {
-    let mapped_rows = Mapper::map(
-        &FlatToNestedMapper::new(users_view::type_map()),
-        vec![
-            row(&[
-                ("id", Value::Int(1)),
-                ("username", Value::Text("alice".into())),
-                ("is_enabled", Value::Bool(true)),
-                ("created", Value::Text("2026-01-01T00:00:00.000Z".into())),
-                ("role_id", Value::Int(2)),
-                ("role_name", Value::Text("admin".into())),
-                ("role_is_enabled", Value::Int(1)),
-                ("group_id", Value::Int(3)),
-                ("group_name", Value::Text("staff".into())),
-                ("group_is_enabled", Value::Bool(false)),
-            ]),
-            row(&[
-                ("id", Value::Int(1)),
-                ("username", Value::Text("alice".into())),
-                ("is_enabled", Value::Bool(true)),
-                ("created", Value::Text("2026-01-01T00:00:00.000Z".into())),
-                ("role_id", Value::Int(4)),
-                ("role_name", Value::Text("ops".into())),
-                ("role_is_enabled", Value::Int(0)),
-                ("group_id", Value::Null),
-                ("group_name", Value::Null),
-                ("group_is_enabled", Value::Null),
-            ]),
-        ],
-    );
-    let users = as_user_view::from_mapped(&mapped_rows);
-    assert_eq!(users.len(), 1);
-    assert_eq!(
-        users[0]
-            .roles
-            .iter()
-            .map(|role| role.name.as_str())
-            .collect::<Vec<_>>(),
-        ["admin", "ops"]
-    );
-    assert_eq!(
-        as_user_view::from_mapped(&[mapped(&[
-            ("id", MappedValue::Cell(Value::Text("9".into()))),
-            ("username", MappedValue::Cell(Value::Int(1))),
-            ("is_enabled", MappedValue::Cell(Value::Null)),
-            ("created", MappedValue::Cell(Value::Float(1.0))),
-            ("roles", MappedValue::Cell(Value::Null)),
-        ])])[0]
-            .id,
-        9
-    );
-    assert_eq!(
-        as_user_view::from_mapped(&[mapped(&[
-            ("id", MappedValue::Cell(Value::Float(1.2))),
-            ("username", MappedValue::Cell(Value::Null)),
-            ("is_enabled", MappedValue::Cell(Value::Text("x".into()))),
-            ("created", MappedValue::Cell(Value::Null)),
-        ])])[0]
-            .id,
-        1
-    );
-}
-
-#[tokio::test]
-async fn writes_sqlite_and_lists() {
-    let command = MockCommand::new();
-    *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(7))])];
-    let app = App::new(&command, "sqlite").with_clock(
-        || "2026-09-22T00:00:00.000Z".into(),
-        |password| Ok(format!("#{password}")),
-        || vec![1, 2, 3],
-    );
-    app.run(CliCommand::AddUser(AddUser {
-        username: "alice".into(),
-        password: "secret".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::AddRole(AddRole {
-        name: "admin".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::AddGroup(AddGroup {
-        name: "staff".into(),
-    }))
-    .await
-    .unwrap();
-    *command.reader_rows.lock().expect("mock") =
-        vec![row(&[("id", Value::Int(1))]), row(&[("id", Value::Int(2))])];
-    app.run(CliCommand::AddUserRole(AddUserRole {
-        username: "alice".into(),
-        role: "admin".into(),
-    }))
-    .await
-    .unwrap();
-    *command.reader_rows.lock().expect("mock") =
-        vec![row(&[("id", Value::Int(1))]), row(&[("id", Value::Int(3))])];
-    app.run(CliCommand::AddUserGroup(AddUserGroup {
-        username: "alice".into(),
-        group: "staff".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::DisableUser(DisableUser {
-        username: "alice".into(),
-    }))
-    .await
-    .unwrap();
-    let logs = command.execute_logs.lock().expect("mock").clone();
-    assert!(logs
-        .iter()
-        .any(|(text, _)| text.contains("INSERT INTO") && text.contains("users")));
-    assert!(logs.iter().any(|(text, _)| text.contains("ugly_name")));
-    assert!(logs.iter().any(|(text, _)| text.contains("bad_role_id")));
-    *command.reader_rows.lock().expect("mock") = vec![row(&[
-        ("id", Value::Int(1)),
-        ("username", Value::Text("alice".into())),
-        ("is_enabled", Value::Bool(false)),
-        ("created", Value::Text("2026-09-22T00:00:00.000Z".into())),
-        ("role_id", Value::Int(2)),
-        ("role_name", Value::Text("admin".into())),
-        ("role_is_enabled", Value::Bool(true)),
-        ("group_id", Value::Int(3)),
-        ("group_name", Value::Text("staff".into())),
-        ("group_is_enabled", Value::Bool(true)),
-    ])];
-    let json = app
-        .run(CliCommand::ListUsersRolesGroups(ListUsersRolesGroups))
-        .await
-        .unwrap();
-    assert!(json.contains("\"username\":\"alice\""));
-    assert!(!json.contains("password"));
-    assert!(!json.contains("ugly_name"));
-}
-
-#[tokio::test]
-async fn writes_mysql_procedures() {
-    let command = MockCommand::new();
-    *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(1))])];
-    let app = App::new(&command, "mysql").with_clock(
-        || "2026-09-22T00:00:00.000Z".into(),
-        |password| Ok(format!("#{password}")),
-        || vec![1, 2, 3],
-    );
-    app.run(CliCommand::AddUser(AddUser {
-        username: "alice".into(),
-        password: "secret".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::AddRole(AddRole {
-        name: "admin".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::AddGroup(AddGroup {
-        name: "staff".into(),
-    }))
-    .await
-    .unwrap();
-    *command.reader_rows.lock().expect("mock") =
-        vec![row(&[("id", Value::Int(1))]), row(&[("id", Value::Int(2))])];
-    app.run(CliCommand::AddUserRole(AddUserRole {
-        username: "alice".into(),
-        role: "admin".into(),
-    }))
-    .await
-    .unwrap();
-    *command.reader_rows.lock().expect("mock") =
-        vec![row(&[("id", Value::Int(1))]), row(&[("id", Value::Int(3))])];
-    app.run(CliCommand::AddUserGroup(AddUserGroup {
-        username: "alice".into(),
-        group: "staff".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::EnableUser(EnableUser {
-        username: "alice".into(),
-    }))
-    .await
-    .unwrap();
-    let logs = command.execute_logs.lock().expect("mock").clone();
-    assert!(logs.iter().all(|(text, _)| text.starts_with("CALL ")));
-}
-
-#[tokio::test]
-async fn mysql_sql_path_inserts_and_updates() {
-    let command = MockCommand::new();
-    *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Int(1))])];
-    let app = App::new(&command, "mysql").procedures(false).with_clock(
-        || "2026-09-22T00:00:00.000Z".into(),
-        |password| Ok(format!("#{password}")),
-        || vec![1, 2, 3],
-    );
-    app.run(CliCommand::AddUser(AddUser {
-        username: "alice".into(),
-        password: "secret".into(),
-    }))
-    .await
-    .unwrap();
-    app.run(CliCommand::EnableUser(EnableUser {
-        username: "alice".into(),
-    }))
-    .await
-    .unwrap();
-    let logs = command.execute_logs.lock().expect("mock").clone();
-    assert!(logs.iter().any(|(text, _)| text.contains("INSERT INTO")));
-    assert!(logs.iter().any(|(text, _)| text.contains("UPDATE")));
-    assert!(logs.iter().all(|(text, _)| !text.starts_with("CALL ")));
-}
-
-#[tokio::test]
-async fn rejects_missing() {
-    let command = MockCommand::new();
-    *command.reader_rows.lock().expect("mock") = vec![];
-    let app = App::new(&command, "sqlite");
-    assert!(app
-        .run(CliCommand::EnableUser(EnableUser {
-            username: "missing".into()
-        }))
-        .await
-        .is_err());
-    *command.reader_rows.lock().expect("mock") = vec![row(&[("id", Value::Text("x".into()))])];
-    assert!(app
-        .run(CliCommand::EnableUser(EnableUser {
-            username: "bad".into()
-        }))
-        .await
-        .is_err());
 }
 
 #[test]

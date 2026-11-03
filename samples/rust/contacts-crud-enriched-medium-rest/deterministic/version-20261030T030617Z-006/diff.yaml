@@ -1,0 +1,24 @@
+types.yaml:
+  types:
+    changed:
+      - contact_change_log:
+          fields:
+            changed:
+              - contact_id:
+                  type: integer
+      - import_contacts_result:
+          fields:
+            changed:
+              - imported_count:
+                  type: integer
+              - skipped_count:
+                  type: integer
+              - failed_count:
+                  type: integer
+      - legacy_migration_result:
+          fields:
+            changed:
+              - migrated_count:
+                  type: integer
+              - skipped_count:
+                  type: integer

@@ -1,0 +1,28 @@
+datasource.sqlite.yaml:
+  types:
+    changed:
+      - contacts_base:
+          fields:
+            added:
+              - notes:
+                  include_in_create: true
+                  include_in_update: true
+      - address_base:
+          fields:
+            added:
+              - country:
+                  include_in_create: true
+                  include_in_update: true
+      - phone_base:
+          fields:
+            added:
+              - label:
+                  include_in_create: true
+                  include_in_update: true
+datasource_seeds.yaml:
+  seeds:
+    changed:
+      - address_type:
+          added:
+            - id2:
+                name: Work

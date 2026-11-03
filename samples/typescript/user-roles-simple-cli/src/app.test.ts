@@ -1,18 +1,14 @@
-import { MockCommand, MockConnection, MockReader } from "@deterministic-code/datasources/mocks";
-import { CreateTableStatement, DefaultStatementTextRenderer, FlatToNestedMapper, type IDriver } from "@deterministic-code/datasources";
+import { CreateTableStatement, DefaultStatementTextRenderer, type IDriver } from "@deterministic-code/datasources";
 import { MysqlDriver } from "@deterministic-code/datasources-mysql";
 import { PostgresDriver } from "@deterministic-code/datasources-postgres";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import bcrypt from "bcryptjs";
 import { describe, expect, it } from "vitest";
-import { App } from "./app.ts";
-import { asUserView } from "./as-user-view.ts";
-import { columns } from "./columns.ts";
-import { parse, usage } from "./parse.ts";
-import { passwordHash } from "./password-hash.ts";
-import { ident, mysqlProcedures, qualified, schema } from "./schema.ts";
-import { usersRolesGroupsQuery } from "./users-roles-groups-query.ts";
-import { usersView } from "./users-view.ts";
+import { listQuery, names, parse, passwordHash, usage } from "./main.ts";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { tables } from "../../../../typescript/schema-spec.ts";
 
 const driver = (provider: string): IDriver =>
   ({
@@ -24,34 +20,16 @@ const driver = (provider: string): IDriver =>
       throw new Error(`unknown provider ${provider}`);
     }))();
 
-const frozen = new Date("2026-09-22T00:00:00.000Z");
-const token = () => new Uint8Array([1, 2, 3]);
-
-const create = (provider: string, procedures = true) => {
-  const connection = new MockConnection(undefined, provider);
-  const command = new MockCommand(connection);
-  connection.command = command;
-  return { app: new App(command, () => frozen, (password) => `#${password}`, token, procedures), command };
-};
-
 describe("parse", () => {
   it("parses commands", () => {
-    expect(parse(["add-user", "a", "b"])).toEqual({ kind: "add-user", username: "a", password: "b" });
-    expect(parse(["add-role", "admin"])).toEqual({ kind: "add-role", name: "admin" });
-    expect(parse(["add-group", "staff"])).toEqual({ kind: "add-group", name: "staff" });
-    expect(parse(["add-user-role", "a", "admin"])).toEqual({
-      kind: "add-user-role",
-      username: "a",
-      role: "admin",
-    });
-    expect(parse(["add-user-group", "a", "staff"])).toEqual({
-      kind: "add-user-group",
-      username: "a",
-      group: "staff",
-    });
-    expect(parse(["enable-user", "a"])).toEqual({ kind: "enable-user", username: "a" });
-    expect(parse(["disable-user", "a"])).toEqual({ kind: "disable-user", username: "a" });
-    expect(parse(["list-users-roles-groups"])).toEqual({ kind: "list-users-roles-groups" });
+    expect(parse(["add-user", "a", "b"])).toEqual({ kind: "add-user", values: ["a", "b"] });
+    expect(parse(["add-role", "admin"])).toEqual({ kind: "add-role", values: ["admin"] });
+    expect(parse(["add-group", "staff"])).toEqual({ kind: "add-group", values: ["staff"] });
+    expect(parse(["add-user-role", "a", "admin"])).toEqual({ kind: "add-user-role", values: ["a", "admin"] });
+    expect(parse(["add-user-group", "a", "staff"])).toEqual({ kind: "add-user-group", values: ["a", "staff"] });
+    expect(parse(["enable-user", "a"])).toEqual({ kind: "enable-user", values: ["a"] });
+    expect(parse(["disable-user", "a"])).toEqual({ kind: "disable-user", values: ["a"] });
+    expect(parse(["list-users-roles-groups"])).toEqual({ kind: "list-users-roles-groups", values: [] });
   });
 
   it("rejects bad args", () => {
@@ -90,11 +68,11 @@ const userTable = (provider: string): string => {
     ["version", "binary", false],
   ] as const;
   const types = driver(provider);
-  return DefaultStatementTextRenderer.instance.render(
+  return types.statementRenderer!.render(
     new CreateTableStatement(
-      ident(provider, "user"),
+      "user",
       columns.map(([name, type, id]) => ({
-        name: ident(provider, name),
+        name,
         type: id ? `${types.columnType(type)} PRIMARY KEY` : types.columnType(type),
       })),
     ),
@@ -103,23 +81,13 @@ const userTable = (provider: string): string => {
 
 describe("schema", () => {
   it("creates tables with foreign keys", () => {
-    for (const provider of ["sqlite", "mysql", "postgres"]) {
-      const sql = schema(provider)
-        .map((table) => DefaultStatementTextRenderer.instance.render(table))
-        .join("\n");
-      expect(sql).toContain(`FOREIGN KEY (${ident(provider, "user_id")}) REFERENCES`);
-      expect(sql).toContain(`FOREIGN KEY (${ident(provider, "bad_role_id")}) REFERENCES`);
-      expect(sql).toContain("ugly_name");
-    }
-    expect(schema("sqlite")[0]!.columns[0]!.identity).toBe(true);
-    expect(DefaultStatementTextRenderer.instance.render(schema("sqlite")[0]!)).toContain("CONSTRAINT pk_users PRIMARY KEY");
-    expect(schema("mysql")[0]!.columns[0]!.identity).toBe(true);
-    expect(schema("postgres")[0]!.columns[0]!.identity).toBe(true);
-    expect(ident("sqlite", "user")).toBe('"user"');
-    expect(ident("postgres", 'a"b')).toBe('"a""b"');
-    expect(ident("mysql", "a`b")).toBe("`a``b`");
-    expect(qualified("sqlite", "users.id")).toBe('"users"."id"');
-    expect(qualified("mysql", "users.id")).toBe("`users`.`id`");
+    const catalog = tables("user-roles-cli", (id) => id);
+    const sql = catalog.map((table) => DefaultStatementTextRenderer.instance.render(table)).join("\n");
+    expect(sql).toContain("FOREIGN KEY (user_id) REFERENCES");
+    expect(sql).toContain("FOREIGN KEY (bad_role_id) REFERENCES");
+    expect(sql).toContain("ugly_name");
+    expect(catalog[0]!.columns[0]!.identity).toBe(true);
+    expect(DefaultStatementTextRenderer.instance.render(catalog[0]!)).toContain("CONSTRAINT pk_users PRIMARY KEY");
     expect(userTable("sqlite")).toBe(
       'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" TEXT, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" REAL, "created" TEXT, "version" BLOB)',
     );
@@ -129,16 +97,20 @@ describe("schema", () => {
     expect(userTable("postgres")).toBe(
       'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" UUID, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" DOUBLE PRECISION, "created" TIMESTAMPTZ, "version" BYTEA)',
     );
-    expect(ident("oracle", "groups")).toBe('"groups"');
-    expect(columns.map("name")).toBe("ugly_name");
-    expect(columns.map("role_id")).toBe("bad_role_id");
-    expect(columns.map("username")).toBe("username");
-    expect(columns.reverseMap("ugly_name")).toBe("name");
-    expect(columns.reverseMap("bad_role_id")).toBe("role_id");
-    expect(columns.reverseMap("username")).toBe("username");
-    expect(mysqlProcedures().join("\n")).toContain("INSERT INTO `groups` (ugly_name");
-    expect(DefaultStatementTextRenderer.instance.render(usersRolesGroupsQuery("sqlite"))).toBe(
-      'SELECT "users".id AS id, "users".username AS username, "users".is_enabled AS is_enabled, "users".created AS created, "roles".id AS role_id, "roles".name AS role_name, "roles".is_enabled AS role_is_enabled, "groups".id AS group_id, "groups".ugly_name AS group_name, "groups".is_enabled AS group_is_enabled FROM "users" LEFT JOIN "user_roles" ON "users".id = "user_roles".user_id LEFT JOIN "roles" ON "user_roles".bad_role_id = "roles".id LEFT JOIN "user_groups" ON "users".id = "user_groups".user_id LEFT JOIN "groups" ON "user_groups".group_id = "groups".id ORDER BY "users".id ASC, "roles".id ASC, "groups".id ASC',
+    expect(names.map("name")).toBe("ugly_name");
+    expect(names.map("role_id")).toBe("bad_role_id");
+    expect(names.map("username")).toBe("username");
+    expect(names.reverseMap("ugly_name")).toBe("name");
+    expect(names.reverseMap("bad_role_id")).toBe("role_id");
+    expect(names.reverseMap("username")).toBe("username");
+    expect(
+      readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), "../../../user-roles-simple-cli-shared/mysql-procedures.sql"),
+        "utf8",
+      ),
+    ).toContain("INSERT INTO `groups` (ugly_name");
+    expect(DefaultStatementTextRenderer.instance.render(listQuery())).toBe(
+      "SELECT users.id AS id, users.username AS username, users.is_enabled AS is_enabled, users.created AS created, roles.id AS role_id, roles.name AS role_name, roles.is_enabled AS role_is_enabled, groups.id AS group_id, groups.ugly_name AS group_name, groups.is_enabled AS group_is_enabled FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.bad_role_id = roles.id LEFT JOIN user_groups ON users.id = user_groups.user_id LEFT JOIN groups ON user_groups.group_id = groups.id ORDER BY users.id ASC, roles.id ASC, groups.id ASC",
     );
   });
 });
@@ -148,123 +120,5 @@ describe("password", () => {
     const hash = passwordHash("secret");
     expect(hash).not.toBe("secret");
     expect(bcrypt.compareSync("secret", hash)).toBe(true);
-  });
-});
-
-describe("asUserView", () => {
-  it("collapses join rows", () => {
-    const users = asUserView(
-      new FlatToNestedMapper(usersView).map([
-        {
-          id: 1,
-          username: "alice",
-          is_enabled: true,
-          created: "2026-01-01T00:00:00.000Z",
-          role_id: 2,
-          role_name: "admin",
-          role_is_enabled: 1,
-          group_id: 3,
-          group_name: "staff",
-          group_is_enabled: false,
-        },
-        {
-          id: 1,
-          username: "alice",
-          is_enabled: true,
-          created: "2026-01-01T00:00:00.000Z",
-          role_id: 4n,
-          role_name: "ops",
-          role_is_enabled: 0n,
-          group_id: null,
-          group_name: null,
-          group_is_enabled: null,
-        },
-      ]),
-    );
-    expect(users).toHaveLength(1);
-    expect(users[0]!.roles.map((role) => role.name)).toEqual(["admin", "ops"]);
-    expect(users[0]!.groups.map((group) => group.name)).toEqual(["staff"]);
-    expect(asUserView([{ id: "9", username: 1, is_enabled: null, created: new Date("2026-01-02T03:04:05.000Z"), roles: [], groups: [] } as never])[0]!.id).toBe(9);
-    expect(asUserView([{ id: "x", username: null, is_enabled: "x", created: null, roles: undefined, groups: undefined } as never])[0]!.id).toBe(0);
-  });
-});
-
-describe("app", () => {
-  it("writes sqlite inserts and lists", async () => {
-    const { app, command } = create("sqlite");
-    command.reader = new MockReader([{ id: 7 }]);
-    await app.run({ kind: "add-user", username: "alice", password: "secret" });
-    await app.run({ kind: "add-role", name: "admin" });
-    await app.run({ kind: "add-group", name: "staff" });
-    command.reader = new MockReader([{ id: 1 }, { id: 2 }]);
-    await app.run({ kind: "add-user-role", username: "alice", role: "admin" });
-    command.reader = new MockReader([{ id: 1 }, { id: 3 }]);
-    await app.run({ kind: "add-user-group", username: "alice", group: "staff" });
-    command.reader = new MockReader([{ id: 1 }]);
-    await app.run({ kind: "disable-user", username: "alice" });
-    expect(command.executeCalls.some((call) => call.text.includes("INSERT INTO") && call.text.includes("users"))).toBe(true);
-    expect(command.executeCalls.some((call) => call.text.includes("ugly_name"))).toBe(true);
-    expect(command.executeCalls.some((call) => call.text.includes("bad_role_id"))).toBe(true);
-    command.reader = new MockReader([
-      undefined as never,
-      {
-        id: 1,
-        username: "alice",
-        is_enabled: false,
-        created: "2026-09-22T00:00:00.000Z",
-        role_id: 2,
-        role_name: "admin",
-        role_is_enabled: true,
-        group_id: 3,
-        group_name: "staff",
-        group_is_enabled: true,
-      },
-    ]);
-    const json = await app.run({ kind: "list-users-roles-groups" });
-    expect(json).toContain('"username":"alice"');
-    expect(json).not.toContain("password");
-    expect(json).not.toContain("ugly_name");
-  });
-
-  it("writes mysql procedures", async () => {
-    const { app, command } = create("mysql");
-    command.reader = new MockReader([{ id: 1 }]);
-    await app.run({ kind: "add-user", username: "alice", password: "secret" });
-    await app.run({ kind: "add-role", name: "admin" });
-    await app.run({ kind: "add-group", name: "staff" });
-    command.reader = new MockReader([{ id: 1 }, { id: 2 }]);
-    await app.run({ kind: "add-user-role", username: "alice", role: "admin" });
-    command.reader = new MockReader([{ id: 1 }, { id: 3 }]);
-    await app.run({ kind: "add-user-group", username: "alice", group: "staff" });
-    await app.run({ kind: "enable-user", username: "alice" });
-    await app.run({ kind: "disable-user", username: "alice" });
-    expect(command.executeCalls.every((call) => call.text.startsWith("CALL "))).toBe(true);
-  });
-
-  it("mysql sql path inserts and updates", async () => {
-    const { app, command } = create("mysql", false);
-    await app.run({ kind: "add-user", username: "alice", password: "secret" });
-    command.reader = new MockReader([{ id: 1 }]);
-    await app.run({ kind: "enable-user", username: "alice" });
-    expect(command.executeCalls.some((call) => call.text.includes("INSERT INTO"))).toBe(true);
-    expect(command.executeCalls.some((call) => call.text.includes("UPDATE"))).toBe(true);
-    expect(command.executeCalls.some((call) => call.text.startsWith("CALL "))).toBe(false);
-  });
-
-  it("uses default clock and hash", async () => {
-    const connection = new MockConnection(undefined, "sqlite");
-    const command = new MockCommand(connection);
-    connection.command = command;
-    await new App(command).run({ kind: "add-user", username: "alice", password: "secret" });
-    expect(command.executeCalls.some((call) => call.text.includes("INSERT INTO") && call.text.includes("users"))).toBe(true);
-  });
-
-  it("rejects missing rows", async () => {
-    const { app, command } = create("sqlite");
-    command.reader = new MockReader([]);
-    await expect(app.run({ kind: "enable-user", username: "missing" })).rejects.toThrow("not found");
-    command.reader = new MockReader([{ id: "x" }]);
-    await expect(app.run({ kind: "enable-user", username: "bad" })).rejects.toThrow("not found");
-    await expect(app.run({ kind: "nope" } as never)).rejects.toThrow("empty command");
   });
 });

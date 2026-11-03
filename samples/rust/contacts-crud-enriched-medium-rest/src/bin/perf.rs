@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use datasources::{
     encode_rows, BatchCommandIBulkWriteStrategy, BulkCRUDRepository, CRUDRepository,
-    CRUDRepositoryOptions, Connection, DictionaryMapper, Driver, Enrichment, EnrichmentPropertyType,
+    CRUDRepositoryOptions, Connection, DictionaryMapper, Enrichment, EnrichmentPropertyType,
     FlatToNestedMapper, HashsetOptimizedReadonlyEnrichmentStrategy, IReadonlyRepository, Join,
     MappedValue, Mapper, Native, Result, Row, RowTypeConverter, SelectStatement,
     SelectStatementOptions,     StoredProcedureBulkWriteStrategy, TypeMap, TypeMapField, TypeMapGroup, Value, WhereText,
@@ -75,16 +75,14 @@ async fn main() -> Result<()> {
     );
     let reading = env("PERF_PHASE", "write") == "read";
     let batched = strategy_name == "batch" || strategy_name == "procedure" && provider == "sqlite";
-    migrate_up(&provider, &url);
     let mut options = HashMap::new();
     options.insert("DATASOURCE_URL".into(), url);
-    let driver: Arc<dyn Driver> = match provider.as_str() {
-        "sqlite" => Arc::new(datasources_sqlite::SqliteDriver),
-        "mysql" => Arc::new(datasources_mysql::MysqlDriver),
-        "postgres" => Arc::new(datasources_postgres::PostgresDriver),
-        other => return Err(datasources::DatasourceError::message(other)),
-    };
-    let connection = driver.connection(Some(&options));
+    options.insert("PROVIDER".into(), provider.clone());
+    datasources::register("sqlite", Arc::new(datasources_sqlite::SqliteDriver));
+    datasources::register("mysql", Arc::new(datasources_mysql::MysqlDriver));
+    datasources::register("postgres", Arc::new(datasources_postgres::PostgresDriver));
+    let ds = datasources::create(Some(&options))?;
+    let connection = ds.create_connection().await?;
     connection.open().await?;
     let settings_repo = Arc::new(repo(
         Arc::clone(&connection),
@@ -801,39 +799,3 @@ fn env(name: &str, fallback: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| fallback.into())
 }
 
-fn migrate_up(provider: &str, url: &str) {
-    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
-    let sql = std::env::temp_dir().join(format!(
-        "contacts-perf-sql-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("time")
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&sql).expect("sql");
-    let status = std::process::Command::new("node")
-        .args([
-            "--import",
-            "tsx",
-            repo.join("cli/src/main.ts").to_str().expect("cli"),
-            "migrations",
-            "create",
-            "--input",
-            repo.join("samples/contacts-crud-enriched-medium-rest-shared/deterministic")
-                .to_str()
-                .expect("spec"),
-            "--migrations-root",
-            sql.join("sql").to_str().expect("root"),
-        ])
-        .current_dir(repo.join("cli"))
-        .status()
-        .expect("migrations create");
-    assert!(status.success(), "migrations create");
-    let status = std::process::Command::new("node")
-        .arg(repo.join("scripts/migraters.mjs"))
-        .args(["up", "--provider", provider, "--connection", url, "--migrations-root"])
-        .arg(sql.join("sql"))
-        .status()
-        .expect("migrate-up");
-    assert!(status.success(), "migrate-up");
-}

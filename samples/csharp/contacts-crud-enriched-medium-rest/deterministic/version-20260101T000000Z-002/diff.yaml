@@ -1,0 +1,9 @@
+types.yaml:
+  types:
+    changed:
+      - contacts_base:
+          fields:
+            removed:
+              - middle_name
+    removed:
+      - tag

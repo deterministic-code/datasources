@@ -5,14 +5,14 @@ public sealed class ParseTests
     [Fact]
     public void ParsesCommands()
     {
-        Assert.Equal(new AddUser("a", "b"), Parse.Args(["add-user", "a", "b"]));
-        Assert.Equal(new AddRole("admin"), Parse.Args(["add-role", "admin"]));
-        Assert.Equal(new AddGroup("staff"), Parse.Args(["add-group", "staff"]));
-        Assert.Equal(new AddUserRole("a", "admin"), Parse.Args(["add-user-role", "a", "admin"]));
-        Assert.Equal(new AddUserGroup("a", "staff"), Parse.Args(["add-user-group", "a", "staff"]));
-        Assert.Equal(new EnableUser("a"), Parse.Args(["enable-user", "a"]));
-        Assert.Equal(new DisableUser("a"), Parse.Args(["disable-user", "a"]));
-        Assert.Equal(new ListUsersRolesGroups(), Parse.Args(["list-users-roles-groups"]));
+        Assert.Equal(("add-user", new[] { "a", "b" }), Program.Parsed(["add-user", "a", "b"]));
+        Assert.Equal(("add-role", new[] { "admin" }), Program.Parsed(["add-role", "admin"]));
+        Assert.Equal(("add-group", new[] { "staff" }), Program.Parsed(["add-group", "staff"]));
+        Assert.Equal(("add-user-role", new[] { "a", "admin" }), Program.Parsed(["add-user-role", "a", "admin"]));
+        Assert.Equal(("add-user-group", new[] { "a", "staff" }), Program.Parsed(["add-user-group", "a", "staff"]));
+        Assert.Equal(("enable-user", new[] { "a" }), Program.Parsed(["enable-user", "a"]));
+        Assert.Equal(("disable-user", new[] { "a" }), Program.Parsed(["disable-user", "a"]));
+        Assert.Equal(("list-users-roles-groups", Array.Empty<string>()), Program.Parsed(["list-users-roles-groups"]));
     }
 
     [Theory]
@@ -25,22 +25,22 @@ public sealed class ParseTests
     [InlineData("disable-user")]
     [InlineData("nope")]
     public void RejectsBadArgs(string verb) =>
-        Assert.Throws<InvalidOperationException>(() => Parse.Args([verb]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed([verb]));
 
     [Fact]
     public void RejectsEmpty() =>
-        Assert.Contains("list-users-roles-groups", Assert.Throws<InvalidOperationException>(() => Parse.Args([])).Message);
+        Assert.Contains("list-users-roles-groups", Assert.Throws<InvalidOperationException>(() => Program.Parsed([])).Message);
 
     [Fact]
     public void RejectsExtraArgs()
     {
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["add-user", "a", "b", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["add-role", "admin", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["add-group", "staff", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["add-user-role", "a", "admin", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["add-user-group", "a", "staff", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["enable-user", "a", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["disable-user", "a", "extra"]));
-        Assert.Throws<InvalidOperationException>(() => Parse.Args(["list-users-roles-groups", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["add-user", "a", "b", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["add-role", "admin", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["add-group", "staff", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["add-user-role", "a", "admin", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["add-user-group", "a", "staff", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["enable-user", "a", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["disable-user", "a", "extra"]));
+        Assert.Throws<InvalidOperationException>(() => Program.Parsed(["list-users-roles-groups", "extra"]));
     }
 }

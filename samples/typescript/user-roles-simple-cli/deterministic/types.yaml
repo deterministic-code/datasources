@@ -1,0 +1,71 @@
+version: 1.0.0
+types:
+  - base:
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - uuid:
+            type: uuid
+            default_value: NewId
+        - created:
+            type: datetime
+        - updated:
+            type: binary
+            default_value: "Hex('00')"
+  - user:
+      tags:
+        - datasource_type
+      inherits: base
+      fields:
+        - username:
+            type: string
+        - password:
+            type: string
+        - is_enabled:
+            type: boolean
+            default_value: true
+  - role:
+      tags:
+        - datasource_type
+      inherits: base
+      fields:
+        - name:
+            type: string
+        - description:
+            type: string
+            default_value: ""
+        - is_enabled:
+            type: boolean
+            default_value: true
+  - group:
+      tags:
+        - datasource_type
+      inherits: base
+      fields:
+        - name:
+            type: string
+        - description:
+            type: string
+            default_value: ""
+        - is_enabled:
+            type: boolean
+            default_value: true
+  - user_group:
+      tags:
+        - datasource_type
+      inherits: base
+      fields:
+        - user_id:
+            references: user.id
+        - group_id:
+            references: group.id
+  - user_role:
+      tags:
+        - datasource_type
+      inherits: base
+      fields:
+        - user_id:
+            references: user.id
+        - role_id:
+            references: role.id
