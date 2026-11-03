@@ -138,6 +138,8 @@ describe("setup", () => {
     expect(io.ran[0]).toMatch(/file:.*typescript\/datasources/);
     expect(io.ran[0]).toMatch(/file:.*typescript\/code-generators/);
     expect(io.ran[0]).toMatch(/file:.*typescript\/providers\/sqlite/);
+    expect(io.ran[0]).toMatch(/@deterministic-code\/generators-common/);
+    expect(io.ran.some((line) => line.includes("npm install --prefix") && line.includes("typescript/code-generators"))).toBe(true);
     expect(io.ran[0]).not.toMatch(/npm install @deterministic-code\/datasources /);
     expect(io.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
@@ -191,6 +193,9 @@ describe("setup", () => {
     expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], npmIo)).toBe(0);
     expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/datasources")}`);
     expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/providers/sqlite")}`);
+    expect(npmIo.ran).toContain(
+      `npm install --prefix ${join(repo, "typescript/code-generators")} @deterministic-code/generators-common @deterministic-code/deterministic-generators-common`,
+    );
 
     const csIo = deps(mem(["App.csproj"], { [join(cwd, "App.csproj")]: `<PackageReference Include="Datasources" />` }).fs);
     expect(
