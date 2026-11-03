@@ -139,6 +139,7 @@ describe("setup", () => {
     expect(io.ran[0]).toMatch(/file:.*typescript\/code-generators/);
     expect(io.ran[0]).toMatch(/file:.*typescript\/providers\/sqlite/);
     expect(io.ran[0]).toMatch(/@deterministic-code\/generators-common/);
+    expect(io.ran.some((line) => line.includes("npm install --prefix") && line.includes("typescript/code-generators"))).toBe(true);
     expect(io.ran[0]).not.toMatch(/npm install @deterministic-code\/datasources /);
     expect(io.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
@@ -192,6 +193,9 @@ describe("setup", () => {
     expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], npmIo)).toBe(0);
     expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/datasources")}`);
     expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/providers/sqlite")}`);
+    expect(npmIo.ran).toContain(
+      `npm install --prefix ${join(repo, "typescript/code-generators")} @deterministic-code/generators-common @deterministic-code/deterministic-generators-common`,
+    );
 
     const csIo = deps(mem(["App.csproj"], { [join(cwd, "App.csproj")]: `<PackageReference Include="Datasources" />` }).fs);
     expect(
@@ -248,7 +252,7 @@ describe("setup", () => {
     const csharpIo = deps(csharp.fs);
     expect(await exec(["add", "sqlite", "postgres", "--cwd", cwd, "--languages", "csharp"], csharpIo)).toBe(0);
     expect(csharpIo.ran).toContain(
-      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres @deterministic-code/generators-common @deterministic-code/deterministic-generators-common",
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres",
     );
     expect(csharpIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(csharpIo.ran).toContain(init("csharp"));
@@ -256,7 +260,7 @@ describe("setup", () => {
     const rustIo = deps(rust.fs);
     expect(await exec(["add", "sqlite", "postgres", "--cwd", cwd, "--languages", "rust"], rustIo)).toBe(0);
     expect(rustIo.ran).toContain(
-      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres @deterministic-code/generators-common @deterministic-code/deterministic-generators-common",
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres",
     );
     expect(rustIo.ran).toContain("npm install @deterministic-code/migraters");
     expect(rustIo.ran).toContain(init("rust"));
@@ -342,7 +346,7 @@ describe("setup", () => {
     expect(io.ran).toContain("cargo add tokio --features macros,rt-multi-thread");
     expect(io.ran).toContain("cargo add datasources-sqlite");
     expect(io.ran).toContain(
-      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/generators-common @deterministic-code/deterministic-generators-common",
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
     );
     expect(files[join(cwd, "datasources_providers.rs")]).toBe(
       `pub fn register() {
@@ -406,7 +410,7 @@ describe("setup", () => {
     ).toBe(0);
     expect(sqliteOnly.ran).toContain("dotnet add App.csproj package Datasources.Sqlite");
     expect(sqliteOnly.ran).toContain(
-      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/generators-common @deterministic-code/deterministic-generators-common",
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
     );
     const props = mem(["App.csproj"]);
     expect(
@@ -538,7 +542,7 @@ describe("setup", () => {
     const io = deps(fs);
     expect(await exec(["setup", "--yes", "--cwd", cwd], io)).toBe(0);
     expect(io.ran).toEqual([
-      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/generators-common @deterministic-code/deterministic-generators-common",
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
       "npm install @deterministic-code/migraters",
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     ]);
@@ -553,7 +557,7 @@ describe("setup", () => {
     ).toBe(0);
     expect(csharp.ran.some((line) => line.includes("dotnet add") && line.includes("package"))).toBe(false);
     expect(csharp.ran).toContain(
-      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/generators-common @deterministic-code/deterministic-generators-common",
+      "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
     );
   });
 

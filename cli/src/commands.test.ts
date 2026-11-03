@@ -12,8 +12,6 @@ describe("commands", () => {
           "install",
           "@deterministic-code/datasources",
           "@deterministic-code/datasources-sqlite",
-          "@deterministic-code/generators-common",
-          "@deterministic-code/deterministic-generators-common",
         ],
       },
     ]);
@@ -21,8 +19,6 @@ describe("commands", () => {
       "install",
       "@deterministic-code/datasources",
       "@deterministic-code/datasources-xml",
-      "@deterministic-code/generators-common",
-      "@deterministic-code/deterministic-generators-common",
     ]);
   });
 
@@ -37,8 +33,6 @@ describe("commands", () => {
           "install",
           "@deterministic-code/datasources",
           "@deterministic-code/datasources-sqlite",
-          "@deterministic-code/generators-common",
-          "@deterministic-code/deterministic-generators-common",
         ],
       },
     ]);
@@ -58,8 +52,6 @@ describe("commands", () => {
         "install",
         "@deterministic-code/datasources",
         "@deterministic-code/datasources-sqlite",
-        "@deterministic-code/generators-common",
-        "@deterministic-code/deterministic-generators-common",
       ],
     ]);
     expect(addCommands("csharp", ["json"], [])[0]?.args).toEqual([
@@ -80,8 +72,6 @@ describe("commands", () => {
         "install",
         "@deterministic-code/datasources",
         "@deterministic-code/datasources-sqlite",
-        "@deterministic-code/generators-common",
-        "@deterministic-code/deterministic-generators-common",
       ],
     ]);
   });
@@ -110,13 +100,23 @@ describe("commands", () => {
   it("adds from this checkout with --local", () => {
     const root = cliDatasourcesRepo;
     const local = { repo: root, cwd: "app" };
-    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local)[0]?.args).toEqual([
+    const generatorsPrefix = [
       "install",
-      `file:${join(root, "typescript/datasources")}`,
-      `file:${join(root, "typescript/code-generators")}`,
-      `file:${join(root, "typescript/providers/sqlite")}`,
+      "--prefix",
+      join(root, "typescript/code-generators"),
       "@deterministic-code/generators-common",
       "@deterministic-code/deterministic-generators-common",
+    ];
+    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([
+      [
+        "install",
+        `file:${join(root, "typescript/datasources")}`,
+        `file:${join(root, "typescript/code-generators")}`,
+        `file:${join(root, "typescript/providers/sqlite")}`,
+        "@deterministic-code/generators-common",
+        "@deterministic-code/deterministic-generators-common",
+      ],
+      generatorsPrefix,
     ]);
     expect(addCommands("rust", ["sqlite"], ["Cargo.toml"], undefined, local).map((c) => c.args)).toEqual([
       ["add", "--path", join(root, "rust/datasources")],
@@ -131,6 +131,7 @@ describe("commands", () => {
         "@deterministic-code/generators-common",
         "@deterministic-code/deterministic-generators-common",
       ],
+      generatorsPrefix,
     ]);
     expect(addCommands("csharp", ["sqlite"], ["App.csproj"], undefined, local).map((c) => c.args)).toEqual([
       ["add", "App.csproj", "reference", join(root, "csharp/Datasources/Datasources.csproj")],
@@ -143,6 +144,7 @@ describe("commands", () => {
         "@deterministic-code/generators-common",
         "@deterministic-code/deterministic-generators-common",
       ],
+      generatorsPrefix,
     ]);
   });
 });
