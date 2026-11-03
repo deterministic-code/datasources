@@ -13,7 +13,36 @@ describe("localRepo", () => {
     );
   });
 
-  it("rejects a path that is not this checkout", () => {
-    expect(() => requireDatasourcesRepo("/tmp")).toThrow("--local is for developing this datasources checkout");
+  it("uses DATASOURCES_REPO when it is this checkout", () => {
+    const previous = process.env.DATASOURCES_REPO;
+    process.env.DATASOURCES_REPO = cliDatasourcesRepo;
+    try {
+      expect(requireDatasourcesRepo("/tmp")).toBe(cliDatasourcesRepo);
+    } finally {
+      if (previous === undefined) delete process.env.DATASOURCES_REPO;
+      else process.env.DATASOURCES_REPO = previous;
+    }
+  });
+
+  it("uses the CLI checkout when cwd is not inside it", () => {
+    const previous = process.env.DATASOURCES_REPO;
+    delete process.env.DATASOURCES_REPO;
+    try {
+      expect(requireDatasourcesRepo("/tmp")).toBe(cliDatasourcesRepo);
+    } finally {
+      if (previous === undefined) delete process.env.DATASOURCES_REPO;
+      else process.env.DATASOURCES_REPO = previous;
+    }
+  });
+
+  it("throws when this checkout is missing", () => {
+    const previous = process.env.DATASOURCES_REPO;
+    delete process.env.DATASOURCES_REPO;
+    try {
+      expect(() => requireDatasourcesRepo("/tmp", "/tmp")).toThrow("--local is for developing this datasources checkout");
+    } finally {
+      if (previous === undefined) delete process.env.DATASOURCES_REPO;
+      else process.env.DATASOURCES_REPO = previous;
+    }
   });
 });

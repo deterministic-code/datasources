@@ -1,6 +1,7 @@
 FROM node:22-alpine
 RUN apk add --no-cache git build-base python3 mariadb-client postgresql-client
 WORKDIR /work
-COPY . /opt/src
-ENTRYPOINT ["sh", "-euc", "find /work -mindepth 1 -delete; if [ -e /repo/typescript/datasources/package.json ]; then cp -a /repo/. /work; else cp -a /opt/src/. /work; fi; cd \"${E2E_WORKDIR:-/work}\"; exec \"$@\"", "sh"]
+COPY scripts/e2e-workdir.sh /e2e-workdir.sh
+COPY samples/typescript/contacts-crud-enriched-medium-rest /opt/src
+ENTRYPOINT ["sh", "/e2e-workdir.sh"]
 CMD ["sh", "-ec", "sh -e sqlite.sh && sh -e mysql-postgres.sh"]

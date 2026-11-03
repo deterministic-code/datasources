@@ -36,7 +36,9 @@ services:
       timeout: 5s
       retries: 20
   runner:
-    build: .
+    build:
+      context: ../../..
+      dockerfile: samples/rust/contacts-crud-enriched-medium-rest/Dockerfile
     restart: "no"
     stop_grace_period: 0s
     tmpfs:

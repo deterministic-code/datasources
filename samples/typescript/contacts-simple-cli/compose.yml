@@ -36,7 +36,9 @@ services:
       timeout: 5s
       retries: 20
   runner:
-    build: .
+    build:
+      context: ../../..
+      dockerfile: samples/typescript/contacts-simple-cli/Dockerfile
     restart: "no"
     stop_grace_period: 0s
     tmpfs:
