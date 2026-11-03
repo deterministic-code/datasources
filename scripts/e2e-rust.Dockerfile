@@ -1,5 +1,5 @@
 FROM rust:1-alpine
-RUN apk add --no-cache nodejs npm git curl build-base python3 pkgconf openssl-dev openssl-libs-static mariadb-client postgresql-client
+RUN apk add --no-cache nodejs npm git curl build-base python3 pkgconf openssl-dev openssl-libs-static mariadb-client postgresql-client util-linux
 COPY e2e-sccache-install.sh /e2e-sccache-install.sh
 RUN sh /e2e-sccache-install.sh
 ENV RUSTC_WRAPPER=sccache
