@@ -124,7 +124,7 @@ describe("setup", () => {
     expect(io.ran[0]).toMatch(/npm install/);
     expect(io.ran[0]).toMatch(/@deterministic-code\/datasources-sqlite/);
     expect(io.ran[0]).not.toMatch(/better-sqlite3/);
-    expect(io.ran).toContain("npm install @deterministic-code/migraters");
+    expect(io.ran).toContain("npm install --install-links @deterministic-code/migraters");
     expect(io.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     );
@@ -218,7 +218,7 @@ describe("setup", () => {
     });
     const sqlIo = deps(sql.fs);
     expect(await exec(["setup", "--yes", "--cwd", cwd, "--languages", "ts"], sqlIo)).toBe(0);
-    expect(sqlIo.ran).toContain("npm install @deterministic-code/migraters");
+    expect(sqlIo.ran).toContain("npm install --install-links @deterministic-code/migraters");
     expect(sqlIo.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     );
@@ -256,7 +256,7 @@ describe("setup", () => {
     expect(csharpIo.ran).toContain(
       "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres",
     );
-    expect(csharpIo.ran).toContain("npm install @deterministic-code/migraters");
+    expect(csharpIo.ran).toContain("npm install --install-links @deterministic-code/migraters");
     expect(csharpIo.ran).toContain(init("csharp", "sqlite --dialect postgres"));
     const rust = mem(["Cargo.toml"], { [join(cwd, ".env")]: "INSTALLED_PROVIDERS=\n" });
     const rustIo = deps(rust.fs);
@@ -264,7 +264,7 @@ describe("setup", () => {
     expect(rustIo.ran).toContain(
       "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite @deterministic-code/datasources-postgres",
     );
-    expect(rustIo.ran).toContain("npm install @deterministic-code/migraters");
+    expect(rustIo.ran).toContain("npm install --install-links @deterministic-code/migraters");
     expect(rustIo.ran).toContain(init("rust", "sqlite --dialect postgres"));
     const json = mem(["App.csproj"], {
       [join(cwd, ".env")]: "INSTALLED_PROVIDERS=json\nDATASOURCE_URL=json://\n",
@@ -590,7 +590,7 @@ describe("setup", () => {
     expect(await exec(["setup", "--yes", "--cwd", cwd], io)).toBe(0);
     expect(io.ran).toEqual([
       "npm install @deterministic-code/datasources @deterministic-code/datasources-sqlite",
-      "npm install @deterministic-code/migraters",
+      "npm install --install-links @deterministic-code/migraters",
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     ]);
     const csharp = deps(
