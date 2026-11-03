@@ -41,6 +41,8 @@ services:
     stop_grace_period: 0s
     tmpfs:
       - /tmp
+      - /work
+    working_dir: /work
     environment:
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources

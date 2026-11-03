@@ -56,7 +56,7 @@ run_compose() {
   (
     cd "$repo/$dir"
     if [ -n "$local" ]; then
-      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build -v "$repo:/repo" -w "/repo/$dir" runner \
+      COMPOSE_PROJECT_NAME=$project docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_WORKDIR="/work/$dir" runner \
         sh -ec "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"
     else
       COMPOSE_PROJECT_NAME=$project docker compose run --rm --build runner
@@ -76,7 +76,7 @@ if [ $# -gt 0 ] && [ ! -d "$1" ]; then
     project="e2e-quickstart-$language"
     (
       cd "$repo/samples/$language/contacts-simple-cli"
-      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo" -w /repo -e E2E_LANG runner "$@"
+      COMPOSE_PROJECT_NAME=$project E2E_LANG=$language docker compose run --rm --build -v "$repo:/repo:ro" -e E2E_WORKDIR=/work -e E2E_LANG runner "$@"
     ) &
     live="$live $!"
   done

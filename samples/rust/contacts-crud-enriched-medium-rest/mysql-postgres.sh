@@ -1,4 +1,3 @@
-unset CARGO_TARGET_DIR
 export PROVIDER=mysql
 export DATASOURCE_URL="${MYSQL_URL:-mysql://ds:ds@mysql:3306/datasources}"
 npx @deterministic-code/datasources-cli setup --yes "$@" sqlite mysql postgres
