@@ -33,21 +33,22 @@ services:
       timeout: 5s
       retries: 20
   runner:
+    image: datasources-e2e-node
     build:
-      context: ../../..
-      dockerfile: quick_starts/contacts_cli/typescript/Dockerfile
+      context: ../../../scripts
+      dockerfile: e2e-node.Dockerfile
+    pull_policy: never
     restart: "no"
     stop_grace_period: 0s
     tmpfs:
       - /tmp
       - /work
+    volumes:
+      - ${HOME}/.cache/datasources-npm:/npm-cache
+      - ${HOME}/.cache/datasources-e2e:/e2e-cache
     working_dir: /work
     environment:
+      npm_config_cache: /npm-cache
       E2E_LANG: typescript
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
       POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources
-    depends_on:
-      mysql:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy

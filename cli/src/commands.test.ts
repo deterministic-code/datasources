@@ -97,6 +97,35 @@ describe("commands", () => {
     ]);
   });
 
+  it("removes a csharp project reference added with --local", () => {
+    const local = { repo: cliDatasourcesRepo, cwd: "app" };
+    const include = `..\\..\\..\\..\\opt\\repo\\csharp\\Providers\\Sqlite\\Datasources.Sqlite.csproj`;
+    expect(
+      removeCommands("csharp", ["sqlite"], [], ["App.csproj"], `<ProjectReference Include="${include}" />`, local).map(
+        (c) => c.args,
+      ),
+    ).toEqual([
+      ["remove", "App.csproj", "reference", include],
+      ["uninstall", "@deterministic-code/datasources-sqlite"],
+    ]);
+    expect(
+      removeCommands(
+        "csharp",
+        ["sqlite"],
+        [],
+        ["App.csproj"],
+        `<PackageReference Include="Datasources.Sqlite" />`,
+        local,
+      ).map((c) => c.args),
+    ).toEqual([
+      ["remove", "App.csproj", "package", "Datasources.Sqlite"],
+      ["uninstall", "@deterministic-code/datasources-sqlite"],
+    ]);
+    expect(removeCommands("csharp", ["sqlite"], [], ["App.csproj"], undefined, local).map((c) => c.args)).toEqual([
+      ["uninstall", "@deterministic-code/datasources-sqlite"],
+    ]);
+  });
+
   it("adds from this checkout with --local", () => {
     const root = cliDatasourcesRepo;
     const local = { repo: root, cwd: "app" };

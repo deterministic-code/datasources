@@ -65,6 +65,19 @@ describe("wireRustProviders", () => {
     expect(logs).toContain(join(cwd, "src/main.rs"));
   });
 
+  it("attaches register to src/main.rs when lib.rs is also present", async () => {
+    const cwd = "app";
+    const { files, fs } = mem({
+      [join(cwd, "src/lib.rs")]: "pub mod program;\n",
+      [join(cwd, "src/main.rs")]: "fn main() {}\n",
+    });
+    await wireRustProviders(cwd, ["sqlite"], false, { fs, log: () => {} });
+    expect(files[join(cwd, "src/lib.rs")]).toBe("pub mod program;\n");
+    expect(files[join(cwd, "src/main.rs")]).toBe(
+      "mod datasources_providers;\nfn main() {\n    datasources_providers::register();\n}\n",
+    );
+  });
+
   it("logs the bind path on dry-run without writing", async () => {
     const cwd = "app";
     const { files, fs } = mem({ [join(cwd, "src/lib.rs")]: "" });
