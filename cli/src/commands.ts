@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { resolve } from "node:path";
 import { catalog, host, type Ecosystem, type Provider } from "./catalog.ts";
 import { csharpTarget } from "./detect.ts";
 import { hasCsharpProjectReference } from "./installed.ts";
@@ -43,14 +43,25 @@ export const removeCommands = (
     ],
   })[ecosystem]();
 
-const fileSpec = (local: LocalInstall, path: string): string => `file:${join(local.repo, path)}`;
+const fileSpec = (local: LocalInstall, path: string): string => `file:${resolve(local.repo, path)}`;
 
 const generatorPkgs = [
   "@deterministic-code/generators-common",
   "@deterministic-code/deterministic-generators-common",
 ];
 
+const localBuild = (local: LocalInstall, names: Provider[]): Proc[] =>
+  [
+    "typescript/datasources",
+    "typescript/code-generators",
+    ...names.map((name) => `typescript/providers/${name}`),
+  ].map((path) => ({
+    command: "npm",
+    args: ["run", "build", "--prefix", resolve(local.repo, path)],
+  }));
+
 const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
+  ...(local ? localBuild(local, names) : []),
   {
     command: "npm",
     args: [
@@ -76,14 +87,14 @@ const npmUninstall = (names: Provider[]): Proc[] => {
 const cargoAdd = (names: Provider[], local?: LocalInstall): Proc[] => [
   {
     command: "cargo",
-    args: local ? ["add", "--path", join(local.repo, "rust/datasources")] : ["add", host.rust.core],
+    args: local ? ["add", "--path", resolve(local.repo, "rust/datasources")] : ["add", host.rust.core],
   },
   { command: "cargo", args: ["add", "tokio", "--features", "macros,rt-multi-thread"] },
   ...names.map((name) => ({
     command: "cargo",
-    args: local ? ["add", "--path", join(local.repo, `rust/providers/${name}`)] : ["add", catalog[name].cargo],
+    args: local ? ["add", "--path", resolve(local.repo, `rust/providers/${name}`)] : ["add", catalog[name].cargo],
   })),
-  ...(local ? [{ command: "cargo", args: ["add", "--path", join(local.repo, "rust/datasources-tests")] }] : []),
+  ...(local ? [{ command: "cargo", args: ["add", "--path", resolve(local.repo, "rust/datasources-tests")] }] : []),
 ];
 
 const cargoRemove = (names: Provider[]): Proc[] =>
@@ -91,8 +102,8 @@ const cargoRemove = (names: Provider[]): Proc[] =>
 
 const csharpCsproj = (local: LocalInstall, nuget: string): string =>
   nuget === host.csharp.core
-    ? join(local.repo, "csharp/Datasources/Datasources.csproj")
-    : join(local.repo, `csharp/Providers/${nuget.slice("Datasources.".length)}/${nuget}.csproj`);
+    ? resolve(local.repo, "csharp/Datasources/Datasources.csproj")
+    : resolve(local.repo, `csharp/Providers/${nuget.slice("Datasources.".length)}/${nuget}.csproj`);
 
 const dotnetAdd = (names: Provider[], project: string, csproj?: string, local?: LocalInstall): Proc[] => {
   const prefix = project === "." ? [] : [project];

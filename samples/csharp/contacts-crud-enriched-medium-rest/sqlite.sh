@@ -1,5 +1,5 @@
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
-npx @deterministic-code/datasources-cli setup --yes "$@" sqlite
-npx @deterministic-code/datasources-cli generate all --dialect csharp
+datasources setup --yes "$@" sqlite
+datasources generate all --dialect csharp
 dotnet run

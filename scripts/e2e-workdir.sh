@@ -15,14 +15,9 @@ copy_tree() {
   (cd "$1" && tar cf - --exclude=node_modules --exclude=target --exclude=bin --exclude=obj --exclude=.env .) | tar xf - -C "$2"
 }
 
-copy_cli() {
-  mkdir -p "$2"
-  (cd "$1" && tar cf - --exclude=node_modules --exclude=.env .) | tar xf - -C "$2"
-}
-
 cli_ready() {
-  dest=/e2e-cache/cli
-  [ -f "$dest/.ready" ] || return 1
+  dest=/e2e-cache/repo/cli
+  [ -f /e2e-cache/repo/.ready ] || return 1
   [ -f "$dest/bin/datasources.mjs" ] || return 1
   [ -d "$dest/node_modules/tsx" ] || return 1
   [ -f "$dest/node_modules/@deterministic-code/deterministic-generators-common/typescript/parser/dist/specification-parser.js" ]
@@ -33,23 +28,26 @@ install_cli() {
   (
     flock 9
     cli_ready && exit 0
-    tmp=/e2e-cache/cli.tmp
+    tmp=/e2e-cache/repo.tmp
     rm -rf "$tmp"
-    copy_cli /opt/repo/cli "$tmp"
-    node /e2e-abs-file-deps.mjs "$tmp"
+    mkdir -p "$tmp"
+    (cd /opt/repo && tar cf - \
+      --exclude=node_modules --exclude=target --exclude=obj --exclude=.git --exclude=.env \
+      cli typescript rust csharp) | tar xf - -C "$tmp"
     (
-      cd "$tmp"
+      cd "$tmp/cli"
       npm_config_ignore_scripts=true npm install --install-links --ignore-scripts
       node node_modules/esbuild/install.js
       node scripts/build-generators.mjs
     )
-    [ -f "$tmp/bin/datasources.mjs" ]
-    [ -d "$tmp/node_modules/tsx" ]
-    [ -f "$tmp/node_modules/@deterministic-code/deterministic-generators-common/typescript/parser/dist/specification-parser.js" ]
-    rm -rf /e2e-cache/cli
-    mv "$tmp" /e2e-cache/cli
-    : >/e2e-cache/cli/.ready
-  ) 9>/e2e-cache/cli.lock
+    chmod +x "$tmp/cli/bin/datasources" "$tmp/cli/bin/datasources.mjs"
+    [ -f "$tmp/cli/bin/datasources.mjs" ]
+    [ -d "$tmp/cli/node_modules/tsx" ]
+    [ -f "$tmp/cli/node_modules/@deterministic-code/deterministic-generators-common/typescript/parser/dist/specification-parser.js" ]
+    rm -rf /e2e-cache/repo
+    mv "$tmp" /e2e-cache/repo
+    : >/e2e-cache/repo/.ready
+  ) 9>/e2e-cache/repo.lock
 }
 
 find /work -mindepth 1 -delete
@@ -66,7 +64,6 @@ if [ -n "${E2E_LANG:-}" ]; then
   exec "$@"
 fi
 
-# Sample on /work. Local packages are file:/opt/repo/..., same prefix as setup --local.
 sample="${SAMPLE:?}"
 src="/opt/repo/$sample"
 if [ ! -d "$src" ]; then
@@ -74,21 +71,16 @@ if [ ! -d "$src" ]; then
   exit 1
 fi
 e2e_step copy copy_tree "$src" /work
-export DATASOURCES_REPO=/opt/repo
-node /e2e-abs-file-deps.mjs /work
-cd /work
 e2e_step cli-install install_cli
+export DATASOURCES_REPO=/e2e-cache/repo
+export PATH="/e2e-cache/repo/cli/bin:/e2e-cache/repo/cli/node_modules/.bin:$PATH"
+cd /work
 if [ -f package.json ]; then
   e2e_step npm-install npm install --install-links --ignore-scripts
   if [ -d node_modules/better-sqlite3 ]; then
     e2e_step rebuild-sqlite npm rebuild better-sqlite3
   fi
 fi
-mkdir -p node_modules/@deterministic-code node_modules/.bin
-ln -sfn /e2e-cache/cli node_modules/@deterministic-code/datasources-cli
-printf '%s\n' '#!/bin/sh' 'exec node /e2e-cache/cli/bin/datasources.mjs "$@"' >node_modules/.bin/datasources
-chmod +x node_modules/.bin/datasources
-export PATH="/work/node_modules/.bin:$PATH"
 printf 'e2e-workdir: start scripts\n'
 start=$(date +%s)
 "$@"

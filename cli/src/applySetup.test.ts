@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { requireProviders } from "./catalog.ts";
 import { cliDatasourcesRepo } from "./localRepo.ts";
@@ -9,6 +9,9 @@ import { help, parseArgs } from "./parse.ts";
 import { applyAddRemove, applySetup, starterTypesYaml, type Prompter } from "./setup.ts";
 
 const cwd = "app";
+
+const npmLocalInstall = (ran: string[]): string =>
+  ran.find((line) => line.includes("npm install --install-links file:")) ?? "";
 
 const mem = (
   entries: string[],
@@ -135,16 +138,29 @@ describe("setup", () => {
     const { fs } = mem(["package.json"], { [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }) });
     const io = deps(fs);
     expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], io)).toBe(0);
-    expect(io.ran[0]).toMatch(/npm install --install-links/);
-    expect(io.ran[0]).toMatch(/file:.*typescript\/datasources/);
-    expect(io.ran[0]).toMatch(/file:.*typescript\/code-generators/);
-    expect(io.ran[0]).toMatch(/file:.*typescript\/providers\/sqlite/);
-    expect(io.ran[0]).toMatch(/@deterministic-code\/generators-common/);
+    expect(io.ran.some((line) => line.includes("npm run build --prefix") && line.includes("typescript/providers/sqlite"))).toBe(
+      true,
+    );
+    expect(npmLocalInstall(io.ran)).toMatch(/npm install --install-links/);
+    expect(npmLocalInstall(io.ran)).toMatch(/file:.*typescript\/datasources/);
+    expect(npmLocalInstall(io.ran)).toMatch(/file:.*typescript\/code-generators/);
+    expect(npmLocalInstall(io.ran)).toMatch(/file:.*typescript\/providers\/sqlite/);
+    expect(npmLocalInstall(io.ran)).toMatch(/@deterministic-code\/generators-common/);
     expect(io.ran.some((line) => line.includes("npm install --prefix") && line.includes("typescript/code-generators"))).toBe(false);
-    expect(io.ran[0]).not.toMatch(/npm install @deterministic-code\/datasources /);
+    expect(npmLocalInstall(io.ran)).not.toMatch(/npm install @deterministic-code\/datasources /);
     expect(io.ran).toContain(
       "npx --yes --package @deterministic-code/migraters migrate-init --language typescript --dialect sqlite",
     );
+  });
+
+  it("does not uninstall when the consumer has no datasources packages", async () => {
+    const { fs } = mem(["package.json"], {
+      [join(cwd, "package.json")]: JSON.stringify({ private: true, dependencies: { tsx: "*" } }),
+    });
+    const io = deps(fs);
+    expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], io)).toBe(0);
+    expect(npmLocalInstall(io.ran)).toContain(`file:${resolve(cliDatasourcesRepo, "typescript/providers/sqlite")}`);
+    expect(io.ran.some((line) => line.includes("npm uninstall"))).toBe(false);
   });
 
   it("writes package.json in a csharp cwd so --local npm install does not use the parent", async () => {
@@ -192,9 +208,9 @@ describe("setup", () => {
 
     const npmIo = deps(mem(["package.json"], { [join(cwd, "package.json")]: JSON.stringify({ dependencies: {} }) }).fs);
     expect(await exec(["setup", "--yes", "--local", "--cwd", cwd, "--languages", "ts", "--datasources", "sqlite"], npmIo)).toBe(0);
-    expect(npmIo.ran[0]).toContain("npm install --install-links");
-    expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/datasources")}`);
-    expect(npmIo.ran[0]).toContain(`file:${join(repo, "typescript/providers/sqlite")}`);
+    expect(npmLocalInstall(npmIo.ran)).toContain("npm install --install-links");
+    expect(npmLocalInstall(npmIo.ran)).toContain(`file:${join(repo, "typescript/datasources")}`);
+    expect(npmLocalInstall(npmIo.ran)).toContain(`file:${join(repo, "typescript/providers/sqlite")}`);
     expect(npmIo.ran.some((line) => line.includes("npm install --prefix") && line.includes("typescript/code-generators"))).toBe(
       false,
     );

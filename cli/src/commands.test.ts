@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { addCommands, removeCommands } from "./commands.ts";
 import { cliDatasourcesRepo } from "./localRepo.ts";
@@ -129,27 +129,48 @@ describe("commands", () => {
   it("adds from this checkout with --local", () => {
     const root = cliDatasourcesRepo;
     const local = { repo: root, cwd: "app" };
+    const builds = [
+      ["run", "build", "--prefix", resolve(root, "typescript/datasources")],
+      ["run", "build", "--prefix", resolve(root, "typescript/code-generators")],
+      ["run", "build", "--prefix", resolve(root, "typescript/providers/sqlite")],
+    ];
     const npmLocal = [
       "install",
       "--install-links",
-      `file:${join(root, "typescript/datasources")}`,
-      `file:${join(root, "typescript/code-generators")}`,
-      `file:${join(root, "typescript/providers/sqlite")}`,
+      `file:${resolve(root, "typescript/datasources")}`,
+      `file:${resolve(root, "typescript/code-generators")}`,
+      `file:${resolve(root, "typescript/providers/sqlite")}`,
       "@deterministic-code/generators-common",
       "@deterministic-code/deterministic-generators-common",
     ];
-    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([npmLocal]);
+    expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([
+      ...builds,
+      npmLocal,
+    ]);
     expect(addCommands("rust", ["sqlite"], ["Cargo.toml"], undefined, local).map((c) => c.args)).toEqual([
-      ["add", "--path", join(root, "rust/datasources")],
+      ["add", "--path", resolve(root, "rust/datasources")],
       ["add", "tokio", "--features", "macros,rt-multi-thread"],
-      ["add", "--path", join(root, "rust/providers/sqlite")],
-      ["add", "--path", join(root, "rust/datasources-tests")],
+      ["add", "--path", resolve(root, "rust/providers/sqlite")],
+      ["add", "--path", resolve(root, "rust/datasources-tests")],
+      ...builds,
       npmLocal,
     ]);
     expect(addCommands("csharp", ["sqlite"], ["App.csproj"], undefined, local).map((c) => c.args)).toEqual([
-      ["add", "App.csproj", "reference", join(root, "csharp/Datasources/Datasources.csproj")],
-      ["add", "App.csproj", "reference", join(root, "csharp/Providers/Sqlite/Datasources.Sqlite.csproj")],
+      ["add", "App.csproj", "reference", resolve(root, "csharp/Datasources/Datasources.csproj")],
+      ["add", "App.csproj", "reference", resolve(root, "csharp/Providers/Sqlite/Datasources.Sqlite.csproj")],
+      ...builds,
       npmLocal,
+    ]);
+  });
+
+  it("resolves --local file specs to absolute paths", () => {
+    const specs = addCommands("ts", ["sqlite"], ["package.json"], undefined, { repo: ".", cwd: "app" })
+      .at(-1)!
+      .args.filter((arg) => arg.startsWith("file:"));
+    expect(specs).toEqual([
+      `file:${resolve(".", "typescript/datasources")}`,
+      `file:${resolve(".", "typescript/code-generators")}`,
+      `file:${resolve(".", "typescript/providers/sqlite")}`,
     ]);
   });
 });
