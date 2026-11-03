@@ -27,7 +27,7 @@ if (!existsSync(pkgPath)) process.exit(0);
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
 rewrite(pkg.dependencies);
 rewrite(pkg.devDependencies);
-rewrite(pkg.overrides);
+delete pkg.overrides;
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 const lock = join(dir, "package-lock.json");
 if (existsSync(lock)) unlinkSync(lock);

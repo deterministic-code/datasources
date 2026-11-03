@@ -63,9 +63,22 @@ build_toolchains() {
       samples/rust/*) rust=1 ;;
     esac
   done
-  [ -n "$node" ] && build_image datasources-e2e-node e2e-node.Dockerfile
-  [ -n "$dotnet" ] && build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
-  [ -n "$rust" ] && build_image datasources-e2e-rust e2e-rust.Dockerfile
+  # CLI install is Node. Always build the node image so warmup can run once.
+  if [ -n "$node$dotnet$rust" ]; then build_image datasources-e2e-node e2e-node.Dockerfile; fi
+  if [ -n "$dotnet" ]; then build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile; fi
+  if [ -n "$rust" ]; then build_image datasources-e2e-rust e2e-rust.Dockerfile; fi
+}
+
+warmup_cli() {
+  mkdir -p "${HOME}/.cache/datasources-e2e" "${HOME}/.cache/datasources-npm"
+  e2e_step cli-install docker run --rm \
+    -v "$repo:/opt/repo:ro" \
+    -v "${HOME}/.cache/datasources-npm:/npm-cache" \
+    -v "${HOME}/.cache/datasources-e2e:/e2e-cache" \
+    -e E2E_CLI_ONLY=1 \
+    -e npm_config_cache=/npm-cache \
+    -e DATASOURCES_REPO=/opt/repo \
+    datasources-e2e-node
 }
 
 if [ "${1:-}" = --local ]; then
@@ -145,7 +158,20 @@ run_compose() {
     start=$(date +%s)
     e2e_log "start $dir"
     docker compose up -d mysql postgres
-    run_runner sh -ec 'sh -e sqlite.sh --local && sh /e2e-wait-engines.sh && sh -e mysql-postgres.sh --local'
+    run_runner sh -ec '
+      start=$(date +%s)
+      printf "e2e-workdir: start sqlite\n"
+      sh -e sqlite.sh --local
+      printf "e2e-workdir: done sqlite %ss\n" "$(($(date +%s) - start))"
+      start=$(date +%s)
+      printf "e2e-workdir: start wait-engines\n"
+      sh /e2e-wait-engines.sh
+      printf "e2e-workdir: done wait-engines %ss\n" "$(($(date +%s) - start))"
+      start=$(date +%s)
+      printf "e2e-workdir: start mysql-postgres\n"
+      sh -e mysql-postgres.sh --local
+      printf "e2e-workdir: done mysql-postgres %ss\n" "$(($(date +%s) - start))"
+    '
     e2e_log "done $dir $(($(date +%s) - start))s"
   )
 }
@@ -209,6 +235,7 @@ suite_start=$(date +%s)
 e2e_log "suite start"
 # shellcheck disable=SC2086
 build_toolchains $sample_dirs
+warmup_cli
 
 for dir in "$@"; do
   await_slot
