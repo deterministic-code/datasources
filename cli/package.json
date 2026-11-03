@@ -11,8 +11,8 @@
   "scripts": {
     "cli": "tsx src/main.ts",
     "setup": "tsx src/main.ts setup",
-    "test": "node scripts/build-generators.mjs && vitest run --coverage",
-    "typecheck": "node scripts/build-generators.mjs && tsc --noEmit"
+    "test": "npm run build --prefix ../typescript/datasources && npm run build --prefix ../typescript/providers/sqlite && node scripts/build-generators.mjs && vitest run --coverage",
+    "typecheck": "npm run build --prefix ../typescript/datasources && npm run build --prefix ../typescript/providers/sqlite && node scripts/build-generators.mjs && tsc --noEmit"
   },
   "dependencies": {
     "@deterministic-code/csharp-generators": "github:deterministic-code/generators-csharp#main",

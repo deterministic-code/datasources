@@ -2,23 +2,22 @@
   "name": "@deterministic-code/datasources",
   "version": "0.1.2",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./src/index.ts",
-      "default": "./src/index.ts"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./mocks": {
       "types": "./dist/mocks/index.d.ts",
-      "import": "./src/mocks/index.ts",
-      "default": "./src/mocks/index.ts"
+      "import": "./dist/mocks/index.js",
+      "default": "./dist/mocks/index.js"
     }
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"

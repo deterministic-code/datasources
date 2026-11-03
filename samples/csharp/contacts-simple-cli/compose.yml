@@ -17,8 +17,8 @@ services:
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uds", "-pds"]
       interval: 1s
-      timeout: 5s
-      retries: 20
+      timeout: 2s
+      retries: 30
   postgres:
     image: postgres:16
     restart: "no"
@@ -33,9 +33,14 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ds -d datasources"]
       interval: 1s
-      timeout: 5s
-      retries: 20
+      timeout: 2s
+      retries: 30
   runner:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     image: datasources-e2e-dotnet
     build:
       context: ../../../scripts

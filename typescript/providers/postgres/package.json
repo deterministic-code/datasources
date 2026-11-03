@@ -2,18 +2,17 @@
   "name": "@deterministic-code/datasources-postgres",
   "version": "0.1.2",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./src/index.ts",
-      "default": "./src/index.ts"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"

@@ -358,7 +358,7 @@ The package exports only the driver type.
 ### csharp
 That class is `public`. Connection, command, transaction, options, and converters are `internal`. `InternalsVisibleTo` opens them to the test project. `GetExportedTypes()` is exactly the driver.
 ### typescript
-`src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points only at that file.
+`src/index.ts` is one line, `export { SqliteDriver } from "./SqliteDriver.ts"`. `package.json` `exports` points at `dist/index.js`.
 ### rust
 `lib.rs` declares private modules and one `pub use` of the driver. `pub` items inside those modules stay crate-private.
 :::

@@ -157,16 +157,12 @@ run_compose() {
     export COMPOSE_PROJECT_NAME=$project
     start=$(date +%s)
     e2e_log "start $dir"
-    docker compose up -d mysql postgres
+    docker compose up -d --wait mysql postgres
     run_runner sh -ec '
       start=$(date +%s)
       printf "e2e-workdir: start sqlite\n"
       sh -e sqlite.sh --local
       printf "e2e-workdir: done sqlite %ss\n" "$(($(date +%s) - start))"
-      start=$(date +%s)
-      printf "e2e-workdir: start wait-engines\n"
-      sh /e2e-wait-engines.sh
-      printf "e2e-workdir: done wait-engines %ss\n" "$(($(date +%s) - start))"
       start=$(date +%s)
       printf "e2e-workdir: start mysql-postgres\n"
       sh -e mysql-postgres.sh --local
