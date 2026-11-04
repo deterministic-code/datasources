@@ -13,6 +13,10 @@ pub trait Reader<T: Send = Row>: Send + Sync {
         Ok(false)
     }
 
+    async fn close(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn read(&self) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + '_>> {
         Box::pin(try_unfold(self, |reader| async move {
             loop {

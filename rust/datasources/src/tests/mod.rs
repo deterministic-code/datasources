@@ -2408,3 +2408,67 @@ async fn typed_entity_create_and_read_single() {
     assert_eq!(found.id, 1);
     assert_eq!(found.title, "Ada");
 }
+
+#[derive(Clone, Facet)]
+struct Stamp {
+    id: i64,
+    created: chrono::DateTime<chrono::Utc>,
+}
+
+impl Default for Stamp {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            created: Utc.with_ymd_and_hms(2024, 1, 2, 3, 4, 5).unwrap(),
+        }
+    }
+}
+
+impl SchemaObject for Stamp {}
+
+struct MysqlStamp;
+
+impl TypeConverter<Value, Value> for MysqlStamp {
+    fn convert(&self, from: &Value) -> Result<Value> {
+        Ok(from.clone())
+    }
+
+    fn reverse_convert(&self, to: &Value) -> Result<Value> {
+        Ok(match to {
+            Value::DateTime(date) => Value::from(date.format("%Y-%m-%d %H:%M:%S%.3f").to_string()),
+            other => other.clone(),
+        })
+    }
+}
+
+#[tokio::test]
+async fn typed_create_keeps_datetime_when_write_row_is_mysql_text() {
+    let command = Arc::new(MockCommand::new());
+    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
+    command
+        .reader_rows
+        .lock()
+        .unwrap()
+        .push(record(&[("id", Value::Int(9))]));
+    let connection = MockConnection::with_command_provider(command, "memory");
+    let mut options = CRUDRepositoryOptions::default();
+    options.entity = "stamps".into();
+    options.ids = vec!["id".into()];
+    options.read_properties = vec!["id".into(), "created".into()];
+    options.create_properties = Some(vec!["created".into()]);
+    options.schema = Schema::new(HashMap::from([
+        ("id".into(), "integer".into()),
+        ("created".into(), "datetime".into()),
+    ]));
+    options.row_converter = Some(RowTypeConverter::new(HashMap::from([(
+        "created".into(),
+        Box::new(MysqlStamp) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+    )])));
+    let repo = CRUDRepository::<Stamp>::new(connection, options).unwrap();
+    let created = repo.create(Stamp::default()).await.unwrap();
+    assert_eq!(created.id, 9);
+    assert_eq!(
+        created.created,
+        Utc.with_ymd_and_hms(2024, 1, 2, 3, 4, 5).unwrap()
+    );
+}

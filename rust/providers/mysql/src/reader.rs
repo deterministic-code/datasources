@@ -114,6 +114,17 @@ impl Reader for MysqlReader {
         self.current.lock().expect("reader").clone()
     }
 
+    async fn close(&self) -> Result<()> {
+        if let Some(tx) = self.ask.lock().expect("reader").take() {
+            let _ = tx.send(Ask::Shutdown);
+        }
+        let task = self.task.lock().expect("reader").take();
+        if let Some(task) = task {
+            let _ = task.await;
+        }
+        Ok(())
+    }
+
     async fn next(&self) -> Result<bool> {
         match self.ask(Ask::Next).await? {
             Answer::Row(row) => {
@@ -177,7 +188,7 @@ async fn drive(
         index += 1;
         if index >= statements.len() {
             let _ = ans_tx.send(Answer::More(false));
-            return idle(&mut ask_rx, ans_tx).await;
+            return Ok(());
         }
         let _ = ans_tx.send(Answer::More(true));
     }

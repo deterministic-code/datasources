@@ -11,7 +11,7 @@ impl Clock {
         Self {
             now: Arc::new(Mutex::new(Arc::new(system_now))),
             uuid: Arc::new(Mutex::new(Arc::new(|| {
-                "00000000-0000-0000-0000-000000000000".into()
+                datasources::uuid::Uuid::new_v4().to_string()
             }))),
         }
     }
