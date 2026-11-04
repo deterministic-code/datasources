@@ -1,4 +1,4 @@
-import "../generated/typescript/repositories/repositoryRegistry.ts";
+import "../generated/repositories/repositoryRegistry.ts";
 import { Datasource, Operator, Where } from "@deterministic-code/datasources";
 
 await using ds = Datasource.default;

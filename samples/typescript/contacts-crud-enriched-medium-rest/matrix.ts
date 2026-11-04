@@ -8,9 +8,9 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { Api } from "./src/api.ts";
 import { clock } from "./src/clock.ts";
-import { LegacyContactRepository } from "./generated/typescript/repositories/legacy-contact-repository.ts";
-import { ContactRepository } from "./generated/typescript/repositories/contact-repository.ts";
-import { ContactGroupRepository } from "./generated/typescript/repositories/contact-group-repository.ts";
+import { LegacyContactRepository } from "./generated/repositories/legacy-contact-repository.ts";
+import { ContactRepository } from "./generated/repositories/contact-repository.ts";
+import { ContactGroupRepository } from "./generated/repositories/contact-group-repository.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
 type Scalar = string | number | boolean | null;

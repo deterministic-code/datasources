@@ -60,8 +60,7 @@ const typesMod = (filenames: string[]): string => {
   const entries = filenames.map((filename) => {
     const stem = filename.replace(/^.*\//, "").replace(/\.rs$/, "");
     const name = ident(stem);
-    const path = name === stem ? `pub mod ${stem};\n` : `#[path = "${stem}.rs"]\npub mod ${name};\n`;
-    return { name, path };
+    return { name, path: `#[path = "${filename}"]\npub mod ${name};\n` };
   });
   return `#![allow(dead_code, unused_imports, non_snake_case)]\n${entries.flatMap((entry) => [entry.path, `pub use ${entry.name}::*;\n`]).join("")}`;
 };
@@ -85,12 +84,14 @@ const writeCrate = (
     writeFileSync(path, entry.contents);
   }
   if (typesOnly) {
-    const rustTypes = Object.keys(texts).filter((name) => name.startsWith("rust/") && name.endsWith(".rs") && !name.includes("/repositories/"));
-    writeFileSync(join(crateDir, "generated/rust/mod.rs"), typesMod(rustTypes));
+    const typeFiles = Object.keys(texts).filter(
+      (name) => name.endsWith(".rs") && name.includes("/generated/") && !name.includes("/repositories/"),
+    );
+    writeFileSync(join(crateDir, "generated/mod.rs"), typesMod(typeFiles));
   }
   writeFileSync(
     join(crateDir, "src/lib.rs"),
-    `#[path = "../generated/rust/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
+    `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
   );
   return texts;
 };
@@ -321,13 +322,13 @@ describe("generated rust compiles", () => {
 
   it("file names snake", async () => {
     const texts = await generate(yaml(entity("contact", idName())), { "languages.rust.casing.file_names": "snake" });
-    expect(texts["rust/repositories/contact_repository.rs"]).toBeDefined();
+    expect(texts["repositories/contact_repository.rs"]).toBeDefined();
     expect(textOf(texts, "mod.rs")).toContain("pub mod contact_repository;");
   });
 
   it("file names kebab", async () => {
     const texts = await generate(yaml(entity("contact", idName())), { "languages.rust.casing.file_names": "kebab" });
-    expect(texts["rust/repositories/contact-repository.rs"]).toBeDefined();
+    expect(texts["repositories/contact-repository.rs"]).toBeDefined();
     expect(textOf(texts, "repositories/mod.rs")).toContain('#[path = "contact-repository.rs"]');
     expect(textOf(texts, "repositories/mod.rs")).toContain("pub mod contact_repository;");
   });

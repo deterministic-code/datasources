@@ -12,7 +12,14 @@ export type CasingFlags = {
   directories?: CaseFormat;
 };
 
-const LITERAL_SEGMENTS = new Set(["csharp", "typescript", "rust", "sql", "custom", "__tests__", "frontend"]);
+const LITERAL_SEGMENTS = new Set(["sql", "custom", "__tests__", "frontend"]);
+
+export const typesPrefixOf = (casing: ICasingStrategy, kind: "datasource" | "views"): string =>
+  ["types", kind === "views" ? "view" : "datasource", "generated"]
+    .map((segment) => casing.convertDirectories(segment))
+    .join("/");
+
+export const repositoriesPrefixOf = (casing: ICasingStrategy): string => casing.convertDirectories("repositories");
 
 export const parseCaseFlag = (raw: string, name: string): CaseFormat => {
   const parsed = caseFormats.find((format) => format.toLowerCase() === raw.toLowerCase());
@@ -38,9 +45,7 @@ export const overlayCasingFlags = (
 export const caseDirectories = (path: string, casing: ICasingStrategy): string =>
   path
     .split("/")
-    .map((segment, index) =>
-      index === 0 || LITERAL_SEGMENTS.has(segment) || segment.includes(".")
-        ? segment
-        : casing.convertDirectories(segment),
+    .map((segment) =>
+      LITERAL_SEGMENTS.has(segment) || segment.includes(".") ? segment : casing.convertDirectories(segment),
     )
     .join("/");
