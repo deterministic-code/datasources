@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@deterministic-code/datasources": src("./src/index.ts"),
+      "@deterministic-code/datasources-json": src("../providers/json/src/index.ts"),
       "@deterministic-code/datasources-memory": src("../providers/memory/src/index.ts"),
     },
   },

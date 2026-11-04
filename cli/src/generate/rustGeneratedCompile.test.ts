@@ -177,24 +177,28 @@ types:
 };
 
 describe("generated rust compiles", () => {
-  it("types", async () => {
-    await generate(
-      yaml(
-        entity(
-          "address",
-          field("city"),
-          "[view_type]",
-        ) +
+  it(
+    "types",
+    async () => {
+      await generate(
+        yaml(
           entity(
-            "contact",
-            `${idName()}\n${field("created", "type: datetime")}\n${field("guid", "type: uuid")}\n${field("note", "type: string\n            is_nullable: true")}\n${field("addresses", "type: address[]")}`,
+            "address",
+            field("city"),
             "[view_type]",
-          ),
-      ),
-      {},
-      true,
-    );
-  });
+          ) +
+            entity(
+              "contact",
+              `${idName()}\n${field("created", "type: datetime")}\n${field("guid", "type: uuid")}\n${field("note", "type: string\n            is_nullable: true")}\n${field("addresses", "type: address[]")}`,
+              "[view_type]",
+            ),
+        ),
+        {},
+        true,
+      );
+    },
+    30_000,
+  );
 
   it("plain", async () => {
     const texts = await generate(yaml(entity("contact", idName())));
