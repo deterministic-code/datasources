@@ -8,14 +8,6 @@ namespace ComplexGameRest;
 
 public sealed class Api
 {
-    static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
-    };
-
     readonly ICRUDRepository<Users> users;
     readonly ICRUDRepository<Categories> categories;
     readonly ICRUDRepository<Games> games;
@@ -92,14 +84,14 @@ public sealed class Api
         IWhere filter = raw.Length == 0
             ? new Where(new Datasources.Operator.IsNull(new Identifier("CategoryId")))
             : new Where(new Datasources.Operator.Equals("CategoryId", long.Parse(raw)));
-        return (200, JsonSerializer.Serialize(await List(categories, filter), Json));
+        return (200, JsonObject.ToString(await List(categories, filter)));
     }
 
     static async Task<(int Status, string Body)> Get<T>(ICRUDRepository<T> repo, Dictionary<string, string> query, string[] keys) =>
-        (200, JsonSerializer.Serialize(await List(repo, WhereOf(query, keys)), Json));
+        (200, JsonObject.ToString(await List(repo, WhereOf(query, keys))));
 
     static async Task<(int Status, string Body)> Post<T>(ICRUDRepository<T> repo, T row) =>
-        (201, JsonSerializer.Serialize(await repo.Create(row), Json));
+        (201, JsonObject.ToString(await repo.Create(row)));
 
     static async Task<(int Status, string Body)> Put<T>(ICRUDRepository<T> repo, Dictionary<string, string> query, T row)
     {
@@ -108,7 +100,7 @@ public sealed class Api
             return (404, "");
         SetId(row, id);
         await repo.Update(row);
-        return (200, JsonSerializer.Serialize(await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))), Json));
+        return (200, JsonObject.ToString(await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id)))));
     }
 
     static async Task<(int Status, string Body)> Delete<T>(ICRUDRepository<T> repo, Dictionary<string, string> query)
@@ -214,11 +206,7 @@ public sealed class Api
 
     static string ToCamel(string name) => char.ToLowerInvariant(name[0]) + name[1..];
 
-    static T Read<T>(string? body) where T : new()
-    {
-        if (string.IsNullOrWhiteSpace(body)) return new T();
-        return JsonSerializer.Deserialize<T>(body, Json) ?? throw new JsonException("invalid json");
-    }
+    static T Read<T>(string? body) where T : new() => JsonObject.FromString<T>(body);
 
     static long RequiredNumber(Dictionary<string, string> query, string key) =>
         long.TryParse(Required(query, key), out var value) ? value : throw new RequestError($"{key} is required");

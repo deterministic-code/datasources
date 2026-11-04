@@ -54,10 +54,21 @@ pub(crate) fn key(value: Option<Value>) -> Option<Value> {
     }
 }
 
-pub(crate) fn map_key(related_key: &str) -> &'static str {
-    match related_key.chars().next() {
-        Some(first) if related_key.contains('_') || first.is_lowercase() => "key",
-        _ => "Key",
+pub(crate) fn map_key<TChild: Entity>(related_key: &str) -> &'static str {
+    let probe = TChild::default();
+    if probe.has("Key") {
+        "Key"
+    } else if probe.has("key") {
+        "key"
+    } else if probe.has("Name") {
+        "Name"
+    } else if probe.has("name") {
+        "name"
+    } else {
+        match related_key.chars().next() {
+            Some(first) if related_key.contains('_') || first.is_lowercase() => "key",
+            _ => "Key",
+        }
     }
 }
 
@@ -76,7 +87,7 @@ fn dictionary_children<T: Entity, TChild: Entity>(
     enrichment: &Enrichment,
     parent: &T,
 ) -> Result<Vec<TChild>> {
-    let key_name = map_key(&enrichment.related_key);
+    let key_name = map_key::<TChild>(&enrichment.related_key);
     parent
         .payload(&enrichment.destination_property)
         .into_iter()

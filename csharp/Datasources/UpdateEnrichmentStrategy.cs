@@ -61,7 +61,7 @@ public abstract class UpdateEnrichmentStrategy<T>
         {
             if (entry.Key is null) continue;
             var row = new TChild();
-            Set(row, MapKey(enrichment.RelatedKey), entry.Key);
+            Set(row, MapKey<TChild>(), entry.Key);
             if (enrichment.RelatedProperty is { } select)
                 Set(row, select, entry.Value);
             else if (entry.Value is not null)
@@ -69,11 +69,18 @@ public abstract class UpdateEnrichmentStrategy<T>
                     Set(row, prop.Name, prop.GetValue(entry.Value));
             rows.Add(row);
         }
-        return [.. rows.OrderBy(row => Get(row, MapKey(enrichment.RelatedKey))?.ToString() ?? "", StringComparer.Ordinal)];
+        return [.. rows.OrderBy(row => Get(row, MapKey<TChild>())?.ToString() ?? "", StringComparer.Ordinal)];
     }
 
-    static string MapKey(string relatedKey) =>
-        relatedKey.Contains('_') || relatedKey.Length > 0 && char.IsLower(relatedKey[0]) ? "key" : "Key";
+    static string MapKey<TChild>()
+    {
+        var type = typeof(TChild);
+        return type.GetProperty("Key") is not null ? "Key"
+            : type.GetProperty("key") is not null ? "key"
+            : type.GetProperty("Name") is not null ? "Name"
+            : type.GetProperty("name") is not null ? "name"
+            : "Key";
+    }
 
     protected static void Stamp<TItem>(TItem related, string by, object? key)
     {

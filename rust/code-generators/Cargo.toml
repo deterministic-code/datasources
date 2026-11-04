@@ -12,6 +12,7 @@ publish = false
 datasources = { workspace = true }
 deterministic_generators_common = { git = "https://github.com/deterministic-code/deterministic-generators-common", branch = "main" }
 indexmap = "2"
+jsonschema = { version = "=0.58.6", default-features = false }
 regex = "1"
 serde_yaml = "0.9"
 sha1 = "0.10"

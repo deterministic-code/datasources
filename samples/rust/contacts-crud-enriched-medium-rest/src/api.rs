@@ -1,12 +1,11 @@
 use crate::clock::Clock;
+use crate::json_object::JsonObjectSerializer;
 use crate::json_row::snake_key;
 use crate::repositories::contact_group_repository::ContactGroupRepository;
 use crate::repositories::contact_repository::ContactRepository;
 use crate::{Address, Contact, ContactGroup, LegacyContact, Phone};
 use chrono::{DateTime, Utc};
-use datasources::{
-    DatasourceError, JsonObjectSerializer, Operator, ReadInput, Value, Where, CRUDRepository,
-};
+use datasources::{DatasourceError, Operator, ReadInput, Value, Where, CRUDRepository};
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
 

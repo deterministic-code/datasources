@@ -102,7 +102,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const mapKey = mapKeyName(enrichment.relatedKey);
+    const mapKey = mapKeyName(enrichment.relatedKey, probe(via));
     for (const [index, parent] of parents.entries()) {
       const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
@@ -186,6 +186,18 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   };
 }
 
-const mapKeyName = (relatedKey: string): string =>
-  relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
+const probe = (via?: { type: new () => object }): object | undefined => {
+  try {
+    return via ? new via.type() : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const mapKeyName = (relatedKey: string, child?: object): string =>
+  child && "Key" in child ? "Key"
+    : child && "key" in child ? "key"
+      : child && "Name" in child ? "Name"
+        : child && "name" in child ? "name"
+          : relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
 
