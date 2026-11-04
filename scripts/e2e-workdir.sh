@@ -15,35 +15,18 @@ copy_tree() {
   (cd "$1" && tar cf - --exclude=node_modules --exclude=target --exclude=bin --exclude=obj --exclude=.env .) | tar xf - -C "$2"
 }
 
-cli_ready() {
-  dest=/e2e-cache/repo/cli
-  [ -f /e2e-cache/repo/.ready ] || return 1
-  [ -f "$dest/bin/datasources.mjs" ] || return 1
-  [ -d "$dest/node_modules/tsx" ] || return 1
-  [ -f "$dest/node_modules/@deterministic-code/deterministic-generators-common/typescript/parser/dist/specification-parser.js" ]
-}
-
 install_cli() {
   mkdir -p /e2e-cache
   (
     flock 9
-    cli_ready && exit 0
+    [ -f /e2e-cache/repo/.ready ] && exit 0
     tmp=/e2e-cache/repo.tmp
     rm -rf "$tmp"
     mkdir -p "$tmp"
     (cd /opt/repo && tar cf - \
       --exclude=node_modules --exclude=target --exclude=obj --exclude=.git --exclude=.env \
       cli typescript rust csharp) | tar xf - -C "$tmp"
-    (
-      cd "$tmp/cli"
-      npm_config_ignore_scripts=true npm install --install-links --ignore-scripts
-      node node_modules/esbuild/install.js
-      node scripts/build-generators.mjs
-    )
-    chmod +x "$tmp/cli/bin/datasources" "$tmp/cli/bin/datasources.mjs"
-    [ -f "$tmp/cli/bin/datasources.mjs" ]
-    [ -d "$tmp/cli/node_modules/tsx" ]
-    [ -f "$tmp/cli/node_modules/@deterministic-code/deterministic-generators-common/typescript/parser/dist/specification-parser.js" ]
+    (cd "$tmp/cli" && npm install --install-links)
     rm -rf /e2e-cache/repo
     mv "$tmp" /e2e-cache/repo
     : >/e2e-cache/repo/.ready

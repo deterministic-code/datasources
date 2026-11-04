@@ -108,7 +108,7 @@ describe("setup", () => {
         scaffold: false,
       }),
     ).toEqual({
-      INSTALLED_PROVIDERS: "sqlite",
+      INSTALLED_PROVIDERS: "json,sqlite",
       PROVIDER: "sqlite",
       DATASOURCE_URL: "sqlite:///:memory:",
     });
@@ -132,5 +132,15 @@ describe("setup", () => {
     expect(envFromAnswers({ providers: [], url: "", schema: "", scaffold: false }).INSTALLED_PROVIDERS).toBe(
       "sqlite",
     );
+    expect(envFromAnswers({ providers: ["json"], url: "other://db", schema: "", scaffold: false })).toEqual({
+      INSTALLED_PROVIDERS: "json",
+      PROVIDER: "other",
+      DATASOURCE_URL: "other://db",
+    });
+    expect(envFromAnswers({ providers: [], url: "other://db", schema: "", scaffold: false })).toEqual({
+      INSTALLED_PROVIDERS: "sqlite",
+      PROVIDER: "other",
+      DATASOURCE_URL: "other://db",
+    });
   });
 });
