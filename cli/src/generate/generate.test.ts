@@ -388,7 +388,7 @@ types:
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
     expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
-    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/generated/views/contact"');
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/view/generated/contact"');
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("use super::super::Contact");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("Contact");
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("use super::super::;");
@@ -583,7 +583,7 @@ types:
       "languages.typescript.casing.file_names": "kebab",
     }));
     const addressType = textOf(typescript, "address-type-repository.ts");
-    expect(addressType).toContain('from "../types/generated/datasource/address-type"');
+    expect(addressType).toContain('from "../types/datasource/generated/address-type"');
     expect(addressType).not.toContain("addressType");
     expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
     expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
@@ -616,8 +616,8 @@ types:
         cwd,
       ),
     ).toBe(0);
-    expect(store.files[join(cwd, "generated/typescript/repositories/contact-repository.ts")]).toContain("export class ContactRepository");
-    expect(store.files[join(cwd, "generated/typescript/repositories/contactRepository.ts")]).toBeUndefined();
+    expect(store.files[join(cwd, "generated/repositories/contact-repository.ts")]).toContain("export class ContactRepository");
+    expect(store.files[join(cwd, "generated/repositories/contactRepository.ts")]).toBeUndefined();
   });
 
   it("cases child fields from settings", async () => {
@@ -653,8 +653,8 @@ types:
         cwd,
       ),
     ).toBe(0);
-    expect(Object.keys(store.files).some((path) => path.includes("typescript/Types/Generated/Datasource"))).toBe(true);
-    expect(Object.keys(store.files).some((path) => path.includes("typescript/Repositories"))).toBe(true);
+    expect(Object.keys(store.files).some((path) => path.includes("Types/Datasource/Generated"))).toBe(true);
+    expect(Object.keys(store.files).some((path) => path.includes("Repositories"))).toBe(true);
   });
 
   it("emits a typescript Contact type and sqlite tables", async () => {
@@ -708,7 +708,7 @@ types:
     expect(contact).not.toContain("crate::types::generated");
     expect(types.filter((entry) => /pub type (\w+) = \1;/.test(entry.contents ?? "")).length).toBe(0);
     const rust = await deterministic.generateRepositories(request("rust"));
-    const root = rust.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "rust/mod.rs");
+    const root = rust.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "mod.rs");
     expect(root?.contents).toContain("#![allow(dead_code, unused_imports, non_snake_case)]");
     expect(root?.contents).toContain("pub use repositories::repositoryRegistry::Repositories;");
     expect(root?.contents?.split("\n").filter((line) => line === "pub mod legacyContact;").length).toBe(1);
@@ -726,7 +726,7 @@ types:
       ),
     ).toBe(0);
     expect(store.files[join(cwd, "src/generated.rs")]).toBe(
-      `#[path = "../generated/rust/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
+      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
     );
     expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
     expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();
@@ -1090,7 +1090,7 @@ types: []
     });
     const io = deps(absolute.fs);
     expect(await exec(["generate", "repositories", "--dialect", "rust", "--input", "/tmp/spec", "--output", "/tmp/out"], io, cwd)).toBe(0);
-    expect(absolute.files[join("/tmp/out", "rust/repositories/legacyContactRepository.rs")]).toContain("CntID");
+    expect(absolute.files[join("/tmp/out", "repositories/legacyContactRepository.rs")]).toContain("CntID");
     const missing = mem();
     expect(await exec(["generate", "types", "--dialect", "csharp", "--cwd", cwd], deps(missing.fs), cwd)).toBe(1);
     expect(await exec(["generate", "types", "--dialect", "typescript", "--provider", "missing", "--cwd", cwd], deps(mem(seeded).fs), cwd)).toBe(1);
@@ -1118,11 +1118,11 @@ types:
     });
     const io = deps(store.fs);
     expect(await exec(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
-    const registry = store.files[join(cwd, "generated/typescript/repositories/repositoryRegistry.ts")];
+    const registry = store.files[join(cwd, "generated/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"NoteCard", "noteCards"');
     expect(registry).not.toContain('"Note"');
-    expect(store.files[join(cwd, "generated/typescript/repositories/noteCardRepository.ts")]).toContain('["NoteCard", "notes"]');
-    expect(store.files[join(cwd, "generated/typescript/repositories/noteRepository.ts")]).toBeUndefined();
+    expect(store.files[join(cwd, "generated/repositories/noteCardRepository.ts")]).toContain('["NoteCard", "notes"]');
+    expect(store.files[join(cwd, "generated/repositories/noteRepository.ts")]).toBeUndefined();
   });
 
   it("does not emit a repository for a dictionary view", async () => {
@@ -1163,7 +1163,7 @@ types: []
     });
     const io = deps(store.fs);
     expect(await exec(["generate", "repositories", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
-    const registry = store.files[join(cwd, "generated/typescript/repositories/repositoryRegistry.ts")];
+    const registry = store.files[join(cwd, "generated/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"Kept", "kepts"');
     expect(registry).not.toContain('"Dropped"');
   });
@@ -1332,7 +1332,7 @@ types:
     expect(up).toMatch(/create table "APPLICATIONS"/);
     expect(up).toMatch(/"firstName"/);
     expect(up).not.toMatch(/CREATE TABLE/);
-    const repo = generate.files[join(cwd, "generated/typescript/repositories/applicationRepository.ts")];
+    const repo = generate.files[join(cwd, "generated/repositories/applicationRepository.ts")];
     expect(repo).toContain('["Application", "APPLICATIONS"]');
     expect(repo).toContain('["FirstName", "firstName"]');
     const create = mem({
@@ -1392,7 +1392,7 @@ types:
       ),
     ).toBe(0);
     expect(off.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "application"/);
-    expect(off.files[join(cwd, "generated/typescript/repositories/applicationRepository.ts")]).toContain(
+    expect(off.files[join(cwd, "generated/repositories/applicationRepository.ts")]).toContain(
       '["Application", "application"]',
     );
     const create = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
@@ -1414,7 +1414,7 @@ types:
       ),
     ).toBe(0);
     expect(on.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "applications"/);
-    expect(on.files[join(cwd, "generated/typescript/repositories/applicationRepository.ts")]).toContain(
+    expect(on.files[join(cwd, "generated/repositories/applicationRepository.ts")]).toContain(
       '["Application", "applications"]',
     );
   });

@@ -43,7 +43,7 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
   for (const path of await writeEntries(deps.fs, at(flags.cwd, command.output), entries)) deps.log(path);
   if (command.dialect !== "rust" || command.target === "datasource") return;
   const dest = join(flags.cwd, "src", "generated.rs");
-  const rustMod = join(at(flags.cwd, command.output), "rust", "mod.rs");
+  const rustMod = join(at(flags.cwd, command.output), "mod.rs");
   const path = relative(join(flags.cwd, "src"), rustMod).replaceAll("\\", "/");
   await deps.fs.writeFile(
     dest,

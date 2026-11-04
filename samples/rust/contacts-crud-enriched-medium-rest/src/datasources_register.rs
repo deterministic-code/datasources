@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-#[path = "../generated/rust/mod.rs"]
+#[path = "../generated/mod.rs"]
 mod generated;
 pub use generated::Repositories;
 pub use generated::{Address, Contact, ContactGroup, LegacyContact, LocalePreferences, Phone};

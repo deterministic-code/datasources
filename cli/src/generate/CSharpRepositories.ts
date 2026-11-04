@@ -6,16 +6,16 @@ import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
+import { repositoriesPrefixOf } from "./casing.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
 class CSharpRepositories extends RepositoryGenerator {
   readonly types = { datasource, views };
 
-  typesPrefix = (): string => "csharp";
+  typesPrefix = (): string => "";
 
-  repositoriesPrefix = (casing: ICasingStrategy): string =>
-    `csharp/${casing.convertDirectories("repositories")}`;
+  repositoriesPrefix = (casing: ICasingStrategy): string => repositoriesPrefixOf(casing);
 
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("csharp", settings);

@@ -8,5 +8,5 @@
     "noEmit": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["src/**/*.ts", "generated/typescript/repositories/**/*.ts", "generated/typescript/types/**/*.ts"]
+  "include": ["src/**/*.ts", "generated/repositories/**/*.ts", "generated/types/**/*.ts"]
 }

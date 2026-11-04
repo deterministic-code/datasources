@@ -6,17 +6,16 @@ import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
+import { repositoriesPrefixOf, typesPrefixOf } from "./casing.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
 class TypeScriptRepositories extends RepositoryGenerator {
   readonly types = { datasource, views };
 
-  typesPrefix = (casing: ICasingStrategy, kind: "datasource" | "views"): string =>
-    ["typescript", ...["types", "generated", kind].map((segment) => casing.convertDirectories(segment))].join("/");
+  typesPrefix = (casing: ICasingStrategy, kind: "datasource" | "views"): string => typesPrefixOf(casing, kind);
 
-  repositoriesPrefix = (casing: ICasingStrategy): string =>
-    `typescript/${casing.convertDirectories("repositories")}`;
+  repositoriesPrefix = (casing: ICasingStrategy): string => repositoriesPrefixOf(casing);
 
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("typescript", settings);
@@ -70,9 +69,8 @@ class TypeScriptRepositories extends RepositoryGenerator {
   }
 
   private typeImport(model: RepositoryModel, casing: ICasingStrategy): string {
-    const folder = model.typeHome === "view" ? "views" : "datasource";
-    const dirs = ["types", "generated", folder].map((segment) => casing.convertDirectories(segment)).join("/");
-    return `../${dirs}/${casing.convertFileName(model.specName)}`;
+    const kind = model.typeHome === "view" ? "views" : "datasource";
+    return `../${typesPrefixOf(casing, kind)}/${casing.convertFileName(model.specName)}`;
   }
 }
 

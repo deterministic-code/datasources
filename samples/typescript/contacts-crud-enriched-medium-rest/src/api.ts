@@ -1,14 +1,14 @@
 import { DatasourceError, Operator, Where, type IWhere } from "@deterministic-code/datasources";
-import type { Contact } from "../generated/typescript/types/generated/views/contact.ts";
-import type { Address } from "../generated/typescript/types/generated/views/address.ts";
-import type { Phone } from "../generated/typescript/types/generated/views/phone.ts";
-import type { LegacyContact } from "../generated/typescript/types/generated/views/legacyContact.ts";
-import type { ContactGroup } from "../generated/typescript/types/generated/views/contactGroup.ts";
-import { ContactRepository } from "../generated/typescript/repositories/contact-repository.ts";
-import { ContactGroupRepository } from "../generated/typescript/repositories/contact-group-repository.ts";
+import type { Contact } from "../generated/types/view/generated/contact.ts";
+import type { Address } from "../generated/types/view/generated/address.ts";
+import type { Phone } from "../generated/types/view/generated/phone.ts";
+import type { LegacyContact } from "../generated/types/view/generated/legacyContact.ts";
+import type { ContactGroup } from "../generated/types/view/generated/contactGroup.ts";
+import { ContactRepository } from "../generated/repositories/contact-repository.ts";
+import { ContactGroupRepository } from "../generated/repositories/contact-group-repository.ts";
 import { clock } from "./clock.ts";
 import { jsonObject } from "./jsonObject.ts";
-import { LegacyContactRepository } from "../generated/typescript/repositories/legacy-contact-repository.ts";
+import { LegacyContactRepository } from "../generated/repositories/legacy-contact-repository.ts";
 
 export type ContactWrite = Contact;
 export type HttpResult = { status: number; body: string };

@@ -1,4 +1,4 @@
-import { address, contact, email, phone } from "../generated/typescript/repositories/repositoryRegistry.ts";
+import { address, contact, email, phone } from "../generated/repositories/repositoryRegistry.ts";
 import { Datasource, Operator, Where } from "@deterministic-code/datasources";
 
 await using ds = Datasource.default;

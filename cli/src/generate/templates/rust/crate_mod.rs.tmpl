@@ -1,9 +1,8 @@
 #![allow(dead_code, unused_imports, non_snake_case)]
 {{#typeStems}}
-{{#path}}#[path = "{{stem}}.rs"]
+#[path = "{{path}}"]
 pub mod {{ident}};
-{{/path}}{{^path}}pub mod {{stem}};
-{{/path}}{{/typeStems}}
+{{/typeStems}}
 {{#typeStems}}
 pub use {{ident}}::*;
 {{/typeStems}}

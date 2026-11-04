@@ -13,7 +13,7 @@ import { datasourceEnginesOf, engineDatasourceOf, overlayDatasource } from "./da
 import { sqlDialectsFromEnv } from "./sqlDialects.ts";
 
 const place = (dir: string, entries: GenerateEntry[]): GenerateEntry[] =>
-  entries.map((entry) => ({ ...entry, filename: `${dir}/${entry.filename}` }));
+  dir === "" ? entries : entries.map((entry) => ({ ...entry, filename: `${dir}/${entry.filename}` }));
 
 const remap = (entries: GenerateEntry[], settings: Record<string, string>, dialect: Dialect): GenerateEntry[] => {
   const casing = createCasingStrategy(dialect, settings);

@@ -7,20 +7,28 @@ import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { childClass, dialectsOf, isLinked, optimisticClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
+import { repositoriesPrefixOf, typesPrefixOf } from "./casing.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
 
 class RustRepositories extends RepositoryGenerator {
   readonly types = { datasource, views };
 
-  typesPrefix = (): string => "rust";
+  typesPrefix = (casing: ICasingStrategy, kind: "datasource" | "views"): string => typesPrefixOf(casing, kind);
 
-  repositoriesPrefix = (casing: ICasingStrategy): string =>
-    `rust/${casing.convertDirectories("repositories")}`;
+  repositoriesPrefix = (casing: ICasingStrategy): string => repositoriesPrefixOf(casing);
 
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("rust", settings);
-    const typeStems = [...new Set([...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => casing.convertFileName(type.name)))].map((stem) => this.mod(stem));
+    const datasourceNames = new Set(datasourceTypesOf(spec).map((type) => type.name));
+    const typeStems = [
+      ...new Map(
+        [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => [
+          type.name,
+          this.typeMod(casing, type.name, datasourceNames.has(type.name) ? "datasource" : "views"),
+        ]),
+      ).values(),
+    ];
     const mods = [...models.map((model) => this.mod(casing.convertFileName(`${model.specName}_repository`))), this.mod(casing.convertFileName("repository_registry"))];
     return [
       ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.rs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
@@ -131,6 +139,11 @@ class RustRepositories extends RepositoryGenerator {
   private mod(stem: string): Record<string, unknown> {
     const ident = this.ident(stem);
     return { stem, ident, path: ident === stem ? undefined : {} };
+  }
+
+  private typeMod(casing: ICasingStrategy, name: string, kind: "datasource" | "views"): Record<string, unknown> {
+    const stem = casing.convertFileName(name);
+    return { stem, ident: this.ident(stem), path: `${typesPrefixOf(casing, kind)}/${stem}.rs` };
   }
 }
 
