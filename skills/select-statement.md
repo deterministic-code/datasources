@@ -1497,7 +1497,7 @@ let ordered = SelectStatement::new(SelectStatementOptions {
 SELECT id FROM users ORDER BY id ASC, name DESC
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L114-L123)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L125-L134)
 
 ```typescript
 const ordered = new SelectStatement({
@@ -1542,7 +1542,7 @@ let limited = SelectStatement::new(SelectStatementOptions {
 SELECT id FROM users LIMIT 10
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L125-L128)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L136-L139)
 
 ```typescript
 const limited = new SelectStatement({ table: "users", fields: ["id"], limit: 10 });

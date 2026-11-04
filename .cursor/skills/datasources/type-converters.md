@@ -554,16 +554,15 @@ var user = converter.Convert(new Row
 });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L99-L112)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/metadata_row_type_converter.rs#L380-L389)
 
 ```rust
-let converter = MetaDataRowTypeConverter::new(vec!["id".into(), "name".into()]);
+let converter = MetaDataRowTypeConverter::new();
 let row = record(&[
     ("id", Value::Int(1)),
     ("name", Value::from("ada")),
     ("extra", Value::from("no")),
 ]);
-let converted = converter.convert(&row).unwrap();
 ```
 
 ##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/converters/RowTypeConverter.test.ts#L14-L19)
@@ -586,7 +585,7 @@ var converter = new MetaDataRowTypeConverter<Dictionary<string, Value>>(new Dict
 var dest = converter.Convert(new Row { ["flag"] = 1L, ["name"] = "a" });
 ```
 
-##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L136-L153)
+##### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/converters/row_type_converter.rs#L219-L236)
 
 ```rust
 let converter = RowTypeConverter::new(HashMap::from([(

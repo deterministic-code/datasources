@@ -1,0 +1,6 @@
+let converter = MetaDataRowTypeConverter::new();
+let row = record(&[
+    ("id", Value::Int(1)),
+    ("name", Value::from("ada")),
+    ("extra", Value::from("no")),
+]);

@@ -831,7 +831,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L294-L301)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L305-L312)
 
 ```typescript
 const where = new Where(
@@ -963,7 +963,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L459-L467)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L470-L478)
 
 ```typescript
 const where = new Where(
