@@ -113,7 +113,7 @@ npx --yes --package @deterministic-code/migraters migrate-up --provider sqlite -
 npx --yes --package @deterministic-code/migraters migrate-down --provider sqlite --connection ./app.sqlite --confirm TOKEN
 ```
 
-Add a migration that generate keeps. Put an up file and a down file under `deterministic/custom/<dialect>/`. The file name is `<order>_<name>_<up|down>.sql`. `order` is 1–999. `name` starts with a letter or digit. The next `generate all` copies the pair into `sql/<dialect>/migrations` and runs migrate-up.
+Add a migration that generate keeps. Put an up file and a down file under `deterministic/custom/<dialect>/`. The file name is `<order>_<name>_<up|down>.sql`. `order` is 1–999. `name` starts with a letter or digit. The next `generate all` copies the pair as `<order>_up_custom_<order>_<name>_<up|down>.sql` into `sql/<dialect>/migrations` and runs migrate-up. Order N runs after generated migration N (`0001_initial`, `000N_up`, `000N_stored_procedures`) and before N+1, so a seed can use `0001` when the schema is `0001_initial`.
 
 ```text
 deterministic/custom/sqlite/0001_add_notes_up.sql

@@ -24,8 +24,8 @@ function generatedFilenameForCustom(
       `generatedFilenameForCustom: direction must be "up" or "down", got "${direction}"`,
     );
   }
-  const stamp = String(order).padStart(10, "0");
-  return `${stamp}${CUSTOM_TOKEN}${String(order).padStart(3, "0")}_${name}_${direction}.sql`;
+  const stamp = String(order).padStart(4, "0");
+  return `${stamp}_up${CUSTOM_TOKEN}${String(order).padStart(3, "0")}_${name}_${direction}.sql`;
 }
 
 export async function buildCustomMigrationFiles(

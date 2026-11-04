@@ -12,6 +12,7 @@ const mem = (entries: string[], files: Record<string, string>): Fs => ({
   },
   writeFile: async () => {},
   readdir: async () => entries,
+  unlink: async () => {},
 });
 
 describe("loadSpec", () => {

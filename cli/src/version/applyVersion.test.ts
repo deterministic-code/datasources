@@ -40,6 +40,9 @@ const tree = (
         }
         return [...names];
       },
+      unlink: async (path) => {
+        delete store[path];
+      },
     },
   };
 };

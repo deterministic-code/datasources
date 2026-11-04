@@ -31,6 +31,7 @@ const mem = (files: Record<string, string> = {}): { files: Record<string, string
         store[path] = text;
       },
       readdir: async () => [],
+      unlink: async () => undefined,
     },
   };
 };

@@ -30,6 +30,9 @@ const mem = (
         store[path] = text;
       },
       readdir: async () => entries,
+      unlink: async (path) => {
+        delete store[path];
+      },
     },
   };
 };

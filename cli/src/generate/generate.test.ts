@@ -77,7 +77,19 @@ const mem = (files: Record<string, string> = {}): { files: Record<string, string
       writeFile: async (path, text) => {
         store[path] = text;
       },
-      readdir: async () => [],
+      readdir: async (path) => {
+        const prefix = path.endsWith("/") ? path : `${path}/`;
+        const names = new Set<string>();
+        for (const file of Object.keys(store)) {
+          if (!file.startsWith(prefix)) continue;
+          const name = file.slice(prefix.length).split("/")[0];
+          if (name) names.add(name);
+        }
+        return [...names];
+      },
+      unlink: async (path) => {
+        delete store[path];
+      },
     },
   };
 };
@@ -1252,6 +1264,24 @@ types: []
       ),
     ).toBe(0);
     expect(absolute.files[join("/tmp/mig", "sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+  });
+
+  it("removes a stale 10-digit custom copy and keeps a handwritten seed", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const migrations = join(cwd, "sql/sqlite/migrations");
+    const stale = join(migrations, "0000000002_custom_002_seed_categories_up.sql");
+    const handwritten = join(migrations, "0002_seed_categories_up.sql");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
+    seeded[stale] = "INSERT INTO categories VALUES (1);\n";
+    seeded[handwritten] = "INSERT INTO categories VALUES (2);\n";
+    const store = mem(seeded);
+    expect(await exec(["migrations", "create", "--cwd", cwd], deps(store.fs), cwd)).toBe(0);
+    expect(store.files[stale]).toBeUndefined();
+    expect(store.files[handwritten]).toBe("INSERT INTO categories VALUES (2);\n");
+    expect(store.files[join(migrations, "0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });
 
   it("applies SQL casing flags to migrations and repositories", async () => {

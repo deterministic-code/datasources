@@ -45,7 +45,7 @@ When `datasource.yaml` is omitted, generate includes every `datasource_type` and
 
 `generate all` writes these files and runs migrate-up. `migrations create` writes the same SQL and leaves the database unchanged. Dialects come from `settings.yaml` (`backend.datasources`, default `sqlite`). Without `version-*/diff.yaml`, the files are `0001_initial_up.sql` and `0001_initial_down.sql`. Version snapshots write `0001_up.sql`, `0002_up.sql`, and so on.
 
-A pair under `deterministic/custom/<dialect>/` named `<order>_<name>_<up|down>.sql` is copied into the migrations directory. `order` is 1–999. `npx --yes --package @deterministic-code/migraters migrate-create --provider sqlite --name add_notes` scaffolds an empty pair in that directory.
+A pair under `deterministic/custom/<dialect>/` named `<order>_<name>_<up|down>.sql` is copied into the migrations directory as `<order>_up_custom_<order>_<name>_<up|down>.sql`. `order` is 1–999. Order N runs after generated migration N (`0001_initial`, `000N_up`, `000N_stored_procedures`) and before N+1, so a seed can use `0001` when the schema is `0001_initial`. `npx --yes --package @deterministic-code/migraters migrate-create --provider sqlite --name add_notes` scaffolds an empty pair in that directory.
 
 ```sh
 npx @deterministic-code/datasources-cli migrations create
