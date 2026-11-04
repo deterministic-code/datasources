@@ -1,0 +1,34 @@
+version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types:
+  - base:
+      fields:
+        - id:
+            include_in_create: false
+            include_in_update: false
+        - uuid:
+            include_in_create: true
+        - created:
+            include_in_create: true
+        - updated:
+            include_in_create: false
+            include_in_update: false
+        - version:
+            include_in_create: true
+  - user_settings:
+      indexes:
+        - user_settings_user_id_name:
+            fields: [user_id, name]
+            is_unique: true
+  - game_settings:
+      indexes:
+        - game_settings_game_id_name:
+            fields: [game_id, name]
+            is_unique: true
+  - games_categories:
+      indexes:
+        - games_categories_game_id_category_id:
+            fields: [game_id, category_id]
+            is_unique: true

@@ -82,6 +82,17 @@ await build({
   logLevel: "warning",
 });
 
+const includesRoot = join(packages, "deterministic-generators-common/typescript/includes");
+await build({
+  entryPoints: [join(includesRoot, "index.ts")],
+  bundle: true,
+  format: "esm",
+  platform: "node",
+  packages: "external",
+  outfile: join(includesRoot, "dist/index.js"),
+  logLevel: "warning",
+});
+
 for (const name of ["generators-common", "typescript-generators", "csharp-generators", "rust-generators"]) {
   await transpile(name);
 }
