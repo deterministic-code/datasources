@@ -211,7 +211,7 @@ The repository uses this converter when {{ObjectConverter|objectConverter|object
 ::: example
 ```csharp csharp/Datasources.Tests/RowTypeConverterTests.cs#ConvertAndReverseConvertRoundTrip
 ```
-```rust rust/datasources/src/converters/metadata_row_type_converter.rs#copies_schema_columns_and_drops_the_rest
+```rust rust/datasources/src/converters/metadata_row_type_converter.rs#copies_every_cell_on_a_row
 ```
 ```typescript typescript/datasources/src/converters/RowTypeConverter.test.ts#convert-and-reverseconvert-round-trip
 ```

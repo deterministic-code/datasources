@@ -126,7 +126,7 @@ var finalEntities = convertedRows.Select(objectConverter.Convert).ToList();
 var finalManualEntities = convertedRows.Select(row => new User
 {
     Id = (long)row["Id"].ToObject()!,
-    Uuid = (Guid)row["Uuid"].ToObject()!,
+    Uuid = Guid.Parse((string)row["Uuid"].ToObject()!),
     Username = (string)row["Username"].ToObject()!,
     IsEnabled = (bool)row["IsEnabled"].ToObject()!,
     Created = (DateTime)row["Created"].ToObject()!,
@@ -183,7 +183,7 @@ var finalManualEntities = convertedRows.Select(row => new User
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L10-L146)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/providers/sqlite/tests/read_pipeline.rs#L10-L152)
 
 ```rust
 let ada = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
@@ -271,7 +271,7 @@ let converted_rows: Vec<Row> = column_mapped_rows
     .map(|row| row_converter.convert(row).unwrap())
     .collect();
 
-let object_converter = MetaDataRowTypeConverter::new(Vec::new());
+let object_converter = MetaDataRowTypeConverter::new();
 let final_entities: Vec<Row> = converted_rows
     .iter()
     .map(|row| object_converter.convert(row).unwrap())

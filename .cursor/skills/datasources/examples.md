@@ -340,7 +340,7 @@ Find the closest title. Open that language's snippet. Topic files already includ
 
 - Convert a row
   - `docs/examples/convert-a-row/RowTypeConverterTests.ConvertAndReverseConvertRoundTrip.csharp`
-  - `docs/examples/convert-a-row/metadata_row_type_converter.copies_schema_columns_and_drops_the_rest.rust`
+  - `docs/examples/convert-a-row/metadata_row_type_converter.copies_every_cell_on_a_row.rust`
   - `docs/examples/convert-a-row/RowTypeConverter.test.convert-and-reverseconvert-round-trip.typescript`
 - Field converter
   - `docs/examples/field-converter/RowTypeConverterTests.AppliesFieldOverrideOnDictionaryRows.csharp`

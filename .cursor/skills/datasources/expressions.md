@@ -488,7 +488,7 @@ let where_clause = Where::new(Operator::and(
 ));
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L303-L308)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L314-L319)
 
 ```typescript
 const where = new Where(

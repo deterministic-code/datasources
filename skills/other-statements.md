@@ -980,7 +980,7 @@ let create_table = CreateTableStatement::new(
 CREATE TABLE users (id INTEGER, name TEXT)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L167-L175)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L178-L186)
 
 ```typescript
 const createTable = new CreateTableStatement("users", [
@@ -1057,7 +1057,7 @@ let named_table = CreateTableStatement::new(
 CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L177-L196)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L188-L207)
 
 ```typescript
 const namedTable = new CreateTableStatement(
@@ -1369,7 +1369,7 @@ let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["use
 CREATE INDEX idx_orders_user ON orders (user_id)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L198-L203)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L209-L214)
 
 ```typescript
 const createIndex = new CreateIndexStatement("idx_orders_user", "orders", ["user_id"]);
@@ -1407,7 +1407,7 @@ let create_index = CreateIndexStatement::new("uq_orders_code", "orders", &["code
 CREATE UNIQUE INDEX uq_orders_code ON orders (code)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L205-L210)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L216-L221)
 
 ```typescript
 const createIndex = new CreateIndexStatement("uq_orders_code", "orders", ["code"], true);
@@ -1701,7 +1701,7 @@ let call = ExecuteStoredProcedureStatement::new("save", &fields);
 CALL save($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L276-L283)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L287-L294)
 
 ```typescript
 const fields = [
@@ -1999,7 +1999,7 @@ let ret = ReturnStatement::new("add", &fields);
 SELECT add($id, $name)
 ```
 
-##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L285-L292)
+##### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L296-L303)
 
 ```typescript
 const fields = [
