@@ -1,10 +1,12 @@
 import { isAbsolute, join, relative } from "node:path";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
+import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Flags, GenerateCommand } from "../parse.ts";
 import type { Deps } from "../io.ts";
 import { destEnv } from "./destEnv.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
+import { requireKnownReferenceTypes } from "./requireKnownReferenceTypes.ts";
 import { withStoredProcedures } from "./storedProcedures.ts";
 import { writeEntries } from "./writeEntries.ts";
 import { overlayCasingFlags } from "./casing.ts";
@@ -20,9 +22,11 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
     command.dialect,
     command,
   );
+  const reader = memoryReader(loaded.files);
+  requireKnownReferenceTypes(await DeterministicParser(reader).parse(settings));
   const request = {
     dialect: command.dialect,
-    reader: memoryReader(loaded.files),
+    reader,
     settings,
     env: await destEnv(deps.fs, flags.cwd),
   };

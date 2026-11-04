@@ -1,11 +1,13 @@
 import { isAbsolute, join } from "node:path";
 import { generateSql } from "@deterministic-code/datasources-code-generators";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
+import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Flags, MigrationsCreateCommand } from "../parse.ts";
 import type { Deps } from "../io.ts";
 import { destEnv } from "./destEnv.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
+import { requireKnownReferenceTypes } from "./requireKnownReferenceTypes.ts";
 import { overlaySqlFlags } from "./sqlFlags.ts";
 import { sqlDialectsFromEnv } from "./sqlDialects.ts";
 import { withStoredProcedures } from "./storedProcedures.ts";
@@ -20,10 +22,13 @@ export const applyMigrations = async (
 ): Promise<void> => {
   providerByName(command.provider);
   const loaded = await loadSpec(deps.fs, at(flags.cwd, command.input));
+  const reader = memoryReader(loaded.files);
+  const settings = overlaySqlFlags(withStoredProcedures(loaded.settings, command.storedProcedures), command);
+  requireKnownReferenceTypes(await DeterministicParser(reader).parse(settings));
   const entries = await generateSql(
     {
-      reader: memoryReader(loaded.files),
-      settings: overlaySqlFlags(withStoredProcedures(loaded.settings, command.storedProcedures), command),
+      reader,
+      settings,
     },
     sqlDialectsFromEnv(await destEnv(deps.fs, flags.cwd)),
   );

@@ -126,6 +126,37 @@ const exec = async (argv: string[], io: Deps, cwd = "."): Promise<number> => {
 };
 
 describe("generate", () => {
+  it("fails parse with missing type user before generate writes files", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - review:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - user_id:
+            references: user.id
+`,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+    });
+    const errs: string[] = [];
+    const io = deps(store.fs);
+    io.err = (line) => errs.push(line);
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        io,
+        cwd,
+      ),
+    ).toBe(1);
+    expect(errs).toEqual(['missing type "user"']);
+    expect(Object.keys(store.files).every((path) => !path.includes("generated") && !path.includes("sql/"))).toBe(true);
+  });
+
   it("generates the complex-game spec after resolving file includes", async () => {
     const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
     const loaded = await loadSpec(nodeFs, dir);
