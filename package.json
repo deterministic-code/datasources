@@ -15,7 +15,7 @@
     "docs:publish": "node scripts/publish-docs.mjs",
     "docs:readme": "node scripts/generate-readme.mjs",
     "docs:skill": "node --experimental-strip-types scripts/generate-skill.mjs",
-    "test:samples": "npm test --prefix samples/typescript/user-roles-simple-cli && env -u CARGO_TARGET_DIR cargo test --manifest-path samples/rust/user-roles-simple-cli/Cargo.toml --lib && dotnet test samples/csharp/user-roles-simple-cli/UserRolesSimpleCli.Tests.csproj && npm test --prefix samples/typescript/contacts-crud-enriched-medium-rest && env -u CARGO_TARGET_DIR cargo test --manifest-path samples/rust/contacts-crud-enriched-medium-rest/Cargo.toml --lib",
+    "test:samples": "npm test --prefix samples/typescript/user-roles-simple-cli && env -u CARGO_TARGET_DIR cargo test --manifest-path samples/rust/user-roles-simple-cli/Cargo.toml --lib && dotnet test samples/csharp/user-roles-simple-cli/UserRolesSimpleCli.Tests.csproj && npm test --prefix samples/typescript/contacts-crud-enriched-medium-rest && env -u CARGO_TARGET_DIR cargo test --manifest-path samples/rust/contacts-crud-enriched-medium-rest/Cargo.toml --lib && npm test --prefix samples/typescript/complex-game-rest && env -u CARGO_TARGET_DIR cargo test --manifest-path samples/rust/complex-game-rest/Cargo.toml --lib && dotnet test samples/csharp/complex-game-rest/ComplexGameRest.Tests.csproj",
     "e2e-matrix": "node scripts/e2e-matrix.mjs",
     "test:perf": "node scripts/perf-matrix.mjs",
     "test:perf:reads": "node scripts/perf-matrix.mjs --reads",

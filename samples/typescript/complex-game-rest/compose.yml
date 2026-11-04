@@ -1,0 +1,63 @@
+services:
+  mysql:
+    image: mysql:8
+    restart: "no"
+    stop_grace_period: 0s
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: datasources
+      MYSQL_USER: ds
+      MYSQL_PASSWORD: ds
+    volumes:
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    tmpfs:
+      - /var/lib/mysql
+      - /tmp
+    command: ["--innodb-buffer-pool-size=64M", "--tls-version=", "--mysql-native-password=ON"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uds", "-pds"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  postgres:
+    image: postgres:16
+    restart: "no"
+    stop_grace_period: 0s
+    environment:
+      POSTGRES_USER: ds
+      POSTGRES_PASSWORD: ds
+      POSTGRES_DB: datasources
+    tmpfs:
+      - /var/lib/postgresql/data
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ds -d datasources"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  runner:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    image: datasources-e2e-node
+    build:
+      context: ../../../scripts
+      dockerfile: e2e-node.Dockerfile
+    pull_policy: never
+    restart: "no"
+    stop_grace_period: 0s
+    tmpfs:
+      - /tmp:exec
+      - /work:exec
+    volumes:
+      - ../../..:/opt/repo:ro
+      - ${HOME}/.cache/datasources-npm:/npm-cache
+      - ${HOME}/.cache/datasources-e2e:/e2e-cache
+    working_dir: /work
+    environment:
+      SAMPLE: samples/typescript/complex-game-rest
+      npm_config_cache: /npm-cache
+      MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
+      POSTGRES_URL: postgres://ds:ds@postgres:5432/datasources

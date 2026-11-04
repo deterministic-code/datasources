@@ -4,22 +4,6 @@ includes:
     combine_options:
       source:
         remove_types: [base]
-        add_fields:
-          - type: user
-            add_field:
-              settings:
-                type: user_settings_map{}
-                references: user_settings.user_id
-          - type: user
-            add_field:
-              roles:
-                type: role[]
-                references: user_role.user_id
-          - type: user
-            add_field:
-              groups:
-                type: group[]
-                references: user_group.user_id
   - file: ../../contacts-crud-enriched-medium-rest-shared/deterministic/types.yaml
     combine_options:
       source:
@@ -75,11 +59,25 @@ types:
             type: string
             size: unlimited
             references: user_settings.value
+  - users:
+      tags: [view_type]
+      inherits: user
+      fields:
+        - settings:
+            type: user_settings_map{}
+            references: user_settings.user_id
+        - roles:
+            type: role[]
+            references: user_role.user_id
+        - groups:
+            type: group[]
+            references: user_group.user_id
   - categories:
       tags: [datasource_type, view_type]
       inherits: base
       fields:
         - category_id:
+            # null is a root category
             references: categories.id
             is_nullable: true
         - name:

@@ -131,14 +131,14 @@ describe("generate", () => {
     const loaded = await loadSpec(nodeFs, dir);
     const spec = await DeterministicParser(memoryReader(loaded.files)).parse(loaded.settings);
     const names = spec.types.map((type) => type.name);
-    expect(names).toEqual(expect.arrayContaining(["user", "contact", "games", "categories", "user_settings"]));
-    expect(spec.types.find((type) => type.name === "user")?.fields.map((field) => field.name)).toEqual(
+    expect(names).toEqual(expect.arrayContaining(["user", "users", "contact", "games", "categories", "user_settings"]));
+    expect(spec.types.find((type) => type.name === "users")?.fields.map((field) => field.name)).toEqual(
       expect.arrayContaining(["settings", "roles", "groups"]),
     );
     expect(spec.types.find((type) => type.name === "contacts_base")?.fields.some((field) => field.name === "user_id")).toBe(true);
     const models = planRepositories(spec, "typescript", loaded.settings);
     expect(models.map((model) => model.specName)).toEqual(
-      expect.arrayContaining(["user", "games", "contact", "categories", "reviews", "game_states"]),
+      expect.arrayContaining(["users", "games", "contact", "categories", "reviews", "game_states"]),
     );
     const entries = await deterministic.generateTypes({
       dialect: "typescript",
