@@ -3,7 +3,18 @@ import { isProvider, providers, requireProviders, type Ecosystem, type Provider 
 import { addCommands, removeCommands, type Proc } from "./commands.ts";
 import { requireDatasourcesRepo } from "./localRepo.ts";
 import { csharpTarget, detect, isEcosystem, requireProjects, setupLanguages } from "./detect.ts";
-import { answersFromEnv, parseEnv, scheme, serializeEnv, updateEnvProviders, withSchema, type EnvMap } from "./env.ts";
+import {
+  answersFromEnv,
+  ensureProviders,
+  parseEnv,
+  scheme,
+  serializeEnv,
+  splitProviders,
+  updateEnvProviders,
+  withSchema,
+  type EnvMap,
+} from "./env.ts";
+import { flattenSettings } from "./generate/settingsFlat.ts";
 import { defaultDatasourceYaml } from "./generate/loadSpec.ts";
 import type { Deps, Fs, Prompter } from "./io.ts";
 import { cargoProviders, csharpProviders, hasDatasourcesNpm, npmProviders, type NpmManifest } from "./installed.ts";
@@ -82,8 +93,15 @@ export const promptSetup = async (
 
 export const envFromAnswers = (answers: SetupAnswers): EnvMap => {
   const provider = scheme(answers.url) ?? answers.providers[0] ?? "sqlite";
+  const names = answers.providers.length
+    ? isProvider(provider)
+      ? ensureProviders(answers.providers, provider)
+      : answers.providers
+    : isProvider(provider)
+      ? [provider]
+      : ["sqlite"];
   return {
-    INSTALLED_PROVIDERS: provider,
+    INSTALLED_PROVIDERS: names.join(","),
     PROVIDER: provider,
     DATASOURCE_URL: withSchema(answers.url, answers.schema),
   };
@@ -103,13 +121,13 @@ export const applySetup = async (flags: Flags, deps: Deps, requested: string[]):
   const datasourcePath = join(specDir, "datasource.yaml");
   const missingSpec = (await optional(deps.fs, typesPath)) === undefined;
   const answers: SetupAnswers = flags.yes
-    ? { ...answersForSetup(existing, requested), languages: flags.languages, scaffold: false }
+    ? await yesAnswers(existing, requested, flags.languages, deps.fs, specDir)
     : await promptSetup(deps.prompt, existing, found, flags.languages, missingSpec, requested);
   const explicit = answers.languages ?? flags.languages;
   const languages = setupLanguages(found, explicit, await npmHasDatasources(deps.fs, flags.cwd));
   requireProjects(languages, entries);
   const env = envFromAnswers(answers);
-  const selected = isProvider(env.PROVIDER) ? [env.PROVIDER] : requireProviders(answers.providers);
+  const selected = requireProviders(splitProviders(env.INSTALLED_PROVIDERS));
   if (!flags.dryRun) await writeEnv(deps.fs, flags.cwd, { ...existing, ...env });
   for (const language of languages) {
     const installed = await readInstalled(deps.fs, flags.cwd, language, entries);
@@ -172,6 +190,7 @@ const applyPackages = async (
   const procs: Proc[] = [
     ...(add.length ? addCommands(ecosystem, add, entries, csproj, local) : []),
     ...(remove.length ? removeCommands(ecosystem, remove, remaining, entries, csproj, local) : []),
+    ...(add.length ? csharpRestore(ecosystem, entries) : []),
   ];
   await runProcs(flags, deps, procs);
   await {
@@ -179,6 +198,33 @@ const applyPackages = async (
     csharp: () => wireCsharpBuildProps(flags.cwd, flags.dryRun, deps),
     ts: () => Promise.resolve(),
   }[ecosystem]();
+};
+
+const yesAnswers = async (
+  existing: EnvMap,
+  requested: string[],
+  languages: Ecosystem[],
+  fs: Fs,
+  specDir: string,
+): Promise<SetupAnswers> => {
+  const base = answersForSetup(existing, requested);
+  return {
+    ...base,
+    providers: [...new Set([...base.providers, ...(await settingsDatasources(fs, specDir))])],
+    languages,
+    scaffold: false,
+  };
+};
+
+const settingsDatasources = async (fs: Fs, specDir: string): Promise<string[]> => {
+  const text = await optional(fs, join(specDir, "settings.yaml"));
+  return text === undefined ? [] : splitProviders(flattenSettings(text)["backend.datasources"] ?? "");
+};
+
+const csharpRestore = (ecosystem: Ecosystem, entries: string[]): Proc[] => {
+  if (ecosystem !== "csharp") return [];
+  const project = csharpTarget(entries);
+  return [{ command: "dotnet", args: ["restore", project] }];
 };
 
 const applyMigrateInit = async (

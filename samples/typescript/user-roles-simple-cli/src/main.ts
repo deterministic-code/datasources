@@ -1,7 +1,6 @@
 import {
   ConsoleCommandMiddleware,
   Datasource,
-  DatasourceFactory,
   ExecuteStoredProcedureStatement,
   FlatToNestedMapper,
   InsertStatement,
@@ -19,9 +18,6 @@ import {
   type Parameter,
   type TypeMap,
 } from "@deterministic-code/datasources";
-import { MysqlDriver } from "@deterministic-code/datasources-mysql";
-import { PostgresDriver } from "@deterministic-code/datasources-postgres";
-import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import bcrypt from "bcryptjs";
 import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -336,9 +332,6 @@ const env = (key: string): string => {
 
 const main = async (args: string[]): Promise<number> => {
   try {
-    DatasourceFactory.register("sqlite", new SqliteDriver());
-    DatasourceFactory.register("mysql", new MysqlDriver());
-    DatasourceFactory.register("postgres", new PostgresDriver());
     await using ds = Datasource.default;
     const connection = await ds.createConnection();
     await connection.open();

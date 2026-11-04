@@ -1,8 +1,5 @@
 using System.Text.Json;
 using Datasources;
-using Datasources.Mysql;
-using Datasources.Postgres;
-using Datasources.Sqlite;
 
 namespace UserRolesSimpleCli;
 
@@ -122,9 +119,6 @@ public static class Program
     {
         try
         {
-            DatasourceFactory.Register("sqlite", new SqliteDriver());
-            DatasourceFactory.Register("mysql", new MysqlDriver());
-            DatasourceFactory.Register("postgres", new PostgresDriver());
             await using var ds = Datasource.Default;
             var connection = await ds.CreateConnection();
             await connection.Open();
