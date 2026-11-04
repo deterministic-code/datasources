@@ -260,7 +260,7 @@ impl PostgresCommand {
     }
 }
 
-fn box_value(value: &Value) -> Box<dyn ToSql + Sync + Send> {
+pub(crate) fn box_value(value: &Value) -> Box<dyn ToSql + Sync + Send> {
     Box::new(PgValue(value.clone()))
 }
 

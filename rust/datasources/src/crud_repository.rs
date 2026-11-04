@@ -649,7 +649,7 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
                 let created = self.insert_parent(&mut row).await?;
                 copy_cells(&created, &mut *item, &self.ids)?;
                 if !self.enriched() {
-                    return map_row(created);
+                    return Ok(*item);
                 }
                 self.write
                     .persist(&self.tree, std::slice::from_mut(&mut *item), WriteMode::Create)
