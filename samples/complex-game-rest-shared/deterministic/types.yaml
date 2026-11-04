@@ -1,0 +1,185 @@
+version: 1.0.0
+includes:
+  - file: ../../user-roles-simple-cli-shared/deterministic/types.yaml
+    combine_options:
+      source:
+        remove_types: [base]
+        add_fields:
+          - type: user
+            add_field:
+              settings:
+                type: user_settings_map{}
+                references: user_settings.user_id
+          - type: user
+            add_field:
+              roles:
+                type: role[]
+                references: user_role.user_id
+          - type: user
+            add_field:
+              groups:
+                type: group[]
+                references: user_group.user_id
+  - file: ../../contacts-crud-enriched-medium-rest-shared/deterministic/types.yaml
+    combine_options:
+      source:
+        remove_types: [base]
+        add_fields:
+          - type: contacts_base
+            add_field:
+              user_id:
+                references: user.id
+        modify_fields:
+          - field: contact_change_log.contact_id
+            def:
+              type: biginteger
+types:
+  - base:
+      fields:
+        - id:
+            type: biginteger
+            is_id: true
+        - uuid:
+            type: uuid
+            default_value: NewId
+        - created:
+            type: datetime
+            default_value: UtcNow
+        - updated:
+            type: datetime
+            default_value: UtcNow
+        - version:
+            type: binary
+            default_value: Hex('00')
+  - user_settings:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - user_id:
+            references: user.id
+        - name:
+            type: string
+            size: 128
+        - value:
+            type: string
+            size: unlimited
+  - user_settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            size: 128
+            references: user_settings.name
+        - value:
+            type: string
+            size: unlimited
+            references: user_settings.value
+  - categories:
+      tags: [datasource_type, view_type]
+      inherits: base
+      fields:
+        - category_id:
+            references: categories.id
+            is_nullable: true
+        - name:
+            type: string
+            size: 128
+        - description:
+            type: string
+            size: unlimited
+        - is_enabled:
+            type: boolean
+            default_value: true
+        - is_deleted:
+            type: boolean
+            default_value: false
+  - games_base:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - name:
+            type: string
+            size: 128
+        - description:
+            type: string
+            size: unlimited
+        - location:
+            type: string
+            size: 256
+        - is_enabled:
+            type: boolean
+            default_value: true
+        - is_deleted:
+            type: boolean
+            default_value: false
+  - games_categories:
+      tags: [datasource_type, many_to_many]
+      inherits: base
+      fields:
+        - game_id:
+            references: games_base.id
+        - category_id:
+            references: categories.id
+  - game_states:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - game_id:
+            references: games_base.id
+        - user_id:
+            references: user.id
+        - state:
+            type: string
+            size: 256
+  - game_settings:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - game_id:
+            references: games_base.id
+        - name:
+            type: string
+            size: 128
+        - value:
+            type: string
+            size: unlimited
+  - game_settings_map:
+      tags: [view_type]
+      inherits: dictionary
+      fields:
+        - key:
+            type: string
+            size: 128
+            references: game_settings.name
+        - value:
+            type: string
+            size: unlimited
+            references: game_settings.value
+  - reviews:
+      tags: [datasource_type]
+      inherits: base
+      fields:
+        - game_id:
+            references: games_base.id
+        - user_id:
+            references: user.id
+        - description:
+            type: string
+            size: unlimited
+        - rating:
+            type: decimal
+            size: [10, 2]
+        - is_approved:
+            type: boolean
+            default_value: false
+  - games:
+      tags: [view_type]
+      inherits: games_base
+      fields:
+        - settings:
+            type: game_settings_map{}
+            references: game_settings.game_id
+        - categories:
+            type: categories[]
+            references: games_categories.game_id

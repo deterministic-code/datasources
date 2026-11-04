@@ -54,6 +54,7 @@ types:
   - user_group:
       tags:
         - datasource_type
+        - many_to_many
       inherits: base
       fields:
         - user_id:
@@ -63,6 +64,7 @@ types:
   - user_role:
       tags:
         - datasource_type
+        - many_to_many
       inherits: base
       fields:
         - user_id:

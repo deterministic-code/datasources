@@ -21,7 +21,8 @@ import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
 import { writeEntries } from "./writeEntries.ts";
-import { defaultDatasourceYaml } from "./loadSpec.ts";
+import { defaultDatasourceYaml, loadSpec } from "./loadSpec.ts";
+import { nodeFs } from "../io.ts";
 import { DictionaryMapper } from "@deterministic-code/datasources";
 import { register } from "@deterministic-code/datasources-code-generators/common/sql-dialect";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
@@ -125,6 +126,29 @@ const exec = async (argv: string[], io: Deps, cwd = "."): Promise<number> => {
 };
 
 describe("generate", () => {
+  it("generates the complex-game spec after resolving file includes", async () => {
+    const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
+    const loaded = await loadSpec(nodeFs, dir);
+    const spec = await DeterministicParser(memoryReader(loaded.files)).parse(loaded.settings);
+    const names = spec.types.map((type) => type.name);
+    expect(names).toEqual(expect.arrayContaining(["user", "contact", "games", "categories", "user_settings"]));
+    expect(spec.types.find((type) => type.name === "user")?.fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(["settings", "roles", "groups"]),
+    );
+    expect(spec.types.find((type) => type.name === "contacts_base")?.fields.some((field) => field.name === "user_id")).toBe(true);
+    const models = planRepositories(spec, "typescript", loaded.settings);
+    expect(models.map((model) => model.specName)).toEqual(
+      expect.arrayContaining(["user", "games", "contact", "categories", "reviews", "game_states"]),
+    );
+    const entries = await deterministic.generateTypes({
+      dialect: "typescript",
+      reader: memoryReader(loaded.files),
+      settings: loaded.settings,
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    expect(entries.length).toBeGreaterThan(0);
+  });
+
   it("flattens settings", () => {
     expect(flattenSettings("settings:\n  backend:\n    datasources: sqlite\n  names:\n    - a\n    - b\n  on: false\n  empty: null\n")).toEqual({
       "backend.datasources": "sqlite",
