@@ -3,12 +3,15 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 samples="
 samples/typescript/contacts-simple-cli
 samples/typescript/contacts-crud-enriched-medium-rest
+samples/typescript/complex-game-rest
 samples/typescript/user-roles-simple-cli
 samples/csharp/contacts-simple-cli
 samples/csharp/contacts-crud-enriched-medium-rest
+samples/csharp/complex-game-rest
 samples/csharp/user-roles-simple-cli
 samples/rust/contacts-simple-cli
 samples/rust/contacts-crud-enriched-medium-rest
+samples/rust/complex-game-rest
 samples/rust/user-roles-simple-cli
 "
 down_flags="down -v --remove-orphans -t 0"

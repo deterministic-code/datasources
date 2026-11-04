@@ -1,0 +1,18 @@
+[package]
+name = "complex-game-rest"
+version = "0.1.0"
+edition = "2021"
+autobins = false
+
+[[bin]]
+name = "complex-game-rest"
+path = "e2e/main.rs"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints.rust]
+warnings = "deny"

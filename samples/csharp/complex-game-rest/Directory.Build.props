@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'ComplexGameRest.Tests'">
+    <BaseIntermediateOutputPath>obj/ComplexGameRest.Tests/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/ComplexGameRest.Tests/</BaseOutputPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);node_modules/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>
