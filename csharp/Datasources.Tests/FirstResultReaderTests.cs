@@ -27,6 +27,7 @@ public sealed class FirstResultReaderTests
                 return Task.CompletedTask;
             });
         var (reader, rows) = await FirstResultReader.Capture(live);
+        Assert.True(closed);
         Assert.Equal(2, rows.Count);
         Assert.Equal(new Value.Int(1), rows[0]["id"]);
         Assert.True(await reader.Next());
@@ -38,6 +39,5 @@ public sealed class FirstResultReaderTests
         Assert.True(await reader.Next());
         Assert.Equal(new Value.Int(3), reader.Current!["id"]);
         await reader.DisposeAsync();
-        Assert.True(closed);
     }
 }

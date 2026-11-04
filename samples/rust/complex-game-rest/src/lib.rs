@@ -11,6 +11,7 @@ mod generated;
 
 pub mod api;
 pub mod clock;
+mod json_object;
 
 #[cfg(test)]
 mod api_tests;

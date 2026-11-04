@@ -13,6 +13,7 @@ import type { Categories } from "../generated/typescript/types/generated/views/c
 import type { Reviews } from "../generated/typescript/types/generated/datasource/reviews.ts";
 import type { GameStates } from "../generated/typescript/types/generated/datasource/gameStates.ts";
 import { clock } from "./clock.ts";
+import { jsonObject } from "./jsonObject.ts";
 
 export type HttpResult = { status: number; body: string };
 
@@ -74,7 +75,7 @@ export class Api {
     const filter = raw.length === 0
       ? new Where(new Operator.IsNull(new Identifier("categoryId")))
       : new Where(new Operator.Equals("categoryId", Number(raw)));
-    return { status: 200, body: JSON.stringify(await list(this.categories, filter)) };
+    return { status: 200, body: jsonObject.toString(await list(this.categories, filter)) };
   };
 }
 
@@ -128,10 +129,10 @@ const stampRow = <T extends { uuid?: string; created?: Date; updated?: Date; ver
 };
 
 const get = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>, keys: string[]): Promise<HttpResult> =>
-  ({ status: 200, body: JSON.stringify(await list(repo, whereOf(query, keys))) });
+  ({ status: 200, body: jsonObject.toString(await list(repo, whereOf(query, keys))) });
 
 const post = async <T>(repo: ICRUDRepository<T>, row: T): Promise<HttpResult> =>
-  ({ status: 201, body: JSON.stringify(await repo.create(row)) });
+  ({ status: 201, body: jsonObject.toString(await repo.create(row)) });
 
 const put = async <T>(
   repo: ICRUDRepository<T>,
@@ -143,7 +144,7 @@ const put = async <T>(
   if ((await repo.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
   setId(row, id);
   await repo.update(row);
-  return { status: 200, body: JSON.stringify(await repo.readSingle(new Where(new Operator.Equals("id", id)))) };
+  return { status: 200, body: jsonObject.toString(await repo.readSingle(new Where(new Operator.Equals("id", id)))) };
 };
 
 const remove = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>): Promise<HttpResult> => {
@@ -169,12 +170,7 @@ const whereOf = (query: Record<string, string>, keys: string[]): IWhere | undefi
 
 const numberKey = (key: string): boolean => key === "id" || key === "userId" || key === "gameId" || key === "categoryId";
 
-const read = <T>(body: string | undefined): T => {
-  if (body == null || body.trim() === "") return {} as T;
-  const parsed: unknown = JSON.parse(body);
-  if (parsed == null || typeof parsed !== "object") throw new SyntaxError("invalid json");
-  return parsed as T;
-};
+const read = <T>(body: string | undefined): T => jsonObject.fromString<T>(body);
 
 const requiredNumber = (query: Record<string, string>, key: string): number => {
   const value = Number(required(query, key));

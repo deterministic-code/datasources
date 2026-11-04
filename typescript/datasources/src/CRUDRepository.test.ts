@@ -48,6 +48,19 @@ class Host {
   Prefs: Record<string, Pref> = {};
 }
 
+class NamedSetting {
+  Id = 0;
+  ParentId = 0;
+  Name = "";
+  Value = "";
+}
+
+class NamedHost {
+  Id = 0;
+  Label = "";
+  Settings: Record<string, string> = {};
+}
+
 class Parent {
   Id = 0;
   Type = new UserType();
@@ -231,6 +244,25 @@ describe("CRUDRepository", () => {
     expect(updated?.Prefs.work.Locale).toBe("en-US");
     expect(updated?.Prefs.work.Timezone).toBe("America/New_York");
     expect(updated?.Prefs.travel).toBeUndefined();
+  });
+
+  it("round-trips a dictionary when the child key is Name", async () => {
+    const connection = await setup();
+    const hostsRepo = repo(NamedHost, connection);
+    const settingsRepo = repo(NamedSetting, connection);
+    hostsRepo.addEnriched(
+      { destinationProperty: "Settings", sourceProperty: "Id", relatedKey: "ParentId", relatedProperty: "Value", type: "dictionary" },
+      settingsRepo,
+    );
+    const created = await hostsRepo.create(
+      Object.assign(new NamedHost(), { Label: "ada", Settings: { theme: "dark" } }),
+    );
+    expect(created.Id).toBeGreaterThan(0);
+    const stored = (await collectAsync(settingsRepo.read()))[0];
+    expect(stored?.Name).toBe("theme");
+    expect(stored?.Value).toBe("dark");
+    const loaded = await hostsRepo.readSingle();
+    expect(loaded?.Settings).toEqual({ theme: "dark" });
   });
 
   it("creates children, stamps FK, and skips select", async () => {

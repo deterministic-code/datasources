@@ -483,6 +483,37 @@ mod tests {
         assert_eq!(stamped.contact_id, 1);
     }
 
+    #[derive(Clone, Debug, Default, PartialEq, Facet)]
+    struct NamedSettingRow {
+        id: i32,
+        contact_id: i32,
+        name: String,
+        value: String,
+    }
+
+    impl SchemaObject for NamedSettingRow {}
+
+    #[test]
+    fn dictionary_rows_use_name_when_child_has_no_key() {
+        let house = House {
+            settings: std::collections::HashMap::from([("theme".into(), "dark".into())]),
+            ..House::default()
+        };
+        let settings = crate::create_enrichment_strategy::children::<House, NamedSettingRow>(
+            &crate::Enrichment::new(
+                "settings",
+                "id",
+                "contact_id",
+                Some("value".into()),
+                crate::EnrichmentPropertyType::Dictionary,
+            ),
+            &house,
+        )
+        .unwrap();
+        assert_eq!(settings[0].name, "theme");
+        assert_eq!(settings[0].value, "dark");
+    }
+
     #[test]
     fn set_cell_keeps_dictionary_maps() {
         let house = House {

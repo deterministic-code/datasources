@@ -22,7 +22,8 @@ export abstract class UpdateEnrichmentStrategy<T> {
     parent: TParent,
     into: string,
     enrichment?: Enrichment,
-  ): TChild[] => mapPayload(this.getCell(parent, into), enrichment) as TChild[];
+    writer?: ICRUDRepository<TChild>,
+  ): TChild[] => mapPayload(this.getCell(parent, into), enrichment, writer) as TChild[];
 
   protected stampCell = <TItem extends object>(related: TItem, by: string, key: Scalar | object | undefined): void => {
     if (key === undefined || key === null || typeof key === "object") return;
@@ -78,11 +79,15 @@ export abstract class UpdateEnrichmentStrategy<T> {
   };
 }
 
-const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment): object[] => {
+const mapPayload = (
+  value: Scalar | object | undefined,
+  enrichment?: Enrichment,
+  writer?: { type: new () => object },
+): object[] => {
   if (value === undefined || value === null || typeof value === "string") return [];
   if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
   if (enrichment?.type !== "dictionary" || typeof value !== "object") return [];
-  const keyName = mapKeyName(enrichment.relatedKey);
+  const keyName = mapKeyName(enrichment.relatedKey, probe(writer));
   const valueName = enrichment.relatedProperty ?? (keyName === "Key" ? "Value" : "value");
   return Object.entries(value as Record<string, Scalar | object>)
     .sort(([left], [right]) => left.localeCompare(right))
@@ -93,5 +98,17 @@ const mapPayload = (value: Scalar | object | undefined, enrichment?: Enrichment)
     );
 };
 
-const mapKeyName = (relatedKey: string): string =>
-  relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
+const probe = (writer?: { type: new () => object }): object | undefined => {
+  try {
+    return writer ? new writer.type() : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const mapKeyName = (relatedKey: string, child?: object): string =>
+  child && "Key" in child ? "Key"
+    : child && "key" in child ? "key"
+      : child && "Name" in child ? "Name"
+        : child && "name" in child ? "name"
+          : relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";

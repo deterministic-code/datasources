@@ -155,6 +155,7 @@ async fn readers() {
         closed: closed.clone(),
     };
     let (reader, rows) = FirstResultReader::capture(Box::new(live)).await.unwrap();
+    assert!(*closed.lock().expect("reader"));
     assert_eq!(rows.len(), 2);
     assert!(reader.next().await.unwrap());
     assert_eq!(reader.current().unwrap().get("id"), Some(&Value::Int(1)));
@@ -165,7 +166,6 @@ async fn readers() {
     assert!(reader.next().await.unwrap());
     assert_eq!(reader.current().unwrap().get("id"), Some(&Value::Int(3)));
     drop(reader);
-    assert!(*closed.lock().expect("reader"));
 
     let collected: Vec<_> = ArrayReader::new(vec![record(&[("id", Value::Int(2))])])
         .read()

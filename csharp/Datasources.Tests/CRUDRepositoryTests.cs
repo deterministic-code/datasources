@@ -42,6 +42,21 @@ public class CRUDRepositoryTests
         public Dictionary<string, Pref> Prefs { get; set; } = [];
     }
 
+    sealed class NamedSetting
+    {
+        public long Id { get; set; }
+        public long ParentId { get; set; }
+        public string Name { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    sealed class NamedHost
+    {
+        public long Id { get; set; }
+        public string Label { get; set; } = "";
+        public Dictionary<string, string> Settings { get; set; } = [];
+    }
+
     sealed class Parent
     {
         public long Id { get; set; }
@@ -224,6 +239,26 @@ public class CRUDRepositoryTests
         Assert.Equal("Europe/Paris", updated.Prefs["home"].Timezone);
         Assert.False(updated.Prefs.ContainsKey("travel"));
         Assert.Equal("en-US", updated.Prefs["work"].Locale);
+    }
+
+    [Fact]
+    public async Task RoundTripsDictionaryWhenChildKeyIsName()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<NamedHost>(connection);
+        var settingsRepo = Open<NamedSetting>(connection);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
+        var created = await hostsRepo.Create(new NamedHost
+        {
+            Label = "ada",
+            Settings = { ["theme"] = "dark" },
+        });
+        Assert.True(created.Id > 0);
+        var stored = Assert.Single(await settingsRepo.Read().ToListAsync());
+        Assert.Equal("theme", stored.Name);
+        Assert.Equal("dark", stored.Value);
+        var loaded = await hostsRepo.ReadSingle();
+        Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark" }, loaded!.Settings);
     }
 
     [Fact]

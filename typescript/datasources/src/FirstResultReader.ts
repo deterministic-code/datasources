@@ -4,29 +4,35 @@ import { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 
 export class FirstResultReader implements IReader<Cells> {
   current: Cells | undefined = undefined;
+  private set = 0;
   private index = -1;
-  private firstSet = true;
 
-  private constructor(
-    private readonly first: readonly Cells[],
-    private readonly live: IReader<Cells>,
-  ) {}
+  private constructor(private readonly sets: readonly (readonly Cells[])[]) {}
 
   static async capture(live: IReader<Cells>): Promise<{ value: IReader<Cells>; rows: Cells[] }> {
-    const rows: Cells[] = [];
-    while (await live.next()) if (live.current != null) rows.push(live.current);
-    return { value: new FirstResultReader(rows, live), rows };
+    const sets: Cells[][] = [];
+    try {
+      for (;;) {
+        const rows: Cells[] = [];
+        while (await live.next()) if (live.current != null) rows.push(live.current);
+        sets.push(rows);
+        if (!(await live.nextResult())) break;
+      }
+    } finally {
+      await live.dispose();
+    }
+    return { value: new FirstResultReader(sets), rows: sets[0] };
   }
 
   async next(): Promise<boolean> {
-    if (!this.firstSet) {
-      const moved = await this.live.next();
-      this.current = this.live.current;
-      return moved;
+    if (this.set >= this.sets.length) {
+      this.current = undefined;
+      return false;
     }
     this.index += 1;
-    if (this.index < this.first.length) {
-      this.current = this.first[this.index];
+    const rows = this.sets[this.set]!;
+    if (this.index < rows.length) {
+      this.current = rows[this.index];
       return true;
     }
     this.current = undefined;
@@ -34,16 +40,17 @@ export class FirstResultReader implements IReader<Cells> {
   }
 
   async nextResult(): Promise<boolean> {
-    this.firstSet = false;
     this.current = undefined;
-    return this.live.nextResult();
+    this.index = -1;
+    this.set += 1;
+    return this.set < this.sets.length;
   }
 
   read(): AsyncIterable<Cells> {
     return readerToAsyncIterable(this);
   }
 
-  dispose = (): Promise<void> => this.live.dispose();
+  dispose = (): Promise<void> => Promise.resolve();
 
   [Symbol.asyncDispose] = (): Promise<void> => this.dispose();
 }

@@ -57,7 +57,6 @@ mod i_unit_of_work;
 mod id_key;
 mod information;
 mod isolation_level;
-mod json_object;
 mod lazy_write_enrichment_strategy;
 pub mod mappers;
 pub mod mocks;
@@ -165,7 +164,6 @@ pub use i_unit_of_work::IUnitOfWork;
 pub use id_key::IdKey;
 pub use information::Information;
 pub use isolation_level::IsolationLevel;
-pub use json_object::JsonObjectSerializer;
 pub use lazy_write_enrichment_strategy::LazyWriteEnrichmentStrategy;
 pub use mappers::{
     ChangeCasingMapper, DeterministicTypeMapper, DictionaryMapper, FlatToNestedMapper, FlatToNestedMapperTrait,

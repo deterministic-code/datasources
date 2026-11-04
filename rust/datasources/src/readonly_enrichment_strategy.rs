@@ -119,7 +119,7 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             .await?;
         match enrichment.related_property.as_deref() {
             Some(select) => {
-                let key_name = crate::create_enrichment_strategy::map_key(&enrichment.related_key);
+                let key_name = crate::create_enrichment_strategy::map_key::<TRelated>(&enrichment.related_key);
                 let rows = related
                     .into_iter()
                     .filter_map(|item| {

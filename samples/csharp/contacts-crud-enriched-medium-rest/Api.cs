@@ -6,13 +6,6 @@ namespace ContactsCrudEnrichedMediumRest;
 
 public sealed class Api
 {
-    static readonly JsonSerializerOptions Json = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-    };
-
     readonly ContactRepository contacts;
     readonly LegacyContactRepository legacy;
     readonly ContactGroupRepository groupsRepo;
@@ -59,12 +52,12 @@ public sealed class Api
     }
 
     async Task<(int Status, string Body)> GetContacts(Dictionary<string, string> query) =>
-        (200, JsonSerializer.Serialize(await List(contacts, WhereOf(query, ["Id", "FirstName", "LastName", "Email"])), Json));
+        (200, JsonObject.ToString(await List(contacts, WhereOf(query, ["Id", "FirstName", "LastName", "Email"]))));
 
     async Task<(int Status, string Body)> PostContact(string? body)
     {
         var contact = Stamp(Read<Contact>(body));
-        return (201, JsonSerializer.Serialize(await contacts.Create(contact), Json));
+        return (201, JsonObject.ToString(await contacts.Create(contact)));
     }
 
     async Task<(int Status, string Body)> PutContact(Dictionary<string, string> query, string? body)
@@ -75,7 +68,7 @@ public sealed class Api
         var contact = Stamp(Read<Contact>(body));
         contact.Id = id;
         await contacts.Update(contact);
-        return (200, JsonSerializer.Serialize(await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))), Json));
+        return (200, JsonObject.ToString(await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id)))));
     }
 
     async Task<(int Status, string Body)> DeleteContact(Dictionary<string, string> query)
@@ -88,13 +81,13 @@ public sealed class Api
     }
 
     async Task<(int Status, string Body)> GetLegacy(Dictionary<string, string> query) =>
-        (200, JsonSerializer.Serialize(await List(legacy, WhereOf(query, ["Key", "FirstName", "LastName", "Email"])), Json));
+        (200, JsonObject.ToString(await List(legacy, WhereOf(query, ["Key", "FirstName", "LastName", "Email"]))));
 
     async Task<(int Status, string Body)> PostLegacy(string? body)
     {
         var row = TextLegacy(Read<LegacyContact>(body));
         if (row.Key.Length == 0) throw new RequestError("key is required");
-        return (201, JsonSerializer.Serialize(await legacy.Create(row), Json));
+        return (201, JsonObject.ToString(await legacy.Create(row)));
     }
 
     async Task<(int Status, string Body)> PutLegacy(Dictionary<string, string> query, string? body)
@@ -105,16 +98,16 @@ public sealed class Api
         var row = TextLegacy(Read<LegacyContact>(body));
         row.Key = key;
         await legacy.Update(row, new Where(new Datasources.Operator.Equals("Key", key)));
-        return (200, JsonSerializer.Serialize(await legacy.ReadSingle(new Where(new Datasources.Operator.Equals("Key", key))), Json));
+        return (200, JsonObject.ToString(await legacy.ReadSingle(new Where(new Datasources.Operator.Equals("Key", key)))));
     }
 
     async Task<(int Status, string Body)> GetGroups(Dictionary<string, string> query) =>
-        (200, JsonSerializer.Serialize(await List(groupsRepo, WhereOf(query, ["Id"])), Json));
+        (200, JsonObject.ToString(await List(groupsRepo, WhereOf(query, ["Id"]))));
 
     async Task<(int Status, string Body)> PostGroup(string? body)
     {
         var group = StampGroup(Read<ContactGroup>(body));
-        return (201, JsonSerializer.Serialize(await groupsRepo.Create(group), Json));
+        return (201, JsonObject.ToString(await groupsRepo.Create(group)));
     }
 
     async Task<(int Status, string Body)> PutGroup(Dictionary<string, string> query, string? body)
@@ -125,7 +118,7 @@ public sealed class Api
         var group = StampGroup(Read<ContactGroup>(body));
         group.Id = id;
         await groupsRepo.Update(group);
-        return (200, JsonSerializer.Serialize(await groupsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))), Json));
+        return (200, JsonObject.ToString(await groupsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id)))));
     }
 
     async Task<(int Status, string Body)> DeleteLegacy(Dictionary<string, string> query)
@@ -204,11 +197,7 @@ public sealed class Api
 
     static string ToCamel(string name) => char.ToLowerInvariant(name[0]) + name[1..];
 
-    static T Read<T>(string? body) where T : new()
-    {
-        if (string.IsNullOrWhiteSpace(body)) return new T();
-        return JsonSerializer.Deserialize<T>(body, Json) ?? throw new JsonException("invalid json");
-    }
+    static T Read<T>(string? body) where T : new() => JsonObject.FromString<T>(body);
 
     static LegacyContact TextLegacy(LegacyContact row)
     {

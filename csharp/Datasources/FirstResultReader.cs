@@ -2,54 +2,59 @@ namespace Datasources;
 
 public sealed class FirstResultReader : IReader<Row>
 {
-    readonly IReadOnlyList<Row> first;
-    readonly IReader<Row> live;
+    readonly IReadOnlyList<IReadOnlyList<Row>> sets;
+    int set;
     int index = -1;
-    bool firstSet = true;
 
-    FirstResultReader(IReadOnlyList<Row> first, IReader<Row> live) =>
-        (this.first, this.live) = (first, live);
+    FirstResultReader(IReadOnlyList<IReadOnlyList<Row>> sets) => this.sets = sets;
 
     public static async Task<(IReader<Row> Reader, IReadOnlyList<Row> Rows)> Capture(IReader<Row> live)
     {
-        var rows = new List<Row>();
-        while (await live.Next() && live.Current is { } row)
-            rows.Add(row);
-        return (new FirstResultReader(rows, live), rows);
+        var sets = new List<IReadOnlyList<Row>>();
+        try
+        {
+            while (true)
+            {
+                var rows = new List<Row>();
+                while (await live.Next() && live.Current is { } row)
+                    rows.Add(row);
+                sets.Add(rows);
+                if (!await live.NextResult())
+                    break;
+            }
+        }
+        finally
+        {
+            await live.DisposeAsync();
+        }
+        return (new FirstResultReader(sets), sets[0]);
     }
 
     public Row? Current { get; private set; }
 
-    public Task<bool> Next() =>
-        firstSet
-            ? Task.FromResult(Replay())
-            : Live();
-
-    public async Task<bool> NextResult()
+    public Task<bool> Next()
     {
-        firstSet = false;
-        Current = null;
-        return await live.NextResult();
-    }
-
-    public ValueTask DisposeAsync() => live.DisposeAsync();
-
-    bool Replay()
-    {
-        index += 1;
-        if (index < first.Count)
+        if (set >= sets.Count)
         {
-            Current = first[index];
-            return true;
+            Current = null;
+            return Task.FromResult(false);
+        }
+        index += 1;
+        var rows = sets[set];
+        if (index < rows.Count)
+        {
+            Current = rows[index];
+            return Task.FromResult(true);
         }
         Current = null;
-        return false;
+        return Task.FromResult(false);
     }
 
-    async Task<bool> Live()
+    public Task<bool> NextResult()
     {
-        var moved = await live.Next();
-        Current = live.Current;
-        return moved;
+        Current = null;
+        index = -1;
+        set += 1;
+        return Task.FromResult(set < sets.Count);
     }
 }

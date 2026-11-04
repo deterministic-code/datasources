@@ -5,30 +5,37 @@ use async_trait::async_trait;
 use std::sync::Mutex;
 
 pub struct FirstResultReader {
-    first: Vec<Row>,
+    sets: Vec<Vec<Row>>,
+    set: Mutex<usize>,
     index: Mutex<isize>,
-    first_set: Mutex<bool>,
     current: Mutex<Option<Row>>,
-    live: Box<dyn Reader>,
 }
 
 impl FirstResultReader {
     pub async fn capture(live: Box<dyn Reader>) -> Result<(Box<dyn Reader>, Vec<Row>)> {
-        let mut rows = Vec::new();
-        while live.next().await? {
-            if let Some(row) = live.current() {
-                rows.push(row);
+        let mut sets = Vec::new();
+        loop {
+            let mut rows = Vec::new();
+            while live.next().await? {
+                if let Some(row) = live.current() {
+                    rows.push(row);
+                }
+            }
+            sets.push(rows);
+            if !live.next_result().await? {
+                break;
             }
         }
+        drop(live);
+        let first = sets.first().cloned().unwrap_or_default();
         Ok((
             Box::new(Self {
-                first: rows.clone(),
+                sets,
+                set: Mutex::new(0),
                 index: Mutex::new(-1),
-                first_set: Mutex::new(true),
                 current: Mutex::new(None),
-                live,
             }) as Box<dyn Reader>,
-            rows,
+            first,
         ))
     }
 }
@@ -40,16 +47,16 @@ impl Reader for FirstResultReader {
     }
 
     async fn next(&self) -> Result<bool> {
-        if !*self.first_set.lock().expect("reader") {
-            let moved = self.live.next().await?;
-            *self.current.lock().expect("reader") = self.live.current();
-            return Ok(moved);
+        let set = *self.set.lock().expect("reader");
+        if set >= self.sets.len() {
+            *self.current.lock().expect("reader") = None;
+            return Ok(false);
         }
         let mut index = self.index.lock().expect("reader");
         *index += 1;
         let i = *index as usize;
-        if i < self.first.len() {
-            *self.current.lock().expect("reader") = Some(self.first[i].clone());
+        if i < self.sets[set].len() {
+            *self.current.lock().expect("reader") = Some(self.sets[set][i].clone());
             Ok(true)
         } else {
             *self.current.lock().expect("reader") = None;
@@ -58,8 +65,10 @@ impl Reader for FirstResultReader {
     }
 
     async fn next_result(&self) -> Result<bool> {
-        *self.first_set.lock().expect("reader") = false;
         *self.current.lock().expect("reader") = None;
-        self.live.next_result().await
+        *self.index.lock().expect("reader") = -1;
+        let mut set = self.set.lock().expect("reader");
+        *set += 1;
+        Ok(*set < self.sets.len())
     }
 }

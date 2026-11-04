@@ -8,6 +8,7 @@ pub(crate) use datasources_register::repositories;
 
 pub mod api;
 pub mod clock;
+mod json_object;
 pub mod json_row;
 pub mod repos;
 

@@ -19,6 +19,7 @@ describe("FirstResultReader", () => {
       },
     );
     const { value: reader, rows } = await FirstResultReader.capture(live);
+    expect(closed).toBe(true);
     expect(rows).toEqual([{ id: 1 }, { id: 2 }]);
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 1 });
@@ -28,8 +29,10 @@ describe("FirstResultReader", () => {
     expect(await reader.nextResult()).toBe(true);
     expect(await reader.next()).toBe(true);
     expect(reader.current).toEqual({ id: 3 });
+    expect(await reader.next()).toBe(false);
+    expect(await reader.nextResult()).toBe(false);
+    expect(await reader.next()).toBe(false);
     await reader.dispose();
-    expect(closed).toBe(true);
     const empty = await FirstResultReader.capture(
       new StreamingReader(
         async () => undefined,

@@ -49,7 +49,6 @@ services:
       - /tmp
       - /work
     volumes:
-      - ${HOME}/.cache/datasources-sccache:/sccache
       - ${HOME}/.cache/datasources-npm:/npm-cache
       - ${HOME}/.cache/datasources-cargo:/cargo
       - ${HOME}/.cache/datasources-cargo-target:/cargo-target
