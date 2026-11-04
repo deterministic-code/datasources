@@ -1,10 +1,10 @@
 version: 1.0.0
 includes:
-  - file: ../../user-roles-simple-cli-shared/deterministic/types.yaml
+  - file: user-roles-simple-cli-types.yaml
     combine_options:
       source:
         remove_types: [base]
-  - file: ../../contacts-crud-enriched-medium-rest-shared/deterministic/types.yaml
+  - file: contacts-crud-enriched-medium-rest-types.yaml
     combine_options:
       source:
         remove_types: [base]

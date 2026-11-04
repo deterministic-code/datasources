@@ -1,18 +1,27 @@
 use crate::builders::{Join, JoinKind};
 use super::i_where::IWhere;
-use super::select_field_aliases::apply_select_field_alias;
+use super::select_field_aliases::{as_index, segments};
 use super::select_statement::SelectStatement;
 use super::where_text::WhereText;
-use super::order_by::OrderBy;
+use super::order_by::{OrderBy, SortDirection};
 use super::statement_text_renderer::StatementTextRenderer;
 
 pub struct SelectStatementTextRenderer<'a> {
     text: &'a StatementTextRenderer,
+    quote: fn(&str) -> String,
 }
 
 impl<'a> SelectStatementTextRenderer<'a> {
     pub fn new(text: &'a StatementTextRenderer) -> Self {
-        Self { text }
+        Self {
+            text,
+            quote: |name| name.to_string(),
+        }
+    }
+
+    pub fn with_quote(mut self, quote: fn(&str) -> String) -> Self {
+        self.quote = quote;
+        self
     }
 
     pub fn render(&self, statement: &SelectStatement) -> String {
@@ -24,7 +33,7 @@ impl<'a> SelectStatementTextRenderer<'a> {
                 .iter()
                 .enumerate()
                 .map(|(index, field)| {
-                    apply_select_field_alias(field, statement.aliases.get(index).and_then(|item| item.as_deref()))
+                    self.field_sql(field, statement.aliases.get(index).and_then(|item| item.as_deref()))
                 })
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -32,7 +41,7 @@ impl<'a> SelectStatementTextRenderer<'a> {
         let distinct = if statement.distinct { "DISTINCT " } else { "" };
         format!(
             "SELECT {distinct}{fields} FROM {}{}{}{}{}{}{}{}",
-            statement.table,
+            self.quote(&statement.table),
             self.join_sql(&statement.joins),
             self.where_sql(statement.where_clause()),
             self.group_sql(&statement.group_by),
@@ -60,7 +69,14 @@ impl<'a> SelectStatementTextRenderer<'a> {
     fn group_sql(&self, columns: &[String]) -> String {
         match columns {
             [] => String::new(),
-            names => format!(" GROUP BY {}", names.join(", ")),
+            names => format!(
+                " GROUP BY {}",
+                names
+                    .iter()
+                    .map(|name| self.quote_path(name))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
         }
     }
 
@@ -71,7 +87,17 @@ impl<'a> SelectStatementTextRenderer<'a> {
                 " ORDER BY {}",
                 items
                     .iter()
-                    .map(ToString::to_string)
+                    .map(|item| {
+                        format!(
+                            "{} {}",
+                            self.quote_path(&item.column),
+                            if item.direction == SortDirection::Desc {
+                                "DESC"
+                            } else {
+                                "ASC"
+                            }
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
@@ -98,17 +124,45 @@ impl<'a> SelectStatementTextRenderer<'a> {
         joins
             .iter()
             .map(|join| match join.kind {
-                JoinKind::Cross => format!(" CROSS JOIN {}", join.table),
+                JoinKind::Cross => format!(" CROSS JOIN {}", self.quote(&join.table)),
                 kind => format!(
                     " {} {} ON {}",
                     keyword(kind),
-                    join.table,
+                    self.quote(&join.table),
                     self.text.render_where(&WhereText::new(
                         join.on.as_deref().expect("empty join"),
                     ))
                 ),
             })
             .collect()
+    }
+
+    pub fn quote(&self, name: &str) -> String {
+        (self.quote)(name)
+    }
+
+    fn quote_path(&self, name: &str) -> String {
+        if name.contains('(') {
+            name.to_string()
+        } else {
+            segments(name)
+                .into_iter()
+                .map(|part| self.quote(part))
+                .collect::<Vec<_>>()
+                .join(".")
+        }
+    }
+
+    fn field_sql(&self, field: &str, alias: Option<&str>) -> String {
+        let rendered = if as_index(field).is_some() || field.contains('(') {
+            field.to_string()
+        } else {
+            self.quote_path(field)
+        };
+        match alias {
+            Some(name) => format!("{} AS {}", rendered, self.quote(name)),
+            None => rendered,
+        }
     }
 }
 

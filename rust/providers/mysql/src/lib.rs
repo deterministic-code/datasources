@@ -10,7 +10,7 @@ mod default_value_converter;
 mod default_value_options;
 mod sql_generate;
 mod type_map;
-mod engine;
+mod isolation_sql;
 mod reader;
 mod select_inserted_id_statement_text_renderer;
 mod sql_seed_statement_renderer;
@@ -40,11 +40,13 @@ mod generate_sql_tests;
 mod tests {
     use crate::command::MysqlCommand;
     use crate::connection::MysqlConnection;
-    use crate::engine::{isolation_sql, to_mysql};
+    use crate::isolation_sql::IsolationSql;
+    use crate::MysqlDriver;
     use crate::transaction::MysqlTransaction;
     use datasources::{
-        Row, create, downcast_connection, register, reset, BuiltDatasource, Command,
-        Connection, Datasource, Driver, IsolationLevel, Transaction,
+        InsertStatement, Parameter, Row, create, downcast_connection, register, reset,
+        BuiltDatasource, Command, Connection, Datasource, Driver, IsolationLevel, Transaction,
+        Value,
     };
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -85,44 +87,43 @@ mod tests {
 
     #[tokio::test]
     async fn mysql_command_and_repository() {
+        let statements = MysqlDriver::statement_text_renderer();
         assert_eq!(
-            to_mysql("SELECT * FROM t WHERE id = $id"),
-            "SELECT * FROM t WHERE id = :id"
+            statements.render(&InsertStatement::new("users", &[Parameter::new("id", Value::Null)])),
+            "INSERT INTO users (id) VALUES (:id)"
         );
         assert_eq!(
-            to_mysql("INSERT INTO t (id) VALUES ($id) RETURNING id"),
-            "INSERT INTO t (id) VALUES (:id)"
+            statements.render(&InsertStatement::new(
+                "groups",
+                &[
+                    Parameter::new("description", Value::Null),
+                    Parameter::new("name", Value::Null),
+                ]
+            )),
+            "INSERT INTO `groups` (description, name) VALUES (:description, :name)"
         );
-        assert_eq!(to_mysql("SELECT $1"), "SELECT $1");
         assert_eq!(
-            to_mysql("INSERT INTO contact_settings (contact_id, key, value) VALUES ($contact_id, $key, $value)"),
+            statements.render(&InsertStatement::new(
+                "contact_settings",
+                &[
+                    Parameter::new("contact_id", Value::Null),
+                    Parameter::new("key", Value::Null),
+                    Parameter::new("value", Value::Null),
+                ]
+            )),
             "INSERT INTO contact_settings (contact_id, `key`, value) VALUES (:contact_id, :key, :value)"
         );
-        assert_eq!(to_mysql("CREATE TABLE t (id INT PRIMARY KEY)"), "CREATE TABLE t (id INT PRIMARY KEY)");
         assert_eq!(
-            to_mysql("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"),
-            "CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"
+            statements.render(&InsertStatement::new(
+                "OldContactsTbl",
+                &[Parameter::new("CntID", Value::Null)]
+            )),
+            "INSERT INTO `OldContactsTbl` (`CntID`) VALUES (:CntID)"
         );
-        assert_eq!(
-            to_mysql("INSERT INTO OldContactsTbl (CntID) VALUES ($CntID)"),
-            "INSERT INTO `OldContactsTbl` (`CntID`) VALUES (:cntid)"
-        );
-        assert_eq!(
-            isolation_sql(IsolationLevel::ReadUncommitted),
-            "READ UNCOMMITTED"
-        );
-        assert_eq!(
-            isolation_sql(IsolationLevel::ReadCommitted),
-            "READ COMMITTED"
-        );
-        assert_eq!(
-            isolation_sql(IsolationLevel::RepeatableRead),
-            "REPEATABLE READ"
-        );
-        assert_eq!(
-            isolation_sql(IsolationLevel::Serializable),
-            "REPEATABLE READ"
-        );
+        assert_eq!(IsolationSql::of(IsolationLevel::ReadUncommitted), "READ UNCOMMITTED");
+        assert_eq!(IsolationSql::of(IsolationLevel::ReadCommitted), "READ COMMITTED");
+        assert_eq!(IsolationSql::of(IsolationLevel::RepeatableRead), "REPEATABLE READ");
+        assert_eq!(IsolationSql::of(IsolationLevel::Serializable), "REPEATABLE READ");
         let conn = Arc::new(MysqlConnection::new(Some("mysql://db/app".into())));
         let command = MysqlCommand::new(conn.clone());
         command

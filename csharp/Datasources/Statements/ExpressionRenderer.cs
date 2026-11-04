@@ -7,7 +7,7 @@ public class ExpressionRenderer(StatementTextRenderer text)
     public virtual string Render(IExpression expression) => expression switch
     {
         Where where => Render(where.Condition),
-        Identifier id => id.Name,
+        Identifier id => QuotePath(id.Name),
         Literal lit => Inline(lit.Value),
         ArrayExpression arr => string.Join(", ", arr.Elements.Select(Render)),
         Operator.Not not => $"NOT ({Render(not.Argument)})",
@@ -18,19 +18,19 @@ public class ExpressionRenderer(StatementTextRenderer text)
         Operator.In { Left: Identifier id, Right: ArrayExpression arr } =>
             arr.Elements.Count == 0
                 ? "1 = 0"
-                : $"{id.Name} IN ({string.Join(", ", arr.Elements.Select((_, i) => $"${ParameterName(id.Name)}_{i}"))})",
-        Operator.In { Left: Identifier id, Right: Subquery } inn => $"{id.Name} IN {Render(inn.Right)}",
+                : $"{QuotePath(id.Name)} IN ({string.Join(", ", arr.Elements.Select((_, i) => Parameter($"{ParameterName(id.Name)}_{i}")))})",
+        Operator.In { Left: Identifier id, Right: Subquery } inn => $"{QuotePath(id.Name)} IN {Render(inn.Right)}",
         Operator.NotIn { Left: Identifier id, Right: ArrayExpression arr } =>
             arr.Elements.Count == 0
                 ? "1 = 1"
-                : $"{id.Name} NOT IN ({string.Join(", ", arr.Elements.Select((_, i) => $"${ParameterName(id.Name)}_{i}"))})",
-        Operator.NotIn { Left: Identifier id, Right: Subquery } miss => $"{id.Name} NOT IN {Render(miss.Right)}",
+                : $"{QuotePath(id.Name)} NOT IN ({string.Join(", ", arr.Elements.Select((_, i) => Parameter($"{ParameterName(id.Name)}_{i}")))})",
+        Operator.NotIn { Left: Identifier id, Right: Subquery } miss => $"{QuotePath(id.Name)} NOT IN {Render(miss.Right)}",
         Operator.Between { Value: Identifier id, Low: Literal, High: Literal } =>
-            $"{id.Name} BETWEEN ${ParameterName(id.Name)}_0 AND ${ParameterName(id.Name)}_1",
+            $"{QuotePath(id.Name)} BETWEEN {Parameter($"{ParameterName(id.Name)}_0")} AND {Parameter($"{ParameterName(id.Name)}_1")}",
         Operator.Between(var value, var low, var high) =>
             $"{Render(value)} BETWEEN {Render(low)} AND {Render(high)}",
         Operator.NotBetween { Value: Identifier id, Low: Literal, High: Literal } =>
-            $"{id.Name} NOT BETWEEN ${ParameterName(id.Name)}_0 AND ${ParameterName(id.Name)}_1",
+            $"{QuotePath(id.Name)} NOT BETWEEN {Parameter($"{ParameterName(id.Name)}_0")} AND {Parameter($"{ParameterName(id.Name)}_1")}",
         Operator.NotBetween(var value, var low, var high) =>
             $"{Render(value)} NOT BETWEEN {Render(low)} AND {Render(high)}",
         Operator.And(var left, var right) =>
@@ -38,7 +38,7 @@ public class ExpressionRenderer(StatementTextRenderer text)
         Operator.Or(var left, var right) =>
             $"{Wrap(left, and: false)} OR {Wrap(right, and: false)}",
         { } op when Pair(op) is ({ } left, { } right) && left is Identifier id && right is Literal =>
-            $"{id.Name} {Symbol(op)} ${ParameterName(id.Name)}",
+            $"{QuotePath(id.Name)} {Symbol(op)} {Parameter(ParameterName(id.Name))}",
         { } op when Pair(op) is ({ } left, { } right) && left is Literal a && right is Literal b =>
             $"{Inline(a.Value)} {Symbol(op)} {Inline(b.Value)}",
         { } op when Pair(op) is ({ } left, { } right) =>
@@ -97,6 +97,12 @@ public class ExpressionRenderer(StatementTextRenderer text)
         Value.Null => "null",
         _ => value.ToObject()?.ToString() ?? "null"
     };
+
+    protected virtual string Quote(string name) => name;
+
+    protected virtual string Parameter(string name) => $"${name}";
+
+    string QuotePath(string name) => string.Join(".", Parts(name).Select(Quote));
 
     static string ParameterName(string name) =>
         string.Join(".", Parts(name).Select(part =>

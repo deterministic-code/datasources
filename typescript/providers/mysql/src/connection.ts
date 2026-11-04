@@ -17,17 +17,11 @@ import {
   type Mysql2Module,
   type MysqlCreateConnection,
 } from "./i-mysql-engine.ts";
+import { IsolationSql } from "./IsolationSql.ts";
 import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 import { MysqlTransaction } from "./transaction.ts";
 
 const require = createRequire(import.meta.url);
-
-const isoSql = (isolation: IsolationLevelName): string =>
-  isolation === IsolationLevel.ReadUncommitted
-    ? "READ UNCOMMITTED"
-    : isolation === IsolationLevel.ReadCommitted
-      ? "READ COMMITTED"
-      : "REPEATABLE READ";
 
 export class MysqlConnection implements IConnection {
   readonly provider = "mysql";
@@ -76,7 +70,7 @@ export class MysqlConnection implements IConnection {
   ): Promise<ITransaction> {
     this.ensureOpen();
     const client = this.require();
-    await client.query(`SET TRANSACTION ISOLATION LEVEL ${isoSql(isolation)}`);
+    await client.query(`SET TRANSACTION ISOLATION LEVEL ${IsolationSql.of(isolation)}`);
     await client.beginTransaction();
     return new MysqlTransaction(this, isolation);
   }

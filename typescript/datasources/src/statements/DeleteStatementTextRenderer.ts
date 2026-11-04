@@ -6,7 +6,11 @@ export class DeleteStatementTextRenderer {
 
   render(statement: DeleteStatement): string {
     return statement.where
-      ? `DELETE FROM ${statement.table} WHERE ${this.text.render(statement.where)}`
-      : `DELETE FROM ${statement.table}`;
+      ? `DELETE FROM ${this.quote(statement.table)} WHERE ${this.text.render(statement.where)}`
+      : `DELETE FROM ${this.quote(statement.table)}`;
+  }
+
+  protected quote(name: string): string {
+    return name;
   }
 }

@@ -46,12 +46,12 @@ types:
     .find(|e| e.filename.ends_with("0001_initial_up.sql"))
     .unwrap()
     .content;
-    let contacts = Regex::new(r#"CREATE TABLE `contacts` \(([\s\S]*?)\);"#)
+    let contacts = Regex::new(r#"CREATE TABLE contacts \(([\s\S]*?)\);"#)
         .unwrap()
         .captures(&sql)
         .unwrap()[1]
         .to_string();
-    assert!(Regex::new(r#"`gender_type_id` INT"#)
+    assert!(Regex::new(r#"gender_type_id INT"#)
         .unwrap()
         .is_match(&contacts));
     assert!(!Regex::new(r#"`gender_type_id` TEXT"#)
@@ -87,7 +87,7 @@ types:
         .find(|e| e.filename.ends_with("0001_initial_up.sql"))
         .unwrap()
         .content;
-    assert!(Regex::new(r";\nGO\nCREATE TRIGGER `trg_genders_updated_at`")
+    assert!(Regex::new(r";\nGO\nCREATE TRIGGER trg_genders_updated_at")
         .unwrap()
         .is_match(&sql));
     let custom = generate_sql(
@@ -100,7 +100,7 @@ types:
     .find(|e| e.filename.ends_with("0001_initial_up.sql"))
     .unwrap()
     .content;
-    assert!(Regex::new(r";\nBATCH\nCREATE TRIGGER `trg_genders_updated_at`")
+    assert!(Regex::new(r";\nBATCH\nCREATE TRIGGER trg_genders_updated_at")
         .unwrap()
         .is_match(&custom));
     assert!(!Regex::new(r"\nGO\n").unwrap().is_match(&custom));
@@ -148,7 +148,7 @@ seeds:
     .find(|e| e.filename.ends_with("0001_initial_up.sql"))
     .unwrap()
     .content;
-    assert!(Regex::new(r"INSERT INTO `genders`[\s\S]*;\nGO\nINSERT INTO `genders`")
+    assert!(Regex::new(r"INSERT INTO genders[\s\S]*;\nGO\nINSERT INTO genders")
         .unwrap()
         .is_match(&sql));
 }

@@ -14,7 +14,7 @@ export class ExpressionRenderer {
 
   render = (expression: IExpression): string => {
     if (is(expression, Where)) return this.render(expression.condition);
-    if (is(expression, Identifier)) return expression.name;
+    if (is(expression, Identifier)) return this.quotePath(expression.name);
     if (is(expression, Literal)) return inline(expression.value);
     if (is(expression, ArrayExpression)) return expression.elements.map((e) => this.render(e)).join(", ");
     if (is(expression, Operator.Not)) return `NOT (${this.render(expression.argument)})`;
@@ -25,15 +25,15 @@ export class ExpressionRenderer {
     if (is(expression, Operator.In) && is(expression.left, Identifier) && is(expression.right, ArrayExpression))
       return expression.right.elements.length === 0
         ? "1 = 0"
-        : `${expression.left.name} IN (${slots(expression.left.name, expression.right.elements.length)})`;
+        : `${this.quotePath(expression.left.name)} IN (${this.slots(expression.left.name, expression.right.elements.length)})`;
     if (is(expression, Operator.In) && is(expression.left, Identifier) && is(expression.right, Subquery))
-      return `${expression.left.name} IN ${this.render(expression.right)}`;
+      return `${this.quotePath(expression.left.name)} IN ${this.render(expression.right)}`;
     if (is(expression, Operator.NotIn) && is(expression.left, Identifier) && is(expression.right, ArrayExpression))
       return expression.right.elements.length === 0
         ? "1 = 1"
-        : `${expression.left.name} NOT IN (${slots(expression.left.name, expression.right.elements.length)})`;
+        : `${this.quotePath(expression.left.name)} NOT IN (${this.slots(expression.left.name, expression.right.elements.length)})`;
     if (is(expression, Operator.NotIn) && is(expression.left, Identifier) && is(expression.right, Subquery))
-      return `${expression.left.name} NOT IN ${this.render(expression.right)}`;
+      return `${this.quotePath(expression.left.name)} NOT IN ${this.render(expression.right)}`;
     if (
       (is(expression, Operator.Between) || is(expression, Operator.NotBetween)) &&
       is(expression.value, Identifier) &&
@@ -41,7 +41,7 @@ export class ExpressionRenderer {
       is(expression.high, Literal)
     ) {
       const word = is(expression, Operator.NotBetween) ? "NOT BETWEEN" : "BETWEEN";
-      return `${expression.value.name} ${word} $${parameterName(expression.value.name)}_0 AND $${parameterName(expression.value.name)}_1`;
+      return `${this.quotePath(expression.value.name)} ${word} ${this.parameter(`${parameterName(expression.value.name)}_0`)} AND ${this.parameter(`${parameterName(expression.value.name)}_1`)}`;
     }
     if (is(expression, Operator.Between))
       return `${this.render(expression.value)} BETWEEN ${this.render(expression.low)} AND ${this.render(expression.high)}`;
@@ -53,12 +53,27 @@ export class ExpressionRenderer {
       return `${this.wrap(expression.left, false)} OR ${this.wrap(expression.right, false)}`;
     const operands = pair(expression as Operator);
     if (operands && is(operands.left, Identifier) && is(operands.right, Literal))
-      return `${operands.left.name} ${symbol(expression as Operator)} $${parameterName(operands.left.name)}`;
+      return `${this.quotePath(operands.left.name)} ${symbol(expression as Operator)} ${this.parameter(parameterName(operands.left.name))}`;
     if (operands && is(operands.left, Literal) && is(operands.right, Literal))
       return `${inline(operands.left.value)} ${symbol(expression as Operator)} ${inline(operands.right.value)}`;
     if (operands) return `${this.render(operands.left)} ${symbol(expression as Operator)} ${this.render(operands.right)}`;
     throw new Error("empty expression");
   };
+
+  protected quote(name: string): string {
+    return name;
+  }
+
+  protected parameter(name: string): string {
+    return `$${name}`;
+  }
+
+  protected quotePath(name: string): string {
+    return parts(name).map((part) => this.quote(part)).join(".");
+  }
+
+  private slots = (name: string, count: number): string =>
+    Array.from({ length: count }, (_, i) => this.parameter(`${parameterName(name)}_${i}`)).join(", ");
 
   private wrap = (child: IExpression, and: boolean): string =>
     needsParens(child, and) ? `(${this.render(child)})` : this.render(child);
@@ -133,6 +148,3 @@ const parts = (name: string): string[] => {
   found.push(name.slice(start));
   return found;
 };
-
-const slots = (name: string, count: number): string =>
-  Array.from({ length: count }, (_, i) => `$${parameterName(name)}_${i}`).join(", ");

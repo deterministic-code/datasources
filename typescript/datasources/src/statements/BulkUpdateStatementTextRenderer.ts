@@ -4,12 +4,20 @@ import type { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
 
 export class BulkUpdateStatementTextRenderer {
   render = (statement: BulkUpdateStatement): string => {
-    const assigns = statement.set.map((column) => `${column} = data.${column}`).join(", ");
-    return `UPDATE ${statement.table} SET ${assigns} FROM ${this.source(statement)} WHERE ${this.on(statement)}`;
+    const assigns = statement.set.map((column) => `${this.quote(column)} = data.${this.quote(column)}`).join(", ");
+    return `UPDATE ${this.quote(statement.table)} SET ${assigns} FROM ${this.source(statement)} WHERE ${this.on(statement)}`;
   };
 
+  protected quote(name: string): string {
+    return name;
+  }
+
+  protected parameter(name: string): string {
+    return `$${name}`;
+  }
+
   protected on = (statement: BulkUpdateStatement): string =>
-    statement.ids.map((column) => `${statement.table}.${column} = data.${column}`).join(" AND ");
+    statement.ids.map((column) => `${this.quote(statement.table)}.${this.quote(column)} = data.${this.quote(column)}`).join(" AND ");
 
   protected source = (statement: BulkUpdateStatement): string => {
     const columns = [...statement.set, ...statement.ids];
@@ -25,5 +33,5 @@ export class BulkUpdateStatementTextRenderer {
   };
 
   protected cell = (column: string, index: number, _value: Cell): string =>
-    `$${column}__${index} AS ${column}`;
+    `${this.parameter(`${column}__${index}`)} AS ${this.quote(column)}`;
 }

@@ -6,7 +6,7 @@ namespace Datasources.Mysql;
 public sealed class MysqlDriver : IDriver
 {
     static readonly StatementTextRenderer Statements =
-        new(t => new MysqlStatementRenderer(t), applyKeywords: ApplyKeywords);
+        new(t => new MysqlStatementRenderer(t), expressions: t => new MysqlExpressionRenderer(t), applyKeywords: ApplyKeywords);
     static readonly TypeMap Types = new(
         new Dictionary<string, string>
         {
@@ -30,7 +30,13 @@ public sealed class MysqlDriver : IDriver
 
     internal string QuoteLeft => "`";
     internal string QuoteRight => "`";
-    internal static string Quote(string name) => $"`{name}`";
+    static readonly Regex Snake = new(@"^[a-z][a-z0-9]*(?:_[a-z][a-z0-9]*)*$", RegexOptions.Compiled);
+    internal static bool Verbatim(string name) => !Snake.IsMatch(name);
+    internal static string Quote(string name) =>
+        SqlKeywords.Contains(name) || Verbatim(name) ? $"`{name}`" : name;
+    internal static string Parameter(string name) => $"@{name}";
+    internal static string Placeholders(string sql) =>
+        Regex.Replace(sql, @"\$([A-Za-z_][A-Za-z0-9_]*)", "@$1");
     internal static string NativeType(Column column) =>
         column.Field is { } field
             ? Types.Convert(field)
