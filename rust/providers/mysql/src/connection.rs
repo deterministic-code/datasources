@@ -1,5 +1,5 @@
 use crate::command::MysqlCommand;
-use crate::engine::isolation_sql;
+use crate::isolation_sql::IsolationSql;
 use crate::transaction::MysqlTransaction;
 use async_trait::async_trait;
 use datasources::{Command, Connection, DatasourceError, IsolationLevel, Result, Transaction};
@@ -128,7 +128,7 @@ impl Connection for MysqlConnection {
         let isolation = isolation.unwrap_or(IsolationLevel::ReadCommitted);
         self.exec(&format!(
             "SET TRANSACTION ISOLATION LEVEL {}",
-            isolation_sql(isolation)
+            IsolationSql::of(isolation)
         ))
         .await?;
         self.exec("START TRANSACTION").await?;

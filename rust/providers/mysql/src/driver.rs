@@ -44,7 +44,38 @@ impl MysqlDriver {
     }
 
     pub fn quote(name: &str) -> String {
-        format!("`{name}`")
+        if sql_generate::is_keyword(name) || sql_generate::is_verbatim(name) {
+            format!("`{name}`")
+        } else {
+            name.to_string()
+        }
+    }
+
+    pub fn parameter(name: &str) -> String {
+        format!(":{name}")
+    }
+
+    pub fn placeholders(sql: &str) -> String {
+        let chars: Vec<char> = sql.chars().collect();
+        let mut out = String::with_capacity(sql.len());
+        let mut i = 0;
+        while i < chars.len() {
+            if chars[i] == '$'
+                && i + 1 < chars.len()
+                && (chars[i + 1].is_ascii_alphabetic() || chars[i + 1] == '_')
+            {
+                out.push(':');
+                i += 1;
+                while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
+                    out.push(chars[i]);
+                    i += 1;
+                }
+                continue;
+            }
+            out.push(chars[i]);
+            i += 1;
+        }
+        out
     }
 
     pub fn native_type(column: &Column) -> String {

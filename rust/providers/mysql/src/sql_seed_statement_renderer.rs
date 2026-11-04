@@ -25,7 +25,7 @@ impl MysqlSqlSeedStatementRenderer {
 }
 
 fn quote(ident: &str) -> String {
-    format!("`{ident}`")
+    crate::MysqlDriver::quote(ident)
 }
 
 fn quote_string(value: &str) -> String {

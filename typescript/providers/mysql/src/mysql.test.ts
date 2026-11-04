@@ -10,8 +10,9 @@ vi.mock("mysql2/promise", () => ({
   }),
 }));
 
-import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
-import { bindParameters, toMysql } from "./bind.ts";
+import { Datasource, DatasourceFactory, DatasourceError, IsolationLevel, InsertStatement, CRUDRepository, ReadonlyRepository, untyped, Native, ParameterDirection, columnType, RowTypeConverter, CreateTableStatement, ExecuteStoredProcedureStatement, ReturnStatement, SelectStatement, type IDriver } from "@deterministic-code/datasources";
+import { bindParameters } from "./bind.ts";
+import { IsolationSql } from "./IsolationSql.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlConnection } from "./connection.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
@@ -75,19 +76,26 @@ describe("bindParameters", () => {
     expect(bindParameters()).toEqual({});
     expect(bindParameters(null)).toEqual({});
     expect(bindParameters([{ name: "id", value: 1 }])).toEqual({ id: 1 });
-    expect(toMysql("SELECT * FROM t WHERE id = $id")).toBe(
-      "SELECT * FROM t WHERE id = :id",
+    const statements = new MysqlDriver().statementRenderer!;
+    expect(statements.render(new InsertStatement("users", [{ name: "id", value: null }]))).toBe(
+      "INSERT INTO users (id) VALUES (:id)",
     );
-    expect(toMysql("INSERT INTO t (id) VALUES ($id) RETURNING id")).toBe(
-      "INSERT INTO t (id) VALUES (:id)",
+    expect(statements.render(new InsertStatement("groups", [
+      { name: "description", value: null },
+      { name: "name", value: null },
+    ]))).toBe("INSERT INTO `groups` (description, name) VALUES (:description, :name)");
+    expect(statements.render(new InsertStatement("contact_settings", [
+      { name: "contact_id", value: null },
+      { name: "key", value: null },
+      { name: "value", value: null },
+    ]))).toBe("INSERT INTO contact_settings (contact_id, `key`, value) VALUES (:contact_id, :key, :value)");
+    expect(statements.render(new InsertStatement("OldContactsTbl", [{ name: "CntID", value: null }]))).toBe(
+      "INSERT INTO `OldContactsTbl` (`CntID`) VALUES (:CntID)",
     );
-    expect(toMysql("INSERT INTO contact_settings (contact_id, key, value) VALUES ($contact_id, $key, $value)"))
-      .toBe("INSERT INTO contact_settings (contact_id, `key`, value) VALUES (:contact_id, :key, :value)");
-    expect(toMysql("CREATE TABLE t (id INT PRIMARY KEY)")).toBe("CREATE TABLE t (id INT PRIMARY KEY)");
-    expect(toMysql("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"))
-      .toBe("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))");
-    expect(toMysql("INSERT INTO OldContactsTbl (CntID) VALUES ($CntID)"))
-      .toBe("INSERT INTO `OldContactsTbl` (`CntID`) VALUES (:CntID)");
+    expect(IsolationSql.of(IsolationLevel.ReadUncommitted)).toBe("READ UNCOMMITTED");
+    expect(IsolationSql.of(IsolationLevel.ReadCommitted)).toBe("READ COMMITTED");
+    expect(IsolationSql.of(IsolationLevel.RepeatableRead)).toBe("REPEATABLE READ");
+    expect(IsolationSql.of(IsolationLevel.Serializable)).toBe("REPEATABLE READ");
   });
 });
 

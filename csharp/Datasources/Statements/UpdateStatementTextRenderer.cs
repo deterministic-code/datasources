@@ -3,7 +3,11 @@ namespace Datasources;
 public class UpdateStatementTextRenderer(StatementTextRenderer text)
 {
     public virtual string Render(UpdateStatement statement) =>
-        Compose($"UPDATE {statement.Table} SET {Set(statement.Fields)}", statement.Where, statement.Fields).Text;
+        Compose($"UPDATE {Quote(statement.Table)} SET {Set(statement.Fields)}", statement.Where, statement.Fields).Text;
+
+    protected virtual string Quote(string name) => name;
+
+    protected virtual string Parameter(string name) => $"${name}";
 
     public (string Text, IReadOnlyList<Parameter> Parameters) Compose(
         string sql, IWhere? where, IReadOnlyList<Parameter> fields)
@@ -19,7 +23,7 @@ public class UpdateStatementTextRenderer(StatementTextRenderer text)
             if (values.TryGetValue(parameter.Name, out var current) && !Equals(current, parameter.Value))
             {
                 var alias = $"{parameter.Name}__where";
-                tail = Rename(tail, parameter.Name, alias);
+                tail = Rename(tail, Parameter(parameter.Name), Parameter(alias));
                 parameters.Add(new Parameter(alias, parameter.Value));
             }
             else
@@ -27,13 +31,11 @@ public class UpdateStatementTextRenderer(StatementTextRenderer text)
         return (head + tail, parameters);
     }
 
-    static string Set(IReadOnlyList<Parameter> fields) =>
-        string.Join(", ", fields.Select(field => $"{field.Name} = ${field.Name}"));
+    string Set(IReadOnlyList<Parameter> fields) =>
+        string.Join(", ", fields.Select(field => $"{Quote(field.Name)} = {Parameter(field.Name)}"));
 
-    static string Rename(string sql, string name, string alias)
+    static string Rename(string sql, string token, string next)
     {
-        var token = "$" + name;
-        var next = "$" + alias;
         var index = 0;
         var result = new System.Text.StringBuilder();
         while (sql.IndexOf(token, index, StringComparison.Ordinal) is var at && at >= 0)

@@ -1,6 +1,6 @@
 use crate::connection::{map_err, MysqlConnection};
 use crate::converters;
-use crate::engine::to_mysql;
+use crate::MysqlDriver;
 use crate::reader::MysqlReader;
 use crate::statement_renderer::MysqlStatementRenderer;
 use async_trait::async_trait;
@@ -39,7 +39,7 @@ impl MysqlCommand {
         sql: &str,
         params: &HashMap<String, Value>,
     ) -> Result<MysqlExecuteResult> {
-        let sql = to_mysql(sql);
+        let sql = MysqlDriver::placeholders(sql);
         let mut slot = connection.lock_conn().await?;
         let conn = slot
             .as_mut()
@@ -243,7 +243,7 @@ impl MysqlCommand {
                 .map_err(map_err)?;
             }
         }
-        conn.query_drop(session_vars(&to_mysql(sql)))
+        conn.query_drop(session_vars(&MysqlDriver::placeholders(sql)))
             .await
             .map_err(map_err)?;
         let outs: Vec<_> = list

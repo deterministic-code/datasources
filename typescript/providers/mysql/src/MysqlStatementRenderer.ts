@@ -1,6 +1,12 @@
 import {
   AlterTableStatement,
+  BulkDeleteStatement,
+  BulkInsertStatement,
   BulkUpdateStatement,
+  DeleteStatement,
+  InsertStatement,
+  SelectStatement,
+  UpdateStatement,
   CreateBulkCreateStoredProcedureStatement,
   CreateBulkDeleteStoredProcedureStatement,
   CreateBulkUpdateStoredProcedureStatement,
@@ -24,6 +30,15 @@ import {
   StatementRenderer,
   type StatementTextRenderer,
 } from "@deterministic-code/datasources";
+import {
+  MysqlBulkDeleteStatementTextRenderer,
+  MysqlBulkInsertStatementTextRenderer,
+  MysqlDeleteStatementTextRenderer,
+  MysqlInsertStatementTextRenderer,
+  MysqlSelectStatementTextRenderer,
+  MysqlUpdateStatementTextRenderer,
+} from "./MysqlDmlRenderers.ts";
+export { MysqlExpressionRenderer } from "./MysqlDmlRenderers.ts";
 import { MysqlAlterTableStatementRenderer } from "./MysqlAlterTableStatementRenderer.ts";
 import { MysqlBulkUpdateStatementTextRenderer } from "./MysqlBulkUpdateStatementTextRenderer.ts";
 import { MysqlCreateTableStatementRenderer } from "./MysqlCreateTableStatementRenderer.ts";
@@ -51,6 +66,30 @@ export class MysqlStatementRenderer extends StatementRenderer {
 
   override procedures(source: ProcedureSource) {
     return sqlProcedureStatementsOf(source);
+  }
+
+  protected override visitSelect(select: SelectStatement): string {
+    return new MysqlSelectStatementTextRenderer(this.text).render(select);
+  }
+
+  protected override visitInsert(insert: InsertStatement): string {
+    return new MysqlInsertStatementTextRenderer().render(insert);
+  }
+
+  protected override visitUpdate(update: UpdateStatement): string {
+    return new MysqlUpdateStatementTextRenderer(this.text).render(update);
+  }
+
+  protected override visitDelete(del: DeleteStatement): string {
+    return new MysqlDeleteStatementTextRenderer(this.text).render(del);
+  }
+
+  protected override visitBulkInsert(insert: BulkInsertStatement): string {
+    return new MysqlBulkInsertStatementTextRenderer().render(insert);
+  }
+
+  protected override visitBulkDelete(del: BulkDeleteStatement): string {
+    return new MysqlBulkDeleteStatementTextRenderer().render(del);
   }
 
   protected override visitSelectInsertedId(inserted: SelectInsertedIdStatement): string {

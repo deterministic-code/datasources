@@ -20,7 +20,8 @@ import {
   type IStatement,
   type Parameter,
 } from "@deterministic-code/datasources";
-import { bindParameters, toMysql } from "./bind.ts";
+import { bindParameters } from "./bind.ts";
+import { MysqlDriver } from "./MysqlDriver.ts";
 import type { MysqlConnection } from "./connection.ts";
 import type { MysqlExecuteResult } from "./i-mysql-engine.ts";
 import type { Scalar } from "./scalar.ts";
@@ -128,7 +129,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
             [parameter.name]: parameter.value ?? null,
           });
       }
-      await client.query(toMysql(query).replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, "@$1"));
+      await client.query(MysqlDriver.placeholders(query).replace(/:([A-Za-z_][A-Za-z0-9_]*)/g, "@$1"));
       const [rows] = await client.query(
         `SELECT ${outs.map((parameter) => `@${parameter.name} AS \`${parameter.name}\``).join(", ")}`,
       );
@@ -153,18 +154,18 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
     params?: Record<string, Scalar>,
     parameters?: Parameter[],
   ): Promise<MysqlExecuteResult> {
-    const [result] = await this.connection.require().query(toMysql(sql), params);
+    const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), params);
     return Array.isArray(result)
       ? { rowsAffected: result.length, parameters }
       : { rowsAffected: result.affectedRows ?? 0, result: null, parameters };
   }
 
   private query(sql: string, params?: Record<string, Scalar>): AsyncIterable<Cells> {
-    return this.connection.require().queryRows(toMysql(sql), params);
+    return this.connection.require().queryRows(MysqlDriver.placeholders(sql), params);
   }
 
   private async callResults(sql: string, params?: Record<string, Scalar>): Promise<Cells[][]> {
-    const [result] = await this.connection.require().query(toMysql(sql), params);
+    const [result] = await this.connection.require().query(MysqlDriver.placeholders(sql), params);
     if (!Array.isArray(result)) return [[]];
     return result.filter((item): item is Cells[] => Array.isArray(item));
   }

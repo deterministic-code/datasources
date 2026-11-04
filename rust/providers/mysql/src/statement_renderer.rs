@@ -5,9 +5,13 @@ use crate::create_trigger_statement_renderer::MysqlCreateTriggerStatementRendere
 use crate::drop_routine_statement_renderer::MysqlDropRoutineStatementRenderer;
 use crate::select_inserted_id_statement_text_renderer::MysqlSelectInsertedIdStatementTextRenderer;
 use crate::sql_seed_statement_renderer::MysqlSqlSeedStatementRenderer;
+use crate::MysqlDriver;
 use datasources::{
-    AlterTableStatement, BulkUpdateStatement,
+    AlterTableStatement, BulkDeleteStatement, BulkDeleteStatementTextRenderer, BulkInsertStatement,
+    BulkInsertStatementTextRenderer, BulkUpdateStatement,
     BulkUpdateStatementTextRenderer, CreateBulkCreateStoredProcedureStatement,
+    DeleteStatement, DeleteStatementTextRenderer, InsertStatement, InsertStatementTextRenderer,
+    SelectStatement, SelectStatementTextRenderer, UpdateStatement, UpdateStatementTextRenderer,
     CreateBulkDeleteStoredProcedureStatement, CreateBulkUpdateStoredProcedureStatement,
     CreateCreateStoredProcedureStatement, CreateDeleteStoredProcedureStatement,
     CreateNestedReadStoredProcedureStatement, CreateReadStoredProcedureStatement, CreateTableStatement,
@@ -22,6 +26,36 @@ pub struct MysqlStatementRenderer;
 impl StatementVisitor for MysqlStatementRenderer {
     fn procedures(&self, source: &ProcedureSource) -> Vec<Box<dyn Statement>> {
         sql_procedure_statements_of(source)
+    }
+
+    fn visit_insert(&self, statement: &InsertStatement, _text: &StatementTextRenderer) -> String {
+        InsertStatementTextRenderer::render_with(statement, MysqlDriver::quote, MysqlDriver::parameter)
+    }
+
+    fn visit_update(&self, statement: &UpdateStatement, text: &StatementTextRenderer) -> String {
+        UpdateStatementTextRenderer::new(text)
+            .with_quote(MysqlDriver::quote, MysqlDriver::parameter)
+            .render(statement)
+    }
+
+    fn visit_delete(&self, statement: &DeleteStatement, text: &StatementTextRenderer) -> String {
+        DeleteStatementTextRenderer::new(text)
+            .with_quote(MysqlDriver::quote)
+            .render(statement)
+    }
+
+    fn visit_select(&self, statement: &SelectStatement, text: &StatementTextRenderer) -> String {
+        SelectStatementTextRenderer::new(text)
+            .with_quote(MysqlDriver::quote)
+            .render(statement)
+    }
+
+    fn visit_bulk_insert(&self, statement: &BulkInsertStatement, _text: &StatementTextRenderer) -> String {
+        BulkInsertStatementTextRenderer::render_with(statement, MysqlDriver::quote, MysqlDriver::parameter)
+    }
+
+    fn visit_bulk_delete(&self, statement: &BulkDeleteStatement, _text: &StatementTextRenderer) -> String {
+        BulkDeleteStatementTextRenderer::render_with(statement, MysqlDriver::quote, MysqlDriver::parameter)
     }
 
     fn visit_create_table(

@@ -111,6 +111,17 @@ describe("statement compile", () => {
     expect(DefaultStatementTextRenderer.instance.render(bounds)).toBe("SELECT MIN(n), MAX(n) FROM users");
   });
 
+  it("groups function columns", () => {
+    const grouped = new SelectStatement({
+      table: "users",
+      fields: ["COUNT(id)"],
+      groupBy: ["COUNT(id)"],
+    });
+    expect(DefaultStatementTextRenderer.instance.render(grouped)).toBe(
+      "SELECT COUNT(id) FROM users GROUP BY COUNT(id)",
+    );
+  });
+
   it("orders rows", () => {
     const ordered = new SelectStatement({
       table: "users",

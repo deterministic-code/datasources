@@ -27,8 +27,8 @@ public class GenerateSqlTests
                 """,
         }, new Dictionary<string, string>(), ["mysql"]);
         var sql = entries.Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
-        var contacts = System.Text.RegularExpressions.Regex.Match(sql, @"CREATE TABLE `contacts` \(([\s\S]*?)\);").Groups[1].Value;
-        Assert.Matches(@"`gender_type_id` INT", contacts);
+        var contacts = System.Text.RegularExpressions.Regex.Match(sql, @"CREATE TABLE contacts \(([\s\S]*?)\);").Groups[1].Value;
+        Assert.Matches(@"gender_type_id INT", contacts);
         Assert.DoesNotMatch(@"`gender_type_id` TEXT", contacts);
     }
 
@@ -55,10 +55,10 @@ public class GenerateSqlTests
         };
         var sql = GenerateSql.Of(files, new Dictionary<string, string>(), ["mysql"])
             .Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
-        Assert.Matches(@";\nGO\nCREATE TRIGGER `trg_genders_updated_at`", sql);
+        Assert.Matches(@";\nGO\nCREATE TRIGGER trg_genders_updated_at", sql);
         var custom = GenerateSql.Of(files, new Dictionary<string, string> { ["datasource.batch_separator"] = "BATCH" }, ["mysql"])
             .Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
-        Assert.Matches(@";\nBATCH\nCREATE TRIGGER `trg_genders_updated_at`", custom);
+        Assert.Matches(@";\nBATCH\nCREATE TRIGGER trg_genders_updated_at", custom);
         Assert.DoesNotMatch(@"\nGO\n", custom);
     }
 
@@ -89,6 +89,6 @@ public class GenerateSqlTests
                 """,
         }, new Dictionary<string, string>(), ["mysql"])
             .Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
-        Assert.Matches(@"INSERT INTO `genders`[\s\S]*;\nGO\nINSERT INTO `genders`", sql);
+        Assert.Matches(@"INSERT INTO genders[\s\S]*;\nGO\nINSERT INTO genders", sql);
     }
 }

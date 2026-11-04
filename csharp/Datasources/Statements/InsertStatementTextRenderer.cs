@@ -3,5 +3,9 @@ namespace Datasources;
 public class InsertStatementTextRenderer
 {
     public virtual string Render(InsertStatement statement) =>
-        $"INSERT INTO {statement.Table} ({string.Join(", ", statement.Fields.Select(field => field.Name))}) VALUES ({string.Join(", ", statement.Fields.Select(field => $"${field.Name}"))})";
+        $"INSERT INTO {Quote(statement.Table)} ({string.Join(", ", statement.Fields.Select(field => Quote(field.Name)))}) VALUES ({string.Join(", ", statement.Fields.Select(field => Parameter(field.Name)))})";
+
+    protected virtual string Quote(string name) => name;
+
+    protected virtual string Parameter(string name) => $"${name}";
 }

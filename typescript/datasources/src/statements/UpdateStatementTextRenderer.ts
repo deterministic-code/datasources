@@ -5,9 +5,7 @@ import type { IWhere } from "./IWhere.ts";
 import type { StatementTextRenderer } from "./StatementTextRenderer.ts";
 import type { UpdateStatement } from "./UpdateStatement.ts";
 
-const rename = (text: string, name: string, alias: string): string => {
-  const token = `$${name}`;
-  const next = `$${alias}`;
+const rename = (text: string, token: string, next: string): string => {
   let index = 0;
   let result = "";
   while (text.indexOf(token, index) >= 0) {
@@ -21,15 +19,12 @@ const rename = (text: string, name: string, alias: string): string => {
   return result + text.slice(index);
 };
 
-const setClause = (fields: Field[]): string =>
-  fields.map((field) => `${field.name} = $${field.name}`).join(", ");
-
 export class UpdateStatementTextRenderer {
   constructor(private readonly text: StatementTextRenderer) {}
 
   render(statement: UpdateStatement): string {
     return this.compose(
-      `UPDATE ${statement.table} SET ${setClause(statement.fields)}`,
+      `UPDATE ${this.quote(statement.table)} SET ${this.setClause(statement.fields)}`,
       statement.where,
       statement.fields,
     ).text;
@@ -54,10 +49,21 @@ export class UpdateStatementTextRenderer {
       const current = values.get(parameter.name);
       if (values.has(parameter.name) && current !== parameter.value) {
         const alias = `${parameter.name}__where`;
-        tail = rename(tail, parameter.name, alias);
+        tail = rename(tail, this.parameter(parameter.name), this.parameter(alias));
         parameters.push({ name: alias, value: parameter.value });
       } else parameters.push({ name: parameter.name, value: parameter.value });
     }
     return { text: head + tail, parameters };
   }
+
+  protected quote(name: string): string {
+    return name;
+  }
+
+  protected parameter(name: string): string {
+    return `$${name}`;
+  }
+
+  private setClause = (fields: Field[]): string =>
+    fields.map((field) => `${this.quote(field.name)} = ${this.parameter(field.name)}`).join(", ");
 }

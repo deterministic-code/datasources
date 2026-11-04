@@ -1,6 +1,8 @@
 import type { SqlSeedColumn, SqlSeedStatement } from "@deterministic-code/datasources";
+import { isKeyword, isVerbatim } from "./applyKeywords.ts";
 
-const quote = (ident: string): string => `\`${ident}\``;
+const quote = (ident: string): string =>
+  isKeyword(ident) || isVerbatim(ident) ? `\`${ident}\`` : ident;
 
 const quoteString = (value: unknown): string => `'${String(value).replace(/'/g, "''")}'`;
 

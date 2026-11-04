@@ -46,7 +46,7 @@ internal sealed class MysqlConnection : IConnection
     public async Task<ITransaction> StartTransaction(IsolationLevel isolation = IsolationLevel.ReadCommitted)
     {
         EnsureOpen();
-        await Exec($"SET TRANSACTION ISOLATION LEVEL {MysqlBind.IsolationSql(isolation)}");
+        await Exec($"SET TRANSACTION ISOLATION LEVEL {IsolationSql.Of(isolation)}");
         await Exec("START TRANSACTION");
         return new MysqlTransaction(this, isolation);
     }

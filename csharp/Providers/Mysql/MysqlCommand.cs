@@ -131,7 +131,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
             command.CommandText = sql;
         }
         else
-            command.CommandText = MysqlBind.ToMysql(sql);
+            command.CommandText = MysqlDriver.Placeholders(sql);
         foreach (var parameter in list)
         {
             var key = parameter.Name.TrimStart('$', '@', ':');
@@ -144,7 +144,7 @@ internal sealed class MysqlCommand : CommandMiddlewareHost, ICommand
     MySqlCommand Bind(string sql, Row parameters)
     {
         var command = Typed.Require().CreateCommand();
-        command.CommandText = MysqlBind.ToMysql(sql);
+        command.CommandText = MysqlDriver.Placeholders(sql);
         foreach (var (name, value) in parameters)
         {
             var key = name[0] is '@' or ':' or '$' ? name.TrimStart('$', '@', ':') : name;

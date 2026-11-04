@@ -4,6 +4,24 @@ namespace Datasources.Mysql;
 
 internal sealed class MysqlStatementRenderer(StatementTextRenderer text) : StatementRenderer(text)
 {
+    public override string Visit(SelectStatement select) =>
+        new MysqlSelectStatementTextRenderer(Text).Render(select);
+
+    public override string Visit(InsertStatement insert) =>
+        new MysqlInsertStatementTextRenderer().Render(insert);
+
+    public override string Visit(UpdateStatement update) =>
+        new MysqlUpdateStatementTextRenderer(Text).Render(update);
+
+    public override string Visit(DeleteStatement delete) =>
+        new MysqlDeleteStatementTextRenderer(Text).Render(delete);
+
+    public override string Visit(BulkInsertStatement insert) =>
+        new MysqlBulkInsertStatementTextRenderer().Render(insert);
+
+    public override string Visit(BulkDeleteStatement delete) =>
+        new MysqlBulkDeleteStatementTextRenderer().Render(delete);
+
     public override string Visit(SelectInsertedIdStatement inserted) =>
         new MysqlSelectInsertedIdStatementTextRenderer().Render(inserted);
 

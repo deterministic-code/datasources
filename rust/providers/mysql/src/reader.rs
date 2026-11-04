@@ -1,6 +1,6 @@
 use crate::command::{named_params, row_record};
 use crate::connection::{map_err, MysqlConnection};
-use crate::engine::to_mysql;
+use crate::MysqlDriver;
 use async_trait::async_trait;
 use datasources::{DatasourceError, Reader, Result, Row, Value};
 use futures_core::Stream;
@@ -156,7 +156,7 @@ async fn drive(
             }
         } else {
             let mut stream = conn
-                .exec_stream(to_mysql(&statements[index]), named_params(params))
+                .exec_stream(MysqlDriver::placeholders(&statements[index]), named_params(params))
                 .await
                 .map_err(map_err)?;
             loop {
@@ -201,7 +201,7 @@ async fn call_sets(
     params: &HashMap<String, Value>,
 ) -> Result<Vec<Vec<Row>>> {
     let mut result = conn
-        .exec_iter(to_mysql(sql), named_params(params))
+        .exec_iter(MysqlDriver::placeholders(sql), named_params(params))
         .await
         .map_err(map_err)?;
     let mut sets = Vec::new();

@@ -3,13 +3,24 @@ namespace Datasources;
 public class SelectStatementTextRenderer(StatementTextRenderer text)
 {
     public virtual string Render(SelectStatement statement) =>
-        $"SELECT {(statement.Distinct ? "DISTINCT " : "")}{FieldsSql(statement)} FROM {statement.Table}{JoinSql(statement.Joins)}{WhereSql(statement.Where)}{GroupSql(statement.GroupBy)}{HavingSql(statement.Having)}{OrderSql(statement.OrderBy)}{Limit(statement.Limit)}{Offset(statement.Offset)}";
+        $"SELECT {(statement.Distinct ? "DISTINCT " : "")}{FieldsSql(statement)} FROM {Quote(statement.Table ?? "")}{JoinSql(statement.Joins)}{WhereSql(statement.Where)}{GroupSql(statement.GroupBy)}{HavingSql(statement.Having)}{OrderSql(statement.OrderBy)}{Limit(statement.Limit)}{Offset(statement.Offset)}";
 
-    static string FieldsSql(SelectStatement statement) =>
+    protected virtual string Quote(string name) => name;
+
+    string QuotePath(string name) =>
+        name.Contains('(') ? name : string.Join(".", SelectFieldAliases.Segments(name).Select(Quote));
+
+    string FieldsSql(SelectStatement statement) =>
         statement.Fields.Count == 0
             ? "*"
             : string.Join(", ", statement.Fields.Select((field, i) =>
-                SelectFieldAliases.Apply(field, i < statement.Aliases.Count ? statement.Aliases[i] : null)));
+                FieldSql(field, i < statement.Aliases.Count ? statement.Aliases[i] : null)));
+
+    string FieldSql(string field, string? alias)
+    {
+        var rendered = SelectFieldAliases.AsIndex(field) >= 0 || field.Contains('(') ? field : QuotePath(field);
+        return alias is { } name ? $"{rendered} AS {Quote(name)}" : rendered;
+    }
 
     protected virtual string WhereSql(IWhere? where) =>
         where is null ? "" : $" WHERE {text.Render(where)}";
@@ -18,10 +29,10 @@ public class SelectStatementTextRenderer(StatementTextRenderer text)
         having is null ? "" : $" HAVING {text.Render(having)}";
 
     protected virtual string GroupSql(IReadOnlyList<string>? columns) =>
-        columns is null or [] ? "" : $" GROUP BY {string.Join(", ", columns)}";
+        columns is null or [] ? "" : $" GROUP BY {string.Join(", ", columns.Select(QuotePath))}";
 
     protected virtual string OrderSql(IReadOnlyList<OrderBy>? order) =>
-        order is null or [] ? "" : $" ORDER BY {string.Join(", ", order)}";
+        order is null or [] ? "" : $" ORDER BY {string.Join(", ", order.Select(item => $"{QuotePath(item.Column)} {(item.Direction == SortDirection.Desc ? "DESC" : "ASC")}"))}";
 
     protected virtual string Limit(int? limit) => Bound("LIMIT", limit);
 
@@ -38,8 +49,8 @@ public class SelectStatementTextRenderer(StatementTextRenderer text)
         joins is null or []
             ? ""
             : string.Concat(joins.Select(join => join.Kind == JoinKind.Cross
-                ? $" CROSS JOIN {join.Table}"
-                : $" {Keyword(join.Kind)} {join.Table} ON {text.Render(new Where(join.On ?? throw new InvalidOperationException("empty join")))}"));
+                ? $" CROSS JOIN {Quote(join.Table)}"
+                : $" {Keyword(join.Kind)} {Quote(join.Table)} ON {text.Render(new Where(join.On ?? throw new InvalidOperationException("empty join")))}"));
 
     protected virtual string Keyword(JoinKind kind) => kind switch
     {

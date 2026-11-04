@@ -17,15 +17,15 @@ import { MysqlConnection } from "./connection.ts";
 import { MysqlCommand } from "./command.ts";
 import { MysqlTransaction } from "./transaction.ts";
 import { MysqlRowTypeConverters } from "./converters/MysqlRowTypeConverters.ts";
-import { MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
+import { MysqlExpressionRenderer, MysqlStatementRenderer } from "./MysqlStatementRenderer.ts";
 import { columnTypes } from "./columnTypes.ts";
-import { applyKeywords } from "./applyKeywords.ts";
+import { applyKeywords, isKeyword, isVerbatim } from "./applyKeywords.ts";
 import { TypeMap } from "./TypeMap.ts";
 import { DefaultValueConverter, sqlStringLiteral } from "./DefaultValueConverter.ts";
 
 export { columnTypes };
 
-const statements = new StatementTextRenderer(t => new MysqlStatementRenderer(t), undefined, undefined, undefined, applyKeywords);
+const statements = new StatementTextRenderer(t => new MysqlStatementRenderer(t), undefined, t => new MysqlExpressionRenderer(t), undefined, applyKeywords);
 const types = new TypeMap({
   string: "TEXT",
   character: "CHAR(1)",
@@ -58,7 +58,11 @@ const defaults = new DefaultValueConverter({
 export class MysqlDriver implements IDriver {
   static readonly procedurePayloadType = "JSON";
   static applyKeywords = applyKeywords;
-  static quote = (name: string): string => `\`${name}\``;
+  static quote = (name: string): string =>
+    isKeyword(name) || isVerbatim(name) ? `\`${name}\`` : name;
+  static parameter = (name: string): string => `:${name}`;
+  static placeholders = (sql: string): string =>
+    sql.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, ":$1");
   static nativeType = (column: Column): string =>
     column.field ? types.convertField(column.field) : columnTypes[column.type] ?? column.type;
   static nativeDefault = (column: Column): string =>

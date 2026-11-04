@@ -6,19 +6,31 @@ use std::collections::HashMap;
 
 pub struct UpdateStatementTextRenderer<'a> {
     text: &'a StatementTextRenderer,
+    quote: fn(&str) -> String,
+    parameter: fn(&str) -> String,
 }
 
 impl<'a> UpdateStatementTextRenderer<'a> {
     pub fn new(text: &'a StatementTextRenderer) -> Self {
-        Self { text }
+        Self {
+            text,
+            quote: |name| name.to_string(),
+            parameter: |name| format!("${name}"),
+        }
+    }
+
+    pub fn with_quote(mut self, quote: fn(&str) -> String, parameter: fn(&str) -> String) -> Self {
+        self.quote = quote;
+        self.parameter = parameter;
+        self
     }
 
     pub fn render(&self, statement: &UpdateStatement) -> String {
         self.compose(
             &format!(
                 "UPDATE {} SET {}",
-                statement.table(),
-                set(statement.fields())
+                self.quote(statement.table()),
+                self.set(statement.fields())
             ),
             statement.where_clause(),
             statement.fields(),
@@ -49,7 +61,7 @@ impl<'a> UpdateStatementTextRenderer<'a> {
             match values.get(&parameter.name) {
                 Some(current) if current != &parameter.value => {
                     let alias = format!("{}__where", parameter.name);
-                    tail = rename(&tail, &parameter.name, &alias);
+                    tail = rename(&tail, &self.parameter(&parameter.name), &self.parameter(&alias));
                     bound.push(Parameter::new(alias, parameter.value));
                 }
                 _ => bound.push(parameter),
@@ -57,19 +69,25 @@ impl<'a> UpdateStatementTextRenderer<'a> {
         }
         (format!("{head}{tail}"), bound)
     }
+
+    pub fn quote(&self, name: &str) -> String {
+        (self.quote)(name)
+    }
+
+    pub fn parameter(&self, name: &str) -> String {
+        (self.parameter)(name)
+    }
+
+    fn set(&self, fields: &[Parameter]) -> String {
+        fields
+            .iter()
+            .map(|field| format!("{} = {}", self.quote(&field.name), self.parameter(&field.name)))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 }
 
-fn set(fields: &[Parameter]) -> String {
-    fields
-        .iter()
-        .map(|field| format!("{} = ${}", field.name, field.name))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn rename(text: &str, name: &str, alias: &str) -> String {
-    let token = format!("${name}");
-    let next = format!("${alias}");
+fn rename(text: &str, token: &str, next: &str) -> String {
     let mut result = String::new();
     let mut index = 0;
     while let Some(at) = text[index..].find(&token) {

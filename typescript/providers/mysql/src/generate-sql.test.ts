@@ -69,7 +69,7 @@ describe("generate sql", () => {
     const up = files.find((entry) => entry.filename.endsWith("mysql/migrations/0001_initial_up.sql"));
     assert.ok(up, "expected mysql/migrations/0001_initial_up.sql");
     const sql = "contents" in up ? String(up.contents) : up.content;
-    assert.match(sql, /;\nGO\nCREATE TRIGGER `trg_genders_updated_at`/);
+    assert.match(sql, /;\nGO\nCREATE TRIGGER trg_genders_updated_at/);
     const custom = await generateSql(
       {
         reader: memoryReader({
@@ -83,7 +83,7 @@ describe("generate sql", () => {
     const customUp = custom.find((entry) => entry.filename.endsWith("mysql/migrations/0001_initial_up.sql"));
     assert.ok(customUp, "expected mysql/migrations/0001_initial_up.sql");
     const customSql = "contents" in customUp ? String(customUp.contents) : customUp.content;
-    assert.match(customSql, /;\nBATCH\nCREATE TRIGGER `trg_genders_updated_at`/);
+    assert.match(customSql, /;\nBATCH\nCREATE TRIGGER trg_genders_updated_at/);
     assert.doesNotMatch(customSql, /\nGO\n/);
   });
 
@@ -113,7 +113,7 @@ seeds:
     );
     assert.ok(up, "expected mysql/migrations/0001_initial_up.sql");
     const sql = "contents" in up ? String(up.contents) : up.content;
-    assert.match(sql, /INSERT INTO `genders`[\s\S]*;\nGO\nINSERT INTO `genders`/);
+    assert.match(sql, /INSERT INTO genders[\s\S]*;\nGO\nINSERT INTO genders/);
   });
 
   it("infers a reference column type from the parent id", async () => {
@@ -143,10 +143,10 @@ seeds:
     const up = files.find((entry) => entry.filename.endsWith("0001_initial_up.sql"));
     assert.ok(up, "expected initial up migration");
     const sql = "contents" in up ? String(up.contents) : up.content;
-    assert.match(sql, /;\nGO\nCREATE TABLE `contacts`/);
-    const contacts = sql.match(/CREATE TABLE `contacts` \(([\s\S]*?)\);/)?.[1];
+    assert.match(sql, /;\nGO\nCREATE TABLE contacts/);
+    const contacts = sql.match(/CREATE TABLE contacts \(([\s\S]*?)\);/)?.[1];
     assert.ok(contacts, "expected contacts table body");
-    assert.match(contacts, /`gender_type_id` INT/);
-    assert.doesNotMatch(contacts, /`gender_type_id` TEXT/);
+    assert.match(contacts, /gender_type_id INT/);
+    assert.doesNotMatch(contacts, /gender_type_id TEXT/);
   });
 });

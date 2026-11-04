@@ -14,20 +14,30 @@ public class MysqlTests
     [Fact]
     public async Task CommandRepositoryAndFactory()
     {
-        Assert.Equal("SELECT * FROM t WHERE id = @id", MysqlBind.ToMysql("SELECT * FROM t WHERE id = $id"));
-        Assert.Equal("INSERT INTO t (id) VALUES (@id)", MysqlBind.ToMysql("INSERT INTO t (id) VALUES ($id) RETURNING id"));
+        var statements = new MysqlDriver().StatementRenderer!;
+        Assert.Equal(
+            "INSERT INTO users (id) VALUES (@id)",
+            statements.Render(new InsertStatement("users", [new Parameter("id", Value.Null.Instance)])));
+        Assert.Equal(
+            "INSERT INTO `groups` (description, name) VALUES (@description, @name)",
+            statements.Render(new InsertStatement("groups", [
+                new Parameter("description", Value.Null.Instance),
+                new Parameter("name", Value.Null.Instance),
+            ])));
         Assert.Equal(
             "INSERT INTO contact_settings (contact_id, `key`, value) VALUES (@contact_id, @key, @value)",
-            MysqlBind.ToMysql("INSERT INTO contact_settings (contact_id, key, value) VALUES ($contact_id, $key, $value)"));
-        Assert.Equal("CREATE TABLE t (id INT PRIMARY KEY)", MysqlBind.ToMysql("CREATE TABLE t (id INT PRIMARY KEY)"));
+            statements.Render(new InsertStatement("contact_settings", [
+                new Parameter("contact_id", Value.Null.Instance),
+                new Parameter("key", Value.Null.Instance),
+                new Parameter("value", Value.Null.Instance),
+            ])));
         Assert.Equal(
-            "CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))",
-            MysqlBind.ToMysql("CREATE TABLE t (id INT AUTO_INCREMENT, CONSTRAINT `pk` PRIMARY KEY (`id`))"));
-        Assert.Equal("INSERT INTO `OldContactsTbl` (`CntID`) VALUES (@CntID)", MysqlBind.ToMysql("INSERT INTO OldContactsTbl (CntID) VALUES ($CntID)"));
-        Assert.Equal("READ UNCOMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadUncommitted));
-        Assert.Equal("READ COMMITTED", MysqlBind.IsolationSql(IsolationLevel.ReadCommitted));
-        Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.RepeatableRead));
-        Assert.Equal("REPEATABLE READ", MysqlBind.IsolationSql(IsolationLevel.Serializable));
+            "INSERT INTO `OldContactsTbl` (`CntID`) VALUES (@CntID)",
+            statements.Render(new InsertStatement("OldContactsTbl", [new Parameter("CntID", Value.Null.Instance)])));
+        Assert.Equal("READ UNCOMMITTED", IsolationSql.Of(IsolationLevel.ReadUncommitted));
+        Assert.Equal("READ COMMITTED", IsolationSql.Of(IsolationLevel.ReadCommitted));
+        Assert.Equal("REPEATABLE READ", IsolationSql.Of(IsolationLevel.RepeatableRead));
+        Assert.Equal("REPEATABLE READ", IsolationSql.Of(IsolationLevel.Serializable));
 
         var conn = new MysqlConnection(new MysqlConnectionOptions { Url = "mysql://db/app" });
         Assert.Equal("mysql://db/app", conn.Url);

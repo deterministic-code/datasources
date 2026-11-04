@@ -18,7 +18,7 @@ internal sealed class MysqlSqlSeedStatementRenderer
         return $"INSERT INTO {table} ({cols}) VALUES ({values})";
     }
 
-    static string Quote(string ident) => $"`{ident}`";
+    static string Quote(string ident) => MysqlDriver.Quote(ident);
 
     static string Literal(SqlSeedColumn column)
     {

@@ -157,6 +157,51 @@ types:
     expect(Object.keys(store.files).every((path) => !path.includes("generated") && !path.includes("sql/"))).toBe(true);
   });
 
+  it("fails parse when complex-game types omit the user include", async () => {
+    const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const types = readFileSync(join(dir, "types.yaml"), "utf8").replace(/\nincludes:\n[\s\S]*?(?=\ntypes:\n)/, "\n");
+    const store = mem({
+      [join(input, "types.yaml")]: types,
+      [join(input, "datasource.yaml")]: readFileSync(join(dir, "datasource.yaml"), "utf8"),
+    });
+    const errs: string[] = [];
+    const io = deps(store.fs);
+    io.err = (line) => errs.push(line);
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        io,
+        cwd,
+      ),
+    ).toBe(1);
+    expect(errs).toEqual(['missing type "user"']);
+    expect(Object.keys(store.files).some((path) => path.includes("generated") || path.includes("sql/"))).toBe(false);
+  });
+
+  it("writes sqlite migrations for complex-game with local includes", async () => {
+    const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: readFileSync(join(dir, "types.yaml"), "utf8"),
+      [join(input, "user-roles-simple-cli-types.yaml")]: readFileSync(join(dir, "user-roles-simple-cli-types.yaml"), "utf8"),
+      [join(input, "contacts-crud-enriched-medium-rest-types.yaml")]: readFileSync(
+        join(dir, "contacts-crud-enriched-medium-rest-types.yaml"),
+        "utf8",
+      ),
+      [join(input, "datasource.yaml")]: readFileSync(join(dir, "datasource.yaml"), "utf8"),
+      [join(cwd, ".env")]: "INSTALLED_PROVIDERS=sqlite\n",
+    });
+    expect(
+      await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-auto-migrate-up"], deps(store.fs), cwd),
+    ).toBe(0);
+    const up = store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")];
+    expect(up).toMatch(/CREATE TABLE/i);
+    expect(up).toMatch(/users/i);
+  });
+
   it("generates the complex-game spec after resolving file includes", async () => {
     const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../samples/complex-game-rest-shared/deterministic");
     const loaded = await loadSpec(nodeFs, dir);
