@@ -17,6 +17,9 @@ const mem = (files: Record<string, string> = {}): { files: Record<string, string
         store[path] = text;
       },
       readdir: async () => Object.keys(store),
+      unlink: async (path) => {
+        delete store[path];
+      },
     },
   };
 };

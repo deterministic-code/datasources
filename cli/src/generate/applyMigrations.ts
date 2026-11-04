@@ -1,9 +1,9 @@
-import { isAbsolute, join } from "node:path";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import { generateSql } from "@deterministic-code/datasources-code-generators";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Flags, MigrationsCreateCommand } from "../parse.ts";
-import type { Deps } from "../io.ts";
+import type { Deps, Fs } from "../io.ts";
 import { destEnv } from "./destEnv.ts";
 import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
@@ -14,6 +14,24 @@ import { withStoredProcedures } from "./storedProcedures.ts";
 import { writeEntries } from "./writeEntries.ts";
 
 const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
+
+const STALE_CUSTOM = /^\d{10}_custom_\d{3}_/;
+
+const pruneStaleCustomMigrations = async (
+  fs: Fs,
+  root: string,
+  entries: { filename: string }[],
+): Promise<void> => {
+  const dirs = new Set(
+    entries.map((entry) => dirname(join(root, entry.filename))).filter((dir) => basename(dir) === "migrations"),
+  );
+  for (const dir of dirs) {
+    const names = await fs.readdir(dir);
+    for (const name of names) {
+      if (STALE_CUSTOM.test(name)) await fs.unlink(join(dir, name));
+    }
+  }
+};
 
 export const applyMigrations = async (
   command: MigrationsCreateCommand,
@@ -38,4 +56,5 @@ export const applyMigrations = async (
     return;
   }
   for (const path of await writeEntries(deps.fs, root, entries)) deps.log(path);
+  await pruneStaleCustomMigrations(deps.fs, root, entries);
 };

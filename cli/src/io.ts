@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { checkbox, confirm, input, select } from "@inquirer/prompts";
 
@@ -7,6 +7,7 @@ export type Fs = {
   readFile: (path: string) => Promise<string>;
   writeFile: (path: string, text: string) => Promise<void>;
   readdir: (path: string) => Promise<string[]>;
+  unlink: (path: string) => Promise<void>;
 };
 
 export type Runner = (command: string, args: string[], cwd: string) => Promise<void>;
@@ -40,6 +41,7 @@ export const nodeFs: Fs = {
     await writeFile(path, text);
   },
   readdir,
+  unlink,
 };
 
 export const spawnRunner: Runner = (command, args, cwd) =>

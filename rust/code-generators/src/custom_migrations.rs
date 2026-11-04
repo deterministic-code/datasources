@@ -99,7 +99,7 @@ pub fn of(
     for slot in ordered {
         for (side, body) in [("up", slot.up.as_deref().unwrap()), ("down", slot.down.as_deref().unwrap())] {
             let filename = format!(
-                "{:010}_custom_{:03}_{}_{side}.sql",
+                "{:04}_up_custom_{:03}_{}_{side}.sql",
                 slot.order, slot.order, slot.name
             );
             if !seen.insert(filename.clone()) {
@@ -111,4 +111,52 @@ pub fn of(
         }
     }
     Ok(entries)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::of;
+    use std::collections::HashMap;
+
+    #[test]
+    fn copies_order_2_after_the_generated_schema_at_that_number() {
+        let files = HashMap::from([
+            (
+                "deterministic/custom/sqlite/0002_seed_categories_up.sql".into(),
+                "INSERT INTO categories VALUES (1);\n".into(),
+            ),
+            (
+                "deterministic/custom/sqlite/0002_seed_categories_down.sql".into(),
+                "DELETE FROM categories WHERE id = 1;\n".into(),
+            ),
+        ]);
+        let entries = of(&files, "sqlite", Some("deterministic")).unwrap();
+        let up = entries
+            .iter()
+            .find(|entry| entry.filename.ends_with("_up.sql"))
+            .unwrap();
+        assert_eq!(
+            up.filename,
+            "sqlite/migrations/0002_up_custom_002_seed_categories_up.sql"
+        );
+        let name = up.filename.rsplit('/').next().unwrap();
+        let mut names = vec![
+            "0001_initial_up.sql",
+            "0001_up.sql",
+            "0002_stored_procedures_up.sql",
+            name,
+            "0003_up.sql",
+        ];
+        names.sort();
+        assert_eq!(
+            names,
+            [
+                "0001_initial_up.sql",
+                "0001_up.sql",
+                "0002_stored_procedures_up.sql",
+                "0002_up_custom_002_seed_categories_up.sql",
+                "0003_up.sql",
+            ]
+        );
+    }
 }
