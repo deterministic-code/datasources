@@ -348,6 +348,17 @@ types: []
     expect(csharpPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Groups")?.relatedProperty).toBeUndefined();
     expect(typescriptPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "groups")?.relatedProperty).toBeUndefined();
     expect(rustPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "groups")?.relatedProperty).toBeUndefined();
+    const missingRelated = {
+      ...spec,
+      types: spec.types.filter((type) => type.name !== "role"),
+      expandedTypes: spec.expandedTypes.filter((type) => type.name !== "role"),
+      datasource: spec.datasource.filter((table) => table.name !== "role"),
+    };
+    expect(
+      planRepositories(missingRelated, "csharp", settings)
+        .find((model) => model.specName === "user")
+        ?.enrichments.find((item) => item.destination === "Roles")?.relatedProperty,
+    ).toBeUndefined();
     const csharp = await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(files), settings });
     const typescript = await deterministic.generateRepositories({
       dialect: "typescript",
