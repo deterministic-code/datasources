@@ -17,21 +17,13 @@ class RustRepositories extends RepositoryGenerator {
 
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("rust", settings);
-    const datasourceNames = new Set(datasourceTypesOf(spec).map((type) => type.name));
-    const typeStems = [
-      ...new Map(
-        [...datasourceTypesOf(spec), ...authoredViewTypesOf(spec)].map((type) => [
-          type.name,
-          this.typeMod(casing, type.name, datasourceNames.has(type.name) ? "datasource" : "view"),
-        ]),
-      ).values(),
-    ];
+    const typeStems = this.typeMods(spec, casing);
     const mods = [...models.map((model) => this.mod(this.repositoryFile(model.specName, casing))), this.mod(casing.convertFileName("repository_registry"))];
     return [
       ...models.map((model) => content(`${this.repositoryFile(model.specName, casing)}.rs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
       content(`${casing.convertFileName("repository_registry")}.rs`, fill(registryTmpl, this.registry(models, casing, spec))),
       content("mod.rs", fill(modTmpl, { mods, allowNonSnakeCase: this.allowNonSnakeCase(mods) })),
-      content("../mod.rs", fill(crateModTmpl, { typeStems, registryIdent: this.ident(casing.convertFileName("repository_registry")), allowNonSnakeCase: this.allowNonSnakeCase(typeStems) })),
+      content("../mod.rs", fill(crateModTmpl, { typeStems, kinds: this.kindMods(typeStems), registryIdent: this.ident(casing.convertFileName("repository_registry")), allowNonSnakeCase: this.allowNonSnakeCase(typeStems) })),
       content("../schema_objects.rs", fill(schemaObjectsTmpl, this.schemaTypes(models, spec))),
     ];
   }
@@ -137,10 +129,52 @@ class RustRepositories extends RepositoryGenerator {
     return { stem, ident, path: ident === stem ? undefined : {} };
   }
 
-  private typeMod(casing: ICasingStrategy, name: string, kind: TypeKind): Record<string, unknown> {
-    const stem = casing.convertFileName(this.paths.typeStem(name));
-    return { stem, ident: this.ident(stem), path: `${caseDirectories(this.paths.typesDir(kind), casing)}/${stem}.rs` };
+  private kindMods(typeStems: Record<string, unknown>[]): Record<string, unknown>[] {
+    const byKind = new Map<string, { ident: string }[]>();
+    for (const item of typeStems) {
+      const kind = item.kind;
+      if (typeof kind !== "string") continue;
+      const idents = byKind.get(kind) ?? [];
+      idents.push({ ident: String(item.ident) });
+      byKind.set(kind, idents);
+    }
+    return [...byKind].map(([kind, idents]) => ({ kind, idents }));
   }
+
+  private typeMods(spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown>[] {
+    const datasourceNames = new Set(datasourceTypesOf(spec).map((type) => type.name));
+    const types = [
+      ...datasourceTypesOf(spec).map((type) => ({ name: type.name, kind: "datasource" as TypeKind })),
+      ...authoredViewTypesOf(spec)
+        .filter((type) => !datasourceNames.has(type.name))
+        .map((type) => ({ name: type.name, kind: "view" as TypeKind })),
+    ];
+    const stems = types.map((type) => ({
+      ...type,
+      stem: casing.convertFileName(this.paths.typeStem(type.name)),
+    }));
+    const counts = new Map<string, number>();
+    for (const item of stems) counts.set(item.stem, (counts.get(item.stem) ?? 0) + 1);
+    return [
+      ...new Map(
+        stems.map((item) => {
+          const collide = counts.get(item.stem)! > 1;
+          const ident = this.ident(collide ? `${item.kind}_${item.stem}` : item.stem);
+          return [
+            `${item.kind}/${item.stem}`,
+            {
+              stem: item.stem,
+              ident,
+              path: `${caseDirectories(this.paths.typesDir(item.kind), casing)}/${item.stem}.rs`,
+              glob: collide ? undefined : {},
+              kind: collide ? item.kind : undefined,
+            },
+          ];
+        }),
+      ).values(),
+    ];
+  }
+
 }
 
 export const rustRepositories = new RustRepositories();

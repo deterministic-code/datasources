@@ -32,6 +32,7 @@ export const loadSpec = async (
     if (text !== undefined) files[name] = text;
   }
   if (files["types.yaml"] === undefined) throw new Error(`missing types.yaml in ${dir}`);
+  files["types.yaml.authored"] = files["types.yaml"];
   files["types.yaml"] = await resolveIncludes(fs, join(dir, "types.yaml"), files["types.yaml"]);
   const names = await fs.readdir(dir).catch(() => [] as string[]);
   for (const name of names) {
@@ -40,6 +41,7 @@ export const loadSpec = async (
     if (text !== undefined) files[name] = await resolveIncludes(fs, join(dir, name), text);
   }
   files["datasource.yaml"] ??= defaultDatasourceYaml;
+  files["datasource.yaml.authored"] = files["datasource.yaml"];
   files["datasource.yaml"] = await resolveIncludes(fs, join(dir, "datasource.yaml"), files["datasource.yaml"]);
   const diffs = names.filter((name) => versionDir.test(name)).sort();
   const versionFiles: string[] = [];

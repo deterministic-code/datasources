@@ -91,6 +91,7 @@ types:
     expect(loaded.files["types.yaml"]).toMatch(/settings:/);
     expect(loaded.files["types.yaml"]).toMatch(/extra:/);
     expect(loaded.files["types.yaml"]).not.toMatch(/\n  - base:\n/);
+    expect(loaded.files["types.yaml.authored"]).toMatch(/file:/);
   });
 
   it("keeps a types filter include after folding file includes", async () => {

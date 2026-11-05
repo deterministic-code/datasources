@@ -52,6 +52,26 @@ public class SqliteStatementRendererTests
             Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.AddColumn(new Column("email", "TEXT", NotNull: new NotNull())))));
         Assert.Throws<InvalidOperationException>(() =>
             Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.AlterColumn(new Column("age", "INTEGER")))));
+        Assert.Equal(
+            "CREATE UNIQUE INDEX \"ux_email\" ON \"users\" (\"email\")",
+            Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.AddConstraint(new UniqueConstraint("ux_email", ["email"])))));
+        Assert.Equal(
+            "DROP INDEX IF EXISTS \"ux_email\"",
+            Renderer.Render(new AlterTableStatement("users", new AlterTableStatement.DropConstraint("ux_email"))));
+        Assert.Equal("", Renderer.Render(new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"], "drop")));
+        Assert.Throws<InvalidOperationException>(() =>
+            Renderer.Render(new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"])));
+        var rebuilt = Renderer.Render(new ForeignKeyStatement(
+            "users",
+            "fk",
+            ["id"],
+            "other",
+            ["id"],
+            Create: new CreateTableStatement("users", [new Column("id", "INTEGER")])));
+        Assert.Contains("CREATE TABLE \"users__new\"", rebuilt);
+        Assert.Contains("INSERT INTO \"users__new\" (\"id\") SELECT \"id\" FROM \"users\"", rebuilt);
+        Assert.Contains("DROP TABLE IF EXISTS \"users\"", rebuilt);
+        Assert.Contains("ALTER TABLE \"users__new\" RENAME TO \"users\"", rebuilt);
     }
 
     [Fact]

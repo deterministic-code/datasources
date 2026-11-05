@@ -67,6 +67,7 @@ describe("parseArgs", () => {
       output: "out",
       migrations: true,
       migrate: true,
+      delete: false,
       storedProcedures: false,
       migrationsRoot: "sql",
       fileNames: undefined,
@@ -131,7 +132,11 @@ describe("parseArgs", () => {
     ).toMatchObject({
       migrations: false,
       migrate: false,
+      delete: false,
       migrationsRoot: "db",
+    });
+    expect(parseArgs(["generate", "all", "--dialect", "typescript", "--delete"]).command).toMatchObject({
+      delete: true,
     });
     expect(parseArgs(["generate", "types", "--dialect=csharp", "--provider=deterministic", "--input=in", "--output=out"]).command).toMatchObject({
       target: "types",
@@ -173,6 +178,7 @@ describe("parseArgs", () => {
     expect(help).toMatch(/--object-names/);
     expect(help).toMatch(/--sql-keywords/);
     expect(help).toMatch(/--batch-separator/);
+    expect(help).toMatch(/--delete/);
     expect(
       parseArgs([
         "generate",

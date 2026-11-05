@@ -1,11 +1,36 @@
 import {
   AlterTableStatementTextRenderer,
+  CreateIndexStatement,
+  DropIndexStatement,
   type AlterAction,
+  type AlterTableStatement,
   type Column,
 } from "@deterministic-code/datasources";
 import { SqliteDriver } from "./SqliteDriver.ts";
+import { SqliteCreateIndexStatementRenderer, SqliteDropIndexStatementRenderer } from "./SqliteQuotedRenderers.ts";
 
 export class SqliteAlterTableStatementRenderer extends AlterTableStatementTextRenderer {
+  #table = "";
+
+  override renderAlter(statement: AlterTableStatement): string {
+    this.#table = statement.table;
+    const unique = this.uniqueIndexSql(statement.action);
+    if (unique !== undefined) return unique;
+    return super.renderAlter(statement);
+  }
+
+  private uniqueIndexSql(action: AlterAction): string | undefined {
+    if (action.kind === "addConstraint" && action.constraint.kind === "unique") {
+      return new SqliteCreateIndexStatementRenderer().render(
+        new CreateIndexStatement(action.constraint.name, this.#table, action.constraint.columns, true),
+      );
+    }
+    if (action.kind === "dropConstraint") {
+      return new SqliteDropIndexStatementRenderer().render(new DropIndexStatement(action.name, this.#table));
+    }
+    return undefined;
+  }
+
   protected quote(name: string): string {
     return SqliteDriver.quote(name);
   }
@@ -30,9 +55,6 @@ export class SqliteAlterTableStatementRenderer extends AlterTableStatementTextRe
         },
         addConstraint: () => {
           throw new Error("SQLite cannot ADD CONSTRAINT");
-        },
-        dropConstraint: () => {
-          throw new Error("SQLite cannot DROP CONSTRAINT");
         },
         addColumn: () => super.actionSql(action),
         dropColumn: () => super.actionSql(action),

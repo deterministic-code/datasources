@@ -20,7 +20,7 @@ import { rustRepositories } from "./RustRepositories.ts";
 import { typescriptRepositories } from "./TypeScriptRepositories.ts";
 import { providerByName } from "./providers.ts";
 import { flattenSettings, settingsFrom } from "./settingsFlat.ts";
-import { writeEntries } from "./writeEntries.ts";
+import { deleteStale, writeEntries } from "./writeEntries.ts";
 import { defaultDatasourceYaml, loadSpec } from "./loadSpec.ts";
 import { nodeFs } from "../io.ts";
 import { DictionaryMapper } from "@deterministic-code/datasources";
@@ -278,6 +278,44 @@ types:
     expect(files[join("out", "e.txt")]).toContain("next");
     expect(files[join("out", "e.txt")]).not.toContain("old");
     expect(files[join("out", "f.txt")]).toContain("// <region>");
+    const leftover = mem({
+      [join("out", "keep.ts")]: "keep",
+      [join("out", "typescript/types/generated/views/categories.ts")]: "old",
+    });
+    expect(await deleteStale(leftover.fs, "out", [join("out", "keep.ts")])).toEqual([
+      join("out", "typescript/types/generated/views/categories.ts"),
+    ]);
+    expect(leftover.files[join("out", "keep.ts")]).toBe("keep");
+    expect(leftover.files[join("out", "typescript/types/generated/views/categories.ts")]).toBeUndefined();
+    expect(await deleteStale(mem().fs, "out", [])).toEqual([]);
+  });
+
+  it("keeps leftover generated files unless --delete", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const leftover = join(cwd, "generated/typescript/types/generated/views/categories.ts");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[leftover] = "old";
+    const kept = mem(seeded);
+    expect(
+      await exec(
+        ["generate", "types", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        deps(kept.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(kept.files[leftover]).toBe("old");
+    const removed = mem(seeded);
+    expect(
+      await exec(
+        ["generate", "types", "--dialect", "typescript", "--cwd", cwd, "--delete", "--no-migrations", "--no-auto-migrate-up"],
+        deps(removed.fs),
+        cwd,
+      ),
+    ).toBe(0);
+    expect(removed.files[leftover]).toBeUndefined();
+    expect(Object.keys(removed.files).some((path) => path.endsWith("contact.ts"))).toBe(true);
   });
 
   it("rejects an unknown provider", () => {
@@ -779,22 +817,108 @@ includes:
 types: []
 `,
     };
-    const named = (dialect: Dialect, settings: Record<string, string> = { "backend.datasources": "sqlite" }) => ({
+    const named = (
+      dialect: Dialect,
+      spec: Record<string, string> = files,
+      settings: Record<string, string> = {},
+    ) => ({
       dialect,
-      reader: memoryReader(files),
-      settings,
+      reader: memoryReader(spec),
+      settings: { "backend.datasources": "sqlite", ...settings },
       env: { INSTALLED_PROVIDERS: "sqlite" },
     });
-    const typescript = await deterministic.generateTypes(named("typescript"));
-    expect(textOf(typescript, "types/datasource/category.ts")).toContain("Category");
-    expect(textOf(typescript, "types/view/category.ts")).toContain("Category");
-    expect(textOf(typescript, "types/datasource/userBase.ts")).toContain("UserBase");
-    expect(textOf(typescript, "types/view/user.ts")).toContain("export interface User extends UserBase");
-    expect(typescript.some((entry) => entry.filename.endsWith("categories.ts"))).toBe(false);
-    expect(typescript.some((entry) => entry.filename.endsWith("users.ts"))).toBe(false);
-    const repos = await deterministic.generateRepositories(named("csharp"));
-    expect(textOf(repos, "CategoriesRepository.cs")).toContain("public sealed class CategoriesRepository");
-    expect(textOf(repos, "CategoriesRepository.cs")).toContain("CRUDRepository<Backend.Types.View.Category>");
+    const dialects = ["csharp", "typescript", "rust"] as const;
+    const typeFile = {
+      csharp: { category: "Category.cs", userBase: "UserBase.cs", user: "User.cs" },
+      typescript: { category: "category.ts", userBase: "userBase.ts", user: "user.ts" },
+      rust: { category: "category.rs", userBase: "userBase.rs", user: "user.rs" },
+    } as const;
+    const repoFile = {
+      csharp: { categories: "CategoriesRepository.cs", users: "UsersRepository.cs" },
+      typescript: { categories: "categoriesRepository.ts", users: "usersRepository.ts" },
+      rust: { categories: "categoriesRepository.rs", users: "usersRepository.rs" },
+    } as const;
+    const pluralType = {
+      csharp: ["Categories.cs", "Users.cs"],
+      typescript: ["categories.ts", "users.ts"],
+      rust: ["categories.rs", "users.rs"],
+    } as const;
+    const clash = {
+      "types.yaml": `version: 1.0.0
+types:
+  - user:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - users:
+      tags: [view_type]
+      inherits: user
+      fields:
+        - extra:
+            type: string
+`,
+      "datasource.yaml": files["datasource.yaml"],
+    };
+    for (const dialect of dialects) {
+      const types = await deterministic.generateTypes(named(dialect));
+      const repos = await deterministic.generateRepositories(named(dialect));
+      const sql = (await deterministic.generateDatasource(named(dialect)))
+        .map((entry) => entry.contents ?? "")
+        .join("\n");
+      expect(textOf(types, typeFile[dialect].category)).toContain("Category");
+      expect(textOf(types, typeFile[dialect].userBase)).toContain("UserBase");
+      expect(textOf(types, typeFile[dialect].user)).toMatch(/User/);
+      expect(types.some((entry) => pluralType[dialect].some((name) => entry.filename.endsWith(name)))).toBe(false);
+      expect(repos.some((entry) => entry.filename.endsWith(repoFile[dialect].categories))).toBe(true);
+      expect(repos.some((entry) => entry.filename.endsWith(repoFile[dialect].users))).toBe(true);
+      expect(sql).toMatch(/CREATE TABLE "categories"/);
+      expect(sql).toMatch(/CREATE TABLE "user_bases"/);
+      if (dialect === "csharp") {
+        expect(textOf(repos, repoFile.csharp.categories)).toContain("CRUDRepository<Backend.Types.View.Category>");
+        expect(textOf(repos, "RepositoryRegistry.cs")).toContain('"Category", "Categories"');
+        expect(textOf(repos, "RepositoryRegistry.cs")).toContain('"User", "Users"');
+        expect(textOf(types, "View/User.cs")).toContain("Backend.Types.Datasource.UserBase");
+      }
+      if (dialect === "typescript") {
+        expect(textOf(types, "types/view/user.ts")).toContain("export interface User extends UserBase");
+        expect(textOf(repos, "repositoryRegistry.ts")).toContain('"Category", "categories"');
+        expect(textOf(repos, "repositoryRegistry.ts")).toContain('"User", "users"');
+      }
+      if (dialect === "rust") {
+        const crate = repos.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "mod.rs");
+        expect(crate?.contents).toContain("types/datasource/userBase.rs");
+        expect(crate?.contents).toContain("types/view/user.rs");
+        expect(crate?.contents).toContain("pub use userBase::*;");
+        expect(crate?.contents).toContain("pub use user::*;");
+        expect(textOf(repos, "repositoryRegistry.rs")).toContain("fn categories(");
+        expect(textOf(repos, "repositoryRegistry.rs")).toContain("fn users(");
+      }
+      const clashTypes = await deterministic.generateTypes(named(dialect, clash));
+      const clashRepos = await deterministic.generateRepositories(named(dialect, clash));
+      expect(clashTypes.some((entry) => entry.filename.endsWith(pluralType[dialect][1]))).toBe(false);
+      expect(clashRepos.some((entry) => entry.filename.endsWith(repoFile[dialect].users))).toBe(true);
+      if (dialect === "csharp") {
+        expect(textOf(clashTypes, "View/User.cs")).toContain("Backend.Types.Datasource.User");
+      }
+      if (dialect === "typescript") {
+        expect(textOf(clashTypes, "types/view/user.ts")).toContain("User as UserBase");
+        expect(textOf(clashTypes, "types/view/user.ts")).toContain("export interface User extends UserBase");
+      }
+      if (dialect === "rust") {
+        const clashMod = clashRepos.find((entry) => entry.filename.endsWith("../mod.rs") || entry.filename === "mod.rs");
+        expect(clashMod?.contents).toContain("types/datasource/user.rs");
+        expect(clashMod?.contents).toContain("types/view/user.rs");
+        expect(clashMod?.contents).toContain("pub mod datasource_user;");
+        expect(clashMod?.contents).toContain("pub mod view_user;");
+        expect(clashMod?.contents).toContain("pub mod datasource {");
+        expect(clashMod?.contents).toContain("pub use super::datasource_user::*;");
+        expect(clashMod?.contents).toContain("pub mod view {");
+        expect(clashMod?.contents).toContain("pub use super::view_user::*;");
+        expect(clashMod?.contents).not.toContain("pub use user::*;");
+      }
+    }
     const singularTables = await deterministic.generateRepositories(
       request("csharp", { "backend.datasources": "sqlite", "datasource.pluralize_datatable_names": "false" }),
     );

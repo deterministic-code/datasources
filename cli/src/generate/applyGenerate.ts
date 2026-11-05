@@ -8,7 +8,7 @@ import { loadSpec } from "./loadSpec.ts";
 import { providerByName } from "./providers.ts";
 import { requireKnownReferenceTypes } from "./requireKnownReferenceTypes.ts";
 import { withStoredProcedures } from "./storedProcedures.ts";
-import { writeEntries } from "./writeEntries.ts";
+import { deleteStale, writeEntries } from "./writeEntries.ts";
 import { overlayCasingFlags } from "./casing.ts";
 import { overlaySqlFlags } from "./sqlFlags.ts";
 
@@ -40,7 +40,10 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
     repositories: () => provider.generateRepositories(request),
     datasource: () => provider.generateDatasource(request),
   }[command.target]();
-  for (const path of await writeEntries(deps.fs, at(flags.cwd, command.output), entries)) deps.log(path);
+  const root = at(flags.cwd, command.output);
+  const written = await writeEntries(deps.fs, root, entries);
+  for (const path of written) deps.log(path);
+  if (command.delete) for (const path of await deleteStale(deps.fs, root, written)) deps.log(path);
   if (command.dialect !== "rust" || command.target === "datasource") return;
   const dest = join(flags.cwd, "src", "generated.rs");
   const rustMod = join(at(flags.cwd, command.output), "mod.rs");

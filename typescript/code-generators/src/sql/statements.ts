@@ -146,7 +146,17 @@ export const addForeignKeyStatementOf = (
   field: TypeField,
 ): ForeignKeyStatement => {
   const fk = foreignKeyOf(naming, tables, table, field);
-  return new ForeignKeyStatement(table.tableName, fk.name, fk.columns, fk.referencesTable, fk.referencesColumns);
+  return new ForeignKeyStatement(
+    table.tableName,
+    fk.name,
+    fk.columns,
+    fk.referencesTable,
+    fk.referencesColumns,
+    "add",
+    undefined,
+    undefined,
+    createTableStatementOf(table, naming, tables),
+  );
 };
 
 export const dropForeignKeyStatementOf = (

@@ -73,6 +73,25 @@ describe("schemaDiff", () => {
     assert.deepEqual(sql([before], [after]), []);
   });
 
+  it("rebuilds a sqlite table when a foreign key target changes", () => {
+    const users = table("user", [field("id", { isId: true })]);
+    const accounts = table("account", [field("id", { isId: true })]);
+    const before = table("order", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer", references: "user.id" }),
+    ]);
+    const after = table("order", [
+      field("id", { isId: true }),
+      field("user_id", { type: "integer", references: "account.id" }),
+    ]);
+    const statements = sql([users, before], [accounts, after]);
+    assert.equal(
+      statements.some((item) => item.includes("INSERT INTO") && item.includes("orders__new")),
+      true,
+    );
+    assert.equal(statements.some((item) => item.includes("accounts")), true);
+  });
+
   it("throws when the primary key changes", () => {
     const before = table("user", [field("id", { isId: true }), field("email")]);
     const after = table("user", [field("email", { isId: true }), field("id")]);

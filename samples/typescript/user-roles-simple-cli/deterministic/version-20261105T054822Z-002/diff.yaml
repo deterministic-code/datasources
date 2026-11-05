@@ -1,0 +1,28 @@
+types.yaml:
+  types:
+    added:
+      - user_base:
+          tags:
+            - datasource_type
+          inherits: base
+          fields:
+            - username:
+                type: string
+            - password:
+                type: string
+            - is_enabled:
+                type: boolean
+                default_value: true
+    changed:
+      - user_group:
+          fields:
+            changed:
+              - user_id:
+                  references: user_base.id
+      - user_role:
+          fields:
+            changed:
+              - user_id:
+                  references: user_base.id
+    removed:
+      - user

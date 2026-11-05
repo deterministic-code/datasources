@@ -71,7 +71,7 @@ public static class TableStatements
         SpecTypeField field)
     {
         var fk = ForeignKeyOf(naming, tables, table, field);
-        return new ForeignKeyStatement(table.TableName, fk.Name, fk.Columns, fk.ReferencesTable, fk.ReferencesColumns);
+        return new ForeignKeyStatement(table.TableName, fk.Name, fk.Columns, fk.ReferencesTable, fk.ReferencesColumns, Create: CreateTable(table, naming, tables));
     }
 
     public static ForeignKeyStatement DropForeignKey(

@@ -1,6 +1,9 @@
-import { parse } from "yaml";
+import { dirname, join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
+import { parse, stringify } from "yaml";
 import type { IStatement } from "@deterministic-code/datasources";
 import type { SeedRow } from "@deterministic-code/deterministic-generators-common/parser";
+import { resolveIncludes as foldIncludes } from "@deterministic-code/deterministic-generators-common/includes";
 import type { GenerateContext } from "@deterministic-code/generators-common/generate-context";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { DeterministicParser, VersionSnapshot } from "@deterministic-code/deterministic-generators-common/parser";
@@ -43,18 +46,69 @@ const parseDiff = (text: string, source: string): Diff => {
 const fold = (path: string, text: string): string =>
   VersionSnapshot.combine([{ [path]: { added: true, content: parse(text) as Diff } }]).yaml(path);
 
+const isKeyed = (value: unknown): value is Record<string, unknown>[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((item) => item != null && typeof item === "object" && !Array.isArray(item) && Object.keys(item).length === 1);
+
+const canonicalize = (value: unknown): unknown => {
+  if (isKeyed(value)) {
+    return Object.fromEntries(value.map((entry) => {
+      const key = Object.keys(entry)[0]!;
+      return [key, canonicalize(entry[key])];
+    }));
+  }
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value != null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalize((value as Record<string, unknown>)[key])]),
+    );
+  }
+  return value;
+};
+
 const matches = (snapshot: VersionSnapshot, path: string, live: string | undefined, whenMissing: string | undefined): boolean => {
   const has = own(snapshot.documents, path);
   const text = live === undefined || live === "" ? whenMissing : live;
   if (text === undefined || text === "") return !has;
-  const snapshotYaml = has ? snapshot.yaml(path) : whenMissing === undefined ? undefined : fold(path, whenMissing);
-  return snapshotYaml !== undefined && snapshotYaml === fold(path, text);
+  const snapshotDoc = has ? snapshot.documents[path] : whenMissing === undefined ? undefined : parse(fold(path, whenMissing));
+  if (snapshotDoc === undefined) return false;
+  return isDeepStrictEqual(canonicalize(snapshotDoc), canonicalize(parse(text)));
 };
 
-const filesOf = (snapshot: VersionSnapshot): Record<string, string> => {
+type Include = { file?: string; types?: { filter?: string } };
+
+const expand = async (files: Record<string, string>, name: string): Promise<string> => {
+  const text = files[name];
+  const parsed = parse(text) as { includes?: Include[] } | null;
+  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return text;
+  const includes = Array.isArray(parsed.includes) ? parsed.includes : [];
+  const fileIncludes = includes.filter((entry) => typeof entry.file === "string" && entry.file.length > 0);
+  if (fileIncludes.length === 0) return text;
+  const { yaml } = await foldIncludes(
+    stringify({ ...parsed, includes: fileIncludes }),
+    async (include, ctx) => {
+      const root = ctx.baseDir ?? "";
+      const file = include.file ?? "";
+      if (file.length === 0) return { text: "types: []\n", key: `${root}#`, ctx: { baseDir: root } };
+      const child = join(root, file);
+      const key = files[child] !== undefined ? child : (file.split("/").pop() ?? file);
+      return { text: files[key] ?? "types: []\n", key, ctx: { baseDir: dirname(child) } };
+    },
+    { baseDir: dirname(name) },
+  );
+  const filters = includes.filter((entry) => !(typeof entry.file === "string" && entry.file.length > 0));
+  return filters.length === 0 ? yaml : stringify({ ...(parse(yaml) as object), includes: filters });
+};
+
+const filesOf = async (snapshot: VersionSnapshot): Promise<Record<string, string>> => {
   const files: Record<string, string> = {};
   for (const path of Object.keys(snapshot.documents)) files[path] = snapshot.yaml(path);
   files["datasource.yaml"] ??= defaultDatasourceYaml;
+  if (files["types.yaml"] !== undefined) files["types.yaml"] = await expand(files, "types.yaml");
+  files["datasource.yaml"] = await expand(files, "datasource.yaml");
   return files;
 };
 
@@ -62,7 +116,7 @@ const compile = async (
   snapshot: VersionSnapshot,
   settings: Record<string, string>,
 ): Promise<SchemaSnapshot & { seeds: Map<string, SeedRow[]> }> => {
-  const spec = await DeterministicParser(memoryReader(filesOf(snapshot))).parse(settings);
+  const spec = await DeterministicParser(memoryReader(await filesOf(snapshot))).parse(settings);
   const types = sqlTablesFrom(spec);
   const naming = createCasing(settings).naming;
   return { tables: buildLiveTables(types, naming), naming, seeds: spec.datasourceSeeds };

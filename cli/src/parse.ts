@@ -27,6 +27,7 @@ export type GenerateCommand = {
   output: string;
   migrations: boolean;
   migrate: boolean;
+  delete: boolean;
   storedProcedures: boolean;
   migrationsRoot: string;
 } & CasingFlags &
@@ -86,6 +87,7 @@ generate <all|types|repositories|datasource>
   --output <dir>              Generated files (default: ./generated)
   --no-migrations             Skip SQL migrations (generate all writes them)
   --no-auto-migrate-up        Skip migrate-up (generate all applies them)
+  --delete                    Remove files in --output that this generate did not write
   --migrations-root <dir>     Root prefix for generate all (default: sql)
   --stored-procedures         Emit stored-procedure migrations when the dialect can
   --pluralize-table-names     Plural table names in SQL and runtime queries (default)
@@ -137,6 +139,7 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     output: "generated",
     migrations: true,
     migrate: true,
+    delete: false,
     storedProcedures: false,
     migrationsRoot: "sql",
     fileNames: undefined as CaseFormat | undefined,
@@ -176,6 +179,7 @@ export const parseArgs = (argv: string[], cwd = "."): { command: Command; flags:
     else if (arg.startsWith("--output=")) generate.output = arg.slice("--output=".length);
     else if (arg === "--no-migrations") generate.migrations = false;
     else if (arg === "--no-auto-migrate-up") generate.migrate = false;
+    else if (arg === "--delete") generate.delete = true;
     else if (arg === "--stored-procedures") generate.storedProcedures = true;
     else if (arg === "--pluralize-table-names") generate.pluralizeTableNames = true;
     else if (arg === "--no-pluralize-table-names") generate.pluralizeTableNames = false;
@@ -219,6 +223,7 @@ const commandOf = (
     output: string;
     migrations: boolean;
     migrate: boolean;
+    delete: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
   } & CasingFlags &
@@ -269,6 +274,7 @@ const generateCommand = (
     output: string;
     migrations: boolean;
     migrate: boolean;
+    delete: boolean;
     storedProcedures: boolean;
     migrationsRoot: string;
   } & CasingFlags &
@@ -287,6 +293,7 @@ const generateCommand = (
     output: generate.output,
     migrations: generate.migrations,
     migrate: generate.migrate,
+    delete: generate.delete,
     storedProcedures: generate.storedProcedures,
     migrationsRoot: generate.migrationsRoot,
     fileNames: generate.fileNames,

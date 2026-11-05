@@ -132,7 +132,8 @@ pub fn add_foreign_key(naming: &StatementNaming, tables: &[SqlTable], table: &Sq
         fk.references_table,
         fk.references_columns,
         "add",
-    ))
+    )
+    .with_create(create_table(table, naming, tables)?))
 }
 
 pub fn drop_foreign_key(naming: &StatementNaming, tables: &[SqlTable], table: &SqlTable, field: &SpecTypeField) -> Result<ForeignKeyStatement> {
