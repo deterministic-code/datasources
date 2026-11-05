@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node ../rewrite-declaration-extensions.mjs dist && rm -rf dist/sql/templates && cp -R src/sql/templates dist/sql/templates",
     "prepack": "npm run build",
+    "pretest": "npm run build --prefix ../datasources && npm run build --prefix ../providers/sqlite",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
