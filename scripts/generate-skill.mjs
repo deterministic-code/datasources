@@ -95,20 +95,20 @@ const HASH_ROUTES = [
 // `sections` are markdown appended to a topic file.
 export const SKILL_ONLY = {
   rules: [
-    "Types, repositories, and SQL come from `types.yaml` (and `datasource.yaml` when it exists). After you change either file, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop.",
-    "Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml` or `datasource.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.",
+    "Types, repositories, SQL, and seed rows come from `types.yaml`, `datasource.yaml` when it exists, and `datasource_seeds.yaml` when it exists. After you change any of those files, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop. Seed row keys, field names, and which `idN` values the next migration inserts are in generation.md.",
+    "Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml`, `datasource.yaml`, or `datasource_seeds.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.",
   ],
   sections: {
     "generation.md": `## After the spec changes
 
-After you change \`types.yaml\` or \`datasource.yaml\`, snapshot the next version, then run \`generate all\`.
+After you change \`types.yaml\`, \`datasource.yaml\`, or \`datasource_seeds.yaml\`, snapshot the next version, then run \`generate all\`.
 
 \`\`\`sh
 npx @deterministic-code/datasources-cli version
 npx @deterministic-code/datasources-cli generate all --dialect typescript
 \`\`\`
 
-\`version\` writes \`deterministic/version-<stamp>-<seq>/diff.yaml\` from the top-level YAML. \`--input\` selects the deterministic project (default \`./deterministic\`). An unchanged spec prints \`unchanged\` and writes nothing; stop there. \`generate all\` then reads those snapshots and writes the next migration. Pass \`--dialect csharp\`, \`typescript\`, or \`rust\`. Run it once per dialect when the project has more than one. If \`generate all\` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change \`types.yaml\` or \`datasource.yaml\` and run \`generate all\` again.
+\`version\` writes \`deterministic/version-<stamp>-<seq>/diff.yaml\` from the top-level YAML, including \`datasource_seeds.yaml\`. \`--input\` selects the deterministic project (default \`./deterministic\`). An unchanged spec prints \`unchanged\` and writes nothing; stop there. \`generate all\` then reads those snapshots and writes the next migration. Once any \`version-*/diff.yaml\` exists, seed inserts come from those snapshots, so a seeds edit has to be snapshotted before \`generate all\`. Pass \`--dialect csharp\`, \`typescript\`, or \`rust\`. Run it once per dialect when the project has more than one. If \`generate all\` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change \`types.yaml\`, \`datasource.yaml\`, or \`datasource_seeds.yaml\` and run \`generate all\` again.
 
 ## Generated directory hook
 
@@ -161,6 +161,7 @@ const TOPICS_LINKS = [
   ["Install packages", "downloading.md"],
   ["setup / add / remove / .env", "setup.md"],
   ["Generate from types.yaml and datasource.yaml", "generation.md"],
+  ["Seed rows in datasource_seeds.yaml", "generation.md"],
   ["Mappers and the read pipeline", "mappings.md"],
   ["Type converters", "type-converters.md"],
   ["Command", "command.md"],
@@ -189,12 +190,12 @@ name: datasources
 description: >-
   Uses Datasources across C#, Rust, and TypeScript: install packages, run setup
   and add providers, generate repositories from types.yaml and datasource.yaml,
-  write mappers and type converters, run commands and readers, build
-  repositories, call AddEnriched and AddLinked, and write Where and other
-  statements from the documented examples. Use when the user mentions
-  datasources, repository generation, types.yaml, datasource.yaml, mapper,
-  type converter, command, reader, AddEnriched, AddLinked, Where, or
-  SelectStatement.
+  write datasource_seeds.yaml, write mappers and type converters, run commands
+  and readers, build repositories, call AddEnriched and AddLinked, and write
+  Where and other statements from the documented examples. Use when the user
+  mentions datasources, repository generation, types.yaml, datasource.yaml,
+  datasource_seeds, mapper, type converter, command, reader, AddEnriched,
+  AddLinked, Where, or SelectStatement.
 ---
 
 ${BANNER}# Datasources

@@ -286,3 +286,26 @@ const updated = await ds.users.update(created);
 const deleted = await ds.users.delete(created);
 ```
 :::
+
+## Seeds
+
+Lookup rows live in `datasource_seeds.yaml`, beside `types.yaml` (default `deterministic/datasource_seeds.yaml`). The key under `seeds` is the type name. Each row key is `id` plus a number (`id1`, `id2`). That number is the inserted primary key. The cells are that type's field names. Leave `id` out of the row. A cell is a string, number, boolean, or null.
+
+```yaml
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+```
+
+`gender` stays the type name when the stored table is `genders`. A mapped column stays the field name here (`email` stored as `email_address` is still `email`). A foreign key is the other row's number (`owner_id: 1` for that type's `id1`). An integer id is that number. A string id is those digits. A uuid id and a field named `uuid` are filled from the type name and the number; leave `uuid` out of the row.
+
+Once any `version-*/diff.yaml` exists, `generate all` reads seed rows from those snapshots. Run `version` after editing the file. The next migration inserts each `idN` that was not in an earlier snapshot. An `idN` already snapshotted stays as inserted: editing its cells or deleting the key leaves the row.
+
+```sh
+npx @deterministic-code/datasources-cli version
+npx @deterministic-code/datasources-cli generate all --dialect typescript
+```
