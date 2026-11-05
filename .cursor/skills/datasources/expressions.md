@@ -471,7 +471,7 @@ A comparison is `Operator.Equals(Identifier, Literal)`. `eq`, `ne`, `gt`, `lt`, 
 
 ### Compare tree
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L281-L288)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L297-L304)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -488,7 +488,7 @@ let where_clause = Where::new(Operator::and(
 ));
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L314-L319)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L326-L331)
 
 ```typescript
 const where = new Where(
@@ -546,7 +546,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L430-L447)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L455-L472)
 
 ```typescript
 const equals = new Where("username", eq, "grace");
@@ -690,7 +690,7 @@ Parameters here are the row, not the SQL bind list on `IStatement.Parameters`. A
 
 #### Match and miss
 
-##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L274-L353)
+##### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/CoreTests.cs#L310-L389)
 
 ```csharp
 var evaluator = new ExpressionEvaluator();

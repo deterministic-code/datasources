@@ -292,7 +292,10 @@ describe("statements", () => {
       { name: "id", type: "INTEGER" },
       { name: "name", type: "TEXT" },
     ]);
-    expect(DefaultStatementTextRenderer.instance.render(createTable)).toBe("CREATE TABLE users (id INTEGER, name TEXT)");
+    expect(DefaultStatementTextRenderer.instance.render(createTable)).toBe(`CREATE TABLE users (
+    id INTEGER,
+    name TEXT
+)`);
     expect(new class extends CreateTableStatementTextRenderer {
       override render(_statement: CreateTableStatement): string {
         return "CREATE TABLE replaced";
@@ -314,7 +317,16 @@ describe("statements", () => {
       ],
     );
     expect(DefaultStatementTextRenderer.instance.render(namedTable)).toBe(
-      "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+      `CREATE TABLE orders (
+    id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL,
+    tenant_id INTEGER,
+    user_id INTEGER,
+    qty INTEGER,
+    CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id),
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_orders_user UNIQUE (user_id),
+    CONSTRAINT chk_orders_qty CHECK (qty > 0)
+)`,
     );
     expect(
       DefaultStatementTextRenderer.instance.render(new CreateTableStatement(
@@ -326,11 +338,18 @@ describe("statements", () => {
         [new ForeignKey("fk_items_user", ["id"], "users", ["id"])],
       )),
     ).toBe(
-      "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
+      `CREATE TABLE items (
+    id INTEGER DEFAULT 0,
+    name TEXT NOT NULL,
+    CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id)
+)`,
     );
     expect(DefaultStatementTextRenderer.instance.render(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }], []))).toBe(
-      "CREATE TABLE users (id INTEGER)",
+      `CREATE TABLE users (
+    id INTEGER
+)`,
     );
+    expect(DefaultStatementTextRenderer.instance.render(new CreateTableStatement("t", []))).toBe("CREATE TABLE t ()");
     expect(
       DefaultStatementTextRenderer.instance.render(new CreateTableStatement(
         "t",
@@ -338,7 +357,10 @@ describe("statements", () => {
         [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)],
       )),
     ).toBe(
-      "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)",
+      `CREATE TABLE t (
+    id INTEGER,
+    CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT
+)`,
     );
     expect(
       DefaultStatementTextRenderer.instance.render(new CreateTableStatement(
@@ -347,7 +369,10 @@ describe("statements", () => {
         [new ForeignKey("fk_restrict", ["id"], "u", ["id"], ReferentialAction.Restrict, ReferentialAction.NoAction)],
       )),
     ).toBe(
-      "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)",
+      `CREATE TABLE t (
+    id INTEGER,
+    CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION
+)`,
     );
     expect(() =>
       DefaultStatementTextRenderer.instance.render(new CreateTableStatement("t", [{ name: "id", type: "INTEGER" }], [

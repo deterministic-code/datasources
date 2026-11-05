@@ -54,10 +54,10 @@ describe("SqliteStatementRenderer", () => {
       { name: "id", type: "int", default: new ColumnDefault("0"), notNull: new NotNull(), identity: true },
     ]);
     expect(renderer.render(create)).toBe(
-      'CREATE TABLE "users" ("id" INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)',
+      'CREATE TABLE "users" (\n    "id" INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL\n)',
     );
     expect(DefaultStatementTextRenderer.instance.render(create)).toBe(
-      "CREATE TABLE users (id int DEFAULT 0 NOT NULL)",
+      "CREATE TABLE users (\n    id int DEFAULT 0 NOT NULL\n)",
     );
 
     const keyed = new CreateTableStatement(
@@ -65,7 +65,7 @@ describe("SqliteStatementRenderer", () => {
       [{ name: "id", type: "int", identity: true }],
       [new PrimaryKey("pk_users", ["id"])],
     );
-    expect(renderer.render(keyed)).toBe('CREATE TABLE "users" ("id" INTEGER PRIMARY KEY AUTOINCREMENT)');
+    expect(renderer.render(keyed)).toBe('CREATE TABLE "users" (\n    "id" INTEGER PRIMARY KEY AUTOINCREMENT\n)');
   });
 
   it("renders alter add column and throws on alter column", () => {

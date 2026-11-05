@@ -58,10 +58,21 @@ impl CreateTableStatementTextRenderer for SqliteCreateTableStatementRenderer {
                 })
                 .map(|constraint| self.constraint(constraint)),
         );
+        if parts.is_empty() {
+            return format!(
+                "CREATE TABLE {} (){}",
+                self.quote(&statement.table),
+                self.suffix()
+            );
+        }
+        let body = parts
+            .iter()
+            .map(|part| format!("    {part}"))
+            .collect::<Vec<_>>()
+            .join(",\n");
         format!(
-            "CREATE TABLE {} ({}){}",
+            "CREATE TABLE {} (\n{body}\n){}",
             self.quote(&statement.table),
-            parts.join(", "),
             self.suffix()
         )
     }

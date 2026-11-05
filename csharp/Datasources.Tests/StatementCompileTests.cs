@@ -129,7 +129,12 @@ public class StatementCompileTests
     public void CompilesACreateTable()
     {
         var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
-        Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", DefaultStatementTextRenderer.Instance.Render(createTable));
+        Assert.Equal("""
+            CREATE TABLE users (
+                id INTEGER,
+                name TEXT
+            )
+            """, DefaultStatementTextRenderer.Instance.Render(createTable));
     }
 
     [Fact]
@@ -150,7 +155,18 @@ public class StatementCompileTests
                 new CheckConstraint("chk_orders_qty", "qty > 0")
             ]);
         Assert.Equal(
-            "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+            """
+            CREATE TABLE orders (
+                id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL,
+                tenant_id INTEGER,
+                user_id INTEGER,
+                qty INTEGER,
+                CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id),
+                CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT uq_orders_user UNIQUE (user_id),
+                CONSTRAINT chk_orders_qty CHECK (qty > 0)
+            )
+            """,
             DefaultStatementTextRenderer.Instance.Render(namedTable));
     }
 

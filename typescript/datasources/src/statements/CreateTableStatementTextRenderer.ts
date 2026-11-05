@@ -17,7 +17,12 @@ const actionKeyword: Record<ReferentialAction, string> = {
 
 export class CreateTableStatementTextRenderer {
   render(statement: CreateTableStatement): string {
-    return `CREATE TABLE ${this.quote(statement.table!)} (${this.parts(statement).join(", ")})${this.suffix()}`;
+    const parts = this.parts(statement);
+    const table = this.quote(statement.table!);
+    const suffix = this.suffix();
+    return parts.length === 0
+      ? `CREATE TABLE ${table} ()${suffix}`
+      : `CREATE TABLE ${table} (\n${parts.map((part) => `    ${part}`).join(",\n")}\n)${suffix}`;
   }
 
   protected quote(name: string): string {

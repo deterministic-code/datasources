@@ -89,13 +89,40 @@ describe("schema", () => {
     expect(catalog[0]!.columns[0]!.identity).toBe(true);
     expect(DefaultStatementTextRenderer.instance.render(catalog[0]!)).toContain("CONSTRAINT pk_users PRIMARY KEY");
     expect(userTable("sqlite")).toBe(
-      'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" TEXT, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" REAL, "created" TEXT, "version" BLOB)',
+      `CREATE TABLE "user" (
+    "id" INTEGER PRIMARY KEY,
+    "uuid" TEXT,
+    "username" TEXT,
+    "is_enabled" BOOLEAN,
+    "balance" NUMERIC,
+    "location" REAL,
+    "created" TEXT,
+    "version" BLOB
+)`,
     );
     expect(userTable("mysql")).toBe(
-      "CREATE TABLE `user` (`id` INT PRIMARY KEY, `uuid` CHAR(36), `username` TEXT, `is_enabled` TINYINT, `balance` DECIMAL(18,4), `location` DOUBLE, `created` TEXT, `version` BLOB)",
+      `CREATE TABLE \`user\` (
+    id INT PRIMARY KEY,
+    uuid CHAR(36),
+    username TEXT,
+    is_enabled TINYINT,
+    balance DECIMAL(18,4),
+    location DOUBLE,
+    created TEXT,
+    version BLOB
+)`,
     );
     expect(userTable("postgres")).toBe(
-      'CREATE TABLE "user" ("id" INTEGER PRIMARY KEY, "uuid" UUID, "username" TEXT, "is_enabled" BOOLEAN, "balance" NUMERIC, "location" DOUBLE PRECISION, "created" TIMESTAMPTZ, "version" BYTEA)',
+      `CREATE TABLE "user" (
+    "id" INTEGER PRIMARY KEY,
+    "uuid" UUID,
+    "username" TEXT,
+    "is_enabled" BOOLEAN,
+    "balance" NUMERIC,
+    "location" DOUBLE PRECISION,
+    "created" TIMESTAMPTZ,
+    "version" BYTEA
+)`,
     );
     expect(names.map("name")).toBe("ugly_name");
     expect(names.map("role_id")).toBe("bad_role_id");

@@ -181,7 +181,10 @@ describe("statement compile", () => {
       { name: "name", type: "TEXT" },
     ]);
     expect(DefaultStatementTextRenderer.instance.render(createTable)).toBe(
-      "CREATE TABLE users (id INTEGER, name TEXT)",
+      `CREATE TABLE users (
+    id INTEGER,
+    name TEXT
+)`,
     );
   });
 
@@ -202,7 +205,16 @@ describe("statement compile", () => {
       ],
     );
     expect(DefaultStatementTextRenderer.instance.render(namedTable)).toBe(
-      "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+      `CREATE TABLE orders (
+    id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL,
+    tenant_id INTEGER,
+    user_id INTEGER,
+    qty INTEGER,
+    CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id),
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uq_orders_user UNIQUE (user_id),
+    CONSTRAINT chk_orders_qty CHECK (qty > 0)
+)`,
     );
   });
 

@@ -89,12 +89,7 @@ pub trait CreateTableStatementTextRenderer {
                 .iter()
                 .map(|constraint| self.constraint(constraint)),
         );
-        format!(
-            "CREATE TABLE {} ({}){}",
-            self.quote(&statement.table),
-            parts.join(", "),
-            self.suffix()
-        )
+        format_create_table(&self.quote(&statement.table), &parts, &self.suffix())
     }
 }
 
@@ -104,6 +99,18 @@ impl CreateTableStatementTextRenderer for DefaultRenderer {}
 
 pub(crate) fn render(statement: &CreateTableStatement) -> String {
     DefaultRenderer.render(statement)
+}
+
+fn format_create_table(table: &str, parts: &[String], suffix: &str) -> String {
+    if parts.is_empty() {
+        return format!("CREATE TABLE {table} (){suffix}");
+    }
+    let body = parts
+        .iter()
+        .map(|part| format!("    {part}"))
+        .collect::<Vec<_>>()
+        .join(",\n");
+    format!("CREATE TABLE {table} (\n{body}\n){suffix}")
 }
 
 fn quoted<T: CreateTableStatementTextRenderer + ?Sized>(sql: &T, names: &[String]) -> String {

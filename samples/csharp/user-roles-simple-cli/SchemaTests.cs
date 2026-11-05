@@ -39,13 +39,46 @@ public sealed class SchemaTests
     public void MapsColumnTypes()
     {
         Assert.Equal(
-            "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)",
+            """
+            CREATE TABLE "user" (
+                "id" INTEGER PRIMARY KEY,
+                "uuid" TEXT,
+                "username" TEXT,
+                "is_enabled" BOOLEAN,
+                "balance" NUMERIC,
+                "location" REAL,
+                "created" TEXT,
+                "version" BLOB
+            )
+            """,
             UserTable("sqlite"));
         Assert.Equal(
-            "CREATE TABLE `user` (`id` INT PRIMARY KEY, `uuid` CHAR(36), `username` TEXT, `is_enabled` TINYINT, `balance` DECIMAL(18,4), `location` DOUBLE, `created` TEXT, `version` BLOB)",
+            """
+            CREATE TABLE `user` (
+                id INT PRIMARY KEY,
+                uuid CHAR(36),
+                username TEXT,
+                is_enabled TINYINT,
+                balance DECIMAL(18,4),
+                location DOUBLE,
+                created TEXT,
+                version BLOB
+            )
+            """,
             UserTable("mysql"));
         Assert.Equal(
-            "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" UUID, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" DOUBLE PRECISION, \"created\" TIMESTAMPTZ, \"version\" BYTEA)",
+            """
+            CREATE TABLE "user" (
+                "id" INTEGER PRIMARY KEY,
+                "uuid" UUID,
+                "username" TEXT,
+                "is_enabled" BOOLEAN,
+                "balance" NUMERIC,
+                "location" DOUBLE PRECISION,
+                "created" TIMESTAMPTZ,
+                "version" BYTEA
+            )
+            """,
             UserTable("postgres"));
     }
 

@@ -128,7 +128,9 @@ describe("PostgresConnection", () => {
       "UPDATE items SET n = 1",
       "SELECT * FROM items",
       "SELECT * FROM items",
-      "CREATE TABLE users (id INTEGER)",
+      `CREATE TABLE users (
+    id INTEGER
+)`,
       "SELECT 1",
       "BEGIN ISOLATION LEVEL READ COMMITTED",
       "BEGIN ISOLATION LEVEL READ UNCOMMITTED",

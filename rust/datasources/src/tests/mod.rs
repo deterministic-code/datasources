@@ -1242,7 +1242,7 @@ fn statements_and_builders() {
     );
     assert_eq!(
         stmt_text(&create_table),
-        "CREATE TABLE users (id INTEGER, name TEXT)"
+        "CREATE TABLE users (\n    id INTEGER,\n    name TEXT\n)"
     );
     struct ReplacedRenderer;
     impl CreateTableStatementTextRenderer for ReplacedRenderer {
@@ -1280,7 +1280,7 @@ fn statements_and_builders() {
     );
     assert_eq!(
         stmt_text(&named_table),
-        "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))"
+        "CREATE TABLE orders (\n    id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL,\n    tenant_id INTEGER,\n    user_id INTEGER,\n    qty INTEGER,\n    CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id),\n    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,\n    CONSTRAINT uq_orders_user UNIQUE (user_id),\n    CONSTRAINT chk_orders_qty CHECK (qty > 0)\n)"
     );
     assert_eq!(
         stmt_text(&CreateTableStatement::new(
@@ -1291,7 +1291,7 @@ fn statements_and_builders() {
             ],
             &[ForeignKey::new("fk_items_user", &["id"], "users", &["id"], None, None)],
         )),
-        "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))"
+        "CREATE TABLE items (\n    id INTEGER DEFAULT 0,\n    name TEXT NOT NULL,\n    CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id)\n)"
     );
     assert_eq!(
         stmt_text(&CreateTableStatement::new(
@@ -1306,7 +1306,7 @@ fn statements_and_builders() {
                 Some(ReferentialAction::SetDefault),
             )],
         )),
-        "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)"
+        "CREATE TABLE t (\n    id INTEGER,\n    CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT\n)"
     );
     assert_eq!(
         stmt_text(&CreateTableStatement::new(
@@ -1321,7 +1321,7 @@ fn statements_and_builders() {
                 Some(ReferentialAction::NoAction),
             )],
         )),
-        "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)"
+        "CREATE TABLE t (\n    id INTEGER,\n    CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION\n)"
     );
     let create_index = CreateIndexStatement::new("idx_orders_user", "orders", &["user_id"], false);
     assert_eq!(
