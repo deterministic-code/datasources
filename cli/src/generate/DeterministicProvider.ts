@@ -2,6 +2,7 @@ import type { GenerateContext } from "@deterministic-code/generators-common/gene
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { generateSql } from "@deterministic-code/datasources-code-generators";
 import { createCasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import { Paths } from "@deterministic-code/generators-common/paths";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
 import { caseDirectories } from "./casing.ts";
 import type { CodeGenerationProvider } from "./CodeGenerationProvider.ts";
@@ -55,7 +56,7 @@ export const deterministic: CodeGenerationProvider = {
     return remap(
       [
         ...place(language.typesPrefix(casing, "datasource"), await language.types.datasource(ctx)),
-        ...place(language.typesPrefix(casing, "views"), await language.types.views(ctx)),
+        ...place(language.typesPrefix(casing, "view"), await language.types.views(ctx)),
       ],
       request.settings,
       request.dialect,
@@ -66,9 +67,10 @@ export const deterministic: CodeGenerationProvider = {
     const spec = await DeterministicParser(request.reader).parse(request.settings);
     const models = planRepositories(spec, request.dialect, request.settings);
     const casing = createCasingStrategy(request.dialect, request.settings);
+    const paths = new Paths();
     return remap(
       place(
-        language.repositoriesPrefix(casing),
+        caseDirectories(paths.repositoriesDir(), casing),
         language.generate(await withProviderWrites(request, models), request.settings, spec),
       ),
       request.settings,

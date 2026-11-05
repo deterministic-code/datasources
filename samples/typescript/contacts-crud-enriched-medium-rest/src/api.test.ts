@@ -3,9 +3,9 @@ import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { describe, expect, it } from "vitest";
 import { Api, type ContactWrite } from "./api.ts";
 import "./datasources-register.ts";
-import { LegacyContactRepository } from "../generated/repositories/legacy-contact-repository.ts";
-import { ContactRepository } from "../generated/repositories/contact-repository.ts";
-import { ContactGroupRepository } from "../generated/repositories/contact-group-repository.ts";
+import { LegacyContactsRepository } from "../generated/repositories/legacy-contacts-repository.ts";
+import { ContactsRepository } from "../generated/repositories/contacts-repository.ts";
+import { ContactGroupsRepository } from "../generated/repositories/contact-groups-repository.ts";
 
 const lookup = (id?: number) => ({
   readSingle: async () => (id == null ? undefined : { id }),
@@ -65,7 +65,7 @@ describe("api", () => {
   it("maps datasource errors", async () => {
     const connection = new SqliteDriver().connection({ DATASOURCE_URL: "sqlite:///:memory:" });
     await connection.open();
-    const api = new Api(new ContactRepository(connection), new LegacyContactRepository(connection), new ContactGroupRepository(connection));
+    const api = new Api(new ContactsRepository(connection), new LegacyContactsRepository(connection), new ContactGroupsRepository(connection));
     expect((await api.handle("GET", "/contacts", undefined)).status).toBe(400);
   });
 

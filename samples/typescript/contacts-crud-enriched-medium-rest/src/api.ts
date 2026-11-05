@@ -1,23 +1,23 @@
 import { DatasourceError, Operator, Where, type IWhere } from "@deterministic-code/datasources";
-import type { Contact } from "../generated/types/view/generated/contact.ts";
-import type { Address } from "../generated/types/view/generated/address.ts";
-import type { Phone } from "../generated/types/view/generated/phone.ts";
-import type { LegacyContact } from "../generated/types/view/generated/legacyContact.ts";
-import type { ContactGroup } from "../generated/types/view/generated/contactGroup.ts";
-import { ContactRepository } from "../generated/repositories/contact-repository.ts";
-import { ContactGroupRepository } from "../generated/repositories/contact-group-repository.ts";
+import type { Contact } from "../generated/types/view/contact.ts";
+import type { Address } from "../generated/types/view/address.ts";
+import type { Phone } from "../generated/types/view/phone.ts";
+import type { LegacyContact } from "../generated/types/view/legacyContact.ts";
+import type { ContactGroup } from "../generated/types/view/contactGroup.ts";
+import { ContactsRepository } from "../generated/repositories/contacts-repository.ts";
+import { ContactGroupsRepository } from "../generated/repositories/contact-groups-repository.ts";
 import { clock } from "./clock.ts";
 import { jsonObject } from "./jsonObject.ts";
-import { LegacyContactRepository } from "../generated/repositories/legacy-contact-repository.ts";
+import { LegacyContactsRepository } from "../generated/repositories/legacy-contacts-repository.ts";
 
 export type ContactWrite = Contact;
 export type HttpResult = { status: number; body: string };
 
 export class Api {
   constructor(
-    private readonly contacts: ContactRepository,
-    private readonly legacy: LegacyContactRepository,
-    private readonly groupsRepo: ContactGroupRepository,
+    private readonly contacts: ContactsRepository,
+    private readonly legacy: LegacyContactsRepository,
+    private readonly groupsRepo: ContactGroupsRepository,
   ) {}
 
   handle = async (method: string, target: string, body: string | undefined): Promise<HttpResult> => {

@@ -6,11 +6,11 @@ namespace ContactsCrudEnrichedMediumRest;
 
 public sealed class Api
 {
-    readonly ContactRepository contacts;
-    readonly LegacyContactRepository legacy;
-    readonly ContactGroupRepository groupsRepo;
+    readonly ContactsRepository contacts;
+    readonly LegacyContactsRepository legacy;
+    readonly ContactGroupsRepository groupsRepo;
 
-    public Api(ContactRepository contacts, LegacyContactRepository legacy, ContactGroupRepository groupsRepo)
+    public Api(ContactsRepository contacts, LegacyContactsRepository legacy, ContactGroupsRepository groupsRepo)
     {
         this.contacts = contacts;
         this.legacy = legacy;

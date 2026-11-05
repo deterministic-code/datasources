@@ -4,9 +4,8 @@ import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
+import type { RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
-import { repositoriesPrefixOf } from "./casing.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
@@ -15,28 +14,26 @@ class CSharpRepositories extends RepositoryGenerator {
 
   typesPrefix = (): string => "";
 
-  repositoriesPrefix = (casing: ICasingStrategy): string => repositoriesPrefixOf(casing);
-
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("csharp", settings);
     return [
-      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.cs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
+      ...models.map((model) => content(`${this.repositoryFile(model.specName, casing)}.cs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
       content(
         `${casing.convertFileName("repository_registry")}.cs`,
         fill(registryTmpl, {
           registryClass: casing.convertTypes("repository_registry"),
           models: models.map((model) => ({
             entity: this.quote(model.entity),
-            plural: this.quote(this.plural(model.typeName, "pascalCase")),
+            plural: this.quote(this.bindName(model.specName, casing, "types")),
             typeName: model.typeName,
-            className: childClass(model.typeName),
+            className: this.repositoryClass(model.specName, casing),
           })),
         }),
       ),
     ];
   }
 
-  private repository(model: RepositoryModel, spec: IDeterministic, casing: ReturnType<typeof createCasingStrategy>): Record<string, unknown> {
+  private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown> {
     const children = this.childrenOf(model, casing);
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
     const dialects = this.dialectsBag(model, spec, casing);

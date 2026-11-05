@@ -289,12 +289,12 @@ types:
     const csharp = await deterministic.generateRepositories(request("csharp"));
     const typescript = await deterministic.generateRepositories(request("typescript"));
     const rust = await deterministic.generateRepositories(request("rust"));
-    const legacyCs = textOf(csharp, "LegacyContactRepository.cs");
-    const contactCs = textOf(csharp, "ContactRepository.cs");
-    const legacyTs = textOf(typescript, "legacyContactRepository.ts");
-    const contactTs = textOf(typescript, "contactRepository.ts");
-    const legacyRs = textOf(rust, "legacyContactRepository.rs");
-    const contactRs = textOf(rust, "contactRepository.rs");
+    const legacyCs = textOf(csharp, "LegacyContactsRepository.cs");
+    const contactCs = textOf(csharp, "ContactsRepository.cs");
+    const legacyTs = textOf(typescript, "legacyContactsRepository.ts");
+    const contactTs = textOf(typescript, "contactsRepository.ts");
+    const legacyRs = textOf(rust, "legacyContactsRepository.rs");
+    const contactRs = textOf(rust, "contactsRepository.rs");
     expect(legacyCs).toContain('["LegacyContact"] = "OldContactsTbl"');
     expect(legacyCs).toContain('["Key"] = "CntID"');
     expect(legacyCs).toContain('["FirstName"] = "FirstNm"');
@@ -312,9 +312,9 @@ types:
     expect(contactCs).toContain(".For(connection)");
     expect(contactCs).toContain("EnrichmentPropertyType.List");
     expect(contactCs).toContain('"Version"');
-    expect(textOf(csharp, "ContactGroupRepository.cs")).toContain("AddLinked");
+    expect(textOf(csharp, "ContactGroupsRepository.cs")).toContain("AddLinked");
     expect(csharp.some((entry) => entry.filename.includes("BaseRepository"))).toBe(false);
-    expect(textOf(csharp, "ContactSourceRepository.cs")).toContain("ContactSource");
+    expect(textOf(csharp, "ContactSourcesRepository.cs")).toContain("ContactSource");
     expect(csharp.some((entry) => entry.filename.includes("ImportContactsRequestRepository"))).toBe(false);
     expect(contactCs).toContain("EnrichmentPropertyType.Dictionary");
     expect(contactCs).toContain('"Settings"');
@@ -349,7 +349,7 @@ types:
     expect(contactTs).toContain('destinationProperty: "contactSourceName"');
     expect(contactTs).toContain('type: "list"');
     expect(contactTs).toContain('type: "dictionary"');
-    expect(textOf(typescript, "contactGroupRepository.ts")).toContain("addLinked");
+    expect(textOf(typescript, "contactGroupsRepository.ts")).toContain("addLinked");
     expect(legacyRs).toContain('"LegacyContact"');
     expect(legacyRs).toContain('"OldContactsTbl"');
     expect(contactRs).toContain('"Contact"');
@@ -367,38 +367,38 @@ types:
     expect(contactRs).toContain('.add_for("postgres"');
     expect(contactRs).toContain('vec!["contact_source_id".into()');
     expect(contactRs).toContain("for_connection(connection.as_ref())");
-    expect(contactRs).toContain("pub struct ContactRepository");
+    expect(contactRs).toContain("pub struct ContactsRepository");
     expect(contactRs).toContain("pub address: Arc<CRUDRepository<Address>>");
     expect(contactRs).toContain("pub phone: Arc<CRUDRepository<Phone>>");
     expect(contactRs).toContain("pub contact_source: Arc<CRUDRepository<ContactSource>>");
-    expect(contactRs).toContain("address_repository");
+    expect(contactRs).toContain("addresses_repository");
     expect(contactRs).toContain("Arc::clone(&address)");
     expect(textOf(rust, "schema_objects.rs")).toContain("impl SchemaObject for Contact");
-    expect(textOf(rust, "contactRepository.rs")).toContain("Schema::new");
-    expect(textOf(rust, "contactRepository.rs")).toContain('"integer"');
-    expect(textOf(rust, "contactRepository.rs")).not.toContain("impl Entity");
-    expect(textOf(rust, "phoneRepository.rs")).toContain("phone_type_name");
-    expect(textOf(rust, "contactRepository.rs")).toContain("contact_source_name");
-    expect(textOf(rust, "contactGroupRepository.rs")).toContain("add_linked");
-    expect(textOf(rust, "contactGroupRepository.rs")).toContain("pub struct ContactGroupRepository");
-    expect(textOf(rust, "mod.rs")).toContain("pub mod contactRepository;");
+    expect(textOf(rust, "contactsRepository.rs")).toContain("Schema::new");
+    expect(textOf(rust, "contactsRepository.rs")).toContain('"integer"');
+    expect(textOf(rust, "contactsRepository.rs")).not.toContain("impl Entity");
+    expect(textOf(rust, "phonesRepository.rs")).toContain("phone_type_name");
+    expect(textOf(rust, "contactsRepository.rs")).toContain("contact_source_name");
+    expect(textOf(rust, "contactGroupsRepository.rs")).toContain("add_linked");
+    expect(textOf(rust, "contactGroupsRepository.rs")).toContain("pub struct ContactGroupsRepository");
+    expect(textOf(rust, "mod.rs")).toContain("pub mod contactsRepository;");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain("ModuleInitializer");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain("RepositoryFactory.Bind(Register)");
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
     expect(textOf(csharp, "RepositoryRegistry.cs")).toContain('"ContactGroup", "ContactGroups"');
-    expect(textOf(csharp, "ContactRepository.cs")).toContain("CreateReadonly");
+    expect(textOf(csharp, "ContactsRepository.cs")).toContain("CreateReadonly");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("RepositoryFactory.bind(register)");
-    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/view/generated/contact"');
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain('export { contact } from "../types/view/contact"');
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("use super::super::Contact");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("Contact");
     expect(textOf(rust, "repositoryRegistry.rs")).not.toContain("use super::super::;");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("impl Repositories for Arc<dyn Datasource>");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self) -> Arc<CRUDRepository<Contact>>");
-    expect(textOf(rust, "contactRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
-    expect(textOf(rust, "addressTypeRepository.rs")).toContain("let repo = ReadonlyRepository::<AddressType>::new(connection, options)?;");
-    expect(textOf(rust, "addressTypeRepository.rs")).not.toContain("Association");
-    expect(textOf(rust, "addressTypeRepository.rs")).not.toContain("Enrichment");
-    expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactRepository;");
+    expect(textOf(rust, "contactsRepository.rs")).toContain("let mut repo = ReadonlyRepository::<Contact>::new(connection, options)?;");
+    expect(textOf(rust, "addressTypesRepository.rs")).toContain("let repo = ReadonlyRepository::<AddressType>::new(connection, options)?;");
+    expect(textOf(rust, "addressTypesRepository.rs")).not.toContain("Association");
+    expect(textOf(rust, "addressTypesRepository.rs")).not.toContain("Enrichment");
+    expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactsRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
     expect(contactTs).toContain("createReadonly");
@@ -464,7 +464,7 @@ types: []
         reader: memoryReader(files),
         settings: { "backend.datasources": "sqlite,mysql" },
       }),
-      "NoteRepository.cs",
+      "NotesRepository.cs",
     );
     expect(csharp).toContain('CreateProperties = ["Body"]');
   });
@@ -500,9 +500,9 @@ types:
       reader: memoryReader(files),
       settings: { "backend.datasources": "sqlite" },
     });
-    const csharp = textOf(await deterministic.generateRepositories(occ("csharp")), "AccountRepository.cs");
-    const typescript = textOf(await deterministic.generateRepositories(occ("typescript")), "accountRepository.ts");
-    const rust = textOf(await deterministic.generateRepositories(occ("rust")), "accountRepository.rs");
+    const csharp = textOf(await deterministic.generateRepositories(occ("csharp")), "AccountsRepository.cs");
+    const typescript = textOf(await deterministic.generateRepositories(occ("typescript")), "accountsRepository.ts");
+    const rust = textOf(await deterministic.generateRepositories(occ("rust")), "accountsRepository.rs");
     const registry = textOf(await deterministic.generateRepositories(occ("rust")), "repositoryRegistry.rs");
     expect(csharp).toContain("public new async Task<Response> Update");
     expect(csharp).toContain("public new async Task<Response> Delete");
@@ -562,10 +562,10 @@ types:
 `,
     };
     const stampReq = { reader: memoryReader(stamp), settings: { "backend.datasources": "sqlite" } };
-    const stampCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", ...stampReq }), "StampRepository.cs");
-    const stampTs = textOf(await deterministic.generateRepositories({ dialect: "typescript", ...stampReq }), "stampRepository.ts");
-    const stampRs = textOf(await deterministic.generateRepositories({ dialect: "rust", ...stampReq }), "stampRepository.rs");
-    const skippedCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(skipped), settings: { "backend.datasources": "sqlite" } }), "AccountRepository.cs");
+    const stampCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", ...stampReq }), "StampsRepository.cs");
+    const stampTs = textOf(await deterministic.generateRepositories({ dialect: "typescript", ...stampReq }), "stampsRepository.ts");
+    const stampRs = textOf(await deterministic.generateRepositories({ dialect: "rust", ...stampReq }), "stampsRepository.rs");
+    const skippedCs = textOf(await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(skipped), settings: { "backend.datasources": "sqlite" } }), "AccountsRepository.cs");
     expect(stampCs).toContain("public new async Task<Response> Update");
     expect(stampCs).not.toContain("item.Version += 1");
     expect(stampTs).toContain("this.update = async (item, byWhere)");
@@ -582,8 +582,8 @@ types:
       "languages.typescript.casing.fields": "camel",
       "languages.typescript.casing.file_names": "kebab",
     }));
-    const addressType = textOf(typescript, "address-type-repository.ts");
-    expect(addressType).toContain('from "../types/datasource/generated/address-type"');
+    const addressType = textOf(typescript, "address-types-repository.ts");
+    expect(addressType).toContain('from "../types/datasource/address-type"');
     expect(addressType).not.toContain("addressType");
     expect(addressType).not.toMatch(/from "[^"]+\.ts"/);
     expect(addressType.slice(addressType.indexOf("createReadonly"))).not.toContain("ids:");
@@ -600,9 +600,9 @@ types:
       "backend.datasources": "sqlite",
       "languages.rust.casing.file_names": "kebab",
     }));
-    expect(textOf(rust, "contact-repository.rs")).toContain("pub fn contact_repository");
-    expect(textOf(rust, "mod.rs")).toContain('#[path = "contact-repository.rs"]');
-    expect(textOf(rust, "mod.rs")).toContain("pub mod contact_repository;");
+    expect(textOf(rust, "contacts-repository.rs")).toContain("pub fn contacts_repository");
+    expect(textOf(rust, "mod.rs")).toContain('#[path = "contacts-repository.rs"]');
+    expect(textOf(rust, "mod.rs")).toContain("pub mod contacts_repository;");
     expect(textOf(rust, "mod.rs")).toContain('#[path = "repository-registry.rs"]');
     const cwd = "app";
     const input = join(cwd, "deterministic");
@@ -616,8 +616,8 @@ types:
         cwd,
       ),
     ).toBe(0);
-    expect(store.files[join(cwd, "generated/repositories/contact-repository.ts")]).toContain("export class ContactRepository");
-    expect(store.files[join(cwd, "generated/repositories/contactRepository.ts")]).toBeUndefined();
+    expect(store.files[join(cwd, "generated/repositories/contacts-repository.ts")]).toContain("export class ContactsRepository");
+    expect(store.files[join(cwd, "generated/repositories/contactsRepository.ts")]).toBeUndefined();
   });
 
   it("cases child fields from settings", async () => {
@@ -625,7 +625,7 @@ types:
       "backend.datasources": "sqlite",
       "languages.csharp.casing.fields": "camel",
     }));
-    expect(textOf(csharp, "ContactRepository.cs")).toContain("public AddressRepository address { get; }");
+    expect(textOf(csharp, "ContactsRepository.cs")).toContain("public AddressesRepository address { get; }");
   });
 
   it("cases layout directories from flags", async () => {
@@ -653,7 +653,7 @@ types:
         cwd,
       ),
     ).toBe(0);
-    expect(Object.keys(store.files).some((path) => path.includes("Types/Datasource/Generated"))).toBe(true);
+    expect(Object.keys(store.files).some((path) => path.includes("Types/Datasource"))).toBe(true);
     expect(Object.keys(store.files).some((path) => path.includes("Repositories"))).toBe(true);
   });
 
@@ -1043,9 +1043,9 @@ types: []
     const rust = rustRepositories.generate(models, {}, spec);
     const typescript = typescriptRepositories.generate(models, {}, spec);
     const csharp = csharpRepositories.generate(planRepositories(spec, "csharp", {}), {}, spec);
-    const rustText = textOf(rust, "itemRepository.rs");
-    const tsText = textOf(typescript, "itemRepository.ts");
-    const csharpText = textOf(csharp, "ItemRepository.cs");
+    const rustText = textOf(rust, "itemsRepository.rs");
+    const tsText = textOf(typescript, "itemsRepository.ts");
+    const csharpText = textOf(csharp, "ItemsRepository.cs");
     expect(rustText).toContain('type_name: "string".into()');
     expect(rustText).toContain('type_name: "boolean".into()');
     expect(rustText).toContain("has_default: true");
@@ -1090,7 +1090,7 @@ types: []
     });
     const io = deps(absolute.fs);
     expect(await exec(["generate", "repositories", "--dialect", "rust", "--input", "/tmp/spec", "--output", "/tmp/out"], io, cwd)).toBe(0);
-    expect(absolute.files[join("/tmp/out", "repositories/legacyContactRepository.rs")]).toContain("CntID");
+    expect(absolute.files[join("/tmp/out", "repositories/legacyContactsRepository.rs")]).toContain("CntID");
     const missing = mem();
     expect(await exec(["generate", "types", "--dialect", "csharp", "--cwd", cwd], deps(missing.fs), cwd)).toBe(1);
     expect(await exec(["generate", "types", "--dialect", "typescript", "--provider", "missing", "--cwd", cwd], deps(mem(seeded).fs), cwd)).toBe(1);
@@ -1121,7 +1121,7 @@ types:
     const registry = store.files[join(cwd, "generated/repositories/repositoryRegistry.ts")];
     expect(registry).toContain('"NoteCard", "noteCards"');
     expect(registry).not.toContain('"Note"');
-    expect(store.files[join(cwd, "generated/repositories/noteCardRepository.ts")]).toContain('["NoteCard", "notes"]');
+    expect(store.files[join(cwd, "generated/repositories/noteCardsRepository.ts")]).toContain('["NoteCard", "notes"]');
     expect(store.files[join(cwd, "generated/repositories/noteRepository.ts")]).toBeUndefined();
   });
 
@@ -1332,7 +1332,7 @@ types:
     expect(up).toMatch(/create table "APPLICATIONS"/);
     expect(up).toMatch(/"firstName"/);
     expect(up).not.toMatch(/CREATE TABLE/);
-    const repo = generate.files[join(cwd, "generated/repositories/applicationRepository.ts")];
+    const repo = generate.files[join(cwd, "generated/repositories/applicationsRepository.ts")];
     expect(repo).toContain('["Application", "APPLICATIONS"]');
     expect(repo).toContain('["FirstName", "firstName"]');
     const create = mem({
@@ -1392,7 +1392,7 @@ types:
       ),
     ).toBe(0);
     expect(off.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "application"/);
-    expect(off.files[join(cwd, "generated/repositories/applicationRepository.ts")]).toContain(
+    expect(off.files[join(cwd, "generated/repositories/applicationsRepository.ts")]).toContain(
       '["Application", "application"]',
     );
     const create = mem(spec("settings:\n  backend:\n    datasources: sqlite\n"));
@@ -1414,7 +1414,7 @@ types:
       ),
     ).toBe(0);
     expect(on.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE "applications"/);
-    expect(on.files[join(cwd, "generated/repositories/applicationRepository.ts")]).toContain(
+    expect(on.files[join(cwd, "generated/repositories/applicationsRepository.ts")]).toContain(
       '["Application", "applications"]',
     );
   });

@@ -1,7 +1,7 @@
 use crate::api::Api;
 use crate::clock::Clock;
 use crate::generated::repositories::categoriesRepository::categories_repository;
-use crate::generated::repositories::contactRepository::contact_repository;
+use crate::generated::repositories::contactsRepository::contacts_repository;
 use crate::generated::repositories::gameStatesRepository::game_states_repository;
 use crate::generated::repositories::gamesRepository::games_repository;
 use crate::generated::repositories::reviewsRepository::reviews_repository;
@@ -22,7 +22,7 @@ async fn maps_datasource_errors() {
         Arc::new(games_repository(Arc::clone(&connection)).unwrap()),
         Arc::new(reviews_repository(Arc::clone(&connection)).unwrap()),
         Arc::new(game_states_repository(Arc::clone(&connection)).unwrap()),
-        Arc::new(contact_repository(connection).unwrap()),
+        Arc::new(contacts_repository(connection).unwrap()),
         Clock::new(),
     );
     assert_eq!(api.handle("GET", "/users", None).await.unwrap().status, 400);

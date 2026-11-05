@@ -6,12 +6,12 @@ import {
   type ICRUDRepository,
   type IWhere,
 } from "@deterministic-code/datasources";
-import type { Contact } from "../generated/types/view/generated/contact.ts";
-import type { Users } from "../generated/types/view/generated/users.ts";
-import type { Games } from "../generated/types/view/generated/games.ts";
-import type { Categories } from "../generated/types/view/generated/categories.ts";
-import type { Reviews } from "../generated/types/datasource/generated/reviews.ts";
-import type { GameStates } from "../generated/types/datasource/generated/gameStates.ts";
+import type { Contact } from "../generated/types/view/contact.ts";
+import type { Users } from "../generated/types/view/users.ts";
+import type { Games } from "../generated/types/view/games.ts";
+import type { Categories } from "../generated/types/view/categories.ts";
+import type { Reviews } from "../generated/types/datasource/reviews.ts";
+import type { GameStates } from "../generated/types/datasource/gameStates.ts";
 import { clock } from "./clock.ts";
 import { jsonObject } from "./jsonObject.ts";
 

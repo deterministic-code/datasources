@@ -85,7 +85,7 @@ const writeCrate = (
   }
   if (typesOnly) {
     const typeFiles = Object.keys(texts).filter(
-      (name) => name.endsWith(".rs") && name.includes("/generated/") && !name.includes("/repositories/"),
+      (name) => name.endsWith(".rs") && name.includes("types/") && !name.includes("/repositories/"),
     );
     writeFileSync(join(crateDir, "generated/mod.rs"), typesMod(typeFiles));
   }
@@ -203,7 +203,7 @@ describe("generated rust compiles", () => {
 
   it("plain", async () => {
     const texts = await generate(yaml(entity("contact", idName())));
-    expect(textOf(texts, "contactRepository.rs")).not.toContain("pub struct ContactRepository");
+    expect(textOf(texts, "contactsRepository.rs")).not.toContain("pub struct ContactsRepository");
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
   });
 
@@ -220,9 +220,9 @@ describe("generated rust compiles", () => {
           ),
       ),
     );
-    expect(textOf(texts, "contactRepository.rs")).toContain("pub struct ContactRepository");
-    expect(textOf(texts, "contactRepository.rs")).toContain("Ok(Self { repo: Arc::new(repo), address })");
-    expect(textOf(texts, "contactRepository.rs")).toContain("EnrichmentPropertyType::List");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("pub struct ContactsRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("Ok(Self { repo: Arc::new(repo), address })");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("EnrichmentPropertyType::List");
   });
 
   it("object", async () => {
@@ -248,7 +248,7 @@ describe("generated rust compiles", () => {
 `,
       ),
     );
-    expect(textOf(texts, "contactRepository.rs")).toContain("EnrichmentPropertyType::Object");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("EnrichmentPropertyType::Object");
   });
 
   it("dictionary", async () => {
@@ -273,7 +273,7 @@ describe("generated rust compiles", () => {
 `,
       ),
     );
-    expect(textOf(texts, "contactRepository.rs")).toContain("EnrichmentPropertyType::Dictionary");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("EnrichmentPropertyType::Dictionary");
   });
 
   it("linked", async () => {
@@ -305,32 +305,32 @@ describe("generated rust compiles", () => {
 `,
       ),
     );
-    expect(textOf(texts, "groupRepository.rs")).toContain("add_linked");
+    expect(textOf(texts, "groupsRepository.rs")).toContain("add_linked");
   });
 
   it("optimistic increment", async () => {
     const texts = await generate(account);
-    expect(textOf(texts, "accountRepository.rs")).toContain("pub struct AccountOptimistic");
-    expect(textOf(texts, "accountRepository.rs")).toContain("item.version += 1");
+    expect(textOf(texts, "accountsRepository.rs")).toContain("pub struct AccountOptimistic");
+    expect(textOf(texts, "accountsRepository.rs")).toContain("item.version += 1");
   });
 
   it("optimistic stamp", async () => {
     const texts = await generate(stamp);
-    expect(textOf(texts, "stampRepository.rs")).toContain("pub struct StampOptimistic");
-    expect(textOf(texts, "stampRepository.rs")).not.toContain("item.version += 1");
+    expect(textOf(texts, "stampsRepository.rs")).toContain("pub struct StampOptimistic");
+    expect(textOf(texts, "stampsRepository.rs")).not.toContain("item.version += 1");
   });
 
   it("file names snake", async () => {
     const texts = await generate(yaml(entity("contact", idName())), { "languages.rust.casing.file_names": "snake" });
-    expect(texts["repositories/contact_repository.rs"]).toBeDefined();
-    expect(textOf(texts, "mod.rs")).toContain("pub mod contact_repository;");
+    expect(texts["repositories/contacts_repository.rs"]).toBeDefined();
+    expect(textOf(texts, "mod.rs")).toContain("pub mod contacts_repository;");
   });
 
   it("file names kebab", async () => {
     const texts = await generate(yaml(entity("contact", idName())), { "languages.rust.casing.file_names": "kebab" });
-    expect(texts["repositories/contact-repository.rs"]).toBeDefined();
-    expect(textOf(texts, "repositories/mod.rs")).toContain('#[path = "contact-repository.rs"]');
-    expect(textOf(texts, "repositories/mod.rs")).toContain("pub mod contact_repository;");
+    expect(texts["repositories/contacts-repository.rs"]).toBeDefined();
+    expect(textOf(texts, "repositories/mod.rs")).toContain('#[path = "contacts-repository.rs"]');
+    expect(textOf(texts, "repositories/mod.rs")).toContain("pub mod contacts_repository;");
   });
 
   it("fields snake", async () => {
@@ -343,8 +343,8 @@ describe("generated rust compiles", () => {
       ),
       { "languages.rust.casing.fields": "snake" },
     );
-    expect(textOf(texts, "contactRepository.rs")).toContain("pub fn contact_repository");
-    expect(textOf(texts, "contactRepository.rs")).toContain("address_repository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("pub fn contacts_repository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("addresses_repository");
   });
 
   it("fields camel", async () => {
@@ -357,8 +357,8 @@ describe("generated rust compiles", () => {
       ),
       { "languages.rust.casing.fields": "camel" },
     );
-    expect(textOf(texts, "contactRepository.rs")).toContain("pub fn contactRepository");
-    expect(textOf(texts, "contactRepository.rs")).toContain("addressRowRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("pub fn contactsRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("addressesRowRepository");
   });
 
   it("pluralizes registry methods and tables", async () => {
@@ -379,12 +379,12 @@ describe("generated rust compiles", () => {
     expect(registry).toContain("fn people(");
     expect(registry).toContain("fn notification_types(");
     expect(registry).toContain("fn phone_labels(");
-    expect(textOf(texts, "contactRepository.rs")).toContain('"contacts"');
-    expect(textOf(texts, "addressRepository.rs")).toContain('"addresses"');
-    expect(textOf(texts, "categoryRepository.rs")).toContain('"categories"');
-    expect(textOf(texts, "personRepository.rs")).toContain('"people"');
-    expect(textOf(texts, "notificationTypeRepository.rs")).toContain('"notification_types"');
-    expect(textOf(texts, "phoneLabelRepository.rs")).toContain('"phone_labels"');
+    expect(textOf(texts, "contactsRepository.rs")).toContain('"contacts"');
+    expect(textOf(texts, "addressesRepository.rs")).toContain('"addresses"');
+    expect(textOf(texts, "categoriesRepository.rs")).toContain('"categories"');
+    expect(textOf(texts, "peopleRepository.rs")).toContain('"people"');
+    expect(textOf(texts, "notificationTypesRepository.rs")).toContain('"notification_types"');
+    expect(textOf(texts, "phoneLabelsRepository.rs")).toContain('"phone_labels"');
   });
 
   it("keeps registry plurals when table names are not pluralized", async () => {
@@ -394,13 +394,13 @@ describe("generated rust compiles", () => {
     );
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn notification_types(");
-    expect(textOf(texts, "contactRepository.rs")).toContain('"contact"');
-    expect(textOf(texts, "notificationTypeRepository.rs")).toContain('"notification_type"');
+    expect(textOf(texts, "contactsRepository.rs")).toContain('"contact"');
+    expect(textOf(texts, "notificationTypesRepository.rs")).toContain('"notification_type"');
   });
 
   it("REST contacts", async () => {
     const texts = await generate(restFiles(), { "languages.typescript.casing.fields": "camel" });
-    expect(textOf(texts, "contactRepository.rs")).toContain(
+    expect(textOf(texts, "contactsRepository.rs")).toContain(
       "Ok(Self { repo: Arc::new(repo), address, phone, contact_settings, contact_preferences, contact_source })",
     );
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
@@ -409,6 +409,6 @@ describe("generated rust compiles", () => {
   it("QS contacts", async () => {
     const texts = await generate(qsFiles());
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
-    expect(textOf(texts, "contactRepository.rs")).toMatch(/Ok\(Self \{ repo: Arc::new\(repo\), /);
+    expect(textOf(texts, "contactsRepository.rs")).toMatch(/Ok\(Self \{ repo: Arc::new\(repo\), /);
   });
 });

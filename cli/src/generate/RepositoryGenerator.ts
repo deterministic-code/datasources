@@ -1,11 +1,12 @@
-import { StatementNaming, type Casing } from "@deterministic-code/datasources";
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
+import { Paths, type TypeKind } from "@deterministic-code/generators-common/paths";
+import { caseDirectories } from "./casing.ts";
 import type { IRepositoryGenerator } from "./IRepositoryGenerator.ts";
 import { schemaPairs, type SchemaPair } from "./schemaPairs.ts";
 import {
-  childClass,
   childField,
   children as childModels,
   dialectsOf,
@@ -31,16 +32,35 @@ export const languageOf = async (dialect: string): Promise<IRepositoryGenerator>
 export abstract class RepositoryGenerator implements IRepositoryGenerator {
   abstract generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[];
   abstract readonly types: IRepositoryGenerator["types"];
-  abstract typesPrefix(casing: ICasingStrategy, kind: "datasource" | "views"): string;
-  abstract repositoriesPrefix(casing: ICasingStrategy): string;
+  protected readonly paths = new Paths();
+
+  typesPrefix = (casing: ICasingStrategy, kind: TypeKind): string =>
+    caseDirectories(this.paths.typesDir(kind), casing);
+  private readonly naming = createDatasourceNaming({});
 
   protected quote(value: string): string {
     return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
   }
 
-  protected plural(name: string, casing: Casing): string {
-    const naming = StatementNaming.sql;
-    return naming.convert(naming.physicalStem(naming.convert(name, "snakeCase")), casing);
+  protected repositoryClass(specName: string, casing: ICasingStrategy): string {
+    return casing.convertTypes(this.paths.repositoryStem(specName));
+  }
+
+  protected repositoryFile(specName: string, casing: ICasingStrategy): string {
+    return casing.convertFileName(this.paths.repositoryStem(specName));
+  }
+
+  protected bindName(specName: string, casing: ICasingStrategy, as: "fields" | "types"): string {
+    const stem = this.naming.physicalStem(specName);
+    return as === "fields" ? casing.convertFields(stem) : casing.convertTypes(stem);
+  }
+
+  protected rowRepositoryStem(specName: string): string {
+    return `${this.naming.physicalStem(specName)}_row_repository`;
+  }
+
+  protected readonlyRepositoryStem(specName: string): string {
+    return `${this.naming.physicalStem(specName)}_readonly_repository`;
   }
 
   protected listed(names: string[]): Array<{ name: string; comma?: Record<string, never> }> {
@@ -119,7 +139,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     return childModels(model).map((child) => ({
       specName: child.specName,
       typeName: child.typeName,
-      className: childClass(child.typeName),
+      className: this.repositoryClass(child.specName, casing),
       field: childField(casing, child.specName),
     }));
   }

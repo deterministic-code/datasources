@@ -4,23 +4,20 @@ import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
-import { childClass, type RepositoryModel } from "./RepositoryModel.ts";
+import type { TypeKind } from "@deterministic-code/generators-common/paths";
+import { caseDirectories } from "./casing.ts";
+import type { RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
-import { repositoriesPrefixOf, typesPrefixOf } from "./casing.ts";
 import { schemaPairs } from "./schemaPairs.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/typescript.ts";
 
 class TypeScriptRepositories extends RepositoryGenerator {
   readonly types = { datasource, views };
 
-  typesPrefix = (casing: ICasingStrategy, kind: "datasource" | "views"): string => typesPrefixOf(casing, kind);
-
-  repositoriesPrefix = (casing: ICasingStrategy): string => repositoriesPrefixOf(casing);
-
   generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("typescript", settings);
     return [
-      ...models.map((model) => content(`${casing.convertFileName(`${model.specName}_repository`)}.ts`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
+      ...models.map((model) => content(`${this.repositoryFile(model.specName, casing)}.ts`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
       content(`${casing.convertFileName("repository_registry")}.ts`, fill(registryTmpl, this.registry(models, casing))),
     ];
   }
@@ -28,14 +25,14 @@ class TypeScriptRepositories extends RepositoryGenerator {
   private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown> {
     const children = this.childrenOf(model, casing).map((child) => ({
       ...child,
-      repoImport: `./${casing.convertFileName(`${child.specName}_repository`)}`,
+      repoImport: `./${this.repositoryFile(child.specName, casing)}`,
     }));
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
     const dialects = this.dialectsBag(model, spec, casing);
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
-      className: childClass(model.typeName),
+      className: this.repositoryClass(model.specName, casing),
       typeImport: this.typeImport(model, casing),
       children,
       enrichments,
@@ -52,8 +49,8 @@ class TypeScriptRepositories extends RepositoryGenerator {
   private registry(models: RepositoryModel[], casing: ICasingStrategy): Record<string, unknown> {
     return {
       imports: models.map((model) => ({
-        className: childClass(model.typeName),
-        path: `./${casing.convertFileName(`${model.specName}_repository`)}`,
+        className: this.repositoryClass(model.specName, casing),
+        path: `./${this.repositoryFile(model.specName, casing)}`,
       })),
       factories: models.map((model) => ({
         name: casing.convertFields(model.specName),
@@ -61,16 +58,16 @@ class TypeScriptRepositories extends RepositoryGenerator {
       })),
       models: models.map((model) => ({
         entity: this.quote(model.entity),
-        plural: this.quote(this.plural(model.typeName, "camelCase")),
-        pluralName: this.plural(model.typeName, "camelCase"),
-        className: childClass(model.typeName),
+        plural: this.quote(this.bindName(model.specName, casing, "fields")),
+        pluralName: this.bindName(model.specName, casing, "fields"),
+        className: this.repositoryClass(model.specName, casing),
       })),
     };
   }
 
   private typeImport(model: RepositoryModel, casing: ICasingStrategy): string {
-    const kind = model.typeHome === "view" ? "views" : "datasource";
-    return `../${typesPrefixOf(casing, kind)}/${casing.convertFileName(model.specName)}`;
+    const kind: TypeKind = model.typeHome === "view" ? "view" : "datasource";
+    return `../${caseDirectories(this.paths.typesDir(kind), casing)}/${casing.convertFileName(model.specName)}`;
   }
 }
 
