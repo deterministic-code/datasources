@@ -47,13 +47,15 @@ e2e_step() {
 build_image() {
   tag=$1
   file=$2
+  hash=$(cksum "$repo/scripts/e2e-workdir.sh" | awk '{print $1}')
   if [ -n "${GITHUB_ACTIONS:-}" ]; then
     e2e_step "image $tag" docker buildx build --load \
+      --build-arg WORKDIR_HASH="$hash" \
       --cache-from "type=gha,scope=$tag" \
       --cache-to "type=gha,mode=max,scope=$tag" \
       -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
   else
-    e2e_step "image $tag" docker build -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
+    e2e_step "image $tag" docker build --build-arg WORKDIR_HASH="$hash" -t "$tag" -f "$repo/scripts/$file" "$repo/scripts"
   fi
 }
 
@@ -76,6 +78,7 @@ warmup_cli() {
   mkdir -p "${HOME}/.cache/datasources-e2e" "${HOME}/.cache/datasources-npm"
   e2e_step cli-install docker run --rm \
     -v "$repo:/opt/repo:ro" \
+    -v "$(dirname "$repo"):/opt/projects:ro" \
     -v "${HOME}/.cache/datasources-npm:/npm-cache" \
     -v "${HOME}/.cache/datasources-e2e:/e2e-cache" \
     -e E2E_CLI_ONLY=1 \
@@ -145,7 +148,7 @@ await_all() {
 }
 
 run_runner() {
-  docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" runner "$@"
+  docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" -v "$(dirname "$repo"):/opt/projects:ro" runner "$@"
 }
 
 run_compose() {

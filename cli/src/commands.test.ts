@@ -140,8 +140,11 @@ describe("commands", () => {
       `file:${resolve(root, "typescript/datasources")}`,
       `file:${resolve(root, "typescript/code-generators")}`,
       `file:${resolve(root, "typescript/providers/sqlite")}`,
-      "@deterministic-code/generators-common",
-      "@deterministic-code/deterministic-generators-common",
+      `file:${resolve(root, "../generators-common")}`,
+      `file:${resolve(root, "../deterministic-generators-common")}`,
+      `file:${resolve(root, "../generators-typescript")}`,
+      `file:${resolve(root, "../generators-csharp")}`,
+      `file:${resolve(root, "../generators-rust")}`,
     ];
     expect(addCommands("ts", ["sqlite"], ["package.json"], undefined, local).map((c) => c.args)).toEqual([
       ...builds,
@@ -171,6 +174,11 @@ describe("commands", () => {
       `file:${resolve(".", "typescript/datasources")}`,
       `file:${resolve(".", "typescript/code-generators")}`,
       `file:${resolve(".", "typescript/providers/sqlite")}`,
+      `file:${resolve(".", "../generators-common")}`,
+      `file:${resolve(".", "../deterministic-generators-common")}`,
+      `file:${resolve(".", "../generators-typescript")}`,
+      `file:${resolve(".", "../generators-csharp")}`,
+      `file:${resolve(".", "../generators-rust")}`,
     ]);
   });
 });

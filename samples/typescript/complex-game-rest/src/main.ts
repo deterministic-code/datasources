@@ -6,17 +6,7 @@ import type { Role } from "../generated/types/datasource/role.ts";
 import type { Group } from "../generated/types/datasource/group.ts";
 import type { ContactSource } from "../generated/types/datasource/contactSource.ts";
 
-await using ds = Datasource.default as Datasource & {
-  users: never;
-  categories: never;
-  games: never;
-  reviews: never;
-  gameStates: never;
-  contacts: never;
-  roles: { create: (row: Role) => Promise<Role> };
-  groups: { create: (row: Group) => Promise<Group> };
-  contactSources: { create: (row: ContactSource) => Promise<ContactSource> };
-};
+await using ds = Datasource.default;
 const api = new Api(ds.users, ds.categories, ds.games, ds.reviews, ds.gameStates, ds.contacts);
 const role = await ds.roles.create({ name: "player", description: "plays" } as Role);
 const group = await ds.groups.create({ name: "guild", description: "guild" } as Group);

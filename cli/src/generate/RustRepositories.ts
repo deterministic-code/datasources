@@ -69,7 +69,7 @@ class RustRepositories extends RepositoryGenerator {
       hasEnrichments: enrichments.length === 0 ? undefined : {},
       hasLinked: model.enrichments.some(isLinked) ? {} : undefined,
       hasIcrud: model.enrichments.some(isLinked) || token !== undefined ? {} : undefined,
-      wrapped: child.length === 0 ? undefined : {},
+      wrapped: {},
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
       schema: this.schemaBag(schemaPairs(model, spec, casing)),

@@ -45,10 +45,18 @@ export const removeCommands = (
 
 const fileSpec = (local: LocalInstall, path: string): string => `file:${resolve(local.repo, path)}`;
 
-const generatorPkgs = [
-  "@deterministic-code/generators-common",
-  "@deterministic-code/deterministic-generators-common",
-];
+const generatorDirs = [
+  ["@deterministic-code/generators-common", "generators-common"],
+  ["@deterministic-code/deterministic-generators-common", "deterministic-generators-common"],
+  ["@deterministic-code/typescript-generators", "generators-typescript"],
+  ["@deterministic-code/csharp-generators", "generators-csharp"],
+  ["@deterministic-code/rust-generators", "generators-rust"],
+] as const;
+
+const generatorRoot = (local: LocalInstall): string =>
+  resolve(process.env.GENERATORS_ROOT ?? resolve(local.repo, ".."));
+
+const generatorSpec = (local: LocalInstall, dir: string): string => `file:${resolve(generatorRoot(local), dir)}`;
 
 const localBuild = (local: LocalInstall, names: Provider[]): Proc[] =>
   [
@@ -72,7 +80,7 @@ const npmInstall = (names: Provider[], local?: LocalInstall): Proc[] => [
             fileSpec(local, "typescript/datasources"),
             fileSpec(local, "typescript/code-generators"),
             ...names.map((name) => fileSpec(local, `typescript/providers/${name}`)),
-            ...generatorPkgs,
+            ...generatorDirs.map(([, dir]) => generatorSpec(local, dir)),
           ]
         : [host.ts.core, ...names.map((name) => catalog[name].npm)]),
     ],

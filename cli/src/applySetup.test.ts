@@ -148,7 +148,7 @@ describe("setup", () => {
     expect(npmLocalInstall(io.ran)).toMatch(/file:.*typescript\/datasources/);
     expect(npmLocalInstall(io.ran)).toMatch(/file:.*typescript\/code-generators/);
     expect(npmLocalInstall(io.ran)).toMatch(/file:.*typescript\/providers\/sqlite/);
-    expect(npmLocalInstall(io.ran)).toMatch(/@deterministic-code\/generators-common/);
+    expect(npmLocalInstall(io.ran)).toMatch(/file:.*generators-common/);
     expect(io.ran.some((line) => line.includes("npm install --prefix") && line.includes("typescript/code-generators"))).toBe(false);
     expect(npmLocalInstall(io.ran)).not.toMatch(/npm install @deterministic-code\/datasources /);
     expect(io.ran).toContain(

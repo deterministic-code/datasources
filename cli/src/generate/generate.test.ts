@@ -348,6 +348,26 @@ types: []
     expect(csharpPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Groups")?.relatedProperty).toBeUndefined();
     expect(typescriptPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "groups")?.relatedProperty).toBeUndefined();
     expect(rustPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "groups")?.relatedProperty).toBeUndefined();
+    const withoutRoleTable = {
+      ...spec,
+      datasource: spec.datasource.filter((table) => table.name !== "role"),
+    };
+    const expandedOnly = planRepositories(
+      { ...withoutRoleTable, types: spec.types.filter((type) => type.name !== "role") },
+      "typescript",
+      { ...settings, "languages.typescript.casing.fields": "camel" },
+    );
+    expect(expandedOnly.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "roles")?.relatedProperty).toBe("name");
+    const missingRelated = planRepositories(
+      {
+        ...withoutRoleTable,
+        types: spec.types.filter((type) => type.name !== "role"),
+        expandedTypes: spec.expandedTypes.filter((type) => type.name !== "role"),
+      },
+      "typescript",
+      { ...settings, "languages.typescript.casing.fields": "camel" },
+    );
+    expect(missingRelated.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "roles")?.relatedProperty).toBeUndefined();
     const csharp = await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(files), settings });
     const typescript = await deterministic.generateRepositories({
       dialect: "typescript",
