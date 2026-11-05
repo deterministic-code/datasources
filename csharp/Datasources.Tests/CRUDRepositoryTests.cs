@@ -351,6 +351,24 @@ public class CRUDRepositoryTests
     }
 
     [Fact]
+    public async Task CreateResolvesLinkedRelatedProperty()
+    {
+        var connection = await Setup();
+        var parentsRepo = Open<Tagged>(connection);
+        var tagsRepo = Open<Tag>(connection);
+        var linksRepo = Open<ParentTag>(connection);
+        var admin = await tagsRepo.Create(new Tag { Name = "admin" });
+        Assert.True(admin.Id > 0);
+        parentsRepo.AddLinked(new("Tags", "Id", "Id", "Name", Association: new("ParentId", "TagId")), tagsRepo, linksRepo);
+        var parent = await parentsRepo.Create(new Tagged { Tags = [new Tag { Name = "admin" }] });
+        Assert.True(parent.Id > 0);
+        var link = Assert.Single(await linksRepo.Read().ToListAsync());
+        Assert.Equal(parent.Id, link.ParentId);
+        Assert.Equal(admin.Id, link.TagId);
+        Assert.Equal("admin", Assert.Single(await tagsRepo.Read().ToListAsync()).Name);
+    }
+
+    [Fact]
     public async Task DeleteCascadesChildrenThenParent()
     {
         var connection = await Setup();

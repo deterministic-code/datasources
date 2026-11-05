@@ -26,8 +26,8 @@ const user = await call(api, "POST", "/users", {
   username: "ada",
   password: "secret",
   settings: { theme: "dark" },
-  roles: [{ id: role.id, name: role.name, description: role.description }],
-  groups: [{ id: group.id, name: group.name, description: group.description }],
+  roles: [{ name: role.name, description: role.description }],
+  groups: [{ name: group.name, description: group.description }],
 }, 201);
 const userId = user.id as number;
 const listed = await call(api, "GET", "/users?username=ada", undefined, 200);
@@ -36,8 +36,8 @@ await call(api, "PUT", `/users?id=${userId}`, {
   username: "ada-byron",
   password: "secret",
   settings: { theme: "sepia" },
-  roles: [{ id: role.id, name: role.name }],
-  groups: [{ id: group.id, name: group.name }],
+  roles: [{ name: role.name }],
+  groups: [{ name: group.name }],
 }, 200);
 const loaded = await call(api, "GET", `/users?id=${userId}`, undefined, 200);
 if (!Array.isArray(loaded) || loaded[0]?.username !== "ada-byron") throw new Error("put users");

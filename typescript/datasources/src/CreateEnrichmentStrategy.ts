@@ -1,5 +1,6 @@
 import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Cell.ts";
 import { identityKey } from "./identity.ts";
@@ -27,13 +28,17 @@ export abstract class CreateEnrichmentStrategy<T> {
     for (const item of items) {
       for (const entry of entries) {
         const { enrichment } = entry;
-        if ((enrichment.type ?? "object") !== "object" || enrichment.association || !enrichment.relatedProperty)
+        if (!enrichment.relatedProperty) continue;
+        const via = entry.via ?? entry.persist;
+        if (!via) continue;
+        if (enrichment.association) {
+          await this.resolveLinked(via, enrichment, item);
           continue;
+        }
+        if ((enrichment.type ?? "object") !== "object") continue;
         const name = this.getCell(item, enrichment.destinationProperty);
         if (!this.presentCell(name)) continue;
         if (this.presentCell(this.keyOf(this.getCell(item, enrichment.sourceProperty), enrichment.relatedKey))) continue;
-        const via = entry.via ?? entry.persist;
-        if (!via) continue;
         const found = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedProperty, name)));
         if (!found)
           throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
@@ -44,6 +49,23 @@ export abstract class CreateEnrichmentStrategy<T> {
       }
     }
   }
+
+  private resolveLinked = async (via: IReadonlyRepository, enrichment: Enrichment, item: T): Promise<void> => {
+    const property = enrichment.relatedProperty;
+    if (!property) return;
+    for (const related of this.payloadOf<object, T>(item, enrichment.destinationProperty)) {
+      if (this.presentCell(this.getCell(related, enrichment.relatedKey))) continue;
+      const name = this.getCell(related, property);
+      if (!this.presentCell(name)) continue;
+      const found = await via.readSingle(new Where(new Operator.Equals(property, name)));
+      if (!found)
+        throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
+      const id = this.getCell(found, enrichment.relatedKey);
+      if (!this.presentCell(id))
+        throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
+      Object.assign(related, { [enrichment.relatedKey]: id });
+    }
+  };
 
   collectChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): TChild[] {
     const children = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);

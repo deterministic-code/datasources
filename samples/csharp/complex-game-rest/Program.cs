@@ -25,8 +25,8 @@ var user = await Call(api, "POST", "/users", Json(new
     username = "ada",
     password = "secret",
     settings = new Dictionary<string, string> { ["theme"] = "dark" },
-    roles = new[] { new { id = role.Id, name = role.Name, description = role.Description } },
-    groups = new[] { new { id = group.Id, name = group.Name, description = group.Description } },
+    roles = new[] { new { name = role.Name, description = role.Description } },
+    groups = new[] { new { name = group.Name, description = group.Description } },
 }), 201);
 var userId = user.GetProperty("id").GetInt64();
 var listed = await Call(api, "GET", "/users?username=ada", null, 200);
@@ -36,8 +36,8 @@ await Call(api, "PUT", $"/users?id={userId}", Json(new
     username = "ada-byron",
     password = "secret",
     settings = new Dictionary<string, string> { ["theme"] = "sepia" },
-    roles = new[] { new { id = role.Id, name = role.Name } },
-    groups = new[] { new { id = group.Id, name = group.Name } },
+    roles = new[] { new { name = role.Name } },
+    groups = new[] { new { name = group.Name } },
 }), 200);
 var loaded = await Call(api, "GET", $"/users?id={userId}", null, 200);
 if (loaded[0].GetProperty("username").GetString() != "ada-byron") throw new InvalidOperationException("put users");

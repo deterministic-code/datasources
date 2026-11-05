@@ -301,6 +301,26 @@ describe("CRUDRepository user view", () => {
     expect(await collectAsync(seeded.userGroupsRepo.read())).toEqual([]);
   });
 
+  it("create-resolves-linked-related-property", async () => {
+    const seeded = await graph();
+    seeded.usersRepo.addLinked(
+      { destinationProperty: "roles", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", association: { parent: "user_id", related: "role_id" } },
+      seeded.rolesRepo,
+      seeded.userRolesRepo,
+    );
+    const created = await seeded.usersRepo.create(Object.assign(new UserView(), {
+      username: "ada",
+      user_type_id: seeded.adminType.id,
+      is_enabled: true,
+      roles: [Object.assign(new Role(), { name: "admin" })],
+    }));
+    expect(created.id > 0).toEqual(true);
+    const links = await collectAsync(seeded.userRolesRepo.read());
+    expect(links.map((linkRow) => linkRow.user_id)).toEqual([created.id]);
+    expect(links.map((linkRow) => linkRow.role_id)).toEqual([seeded.adminRole.id]);
+    expect((await collectAsync(seeded.rolesRepo.read())).map((role) => role.name).sort()).toEqual(["admin", "editor"]);
+  });
+
   it("rejects a link without an id", async () => {
     const seeded = await graph();
     seeded.usersRepo.addLinked(

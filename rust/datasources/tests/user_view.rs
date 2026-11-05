@@ -559,3 +559,42 @@ async fn lazy_write_skips_unloaded_links() {
         .unwrap()
         .is_empty());
 }
+
+#[tokio::test]
+async fn create_resolves_linked_related_property() {
+    let (mut users, seeded) = open(None).await;
+    users.add_linked(
+        Enrichment::new(
+            "roles",
+            "id",
+            "id",
+            Some("name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        )
+        .linked(Association::new("user_id", "role_id")),
+        seeded.roles.clone(),
+        seeded.user_roles.clone(),
+        None,
+    );
+    let created = users
+        .create(ada(
+            &seeded,
+            encode_rows(&[record(&[("name", Value::from("admin"))])]),
+            Value::Null,
+        ))
+        .await
+        .unwrap();
+    let links = seeded
+        .user_roles
+        .read(&())
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert!(num(&created, "id") > 0);
+    assert_eq!(ints(&links, "user_id"), vec![num(&created, "id")]);
+    assert_eq!(ints(&links, "role_id"), vec![num(&seeded.admin_role, "id")]);
+    assert_eq!(
+        names(&seeded.roles.read(&()).try_collect::<Vec<_>>().await.unwrap()),
+        vec!["admin".to_string(), "editor".to_string()]
+    );
+}

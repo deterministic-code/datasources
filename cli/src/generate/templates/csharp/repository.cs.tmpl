@@ -16,7 +16,7 @@ public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{
         {{field}} = new {{className}}(connection);
 {{/children}}
 {{#enrichments}}
-        {{#linked}}AddLinked(new("{{destination}}", "{{source}}", "{{relatedKey}}", Association: new("{{parentFk}}", "{{relatedFk}}")), {{via}}, {{link}});{{/linked}}{{^linked}}AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}{{#dictionary}}, Type: EnrichmentPropertyType.Dictionary{{/dictionary}}{{#list}}, Type: EnrichmentPropertyType.List{{/list}}), {{via}});{{/linked}}
+        {{#linked}}AddLinked(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}, Association: new("{{parentFk}}", "{{relatedFk}}")), {{via}}, {{link}});{{/linked}}{{^linked}}AddEnriched(new("{{destination}}", "{{source}}", "{{relatedKey}}"{{#relatedProperty}}, "{{relatedProperty}}"{{/relatedProperty}}{{#dictionary}}, Type: EnrichmentPropertyType.Dictionary{{/dictionary}}{{#list}}, Type: EnrichmentPropertyType.List{{/list}}), {{via}});{{/linked}}
 {{/enrichments}}
     }
 {{/setup}}
