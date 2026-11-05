@@ -568,6 +568,7 @@ dependencies = [
  "datasources",
  "deterministic_generators_common",
  "indexmap",
+ "jsonschema",
  "regex",
  "serde_yaml",
  "sha1",

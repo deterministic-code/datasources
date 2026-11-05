@@ -2,25 +2,26 @@ using System.Text.Json;
 using Backend.Types.Datasource;
 using Backend.Types.View;
 using Datasources;
-using Categories = Backend.Types.View.Categories;
+using Category = Backend.Types.View.Category;
+using User = Backend.Types.View.User;
 
 namespace ComplexGameRest;
 
 public sealed class Api
 {
-    readonly ICRUDRepository<Users> users;
-    readonly ICRUDRepository<Categories> categories;
-    readonly ICRUDRepository<Games> games;
-    readonly ICRUDRepository<Reviews> reviews;
-    readonly ICRUDRepository<GameStates> states;
+    readonly ICRUDRepository<User> users;
+    readonly ICRUDRepository<Category> categories;
+    readonly ICRUDRepository<Game> games;
+    readonly ICRUDRepository<Review> reviews;
+    readonly ICRUDRepository<GameState> states;
     readonly ICRUDRepository<Contact> contacts;
 
     public Api(
-        ICRUDRepository<Users> users,
-        ICRUDRepository<Categories> categories,
-        ICRUDRepository<Games> games,
-        ICRUDRepository<Reviews> reviews,
-        ICRUDRepository<GameStates> states,
+        ICRUDRepository<User> users,
+        ICRUDRepository<Category> categories,
+        ICRUDRepository<Game> games,
+        ICRUDRepository<Review> reviews,
+        ICRUDRepository<GameState> states,
         ICRUDRepository<Contact> contacts)
     {
         this.users = users;
@@ -42,24 +43,24 @@ public sealed class Api
             return await ($"{method.ToUpperInvariant()} {path}" switch
             {
                 "GET /users" => Get(users, query, ["Id", "Username"]),
-                "POST /users" => Post(users, StampUser(Read<Users>(body))),
-                "PUT /users" => Put(users, query, StampUser(Read<Users>(body))),
+                "POST /users" => Post(users, StampUser(Read<User>(body))),
+                "PUT /users" => Put(users, query, StampUser(Read<User>(body))),
                 "DELETE /users" => Delete(users, query),
                 "GET /categories" => GetCategories(query),
-                "POST /categories" => Post(categories, StampCategory(Read<Categories>(body))),
-                "PUT /categories" => Put(categories, query, StampCategory(Read<Categories>(body))),
+                "POST /categories" => Post(categories, StampCategory(Read<Category>(body))),
+                "PUT /categories" => Put(categories, query, StampCategory(Read<Category>(body))),
                 "DELETE /categories" => Delete(categories, query),
                 "GET /games" => Get(games, query, ["Id", "Name"]),
-                "POST /games" => Post(games, StampGame(Read<Games>(body))),
-                "PUT /games" => Put(games, query, StampGame(Read<Games>(body))),
+                "POST /games" => Post(games, StampGame(Read<Game>(body))),
+                "PUT /games" => Put(games, query, StampGame(Read<Game>(body))),
                 "DELETE /games" => Delete(games, query),
                 "GET /reviews" => Get(reviews, query, ["Id", "GameId", "UserId"]),
-                "POST /reviews" => Post(reviews, StampReview(Read<Reviews>(body))),
-                "PUT /reviews" => Put(reviews, query, StampReview(Read<Reviews>(body))),
+                "POST /reviews" => Post(reviews, StampReview(Read<Review>(body))),
+                "PUT /reviews" => Put(reviews, query, StampReview(Read<Review>(body))),
                 "DELETE /reviews" => Delete(reviews, query),
                 "GET /game_states" => Get(states, query, ["Id", "GameId", "UserId"]),
-                "POST /game_states" => Post(states, StampState(Read<GameStates>(body))),
-                "PUT /game_states" => Put(states, query, StampState(Read<GameStates>(body))),
+                "POST /game_states" => Post(states, StampState(Read<GameState>(body))),
+                "PUT /game_states" => Put(states, query, StampState(Read<GameState>(body))),
                 "DELETE /game_states" => Delete(states, query),
                 "GET /contacts" => Get(contacts, query, ["Id", "UserId"]),
                 "POST /contacts" => Post(contacts, StampContact(Read<Contact>(body))),
@@ -112,7 +113,7 @@ public sealed class Api
         return (204, "");
     }
 
-    static Users StampUser(Users user)
+    static User StampUser(User user)
     {
         Stamp(user);
         user.Settings ??= [];
@@ -123,13 +124,13 @@ public sealed class Api
         return user;
     }
 
-    static Categories StampCategory(Categories category)
+    static Category StampCategory(Category category)
     {
         Stamp(category);
         return category;
     }
 
-    static Games StampGame(Games game)
+    static Game StampGame(Game game)
     {
         Stamp(game);
         game.Settings ??= [];
@@ -138,13 +139,13 @@ public sealed class Api
         return game;
     }
 
-    static Reviews StampReview(Reviews review)
+    static Review StampReview(Review review)
     {
         Stamp(review);
         return review;
     }
 
-    static GameStates StampState(GameStates state)
+    static GameState StampState(GameState state)
     {
         Stamp(state);
         return state;
@@ -175,11 +176,11 @@ public sealed class Api
 
     static void SetId<T>(T row, long id)
     {
-        if (row is Users user) user.Id = id;
-        else if (row is Categories category) category.Id = id;
-        else if (row is Games game) game.Id = id;
-        else if (row is Reviews review) review.Id = id;
-        else if (row is GameStates state) state.Id = id;
+        if (row is User user) user.Id = id;
+        else if (row is Category category) category.Id = id;
+        else if (row is Game game) game.Id = id;
+        else if (row is Review review) review.Id = id;
+        else if (row is GameState state) state.Id = id;
         else if (row is Contact contact) contact.Id = id;
     }
 

@@ -1,6 +1,6 @@
 use crate::clock::Clock;
 use crate::json_object::JsonObjectSerializer;
-use crate::{Categories, Contact, GameStates, Games, Reviews, Users};
+use crate::{Category, Contact, Game, GameState, Review, User};
 use chrono::{DateTime, Utc};
 use datasources::{
     DatasourceError, Expression, Identifier, Operator, ReadInput, Value, Where, CRUDRepository,
@@ -15,22 +15,22 @@ pub struct HttpResult {
 }
 
 pub struct Api {
-    users: Arc<CRUDRepository<Users>>,
-    categories: Arc<CRUDRepository<Categories>>,
-    games: Arc<CRUDRepository<Games>>,
-    reviews: Arc<CRUDRepository<Reviews>>,
-    states: Arc<CRUDRepository<GameStates>>,
+    users: Arc<CRUDRepository<User>>,
+    categories: Arc<CRUDRepository<Category>>,
+    games: Arc<CRUDRepository<Game>>,
+    reviews: Arc<CRUDRepository<Review>>,
+    states: Arc<CRUDRepository<GameState>>,
     contacts: Arc<CRUDRepository<Contact>>,
     clock: Clock,
 }
 
 impl Api {
     pub fn new(
-        users: Arc<CRUDRepository<Users>>,
-        categories: Arc<CRUDRepository<Categories>>,
-        games: Arc<CRUDRepository<Games>>,
-        reviews: Arc<CRUDRepository<Reviews>>,
-        states: Arc<CRUDRepository<GameStates>>,
+        users: Arc<CRUDRepository<User>>,
+        categories: Arc<CRUDRepository<Category>>,
+        games: Arc<CRUDRepository<Game>>,
+        reviews: Arc<CRUDRepository<Review>>,
+        states: Arc<CRUDRepository<GameState>>,
         contacts: Arc<CRUDRepository<Contact>>,
         clock: Clock,
     ) -> Self {
@@ -259,7 +259,7 @@ fn decode(text: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn stamp_user(mut user: Users, clock: &Clock) -> Users {
+fn stamp_user(mut user: User, clock: &Clock) -> User {
     stamp(&mut user.uuid, &mut user.created, &mut user.updated, &mut user.version, clock);
     for role in &mut user.roles {
         stamp(&mut role.uuid, &mut role.created, &mut role.updated, &mut role.version, clock);
@@ -270,12 +270,12 @@ fn stamp_user(mut user: Users, clock: &Clock) -> Users {
     user
 }
 
-fn stamp_category(mut category: Categories, clock: &Clock) -> Categories {
+fn stamp_category(mut category: Category, clock: &Clock) -> Category {
     stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
     category
 }
 
-fn stamp_game(mut game: Games, clock: &Clock) -> Games {
+fn stamp_game(mut game: Game, clock: &Clock) -> Game {
     stamp(&mut game.uuid, &mut game.created, &mut game.updated, &mut game.version, clock);
     for category in &mut game.categories {
         stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
@@ -283,12 +283,12 @@ fn stamp_game(mut game: Games, clock: &Clock) -> Games {
     game
 }
 
-fn stamp_review(mut review: Reviews, clock: &Clock) -> Reviews {
+fn stamp_review(mut review: Review, clock: &Clock) -> Review {
     stamp(&mut review.uuid, &mut review.created, &mut review.updated, &mut review.version, clock);
     review
 }
 
-fn stamp_state(mut state: GameStates, clock: &Clock) -> GameStates {
+fn stamp_state(mut state: GameState, clock: &Clock) -> GameState {
     stamp(&mut state.uuid, &mut state.created, &mut state.updated, &mut state.version, clock);
     state
 }

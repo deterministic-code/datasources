@@ -188,7 +188,7 @@ types:
         cwd,
       ),
     ).toBe(1);
-    expect(errs).toEqual(['missing type "user"']);
+    expect(errs).toEqual(['missing type "user_base"']);
     expect(Object.keys(store.files).some((path) => path.includes("generated") || path.includes("sql/"))).toBe(false);
   });
 
@@ -211,7 +211,7 @@ types:
     ).toBe(0);
     const up = store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")];
     expect(up).toMatch(/CREATE TABLE/i);
-    expect(up).toMatch(/users/i);
+    expect(up).toMatch(/user_bases/i);
   });
 
   it("generates the complex-game spec after resolving file includes", async () => {
@@ -219,14 +219,14 @@ types:
     const loaded = await loadSpec(nodeFs, dir);
     const spec = await DeterministicParser(memoryReader(loaded.files)).parse(loaded.settings);
     const names = spec.types.map((type) => type.name);
-    expect(names).toEqual(expect.arrayContaining(["user", "users", "contact", "games", "categories", "user_settings"]));
-    expect(spec.types.find((type) => type.name === "users")?.fields.map((field) => field.name)).toEqual(
+    expect(names).toEqual(expect.arrayContaining(["user_base", "user", "contact", "games", "categories", "user_settings"]));
+    expect(spec.types.find((type) => type.name === "user")?.fields.map((field) => field.name)).toEqual(
       expect.arrayContaining(["settings", "roles", "groups"]),
     );
     expect(spec.types.find((type) => type.name === "contacts_base")?.fields.some((field) => field.name === "user_id")).toBe(true);
     const models = planRepositories(spec, "typescript", loaded.settings);
     expect(models.map((model) => model.specName)).toEqual(
-      expect.arrayContaining(["users", "games", "contact", "categories", "reviews", "game_states"]),
+      expect.arrayContaining(["user", "games", "contact", "categories", "reviews", "game_states"]),
     );
     const entries = await deterministic.generateTypes({
       dialect: "typescript",
@@ -358,6 +358,59 @@ types: []
     expect(csharp.some((entry) => entry.kind === "content" && entry.contents?.includes('AddLinked(new("Roles", "Id", "Id", "Name", Association: new("UserId", "RoleId"))'))).toBe(true);
     expect(typescript.some((entry) => entry.kind === "content" && entry.contents?.includes('relatedProperty: "name"'))).toBe(true);
     expect(rust.some((entry) => entry.kind === "content" && entry.contents?.includes('Some("name".into())'))).toBe(true);
+  });
+
+  it("reads a linked related type from expanded types and skips relatedProperty when that type is gone", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - user:
+      tags: [datasource_type, view_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - roles:
+            type: role[]
+            references: user_role.user_id
+  - role:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - user_role:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - user_id:
+            references: user.id
+        - role_id:
+            references: role.id
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const withoutRoleTable = {
+      ...spec,
+      types: spec.types.filter((type) => type.name !== "role"),
+      datasource: spec.datasource.filter((table) => table.name !== "role"),
+    };
+    const fromExpanded = planRepositories(withoutRoleTable, "csharp", settings);
+    expect(fromExpanded.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Roles")?.relatedProperty).toBe("Name");
+    const missing = {
+      ...withoutRoleTable,
+      expandedTypes: withoutRoleTable.expandedTypes.filter((type) => type.name !== "role"),
+    };
+    const fromMissing = planRepositories(missing, "csharp", settings);
+    expect(fromMissing.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Roles")?.relatedProperty).toBeUndefined();
   });
 
   it("maps legacy contacts and enriches contact lists", async () => {
@@ -709,15 +762,15 @@ types:
         - id:
             type: integer
             is_id: true
-  - user:
+  - user_base:
       tags: [datasource_type]
       fields:
         - id:
             type: integer
             is_id: true
-  - users:
+  - user:
       tags: [view_type]
-      inherits: user
+      inherits: user_base
 `,
       "datasource.yaml": `version: 1.0.0
 includes:
@@ -735,8 +788,8 @@ types: []
     const typescript = await deterministic.generateTypes(named("typescript"));
     expect(textOf(typescript, "types/datasource/category.ts")).toContain("Category");
     expect(textOf(typescript, "types/view/category.ts")).toContain("Category");
-    expect(textOf(typescript, "types/datasource/user.ts")).toContain("User");
-    expect(textOf(typescript, "types/view/user.ts")).toContain("User");
+    expect(textOf(typescript, "types/datasource/userBase.ts")).toContain("UserBase");
+    expect(textOf(typescript, "types/view/user.ts")).toContain("export interface User extends UserBase");
     expect(typescript.some((entry) => entry.filename.endsWith("categories.ts"))).toBe(false);
     expect(typescript.some((entry) => entry.filename.endsWith("users.ts"))).toBe(false);
     const repos = await deterministic.generateRepositories(named("csharp"));

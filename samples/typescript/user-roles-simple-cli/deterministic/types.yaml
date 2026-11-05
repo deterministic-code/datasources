@@ -13,7 +13,7 @@ types:
         - updated:
             type: binary
             default_value: "Hex('00')"
-  - user:
+  - user_base:
       tags:
         - datasource_type
       inherits: base
@@ -57,7 +57,7 @@ types:
       inherits: base
       fields:
         - user_id:
-            references: user.id
+            references: user_base.id
         - group_id:
             references: group.id
   - user_role:
@@ -66,6 +66,6 @@ types:
       inherits: base
       fields:
         - user_id:
-            references: user.id
+            references: user_base.id
         - role_id:
             references: role.id

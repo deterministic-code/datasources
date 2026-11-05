@@ -1,17 +1,18 @@
 using System.Text.Json;
 using Backend.Types.Datasource;
 using Backend.Types.View;
-using Categories = Backend.Types.View.Categories;
+using Category = Backend.Types.View.Category;
+using User = Backend.Types.View.User;
 using ComplexGameRest;
 using Datasources;
 
 await using var ds = Datasource.Default;
 var api = new Api(
-    ds.CreateRepository<Users>("Users"),
-    ds.CreateRepository<Categories>("Categories"),
-    ds.CreateRepository<Games>("Games"),
-    ds.CreateRepository<Reviews>("Reviews"),
-    ds.CreateRepository<GameStates>("GameStates"),
+    ds.CreateRepository<User>("Users"),
+    ds.CreateRepository<Category>("Categories"),
+    ds.CreateRepository<Game>("Games"),
+    ds.CreateRepository<Review>("Reviews"),
+    ds.CreateRepository<GameState>("GameStates"),
     ds.CreateRepository<Contact>("Contacts"));
 var roles = ds.CreateRepository<Role>("Roles");
 var groups = ds.CreateRepository<Group>("Groups");

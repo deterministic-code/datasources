@@ -7,11 +7,11 @@ import {
   type IWhere,
 } from "@deterministic-code/datasources";
 import type { Contact } from "../generated/types/view/contact.ts";
-import type { Users } from "../generated/types/view/users.ts";
-import type { Games } from "../generated/types/view/games.ts";
-import type { Categories } from "../generated/types/view/categories.ts";
-import type { Reviews } from "../generated/types/datasource/reviews.ts";
-import type { GameStates } from "../generated/types/datasource/gameStates.ts";
+import type { User } from "../generated/types/view/user.ts";
+import type { Game } from "../generated/types/view/game.ts";
+import type { Category } from "../generated/types/view/category.ts";
+import type { Review } from "../generated/types/datasource/review.ts";
+import type { GameState } from "../generated/types/datasource/gameState.ts";
 import { clock } from "./clock.ts";
 import { jsonObject } from "./jsonObject.ts";
 
@@ -19,11 +19,11 @@ export type HttpResult = { status: number; body: string };
 
 export class Api {
   constructor(
-    private readonly users: ICRUDRepository<Users>,
-    private readonly categories: ICRUDRepository<Categories>,
-    private readonly games: ICRUDRepository<Games>,
-    private readonly reviews: ICRUDRepository<Reviews>,
-    private readonly states: ICRUDRepository<GameStates>,
+    private readonly users: ICRUDRepository<User>,
+    private readonly categories: ICRUDRepository<Category>,
+    private readonly games: ICRUDRepository<Game>,
+    private readonly reviews: ICRUDRepository<Review>,
+    private readonly states: ICRUDRepository<GameState>,
     private readonly contacts: ICRUDRepository<Contact>,
   ) {}
 
@@ -34,24 +34,24 @@ export class Api {
       const query = parse(split < 0 ? "" : target.slice(split + 1));
       return await ({
         "GET /users": () => get(this.users, query, ["id", "username"]),
-        "POST /users": () => post(this.users, stampUser(read<Users>(body))),
-        "PUT /users": () => put(this.users, query, stampUser(read<Users>(body)), (row, id) => { row.id = id; }),
+        "POST /users": () => post(this.users, stampUser(read<User>(body))),
+        "PUT /users": () => put(this.users, query, stampUser(read<User>(body)), (row, id) => { row.id = id; }),
         "DELETE /users": () => remove(this.users, query),
         "GET /categories": () => this.getCategories(query),
-        "POST /categories": () => post(this.categories, stampRow(read<Categories>(body))),
-        "PUT /categories": () => put(this.categories, query, stampRow(read<Categories>(body)), (row, id) => { row.id = id; }),
+        "POST /categories": () => post(this.categories, stampRow(read<Category>(body))),
+        "PUT /categories": () => put(this.categories, query, stampRow(read<Category>(body)), (row, id) => { row.id = id; }),
         "DELETE /categories": () => remove(this.categories, query),
         "GET /games": () => get(this.games, query, ["id", "name"]),
-        "POST /games": () => post(this.games, stampGame(read<Games>(body))),
-        "PUT /games": () => put(this.games, query, stampGame(read<Games>(body)), (row, id) => { row.id = id; }),
+        "POST /games": () => post(this.games, stampGame(read<Game>(body))),
+        "PUT /games": () => put(this.games, query, stampGame(read<Game>(body)), (row, id) => { row.id = id; }),
         "DELETE /games": () => remove(this.games, query),
         "GET /reviews": () => get(this.reviews, query, ["id", "gameId", "userId"]),
-        "POST /reviews": () => post(this.reviews, stampRow(read<Reviews>(body))),
-        "PUT /reviews": () => put(this.reviews, query, stampRow(read<Reviews>(body)), (row, id) => { row.id = id; }),
+        "POST /reviews": () => post(this.reviews, stampRow(read<Review>(body))),
+        "PUT /reviews": () => put(this.reviews, query, stampRow(read<Review>(body)), (row, id) => { row.id = id; }),
         "DELETE /reviews": () => remove(this.reviews, query),
         "GET /game_states": () => get(this.states, query, ["id", "gameId", "userId"]),
-        "POST /game_states": () => post(this.states, stampRow(read<GameStates>(body))),
-        "PUT /game_states": () => put(this.states, query, stampRow(read<GameStates>(body)), (row, id) => { row.id = id; }),
+        "POST /game_states": () => post(this.states, stampRow(read<GameState>(body))),
+        "PUT /game_states": () => put(this.states, query, stampRow(read<GameState>(body)), (row, id) => { row.id = id; }),
         "DELETE /game_states": () => remove(this.states, query),
         "GET /contacts": () => get(this.contacts, query, ["id", "userId"]),
         "POST /contacts": () => post(this.contacts, stampContact(read<Contact>(body))),
@@ -88,7 +88,7 @@ class RequestError extends Error {
   }
 }
 
-const stampUser = (user: Users): Users => {
+const stampUser = (user: User): User => {
   stampRow(user);
   user.settings ??= {};
   user.roles ??= [];
@@ -98,7 +98,7 @@ const stampUser = (user: Users): Users => {
   return user;
 };
 
-const stampGame = (game: Games): Games => {
+const stampGame = (game: Game): Game => {
   stampRow(game);
   game.settings ??= {};
   game.categories ??= [];
@@ -195,4 +195,4 @@ const parse = (query: string): Record<string, string> =>
       }),
   );
 
-export type { Users, Games, Categories, Reviews, GameStates, Contact };
+export type { User, Game, Category, Review, GameState, Contact };
