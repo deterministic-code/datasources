@@ -92,6 +92,12 @@ describe("schemaDiff", () => {
     assert.equal(statements.some((item) => item.includes("accounts")), true);
   });
 
+  it("keeps a physical table when the type is renamed via mapping", () => {
+    const before = table("user", [field("id", { isId: true }), field("email")]);
+    const after = table("user_base", [field("id", { isId: true }), field("email")], { mapping: "user" });
+    assert.deepEqual(sql([before], [after]), []);
+  });
+
   it("throws when the primary key changes", () => {
     const before = table("user", [field("id", { isId: true }), field("email")]);
     const after = table("user", [field("email", { isId: true }), field("id")]);

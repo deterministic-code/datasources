@@ -12,18 +12,28 @@ public static class SchemaDiff
         IReadOnlyList<SqlTable> afterTables,
         StatementNaming afterNaming)
     {
-        var previous = beforeTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
-        var next = afterTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
-        var removed = beforeTables.Where(table => !next.ContainsKey(table.Name)).Reverse();
-        var added = afterTables.Where(table => !previous.ContainsKey(table.Name));
-        var kept = afterTables.Where(table => previous.ContainsKey(table.Name));
+        var previousByName = beforeTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
+        var nextByName = afterTables.ToDictionary(table => table.Name, StringComparer.Ordinal);
+        var previousByTable = beforeTables.ToDictionary(table => table.TableName, StringComparer.Ordinal);
+        var nextByTable = afterTables.ToDictionary(table => table.TableName, StringComparer.Ordinal);
+        var removed = beforeTables.Where(table => PriorOf(nextByName, nextByTable, table) is null).Reverse();
+        var added = afterTables.Where(table => PriorOf(previousByName, previousByTable, table) is null);
+        var kept = afterTables
+            .Select(table => (Before: PriorOf(previousByName, previousByTable, table), After: table))
+            .Where(pair => pair.Before is not null);
         return
         [
             .. removed.SelectMany(table => DropTable(dialect, table, beforeNaming, beforeTables)),
-            .. kept.SelectMany(table => DiffTable(dialect, previous[table.Name], table, beforeNaming, afterNaming, beforeTables, afterTables)),
+            .. kept.SelectMany(pair => DiffTable(dialect, pair.Before!, pair.After, beforeNaming, afterNaming, beforeTables, afterTables)),
             .. added.SelectMany(table => CreateTable(dialect, table, afterNaming, afterTables)),
         ];
     }
+
+    static SqlTable? PriorOf(
+        IReadOnlyDictionary<string, SqlTable> byName,
+        IReadOnlyDictionary<string, SqlTable> byTable,
+        SqlTable table) =>
+        byName.TryGetValue(table.Name, out var named) ? named : byTable.GetValueOrDefault(table.TableName);
 
     static IEnumerable<IStatement> CreateTable(
         string dialect,

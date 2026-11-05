@@ -1,5 +1,5 @@
 use contacts_crud_enriched_medium_rest::{
-    register, Address, Contact, LocalePreferences, Phone, Repositories,
+    register, Address, Contact, LocalePreference, Phone, Repositories,
 };
 use datasources::{default, DatasourceError, Operator, Result, Where};
 use std::collections::HashMap;
@@ -39,7 +39,7 @@ fn ada() -> Contact {
         settings: HashMap::from([("theme".into(), "dark".into())]),
         prefs: HashMap::from([(
             "home".into(),
-            LocalePreferences {
+            LocalePreference {
                 locale: "en-GB".into(),
                 timezone: "Europe/London".into(),
             },
@@ -70,7 +70,7 @@ fn alan() -> Contact {
         settings: HashMap::from([("theme".into(), "light".into())]),
         prefs: HashMap::from([(
             "lab".into(),
-            LocalePreferences {
+            LocalePreference {
                 locale: "en-GB".into(),
                 timezone: "Europe/London".into(),
             },

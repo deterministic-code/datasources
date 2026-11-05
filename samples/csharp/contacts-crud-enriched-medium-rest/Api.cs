@@ -141,7 +141,7 @@ public sealed class Api
         contact.Addresses ??= [];
         contact.Phones ??= [];
         contact.Settings ??= new Dictionary<string, string>();
-        contact.Prefs ??= new Dictionary<string, LocalePreferences>();
+        contact.Prefs ??= new Dictionary<string, LocalePreference>();
         foreach (var address in contact.Addresses)
         {
             address.Line1 = address.Line1 ?? "";

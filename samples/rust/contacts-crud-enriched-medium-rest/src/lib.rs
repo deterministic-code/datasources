@@ -2,7 +2,7 @@ mod datasources_providers;
 mod datasources_register;
 pub use datasources_providers::register;
 pub use datasources_register::{
-    Address, Contact, ContactGroup, LegacyContact, LocalePreferences, Phone, Repositories,
+    Address, Contact, ContactGroup, LegacyContact, LocalePreference, Phone, Repositories,
 };
 pub(crate) use datasources_register::repositories;
 
