@@ -34,7 +34,6 @@ export const applyGenerate = async (command: GenerateCommand, flags: Flags, deps
     all: async () => [
       ...(await provider.generateTypes(request)),
       ...(await provider.generateRepositories(request)),
-      ...(await provider.generateDatasource(request)),
     ],
     types: () => provider.generateTypes(request),
     repositories: () => provider.generateRepositories(request),

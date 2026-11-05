@@ -93,7 +93,7 @@ types:
             size: 128
 ```
 
-`generate all` writes the types, the repositories, and SQL for one language. It also writes SQL migrations and runs migrate-up. The default input directory is `./deterministic`. The default output directory is `./generated`. See [Migrating](#migrating).
+`generate all` writes types and repositories under `./generated` and SQL migrations under `sql/<dialect>/migrations`, then runs migrate-up. The default input directory is `./deterministic`. See [Migrating](#migrating).
 
 ##### C#
 

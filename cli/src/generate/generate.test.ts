@@ -1497,6 +1497,7 @@ types: []
     try {
       expect(await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd], io, cwd)).toBe(0);
       expect(store.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+      expect(Object.keys(store.files).some((path) => path.includes("generated/sql"))).toBe(false);
       expect(ran).toEqual([
         "npx migrate-setup --provider sqlite --connection sqlite:///./app.sqlite",
         "npx migrate-up --provider sqlite --connection sqlite:///./app.sqlite --migrations-root sql",
@@ -1518,6 +1519,7 @@ types: []
         await exec(["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"], skipIo, cwd),
       ).toBe(0);
       expect(skipped.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toBeUndefined();
+      expect(Object.keys(skipped.files).some((path) => path.includes("generated/sql") || path.includes("/sql/"))).toBe(false);
       expect(skipIo.logs.some((line) => line.includes("migrate-up"))).toBe(false);
       const memory = mem({
         ...seeded,

@@ -19,6 +19,7 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 | `--output <dir>` | Generated files (default: `./generated`) |
 | `--no-migrations` | Skip SQL migrations. `generate all` writes them by default |
 | `--no-auto-migrate-up` | Skip migrate-up. `generate all` applies them by default |
+| `--delete` | Remove files in `--output` that this generate did not write (default: off) |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` on `generate all` (default: `sql`) |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
 | `--pluralize-table-names` | Plural table names in SQL and runtime queries (default). Procedure names stay plural |
@@ -37,7 +38,7 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 
 When `datasource.yaml` is omitted, generate includes every `datasource_type` and `view_type`. Table and column names use the default mapping: a plural snake table and snake columns, unless `--no-pluralize-table-names` or `datasource.pluralize_datatable_names: false`. An explicit `datasource.yaml` still wins. SQL table/column/object/keyword flags overlay `datasource.casing.*` and do not change `--type-names` / `--field-names`.
 
-`types` writes datasource and view types under `<output>/types/{datasource|view}/generated/`. `repositories` writes one repository class per datasource table under `<output>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes each of those.
+`types` writes datasource and view types under `<output>/types/{datasource|view}/generated/`. `repositories` writes one repository class per datasource table under `<output>/repositories/`. `datasource` writes SQL under `<output>/sql/`. `all` writes types and repositories under `<output>`, and SQL only under `--migrations-root`.
 
 `generate` writes types and repositories under `--output` (default `./generated`). The app imports that registry. C# `RepositoryRegistry` uses `[ModuleInitializer]`. TypeScript imports the generated `repositoryRegistry`. Rust generate writes `src/generated.rs` so the crate can `mod generated;` and `use generated::…`. Generate does not rewrite `Cargo.toml`, `.csproj`, or `main`.
 
