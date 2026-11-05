@@ -66,5 +66,12 @@ if [ -f package.json ]; then
 fi
 printf 'e2e-workdir: start scripts\n'
 start=$(date +%s)
-"$@"
+case "$sample" in
+  samples/csharp/*)
+    ( flock 8; "$@" ) 8>/e2e-cache/dotnet.lock
+    ;;
+  *)
+    "$@"
+    ;;
+esac
 printf 'e2e-workdir: done scripts %ss\n' "$(($(date +%s) - start))"

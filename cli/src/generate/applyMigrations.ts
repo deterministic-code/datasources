@@ -16,6 +16,7 @@ import { writeEntries } from "./writeEntries.ts";
 const at = (root: string, path: string): string => (isAbsolute(path) ? path : join(root, path));
 
 const STALE_CUSTOM = /^\d{10}_custom_\d{3}_/;
+const GENERATED_MIGRATION = /^(?:\d{4}_(?:initial_)?(?:up|down))\.sql$/;
 
 const pruneStaleCustomMigrations = async (
   fs: Fs,
@@ -25,10 +26,11 @@ const pruneStaleCustomMigrations = async (
   const dirs = new Set(
     entries.map((entry) => dirname(join(root, entry.filename))).filter((dir) => basename(dir) === "migrations"),
   );
+  const keep = new Set(entries.map((entry) => basename(entry.filename)));
   for (const dir of dirs) {
     const names = await fs.readdir(dir);
     for (const name of names) {
-      if (STALE_CUSTOM.test(name)) await fs.unlink(join(dir, name));
+      if (STALE_CUSTOM.test(name) || (GENERATED_MIGRATION.test(name) && !keep.has(name))) await fs.unlink(join(dir, name));
     }
   }
 };

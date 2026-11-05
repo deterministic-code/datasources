@@ -2,7 +2,7 @@
 #[path = "../generated/mod.rs"]
 mod generated;
 pub use generated::Repositories;
-pub use generated::{Address, Contact, ContactGroup, LegacyContact, LocalePreferences, Phone};
+pub use generated::{Address, Contact, ContactGroup, LegacyContact, LocalePreference, Phone};
 
 pub mod repositories {
     pub use super::generated::repositories::*;

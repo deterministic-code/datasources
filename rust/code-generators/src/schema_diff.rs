@@ -48,29 +48,53 @@ pub fn of(
     after_tables: &[SqlTable],
     after_map: &StatementNaming,
 ) -> Result<Vec<DdlStatement>> {
-    let previous: std::collections::HashMap<_, _> =
+    let previous_by_name: std::collections::HashMap<_, _> =
         before_tables.iter().map(|table| (table.name.as_str(), table)).collect();
-    let next: std::collections::HashMap<_, _> =
+    let next_by_name: std::collections::HashMap<_, _> =
         after_tables.iter().map(|table| (table.name.as_str(), table)).collect();
+    let previous_by_table: std::collections::HashMap<_, _> =
+        before_tables.iter().map(|table| (table.table_name.as_str(), table)).collect();
+    let next_by_table: std::collections::HashMap<_, _> =
+        after_tables.iter().map(|table| (table.table_name.as_str(), table)).collect();
     let mut out = Vec::new();
-    for table in before_tables.iter().rev().filter(|table| !next.contains_key(table.name.as_str())) {
+    for table in before_tables
+        .iter()
+        .rev()
+        .filter(|table| prior_of(&next_by_name, &next_by_table, table).is_none())
+    {
         out.extend(drop_table(dialect, table, before_map)?);
     }
-    for table in after_tables.iter().filter(|table| previous.contains_key(table.name.as_str())) {
-        out.extend(diff_table(
-            dialect,
-            previous[table.name.as_str()],
-            table,
-            before_map,
-            after_map,
-            before_tables,
-            after_tables,
-        )?);
+    for table in after_tables.iter() {
+        if let Some(prior) = prior_of(&previous_by_name, &previous_by_table, table) {
+            out.extend(diff_table(
+                dialect,
+                prior,
+                table,
+                before_map,
+                after_map,
+                before_tables,
+                after_tables,
+            )?);
+        }
     }
-    for table in after_tables.iter().filter(|table| !previous.contains_key(table.name.as_str())) {
+    for table in after_tables
+        .iter()
+        .filter(|table| prior_of(&previous_by_name, &previous_by_table, table).is_none())
+    {
         out.extend(create_table(dialect, table, after_map, after_tables)?);
     }
     Ok(out)
+}
+
+fn prior_of<'a>(
+    by_name: &std::collections::HashMap<&str, &'a SqlTable>,
+    by_table: &std::collections::HashMap<&str, &'a SqlTable>,
+    table: &SqlTable,
+) -> Option<&'a SqlTable> {
+    by_name
+        .get(table.name.as_str())
+        .copied()
+        .or_else(|| by_table.get(table.table_name.as_str()).copied())
 }
 
 fn create_table(dialect: &str, table: &SqlTable, naming: &StatementNaming, tables: &[SqlTable]) -> Result<Vec<DdlStatement>> {

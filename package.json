@@ -39,6 +39,6 @@
     "@deterministic-code/datasources-mysql": "file:typescript/providers/mysql",
     "@deterministic-code/datasources-postgres": "file:typescript/providers/postgres",
     "@deterministic-code/datasources-sqlite": "file:typescript/providers/sqlite",
-    "@deterministic-code/migraters": "^0.0.13"
+    "@deterministic-code/migraters": "^0.0.15"
   }
 }

@@ -42,6 +42,15 @@ export type SchemaSnapshot = {
 const byName = (tables: LiveTable[]): Map<string, LiveTable> =>
   new Map(tables.map((table) => [table.name, table]));
 
+const byTable = (tables: LiveTable[]): Map<string, LiveTable> =>
+  new Map(tables.map((table) => [table.tableName, table]));
+
+const priorOf = (
+  named: Map<string, LiveTable>,
+  physical: Map<string, LiveTable>,
+  table: LiveTable,
+): LiveTable | undefined => named.get(table.name) ?? physical.get(table.tableName);
+
 const fieldByName = (table: LiveTable): Map<string, TypeField> =>
   new Map(table.fields.map((field) => [field.name, field]));
 
@@ -231,15 +240,20 @@ export const schemaDiff = (
   before: SchemaSnapshot,
   after: SchemaSnapshot,
 ): IStatement[] => {
-  const previous = byName(before.tables);
-  const next = byName(after.tables);
-  const removed = before.tables.filter((table) => !next.has(table.name));
-  const added = after.tables.filter((table) => !previous.has(table.name));
-  const kept = after.tables.filter((table) => previous.has(table.name));
+  const previousByName = byName(before.tables);
+  const nextByName = byName(after.tables);
+  const previousByTable = byTable(before.tables);
+  const nextByTable = byTable(after.tables);
+  const removed = before.tables.filter((table) => priorOf(nextByName, nextByTable, table) === undefined);
+  const added = after.tables.filter((table) => priorOf(previousByName, previousByTable, table) === undefined);
+  const kept = after.tables.flatMap((table) => {
+    const prior = priorOf(previousByName, previousByTable, table);
+    return prior === undefined ? [] : [[prior, table] as const];
+  });
   return [
     ...[...removed].reverse().flatMap((table) => dropTable(dialect, table, before.naming)),
-    ...kept.flatMap((table) =>
-      diffTable(dialect, previous.get(table.name)!, table, before.naming, after.naming, before.tables, after.tables),
+    ...kept.flatMap(([prior, table]) =>
+      diffTable(dialect, prior, table, before.naming, after.naming, before.tables, after.tables),
     ),
     ...added.flatMap((table) => createTable(dialect, table, after.naming, after.tables)),
   ];

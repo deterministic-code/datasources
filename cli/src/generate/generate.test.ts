@@ -1572,7 +1572,7 @@ types: []
     expect(absolute.files[join("/tmp/mig", "sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });
 
-  it("removes a stale 10-digit custom copy and keeps a handwritten seed", async () => {
+  it("removes a stale generated pair and a 10-digit custom copy and keeps a handwritten seed", async () => {
     const cwd = "app";
     const input = join(cwd, "deterministic");
     const migrations = join(cwd, "sql/sqlite/migrations");
@@ -1583,9 +1583,11 @@ types: []
     seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
     seeded[stale] = "INSERT INTO categories VALUES (1);\n";
     seeded[handwritten] = "INSERT INTO categories VALUES (2);\n";
+    seeded[join(migrations, "0001_up.sql")] = "CREATE TABLE leftover;\n";
     const store = mem(seeded);
     expect(await exec(["migrations", "create", "--cwd", cwd], deps(store.fs), cwd)).toBe(0);
     expect(store.files[stale]).toBeUndefined();
+    expect(store.files[join(migrations, "0001_up.sql")]).toBeUndefined();
     expect(store.files[handwritten]).toBe("INSERT INTO categories VALUES (2);\n");
     expect(store.files[join(migrations, "0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
   });

@@ -33,7 +33,7 @@ var ada = await contacts.Create(new Contact
     ],
     Phones = [new Phone { PhoneTypeName = "Mobile", Number = "555-0100" }],
     Settings = new Dictionary<string, string> { ["theme"] = "dark" },
-    Prefs = new Dictionary<string, LocalePreferences>
+    Prefs = new Dictionary<string, LocalePreference>
     {
         ["home"] = new() { Locale = "en-GB", Timezone = "Europe/London" },
     },

@@ -70,4 +70,46 @@ public class SchemaDiffTests
         Assert.Contains(sql, item => item.Contains("INSERT INTO") && item.Contains("orders__new"));
         Assert.Contains(sql, item => item.Contains("accounts"));
     }
+
+    [Fact]
+    public void KeepsAPhysicalTableWhenTheTypeIsRenamedViaMapping()
+    {
+        var before = Snap("""
+            types:
+              - user:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - email:
+                        type: string
+            """);
+        var after = Snap(
+            """
+            types:
+              - user_base:
+                  tags: [datasource_type]
+                  inherits: set
+                  fields:
+                    - email:
+                        type: string
+            """,
+            """
+            types:
+              - user_base:
+                  mapping: user
+            """);
+        Assert.Empty(SchemaDiff.Of("sqlite", before.Tables, before.Naming, after.Tables, after.Naming));
+    }
+
+    static (IReadOnlyList<SqlTable> Tables, StatementNaming Naming) Snap(string typesYaml, string datasourceYaml)
+    {
+        var spec = SpecParser.Parse(new Dictionary<string, string>
+        {
+            ["types.yaml"] = typesYaml,
+            ["datasource.yaml"] = datasourceYaml,
+        });
+        var types = SqlSchema.From(spec);
+        var naming = PackCasing.Of(new Dictionary<string, string>()).Naming;
+        return (SqlSchema.BuildLive(types, naming), naming);
+    }
 }

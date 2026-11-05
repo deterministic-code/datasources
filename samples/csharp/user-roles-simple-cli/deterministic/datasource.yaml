@@ -21,3 +21,5 @@ types:
       fields:
         - role_id:
             mapping: bad_role_id
+  - user_base:
+      mapping: user
