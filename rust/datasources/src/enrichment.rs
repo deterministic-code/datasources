@@ -31,7 +31,6 @@ impl Enrichment {
 
     pub fn linked(mut self, association: Association) -> Self {
         self.r#type = EnrichmentPropertyType::List;
-        self.related_property = None;
         self.association = Some(association);
         self
     }

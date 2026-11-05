@@ -49,15 +49,33 @@ public abstract class CreateEnrichmentStrategy<T>
         foreach (var item in items)
         foreach (var entry in entries)
         {
-            if (entry.Enrichment is not { Type: EnrichmentPropertyType.Object, Association: null, RelatedProperty: { } related })
+            if (entry is not StoredEnrichment<T> stored || entry.Enrichment.RelatedProperty is not { } related)
                 continue;
-            if (entry is not StoredEnrichment<T> stored) continue;
+            if (entry.Enrichment.Association is not null)
+            {
+                await ResolveLinked(stored, item, related);
+                continue;
+            }
+            if (entry.Enrichment.Type is not EnrichmentPropertyType.Object) continue;
             var name = Value.From(TryGet(item, entry.Enrichment.DestinationProperty));
             if (Missing(name)) continue;
             if (!Missing(Value.From(Key(TryGet(item, entry.Enrichment.SourceProperty), entry.Enrichment.RelatedKey)))) continue;
             var id = await stored.Read.Lookup(related, name, entry.Enrichment.RelatedKey)
                 ?? throw new DatasourceException($"Unknown {entry.Enrichment.DestinationProperty} \"{name.ToObject()}\"");
             Set(item, entry.Enrichment.SourceProperty, id.ToObject(), entry.Enrichment.RelatedKey);
+        }
+    }
+
+    static async Task ResolveLinked(StoredEnrichment<T> stored, T item, string related)
+    {
+        foreach (var row in Payload<T, object>(item, stored.Enrichment.DestinationProperty))
+        {
+            if (!Missing(Value.From(TryGet(row, stored.Enrichment.RelatedKey)))) continue;
+            var name = Value.From(TryGet(row, related));
+            if (Missing(name)) continue;
+            var id = await stored.Read.Lookup(related, name, stored.Enrichment.RelatedKey)
+                ?? throw new DatasourceException($"Unknown {stored.Enrichment.DestinationProperty} \"{name.ToObject()}\"");
+            Set(row, stored.Enrichment.RelatedKey, id.ToObject());
         }
     }
 

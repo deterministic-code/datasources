@@ -285,6 +285,81 @@ types:
     expect(() => providerByName("missing")).toThrow(/Unknown provider: missing/);
   });
 
+  it("emits relatedProperty on generated links when the related type has name", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - user:
+      tags: [datasource_type, view_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - roles:
+            type: role[]
+            references: user_role.user_id
+        - groups:
+            type: group[]
+            references: user_group.user_id
+  - role:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - group:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - user_role:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - user_id:
+            references: user.id
+        - role_id:
+            references: role.id
+  - user_group:
+      tags: [datasource_type, many_to_many]
+      fields:
+        - user_id:
+            references: user.id
+        - group_id:
+            references: group.id
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+    };
+    const settings = { "backend.datasources": "sqlite" };
+    const spec = await DeterministicParser(memoryReader(files)).parse(settings);
+    const csharpPlan = planRepositories(spec, "csharp", settings);
+    const typescriptPlan = planRepositories(spec, "typescript", { ...settings, "languages.typescript.casing.fields": "camel" });
+    const rustPlan = planRepositories(spec, "rust", settings);
+    expect(csharpPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Roles")?.relatedProperty).toBe("Name");
+    expect(typescriptPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "roles")?.relatedProperty).toBe("name");
+    expect(rustPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "roles")?.relatedProperty).toBe("name");
+    expect(csharpPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Groups")?.relatedProperty).toBeUndefined();
+    expect(typescriptPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "groups")?.relatedProperty).toBeUndefined();
+    expect(rustPlan.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "groups")?.relatedProperty).toBeUndefined();
+    const csharp = await deterministic.generateRepositories({ dialect: "csharp", reader: memoryReader(files), settings });
+    const typescript = await deterministic.generateRepositories({
+      dialect: "typescript",
+      reader: memoryReader(files),
+      settings: { ...settings, "languages.typescript.casing.fields": "camel" },
+    });
+    const rust = await deterministic.generateRepositories({ dialect: "rust", reader: memoryReader(files), settings });
+    expect(csharp.some((entry) => entry.kind === "content" && entry.contents?.includes('AddLinked(new("Roles", "Id", "Id", "Name", Association: new("UserId", "RoleId"))'))).toBe(true);
+    expect(typescript.some((entry) => entry.kind === "content" && entry.contents?.includes('relatedProperty: "name"'))).toBe(true);
+    expect(rust.some((entry) => entry.kind === "content" && entry.contents?.includes('Some("name".into())'))).toBe(true);
+  });
+
   it("maps legacy contacts and enriches contact lists", async () => {
     const csharp = await deterministic.generateRepositories(request("csharp"));
     const typescript = await deterministic.generateRepositories(request("typescript"));
@@ -780,7 +855,7 @@ types: []
       ),
     ).toBe(0);
     expect(store.files[join(cwd, "src/generated.rs")]).toBe(
-      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
+      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
     );
     expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
     expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();

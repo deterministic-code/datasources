@@ -160,14 +160,16 @@ pub(crate) async fn resolve_lookups<T: Entity>(
     for item in items.iter_mut() {
         for entry in entries {
             let enrichment = &entry.enrichment;
-            if enrichment.r#type != crate::EnrichmentPropertyType::Object
-                || enrichment.association.is_some()
-            {
-                continue;
-            }
             let Some(related) = enrichment.related_property.as_deref() else {
                 continue;
             };
+            if enrichment.association.is_some() {
+                resolve_linked(entry, item, related).await?;
+                continue;
+            }
+            if enrichment.r#type != crate::EnrichmentPropertyType::Object {
+                continue;
+            }
             let Some(name) = try_get(item, &enrichment.destination_property).filter(|value| !missing(value))
             else {
                 continue;
@@ -190,6 +192,43 @@ pub(crate) async fn resolve_lookups<T: Entity>(
                 })?;
             set(item, &enrichment.source_property, id)?;
         }
+    }
+    Ok(())
+}
+
+async fn resolve_linked<T: Entity>(
+    entry: &StoredEnrichment<T>,
+    item: &mut T,
+    related: &str,
+) -> Result<()> {
+    let enrichment = &entry.enrichment;
+    let mut rows = item.payload(&enrichment.destination_property);
+    let mut changed = false;
+    for row in &mut rows {
+        if row
+            .get(&enrichment.related_key)
+            .is_some_and(|value| !missing(value))
+        {
+            continue;
+        }
+        let Some(name) = row.get(related).cloned().filter(|value| !missing(value)) else {
+            continue;
+        };
+        let found = entry
+            .lookup(related, name.clone(), &enrichment.related_key)
+            .await?;
+        let id = found.filter(|value| !missing(value)).ok_or_else(|| {
+            DatasourceError::message(format!(
+                "Unknown {} \"{}\"",
+                enrichment.destination_property,
+                name.wire_text()
+            ))
+        })?;
+        row.insert(enrichment.related_key.clone(), id);
+        changed = true;
+    }
+    if changed {
+        item.set_payload(&enrichment.destination_property, rows)?;
     }
     Ok(())
 }

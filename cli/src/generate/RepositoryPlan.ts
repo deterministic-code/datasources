@@ -183,10 +183,12 @@ const relations = (
     if (target?.tags.includes("many_to_many") === true && other !== undefined && otherRef !== undefined) {
       const via = named(otherRef.type);
       const link = named(ref.type);
+      const relatedType = types.get(otherRef.type) ?? expanded.get(otherRef.type);
       planned.push({
         destination: property(field.name),
         source,
         relatedKey: identity(otherRef.type),
+        relatedProperty: (relatedType ?? { fields: [] }).fields.some((item) => item.name === "name") ? property("name") : undefined,
         kind: "linked",
         via: via.via,
         viaType: via.viaType,

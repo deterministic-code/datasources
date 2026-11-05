@@ -25,8 +25,8 @@ async fn main() -> Result<()> {
         ("username", Value::String("ada".into())),
         ("password", Value::String("secret".into())),
         ("settings", object(&[("theme", Value::String("dark".into()))])),
-        ("roles", array(&[object(&[("id", role.id.into()), ("name", role.name.clone().into()), ("description", role.description.clone().into())])])),
-        ("groups", array(&[object(&[("id", group.id.into()), ("name", group.name.clone().into()), ("description", group.description.clone().into())])])),
+        ("roles", array(&[object(&[("name", role.name.clone().into()), ("description", role.description.clone().into())])])),
+        ("groups", array(&[object(&[("name", group.name.clone().into()), ("description", group.description.clone().into())])])),
     ])), 201).await?;
     let user_id = user["id"].as_i64().ok_or_else(|| DatasourceError::message("user id"))?;
     let listed = call(&api, "GET", "/users?username=ada", None, 200).await?;
@@ -37,8 +37,8 @@ async fn main() -> Result<()> {
         ("username", Value::String("ada-byron".into())),
         ("password", Value::String("secret".into())),
         ("settings", object(&[("theme", Value::String("sepia".into()))])),
-        ("roles", array(&[object(&[("id", role.id.into()), ("name", role.name.into())])])),
-        ("groups", array(&[object(&[("id", group.id.into()), ("name", group.name.into())])])),
+        ("roles", array(&[object(&[("name", role.name.into())])])),
+        ("groups", array(&[object(&[("name", group.name.into())])])),
     ])), 200).await?;
     let loaded = call(&api, "GET", &format!("/users?id={user_id}"), None, 200).await?;
     if loaded[0]["username"] != "ada-byron" {
