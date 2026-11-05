@@ -6,25 +6,30 @@ import {
   type ICRUDRepository,
   type IWhere,
 } from "@deterministic-code/datasources";
+import { UsersRepository } from "../generated/repositories/usersRepository.ts";
+import { CategoriesRepository } from "../generated/repositories/categoriesRepository.ts";
+import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
+import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
+import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
 import type { Contact } from "../generated/types/view/contact.ts";
-import type { Users } from "../generated/types/view/users.ts";
-import type { Games } from "../generated/types/view/games.ts";
-import type { Categories } from "../generated/types/view/categories.ts";
-import type { Reviews } from "../generated/types/datasource/reviews.ts";
-import type { GameStates } from "../generated/types/datasource/gameStates.ts";
-import { clock } from "./clock.ts";
+import type { User } from "../generated/types/view/user.ts";
+import type { Game } from "../generated/types/view/game.ts";
+import type { Category } from "../generated/types/view/category.ts";
+import type { Review } from "../generated/types/datasource/review.ts";
+import type { GameState } from "../generated/types/datasource/gameState.ts";
 import { jsonObject } from "./jsonObject.ts";
 
 export type HttpResult = { status: number; body: string };
 
 export class Api {
   constructor(
-    private readonly users: ICRUDRepository<Users>,
-    private readonly categories: ICRUDRepository<Categories>,
-    private readonly games: ICRUDRepository<Games>,
-    private readonly reviews: ICRUDRepository<Reviews>,
-    private readonly states: ICRUDRepository<GameStates>,
-    private readonly contacts: ICRUDRepository<Contact>,
+    private readonly users: UsersRepository,
+    private readonly categories: CategoriesRepository,
+    private readonly games: GamesRepository,
+    private readonly reviews: ReviewsRepository,
+    private readonly states: GameStatesRepository,
+    private readonly contacts: ContactsRepository,
   ) {}
 
   handle = async (method: string, target: string, body: string | undefined): Promise<HttpResult> => {
@@ -34,28 +39,28 @@ export class Api {
       const query = parse(split < 0 ? "" : target.slice(split + 1));
       return await ({
         "GET /users": () => get(this.users, query, ["id", "username"]),
-        "POST /users": () => post(this.users, stampUser(read<Users>(body))),
-        "PUT /users": () => put(this.users, query, stampUser(read<Users>(body)), (row, id) => { row.id = id; }),
+        "POST /users": () => post(this.users, read<User>(body)),
+        "PUT /users": () => put(this.users, query, body, (incoming, current) => ({ ...incoming, id: current.id })),
         "DELETE /users": () => remove(this.users, query),
         "GET /categories": () => this.getCategories(query),
-        "POST /categories": () => post(this.categories, stampRow(read<Categories>(body))),
-        "PUT /categories": () => put(this.categories, query, stampRow(read<Categories>(body)), (row, id) => { row.id = id; }),
+        "POST /categories": () => post(this.categories, read<Category>(body)),
+        "PUT /categories": () => put(this.categories, query, body, (incoming, current) => ({ ...incoming, id: current.id })),
         "DELETE /categories": () => remove(this.categories, query),
         "GET /games": () => get(this.games, query, ["id", "name"]),
-        "POST /games": () => post(this.games, stampGame(read<Games>(body))),
-        "PUT /games": () => put(this.games, query, stampGame(read<Games>(body)), (row, id) => { row.id = id; }),
+        "POST /games": () => post(this.games, read<Game>(body)),
+        "PUT /games": () => put(this.games, query, body, (incoming, current) => ({ ...incoming, id: current.id })),
         "DELETE /games": () => remove(this.games, query),
         "GET /reviews": () => get(this.reviews, query, ["id", "gameId", "userId"]),
-        "POST /reviews": () => post(this.reviews, stampRow(read<Reviews>(body))),
-        "PUT /reviews": () => put(this.reviews, query, stampRow(read<Reviews>(body)), (row, id) => { row.id = id; }),
+        "POST /reviews": () => post(this.reviews, read<Review>(body)),
+        "PUT /reviews": () => put(this.reviews, query, body, (incoming, current) => ({ ...incoming, id: current.id })),
         "DELETE /reviews": () => remove(this.reviews, query),
         "GET /game_states": () => get(this.states, query, ["id", "gameId", "userId"]),
-        "POST /game_states": () => post(this.states, stampRow(read<GameStates>(body))),
-        "PUT /game_states": () => put(this.states, query, stampRow(read<GameStates>(body)), (row, id) => { row.id = id; }),
+        "POST /game_states": () => post(this.states, read<GameState>(body)),
+        "PUT /game_states": () => put(this.states, query, body, (incoming, current) => ({ ...incoming, id: current.id })),
         "DELETE /game_states": () => remove(this.states, query),
         "GET /contacts": () => get(this.contacts, query, ["id", "userId"]),
-        "POST /contacts": () => post(this.contacts, stampContact(read<Contact>(body))),
-        "PUT /contacts": () => put(this.contacts, query, stampContact(read<Contact>(body)), (row, id) => { row.id = id; }),
+        "POST /contacts": () => post(this.contacts, read<Contact>(body)),
+        "PUT /contacts": () => put(this.contacts, query, body, (incoming, current) => ({ ...incoming, id: current.id })),
         "DELETE /contacts": () => remove(this.contacts, query),
       }[`${method.toUpperCase()} ${path}`] ?? (() => Promise.resolve({ status: 404, body: "" })))();
     } catch (error) {
@@ -88,46 +93,6 @@ class RequestError extends Error {
   }
 }
 
-const stampUser = (user: Users): Users => {
-  stampRow(user);
-  user.settings ??= {};
-  user.roles ??= [];
-  user.groups ??= [];
-  for (const role of user.roles) stampRow(role);
-  for (const group of user.groups) stampRow(group);
-  return user;
-};
-
-const stampGame = (game: Games): Games => {
-  stampRow(game);
-  game.settings ??= {};
-  game.categories ??= [];
-  for (const category of game.categories) stampRow(category);
-  return game;
-};
-
-const stampContact = (contact: Contact): Contact => {
-  contact.email = contact.email ?? "";
-  contact.notes = contact.notes ? contact.notes : "none";
-  contact.uuid = contact.uuid || clock.uuid();
-  contact.created = contact.created || clock.now();
-  contact.updated = clock.now();
-  contact.version = contact.version || "AA==";
-  contact.addresses ??= [];
-  contact.phones ??= [];
-  contact.settings ??= {};
-  contact.prefs ??= {};
-  return contact;
-};
-
-const stampRow = <T extends { uuid?: string; created?: Date; updated?: Date; version?: string | Uint8Array }>(row: T): T => {
-  row.uuid = row.uuid || clock.uuid();
-  row.created = row.created || clock.now();
-  row.updated = clock.now();
-  row.version = row.version || "AA==";
-  return row;
-};
-
 const get = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>, keys: string[]): Promise<HttpResult> =>
   ({ status: 200, body: jsonObject.toString(await list(repo, whereOf(query, keys))) });
 
@@ -137,14 +102,15 @@ const post = async <T>(repo: ICRUDRepository<T>, row: T): Promise<HttpResult> =>
 const put = async <T>(
   repo: ICRUDRepository<T>,
   query: Record<string, string>,
-  row: T,
-  setId: (row: T, id: number) => void,
+  body: string | undefined,
+  withId: (incoming: T, current: T) => T,
 ): Promise<HttpResult> => {
   const id = requiredNumber(query, "id");
-  if ((await repo.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
-  setId(row, id);
-  await repo.update(row);
-  return { status: 200, body: jsonObject.toString(await repo.readSingle(new Where(new Operator.Equals("id", id)))) };
+  const by = new Where(new Operator.Equals("id", id));
+  const current = await repo.readSingle(by);
+  if (current == null) return { status: 404, body: "" };
+  await repo.update(withId(read<T>(body), current));
+  return { status: 200, body: jsonObject.toString(await repo.readSingle(by)) };
 };
 
 const remove = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>): Promise<HttpResult> => {
@@ -195,4 +161,4 @@ const parse = (query: string): Record<string, string> =>
       }),
   );
 
-export type { Users, Games, Categories, Reviews, GameStates, Contact };
+export type { User, Game, Category, Review, GameState, Contact };

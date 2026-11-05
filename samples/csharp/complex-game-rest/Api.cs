@@ -2,26 +2,28 @@ using System.Text.Json;
 using Backend.Types.Datasource;
 using Backend.Types.View;
 using Datasources;
-using Categories = Backend.Types.View.Categories;
+using Category = Backend.Types.View.Category;
+using Game = Backend.Types.View.Game;
+using User = Backend.Types.View.User;
 
 namespace ComplexGameRest;
 
 public sealed class Api
 {
-    readonly ICRUDRepository<Users> users;
-    readonly ICRUDRepository<Categories> categories;
-    readonly ICRUDRepository<Games> games;
-    readonly ICRUDRepository<Reviews> reviews;
-    readonly ICRUDRepository<GameStates> states;
-    readonly ICRUDRepository<Contact> contacts;
+    readonly UsersRepository users;
+    readonly CategoriesRepository categories;
+    readonly GamesRepository games;
+    readonly ReviewsRepository reviews;
+    readonly GameStatesRepository states;
+    readonly ContactsRepository contacts;
 
     public Api(
-        ICRUDRepository<Users> users,
-        ICRUDRepository<Categories> categories,
-        ICRUDRepository<Games> games,
-        ICRUDRepository<Reviews> reviews,
-        ICRUDRepository<GameStates> states,
-        ICRUDRepository<Contact> contacts)
+        UsersRepository users,
+        CategoriesRepository categories,
+        GamesRepository games,
+        ReviewsRepository reviews,
+        GameStatesRepository states,
+        ContactsRepository contacts)
     {
         this.users = users;
         this.categories = categories;
@@ -42,28 +44,28 @@ public sealed class Api
             return await ($"{method.ToUpperInvariant()} {path}" switch
             {
                 "GET /users" => Get(users, query, ["Id", "Username"]),
-                "POST /users" => Post(users, StampUser(Read<Users>(body))),
-                "PUT /users" => Put(users, query, StampUser(Read<Users>(body))),
+                "POST /users" => Post(users, Read<User>(body)),
+                "PUT /users" => Put(users, query, body, (incoming, current) => incoming with { Id = current.Id }),
                 "DELETE /users" => Delete(users, query),
                 "GET /categories" => GetCategories(query),
-                "POST /categories" => Post(categories, StampCategory(Read<Categories>(body))),
-                "PUT /categories" => Put(categories, query, StampCategory(Read<Categories>(body))),
+                "POST /categories" => Post(categories, Read<Category>(body)),
+                "PUT /categories" => Put(categories, query, body, (incoming, current) => incoming with { Id = current.Id }),
                 "DELETE /categories" => Delete(categories, query),
                 "GET /games" => Get(games, query, ["Id", "Name"]),
-                "POST /games" => Post(games, StampGame(Read<Games>(body))),
-                "PUT /games" => Put(games, query, StampGame(Read<Games>(body))),
+                "POST /games" => Post(games, Read<Game>(body)),
+                "PUT /games" => Put(games, query, body, (incoming, current) => incoming with { Id = current.Id }),
                 "DELETE /games" => Delete(games, query),
                 "GET /reviews" => Get(reviews, query, ["Id", "GameId", "UserId"]),
-                "POST /reviews" => Post(reviews, StampReview(Read<Reviews>(body))),
-                "PUT /reviews" => Put(reviews, query, StampReview(Read<Reviews>(body))),
+                "POST /reviews" => Post(reviews, Read<Review>(body)),
+                "PUT /reviews" => Put(reviews, query, body, (incoming, current) => incoming with { Id = current.Id }),
                 "DELETE /reviews" => Delete(reviews, query),
                 "GET /game_states" => Get(states, query, ["Id", "GameId", "UserId"]),
-                "POST /game_states" => Post(states, StampState(Read<GameStates>(body))),
-                "PUT /game_states" => Put(states, query, StampState(Read<GameStates>(body))),
+                "POST /game_states" => Post(states, Read<GameState>(body)),
+                "PUT /game_states" => Put(states, query, body, (incoming, current) => incoming with { Id = current.Id }),
                 "DELETE /game_states" => Delete(states, query),
                 "GET /contacts" => Get(contacts, query, ["Id", "UserId"]),
-                "POST /contacts" => Post(contacts, StampContact(Read<Contact>(body))),
-                "PUT /contacts" => Put(contacts, query, StampContact(Read<Contact>(body))),
+                "POST /contacts" => Post(contacts, Read<Contact>(body)),
+                "PUT /contacts" => Put(contacts, query, body, (incoming, current) => incoming with { Id = current.Id }),
                 "DELETE /contacts" => Delete(contacts, query),
                 _ => Task.FromResult((404, "")),
             });
@@ -93,14 +95,18 @@ public sealed class Api
     static async Task<(int Status, string Body)> Post<T>(ICRUDRepository<T> repo, T row) =>
         (201, JsonObject.ToString(await repo.Create(row)));
 
-    static async Task<(int Status, string Body)> Put<T>(ICRUDRepository<T> repo, Dictionary<string, string> query, T row)
+    static async Task<(int Status, string Body)> Put<T>(
+        ICRUDRepository<T> repo,
+        Dictionary<string, string> query,
+        string? body,
+        Func<T, T, T> withId) where T : new()
     {
         var id = RequiredNumber(query, "id");
-        if (await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id))) is null)
+        var by = new Where(new Datasources.Operator.Equals("Id", id));
+        if (await repo.ReadSingle(by) is not { } current)
             return (404, "");
-        SetId(row, id);
-        await repo.Update(row);
-        return (200, JsonObject.ToString(await repo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", id)))));
+        await repo.Update(withId(Read<T>(body), current));
+        return (200, JsonObject.ToString(await repo.ReadSingle(by)));
     }
 
     static async Task<(int Status, string Body)> Delete<T>(ICRUDRepository<T> repo, Dictionary<string, string> query)
@@ -110,77 +116,6 @@ public sealed class Api
         if (row is null) return (404, "");
         await repo.Delete(row);
         return (204, "");
-    }
-
-    static Users StampUser(Users user)
-    {
-        Stamp(user);
-        user.Settings ??= [];
-        user.Roles ??= [];
-        user.Groups ??= [];
-        foreach (var role in user.Roles) Stamp(role);
-        foreach (var group in user.Groups) Stamp(group);
-        return user;
-    }
-
-    static Categories StampCategory(Categories category)
-    {
-        Stamp(category);
-        return category;
-    }
-
-    static Games StampGame(Games game)
-    {
-        Stamp(game);
-        game.Settings ??= [];
-        game.Categories ??= [];
-        foreach (var category in game.Categories) Stamp(category);
-        return game;
-    }
-
-    static Reviews StampReview(Reviews review)
-    {
-        Stamp(review);
-        return review;
-    }
-
-    static GameStates StampState(GameStates state)
-    {
-        Stamp(state);
-        return state;
-    }
-
-    static Contact StampContact(Contact contact)
-    {
-        contact.Email = contact.Email ?? "";
-        contact.Notes = string.IsNullOrEmpty(contact.Notes) ? "none" : contact.Notes;
-        contact.Uuid = string.IsNullOrEmpty(contact.Uuid) ? Clock.Uuid() : contact.Uuid;
-        contact.Created = contact.Created == default ? Clock.Now() : contact.Created;
-        contact.Updated = Clock.Now();
-        contact.Version ??= [0];
-        contact.Addresses ??= [];
-        contact.Phones ??= [];
-        contact.Settings ??= [];
-        contact.Prefs ??= [];
-        return contact;
-    }
-
-    static void Stamp(Base row)
-    {
-        row.Uuid = string.IsNullOrEmpty(row.Uuid) ? Clock.Uuid() : row.Uuid;
-        row.Created = row.Created == default ? Clock.Now() : row.Created;
-        row.Updated = Clock.Now();
-        row.Version ??= [0];
-    }
-
-    static void SetId<T>(T row, long id)
-    {
-        if (row is Users user) user.Id = id;
-        else if (row is Categories category) category.Id = id;
-        else if (row is Games game) game.Id = id;
-        else if (row is Reviews review) review.Id = id;
-        else if (row is GameStates state) state.Id = id;
-        else if (row is Contact contact) contact.Id = id;
     }
 
     static async Task<List<T>> List<T>(IReadonlyRepository<T> repo, IWhere? query)

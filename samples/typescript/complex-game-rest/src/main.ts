@@ -2,32 +2,40 @@ import "../generated/repositories/repositoryRegistry.ts";
 import "./datasources-register.ts";
 import { Datasource } from "@deterministic-code/datasources";
 import { Api } from "./api.ts";
+import { UsersRepository } from "../generated/repositories/usersRepository.ts";
+import { CategoriesRepository } from "../generated/repositories/categoriesRepository.ts";
+import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
+import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
+import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { RolesRepository } from "../generated/repositories/rolesRepository.ts";
+import { GroupsRepository } from "../generated/repositories/groupsRepository.ts";
+import { ContactSourcesRepository } from "../generated/repositories/contactSourcesRepository.ts";
 import type { Role } from "../generated/types/datasource/role.ts";
 import type { Group } from "../generated/types/datasource/group.ts";
 import type { ContactSource } from "../generated/types/datasource/contactSource.ts";
 
-await using ds = Datasource.default as Datasource & {
-  users: never;
-  categories: never;
-  games: never;
-  reviews: never;
-  gameStates: never;
-  contacts: never;
-  roles: { create: (row: Role) => Promise<Role> };
-  groups: { create: (row: Group) => Promise<Group> };
-  contactSources: { create: (row: ContactSource) => Promise<ContactSource> };
-};
-const api = new Api(ds.users, ds.categories, ds.games, ds.reviews, ds.gameStates, ds.contacts);
-const role = await ds.roles.create({ name: "player", description: "plays" } as Role);
-const group = await ds.groups.create({ name: "guild", description: "guild" } as Group);
-await ds.contactSources.create({ name: "Manual" } as ContactSource);
+await using ds = Datasource.default;
+const connection = await ds.createConnection();
+await connection.open();
+const api = new Api(
+  new UsersRepository(connection),
+  new CategoriesRepository(connection),
+  new GamesRepository(connection),
+  new ReviewsRepository(connection),
+  new GameStatesRepository(connection),
+  new ContactsRepository(connection),
+);
+const role = await new RolesRepository(connection).create({ name: "player", description: "plays" } as Role);
+const group = await new GroupsRepository(connection).create({ name: "guild", description: "guild" } as Group);
+await new ContactSourcesRepository(connection).create({ name: "Manual" } as ContactSource);
 
 const user = await call(api, "POST", "/users", {
   username: "ada",
   password: "secret",
   settings: { theme: "dark" },
-  roles: [{ id: role.id, name: role.name, description: role.description }],
-  groups: [{ id: group.id, name: group.name, description: group.description }],
+  roles: [{ name: role.name, description: role.description }],
+  groups: [{ name: group.name, description: group.description }],
 }, 201);
 const userId = user.id as number;
 const listed = await call(api, "GET", "/users?username=ada", undefined, 200);
@@ -36,8 +44,8 @@ await call(api, "PUT", `/users?id=${userId}`, {
   username: "ada-byron",
   password: "secret",
   settings: { theme: "sepia" },
-  roles: [{ id: role.id, name: role.name }],
-  groups: [{ id: group.id, name: group.name }],
+  roles: [{ name: role.name }],
+  groups: [{ name: group.name }],
 }, 200);
 const loaded = await call(api, "GET", `/users?id=${userId}`, undefined, 200);
 if (!Array.isArray(loaded) || loaded[0]?.username !== "ada-byron") throw new Error("put users");

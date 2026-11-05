@@ -1,32 +1,42 @@
 use complex_game_rest::{
-    register, Api, Categories, Contact, ContactSource, GameStates, Games, Group, Repositories, Reviews, Role, Users,
+    categories_repository, contact_sources_repository, game_states_repository, groups_repository,
+    register, reviews_repository, roles_repository, Api, Category, Contact, ContactSource,
+    ContactsRepository, Game, GameState, GamesRepository, Group, Review, Role, User, UsersRepository,
 };
-use datasources::{default, DatasourceError, Result};
+use datasources::{default, Datasource, DatasourceError, Result};
 use serde_json::Value;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     register();
     let ds = default()?;
+    let connection = ds.create_connection().await?;
+    connection.open().await?;
     let api = Api::new(
-        ds.users(),
-        ds.categories(),
-        ds.games(),
-        ds.reviews(),
-        ds.game_states(),
-        ds.contacts(),
-        complex_game_rest::clock::Clock::new(),
+        UsersRepository::new(Arc::clone(&connection))?,
+        categories_repository(Arc::clone(&connection))?,
+        GamesRepository::new(Arc::clone(&connection))?,
+        reviews_repository(Arc::clone(&connection))?,
+        game_states_repository(Arc::clone(&connection))?,
+        ContactsRepository::new(Arc::clone(&connection))?,
     );
-    let role = ds.roles().create(Role { name: "player".into(), description: "plays".into(), ..Default::default() }).await?;
-    let group = ds.groups().create(Group { name: "guild".into(), description: "guild".into(), ..Default::default() }).await?;
-    ds.contact_sources().create(ContactSource { name: "Manual".into(), ..Default::default() }).await?;
+    let role = roles_repository(Arc::clone(&connection))?
+        .create(Role { name: "player".into(), description: "plays".into(), ..Default::default() })
+        .await?;
+    let group = groups_repository(Arc::clone(&connection))?
+        .create(Group { name: "guild".into(), description: "guild".into(), ..Default::default() })
+        .await?;
+    contact_sources_repository(connection)?
+        .create(ContactSource { name: "Manual".into(), ..Default::default() })
+        .await?;
 
     let user = call(&api, "POST", "/users", Some(json(&[
         ("username", Value::String("ada".into())),
         ("password", Value::String("secret".into())),
         ("settings", object(&[("theme", Value::String("dark".into()))])),
-        ("roles", array(&[object(&[("id", role.id.into()), ("name", role.name.clone().into()), ("description", role.description.clone().into())])])),
-        ("groups", array(&[object(&[("id", group.id.into()), ("name", group.name.clone().into()), ("description", group.description.clone().into())])])),
+        ("roles", array(&[object(&[("name", role.name.clone().into()), ("description", role.description.clone().into())])])),
+        ("groups", array(&[object(&[("name", group.name.clone().into()), ("description", group.description.clone().into())])])),
     ])), 201).await?;
     let user_id = user["id"].as_i64().ok_or_else(|| DatasourceError::message("user id"))?;
     let listed = call(&api, "GET", "/users?username=ada", None, 200).await?;
@@ -37,8 +47,8 @@ async fn main() -> Result<()> {
         ("username", Value::String("ada-byron".into())),
         ("password", Value::String("secret".into())),
         ("settings", object(&[("theme", Value::String("sepia".into()))])),
-        ("roles", array(&[object(&[("id", role.id.into()), ("name", role.name.into())])])),
-        ("groups", array(&[object(&[("id", group.id.into()), ("name", group.name.into())])])),
+        ("roles", array(&[object(&[("name", role.name.into())])])),
+        ("groups", array(&[object(&[("name", group.name.into())])])),
     ])), 200).await?;
     let loaded = call(&api, "GET", &format!("/users?id={user_id}"), None, 200).await?;
     if loaded[0]["username"] != "ada-byron" {
@@ -137,7 +147,7 @@ async fn main() -> Result<()> {
         call(&api, "DELETE", &target, None, 404).await?;
         call(&api, "PUT", &target, Some("{}".into()), 404).await?;
     }
-    let _ = (Users::default(), Games::default(), Categories::default(), Reviews::default(), GameStates::default(), Contact::default());
+    let _ = (User::default(), Game::default(), Category::default(), Review::default(), GameState::default(), Contact::default());
     Ok(())
 }
 

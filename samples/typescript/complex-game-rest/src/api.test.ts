@@ -1,44 +1,73 @@
-import { DatasourceError } from "@deterministic-code/datasources";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Datasource, Native, type IConnection } from "@deterministic-code/datasources";
+import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { describe, expect, it } from "vitest";
 import { Api } from "./api.ts";
 import "./datasources-register.ts";
+import { UsersRepository } from "../generated/repositories/usersRepository.ts";
+import { CategoriesRepository } from "../generated/repositories/categoriesRepository.ts";
+import { GamesRepository } from "../generated/repositories/gamesRepository.ts";
+import { ReviewsRepository } from "../generated/repositories/reviewsRepository.ts";
+import { GameStatesRepository } from "../generated/repositories/gameStatesRepository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { RolesRepository } from "../generated/repositories/rolesRepository.ts";
+import { GroupsRepository } from "../generated/repositories/groupsRepository.ts";
+import { ContactSourcesRepository } from "../generated/repositories/contactSourcesRepository.ts";
+import type { Role } from "../generated/types/datasource/role.ts";
+import type { Group } from "../generated/types/datasource/group.ts";
+import type { ContactSource } from "../generated/types/datasource/contactSource.ts";
 
-const repo = (opts?: { read?: object[]; single?: object | undefined; create?: object; error?: Error }) =>
-  ({
-    read: async function* () {
-      if (opts?.error) throw opts.error;
-      for (const row of opts?.read ?? []) yield row;
-    },
-    readSingle: async () => {
-      if (opts?.error) throw opts.error;
-      return opts?.single;
-    },
-    create: async (row: object) => opts?.create ?? { ...row, id: 1 },
-    update: async () => undefined,
-    delete: async () => undefined,
-  }) as never;
-
-const apiOf = (opts?: { users?: object; error?: Error }) =>
+const apiOf = (connection: IConnection) =>
   new Api(
-    repo({ create: opts?.users ?? { id: 1, username: "ada" }, single: opts?.users ?? { id: 1, username: "ada" }, read: [opts?.users ?? { id: 1, username: "ada" }], error: opts?.error }),
-    repo({ create: { id: 2, name: "arcade" }, single: { id: 2, name: "arcade" }, read: [{ id: 2, name: "arcade" }] }),
-    repo({ create: { id: 3, name: "star" }, single: { id: 3, name: "star" }, read: [{ id: 3, name: "star" }] }),
-    repo({ create: { id: 4, description: "fun" }, single: { id: 4, description: "fun" }, read: [{ id: 4 }] }),
-    repo({ create: { id: 5, state: "intro" }, single: { id: 5, state: "intro" }, read: [{ id: 5 }] }),
-    repo({ create: { id: 6, firstName: "Ada" }, single: { id: 6, firstName: "Ada" }, read: [{ id: 6 }] }),
+    new UsersRepository(connection),
+    new CategoriesRepository(connection),
+    new GamesRepository(connection),
+    new ReviewsRepository(connection),
+    new GameStatesRepository(connection),
+    new ContactsRepository(connection),
   );
+
+const open = async () => {
+  const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+  const connection = await ds.createConnection();
+  await connection.open();
+  return { api: apiOf(connection), connection };
+};
+
+const migrated = async () => {
+  const opened = await open();
+  const sql = await readFile(join(root(), "sql/sqlite/migrations/0001_initial_up.sql"), "utf8");
+  for (const batch of sql.split("GO").map((part) => part.trim()).filter((part) => part.length > 0))
+    await opened.connection.createCommand().executeNative(new Native(batch));
+  return opened;
+};
+
+const root = (): string => {
+  let dir: string | undefined = dirname(fileURLToPath(import.meta.url));
+  while (dir != null && !existsSync(join(dir, "sql/sqlite/migrations/0001_initial_up.sql")))
+    dir = dirname(dir) === dir ? undefined : dirname(dir);
+  if (dir == null) throw new Error("sql/sqlite/migrations/0001_initial_up.sql");
+  return dir;
+};
+
+const idOf = (result: { status: number; body: string }): number => {
+  expect(result.status).toBe(201);
+  return JSON.parse(result.body).id as number;
+};
 
 describe("api", () => {
   it("maps datasource errors", async () => {
-    expect((await apiOf({ error: new DatasourceError("missing") }).handle("GET", "/users", undefined)).status).toBe(400);
-  });
-
-  it("rethrows unexpected errors", async () => {
-    await expect(apiOf({ error: new Error("boom") }).handle("GET", "/users", undefined)).rejects.toThrow("boom");
+    const { api } = await open();
+    const result = await api.handle("GET", "/users", undefined);
+    expect(result.status).toBe(400);
+    expect(result.body.length).toBeGreaterThan(0);
   });
 
   it("rejects unknown routes lookups and missing rows", async () => {
-    const api = new Api(repo(), repo(), repo(), repo(), repo(), repo());
+    const { api } = await migrated();
     expect((await api.handle("GET", "/", undefined)).status).toBe(404);
     expect((await api.handle("GET", "", undefined)).status).toBe(404);
     expect((await api.handle("GET", "/nope", undefined)).status).toBe(404);
@@ -57,8 +86,11 @@ describe("api", () => {
   });
 
   it("writes and reads each route", async () => {
-    const api = apiOf();
-    expect((await api.handle("POST", "/users/", JSON.stringify({
+    const { api, connection } = await migrated();
+    await new RolesRepository(connection).create({ name: "player", description: "plays" } as Role);
+    await new GroupsRepository(connection).create({ name: "guild", description: "guild" } as Group);
+    await new ContactSourcesRepository(connection).create({ name: "Manual" } as ContactSource);
+    let userId = idOf(await api.handle("POST", "/users/", JSON.stringify({
       username: "ada",
       password: "x",
       uuid: "11111111-1111-1111-1111-111111111111",
@@ -67,43 +99,45 @@ describe("api", () => {
       settings: { theme: "dark" },
       roles: [{ name: "player" }],
       groups: [{ name: "guild" }],
-    }))).status).toBe(201);
+    })));
     expect((await api.handle("GET", "/users", undefined)).status).toBe(200);
-    expect((await api.handle("GET", "/users/?id=1&username=ada", undefined)).status).toBe(200);
-    expect((await api.handle("PUT", "/users/?id=1", JSON.stringify({ username: "ada", password: "x" }))).status).toBe(200);
-    expect((await api.handle("DELETE", "/users/?id=1", undefined)).status).toBe(204);
+    expect((await api.handle("GET", `/users/?id=${userId}&username=ada`, undefined)).status).toBe(200);
+    expect((await api.handle("PUT", `/users/?id=${userId}`, JSON.stringify({ username: "ada", password: "x" }))).status).toBe(200);
+    expect((await api.handle("DELETE", `/users/?id=${userId}`, undefined)).status).toBe(204);
     expect((await api.handle("GET", "/categories", undefined)).status).toBe(200);
     expect((await api.handle("GET", "/categories?categoryId=", undefined)).status).toBe(200);
-    expect((await api.handle("GET", "/categories?category_id=2", undefined)).status).toBe(200);
-    expect((await api.handle("POST", "/categories/", JSON.stringify({ name: "arcade" }))).status).toBe(201);
-    expect((await api.handle("PUT", "/categories/?id=2", JSON.stringify({ name: "arcade" }))).status).toBe(200);
-    expect((await api.handle("DELETE", "/categories/?id=2", undefined)).status).toBe(204);
-    expect((await api.handle("POST", "/games/", JSON.stringify({ name: "star", settings: { lives: "3" }, categories: [{ name: "arcade" }] }))).status).toBe(201);
-    expect((await api.handle("GET", "/games/?id=3&name=star", undefined)).status).toBe(200);
-    expect((await api.handle("PUT", "/games/?id=3", JSON.stringify({ name: "star" }))).status).toBe(200);
-    expect((await api.handle("DELETE", "/games/?id=3", undefined)).status).toBe(204);
-    expect((await api.handle("POST", "/reviews/", JSON.stringify({ gameId: 3, userId: 1, description: "fun", rating: "4.5" }))).status).toBe(201);
-    expect((await api.handle("GET", "/reviews/?gameId=3&userId=1", undefined)).status).toBe(200);
-    expect((await api.handle("PUT", "/reviews/?id=4", JSON.stringify({ description: "great" }))).status).toBe(200);
-    expect((await api.handle("DELETE", "/reviews/?id=4", undefined)).status).toBe(204);
-    expect((await api.handle("POST", "/game_states/", JSON.stringify({ gameId: 3, userId: 1, state: "intro" }))).status).toBe(201);
-    expect((await api.handle("GET", "/game_states/?id=5", undefined)).status).toBe(200);
-    expect((await api.handle("PUT", "/game_states/?id=5", JSON.stringify({ state: "boss" }))).status).toBe(200);
-    expect((await api.handle("DELETE", "/game_states/?id=5", undefined)).status).toBe(204);
-    expect((await api.handle("POST", "/contacts/", JSON.stringify({
+    const categoryId = idOf(await api.handle("POST", "/categories/", JSON.stringify({ name: "arcade" })));
+    expect((await api.handle("GET", `/categories?category_id=${categoryId}`, undefined)).status).toBe(200);
+    expect((await api.handle("PUT", `/categories/?id=${categoryId}`, JSON.stringify({ name: "arcade" }))).status).toBe(200);
+    expect((await api.handle("DELETE", `/categories/?id=${categoryId}`, undefined)).status).toBe(204);
+    let gameId = idOf(await api.handle("POST", "/games/", JSON.stringify({ name: "star", settings: { lives: "3" }, categories: [{ name: "arcade" }] })));
+    expect((await api.handle("GET", `/games/?id=${gameId}&name=star`, undefined)).status).toBe(200);
+    expect((await api.handle("PUT", `/games/?id=${gameId}`, JSON.stringify({ name: "star" }))).status).toBe(200);
+    expect((await api.handle("DELETE", `/games/?id=${gameId}`, undefined)).status).toBe(204);
+    userId = idOf(await api.handle("POST", "/users/", JSON.stringify({ username: "ada", password: "x" })));
+    gameId = idOf(await api.handle("POST", "/games/", JSON.stringify({ name: "star" })));
+    const reviewId = idOf(await api.handle("POST", "/reviews/", JSON.stringify({ gameId, userId, description: "fun", rating: "4.5" })));
+    expect((await api.handle("GET", `/reviews/?gameId=${gameId}&userId=${userId}`, undefined)).status).toBe(200);
+    expect((await api.handle("PUT", `/reviews/?id=${reviewId}`, JSON.stringify({ gameId, userId, description: "great" }))).status).toBe(200);
+    expect((await api.handle("DELETE", `/reviews/?id=${reviewId}`, undefined)).status).toBe(204);
+    const stateId = idOf(await api.handle("POST", "/game_states/", JSON.stringify({ gameId, userId, state: "intro" })));
+    expect((await api.handle("GET", `/game_states/?id=${stateId}`, undefined)).status).toBe(200);
+    expect((await api.handle("PUT", `/game_states/?id=${stateId}`, JSON.stringify({ gameId, userId, state: "boss" }))).status).toBe(200);
+    expect((await api.handle("DELETE", `/game_states/?id=${stateId}`, undefined)).status).toBe(204);
+    const contactId = idOf(await api.handle("POST", "/contacts/", JSON.stringify({
       firstName: "Ada",
       lastName: "Lovelace",
       email: "ada@example.com",
       notes: "poet",
       contactSourceName: "Manual",
-      userId: 1,
+      userId,
       uuid: "22222222-2222-2222-2222-222222222222",
       created: "2020-01-02T03:04:05.000Z",
       version: "AA==",
-    }))).status).toBe(201);
-    expect((await api.handle("GET", "/contacts/?userId=1", undefined)).status).toBe(200);
-    expect((await api.handle("PUT", "/contacts/?id=6", JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Manual", userId: 1 }))).status).toBe(200);
-    expect((await api.handle("DELETE", "/contacts/?id=6", undefined)).status).toBe(204);
+    })));
+    expect((await api.handle("GET", `/contacts/?userId=${userId}`, undefined)).status).toBe(200);
+    expect((await api.handle("PUT", `/contacts/?id=${contactId}`, JSON.stringify({ firstName: "Ada", lastName: "Lovelace", contactSourceName: "Manual", userId }))).status).toBe(200);
+    expect((await api.handle("DELETE", `/contacts/?id=${contactId}`, undefined)).status).toBe(204);
     expect((await api.handle("POST", "/users/", JSON.stringify({
       username: "x",
       password: "y",
@@ -124,6 +158,6 @@ describe("api", () => {
       prefs: null,
     }))).status).toBe(201);
     expect((await api.handle("POST", "/users/", " ")).status).toBe(201);
-    expect((await api.handle("GET", "/users/?id=&lonely&username=ada", undefined)).status).toBe(200);
+    expect((await api.handle("GET", "/users/?id=&lonely&username=x", undefined)).status).toBe(200);
   });
 });

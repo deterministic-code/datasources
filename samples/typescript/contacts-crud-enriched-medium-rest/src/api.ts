@@ -4,11 +4,11 @@ import type { Address } from "../generated/types/view/address.ts";
 import type { Phone } from "../generated/types/view/phone.ts";
 import type { LegacyContact } from "../generated/types/view/legacyContact.ts";
 import type { ContactGroup } from "../generated/types/view/contactGroup.ts";
-import { ContactsRepository } from "../generated/repositories/contacts-repository.ts";
-import { ContactGroupsRepository } from "../generated/repositories/contact-groups-repository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { ContactGroupsRepository } from "../generated/repositories/contactGroupsRepository.ts";
 import { clock } from "./clock.ts";
 import { jsonObject } from "./jsonObject.ts";
-import { LegacyContactsRepository } from "../generated/repositories/legacy-contacts-repository.ts";
+import { LegacyContactsRepository } from "../generated/repositories/legacyContactsRepository.ts";
 
 export type ContactWrite = Contact;
 export type HttpResult = { status: number; body: string };

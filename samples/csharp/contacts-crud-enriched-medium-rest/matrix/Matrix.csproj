@@ -11,7 +11,8 @@
   <ItemGroup>
     <Compile Include="..\Clock.cs" />
     <Compile Include="..\Api.cs" />
-    <Compile Include="$(E2E_MATRIX_GENERATED)\csharp\**\*.cs" Condition="'$(E2E_MATRIX_GENERATED)' != ''" />
+    <Compile Include="$(E2E_MATRIX_GENERATED)\Types\**\*.cs" Condition="'$(E2E_MATRIX_GENERATED)' != ''" />
+    <Compile Include="$(E2E_MATRIX_GENERATED)\Repositories\**\*.cs" Condition="'$(E2E_MATRIX_GENERATED)' != ''" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>
