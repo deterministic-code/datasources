@@ -1,8 +1,8 @@
 use crate::clock::Clock;
 use crate::json_object::JsonObjectSerializer;
 use crate::json_row::snake_key;
-use crate::repositories::contact_group_repository::ContactGroupRepository;
-use crate::repositories::contact_repository::ContactRepository;
+use crate::repositories::contact_groups_repository::ContactGroupsRepository;
+use crate::repositories::contacts_repository::ContactsRepository;
 use crate::{Address, Contact, ContactGroup, LegacyContact, Phone};
 use chrono::{DateTime, Utc};
 use datasources::{DatasourceError, Operator, ReadInput, Value, Where, CRUDRepository};
@@ -15,17 +15,17 @@ pub struct HttpResult {
 }
 
 pub struct Api {
-    contacts: ContactRepository,
+    contacts: ContactsRepository,
     legacy: CRUDRepository<LegacyContact>,
-    groups_repo: ContactGroupRepository,
+    groups_repo: ContactGroupsRepository,
     clock: Clock,
 }
 
 impl Api {
     pub fn new(
-        contacts: ContactRepository,
+        contacts: ContactsRepository,
         legacy: CRUDRepository<LegacyContact>,
-        groups_repo: ContactGroupRepository,
+        groups_repo: ContactGroupsRepository,
         clock: Clock,
     ) -> Self {
         Self { contacts, legacy, groups_repo, clock }

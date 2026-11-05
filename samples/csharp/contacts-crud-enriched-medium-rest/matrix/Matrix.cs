@@ -29,9 +29,9 @@ try
     Clock.Now = () => stamp.UtcDateTime;
     Clock.Uuid = () => $"00000000-0000-0000-0000-{++n:D12}";
     var middleware = new ConsoleCommandMiddleware(lines.Add, () => stamp, new Dictionary<string, string> { ["isVerbose"] = "true" });
-    var contacts = new ContactRepository(connection);
-    var legacy = new LegacyContactRepository(connection);
-    var groupsRepo = new ContactGroupRepository(connection);
+    var contacts = new ContactsRepository(connection);
+    var legacy = new LegacyContactsRepository(connection);
+    var groupsRepo = new ContactGroupsRepository(connection);
     contacts.AddMiddleware(middleware);
     contacts.Address.AddMiddleware(middleware);
     contacts.Phone.AddMiddleware(middleware);

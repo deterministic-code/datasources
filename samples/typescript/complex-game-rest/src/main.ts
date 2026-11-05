@@ -2,9 +2,9 @@ import "../generated/repositories/repositoryRegistry.ts";
 import "./datasources-register.ts";
 import { Datasource } from "@deterministic-code/datasources";
 import { Api } from "./api.ts";
-import type { Role } from "../generated/types/datasource/generated/role.ts";
-import type { Group } from "../generated/types/datasource/generated/group.ts";
-import type { ContactSource } from "../generated/types/datasource/generated/contactSource.ts";
+import type { Role } from "../generated/types/datasource/role.ts";
+import type { Group } from "../generated/types/datasource/group.ts";
+import type { ContactSource } from "../generated/types/datasource/contactSource.ts";
 
 await using ds = Datasource.default as Datasource & {
   users: never;

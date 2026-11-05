@@ -8,9 +8,9 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { Api } from "./src/api.ts";
 import { clock } from "./src/clock.ts";
-import { LegacyContactRepository } from "./generated/repositories/legacy-contact-repository.ts";
-import { ContactRepository } from "./generated/repositories/contact-repository.ts";
-import { ContactGroupRepository } from "./generated/repositories/contact-group-repository.ts";
+import { LegacyContactsRepository } from "./generated/repositories/legacy-contacts-repository.ts";
+import { ContactsRepository } from "./generated/repositories/contacts-repository.ts";
+import { ContactGroupsRepository } from "./generated/repositories/contact-groups-repository.ts";
 
 const sample = dirname(fileURLToPath(import.meta.url));
 type Scalar = string | number | boolean | null;
@@ -64,7 +64,7 @@ const at = (root: Node | null, pointer: string): string => {
   return current == null ? "" : String(current);
 };
 
-const attach = (contacts: ContactRepository, legacy: LegacyContactRepository, groupsRepo: ContactGroupRepository, middleware: ICommandMiddleware) => {
+const attach = (contacts: ContactsRepository, legacy: LegacyContactsRepository, groupsRepo: ContactGroupsRepository, middleware: ICommandMiddleware) => {
   contacts.addMiddleware(middleware);
   contacts.address.addMiddleware(middleware);
   contacts.phone.addMiddleware(middleware);
@@ -94,9 +94,9 @@ try {
   clock.now = () => stamp;
   clock.uuid = () => `00000000-0000-0000-0000-${String(++n).padStart(12, "0")}`;
   const middleware = new ConsoleCommandMiddleware((line) => lines.push(line), () => stamp, { isVerbose: "true" });
-  const contacts = new ContactRepository(connection);
-  const legacy = new LegacyContactRepository(connection);
-  const groupsRepo = new ContactGroupRepository(connection);
+  const contacts = new ContactsRepository(connection);
+  const legacy = new LegacyContactsRepository(connection);
+  const groupsRepo = new ContactGroupsRepository(connection);
   attach(contacts, legacy, groupsRepo, middleware);
   const api = new Api(contacts, legacy, groupsRepo);
   const saved: Record<string, string> = {};

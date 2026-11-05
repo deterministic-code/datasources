@@ -30,15 +30,10 @@ describe("casing", () => {
     expect(overlayCasingFlags({ existing: "1" }, "csharp", {})).toEqual({ existing: "1" });
   });
 
-  it("cases layout prefixes and keeps sql folders literal", async () => {
+  it("cases Paths directories and keeps sql folders literal", () => {
     const ts = createCasingStrategy("typescript", { "languages.typescript.casing.directories": "Pascal" });
-    const typescript = await languageOf("typescript");
-    const csharp = await languageOf("csharp");
-    const rust = await languageOf("rust");
-    expect(typescript.typesPrefix(ts, "datasource")).toBe("Types/Datasource/Generated");
-    expect(csharp.typesPrefix(ts, "views")).toBe("");
-    expect(rust.repositoriesPrefix(ts)).toBe("Repositories");
-    expect(caseDirectories("types/datasource/generated/user.ts", ts)).toBe("Types/Datasource/Generated/user.ts");
+    expect(caseDirectories("types/view", ts)).toBe("Types/View");
+    expect(caseDirectories("repositories", ts)).toBe("Repositories");
     expect(caseDirectories("sql/custom/__tests__/frontend", ts)).toBe("sql/custom/__tests__/frontend");
     expect(caseDirectories("features/user/custom/file.ts", ts)).toBe("Features/User/custom/file.ts");
   });

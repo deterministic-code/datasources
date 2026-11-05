@@ -1,4 +1,4 @@
-import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import type { Dialect } from "./GenerateRequest.ts";
 
 export const caseFormats = ["Pascal", "Camel", "Snake", "Kebab", "Auto"] as const;
@@ -13,13 +13,6 @@ export type CasingFlags = {
 };
 
 const LITERAL_SEGMENTS = new Set(["sql", "custom", "__tests__", "frontend"]);
-
-export const typesPrefixOf = (casing: ICasingStrategy, kind: "datasource" | "views"): string =>
-  ["types", kind === "views" ? "view" : "datasource", "generated"]
-    .map((segment) => casing.convertDirectories(segment))
-    .join("/");
-
-export const repositoriesPrefixOf = (casing: ICasingStrategy): string => casing.convertDirectories("repositories");
 
 export const parseCaseFlag = (raw: string, name: string): CaseFormat => {
   const parsed = caseFormats.find((format) => format.toLowerCase() === raw.toLowerCase());

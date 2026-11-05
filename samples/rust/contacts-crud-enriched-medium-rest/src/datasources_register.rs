@@ -7,8 +7,8 @@ pub use generated::{Address, Contact, ContactGroup, LegacyContact, LocalePrefere
 pub mod repositories {
     pub use super::generated::repositories::*;
     pub use super::generated::repositories::{
-        contactGroupRepository as contact_group_repository,
-        contactRepository as contact_repository,
-        legacyContactRepository as legacy_contact_repository,
+        contactGroupsRepository as contact_groups_repository,
+        contactsRepository as contacts_repository,
+        legacyContactsRepository as legacy_contacts_repository,
     };
 }

@@ -62,8 +62,6 @@ export const dialectsOf = (model: RepositoryModel): Array<[string, RepositoryOpt
 
 export const childField = (casing: ICasingStrategy, specName: string): string => casing.convertFields(specName);
 
-export const childClass = (typeName: string): string => `${typeName}Repository`;
-
 export const optimisticClass = (typeName: string): string => `${typeName}Optimistic`;
 
 export type LinkedEnrichment = PlannedEnrichment & {
