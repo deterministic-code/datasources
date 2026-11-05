@@ -12,7 +12,7 @@ includes:
           - type: contacts_base
             add_field:
               user_id:
-                references: user.id
+                references: user_base.id
         modify_fields:
           - field: contact_change_log.contact_id
             def:
@@ -40,7 +40,7 @@ types:
       inherits: base
       fields:
         - user_id:
-            references: user.id
+            references: user_base.id
         - name:
             type: string
             size: 128
@@ -59,9 +59,9 @@ types:
             type: string
             size: unlimited
             references: user_settings.value
-  - users:
+  - user:
       tags: [view_type]
-      inherits: user
+      inherits: user_base
       fields:
         - settings:
             type: user_settings_map{}
@@ -126,7 +126,7 @@ types:
         - game_id:
             references: games_base.id
         - user_id:
-            references: user.id
+            references: user_base.id
         - state:
             type: string
             size: 256
@@ -161,7 +161,7 @@ types:
         - game_id:
             references: games_base.id
         - user_id:
-            references: user.id
+            references: user_base.id
         - description:
             type: string
             size: unlimited

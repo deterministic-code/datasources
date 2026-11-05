@@ -1,6 +1,6 @@
 use crate::clock::Clock;
 use crate::json_object::JsonObjectSerializer;
-use crate::{Categories, Contact, GameStates, Games, Reviews, Users};
+use crate::{Categories, Contact, GameStates, Games, Reviews, User};
 use chrono::{DateTime, Utc};
 use datasources::{
     DatasourceError, Expression, Identifier, Operator, ReadInput, Value, Where, CRUDRepository,
@@ -15,7 +15,7 @@ pub struct HttpResult {
 }
 
 pub struct Api {
-    users: Arc<CRUDRepository<Users>>,
+    users: Arc<CRUDRepository<User>>,
     categories: Arc<CRUDRepository<Categories>>,
     games: Arc<CRUDRepository<Games>>,
     reviews: Arc<CRUDRepository<Reviews>>,
@@ -26,7 +26,7 @@ pub struct Api {
 
 impl Api {
     pub fn new(
-        users: Arc<CRUDRepository<Users>>,
+        users: Arc<CRUDRepository<User>>,
         categories: Arc<CRUDRepository<Categories>>,
         games: Arc<CRUDRepository<Games>>,
         reviews: Arc<CRUDRepository<Reviews>>,
@@ -259,7 +259,7 @@ fn decode(text: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn stamp_user(mut user: Users, clock: &Clock) -> Users {
+fn stamp_user(mut user: User, clock: &Clock) -> User {
     stamp(&mut user.uuid, &mut user.created, &mut user.updated, &mut user.version, clock);
     for role in &mut user.roles {
         stamp(&mut role.uuid, &mut role.created, &mut role.updated, &mut role.version, clock);

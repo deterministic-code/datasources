@@ -7,7 +7,7 @@ import {
   type IWhere,
 } from "@deterministic-code/datasources";
 import type { Contact } from "../generated/types/view/contact.ts";
-import type { Users } from "../generated/types/view/users.ts";
+import type { User } from "../generated/types/view/user.ts";
 import type { Games } from "../generated/types/view/games.ts";
 import type { Categories } from "../generated/types/view/categories.ts";
 import type { Reviews } from "../generated/types/datasource/reviews.ts";
@@ -19,7 +19,7 @@ export type HttpResult = { status: number; body: string };
 
 export class Api {
   constructor(
-    private readonly users: ICRUDRepository<Users>,
+    private readonly users: ICRUDRepository<User>,
     private readonly categories: ICRUDRepository<Categories>,
     private readonly games: ICRUDRepository<Games>,
     private readonly reviews: ICRUDRepository<Reviews>,
@@ -34,8 +34,8 @@ export class Api {
       const query = parse(split < 0 ? "" : target.slice(split + 1));
       return await ({
         "GET /users": () => get(this.users, query, ["id", "username"]),
-        "POST /users": () => post(this.users, stampUser(read<Users>(body))),
-        "PUT /users": () => put(this.users, query, stampUser(read<Users>(body)), (row, id) => { row.id = id; }),
+        "POST /users": () => post(this.users, stampUser(read<User>(body))),
+        "PUT /users": () => put(this.users, query, stampUser(read<User>(body)), (row, id) => { row.id = id; }),
         "DELETE /users": () => remove(this.users, query),
         "GET /categories": () => this.getCategories(query),
         "POST /categories": () => post(this.categories, stampRow(read<Categories>(body))),
@@ -88,7 +88,7 @@ class RequestError extends Error {
   }
 }
 
-const stampUser = (user: Users): Users => {
+const stampUser = (user: User): User => {
   stampRow(user);
   user.settings ??= {};
   user.roles ??= [];
@@ -195,4 +195,4 @@ const parse = (query: string): Record<string, string> =>
       }),
   );
 
-export type { Users, Games, Categories, Reviews, GameStates, Contact };
+export type { User, Games, Categories, Reviews, GameStates, Contact };

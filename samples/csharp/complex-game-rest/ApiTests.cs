@@ -10,7 +10,7 @@ public sealed class ApiTests
     [Fact]
     public async Task MapsDatasourceErrors()
     {
-        var users = Repo<Users>();
+        var users = Repo<User>();
         users.Error = new DatasourceException("missing");
         var api = new Api(users, Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
         var result = await api.Handle("GET", "/users", null);
@@ -21,7 +21,7 @@ public sealed class ApiTests
     [Fact]
     public async Task RethrowsUnexpectedErrors()
     {
-        var users = Repo<Users>();
+        var users = Repo<User>();
         users.Error = new InvalidOperationException("boom");
         var api = new Api(users, Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
         await Assert.ThrowsAsync<InvalidOperationException>(() => api.Handle("GET", "/users", null));
@@ -30,7 +30,7 @@ public sealed class ApiTests
     [Fact]
     public async Task RejectsUnknownRoutesLookupsAndMissingRows()
     {
-        var api = new Api(Repo<Users>(), Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
+        var api = new Api(Repo<User>(), Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
         Assert.Equal(404, (await api.Handle("GET", "/", null)).Status);
         Assert.Equal(404, (await api.Handle("GET", "", null)).Status);
         Assert.Equal(404, (await api.Handle("GET", "/nope", null)).Status);
@@ -53,7 +53,7 @@ public sealed class ApiTests
     [Fact]
     public async Task WritesAndReadsEachRoute()
     {
-        var users = Repo(new Users { Id = 1, Username = "ada", Settings = [], Roles = [], Groups = [] });
+        var users = Repo(new User { Id = 1, Username = "ada", Settings = [], Roles = [], Groups = [] });
         var categories = Repo(new Categories { Id = 2, Name = "arcade" });
         var games = Repo(new Games { Id = 3, Name = "star", Settings = [], Categories = [] });
         var reviews = Repo(new Reviews { Id = 4, Description = "fun" });

@@ -3,6 +3,7 @@ using Backend.Types.Datasource;
 using Backend.Types.View;
 using Datasources;
 using Categories = Backend.Types.View.Categories;
+using User = Backend.Types.View.User;
 
 namespace ComplexGameRest;
 
@@ -42,8 +43,8 @@ public sealed class Api
             return await ($"{method.ToUpperInvariant()} {path}" switch
             {
                 "GET /users" => Get(users, query, ["Id", "Username"]),
-                "POST /users" => Post(users, StampUser(Read<Users>(body))),
-                "PUT /users" => Put(users, query, StampUser(Read<Users>(body))),
+                "POST /users" => Post(users, StampUser(Read<User>(body))),
+                "PUT /users" => Put(users, query, StampUser(Read<User>(body))),
                 "DELETE /users" => Delete(users, query),
                 "GET /categories" => GetCategories(query),
                 "POST /categories" => Post(categories, StampCategory(Read<Categories>(body))),
@@ -112,7 +113,7 @@ public sealed class Api
         return (204, "");
     }
 
-    static Users StampUser(Users user)
+    static User StampUser(User user)
     {
         Stamp(user);
         user.Settings ??= [];
@@ -175,7 +176,7 @@ public sealed class Api
 
     static void SetId<T>(T row, long id)
     {
-        if (row is Users user) user.Id = id;
+        if (row is User user) user.Id = id;
         else if (row is Categories category) category.Id = id;
         else if (row is Games game) game.Id = id;
         else if (row is Reviews review) review.Id = id;
