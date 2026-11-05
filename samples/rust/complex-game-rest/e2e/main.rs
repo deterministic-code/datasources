@@ -1,5 +1,5 @@
 use complex_game_rest::{
-    register, Api, Categories, Contact, ContactSource, GameStates, Games, Group, Repositories, Reviews, Role, User,
+    register, Api, Category, Contact, ContactSource, Game, GameState, Group, Repositories, Review, Role, User,
 };
 use datasources::{default, DatasourceError, Result};
 use serde_json::Value;
@@ -137,7 +137,7 @@ async fn main() -> Result<()> {
         call(&api, "DELETE", &target, None, 404).await?;
         call(&api, "PUT", &target, Some("{}".into()), 404).await?;
     }
-    let _ = (User::default(), Games::default(), Categories::default(), Reviews::default(), GameStates::default(), Contact::default());
+    let _ = (User::default(), Game::default(), Category::default(), Review::default(), GameState::default(), Contact::default());
     Ok(())
 }
 

@@ -1,6 +1,6 @@
 using Backend.Types.Datasource;
 using Backend.Types.View;
-using Categories = Backend.Types.View.Categories;
+using Category = Backend.Types.View.Category;
 using ComplexGameRest;
 using Datasources;
 using Xunit;
@@ -12,7 +12,7 @@ public sealed class ApiTests
     {
         var users = Repo<User>();
         users.Error = new DatasourceException("missing");
-        var api = new Api(users, Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
+        var api = new Api(users, Repo<Category>(), Repo<Game>(), Repo<Review>(), Repo<GameState>(), Repo<Contact>());
         var result = await api.Handle("GET", "/users", null);
         Assert.Equal(400, result.Status);
         Assert.Equal("missing", result.Body);
@@ -23,14 +23,14 @@ public sealed class ApiTests
     {
         var users = Repo<User>();
         users.Error = new InvalidOperationException("boom");
-        var api = new Api(users, Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
+        var api = new Api(users, Repo<Category>(), Repo<Game>(), Repo<Review>(), Repo<GameState>(), Repo<Contact>());
         await Assert.ThrowsAsync<InvalidOperationException>(() => api.Handle("GET", "/users", null));
     }
 
     [Fact]
     public async Task RejectsUnknownRoutesLookupsAndMissingRows()
     {
-        var api = new Api(Repo<User>(), Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
+        var api = new Api(Repo<User>(), Repo<Category>(), Repo<Game>(), Repo<Review>(), Repo<GameState>(), Repo<Contact>());
         Assert.Equal(404, (await api.Handle("GET", "/", null)).Status);
         Assert.Equal(404, (await api.Handle("GET", "", null)).Status);
         Assert.Equal(404, (await api.Handle("GET", "/nope", null)).Status);
@@ -54,10 +54,10 @@ public sealed class ApiTests
     public async Task WritesAndReadsEachRoute()
     {
         var users = Repo(new User { Id = 1, Username = "ada", Settings = [], Roles = [], Groups = [] });
-        var categories = Repo(new Categories { Id = 2, Name = "arcade" });
-        var games = Repo(new Games { Id = 3, Name = "star", Settings = [], Categories = [] });
-        var reviews = Repo(new Reviews { Id = 4, Description = "fun" });
-        var states = Repo(new GameStates { Id = 5, State = "intro" });
+        var categories = Repo(new Category { Id = 2, Name = "arcade" });
+        var games = Repo(new Game { Id = 3, Name = "star", Settings = [], Categories = [] });
+        var reviews = Repo(new Review { Id = 4, Description = "fun" });
+        var states = Repo(new GameState { Id = 5, State = "intro" });
         var contacts = Repo(new Contact { Id = 6, FirstName = "Ada" });
         var api = new Api(users, categories, games, reviews, states, contacts);
         Assert.Equal(201, (await api.Handle("POST", "/users/", """{"username":"ada","password":"x","uuid":"11111111-1111-1111-1111-111111111111","created":"2020-01-02T03:04:05Z","version":"AA==","settings":{"theme":"dark"},"roles":[{"name":"player"}],"groups":[{"name":"guild"}]}""")).Status);
