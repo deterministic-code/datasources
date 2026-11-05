@@ -1,13 +1,14 @@
-use crate::clock::Clock;
+use crate::generated::repositories::contactsRepository::ContactsRepository;
+use crate::generated::repositories::gamesRepository::GamesRepository;
+use crate::generated::repositories::usersRepository::UsersRepository;
 use crate::json_object::JsonObjectSerializer;
-use crate::{Categories, Contact, GameStates, Games, Reviews, Users};
-use chrono::{DateTime, Utc};
+use crate::{Category, Contact, Game, GameState, Review, User};
 use datasources::{
     DatasourceError, Expression, Identifier, Operator, ReadInput, Value, Where, CRUDRepository,
 };
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::ops::Deref;
 
 pub struct HttpResult {
     pub status: u16,
@@ -15,26 +16,24 @@ pub struct HttpResult {
 }
 
 pub struct Api {
-    users: Arc<CRUDRepository<Users>>,
-    categories: Arc<CRUDRepository<Categories>>,
-    games: Arc<CRUDRepository<Games>>,
-    reviews: Arc<CRUDRepository<Reviews>>,
-    states: Arc<CRUDRepository<GameStates>>,
-    contacts: Arc<CRUDRepository<Contact>>,
-    clock: Clock,
+    users: UsersRepository,
+    categories: CRUDRepository<Category>,
+    games: GamesRepository,
+    reviews: CRUDRepository<Review>,
+    states: CRUDRepository<GameState>,
+    contacts: ContactsRepository,
 }
 
 impl Api {
     pub fn new(
-        users: Arc<CRUDRepository<Users>>,
-        categories: Arc<CRUDRepository<Categories>>,
-        games: Arc<CRUDRepository<Games>>,
-        reviews: Arc<CRUDRepository<Reviews>>,
-        states: Arc<CRUDRepository<GameStates>>,
-        contacts: Arc<CRUDRepository<Contact>>,
-        clock: Clock,
+        users: UsersRepository,
+        categories: CRUDRepository<Category>,
+        games: GamesRepository,
+        reviews: CRUDRepository<Review>,
+        states: CRUDRepository<GameState>,
+        contacts: ContactsRepository,
     ) -> Self {
-        Self { users, categories, games, reviews, states, contacts, clock }
+        Self { users, categories, games, reviews, states, contacts }
     }
 
     pub async fn handle(&self, method: &str, target: &str, body: Option<&str>) -> Result<HttpResult, String> {
@@ -48,42 +47,43 @@ impl Api {
         let path = if path.is_empty() { "/" } else { path };
         let query = parse(split.map(|i| &target[i + 1..]).unwrap_or(""));
         match (method.to_ascii_uppercase().as_str(), path) {
-            ("GET", "/users") => get(&self.users, &query, &["id", "username"]).await,
-            ("POST", "/users") => post(&self.users, stamp_user(read(body)?, &self.clock)).await,
+            ("GET", "/users") => get(self.users.deref(), &query, &["id", "username"]).await,
+            ("POST", "/users") => post(self.users.deref(), read(body)?).await,
             ("PUT", "/users") => {
-                put(&self.users, &query, stamp_user(read(body)?, &self.clock), |row, id| row.id = id).await
+                put(self.users.deref(), &query, body, |incoming, current| User { id: current.id, ..incoming }).await
             }
-            ("DELETE", "/users") => delete(&self.users, &query).await,
+            ("DELETE", "/users") => delete(self.users.deref(), &query).await,
             ("GET", "/categories") => self.get_categories(&query).await,
-            ("POST", "/categories") => post(&self.categories, stamp_category(read(body)?, &self.clock)).await,
+            ("POST", "/categories") => post(&self.categories, read(body)?).await,
             ("PUT", "/categories") => {
-                put(&self.categories, &query, stamp_category(read(body)?, &self.clock), |row, id| row.id = id).await
+                put(&self.categories, &query, body, |incoming, current| Category { id: current.id, ..incoming }).await
             }
             ("DELETE", "/categories") => delete(&self.categories, &query).await,
-            ("GET", "/games") => get(&self.games, &query, &["id", "name"]).await,
-            ("POST", "/games") => post(&self.games, stamp_game(read(body)?, &self.clock)).await,
+            ("GET", "/games") => get(self.games.deref(), &query, &["id", "name"]).await,
+            ("POST", "/games") => post(self.games.deref(), read(body)?).await,
             ("PUT", "/games") => {
-                put(&self.games, &query, stamp_game(read(body)?, &self.clock), |row, id| row.id = id).await
+                put(self.games.deref(), &query, body, |incoming, current| Game { id: current.id, ..incoming }).await
             }
-            ("DELETE", "/games") => delete(&self.games, &query).await,
+            ("DELETE", "/games") => delete(self.games.deref(), &query).await,
             ("GET", "/reviews") => get(&self.reviews, &query, &["id", "game_id", "user_id"]).await,
-            ("POST", "/reviews") => post(&self.reviews, stamp_review(read(body)?, &self.clock)).await,
+            ("POST", "/reviews") => post(&self.reviews, read(body)?).await,
             ("PUT", "/reviews") => {
-                put(&self.reviews, &query, stamp_review(read(body)?, &self.clock), |row, id| row.id = id).await
+                put(&self.reviews, &query, body, |incoming, current| Review { id: current.id, ..incoming }).await
             }
             ("DELETE", "/reviews") => delete(&self.reviews, &query).await,
             ("GET", "/game_states") => get(&self.states, &query, &["id", "game_id", "user_id"]).await,
-            ("POST", "/game_states") => post(&self.states, stamp_state(read(body)?, &self.clock)).await,
+            ("POST", "/game_states") => post(&self.states, read(body)?).await,
             ("PUT", "/game_states") => {
-                put(&self.states, &query, stamp_state(read(body)?, &self.clock), |row, id| row.id = id).await
+                put(&self.states, &query, body, |incoming, current| GameState { id: current.id, ..incoming }).await
             }
             ("DELETE", "/game_states") => delete(&self.states, &query).await,
-            ("GET", "/contacts") => get(&self.contacts, &query, &["id", "user_id"]).await,
-            ("POST", "/contacts") => post(&self.contacts, stamp_contact(read(body)?, &self.clock)).await,
+            ("GET", "/contacts") => get(self.contacts.deref(), &query, &["id", "user_id"]).await,
+            ("POST", "/contacts") => post(self.contacts.deref(), read(body)?).await,
             ("PUT", "/contacts") => {
-                put(&self.contacts, &query, stamp_contact(read(body)?, &self.clock), |row, id| row.id = id).await
+                put(self.contacts.deref(), &query, body, |incoming, current| Contact { id: current.id, ..incoming })
+                    .await
             }
-            ("DELETE", "/contacts") => delete(&self.contacts, &query).await,
+            ("DELETE", "/contacts") => delete(self.contacts.deref(), &query).await,
             _ => Ok(HttpResult { status: 404, body: String::new() }),
         }
     }
@@ -151,16 +151,15 @@ async fn post<T: datasources::Entity + datasources::Facet<'static>>(repo: &CRUDR
 async fn put<T: datasources::Entity + datasources::Facet<'static>>(
     repo: &CRUDRepository<T>,
     query: &HashMap<String, String>,
-    mut row: T,
-    set_id: impl FnOnce(&mut T, i64),
+    body: Option<&str>,
+    with_id: impl FnOnce(T, &T) -> T,
 ) -> Result<HttpResult, ApiError> {
     let id = required_number(query, "id")?;
     let by = Where::new(Operator::equals("id", id));
-    if repo.read_single(&by).await?.is_none() {
+    let Some(current) = repo.read_single(&by).await? else {
         return Ok(empty(404));
-    }
-    set_id(&mut row, id);
-    repo.update(row).await?;
+    };
+    repo.update(with_id(read(body)?, &current)).await?;
     Ok(ok(200, &repo.read_single(&by).await?.unwrap_or_default())?)
 }
 
@@ -257,74 +256,4 @@ fn decode(text: &str) -> String {
         i += 1;
     }
     String::from_utf8_lossy(&out).into_owned()
-}
-
-fn stamp_user(mut user: Users, clock: &Clock) -> Users {
-    stamp(&mut user.uuid, &mut user.created, &mut user.updated, &mut user.version, clock);
-    for role in &mut user.roles {
-        stamp(&mut role.uuid, &mut role.created, &mut role.updated, &mut role.version, clock);
-    }
-    for group in &mut user.groups {
-        stamp(&mut group.uuid, &mut group.created, &mut group.updated, &mut group.version, clock);
-    }
-    user
-}
-
-fn stamp_category(mut category: Categories, clock: &Clock) -> Categories {
-    stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
-    category
-}
-
-fn stamp_game(mut game: Games, clock: &Clock) -> Games {
-    stamp(&mut game.uuid, &mut game.created, &mut game.updated, &mut game.version, clock);
-    for category in &mut game.categories {
-        stamp(&mut category.uuid, &mut category.created, &mut category.updated, &mut category.version, clock);
-    }
-    game
-}
-
-fn stamp_review(mut review: Reviews, clock: &Clock) -> Reviews {
-    stamp(&mut review.uuid, &mut review.created, &mut review.updated, &mut review.version, clock);
-    review
-}
-
-fn stamp_state(mut state: GameStates, clock: &Clock) -> GameStates {
-    stamp(&mut state.uuid, &mut state.created, &mut state.updated, &mut state.version, clock);
-    state
-}
-
-fn stamp_contact(mut contact: Contact, clock: &Clock) -> Contact {
-    if contact.email.as_deref().unwrap_or("").is_empty() {
-        contact.email = Some(String::new());
-    }
-    if contact.notes.as_deref().unwrap_or("").is_empty() {
-        contact.notes = Some("none".into());
-    }
-    stamp(&mut contact.uuid, &mut contact.created, &mut contact.updated, &mut contact.version, clock);
-    contact
-}
-
-fn stamp(
-    uuid: &mut String,
-    created: &mut DateTime<Utc>,
-    updated: &mut DateTime<Utc>,
-    version: &mut Vec<u8>,
-    clock: &Clock,
-) {
-    if uuid.is_empty() {
-        *uuid = clock.uuid();
-    }
-    if *created == DateTime::<Utc>::default() {
-        *created = date(clock);
-    }
-    *updated = date(clock);
-    if version.is_empty() {
-        *version = vec![0];
-    }
-}
-
-fn date(clock: &Clock) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(&clock.now())
-        .map(|date| date.with_timezone(&Utc))
-        .unwrap_or_default()
 }

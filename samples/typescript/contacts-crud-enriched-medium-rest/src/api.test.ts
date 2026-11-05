@@ -3,9 +3,9 @@ import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { describe, expect, it } from "vitest";
 import { Api, type ContactWrite } from "./api.ts";
 import "./datasources-register.ts";
-import { LegacyContactsRepository } from "../generated/repositories/legacy-contacts-repository.ts";
-import { ContactsRepository } from "../generated/repositories/contacts-repository.ts";
-import { ContactGroupsRepository } from "../generated/repositories/contact-groups-repository.ts";
+import { LegacyContactsRepository } from "../generated/repositories/legacyContactsRepository.ts";
+import { ContactsRepository } from "../generated/repositories/contactsRepository.ts";
+import { ContactGroupsRepository } from "../generated/repositories/contactGroupsRepository.ts";
 
 const lookup = (id?: number) => ({
   readSingle: async () => (id == null ? undefined : { id }),

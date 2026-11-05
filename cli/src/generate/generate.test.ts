@@ -780,7 +780,7 @@ types: []
       ),
     ).toBe(0);
     expect(store.files[join(cwd, "src/generated.rs")]).toBe(
-      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
+      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
     );
     expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
     expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();

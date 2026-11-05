@@ -1,21 +1,21 @@
 using System.Text.Json;
 using Backend.Types.Datasource;
-using Backend.Types.View;
-using Categories = Backend.Types.View.Categories;
 using ComplexGameRest;
 using Datasources;
 
 await using var ds = Datasource.Default;
+var connection = await ds.CreateConnection();
+await connection.Open();
 var api = new Api(
-    ds.CreateRepository<Users>("Users"),
-    ds.CreateRepository<Categories>("Categories"),
-    ds.CreateRepository<Games>("Games"),
-    ds.CreateRepository<Reviews>("Reviews"),
-    ds.CreateRepository<GameStates>("GameStates"),
-    ds.CreateRepository<Contact>("Contacts"));
-var roles = ds.CreateRepository<Role>("Roles");
-var groups = ds.CreateRepository<Group>("Groups");
-var sources = ds.CreateRepository<ContactSource>("ContactSources");
+    new UsersRepository(connection),
+    new CategoriesRepository(connection),
+    new GamesRepository(connection),
+    new ReviewsRepository(connection),
+    new GameStatesRepository(connection),
+    new ContactsRepository(connection));
+var roles = new RolesRepository(connection);
+var groups = new GroupsRepository(connection);
+var sources = new ContactSourcesRepository(connection);
 var role = await roles.Create(new Role { Name = "player", Description = "plays" });
 var group = await groups.Create(new Group { Name = "guild", Description = "guild" });
 await sources.Create(new ContactSource { Name = "Manual" });
@@ -25,8 +25,8 @@ var user = await Call(api, "POST", "/users", Json(new
     username = "ada",
     password = "secret",
     settings = new Dictionary<string, string> { ["theme"] = "dark" },
-    roles = new[] { new { id = role.Id, name = role.Name, description = role.Description } },
-    groups = new[] { new { id = group.Id, name = group.Name, description = group.Description } },
+    roles = new[] { new { name = role.Name, description = role.Description } },
+    groups = new[] { new { name = group.Name, description = group.Description } },
 }), 201);
 var userId = user.GetProperty("id").GetInt64();
 var listed = await Call(api, "GET", "/users?username=ada", null, 200);
@@ -36,8 +36,8 @@ await Call(api, "PUT", $"/users?id={userId}", Json(new
     username = "ada-byron",
     password = "secret",
     settings = new Dictionary<string, string> { ["theme"] = "sepia" },
-    roles = new[] { new { id = role.Id, name = role.Name } },
-    groups = new[] { new { id = group.Id, name = group.Name } },
+    roles = new[] { new { name = role.Name } },
+    groups = new[] { new { name = group.Name } },
 }), 200);
 var loaded = await Call(api, "GET", $"/users?id={userId}", null, 200);
 if (loaded[0].GetProperty("username").GetString() != "ada-byron") throw new InvalidOperationException("put users");

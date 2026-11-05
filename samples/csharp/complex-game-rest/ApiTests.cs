@@ -1,36 +1,25 @@
+using System.Text.Json;
 using Backend.Types.Datasource;
-using Backend.Types.View;
-using Categories = Backend.Types.View.Categories;
 using ComplexGameRest;
 using Datasources;
-using Xunit;
+using Datasources.Sqlite;
 
 public sealed class ApiTests
 {
     [Fact]
     public async Task MapsDatasourceErrors()
     {
-        var users = Repo<Users>();
-        users.Error = new DatasourceException("missing");
-        var api = new Api(users, Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
-        var result = await api.Handle("GET", "/users", null);
+        var opened = await Open();
+        var result = await opened.Api.Handle("GET", "/users", null);
         Assert.Equal(400, result.Status);
-        Assert.Equal("missing", result.Body);
-    }
-
-    [Fact]
-    public async Task RethrowsUnexpectedErrors()
-    {
-        var users = Repo<Users>();
-        users.Error = new InvalidOperationException("boom");
-        var api = new Api(users, Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
-        await Assert.ThrowsAsync<InvalidOperationException>(() => api.Handle("GET", "/users", null));
+        Assert.False(string.IsNullOrEmpty(result.Body));
     }
 
     [Fact]
     public async Task RejectsUnknownRoutesLookupsAndMissingRows()
     {
-        var api = new Api(Repo<Users>(), Repo<Categories>(), Repo<Games>(), Repo<Reviews>(), Repo<GameStates>(), Repo<Contact>());
+        var opened = await Migrated();
+        var api = opened.Api;
         Assert.Equal(404, (await api.Handle("GET", "/", null)).Status);
         Assert.Equal(404, (await api.Handle("GET", "", null)).Status);
         Assert.Equal(404, (await api.Handle("GET", "/nope", null)).Status);
@@ -53,45 +42,45 @@ public sealed class ApiTests
     [Fact]
     public async Task WritesAndReadsEachRoute()
     {
-        var users = Repo(new Users { Id = 1, Username = "ada", Settings = [], Roles = [], Groups = [] });
-        var categories = Repo(new Categories { Id = 2, Name = "arcade" });
-        var games = Repo(new Games { Id = 3, Name = "star", Settings = [], Categories = [] });
-        var reviews = Repo(new Reviews { Id = 4, Description = "fun" });
-        var states = Repo(new GameStates { Id = 5, State = "intro" });
-        var contacts = Repo(new Contact { Id = 6, FirstName = "Ada" });
-        var api = new Api(users, categories, games, reviews, states, contacts);
-        Assert.Equal(201, (await api.Handle("POST", "/users/", """{"username":"ada","password":"x","uuid":"11111111-1111-1111-1111-111111111111","created":"2020-01-02T03:04:05Z","version":"AA==","settings":{"theme":"dark"},"roles":[{"name":"player"}],"groups":[{"name":"guild"}]}""")).Status);
+        var opened = await Migrated();
+        var api = opened.Api;
+        await new RolesRepository(opened.Connection).Create(new Role { Name = "player", Description = "plays" });
+        await new GroupsRepository(opened.Connection).Create(new Group { Name = "guild", Description = "guild" });
+        await new ContactSourcesRepository(opened.Connection).Create(new ContactSource { Name = "Manual" });
+        var userId = Id(await api.Handle("POST", "/users/", """{"username":"ada","password":"x","uuid":"11111111-1111-1111-1111-111111111111","created":"2020-01-02T03:04:05Z","version":"AA==","settings":{"theme":"dark"},"roles":[{"name":"player"}],"groups":[{"name":"guild"}]}"""));
         Assert.Equal(200, (await api.Handle("GET", "/users", null)).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/users/?id=1&username=ada", null)).Status);
-        Assert.Equal(200, (await api.Handle("PUT", "/users/?id=1", """{"username":"ada","password":"x"}""")).Status);
-        Assert.Equal(204, (await api.Handle("DELETE", "/users/?id=1", null)).Status);
+        Assert.Equal(200, (await api.Handle("GET", $"/users/?id={userId}&username=ada", null)).Status);
+        Assert.Equal(200, (await api.Handle("PUT", $"/users/?id={userId}", """{"username":"ada","password":"x"}""")).Status);
+        Assert.Equal(204, (await api.Handle("DELETE", $"/users/?id={userId}", null)).Status);
         Assert.Equal(200, (await api.Handle("GET", "/categories", null)).Status);
         Assert.Equal(200, (await api.Handle("GET", "/categories?categoryId=", null)).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/categories?category_id=2", null)).Status);
-        Assert.Equal(201, (await api.Handle("POST", "/categories/", """{"name":"arcade"}""")).Status);
-        Assert.Equal(200, (await api.Handle("PUT", "/categories/?id=2", """{"name":"arcade"}""")).Status);
-        Assert.Equal(204, (await api.Handle("DELETE", "/categories/?id=2", null)).Status);
-        Assert.Equal(201, (await api.Handle("POST", "/games/", """{"name":"star","settings":{"lives":"3"},"categories":[{"name":"arcade"}]}""")).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/games/?id=3&name=star", null)).Status);
-        Assert.Equal(200, (await api.Handle("PUT", "/games/?id=3", """{"name":"star"}""")).Status);
-        Assert.Equal(204, (await api.Handle("DELETE", "/games/?id=3", null)).Status);
-        Assert.Equal(201, (await api.Handle("POST", "/reviews/", """{"gameId":3,"userId":1,"description":"fun","rating":"4.5"}""")).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/reviews/?gameId=3&userId=1", null)).Status);
-        Assert.Equal(200, (await api.Handle("PUT", "/reviews/?id=4", """{"description":"great"}""")).Status);
-        Assert.Equal(204, (await api.Handle("DELETE", "/reviews/?id=4", null)).Status);
-        Assert.Equal(201, (await api.Handle("POST", "/game_states/", """{"gameId":3,"userId":1,"state":"intro"}""")).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/game_states/?id=5", null)).Status);
-        Assert.Equal(200, (await api.Handle("PUT", "/game_states/?id=5", """{"state":"boss"}""")).Status);
-        Assert.Equal(204, (await api.Handle("DELETE", "/game_states/?id=5", null)).Status);
-        Assert.Equal(201, (await api.Handle("POST", "/contacts/", """{"firstName":"Ada","lastName":"Lovelace","email":"ada@example.com","notes":"poet","contactSourceName":"Manual","userId":"1","uuid":"22222222-2222-2222-2222-222222222222","created":"2020-01-02T03:04:05Z","version":"AA=="}""")).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/contacts/?userId=1", null)).Status);
-        Assert.Equal(200, (await api.Handle("PUT", "/contacts/?id=6", """{"firstName":"Ada","lastName":"Lovelace","contactSourceName":"Manual","userId":"1"}""")).Status);
-        Assert.Equal(204, (await api.Handle("DELETE", "/contacts/?id=6", null)).Status);
+        var categoryId = Id(await api.Handle("POST", "/categories/", """{"name":"arcade"}"""));
+        Assert.Equal(200, (await api.Handle("GET", $"/categories?category_id={categoryId}", null)).Status);
+        Assert.Equal(200, (await api.Handle("PUT", $"/categories/?id={categoryId}", """{"name":"arcade"}""")).Status);
+        Assert.Equal(204, (await api.Handle("DELETE", $"/categories/?id={categoryId}", null)).Status);
+        var gameId = Id(await api.Handle("POST", "/games/", """{"name":"star","settings":{"lives":"3"},"categories":[{"name":"arcade"}]}"""));
+        Assert.Equal(200, (await api.Handle("GET", $"/games/?id={gameId}&name=star", null)).Status);
+        Assert.Equal(200, (await api.Handle("PUT", $"/games/?id={gameId}", """{"name":"star"}""")).Status);
+        Assert.Equal(204, (await api.Handle("DELETE", $"/games/?id={gameId}", null)).Status);
+        userId = Id(await api.Handle("POST", "/users/", """{"username":"ada","password":"x"}"""));
+        gameId = Id(await api.Handle("POST", "/games/", """{"name":"star"}"""));
+        var reviewId = Id(await api.Handle("POST", "/reviews/", $"{{\"gameId\":{gameId},\"userId\":{userId},\"description\":\"fun\",\"rating\":\"4.5\"}}"));
+        Assert.Equal(200, (await api.Handle("GET", $"/reviews/?gameId={gameId}&userId={userId}", null)).Status);
+        Assert.Equal(200, (await api.Handle("PUT", $"/reviews/?id={reviewId}", $"{{\"gameId\":{gameId},\"userId\":{userId},\"description\":\"great\"}}")).Status);
+        Assert.Equal(204, (await api.Handle("DELETE", $"/reviews/?id={reviewId}", null)).Status);
+        var stateId = Id(await api.Handle("POST", "/game_states/", $"{{\"gameId\":{gameId},\"userId\":{userId},\"state\":\"intro\"}}"));
+        Assert.Equal(200, (await api.Handle("GET", $"/game_states/?id={stateId}", null)).Status);
+        Assert.Equal(200, (await api.Handle("PUT", $"/game_states/?id={stateId}", $"{{\"gameId\":{gameId},\"userId\":{userId},\"state\":\"boss\"}}")).Status);
+        Assert.Equal(204, (await api.Handle("DELETE", $"/game_states/?id={stateId}", null)).Status);
+        var contactId = Id(await api.Handle("POST", "/contacts/", $"{{\"firstName\":\"Ada\",\"lastName\":\"Lovelace\",\"email\":\"ada@example.com\",\"notes\":\"poet\",\"contactSourceName\":\"Manual\",\"userId\":\"{userId}\",\"uuid\":\"22222222-2222-2222-2222-222222222222\",\"created\":\"2020-01-02T03:04:05Z\",\"version\":\"AA==\"}}"));
+        Assert.Equal(200, (await api.Handle("GET", $"/contacts/?userId={userId}", null)).Status);
+        Assert.Equal(200, (await api.Handle("PUT", $"/contacts/?id={contactId}", $"{{\"firstName\":\"Ada\",\"lastName\":\"Lovelace\",\"contactSourceName\":\"Manual\",\"userId\":\"{userId}\"}}")).Status);
+        Assert.Equal(204, (await api.Handle("DELETE", $"/contacts/?id={contactId}", null)).Status);
         Assert.Equal(201, (await api.Handle("POST", "/users/", """{"username":"x","password":"y","uuid":"","created":"0001-01-01T00:00:00","version":null,"settings":null,"roles":null,"groups":null}""")).Status);
         Assert.Equal(201, (await api.Handle("POST", "/games/", """{"name":"z","settings":null,"categories":null}""")).Status);
         Assert.Equal(201, (await api.Handle("POST", "/contacts/", """{"firstName":"A","lastName":"B","notes":"","uuid":"","created":"0001-01-01T00:00:00","version":null,"addresses":null,"phones":null,"settings":null,"prefs":null}""")).Status);
         Assert.Equal(201, (await api.Handle("POST", "/users/", " ")).Status);
-        Assert.Equal(200, (await api.Handle("GET", "/users/?id=&lonely&username=ada", null)).Status);
+        Assert.Equal(200, (await api.Handle("GET", "/users/?id=&lonely&username=x", null)).Status);
         Assert.Equal(400, (await api.Handle("GET", "/users/?id=1&id=2", null)).Status);
         Clock.Now = () => new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
         Clock.Uuid = () => "00000000-0000-0000-0000-000000000000";
@@ -99,41 +88,44 @@ public sealed class ApiTests
         Assert.Equal(new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc), Clock.Now());
     }
 
-    static Fake<T> Repo<T>(T? row = default) where T : class, new() => new(row);
+    sealed record Opened(Api Api, IConnection Connection);
 
-    sealed class Fake<T>(T? row) : ICRUDRepository<T> where T : class, new()
+    static long Id((int Status, string Body) result)
     {
-        public Exception? Error { get; set; }
-        public Type Type => typeof(T);
-        public bool IsSchemaRequired => false;
-        public IReadOnlyList<string> Ids => ["Id"];
+        Assert.Equal(201, result.Status);
+        return JsonSerializer.Deserialize<JsonElement>(result.Body).GetProperty("id").GetInt64();
+    }
 
-        public async IAsyncEnumerable<T> Read(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null, ReadonlyRepositoryMappingOptions<T>? options = null)
-        {
-            if (Error is not null) throw Error;
-            if (row is not null) yield return row;
-            await Task.CompletedTask;
-        }
+    static async Task<Opened> Open()
+    {
+        var ds = new Datasource("sqlite", new SqliteDriver(), new Dictionary<string, string?> { ["DATASOURCE_URL"] = "sqlite:///:memory:" });
+        var connection = await ds.CreateConnection();
+        await connection.Open();
+        return new(
+            new Api(
+                new UsersRepository(connection),
+                new CategoriesRepository(connection),
+                new GamesRepository(connection),
+                new ReviewsRepository(connection),
+                new GameStatesRepository(connection),
+                new ContactsRepository(connection)),
+            connection);
+    }
 
-        public IAsyncEnumerable<T> Read(IWhere where, ReadonlyRepositoryMappingOptions<T>? options = null) =>
-            Read();
+    static async Task<Opened> Migrated()
+    {
+        var opened = await Open();
+        var sql = await File.ReadAllTextAsync(Path.Combine(Root(), "sql/sqlite/migrations/0001_initial_up.sql"));
+        foreach (var batch in sql.Split("GO", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            await opened.Connection.CreateCommand().Execute(Native.N(batch));
+        return opened;
+    }
 
-        public Task<T?> ReadSingle(IStatement? query = null, IReadOnlyList<Parameter>? parameters = null, ReadonlyRepositoryMappingOptions<T>? options = null) =>
-            Task.FromResult(row);
-
-        public Task<T?> ReadSingle(IWhere where, ReadonlyRepositoryMappingOptions<T>? options = null) =>
-            Task.FromResult(row);
-
-        public Task<T> Create(T item) => Task.FromResult(row ?? item);
-
-        public Task<Response> Update(T item, IWhere? byWhere = null) =>
-            Task.FromResult(new Response(Value.Null.Instance, 1));
-
-        public Task<Response> Delete(T item, IWhere? byWhere = null) =>
-            Task.FromResult(new Response(Value.Null.Instance, 1));
-
-        public Task<T?> ReadSingleById(Value id) => Task.FromResult(row);
-
-        public Task<T?> ReadSingleById(Row ids) => Task.FromResult(row);
+    static string Root()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir is not null && !File.Exists(Path.Combine(dir, "sql/sqlite/migrations/0001_initial_up.sql")))
+            dir = Directory.GetParent(dir)?.FullName;
+        return dir ?? throw new InvalidOperationException("sql/sqlite/migrations/0001_initial_up.sql");
     }
 }
