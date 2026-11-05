@@ -3,14 +3,14 @@ using Datasources;
 using static Datasources.Cmp;
 {{/optimisticConcurrency}}
 
-public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{#optimisticConcurrency}}, ICRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{/optimisticConcurrency}}
+public sealed class {{className}} : CRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{#optimisticConcurrency}}, ICRUDRepository<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>{{/optimisticConcurrency}}
 {
 {{#children}}
     public {{className}} {{field}} { get; }
 {{/children}}
 {{#setup}}
 
-    public {{typeName}}Repository(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}})
+    public {{className}}(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}})
     {
 {{#children}}
         {{field}} = new {{className}}(connection);
@@ -21,7 +21,7 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
     }
 {{/setup}}
 {{^setup}}
-    public {{typeName}}Repository(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}}) { }
+    public {{className}}(IConnection connection) : base(connection, {{#builder}}Options(connection){{/builder}}{{^builder}}Options(){{/builder}}) { }
 {{/setup}}
 
 {{#setup}}
@@ -61,8 +61,8 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
 {{^builder}}
     static CRUDRepositoryOptions<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}> Options() => new()
     {
-        Entity = "{{entity}}",
-        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{entity}}"] = "{{table}}" }),
+        Entity = "{{typeName}}",
+        EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{typeName}}"] = "{{table}}" }),
         PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
         {
 {{#propertyMappings}}
@@ -86,8 +86,8 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
         new CRUDRepositoryBuilder<{{#view}}Backend.Types.View{{/view}}{{^view}}Backend.Types.Datasource{{/view}}.{{typeName}}>()
             .Add(new()
             {
-                Entity = "{{entity}}",
-                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{entity}}"] = "{{table}}" }),
+                Entity = "{{typeName}}",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{typeName}}"] = "{{table}}" }),
                 PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
                 {
 {{#propertyMappings}}
@@ -108,8 +108,8 @@ public sealed class {{typeName}}Repository : CRUDRepository<{{#view}}Backend.Typ
 {{#dialects}}
             .Add("{{engine}}", new()
             {
-                Entity = "{{entity}}",
-                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{entity}}"] = "{{table}}" }),
+                Entity = "{{typeName}}",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["{{typeName}}"] = "{{table}}" }),
                 PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
                 {
 {{#propertyMappings}}

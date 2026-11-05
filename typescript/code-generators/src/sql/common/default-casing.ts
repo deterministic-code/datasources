@@ -1,4 +1,5 @@
 import {
+  CreateTableStatement,
   KeywordCasing,
   StatementNaming,
   type Casing,
@@ -64,10 +65,6 @@ export const createCasing = (
   settings: Record<string, string>,
 ): PackCasing => {
   const naming = createDatasourceNaming(settings);
-  const alwaysPlural = createDatasourceNaming({
-    ...settings,
-    "datasource.pluralize_datatable_names": "true",
-  });
   const casing = createCasingStrategy("sql", settings, {
     prefix: DATASOURCE_CASING,
   });
@@ -82,14 +79,24 @@ export const createCasing = (
     "upper",
   ) as UpperLower;
   const types = identifier(settings, `${DATASOURCE_CASING}.types`);
-  const strategy = new StatementNaming({
+  const namingOptions = {
     tableNameCasing: types,
     fieldNameCasing: identifier(settings, `${DATASOURCE_CASING}.fields`),
     constraintNameCasing: types,
     triggerNameCasing: types,
     keywordCasing: keywords === "lower" ? KeywordCasing.Lower : KeywordCasing.Upper,
+    objects: (objects === "upper" || objects === "lower" ? objects : "preserve") as
+      | "preserve"
+      | "upper"
+      | "lower",
+  };
+  const strategy = new StatementNaming({
+    ...namingOptions,
     pluralizeTables: settings["datasource.pluralize_datatable_names"] !== "false",
-    objects: objects === "upper" || objects === "lower" ? objects : "preserve",
+  });
+  const alwaysPlural = new StatementNaming({
+    ...namingOptions,
+    pluralizeTables: true,
   });
   const objectIdent = (stem: string, converted: string): string =>
     naming.isVerbatim(stem) ? converted : strategy.letter(converted);
@@ -102,7 +109,7 @@ export const createCasing = (
     convertDirectories: (text) => casing.convertDirectories(text),
     isVerbatim: naming.isVerbatim,
     pluralTableName: (entity) =>
-      objectIdent(entity, alwaysPlural.resolveTable(entity)),
+      objectIdent(entity, CreateTableStatement.tableName(entity, alwaysPlural)),
     pluralStem: (entity) => alwaysPlural.physicalStem(entity),
     routineName: (stem) => objectIdent(stem, naming.tableName(stem)),
     fileBase,

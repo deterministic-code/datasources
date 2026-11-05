@@ -464,4 +464,23 @@ describe("createCasing tableName pluralize", () => {
     assert.equal(casing.tableName("users"), "users");
     assert.equal(casing.tableName(""), "");
   });
+
+  it("uses the same converter stem for tables and routines", () => {
+    const on = createCasing({});
+    const off = createCasing({ "datasource.pluralize_datatable_names": "false" });
+    assert.equal(on.tableName("contact"), "contacts");
+    assert.equal(on.pluralStem("contact"), "contacts");
+    assert.equal(on.pluralTableName("contact"), "contacts");
+    assert.equal(on.routineName(`create_${on.pluralStem("contact")}`), "create_contacts");
+    assert.equal(off.tableName("contact"), "contact");
+    assert.equal(off.pluralStem("contact"), "contacts");
+    assert.equal(off.pluralTableName("contact"), "contacts");
+    assert.equal(off.routineName(`create_${off.pluralStem("contact")}`), "create_contacts");
+    assert.equal(on.tableName("leaf"), "leafs");
+    assert.equal(on.pluralStem("leaf"), "leafs");
+    assert.equal(on.routineName(`create_${on.pluralStem("leaf")}`), "create_leafs");
+    assert.equal(on.tableName("status"), "statuses");
+    assert.equal(on.pluralStem("status"), "statuses");
+    assert.equal(on.routineName(`create_${on.pluralStem("status")}`), "create_statuses");
+  });
 });

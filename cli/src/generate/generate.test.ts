@@ -620,6 +620,60 @@ types:
     expect(store.files[join(cwd, "generated/repositories/contactsRepository.ts")]).toBeUndefined();
   });
 
+  it("uses one repository name and singular entities", async () => {
+    const csharp = await deterministic.generateRepositories(request("csharp"));
+    expect(textOf(csharp, "AddressTypesRepository.cs")).toContain("public sealed class AddressTypesRepository");
+    expect(textOf(csharp, "AddressTypesRepository.cs")).not.toContain("class AddressTypeRepository ");
+    expect(textOf(csharp, "AddressesRepository.cs")).toContain("AddressTypesRepository");
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - categories:
+      tags: [datasource_type, view_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - user:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - users:
+      tags: [view_type]
+      inherits: user
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+    };
+    const named = (dialect: Dialect, settings: Record<string, string> = { "backend.datasources": "sqlite" }) => ({
+      dialect,
+      reader: memoryReader(files),
+      settings,
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    const typescript = await deterministic.generateTypes(named("typescript"));
+    expect(textOf(typescript, "types/datasource/category.ts")).toContain("Category");
+    expect(textOf(typescript, "types/view/category.ts")).toContain("Category");
+    expect(textOf(typescript, "types/datasource/user.ts")).toContain("User");
+    expect(textOf(typescript, "types/view/user.ts")).toContain("User");
+    expect(typescript.some((entry) => entry.filename.endsWith("categories.ts"))).toBe(false);
+    expect(typescript.some((entry) => entry.filename.endsWith("users.ts"))).toBe(false);
+    const repos = await deterministic.generateRepositories(named("csharp"));
+    expect(textOf(repos, "CategoriesRepository.cs")).toContain("public sealed class CategoriesRepository");
+    expect(textOf(repos, "CategoriesRepository.cs")).toContain("CRUDRepository<Backend.Types.View.Category>");
+    const singularTables = await deterministic.generateRepositories(
+      request("csharp", { "backend.datasources": "sqlite", "datasource.pluralize_datatable_names": "false" }),
+    );
+    expect(textOf(singularTables, "AddressTypesRepository.cs")).toContain("public sealed class AddressTypesRepository");
+    expect(textOf(singularTables, "AddressTypesRepository.cs")).toMatch(/\["AddressType"\] = "address_type"/);
+  });
+
   it("cases child fields from settings", async () => {
     const csharp = await deterministic.generateRepositories(request("csharp", {
       "backend.datasources": "sqlite",
@@ -726,7 +780,7 @@ types:
       ),
     ).toBe(0);
     expect(store.files[join(cwd, "src/generated.rs")]).toBe(
-      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\npub use generated_mod::Repositories;\n`,
+      `#[path = "../generated/mod.rs"]\nmod generated_mod;\npub use generated_mod::*;\n`,
     );
     expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
     expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();
@@ -1439,5 +1493,90 @@ types:
     expect(await exec(["migrations", "create", "--cwd", cwd, "--stored-procedures"], deps(create.fs), cwd)).toBe(0);
     expect(create.files[join(cwd, "sql/sqlite/migrations/0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
     expect(Object.keys(create.files).some((path) => path.includes("stored_procedures"))).toBe(false);
+  });
+
+  it("keeps type, repo, bind, and table stems on one owner", async () => {
+    const entity = (name: string) => `  - ${name}:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+`;
+    const filesOf = (names: string[]) => ({
+      "types.yaml": `version: 1.0.0\ntypes:\n${names.map(entity).join("")}`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+    });
+    const named = (
+      dialect: Dialect,
+      files: Record<string, string>,
+      settings: Record<string, string> = {},
+    ) => ({
+      dialect,
+      reader: memoryReader(files),
+      settings: { "backend.datasources": "sqlite", ...settings },
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    const dialects = ["csharp", "typescript", "rust"] as const;
+    const contact = filesOf(["contact"]);
+    for (const dialect of dialects) {
+      const types = await deterministic.generateTypes(named(dialect, contact));
+      const repos = await deterministic.generateRepositories(named(dialect, contact));
+      const sql = (await deterministic.generateDatasource(named(dialect, contact)))
+        .map((entry) => entry.contents ?? "")
+        .join("\n");
+      expect(types.some((entry) => /contact\.(ts|cs|rs)$/i.test(entry.filename))).toBe(true);
+      expect(repos.some((entry) => /ContactsRepository\.(cs)$/i.test(entry.filename) || /contactsRepository\.(ts|rs)$/.test(entry.filename))).toBe(true);
+      expect(repos.some((entry) => /ContactRepository\.(cs)$/i.test(entry.filename) || /contactRepository\.(ts|rs)$/.test(entry.filename))).toBe(false);
+      expect(sql).toMatch(/CREATE TABLE "contacts"/);
+      if (dialect === "csharp") {
+        expect(textOf(repos, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
+        expect(textOf(repos, "ContactsRepository.cs")).toContain('["Contact"] = "contacts"');
+      }
+      if (dialect === "typescript") {
+        expect(textOf(repos, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
+        expect(textOf(repos, "contactsRepository.ts")).toContain('["Contact", "contacts"]');
+        expect(textOf(repos, "repositoryRegistry.ts")).toContain("export { contact }");
+      }
+      if (dialect === "rust") {
+        expect(textOf(repos, "repositoryRegistry.rs")).toContain("fn contacts(");
+        expect(textOf(repos, "contactsRepository.rs")).toContain('"contacts"');
+      }
+      const singular = await deterministic.generateRepositories(
+        named(dialect, contact, { "datasource.pluralize_datatable_names": "false" }),
+      );
+      const singularSql = (await deterministic.generateDatasource(
+        named(dialect, contact, { "datasource.pluralize_datatable_names": "false" }),
+      ))
+        .map((entry) => entry.contents ?? "")
+        .join("\n");
+      expect(singularSql).toMatch(/CREATE TABLE "contact"/);
+      expect(singular.some((entry) => /ContactsRepository\.(cs)$/i.test(entry.filename) || /contactsRepository\.(ts|rs)$/.test(entry.filename))).toBe(true);
+      if (dialect === "csharp") expect(textOf(singular, "RepositoryRegistry.cs")).toContain('"Contact", "Contacts"');
+      if (dialect === "typescript") expect(textOf(singular, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
+      if (dialect === "rust") expect(textOf(singular, "repositoryRegistry.rs")).toContain("fn contacts(");
+    }
+
+    const already = filesOf(["contacts"]);
+    for (const dialect of dialects) {
+      const types = await deterministic.generateTypes(named(dialect, already));
+      const repos = await deterministic.generateRepositories(named(dialect, already));
+      expect(textOf(types, dialect === "csharp" ? "Contact.cs" : dialect === "typescript" ? "contact.ts" : "contact.rs")).toMatch(/Contact/);
+      expect(repos.some((entry) => /ContactsRepository\.(cs)$/i.test(entry.filename) || /contactsRepository\.(ts|rs)$/.test(entry.filename))).toBe(true);
+      expect(repos.some((entry) => /ContactRepository\.(cs)$/i.test(entry.filename) || /contactRepository\.(ts|rs)$/.test(entry.filename))).toBe(false);
+    }
+
+    const irregular = filesOf(["leaf", "status"]);
+    const sql = (await deterministic.generateDatasource(named("typescript", irregular)))
+      .map((entry) => entry.contents ?? "")
+      .join("\n");
+    expect(sql).toMatch(/CREATE TABLE "leafs"/);
+    expect(sql).toMatch(/CREATE TABLE "statuses"/);
+    expect(sql).not.toMatch(/CREATE TABLE "leaves"/);
   });
 });

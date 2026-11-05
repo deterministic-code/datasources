@@ -8,7 +8,7 @@ export { {{name}} } from "{{path}}";
 
 export const register = (factory: RepositoryFactory): void => {
 {{#models}}
-  factory.register("{{entity}}", "{{plural}}", (connection) => new {{className}}(connection), (connection) => {{className}}.createReadonly(connection));
+  factory.register("{{typeName}}", "{{plural}}", (connection) => new {{className}}(connection), (connection) => {{className}}.createReadonly(connection));
 {{/models}}
 };
 RepositoryFactory.bind(register);

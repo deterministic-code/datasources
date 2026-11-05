@@ -8,9 +8,16 @@ describe("localRepo", () => {
   });
 
   it("walks from a nested consumer directory", () => {
-    expect(requireDatasourcesRepo(join(cliDatasourcesRepo, "samples/csharp/contacts-simple-cli"))).toBe(
-      cliDatasourcesRepo,
-    );
+    const previous = process.env.DATASOURCES_REPO;
+    delete process.env.DATASOURCES_REPO;
+    try {
+      expect(requireDatasourcesRepo(join(cliDatasourcesRepo, "samples/csharp/contacts-simple-cli"))).toBe(
+        cliDatasourcesRepo,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.DATASOURCES_REPO;
+      else process.env.DATASOURCES_REPO = previous;
+    }
   });
 
   it("uses DATASOURCES_REPO when it is this checkout", () => {

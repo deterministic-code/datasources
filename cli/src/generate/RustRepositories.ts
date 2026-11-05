@@ -47,7 +47,7 @@ class RustRepositories extends RepositoryGenerator {
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
     const dialects = dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
-      ...this.optionsOf({ entity: model.entity, ...planned }),
+      ...this.optionsOf({ typeName: model.typeName, ...planned }),
       schema: this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
     }));
     const token = model.optimisticConcurrency;
@@ -95,7 +95,6 @@ class RustRepositories extends RepositoryGenerator {
         entityType: this.isRustEnum(spec, model.specName) ? "datasources::Row" : model.typeName,
         className: this.repositoryClass(model.specName, casing),
         optimisticClass: optimisticClass(model.typeName),
-        entity: this.quote(model.entity),
         plural: this.bindName(model.specName, casing, "fields"),
         module: this.ident(this.repositoryFile(model.specName, casing)),
         repoFn: casing.convertFields(this.paths.repositoryStem(model.specName)),
@@ -139,7 +138,7 @@ class RustRepositories extends RepositoryGenerator {
   }
 
   private typeMod(casing: ICasingStrategy, name: string, kind: TypeKind): Record<string, unknown> {
-    const stem = casing.convertFileName(name);
+    const stem = casing.convertFileName(this.paths.typeStem(name));
     return { stem, ident: this.ident(stem), path: `${caseDirectories(this.paths.typesDir(kind), casing)}/${stem}.rs` };
   }
 }

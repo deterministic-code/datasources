@@ -7,7 +7,6 @@ const model = (optionsByProvider?: RepositoryModel["optionsByProvider"]): Reposi
   specName: "item",
   typeName: "Item",
   typeHome: "datasource",
-  entity: "Item",
   table: "items",
   propertyMappings: [],
   ids: ["Id"],

@@ -9,7 +9,7 @@ public static class {{registryClass}}
     public static void Register(RepositoryFactory factory)
     {
 {{#models}}
-        factory.Register("{{entity}}", "{{plural}}", connection => new {{typeName}}Repository(connection), connection => {{typeName}}Repository.CreateReadonly(connection));
+        factory.Register("{{typeName}}", "{{plural}}", connection => new {{className}}(connection), connection => {{className}}.CreateReadonly(connection));
 {{/models}}
     }
 }

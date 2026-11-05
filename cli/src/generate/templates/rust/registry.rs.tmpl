@@ -5,7 +5,7 @@ use datasources::{CRUDRepository, Datasource, ICRUDRepository, IReadonlyReposito
 pub fn register(factory: &RepositoryFactory) {
 {{#models}}
     factory.register_named(
-        "{{entity}}",
+        "{{typeName}}",
         "{{plural}}",
         |connection| {{#optimisticConcurrency}}Arc::new(super::{{module}}::{{optimisticClass}}::new(super::{{module}}::{{repoFn}}(connection).expect("repository"))) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}}{{^optimisticConcurrency}}Arc::new(super::{{module}}::{{repoFn}}(connection).expect("repository")) as Arc<dyn ICRUDRepository<{{entityType}}>>{{/optimisticConcurrency}},
         |connection| Arc::new(super::{{module}}::{{readonlyFn}}(connection).expect("repository")) as Arc<dyn IReadonlyRepository<{{entityType}}>>,

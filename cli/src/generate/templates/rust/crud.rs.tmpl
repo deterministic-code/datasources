@@ -1,8 +1,8 @@
 {{^builder}}
     let mut options = CRUDRepositoryOptions::default();
-    options.entity = "{{entity}}".into();
+    options.entity = "{{typeName}}".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("{{entity}}".into(), "{{table}}".into()),
+        ("{{typeName}}".into(), "{{table}}".into()),
     ])));
 {{#propertyMappings}}
 {{#first}}    options.property_mappings = Some(Arc::new(DictionaryMapper::new([
@@ -24,9 +24,9 @@
     let options = CRUDRepositoryBuilder::new()
     .add({
         let mut options = CRUDRepositoryOptions::default();
-        options.entity = "{{entity}}".into();
+        options.entity = "{{typeName}}".into();
         options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("{{entity}}".into(), "{{table}}".into()),
+            ("{{typeName}}".into(), "{{table}}".into()),
         ])));
 {{#propertyMappings}}
 {{#first}}        options.property_mappings = Some(Arc::new(DictionaryMapper::new([
@@ -48,9 +48,9 @@
 {{#dialects}}
     .add_for("{{engine}}", {
         let mut options = CRUDRepositoryOptions::default();
-        options.entity = "{{entity}}".into();
+        options.entity = "{{typeName}}".into();
         options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-            ("{{entity}}".into(), "{{table}}".into()),
+            ("{{typeName}}".into(), "{{table}}".into()),
         ])));
 {{#propertyMappings}}
 {{#first}}        options.property_mappings = Some(Arc::new(DictionaryMapper::new([

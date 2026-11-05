@@ -53,11 +53,11 @@ class TypeScriptRepositories extends RepositoryGenerator {
         path: `./${this.repositoryFile(model.specName, casing)}`,
       })),
       factories: models.map((model) => ({
-        name: casing.convertFields(model.specName),
+        name: casing.convertFields(this.paths.typeStem(model.specName)),
         path: this.typeImport(model, casing),
       })),
       models: models.map((model) => ({
-        entity: this.quote(model.entity),
+        typeName: this.quote(model.typeName),
         plural: this.quote(this.bindName(model.specName, casing, "fields")),
         pluralName: this.bindName(model.specName, casing, "fields"),
         className: this.repositoryClass(model.specName, casing),
@@ -67,7 +67,7 @@ class TypeScriptRepositories extends RepositoryGenerator {
 
   private typeImport(model: RepositoryModel, casing: ICasingStrategy): string {
     const kind: TypeKind = model.typeHome === "view" ? "view" : "datasource";
-    return `../${caseDirectories(this.paths.typesDir(kind), casing)}/${casing.convertFileName(model.specName)}`;
+    return `../${caseDirectories(this.paths.typesDir(kind), casing)}/${casing.convertFileName(this.paths.typeStem(model.specName))}`;
   }
 }
 

@@ -36,7 +36,6 @@ const model = (specName: string): RepositoryModel => ({
   specName,
   typeName: "Contact",
   typeHome: "view",
-  entity: "Contact",
   table: "contacts",
   propertyMappings: [],
   ids: ["id"],
