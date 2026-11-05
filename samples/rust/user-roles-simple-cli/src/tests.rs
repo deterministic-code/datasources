@@ -119,15 +119,15 @@ fn builds_schema() {
         .contains("CONSTRAINT pk_users PRIMARY KEY"));
     assert_eq!(
         user_table("sqlite"),
-        "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" TEXT, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" REAL, \"created\" TEXT, \"version\" BLOB)"
+        "CREATE TABLE \"user\" (\n    \"id\" INTEGER PRIMARY KEY,\n    \"uuid\" TEXT,\n    \"username\" TEXT,\n    \"is_enabled\" BOOLEAN,\n    \"balance\" NUMERIC,\n    \"location\" REAL,\n    \"created\" TEXT,\n    \"version\" BLOB\n)"
     );
     assert_eq!(
         user_table("mysql"),
-        "CREATE TABLE `user` (`id` INT PRIMARY KEY, `uuid` CHAR(36), `username` TEXT, `is_enabled` TINYINT, `balance` DECIMAL(18,4), `location` DOUBLE, `created` TEXT, `version` BLOB)"
+        "CREATE TABLE `user` (\n    id INT PRIMARY KEY,\n    uuid CHAR(36),\n    username TEXT,\n    is_enabled TINYINT,\n    balance DECIMAL(18,4),\n    location DOUBLE,\n    created TEXT,\n    version BLOB\n)"
     );
     assert_eq!(
         user_table("postgres"),
-        "CREATE TABLE \"user\" (\"id\" INTEGER PRIMARY KEY, \"uuid\" UUID, \"username\" TEXT, \"is_enabled\" BOOLEAN, \"balance\" NUMERIC, \"location\" DOUBLE PRECISION, \"created\" TIMESTAMPTZ, \"version\" BYTEA)"
+        "CREATE TABLE \"user\" (\n    \"id\" INTEGER PRIMARY KEY,\n    \"uuid\" UUID,\n    \"username\" TEXT,\n    \"is_enabled\" BOOLEAN,\n    \"balance\" NUMERIC,\n    \"location\" DOUBLE PRECISION,\n    \"created\" TIMESTAMPTZ,\n    \"version\" BYTEA\n)"
     );
     assert_eq!(program::map_name("name"), "ugly_name");
     assert_eq!(program::map_name("role_id"), "bad_role_id");

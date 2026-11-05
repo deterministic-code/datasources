@@ -57,7 +57,9 @@ describe("MysqlStatementRenderer", () => {
         { name: "uuid", type: "uuid", default: new ColumnDefault("(UUID())", "df_uuid"), notNull: new NotNull("nn_uuid") },
       ]),
     );
-    expect(sql).toBe("CREATE TABLE genders (uuid CHAR(36) DEFAULT (UUID()) NOT NULL)");
+    expect(sql).toBe(`CREATE TABLE genders (
+    uuid CHAR(36) DEFAULT (UUID()) NOT NULL
+)`);
     expect(sql).not.toContain("CONSTRAINT");
   });
 
@@ -66,10 +68,14 @@ describe("MysqlStatementRenderer", () => {
       { name: "id", type: "int", default: new ColumnDefault("0"), notNull: new NotNull(), identity: true },
     ]);
     expect(renderer.render(create)).toBe(
-      "CREATE TABLE users (id INT AUTO_INCREMENT DEFAULT 0 NOT NULL)",
+      `CREATE TABLE users (
+    id INT AUTO_INCREMENT DEFAULT 0 NOT NULL
+)`,
     );
     expect(DefaultStatementTextRenderer.instance.render(create)).toBe(
-      "CREATE TABLE users (id int DEFAULT 0 NOT NULL)",
+      `CREATE TABLE users (
+    id int DEFAULT 0 NOT NULL
+)`,
     );
   });
 

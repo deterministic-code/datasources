@@ -141,11 +141,11 @@ mod tests {
         let create = CreateTableStatement::new("users", &columns, &[]);
         assert_eq!(
             renderer().render(&create),
-            "CREATE TABLE \"users\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL)"
+            "CREATE TABLE \"users\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0 NOT NULL\n)"
         );
         assert_eq!(
             DefaultStatementTextRenderer::instance().render(&create),
-            "CREATE TABLE users (id int DEFAULT 0 NOT NULL)"
+            "CREATE TABLE users (\n    id int DEFAULT 0 NOT NULL\n)"
         );
 
         let keyed = CreateTableStatement::new(
@@ -155,7 +155,7 @@ mod tests {
         );
         assert_eq!(
             renderer().render(&keyed),
-            "CREATE TABLE \"users\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT)"
+            "CREATE TABLE \"users\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT\n)"
         );
     }
 

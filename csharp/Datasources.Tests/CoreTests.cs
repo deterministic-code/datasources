@@ -192,7 +192,12 @@ public class CoreTests
         Assert.Same(where, delete.Where);
         Assert.Equal("DELETE FROM users", DefaultStatementTextRenderer.Instance.Render(new DeleteStatement("users")));
         var createTable = new CreateTableStatement("users", [new Column("id", "INTEGER"), new Column("name", "TEXT")]);
-        Assert.Equal("CREATE TABLE users (id INTEGER, name TEXT)", DefaultStatementTextRenderer.Instance.Render(createTable));
+        Assert.Equal("""
+            CREATE TABLE users (
+                id INTEGER,
+                name TEXT
+            )
+            """, DefaultStatementTextRenderer.Instance.Render(createTable));
         Assert.Equal("CREATE TABLE replaced", new ReplacedRenderer().Render(createTable));
         var namedTable = new CreateTableStatement(
             "orders",
@@ -209,25 +214,56 @@ public class CoreTests
                 new CheckConstraint("chk_orders_qty", "qty > 0")
             ]);
         Assert.Equal(
-            "CREATE TABLE orders (id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL, tenant_id INTEGER, user_id INTEGER, qty INTEGER, CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id), CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE, CONSTRAINT uq_orders_user UNIQUE (user_id), CONSTRAINT chk_orders_qty CHECK (qty > 0))",
+            """
+            CREATE TABLE orders (
+                id INTEGER CONSTRAINT df_id DEFAULT 0 CONSTRAINT nn_id NOT NULL,
+                tenant_id INTEGER,
+                user_id INTEGER,
+                qty INTEGER,
+                CONSTRAINT pk_orders PRIMARY KEY (id, tenant_id),
+                CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT uq_orders_user UNIQUE (user_id),
+                CONSTRAINT chk_orders_qty CHECK (qty > 0)
+            )
+            """,
             DefaultStatementTextRenderer.Instance.Render(namedTable));
         Assert.Equal(
-            "CREATE TABLE items (id INTEGER DEFAULT 0, name TEXT NOT NULL, CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id))",
+            """
+            CREATE TABLE items (
+                id INTEGER DEFAULT 0,
+                name TEXT NOT NULL,
+                CONSTRAINT fk_items_user FOREIGN KEY (id) REFERENCES users (id)
+            )
+            """,
             DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "items",
                 [new Column("id", "INTEGER", new ColumnDefault("0")), new Column("name", "TEXT", NotNull: new NotNull())],
                 [new ForeignKey("fk_items_user", ["id"], "users", ["id"])])));
         Assert.Equal(
-            "CREATE TABLE users (id INTEGER)",
+            """
+            CREATE TABLE users (
+                id INTEGER
+            )
+            """,
             DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement("users", [new Column("id", "INTEGER")], [])));
         Assert.Equal(
-            "CREATE TABLE t (id INTEGER, CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT)",
+            """
+            CREATE TABLE t (
+                id INTEGER,
+                CONSTRAINT fk_set_null FOREIGN KEY (id) REFERENCES u (id) ON DELETE SET NULL ON UPDATE SET DEFAULT
+            )
+            """,
             DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "t",
                 [new Column("id", "INTEGER")],
                 [new ForeignKey("fk_set_null", ["id"], "u", ["id"], ReferentialAction.SetNull, ReferentialAction.SetDefault)])));
         Assert.Equal(
-            "CREATE TABLE t (id INTEGER, CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION)",
+            """
+            CREATE TABLE t (
+                id INTEGER,
+                CONSTRAINT fk_restrict FOREIGN KEY (id) REFERENCES u (id) ON DELETE RESTRICT ON UPDATE NO ACTION
+            )
+            """,
             DefaultStatementTextRenderer.Instance.Render(new CreateTableStatement(
                 "t",
                 [new Column("id", "INTEGER")],

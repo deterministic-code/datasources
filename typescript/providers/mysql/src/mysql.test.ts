@@ -106,7 +106,9 @@ describe("MysqlConnection", () => {
       .toMatchObject({ rowsAffected: 2, result: null });
     expect(await command.executeStatement(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])))
       .toMatchObject({ rowsAffected: 2 });
-    expect(client.queries.at(-1)?.sql).toBe("CREATE TABLE users (id INTEGER)");
+    expect(client.queries.at(-1)?.sql).toBe(`CREATE TABLE users (
+    id INTEGER
+)`);
     client.arrayResult = true;
     expect(await (await command.executeReaderNative(new Native("SELECT 1"))).next()).toBe(true);
     expect(await command.executeNative(new Native("   "))).toEqual({ result: undefined, rowsAffected: 0, parameters: undefined });
@@ -129,7 +131,9 @@ describe("MysqlConnection", () => {
       "SET SESSION sql_mode = CONCAT(@@sql_mode, ',ANSI_QUOTES')",
       "SET time_zone = '+00:00'",
       "INSERT INTO items (id) VALUES (:id)",
-      "CREATE TABLE users (id INTEGER)",
+      `CREATE TABLE users (
+    id INTEGER
+)`,
       "SELECT 1",
       "SELECT * FROM items",
       "SET TRANSACTION ISOLATION LEVEL READ COMMITTED",

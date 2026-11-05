@@ -2,8 +2,13 @@ namespace Datasources;
 
 public class CreateTableStatementTextRenderer
 {
-    public virtual string Render(CreateTableStatement statement) =>
-        $"CREATE TABLE {Quote(statement.Table)} ({string.Join(", ", Parts(statement))}){Suffix()}";
+    public virtual string Render(CreateTableStatement statement)
+    {
+        var parts = Parts(statement).ToList();
+        return parts.Count == 0
+            ? $"CREATE TABLE {Quote(statement.Table)} (){Suffix()}"
+            : $"CREATE TABLE {Quote(statement.Table)} (\n{string.Join(",\n", parts.Select(part => $"    {part}"))}\n){Suffix()}";
+    }
 
     protected virtual string Quote(string name) => name;
 

@@ -278,7 +278,7 @@ mod tests {
         let sql = renderer().render(&create);
         assert_eq!(
             sql,
-            "CREATE TABLE genders (uuid CHAR(36) DEFAULT (UUID()) NOT NULL)"
+            "CREATE TABLE genders (\n    uuid CHAR(36) DEFAULT (UUID()) NOT NULL\n)"
         );
         assert!(!sql.contains("CONSTRAINT"));
     }
@@ -295,11 +295,11 @@ mod tests {
         );
         assert_eq!(
             renderer().render(&create),
-            "CREATE TABLE users (id INT AUTO_INCREMENT DEFAULT 0 NOT NULL)"
+            "CREATE TABLE users (\n    id INT AUTO_INCREMENT DEFAULT 0 NOT NULL\n)"
         );
         assert_eq!(
             DefaultStatementTextRenderer::instance().render(&create),
-            "CREATE TABLE users (id int DEFAULT 0 NOT NULL)"
+            "CREATE TABLE users (\n    id int DEFAULT 0 NOT NULL\n)"
         );
     }
 

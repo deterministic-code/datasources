@@ -22,10 +22,14 @@ describe("SqlServerStatementRenderer", () => {
   it("renders create, alter, trigger, identity insert, and drop statements", () => {
     expect(
       renderer.render(new CreateTableStatement("users", [{ name: "id", type: "INTEGER", identity: true }])),
-    ).toBe("CREATE TABLE users (id INTEGER IDENTITY(1,1))");
+    ).toBe(`CREATE TABLE users (
+    id INTEGER IDENTITY(1,1)
+)`);
     expect(
       renderer.render(new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }])),
-    ).toBe("CREATE TABLE users (id INTEGER)");
+    ).toBe(`CREATE TABLE users (
+    id INTEGER
+)`);
     expect(
       renderer.render(
         new AlterTableStatement("users", { kind: "renameColumn", from: "old", to: "new" }),

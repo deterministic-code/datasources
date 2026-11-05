@@ -788,7 +788,7 @@ Construct the predicate with [Operator](expressions.md#operator) records, then w
 
 ### Compare, groups, not, and in
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L270-L279)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L286-L295)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -831,7 +831,7 @@ id = $id AND age > $age
 id IN ($id_0, $id_1)
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L305-L312)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L317-L324)
 
 ```typescript
 const where = new Where(
@@ -902,7 +902,7 @@ username = $username
 username = $username AND is_enabled = $is_enabled
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L430-L447)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/builders/builders.test.ts#L455-L472)
 
 ```typescript
 const equals = new Where("username", eq, "grace");
@@ -929,7 +929,7 @@ username = $username AND is_enabled = $is_enabled
 
 ### Attach to a query
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L290-L298)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/StatementCompileTests.cs#L306-L314)
 
 ```csharp
 var where = new Where(new Operator.And(
@@ -963,7 +963,7 @@ let query = SelectStatement::new(SelectStatementOptions {
 SELECT id, name FROM users WHERE id = $id AND age > $age
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L470-L478)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/statements/StatementCompile.test.ts#L482-L490)
 
 ```typescript
 const where = new Where(
