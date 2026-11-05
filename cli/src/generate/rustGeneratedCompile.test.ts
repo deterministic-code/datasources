@@ -203,7 +203,7 @@ describe("generated rust compiles", () => {
 
   it("plain", async () => {
     const texts = await generate(yaml(entity("contact", idName())));
-    expect(textOf(texts, "contactsRepository.rs")).not.toContain("pub struct ContactsRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("pub struct ContactsRepository");
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
   });
 

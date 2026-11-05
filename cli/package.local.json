@@ -1,0 +1,38 @@
+{
+  "name": "@deterministic-code/datasources-cli",
+  "version": "0.1.8",
+  "type": "module",
+  "bin": {
+    "datasources": "./bin/datasources.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "cli": "tsx src/main.ts",
+    "setup": "tsx src/main.ts setup",
+    "prepare": "node scripts/build-generators.mjs",
+    "test": "npm run build --prefix ../typescript/datasources && npm run build --prefix ../typescript/providers/sqlite && node scripts/build-generators.mjs && vitest run --coverage",
+    "typecheck": "npm run build --prefix ../typescript/datasources && npm run build --prefix ../typescript/providers/sqlite && node scripts/build-generators.mjs && tsc --noEmit"
+  },
+  "dependencies": {
+    "@deterministic-code/csharp-generators": "file:../../generators-csharp",
+    "@deterministic-code/datasources": "file:../typescript/datasources",
+    "@deterministic-code/datasources-code-generators": "file:../typescript/code-generators",
+    "@deterministic-code/deterministic-generators-common": "file:../../deterministic-generators-common",
+    "@deterministic-code/generators-common": "file:../../generators-common",
+    "@deterministic-code/rust-generators": "file:../../generators-rust",
+    "@deterministic-code/typescript-generators": "file:../../generators-typescript",
+    "@inquirer/prompts": "^7.8.0",
+    "tsx": "^4.20.5",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@deterministic-code/datasources-sqlite": "file:../typescript/providers/sqlite",
+    "@types/node": "^22.15.3",
+    "@vitest/coverage-v8": "^3.1.2",
+    "esbuild": "^0.25.12",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}
