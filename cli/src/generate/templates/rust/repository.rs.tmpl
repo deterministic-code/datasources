@@ -129,12 +129,20 @@ impl IReadonlyRepository<{{entityType}}> for {{optimisticClass}} {
         Some(self)
     }
 
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<{{entityType}}>> {
-        self.repo.read_single(query).await
+    async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<{{entityType}}>> {
+        self.repo.read_single(query, options).await
     }
 
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
-        self.repo.read(query)
+    fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
+        self.repo.read(query, options)
     }
 }
 

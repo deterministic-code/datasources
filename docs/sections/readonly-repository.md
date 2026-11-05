@@ -177,6 +177,14 @@ SELECT column names. When omitted, public fields of `type` are used.
 readColumns?: string[]
 ```
 
+##### enrichment
+
+Per-call [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [addEnriched](./i-enriched.md) stay on the repository. The constructor ignores this property.
+
+```typescript
+enrichment?: IReadonlyEnrichmentStrategy<T & object>
+```
+
 #### IRepositoryTree
 
 ```typescript
@@ -424,6 +432,14 @@ SELECT column names. When omitted, public properties of `T` are used.
 IReadOnlyList<string>? ReadColumns { get; init; }
 ```
 
+##### Enrichment
+
+Per-call [IReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [AddEnriched](./i-enriched.md) stay on the repository. The constructor ignores this property.
+
+```csharp
+IReadonlyEnrichmentStrategy<T>? Enrichment { get; init; }
+```
+
 #### IRepositoryTree
 
 ```csharp
@@ -489,29 +505,31 @@ pub trait IReadonlyRepository: IRepository
 
 **Methods**
 
-##### read_single(query)
+##### read_single(query, options)
 
 Returns the first row, or `None` when the result is empty.
 
 ```rust
-async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>>
+async fn read_single(&self, query: &dyn ReadInput, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
 ```
 
-- `query` — optional query, where, or stored procedure; omitted uses the default select
+- `query` — query, where, or stored procedure
+- `options` — optional [ReadonlyRepositoryMappingOptions](#readonlyrepositorymappingoptions); omitted mapping uses the repository constructor
 
 **Returns** `Result<Option<Row>>`
 
-##### read(query)
+##### read(query, options)
 
 Returns every row.
 
 ```rust
-async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
+fn read<'a>(&'a self, query: &'a dyn ReadInput, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
 ```
 
-- `query` — optional query, where, or stored procedure; omitted uses the default select
+- `query` — query, where, or stored procedure
+- `options` — optional [ReadonlyRepositoryMappingOptions](#readonlyrepositorymappingoptions); omitted mapping uses the repository constructor
 
-**Returns** `Result<Vec<Row>>`
+**Returns** stream of `Result<Row>`
 
 #### ReadonlyRepository
 
@@ -602,6 +620,14 @@ Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`
 
 ```rust
 pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>
+```
+
+##### enrichment
+
+Per-call [ReadonlyEnrichmentStrategy](./i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [add_enriched](./i-enriched.md) stay on the repository. The constructor ignores this field.
+
+```rust
+pub enrichment: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, Row>>>
 ```
 
 #### RepositoryTree
@@ -1101,7 +1127,7 @@ The repository type is `UsersView`. The select reads `User`, joined to `UserType
 
 ### Read with where clause and custom flat to nested custom object mapping options
 
-The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](./readonly-repository.md#propertymappings) stay in effect when a later read passes only an [EntityMapper](./repository.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](./nested-to-object-enrichment-strategy.md) collapses flat join rows using a [TypeMap](./flat-to-nested-mapper.md#typemap).
+The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](./readonly-repository.md#propertymappings) stay in effect when a later read passes only an [EntityMapper](./repository.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](./nested-to-object-enrichment-strategy.md) is the [Enrichment](#enrichment) on that call's mapping options and collapses flat join rows using a [TypeMap](./flat-to-nested-mapper.md#typemap).
 
 ::: example
 ```csharp csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptions

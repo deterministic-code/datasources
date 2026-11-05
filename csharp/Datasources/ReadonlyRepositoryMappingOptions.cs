@@ -10,4 +10,5 @@ public record ReadonlyRepositoryMappingOptions<T>
     public IReadOnlyDictionary<string, TypeConverter<Value, Value>>? RowTypeConverters { get; init; }
     public IReadOnlyList<string>? ReadProperties { get; init; }
     public Schema? Schema { get; init; }
+    public IReadonlyEnrichmentStrategy<T>? Enrichment { get; init; }
 }

@@ -178,6 +178,7 @@ type ReadonlyRepositoryMappingOptions<T = Cells>
 | type | Item constructor. Supplies the default entity name and column list. |
 | rowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
 | readColumns | SELECT column names. When omitted, public fields of `type` are used. |
+| enrichment | Per-call [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [addEnriched](enrichment.md) stay on the repository. The constructor ignores this property. |
 
 #### IRepositoryTree {#typescript-irepositorytree}
 
@@ -409,6 +410,7 @@ public class ReadonlyRepositoryMappingOptions<T> where T : new()
 | ObjectConverter | `Row` to `T`, after `RowConverter`. Omitted assigns public properties. A handwritten converter assigns each column and does not reflect. |
 | RowTypeConverters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`. The driver applies its converters when it binds a parameter. A field converter on the object converter reverse-converts that property in the repository. |
 | ReadColumns | SELECT column names. When omitted, public properties of `T` are used. |
+| Enrichment | Per-call [IReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [AddEnriched](enrichment.md) stay on the repository. The constructor ignores this property. |
 
 #### IRepositoryTree {#csharp-irepositorytree}
 
@@ -449,48 +451,50 @@ pub trait IReadonlyRepository: IRepository
 
 | Name | Description |
 | --- | --- |
-| [read_single(query)](#rust-ireadonlyrepository-read_single-query) | Returns the first row, or `None` when the result is empty. |
-| [read(query)](#rust-ireadonlyrepository-read-query) | Returns every row. |
+| [read_single(query, options)](#rust-ireadonlyrepository-read_single-query-options) | Returns the first row, or `None` when the result is empty. |
+| [read(query, options)](#rust-ireadonlyrepository-read-query-options) | Returns every row. |
 
-##### read_single(query) {#rust-ireadonlyrepository-read_single-query}
+##### read_single(query, options) {#rust-ireadonlyrepository-read_single-query-options}
 
 Returns the first row, or `None` when the result is empty.
 
 **Definition**
 
 ```rust
-async fn read_single(&self, query: Option<&dyn ReadInput>) -> Result<Option<Row>>
+async fn read_single(&self, query: &dyn ReadInput, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
+| `query` | query, where, or stored procedure |
+| `options` | optional [ReadonlyRepositoryMappingOptions](#rust-readonlyrepositorymappingoptions); omitted mapping uses the repository constructor |
 
 **Returns**
 
 `Result<Option<Row>>`
 
-##### read(query) {#rust-ireadonlyrepository-read-query}
+##### read(query, options) {#rust-ireadonlyrepository-read-query-options}
 
 Returns every row.
 
 **Definition**
 
 ```rust
-async fn read(&self, query: Option<&dyn ReadInput>) -> Result<Vec<Row>>
+fn read<'a>(&'a self, query: &'a dyn ReadInput, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | optional query, where, or stored procedure; omitted uses the default select |
+| `query` | query, where, or stored procedure |
+| `options` | optional [ReadonlyRepositoryMappingOptions](#rust-readonlyrepositorymappingoptions); omitted mapping uses the repository constructor |
 
 **Returns**
 
-`Result<Vec<Row>>`
+stream of `Result<Row>`
 
 #### ReadonlyRepository {#rust-readonlyrepository}
 
@@ -562,6 +566,7 @@ pub struct ReadonlyRepositoryMappingOptions
 | row_converter | `Row` to `Row` cell step. `None` leaves each cell unchanged. The object step is [MetaDataRowTypeConverter](type-converters.md). |
 | object_converter | `Row` to `Row`, after `row_converter`. Omitted copies every cell. A handwritten converter assigns each column. |
 | row_type_converters | Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository. |
+| enrichment | Per-call [ReadonlyEnrichmentStrategy](docs/sections/i-readonly-enrichment-strategy.md). When set, that read collects rows and runs only this strategy. Fills from [add_enriched](enrichment.md) stay on the repository. The constructor ignores this field. |
 
 #### RepositoryTree {#rust-repositorytree}
 
@@ -705,12 +710,12 @@ options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(&Where::binary("Id", eq, 1_i64))
+    .read_single(&Where::binary("Id", eq, 1_i64), None)
     .await
     .unwrap()
     .unwrap();
 let row = repo
-    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64))
+    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
     .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
@@ -878,7 +883,7 @@ options.property_mappings = Some(std::sync::Arc::new(snake()));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
 let user = users_repo
-    .read_single(&Where::binary("Id", eq, 1_i64))
+    .read_single(&Where::binary("Id", eq, 1_i64), None)
     .await
     .unwrap()
     .unwrap();
@@ -1054,7 +1059,7 @@ users_repo.add_enriched(
     None,
 );
 let account = users_repo
-    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
     .await
     .unwrap()
     .unwrap();
@@ -1234,16 +1239,16 @@ options.schema = Schema::new(HashMap::from([
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
-    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
     .await
     .unwrap()
     .unwrap();
 let by_login = repo
-    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true))
+    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true), None)
     .try_collect::<Vec<_>>().await
     .unwrap();
 let later = repo
-    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened))
+    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened), None)
     .try_collect::<Vec<_>>().await
     .unwrap();
 ```
@@ -1707,7 +1712,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(&joined).try_collect::<Vec<_>>().await.unwrap();
+let items = users_repo.read(&joined, None).try_collect::<Vec<_>>().await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -1862,9 +1867,9 @@ CREATE TABLE user_roles (user_id uuid NOT NULL, role_id int NOT NULL, name strin
 
 ### Read with where clause and custom flat to nested custom object mapping options
 
-The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](#propertymappings) stay in effect when a later read passes only an [EntityMapper](repositories.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](docs/sections/nested-to-object-enrichment-strategy.md) collapses flat join rows using a [TypeMap](mappings.md#typemap).
+The repository reads `Parent` with nested `Children`. Constructor [PropertyMappings](#propertymappings) stay in effect when a later read passes only an [EntityMapper](repositories.md#entitymapper) override. A normal lookup enrichment read runs first; the join read then maps entity names per call. The join select names entity types (`Parent`, `Child`). [NestedToObjectEnrichmentStrategy](docs/sections/nested-to-object-enrichment-strategy.md) is the [Enrichment](#enrichment) on that call's mapping options and collapses flat join rows using a [TypeMap](mappings.md#typemap).
 
-#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L46-L108)
+#### C# [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/csharp/Datasources.Tests/ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests.cs#L46-L107)
 
 ```csharp
 var connection = await Setup();
@@ -1881,28 +1886,6 @@ var mockConnection = new MockConnection { Provider = "memory" };
 var command = new MockCommand(mockConnection);
 mockConnection.Command = command;
 var joinRepo = ParentsRepo(mockConnection);
-joinRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
-joinRepo.AddEnriched(
-    new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
-    joinRepo,
-    new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
-    {
-        Key = "Id",
-        Fields = new Dictionary<string, TypeMapField>
-        {
-            ["Id"] = "Id",
-            ["TypeName"] = "TypeName",
-            ["Children"] = new TypeMapGroup
-            {
-                Key = "ChildId",
-                Fields = new Dictionary<string, TypeMapField>
-                {
-                    ["Id"] = "ChildId",
-                    ["Label"] = "Label",
-                },
-            },
-        },
-    }));
 var join = new SelectStatement(new()
 {
     Table = "Parent",
@@ -1920,7 +1903,28 @@ command.Reader = new MockReader<Row>([row1, row2]);
 var items = await joinRepo.Read(
     join,
     null,
-    new ReadonlyRepositoryMappingOptions<Parent> { EntityMapper = JoinEntity }).ToListAsync();
+    new ReadonlyRepositoryMappingOptions<Parent>
+    {
+        EntityMapper = JoinEntity,
+        Enrichment = new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+        {
+            Key = "Id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["Id"] = "Id",
+                ["TypeName"] = "TypeName",
+                ["Children"] = new TypeMapGroup
+                {
+                    Key = "ChildId",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["Id"] = "ChildId",
+                        ["Label"] = "Label",
+                    },
+                },
+            },
+        }),
+    }).ToListAsync();
 ```
 
 **Parent from join**
@@ -1938,7 +1942,7 @@ var items = await joinRepo.Read(
 ]
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L173)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/tests/read_with_where_clause_and_custom_flat_to_nested_object_mapping_options.rs#L61-L149)
 
 ```rust
 let connection = MemoryDriver.connection(None);
@@ -1959,7 +1963,7 @@ parents.add_enriched(
 );
 let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
 parents.create(parent).await.unwrap();
-let enriched = parents.read_single(&()).await.unwrap();
+let enriched = parents.read_single(&(), None).await.unwrap();
 
 let command = Arc::new(MockCommand::new());
 command.reader_rows.lock().unwrap().extend([
@@ -1976,51 +1980,10 @@ command.reader_rows.lock().unwrap().extend([
         ("Label", Value::from("b")),
     ]),
 ]);
-let mut join_repo = parents_repo(MockConnection::with_command_provider(
+let join_repo = parents_repo(MockConnection::with_command_provider(
     command,
     "memory",
 ));
-join_repo.add_enriched(
-    Enrichment::new(
-        "TypeName",
-        "Type",
-        "Id",
-        Some("Name".into()),
-        EnrichmentPropertyType::Object,
-    ),
-    as_readonly(types),
-    None,
-);
-join_repo.add_enriched(
-    Enrichment::new(
-        "Children",
-        "Id",
-        "ParentId",
-        None,
-        EnrichmentPropertyType::List,
-    ),
-    Arc::new(CRUDRepository::<Row>::new(
-        Arc::new(StubConnection::new("memory")),
-        CRUDRepositoryOptions::default(),
-    ).unwrap()),
-    Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
-        "Id",
-        vec![
-            ("Id".into(), TypeMapField::column("Id")),
-            ("TypeName".into(), TypeMapField::column("TypeName")),
-            (
-                "Children".into(),
-                TypeMapField::Group(TypeMapGroup::new(
-                    "ChildId",
-                    vec![
-                        ("Id".into(), TypeMapField::column("ChildId")),
-                        ("Label".into(), TypeMapField::column("Label")),
-                    ],
-                )),
-            ),
-        ],
-    )))),
-);
 let where_clause = Where::new(Operator::equals("Parent.Id", Value::Int(1)));
 let join = SelectStatement::new(SelectStatementOptions {
     joins: &[Join::left("Child", "Parent.Id", "Child.ParentId")],
@@ -2037,8 +2000,25 @@ let join = SelectStatement::new(SelectStatementOptions {
 });
 let mut options = ReadonlyRepositoryMappingOptions::default();
 options.entity_mapper = Some(Arc::new(join_entity()));
+options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
+    "Id",
+    vec![
+        ("Id".into(), TypeMapField::column("Id")),
+        ("TypeName".into(), TypeMapField::column("TypeName")),
+        (
+            "Children".into(),
+            TypeMapField::Group(TypeMapGroup::new(
+                "ChildId",
+                vec![
+                    ("Id".into(), TypeMapField::column("ChildId")),
+                    ("Label".into(), TypeMapField::column("Label")),
+                ],
+            )),
+        ),
+    ],
+))));
 let items = join_repo
-    .read(&join)
+    .read(&join, Some(&options))
     .try_collect::<Vec<_>>().await
     .unwrap();
 ```
@@ -2058,7 +2038,7 @@ let items = join_repo
 ]
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions.test.ts#L18-L125)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions.test.ts#L18-L119)
 
 ```typescript
 class UserType {
@@ -2128,25 +2108,6 @@ const mockConnection = new MockConnection({ provider: "memory" });
 const command = new MockCommand(mockConnection);
 mockConnection.command = command;
 const joinParents = parentsRepo(mockConnection);
-joinParents.addEnriched(
-  { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
-  types,
-);
-joinParents.addEnriched(
-  { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
-  joinParents,
-  new NestedToObjectEnrichmentStrategy<Parent>({
-    key: "Id",
-    fields: {
-      Id: "Id",
-      TypeName: "TypeName",
-      Children: {
-        key: "ChildId",
-        fields: { Id: "ChildId", Label: "Label" },
-      },
-    },
-  }),
-);
 const join = new SelectStatement({
   table: "Parent",
   fields: [
@@ -2160,7 +2121,20 @@ const join = new SelectStatement({
 });
 command.reader = new MockReader([row1, row2]);
 const items = await collectAsync(
-  joinParents.read(join, undefined, { entityMapper: joinEntity }),
+  joinParents.read(join, undefined, {
+    entityMapper: joinEntity,
+    enrichment: new NestedToObjectEnrichmentStrategy<Parent>({
+      key: "Id",
+      fields: {
+        Id: "Id",
+        TypeName: "TypeName",
+        Children: {
+          key: "ChildId",
+          fields: { Id: "ChildId", Label: "Label" },
+        },
+      },
+    }),
+  }),
 );
 ```
 

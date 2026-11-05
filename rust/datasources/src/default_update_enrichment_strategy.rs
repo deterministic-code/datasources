@@ -95,7 +95,7 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         .read(&Where::new(Operator::equals(
             association.parent.clone(),
             parent_key.clone(),
-        )))
+        )), None)
         .try_collect::<Vec<_>>()
         .await?;
     let wanted = related_ids(parent, enrichment)?;

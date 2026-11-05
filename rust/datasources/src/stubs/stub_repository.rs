@@ -43,11 +43,19 @@ impl IReadonlyRepository for StubRepository {
         Some(self)
     }
 
-    async fn read_single(&self, _query: &dyn ReadInput) -> Result<Option<Row>> {
+    async fn read_single(
+        &self,
+        _query: &dyn ReadInput,
+        _options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
         Err(fail(&self.provider))
     }
 
-    fn read<'a>(&'a self, _query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+    fn read<'a>(
+        &'a self,
+        _query: &'a dyn ReadInput,
+        _options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         let provider = self.provider.clone();
         Box::pin(once(async move { Err(fail(&provider)) }))
     }

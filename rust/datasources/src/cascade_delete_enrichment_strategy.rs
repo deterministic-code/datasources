@@ -71,7 +71,7 @@ pub(crate) async fn delete_linked<T: Entity, TLink: Entity>(
         .read(&Where::new(Operator::equals(
             association.parent.clone(),
             parent_key.clone(),
-        )))
+        )), None)
         .try_collect::<Vec<_>>()
         .await?;
     for row in existing {

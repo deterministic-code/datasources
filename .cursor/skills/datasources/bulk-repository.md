@@ -395,7 +395,7 @@ let ids = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(&()).try_collect::<Vec<_>>().await.unwrap();
+let stored_parents = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L39)

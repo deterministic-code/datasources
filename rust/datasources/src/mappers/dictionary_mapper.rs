@@ -105,7 +105,7 @@ mod tests {
             ("Login".to_string(), "username".to_string()),
         ])));
         let repo = ReadonlyRepository::<Row>::new(connection, options).unwrap();
-        let row = repo.read_single(&()).await.unwrap().unwrap();
+        let row = repo.read_single(&(), None).await.unwrap().unwrap();
         assert_eq!(row.get("Key"), Some(&Value::Int(7)));
         assert_eq!(row.get("Login"), Some(&Value::from("ada")));
         assert_eq!(

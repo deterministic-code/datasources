@@ -97,7 +97,7 @@ let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };
 let loaded = contacts_repo
-    .read_single(&Where::new(Operator::equals("Id", Value::Int(id))))
+    .read_single(&Where::new(Operator::equals("Id", Value::Int(id))), None)
     .await
     .unwrap()
     .unwrap();

@@ -147,7 +147,12 @@ impl<T: Entity> ReadonlyRepository<T> {
     }
 
     pub(crate) fn enriched(&self) -> bool {
-        !self.enrichments.lock().expect("enrichments").is_empty()
+        self.enriched_with(None)
+    }
+
+    fn enriched_with(&self, options: Option<&ReadonlyRepositoryMappingOptions>) -> bool {
+        options.and_then(|opts| opts.enrichment.as_ref()).is_some()
+            || !self.enrichments.lock().expect("enrichments").is_empty()
     }
 
     pub(crate) fn memory_items(&self) -> Option<&Arc<SharedItems>> {
@@ -445,8 +450,24 @@ impl<T: Entity> ReadonlyRepository<T> {
         Ok(pairs)
     }
 
-    async fn fill_rows(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<T>> {
-        let (rows, sources): (Vec<Row>, Vec<Option<Row>>) = pairs.into_iter().unzip();
+    async fn fill_rows(
+        &self,
+        pairs: Vec<(Row, Option<Row>)>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Vec<T>> {
+        let (mut rows, sources): (Vec<Row>, Vec<Option<Row>>) = pairs.into_iter().unzip();
+        if let Some(strategy) = options.and_then(|opts| opts.enrichment.clone()) {
+            let via = Arc::new(ReadonlyRepository::<Row>::memory(Vec::new()));
+            strategy
+                .apply(
+                    via,
+                    &crate::Enrichment::new("", "", "", None, crate::EnrichmentPropertyType::Object),
+                    &mut rows,
+                    Some(&sources),
+                )
+                .await?;
+            return rows.into_iter().map(crate::repository::map_row).collect();
+        }
         let mut items = rows
             .into_iter()
             .map(crate::repository::map_row)
@@ -493,12 +514,20 @@ impl<T: Entity> ReadonlyRepository<T> {
         Ok((mapped, params))
     }
 
-    pub async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
-        IReadonlyRepository::read_single(self, query).await
+    pub async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        IReadonlyRepository::read_single(self, query, options).await
     }
 
-    pub fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        IReadonlyRepository::read(self, query)
+    pub fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        IReadonlyRepository::read(self, query, options)
     }
 }
 
@@ -518,7 +547,7 @@ impl<T: Entity> ReadonlyRepository<T> {
         Box::pin(try_unfold(ReadRun::Start, move |run| async move {
             match run {
                 ReadRun::Start => {
-                    if self.enriched() {
+                    if self.enriched_with(options) {
                         let items: Vec<Row> = self
                             .read_tracked(query, parameters, options)
                             .await?
@@ -550,19 +579,27 @@ impl<T: Entity> ReadonlyRepository<T> {
 
 #[async_trait]
 impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
-        self.read(query).try_next().await
+    async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.read(query, options).try_next().await
     }
 
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        if !self.enriched() {
-            return map_stream(self.read_rows(Some(query), None, None));
+    fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        if !self.enriched_with(options) {
+            return map_stream(self.read_rows(Some(query), None, options));
         }
         Box::pin(try_unfold(None, move |state| async move {
             match state {
                 None => {
-                    let pairs = self.read_tracked(Some(query), None, None).await?;
-                    next_entities(self.fill_rows(pairs).await?)
+                    let pairs = self.read_tracked(Some(query), None, options).await?;
+                    next_entities(self.fill_rows(pairs, options).await?)
                 }
                 Some(items) => next_entities_iter(items),
             }

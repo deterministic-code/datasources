@@ -60,28 +60,6 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
         var command = new MockCommand(mockConnection);
         mockConnection.Command = command;
         var joinRepo = ParentsRepo(mockConnection);
-        joinRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
-        joinRepo.AddEnriched(
-            new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
-            joinRepo,
-            new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
-            {
-                Key = "Id",
-                Fields = new Dictionary<string, TypeMapField>
-                {
-                    ["Id"] = "Id",
-                    ["TypeName"] = "TypeName",
-                    ["Children"] = new TypeMapGroup
-                    {
-                        Key = "ChildId",
-                        Fields = new Dictionary<string, TypeMapField>
-                        {
-                            ["Id"] = "ChildId",
-                            ["Label"] = "Label",
-                        },
-                    },
-                },
-            }));
         var join = new SelectStatement(new()
         {
             Table = "Parent",
@@ -99,7 +77,28 @@ public class ReadWithWhereClauseAndCustomFlatToNestedObjectMappingOptionsTests
         var items = await joinRepo.Read(
             join,
             null,
-            new ReadonlyRepositoryMappingOptions<Parent> { EntityMapper = JoinEntity }).ToListAsync();
+            new ReadonlyRepositoryMappingOptions<Parent>
+            {
+                EntityMapper = JoinEntity,
+                Enrichment = new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+                {
+                    Key = "Id",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["Id"] = "Id",
+                        ["TypeName"] = "TypeName",
+                        ["Children"] = new TypeMapGroup
+                        {
+                            Key = "ChildId",
+                            Fields = new Dictionary<string, TypeMapField>
+                            {
+                                ["Id"] = "ChildId",
+                                ["Label"] = "Label",
+                            },
+                        },
+                    },
+                }),
+            }).ToListAsync();
         Assert.Equal("person", enriched!.TypeName);
         var parent = Assert.Single(items);
         Assert.Equal(1L, parent.Id);

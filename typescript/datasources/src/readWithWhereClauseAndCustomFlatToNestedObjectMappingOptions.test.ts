@@ -83,25 +83,6 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
     const command = new MockCommand(mockConnection);
     mockConnection.command = command;
     const joinParents = parentsRepo(mockConnection);
-    joinParents.addEnriched(
-      { destinationProperty: "TypeName", sourceProperty: "Type", relatedKey: "Id", relatedProperty: "Name" },
-      types,
-    );
-    joinParents.addEnriched(
-      { destinationProperty: "Children", sourceProperty: "Id", relatedKey: "ParentId", type: "list" },
-      joinParents,
-      new NestedToObjectEnrichmentStrategy<Parent>({
-        key: "Id",
-        fields: {
-          Id: "Id",
-          TypeName: "TypeName",
-          Children: {
-            key: "ChildId",
-            fields: { Id: "ChildId", Label: "Label" },
-          },
-        },
-      }),
-    );
     const join = new SelectStatement({
       table: "Parent",
       fields: [
@@ -115,7 +96,20 @@ describe("readWithWhereClauseAndCustomFlatToNestedObjectMappingOptions", () => {
     });
     command.reader = new MockReader([row1, row2]);
     const items = await collectAsync(
-      joinParents.read(join, undefined, { entityMapper: joinEntity }),
+      joinParents.read(join, undefined, {
+        entityMapper: joinEntity,
+        enrichment: new NestedToObjectEnrichmentStrategy<Parent>({
+          key: "Id",
+          fields: {
+            Id: "Id",
+            TypeName: "TypeName",
+            Children: {
+              key: "ChildId",
+              fields: { Id: "ChildId", Label: "Label" },
+            },
+          },
+        }),
+      }),
     );
     expect(enriched?.TypeName).toBe("person");
     expect(items).toHaveLength(1);

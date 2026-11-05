@@ -52,10 +52,13 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
             let cache_key = key_of(&key);
             if !cache.contains_key(&cache_key) {
                 let related = via
-                    .read_single(&Where::new(Operator::equals(
-                        enrichment.related_key.clone(),
-                        key.clone(),
-                    )))
+                    .read_single(
+                        &Where::new(Operator::equals(
+                            enrichment.related_key.clone(),
+                            key.clone(),
+                        )),
+                        None,
+                    )
                     .await?;
                 cache.insert(cache_key.clone(), related);
             }
@@ -87,10 +90,13 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
                 continue;
             };
             let related = via
-                .read(&Where::new(Operator::equals(
-                    enrichment.related_key.clone(),
-                    key,
-                )))
+                .read(
+                    &Where::new(Operator::equals(
+                        enrichment.related_key.clone(),
+                        key,
+                    )),
+                    None,
+                )
                 .try_collect::<Vec<_>>()
                 .await?;
             assign_related(parent, &enrichment.destination_property, related)?;
@@ -111,10 +117,13 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             continue;
         };
         let related = via
-            .read(&Where::new(Operator::equals(
-                enrichment.related_key.clone(),
-                key,
-            )))
+            .read(
+                &Where::new(Operator::equals(
+                    enrichment.related_key.clone(),
+                    key,
+                )),
+                None,
+            )
             .try_collect::<Vec<_>>()
             .await?;
         match enrichment.related_property.as_deref() {
@@ -153,7 +162,10 @@ pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
             continue;
         };
         let links = link
-            .read(&Where::new(Operator::equals(association.parent.clone(), key)))
+            .read(
+                &Where::new(Operator::equals(association.parent.clone(), key)),
+                None,
+            )
             .try_collect::<Vec<_>>()
             .await?;
         let mut related = Vec::new();
@@ -162,10 +174,13 @@ pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
                 continue;
             };
             if let Some(entity) = via
-                .read_single(&Where::new(Operator::equals(
-                    enrichment.related_key.clone(),
-                    id,
-                )))
+                .read_single(
+                    &Where::new(Operator::equals(
+                        enrichment.related_key.clone(),
+                        id,
+                    )),
+                    None,
+                )
                 .await?
             {
                 related.push(entity);
