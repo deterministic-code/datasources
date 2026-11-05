@@ -3,12 +3,12 @@ name: datasources
 description: >-
   Uses Datasources across C#, Rust, and TypeScript: install packages, run setup
   and add providers, generate repositories from types.yaml and datasource.yaml,
-  write mappers and type converters, run commands and readers, build
-  repositories, call AddEnriched and AddLinked, and write Where and other
-  statements from the documented examples. Use when the user mentions
-  datasources, repository generation, types.yaml, datasource.yaml, mapper,
-  type converter, command, reader, AddEnriched, AddLinked, Where, or
-  SelectStatement.
+  write datasource_seeds.yaml, write mappers and type converters, run commands
+  and readers, build repositories, call AddEnriched and AddLinked, and write
+  Where and other statements from the documented examples. Use when the user
+  mentions datasources, repository generation, types.yaml, datasource.yaml,
+  datasource_seeds, mapper, type converter, command, reader, AddEnriched,
+  AddLinked, Where, or SelectStatement.
 ---
 
 <!-- Generated from docs/. Edit the markdown in docs/ and run npm run docs:skill. -->
@@ -25,8 +25,8 @@ Read one file below. Do not load the rest.
 - Read is convert, then map. Do not fold mapping into the converter.
 - When writing code, find the closest row in [examples.md](skills/examples.md), open that language's snippet, and use the same objects the sample uses (connection, repository, enrichment). Include every type the sample defines.
 - `AddEnriched` is a read fill. A `List` on a CRUD repository is also written with the parent. `AddLinked` reads the related repository and writes the association through the link repository. Register a child repository's own fills on that child, then register the child on the parent. Read [enrichment.md](skills/enrichment.md) before either call.
-- Types, repositories, and SQL come from `types.yaml` (and `datasource.yaml` when it exists). After you change either file, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop.
-- Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml` or `datasource.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.
+- Types, repositories, SQL, and seed rows come from `types.yaml`, `datasource.yaml` when it exists, and `datasource_seeds.yaml` when it exists. After you change any of those files, run `npx @deterministic-code/datasources-cli version`, then `npx @deterministic-code/datasources-cli generate all --dialect csharp|typescript|rust`. `version` writes the next `version-*/diff.yaml`. When it prints `unchanged`, stop. Seed row keys, field names, and which `idN` values the next migration inserts are in generation.md.
+- Do not create, edit, or delete generator output (a directory named `generated`, Rust `src/generated.rs`, or the SQL migrations `generate all` just wrote). If `generate all` fails, stop immediately. Report the command's error unchanged. Do not patch generated code. Change `types.yaml`, `datasource.yaml`, or `datasource_seeds.yaml` and run `generate all` again. In a consumer project, if `.cursor/hooks/block-generated.mjs` is missing, offer to install that hook and wait for a yes. generation.md lists the files to write. Skip that offer when the project root contains `scripts/generate-skill.mjs`.
 
 ## Install and setup
 
@@ -53,6 +53,7 @@ npx @deterministic-code/datasources-cli setup --yes --languages ts|rust|csharp -
 | Install packages | [downloading.md](skills/downloading.md) |
 | setup / add / remove / .env | [setup.md](skills/setup.md) |
 | Generate from types.yaml and datasource.yaml | [generation.md](skills/generation.md) |
+| Seed rows in datasource_seeds.yaml | [generation.md](skills/generation.md) |
 | Mappers and the read pipeline | [mappings.md](skills/mappings.md) |
 | Type converters | [type-converters.md](skills/type-converters.md) |
 | Command | [command.md](skills/command.md) |

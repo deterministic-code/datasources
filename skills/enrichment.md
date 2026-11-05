@@ -516,7 +516,7 @@ pub fn new(parent: impl Into<String>, related: impl Into<String>) -> Self
 
 ### Remarks
 
-`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` loads child rows into a map keyed by `key` and writes one row per entry. `Custom` is rejected. [AddLinked](crud-repository.md) sets `association` and writes the junction. Pass the value to [IEnriched](#).
+`Object` copies `relatedProperty`, or the related row when `relatedProperty` is omitted. `List` is walked and, on a CRUD repository, written with the parent. A `List` that sets `relatedProperty` is not written. `Dictionary` loads child rows into a map keyed by `key` and writes one row per entry. `Custom` is rejected. [AddLinked](crud-repository.md) sets `association` and writes the junction. A linked item without its key is read from the related repository by `relatedProperty`. Pass the value to [IEnriched](#).
 
 ### Examples
 

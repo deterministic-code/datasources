@@ -276,3 +276,26 @@ created.Username = "ada-v2";
 Response updated = await ds.Users.Update(created);
 Response deleted = await ds.Users.Delete(created);
 ```
+
+## Create datasource seeds
+
+::: skill-prompt
+Add `datasource_seeds.yaml` that seeds `gender` with Male as `id1` and Female as `id2`. Snapshot the spec, then generate for typescript.
+:::
+
+**Expected**
+
+```yaml
+version: 1.0.0
+seeds:
+  - gender:
+      - id1:
+          name: Male
+      - id2:
+          name: Female
+```
+
+```sh
+npx @deterministic-code/datasources-cli version
+npx @deterministic-code/datasources-cli generate all --dialect typescript
+```

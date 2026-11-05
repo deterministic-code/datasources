@@ -85,6 +85,19 @@
         { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect typescript" },
         { "id": "crud-uses-username", "text": "Create, read, update, and delete still use Username / username" }
       ]
+    },
+    {
+      "id": "create-datasource-seeds",
+      "prompt": "Add datasource_seeds.yaml that seeds gender with Male as id1 and Female as id2. Snapshot the spec, then generate for typescript.",
+      "expected_output": "deterministic/datasource_seeds.yaml with gender id1 name Male and id2 name Female. Row keys are idN. The id field is omitted. Then datasources-cli version and generate all --dialect typescript. No hand-written INSERT and no edit of a migration file.",
+      "files": [],
+      "assertions": [
+        { "id": "seeds-file", "text": "Writes datasource_seeds.yaml with a gender seed list" },
+        { "id": "seed-rows", "text": "id1 is Male and id2 is Female, using field name and leaving id out of each row" },
+        { "id": "version-command", "text": "Runs npx @deterministic-code/datasources-cli version" },
+        { "id": "generate-command", "text": "Runs npx @deterministic-code/datasources-cli generate all --dialect typescript" },
+        { "id": "no-handwritten-sql", "text": "Does not write INSERT SQL or edit a migration file" }
+      ]
     }
   ]
 }

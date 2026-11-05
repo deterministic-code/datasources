@@ -59,6 +59,10 @@ test("skill-only text is appended outside the docs", () => {
   assert.match(files["SKILL.md"], /generate all --dialect csharp\|typescript\|rust/);
   assert.match(files["generation.md"], /## After the spec changes/);
   assert.match(files["generation.md"], /datasources-cli version/);
+  assert.match(files["generation.md"], /## Seeds/);
+  assert.match(files["generation.md"], /datasource_seeds\.yaml/);
+  assert.match(files["SKILL.md"], /datasource_seeds\.yaml/);
+  assert.match(files["SKILL.md"], /Seed rows in datasource_seeds\.yaml/);
   assert.ok(SKILL_ONLY.rules.length > 0);
 });
 
