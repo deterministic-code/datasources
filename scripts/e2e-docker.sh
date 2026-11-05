@@ -175,8 +175,16 @@ run_compose() {
   )
 }
 
+quickstart_npm_cache() {
+  case "${E2E_NPM_CACHE_TMPFS:-1}" in
+    0) printf '%s' /npm-cache ;;
+    *) printf '%s' /tmp/npm-cache ;;
+  esac
+}
+
 if [ -n "$quickstarts" ]; then
   parallel=1
+  npm_cache=$(quickstart_npm_cache)
   down() {
     for language in typescript csharp rust; do
       down_one "e2e-quickstart-$language" "$repo/quick_starts/contacts_cli/$language/compose.yml"
@@ -187,6 +195,7 @@ if [ -n "$quickstarts" ]; then
   build_image datasources-e2e-node e2e-node.Dockerfile
   build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
   build_image datasources-e2e-rust e2e-rust.Dockerfile
+  e2e_log "npm-cache $npm_cache"
   for language in typescript csharp rust; do
     await_slot
     project="e2e-quickstart-$language"
@@ -196,7 +205,7 @@ if [ -n "$quickstarts" ]; then
       status=0
       export COMPOSE_PROJECT_NAME=$project
       docker compose up -d --wait mysql postgres
-      docker compose run --rm --no-deps -v "$repo:/repo:ro" -e E2E_LANG="$language" runner sh /e2e-quickstarts.sh || status=$?
+      docker compose run --rm --no-deps -v "$repo:/repo:ro" -e E2E_LANG="$language" -e npm_config_cache="$npm_cache" runner sh /e2e-quickstarts.sh || status=$?
       down_one "$project" "$compose"
       exit $status
     ) &
