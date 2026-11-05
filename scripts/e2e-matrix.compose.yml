@@ -45,7 +45,10 @@ services:
       dockerfile: e2e-matrix.Dockerfile
     working_dir: /work
     tmpfs:
-      - /tmp
+      - /tmp:exec
+      - /work:exec
+    volumes:
+      - ..:/opt/repo:ro
     environment:
       E2E_MATRIX_IN_DOCKER: "1"
       MYSQL_URL: mysql://ds:ds@mysql:3306/datasources
@@ -55,4 +58,3 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: ["node", "scripts/e2e-matrix.mjs"]
