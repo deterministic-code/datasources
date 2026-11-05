@@ -71,14 +71,22 @@ impl IReadonlyRepository for MockRepository {
         Some(self)
     }
 
-    async fn read_single(&self, _query: &dyn ReadInput) -> Result<Option<Row>> {
+    async fn read_single(
+        &self,
+        _query: &dyn ReadInput,
+        _options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
         if let Some(error) = &*self.read_single_error.lock().expect("mock") {
             return Err(DatasourceError::message(error.clone()));
         }
         Ok(self.items.lock().expect("mock").first().cloned())
     }
 
-    fn read<'a>(&'a self, _query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+    fn read<'a>(
+        &'a self,
+        _query: &'a dyn ReadInput,
+        _options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
             let error = error.clone();
             return Box::pin(once(async move { Err(DatasourceError::message(error)) }));
@@ -113,6 +121,6 @@ impl ICRUDRepository for MockRepository {
     }
 
     async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {
-        self.read_single(&()).await
+        self.read_single(&(), None).await
     }
 }

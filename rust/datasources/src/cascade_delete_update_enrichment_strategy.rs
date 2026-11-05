@@ -48,7 +48,7 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStr
             .read(&Where::new(Operator::equals(
                     association.parent.clone(),
                     parent_key.clone(),
-                )))
+                )), None)
             .try_collect::<Vec<_>>().await?;
         for row in &existing {
             let Some(related) = row.get(&association.related).cloned() else {

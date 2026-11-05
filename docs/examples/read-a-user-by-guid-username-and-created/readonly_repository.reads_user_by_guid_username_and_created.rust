@@ -32,15 +32,15 @@ options.schema = Schema::new(HashMap::from([
 let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
-    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()))
+    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
     .await
     .unwrap()
     .unwrap();
 let by_login = repo
-    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true))
+    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true), None)
     .try_collect::<Vec<_>>().await
     .unwrap();
 let later = repo
-    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened))
+    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened), None)
     .try_collect::<Vec<_>>().await
     .unwrap();

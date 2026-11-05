@@ -1,5 +1,6 @@
 use crate::converters::{RowTypeConverter, TypeConverter};
 use crate::mappers::Mapper;
+use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::row::Row;
 use crate::schema::Schema;
 use crate::value::Value;
@@ -15,6 +16,7 @@ pub struct ReadonlyRepositoryMappingOptions {
     pub row_converter: Option<RowTypeConverter>,
     pub object_converter: Option<Box<dyn TypeConverter<Row, Row> + Send + Sync>>,
     pub row_type_converters: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    pub enrichment: Option<Arc<dyn ReadonlyEnrichmentStrategy<Row, Row>>>,
 }
 
 impl Clone for ReadonlyRepositoryMappingOptions {
@@ -28,6 +30,7 @@ impl Clone for ReadonlyRepositoryMappingOptions {
             row_converter: self.row_converter.clone(),
             object_converter: None,
             row_type_converters: HashMap::new(),
+            enrichment: self.enrichment.clone(),
         }
     }
 }
@@ -43,6 +46,7 @@ impl Default for ReadonlyRepositoryMappingOptions {
             row_converter: None,
             object_converter: None,
             row_type_converters: HashMap::new(),
+            enrichment: None,
         }
     }
 }

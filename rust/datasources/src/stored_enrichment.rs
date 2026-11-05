@@ -48,7 +48,7 @@ impl<T: Entity, TRelated: Entity> AppliedRead<T> for AppliedReadImpl<T, TRelated
     async fn lookup(&self, property: &str, name: Value, key: &str) -> Result<Option<Value>> {
         let found = self
             .via
-            .read_single(&Where::new(Operator::equals(property, name)))
+            .read_single(&Where::new(Operator::equals(property, name)), None)
             .await?;
         Ok(found.and_then(|item| item.cell(key)))
     }
@@ -84,7 +84,7 @@ impl<T: Entity, TRelated: Entity, TLink: Entity> AppliedRead<T>
     async fn lookup(&self, property: &str, name: Value, key: &str) -> Result<Option<Value>> {
         let found = self
             .via
-            .read_single(&Where::new(Operator::equals(property, name)))
+            .read_single(&Where::new(Operator::equals(property, name)), None)
             .await?;
         Ok(found.and_then(|item| item.cell(key)))
     }

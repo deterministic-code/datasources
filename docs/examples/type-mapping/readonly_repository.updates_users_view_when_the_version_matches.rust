@@ -94,7 +94,7 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(&Where::binary("Key", eq, key.clone()))
+    .read_single(&Where::binary("Key", eq, key.clone()), None)
     .await
     .unwrap()
     .unwrap();
@@ -120,7 +120,7 @@ let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_vers
     .await
     .unwrap();
 let current = users_repo
-    .read_single(&Where::binary("Key", eq, key.clone()))
+    .read_single(&Where::binary("Key", eq, key.clone()), None)
     .await
     .unwrap()
     .unwrap();

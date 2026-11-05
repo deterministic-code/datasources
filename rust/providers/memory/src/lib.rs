@@ -168,24 +168,24 @@ mod tests {
         conn.open().await.unwrap();
         assert_eq!(conn.collection_name(), "");
         let repo = crud(conn.clone());
-        assert!(repo.read_single(&()).await.unwrap().is_some());
+        assert!(repo.read_single(&(), None).await.unwrap().is_some());
         assert!(repo
-            .read_single(&WhereText::new("{\"id\":9}"))
+            .read_single(&WhereText::new("{\"id\":9}"), None)
             .await
             .unwrap()
             .is_none());
         assert!(!repo
-            .read(&WhereText::new("{\"id\":1}"))
+            .read(&WhereText::new("{\"id\":1}"), None)
             .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());
         assert!(repo
-            .read_single(&WhereText::new("{\"id\":1}"))
+            .read_single(&WhereText::new("{\"id\":1}"), None)
             .await
             .unwrap()
             .is_some());
         assert!(!repo
-            .read(&WhereText::new("{\"id\":1}"))
+            .read(&WhereText::new("{\"id\":1}"), None)
             .try_collect::<Vec<_>>().await
             .unwrap()
             .is_empty());

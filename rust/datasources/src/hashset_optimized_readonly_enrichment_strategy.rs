@@ -34,7 +34,7 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             .read(&Where::new(Operator::in_list(
                 enrichment.related_key.clone(),
                 keys.values().cloned().collect(),
-            )))
+            )), None)
             .try_collect::<Vec<_>>()
             .await?;
         let mut index = HashMap::new();
@@ -81,7 +81,7 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             .read(&Where::new(Operator::in_list(
                 enrichment.related_key.clone(),
                 keys.values().cloned().collect(),
-            )))
+            )), None)
             .try_collect::<Vec<_>>()
             .await?;
         let mut index: HashMap<String, Vec<TRelated>> = HashMap::new();

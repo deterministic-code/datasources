@@ -625,12 +625,20 @@ impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
         Some(self)
     }
 
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
-        self.readonly.read_single(query).await
+    async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.readonly.read_single(query, options).await
     }
 
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        self.readonly.read(query)
+    fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.readonly.read(query, options)
     }
 }
 

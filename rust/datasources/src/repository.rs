@@ -27,8 +27,16 @@ pub trait IReadonlyRepository<T: Entity = Row>: IRepository {
         None
     }
 
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>>;
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>>;
+    async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>>;
+    fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>>;
 }
 
 #[async_trait]
@@ -55,12 +63,20 @@ impl<T: Entity> IRepository for AsReadonly<T> {
 
 #[async_trait]
 impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<T>> {
-        self.0.read_single(query).await
+    async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.0.read_single(query, options).await
     }
 
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
-        self.0.read(query)
+    fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.0.read(query, options)
     }
 }
 

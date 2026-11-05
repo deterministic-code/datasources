@@ -17,7 +17,7 @@ let matches = users_repo
             "IsEnabled",
             eq,
             Value::Bool(true),
-        ))
+        ), None)
     .try_collect::<Vec<_>>().await
     .unwrap();
 created.insert("Username".into(), Value::from("ada-v2"));

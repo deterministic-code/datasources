@@ -34,7 +34,7 @@ async fn update_keeps_explicit_empty_string_on_nullable() {
         .await
         .expect("update");
     assert_eq!(
-        repo.read_single(&()).await.unwrap().unwrap()["note"],
+        repo.read_single(&(), None).await.unwrap().unwrap()["note"],
         Value::from("")
     );
 }

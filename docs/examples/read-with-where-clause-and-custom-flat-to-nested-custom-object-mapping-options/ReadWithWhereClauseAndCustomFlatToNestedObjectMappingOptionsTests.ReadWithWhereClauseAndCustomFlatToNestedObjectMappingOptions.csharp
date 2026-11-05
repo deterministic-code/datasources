@@ -12,28 +12,6 @@ var mockConnection = new MockConnection { Provider = "memory" };
 var command = new MockCommand(mockConnection);
 mockConnection.Command = command;
 var joinRepo = ParentsRepo(mockConnection);
-joinRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
-joinRepo.AddEnriched(
-    new("Children", "Id", "ParentId", Type: EnrichmentPropertyType.List),
-    joinRepo,
-    new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
-    {
-        Key = "Id",
-        Fields = new Dictionary<string, TypeMapField>
-        {
-            ["Id"] = "Id",
-            ["TypeName"] = "TypeName",
-            ["Children"] = new TypeMapGroup
-            {
-                Key = "ChildId",
-                Fields = new Dictionary<string, TypeMapField>
-                {
-                    ["Id"] = "ChildId",
-                    ["Label"] = "Label",
-                },
-            },
-        },
-    }));
 var join = new SelectStatement(new()
 {
     Table = "Parent",
@@ -51,4 +29,25 @@ command.Reader = new MockReader<Row>([row1, row2]);
 var items = await joinRepo.Read(
     join,
     null,
-    new ReadonlyRepositoryMappingOptions<Parent> { EntityMapper = JoinEntity }).ToListAsync();
+    new ReadonlyRepositoryMappingOptions<Parent>
+    {
+        EntityMapper = JoinEntity,
+        Enrichment = new NestedToObjectEnrichmentStrategy<Parent>(new TypeMap
+        {
+            Key = "Id",
+            Fields = new Dictionary<string, TypeMapField>
+            {
+                ["Id"] = "Id",
+                ["TypeName"] = "TypeName",
+                ["Children"] = new TypeMapGroup
+                {
+                    Key = "ChildId",
+                    Fields = new Dictionary<string, TypeMapField>
+                    {
+                        ["Id"] = "ChildId",
+                        ["Label"] = "Label",
+                    },
+                },
+            },
+        }),
+    }).ToListAsync();

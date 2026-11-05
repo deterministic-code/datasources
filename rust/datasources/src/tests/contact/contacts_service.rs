@@ -109,12 +109,20 @@ impl IReadonlyRepository for ContactsService {
         Some(self)
     }
 
-    async fn read_single(&self, query: &dyn ReadInput) -> Result<Option<Row>> {
-        self.contacts.read_single(query).await
+    async fn read_single(
+        &self,
+        query: &dyn ReadInput,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
+        self.contacts.read_single(query, options).await
     }
 
-    fn read<'a>(&'a self, query: &'a dyn ReadInput) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
-        self.contacts.read(query)
+    fn read<'a>(
+        &'a self,
+        query: &'a dyn ReadInput,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.contacts.read(query, options)
     }
 }
 

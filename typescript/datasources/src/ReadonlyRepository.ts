@@ -206,15 +206,21 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     const listed =
       parameters ??
       (statement instanceof SelectStatement ? statement.where?.parameters : undefined);
-    yield* this.apply(this.readItems(statement, listed, mappers, this.rowConverterOf(options), this.objects(options)));
+    yield* this.apply(
+      this.readItems(statement, listed, mappers, this.rowConverterOf(options), this.objects(options)),
+      options,
+    );
   }
 
-  private async *apply(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
-    if (!this.enriched) {
+  private async *apply(
+    pairs: AsyncIterable<Sourced<T>>,
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): AsyncIterable<Sourced<T>> {
+    if (!this.enriched && !options?.enrichment) {
       yield* pairs;
       return;
     }
-    yield* this.sourced(pairs);
+    yield* this.sourced(pairs, options);
   }
 
   private convertObject = (row: Cells, objects: TypeConverter<T, Cells>): T =>
@@ -251,19 +257,35 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     }
   }
 
-  private async *sourced(pairs: AsyncIterable<Sourced<T>>): AsyncIterable<Sourced<T>> {
+  private async *sourced(
+    pairs: AsyncIterable<Sourced<T>>,
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): AsyncIterable<Sourced<T>> {
     const items: T[] = [];
     const sources: (Row | undefined)[] = [];
     for await (const sourced of pairs) {
       items.push(sourced.item);
       sources.push(sourced.source);
     }
-    await this.fill(items as (T & object)[], sources);
+    await this.fill(items as (T & object)[], sources, options);
     for (let index = 0; index < items.length; index++)
       yield { item: items[index]!, source: sources[index] };
   }
 
-  private fill = async (parents: (T & object)[], sources?: (Row | undefined)[]): Promise<void> => {
+  private fill = async (
+    parents: (T & object)[],
+    sources?: (Row | undefined)[],
+    options?: ReadonlyRepositoryMappingOptions<T>,
+  ): Promise<void> => {
+    if (options?.enrichment) {
+      await options.enrichment.apply(
+        this,
+        { destinationProperty: "", sourceProperty: "", relatedKey: "" },
+        parents,
+        sources,
+      );
+      return;
+    }
     for (const entry of this.entries()) await entry.apply(parents, sources);
   };
 
