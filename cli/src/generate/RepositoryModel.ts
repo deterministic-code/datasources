@@ -25,7 +25,6 @@ export type RepositoryModel = {
   specName: string;
   typeName: string;
   typeHome: "view" | "datasource";
-  entity: string;
   table: string;
   propertyMappings: Pair[];
   ids: string[];

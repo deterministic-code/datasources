@@ -23,7 +23,6 @@ class CSharpRepositories extends RepositoryGenerator {
         fill(registryTmpl, {
           registryClass: casing.convertTypes("repository_registry"),
           models: models.map((model) => ({
-            entity: this.quote(model.entity),
             plural: this.quote(this.bindName(model.specName, casing, "types")),
             typeName: model.typeName,
             className: this.repositoryClass(model.specName, casing),
@@ -40,6 +39,7 @@ class CSharpRepositories extends RepositoryGenerator {
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
+      className: this.repositoryClass(model.specName, casing),
       view: model.typeHome === "view" ? {} : undefined,
       children,
       enrichments,

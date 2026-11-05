@@ -2,6 +2,7 @@ import { CreateTableStatement } from "@deterministic-code/datasources";
 import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
 import { inferReferenceFieldTypes } from "@deterministic-code/datasources-code-generators/sql/common/infer-reference-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
+import { Paths } from "@deterministic-code/generators-common/paths";
 import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
 import { writeInclusionOf } from "@deterministic-code/datasources-code-generators/sql/common/write-inclusion";
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
@@ -36,7 +37,9 @@ export const planRepositories = (
   settings: Record<string, string>,
 ): RepositoryModel[] => {
   const casing = createCasingStrategy(dialect, settings);
+  const paths = new Paths();
   const naming = createCasing(settings);
+  const typeName = (specName: string): string => casing.convertTypes(paths.typeStem(specName));
   spec = {
     ...spec,
     types: inferReferenceFieldTypes(spec.types),
@@ -81,9 +84,8 @@ export const planRepositories = (
     return [
       {
         specName: authored.name,
-        typeName: casing.convertTypes(authored.name),
+        typeName: typeName(authored.name),
         typeHome: authored.tags.includes("view_type") ? "view" : "datasource",
-        entity: casing.convertTypes(authored.name),
         table: CreateTableStatement.tableName(table.mapping ?? table.name, naming.naming),
         propertyMappings: columns.flatMap((field) => {
           const from = property(field.name);
@@ -103,7 +105,7 @@ export const planRepositories = (
           )
           .map((field) => property(field.name)),
         optimisticConcurrency: concurrencyToken(table, tableType, property),
-        enrichments: relations(authored, full, casing, types, expanded, repoName, identity),
+        enrichments: relations(authored, full, casing, types, expanded, repoName, identity, typeName),
         removeFields: removed.map(property),
       },
     ];
@@ -136,11 +138,12 @@ const relations = (
   expanded: Map<string, Type>,
   repoName: (tableName: string) => string,
   identity: (name: string) => string,
+  typeName: (specName: string) => string,
 ): PlannedEnrichment[] => {
   const property = (name: string): string => casing.convertFields(name);
   const named = (tableName: string): { via: string; viaType: string } => {
     const via = repoName(tableName);
-    return { via, viaType: casing.convertTypes(via) };
+    return { via, viaType: typeName(via) };
   };
   const planned: PlannedEnrichment[] = [];
   const source = identity(authored.inherits ?? authored.name);

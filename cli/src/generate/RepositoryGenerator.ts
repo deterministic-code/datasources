@@ -1,5 +1,4 @@
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
-import { createDatasourceNaming } from "@deterministic-code/generators-common/datasource-naming";
 import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { Paths, type TypeKind } from "@deterministic-code/generators-common/paths";
@@ -36,7 +35,6 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
 
   typesPrefix = (casing: ICasingStrategy, kind: TypeKind): string =>
     caseDirectories(this.paths.typesDir(kind), casing);
-  private readonly naming = createDatasourceNaming({});
 
   protected quote(value: string): string {
     return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"");
@@ -50,17 +48,21 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     return casing.convertFileName(this.paths.repositoryStem(specName));
   }
 
+  protected bindStem(specName: string): string {
+    return this.paths.repositoryStem(specName).slice(0, -"_repository".length);
+  }
+
   protected bindName(specName: string, casing: ICasingStrategy, as: "fields" | "types"): string {
-    const stem = this.naming.physicalStem(specName);
+    const stem = this.bindStem(specName);
     return as === "fields" ? casing.convertFields(stem) : casing.convertTypes(stem);
   }
 
   protected rowRepositoryStem(specName: string): string {
-    return `${this.naming.physicalStem(specName)}_row_repository`;
+    return `${this.bindStem(specName)}_row_repository`;
   }
 
   protected readonlyRepositoryStem(specName: string): string {
-    return `${this.naming.physicalStem(specName)}_readonly_repository`;
+    return `${this.bindStem(specName)}_readonly_repository`;
   }
 
   protected listed(names: string[]): Array<{ name: string; comma?: Record<string, never> }> {
@@ -86,9 +88,8 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     }));
   }
 
-  protected optionsOf(model: RepositoryOptionsModel & { entity: string }): Record<string, unknown> {
+  protected optionsOf(model: RepositoryOptionsModel & { typeName: string }): Record<string, unknown> {
     return {
-      entity: this.quote(model.entity),
       table: this.quote(model.table),
       ids: this.listed(model.ids),
       readProperties: this.listed(model.readProperties),
@@ -101,7 +102,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
         last: index === model.propertyMappings.length - 1 ? {} : undefined,
         comma: index > 0 ? {} : undefined,
       })),
-      entityPairs: this.pairList([{ from: model.entity, to: model.table }]),
+      entityPairs: this.pairList([{ from: model.typeName, to: model.table }]),
       mappingPairs: this.pairList(model.propertyMappings),
     };
   }
@@ -109,7 +110,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
   protected dialectsBag(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown>[] {
     return dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
-      ...this.optionsOf({ entity: model.entity, ...planned }),
+      ...this.optionsOf({ typeName: model.typeName, ...planned }),
       schema: this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
     }));
   }

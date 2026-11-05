@@ -68,9 +68,9 @@ pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datas
 
 pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<{{entityType}}>> {
     let mut options = ReadonlyRepositoryMappingOptions::default();
-    options.entity = "{{entity}}".into();
+    options.entity = "{{typeName}}".into();
     options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("{{entity}}".into(), "{{table}}".into()),
+        ("{{typeName}}".into(), "{{table}}".into()),
     ])));
 {{#propertyMappings}}
 {{#first}}    options.property_mappings = Some(Arc::new(DictionaryMapper::new([
