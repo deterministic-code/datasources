@@ -78,6 +78,7 @@ npx @deterministic-code/datasources-cli generate repositories --dialect csharp
 | `--output <dir>` | Generated files (default: `./generated`) |
 | `--no-migrations` | Skip SQL migrations. `generate all` writes them by default |
 | `--no-auto-migrate-up` | Skip migrate-up. `generate all` applies them by default |
+| `--delete` | Remove files in `--output` that this generate did not write (default: off) |
 | `--migrations-root <dir>` | Writes `<root>/<dialect>/migrations/` on `generate all` (default: `sql`) |
 | `--stored-procedures` | Emit stored-procedure migrations when the dialect can. `settings.yaml` `datasource.use_stored_procedures: true` has the same effect |
 | `--pluralize-table-names` | Plural table names in SQL and runtime queries (default). Procedure names stay plural |

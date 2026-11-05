@@ -4,8 +4,17 @@
 pub mod {{ident}};
 {{/typeStems}}
 {{#typeStems}}
+{{#glob}}
 pub use {{ident}}::*;
+{{/glob}}
 {{/typeStems}}
+{{#kinds}}
+pub mod {{kind}} {
+{{#idents}}
+    pub use super::{{ident}}::*;
+{{/idents}}
+}
+{{/kinds}}
 mod schema_objects;
 pub mod repositories;
 pub use repositories::{{registryIdent}}::Repositories;

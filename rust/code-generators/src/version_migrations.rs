@@ -47,7 +47,15 @@ pub fn files(
         return Ok(Vec::new());
     }
     let last = snapshots.last().unwrap();
-    if !same(last, "types.yaml", files.get("types.yaml").map(String::as_str), None)? {
+    if !same(
+        last,
+        "types.yaml",
+        files
+            .get("types.yaml.authored")
+            .or_else(|| files.get("types.yaml"))
+            .map(String::as_str),
+        None,
+    )? {
         return Err(DatasourceError::message(
             "types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first",
         ));
@@ -62,7 +70,10 @@ pub fn files(
         if !same(
             last,
             "datasource.yaml",
-            files.get("datasource.yaml").map(String::as_str),
+            files
+                .get("datasource.yaml.authored")
+                .or_else(|| files.get("datasource.yaml"))
+                .map(String::as_str),
             Some(DEFAULT_DATASOURCE),
         )? {
             return Err(DatasourceError::message(

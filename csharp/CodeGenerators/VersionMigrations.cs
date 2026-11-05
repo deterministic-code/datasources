@@ -39,13 +39,13 @@ public static class VersionMigrations
         if (snapshots.Count == 0) return [];
 
         var last = snapshots[^1];
-        if (!Matches(last, SpecParser.TypesYaml, files.GetValueOrDefault(SpecParser.TypesYaml), null))
+        if (!Matches(last, SpecParser.TypesYaml, files.GetValueOrDefault("types.yaml.authored") ?? files.GetValueOrDefault(SpecParser.TypesYaml), null))
             throw new InvalidOperationException("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
         if (!Has(files, $"datasource.{dialect}.yaml"))
         {
             if (!Has(files, SpecParser.DatasourceYaml))
                 throw new InvalidOperationException($"{dialect} requires datasource.{dialect}.yaml or datasource.yaml");
-            if (!Matches(last, SpecParser.DatasourceYaml, files.GetValueOrDefault(SpecParser.DatasourceYaml), DefaultDatasourceYaml))
+            if (!Matches(last, SpecParser.DatasourceYaml, files.GetValueOrDefault("datasource.yaml.authored") ?? files.GetValueOrDefault(SpecParser.DatasourceYaml), DefaultDatasourceYaml))
                 throw new InvalidOperationException("types.yaml or datasource.yaml differs from the frozen version diffs; run datasources version first");
         }
 

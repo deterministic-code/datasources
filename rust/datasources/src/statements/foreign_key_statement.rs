@@ -1,4 +1,5 @@
 use super::constraint_name::constraint_name_of;
+use super::create_table_statement::CreateTableStatement;
 use super::foreign_key::ReferentialAction;
 use super::statement::Statement;
 use super::statement_naming::StatementNaming;
@@ -13,6 +14,7 @@ pub struct ForeignKeyStatement {
     kind: String,
     on_delete: Option<ReferentialAction>,
     on_update: Option<ReferentialAction>,
+    create: Option<CreateTableStatement>,
 }
 
 impl ForeignKeyStatement {
@@ -33,7 +35,17 @@ impl ForeignKeyStatement {
             kind: kind.into(),
             on_delete: None,
             on_update: None,
+            create: None,
         }
+    }
+
+    pub fn with_create(mut self, create: CreateTableStatement) -> Self {
+        self.create = Some(create);
+        self
+    }
+
+    pub fn create(&self) -> Option<&CreateTableStatement> {
+        self.create.as_ref()
     }
 
     pub fn name_of(entity: &str, naming: &StatementNaming, parts: &[&str]) -> String {

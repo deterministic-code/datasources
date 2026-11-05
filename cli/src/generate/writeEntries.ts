@@ -16,6 +16,29 @@ const merge = (existing: string, entry: Extract<GenerateEntry, { kind: "patch" }
   return `${existing}${entry.content}`;
 };
 
+const listFiles = async (fs: Fs, dir: string): Promise<string[]> => {
+  const names = await fs.readdir(dir).catch(() => [] as string[]);
+  const files: string[] = [];
+  for (const name of names) {
+    const path = join(dir, name);
+    const file = await fs.readFile(path).then(() => true).catch(() => false);
+    if (file) files.push(path);
+    else files.push(...(await listFiles(fs, path)));
+  }
+  return files;
+};
+
+export const deleteStale = async (fs: Fs, root: string, keep: string[]): Promise<string[]> => {
+  const kept = new Set(keep);
+  const removed: string[] = [];
+  for (const path of await listFiles(fs, root)) {
+    if (kept.has(path)) continue;
+    await fs.unlink(path);
+    removed.push(path);
+  }
+  return removed;
+};
+
 export const writeEntries = async (fs: Fs, root: string, entries: GenerateEntry[]): Promise<string[]> => {
   const paths: string[] = [];
   for (const entry of stripAttributes(entries)) {

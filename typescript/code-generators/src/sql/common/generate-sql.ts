@@ -172,12 +172,16 @@ const schemaFiles = async (
   casing: PackCasing,
 ): Promise<{ entries: GenerateEntry[]; count: number }> => {
   if (versionDiffPaths(ctx.settings).length > 0) {
-    const liveTypes = (await ctx.reader.exists("types.yaml"))
-      ? await ctx.reader.read("types.yaml")
-      : undefined;
-    const liveDatasource = (await ctx.reader.exists("datasource.yaml"))
-      ? await ctx.reader.read("datasource.yaml")
-      : undefined;
+    const liveTypes = (await ctx.reader.exists("types.yaml.authored"))
+      ? await ctx.reader.read("types.yaml.authored")
+      : (await ctx.reader.exists("types.yaml"))
+        ? await ctx.reader.read("types.yaml")
+        : undefined;
+    const liveDatasource = (await ctx.reader.exists("datasource.yaml.authored"))
+      ? await ctx.reader.read("datasource.yaml.authored")
+      : (await ctx.reader.exists("datasource.yaml"))
+        ? await ctx.reader.read("datasource.yaml")
+        : undefined;
     const versions = await versionMigrationFiles(key, ctx, casing, {
       typesYaml: liveTypes,
       datasourceYaml: liveDatasource,

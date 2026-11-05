@@ -88,14 +88,19 @@ describe("SqliteStatementRenderer", () => {
     expect(() =>
       renderer.render(new AlterTableStatement("users", { kind: "alterColumn", column: { name: "age", type: "INTEGER" } })),
     ).toThrow(/SQLite cannot ALTER COLUMN/);
-    expect(() =>
+    expect(
       renderer.render(
         new AlterTableStatement("users", { kind: "addConstraint", constraint: new UniqueConstraint("uq_email", ["email"]) }),
       ),
-    ).toThrow(/SQLite cannot ADD CONSTRAINT/);
+    ).toBe('CREATE UNIQUE INDEX "uq_email" ON "users" ("email")');
+    expect(renderer.render(new AlterTableStatement("users", { kind: "dropConstraint", name: "uq_email" }))).toBe(
+      'DROP INDEX IF EXISTS "uq_email"',
+    );
     expect(() =>
-      renderer.render(new AlterTableStatement("users", { kind: "dropConstraint", name: "uq_email" })),
-    ).toThrow(/SQLite cannot DROP CONSTRAINT/);
+      renderer.render(
+        new AlterTableStatement("users", { kind: "addConstraint", constraint: new PrimaryKey("pk_users", ["id"]) }),
+      ),
+    ).toThrow(/SQLite cannot ADD CONSTRAINT/);
     expect(() =>
       renderer.render(new AlterTableStatement("users", { kind: "empty" } as never)),
     ).toThrow(/empty alter/);
@@ -166,12 +171,27 @@ END`,
     expect(renderer.render(new DropIndexStatement("ix_name", "users"))).toBe(
       'DROP INDEX IF EXISTS "ix_name"',
     );
+    expect(renderer.render(new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"], "drop"))).toBe("");
     expect(() =>
       renderer.render(new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"], "add")),
     ).toThrow(/SQLite cannot ADD CONSTRAINT/);
-    expect(() =>
-      renderer.render(new ForeignKeyStatement("users", "fk", ["id"], "other", ["id"], "drop")),
-    ).toThrow(/SQLite cannot DROP CONSTRAINT/);
+    const rebuilt = renderer.render(
+      new ForeignKeyStatement(
+        "users",
+        "fk",
+        ["id"],
+        "other",
+        ["id"],
+        "add",
+        undefined,
+        undefined,
+        new CreateTableStatement("users", [{ name: "id", type: "INTEGER" }]),
+      ),
+    );
+    expect(rebuilt).toContain('CREATE TABLE "users__new"');
+    expect(rebuilt).toContain('INSERT INTO "users__new" ("id") SELECT "id" FROM "users"');
+    expect(rebuilt).toContain('DROP TABLE IF EXISTS "users"');
+    expect(rebuilt).toContain('ALTER TABLE "users__new" RENAME TO "users"');
     expect(
       renderer.render(
         new AlterTableStatement("users", {
