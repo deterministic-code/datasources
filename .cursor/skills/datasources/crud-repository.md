@@ -1195,7 +1195,7 @@ let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
-let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
+let users_repo = ds.create_repository::<Row>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
@@ -1427,7 +1427,7 @@ let mut next = ada(
     encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
 );
 next.insert("id".into(), created.get("id").unwrap().clone());
-let saved = users.update(next).await.unwrap();
+let saved = users.update(next, None).await.unwrap();
 let updated = users
     .read_single_by_id(created.get("id").unwrap())
     .await
@@ -1436,7 +1436,7 @@ let updated = users
 let updated_role_links = seeded.user_roles.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
 let updated_group_links = seeded.user_groups.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(record(&[("id", created.get("id").unwrap().clone())]))
+    .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
     .unwrap();
 ```
@@ -1610,9 +1610,9 @@ key.insert("TenantId".into(), Value::Int(1));
 key.insert("Id".into(), Value::Int(1));
 let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
 ada.insert("Name".into(), Value::from("ada-v2"));
-let updated = accounts_repo.update(ada.clone()).await.unwrap();
+let updated = accounts_repo.update(ada.clone(), None).await.unwrap();
 let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-let removed = accounts_repo.delete(ada).await.unwrap();
+let removed = accounts_repo.delete(ada, None).await.unwrap();
 let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
 let mut other = datasources::Row::new();
 other.insert("TenantId".into(), Value::Int(2));
@@ -2190,7 +2190,7 @@ let current = users_repo
 let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
-let removed = users_repo.delete(loaded).await.unwrap();
+let removed = users_repo.delete(loaded, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 

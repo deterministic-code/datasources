@@ -188,7 +188,7 @@ execute_sql(
 let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
-let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
+let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
     .read_single(&Where::binary("Id", eq, 1_i64), None)
     .await
@@ -311,7 +311,7 @@ let ds = default().unwrap();
 let mut options = create_crud_repository_options::<User>();
 options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
 options.ids = vec!["Id".into()];
-let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
+let users_repo = ds.create_repository::<Row>(Some(connection), Some(options));
 let mut created = datasources::Row::new();
 created.insert("Username".into(), Value::from("ada"));
 created.insert("IsEnabled".into(), Value::Bool(true));
@@ -685,7 +685,7 @@ let current = users_repo
 let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
-let removed = users_repo.delete(loaded).await.unwrap();
+let removed = users_repo.delete(loaded, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
 ```
 

@@ -127,5 +127,5 @@ let current = users_repo
 let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
     .await
     .unwrap();
-let removed = users_repo.delete(loaded).await.unwrap();
+let removed = users_repo.delete(loaded, None).await.unwrap();
 let gone = users_repo.read_single_by_id(&key).await.unwrap();
