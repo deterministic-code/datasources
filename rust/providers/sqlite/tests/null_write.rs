@@ -40,7 +40,7 @@ async fn omits_null_datetime_and_version() {
         .unwrap();
     let mut renamed = stored.clone();
     renamed.insert("Name".into(), Value::from("ada-v2"));
-    let updated = repo.update(renamed).await.unwrap();
+    let updated = repo.update(renamed, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let kept = repo
         .read_single_by_id(omitted.get("Id").unwrap())

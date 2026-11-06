@@ -577,12 +577,12 @@ impl<T: Entity> CRUDRepository<T> {
         ICRUDRepository::create(self, item).await
     }
 
-    pub async fn update(&self, item: T) -> Result<Response> {
-        ICRUDRepository::update(self, item, None).await
+    pub async fn update(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        ICRUDRepository::update(self, item, by_where).await
     }
 
-    pub async fn delete(&self, item: T) -> Result<Response> {
-        ICRUDRepository::delete(self, item, None).await
+    pub async fn delete(&self, item: T, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        ICRUDRepository::delete(self, item, by_where).await
     }
 
     pub async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<T>> {

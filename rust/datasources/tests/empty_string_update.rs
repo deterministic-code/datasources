@@ -30,7 +30,7 @@ async fn update_keeps_explicit_empty_string_on_nullable() {
     repo.create(record(&[("id", Value::Int(1)), ("note", Value::from("side"))]))
         .await
         .expect("create");
-    repo.update(record(&[("id", Value::Int(1)), ("note", Value::from(""))]))
+    repo.update(record(&[("id", Value::Int(1)), ("note", Value::from(""))]), None)
         .await
         .expect("update");
     assert_eq!(

@@ -768,7 +768,7 @@ pub async fn run(
             } => {
                 let updated_row_1 = domain_record(&update.row, &spec.type_spec.mappings);
                 let response = repo
-                    .update(updated_row_1)
+                    .update(updated_row_1, None)
                     .await
                     .unwrap();
                 assert_affected(
@@ -798,7 +798,7 @@ pub async fn run(
             } => {
                 let mut row = Row::new();
                 row.insert("id".into(), yaml_value(&delete.id));
-                let response = repo.delete(row).await.unwrap();
+                let response = repo.delete(row, None).await.unwrap();
                 assert_affected(
                     &format!("{} DELETE", spec.name),
                     response.rows_affected,

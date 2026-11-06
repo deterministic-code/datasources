@@ -160,7 +160,7 @@ async fn put<T: datasources::Entity + datasources::Facet<'static>>(
         return Ok(empty(404));
     }
     set_id(&mut row, id);
-    repo.update(row).await?;
+    repo.update(row, None).await?;
     Ok(ok(200, &repo.read_single(&by).await?.unwrap_or_default())?)
 }
 
@@ -170,7 +170,7 @@ async fn delete<T: datasources::Entity>(repo: &CRUDRepository<T>, query: &HashMa
     let Some(row) = repo.read_single(&by).await? else {
         return Ok(empty(404));
     };
-    repo.delete(row).await?;
+    repo.delete(row, None).await?;
     Ok(empty(204))
 }
 

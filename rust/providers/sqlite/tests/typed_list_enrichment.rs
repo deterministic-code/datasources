@@ -294,7 +294,7 @@ async fn update_stamp_keeps_typed_list_line2() {
     let contacts = wired(conn);
     let mut created = contacts.create(ada()).await.unwrap();
     created.addresses[0].line1 = "12 Engine".into();
-    contacts.update(created.clone()).await.unwrap();
+    contacts.update(created.clone(), None).await.unwrap();
     let read = contacts
         .read_single_by_id(&Value::Int(created.id))
         .await

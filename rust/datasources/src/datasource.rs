@@ -50,34 +50,26 @@ pub trait Datasource: Send + Sync {
 }
 
 impl dyn Datasource {
-    pub fn create_repository<T: 'static>(
-        &self,
-        connection: Option<Arc<dyn Connection>>,
-        options: Option<CRUDRepositoryOptions>,
-    ) -> Arc<dyn ICRUDRepository<Row>> {
-        let bound = self.bind_connection(connection);
-        self.repository_from(bound, apply_crud::<T>(options))
-    }
-
-    pub fn create_typed_repository<T: Entity + crate::converters::SchemaObject + 'static>(
+    pub fn create_repository<T: Entity>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<CRUDRepositoryOptions>,
     ) -> Arc<dyn ICRUDRepository<T>> {
         let bound = self.bind_connection(connection);
-        let options = options.unwrap_or_else(create_crud_repository_options::<T>);
-        Arc::new(
-            CRUDRepository::<T>::new(bound, apply_crud::<T>(Some(options))).expect("repository"),
-        )
+        T::create_repository(bound, apply_crud::<T>(options), |connection, options| {
+            self.repository_from(connection, options)
+        })
     }
 
-    pub fn create_readonly_repository<T: 'static>(
+    pub fn create_readonly_repository<T: Entity>(
         &self,
         connection: Option<Arc<dyn Connection>>,
         options: Option<ReadonlyRepositoryMappingOptions>,
-    ) -> Arc<dyn IReadonlyRepository<Row>> {
+    ) -> Arc<dyn IReadonlyRepository<T>> {
         let bound = self.bind_connection(connection);
-        self.readonly_repository_from(bound, apply_readonly::<T>(options))
+        T::create_readonly_repository(bound, apply_readonly::<T>(options), |connection, options| {
+            self.readonly_repository_from(connection, options)
+        })
     }
 
     pub fn create_repository_by_name<T: Entity>(

@@ -140,7 +140,7 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 }],
                 ..Default::default()
-            })
+            }, None)
         .await?;
     let ada_after = contacts_repo
         .read_single(&Where::new(Operator::equals("id", ada.id)))
@@ -191,7 +191,7 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 }],
                 ..Default::default()
-            })
+            }, None)
         .await?;
     let alan_after = contacts_repo
         .read_single(&Where::new(Operator::equals("id", alan.id)))
@@ -207,7 +207,7 @@ async fn main() -> Result<()> {
         alan_after.addresses[0].line_1
     );
 
-    let ada_removed = contacts_repo.delete(ada_after).await?;
+    let ada_removed = contacts_repo.delete(ada_after, None).await?;
     if contacts_repo
         .read_single(&Where::new(Operator::equals("id", ada.id)))
         .await?
@@ -217,7 +217,7 @@ async fn main() -> Result<()> {
     }
     println!("deleted {} rows={}", ada.id, ada_removed.rows_affected);
 
-    let alan_removed = contacts_repo.delete(alan_after).await?;
+    let alan_removed = contacts_repo.delete(alan_after, None).await?;
     if contacts_repo
         .read_single(&Where::new(Operator::equals("id", alan.id)))
         .await?

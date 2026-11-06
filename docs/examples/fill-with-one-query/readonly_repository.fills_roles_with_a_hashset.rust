@@ -29,12 +29,12 @@ role_options.property_mappings = Some(std::sync::Arc::new(DictionaryMapper::new(
 ])));
 let mut users_repo =
     ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
-let types = ds.create_readonly_repository::<UserType>(
+let types = ds.create_readonly_repository::<Row>(
     Some(connection.clone()),
     Some(type_options),
 );
 let roles =
-    ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options));
+    ds.create_readonly_repository::<Row>(Some(connection), Some(role_options));
 let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
 users_repo.add_enriched(
     datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),

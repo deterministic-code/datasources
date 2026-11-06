@@ -20,13 +20,9 @@ pub struct StubRepository {
 
 impl StubRepository {
     pub fn new(provider: impl Into<String>) -> Self {
-        Self::typed::<Row>(provider)
-    }
-
-    pub fn typed<T: 'static>(provider: impl Into<String>) -> Self {
         Self {
             provider: provider.into(),
-            entity_type: TypeId::of::<T>(),
+            entity_type: TypeId::of::<Row>(),
         }
     }
 }

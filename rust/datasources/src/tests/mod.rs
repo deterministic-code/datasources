@@ -794,12 +794,12 @@ async fn published_mocks() {
     assert_eq!(created["id"], Value::Int(2));
     let updated_row_1 = record(&[("id", Value::Int(2))]);
     let updated = repo
-        .update(updated_row_1)
+        .update(updated_row_1, None)
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
     let removed = repo
-        .delete(record(&[("id", Value::Int(2))]))
+        .delete(record(&[("id", Value::Int(2))]), None)
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
@@ -811,9 +811,9 @@ async fn published_mocks() {
     assert!(repo.create(Row::new()).await.is_err());
     repo.set_update_error("up");
     let updated_row_2 = Row::new();
-    assert!(repo.update(updated_row_2).await.is_err());
+    assert!(repo.update(updated_row_2, None).await.is_err());
     repo.set_delete_error("del");
-    assert!(repo.delete(Row::new()).await.is_err());
+    assert!(repo.delete(Row::new(), None).await.is_err());
 
     let ds = MockDatasource::new("mock");
     let ds: &dyn Datasource = &ds;
@@ -1814,13 +1814,13 @@ async fn table_repository() {
         "INSERT INTO users (name) VALUES ($name)"
     );
     assert_eq!(created["id"], Value::Int(9));
-    let updated = repo.update(obj.clone()).await.unwrap();
+    let updated = repo.update(obj.clone(), None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE users SET name = $name WHERE id = $id"
     );
-    let removed = repo.delete(obj).await.unwrap();
+    let removed = repo.delete(obj, None).await.unwrap();
     assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
@@ -1860,7 +1860,7 @@ async fn create_and_update_honor_write_properties() {
             ("Id", Value::Int(1)),
             ("Line1", Value::from("2 Main")),
             ("Description", Value::from("Work")),
-        ]))
+        ]), None)
     .await
     .unwrap();
     assert_eq!(
@@ -1958,7 +1958,7 @@ async fn create_and_update_write_read_properties_only() {
             ("Id", Value::Int(1)),
             ("Line1", Value::from("2 Main")),
             ("Description", Value::from("Work")),
-        ]))
+        ]), None)
     .await
     .unwrap();
     assert_eq!(
@@ -2020,7 +2020,7 @@ async fn table_repository_assigned_id() {
                 ("name", Value::Int(4)),
             ]);
     let updated = repo
-        .update(updated_row_3)
+        .update(updated_row_3, None)
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
@@ -2040,16 +2040,16 @@ async fn table_repository_assigned_id() {
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let updated_row_4 = record(&[("name", Value::from("a"))]);
     assert!(repo
-        .update(updated_row_4)
+        .update(updated_row_4, None)
         .await
         .is_err());
     assert!(repo
-        .delete(record(&[("name", Value::from("a"))]))
+        .delete(record(&[("name", Value::from("a"))]), None)
         .await
         .is_err());
     let updated_row_5 = record(&[("id", Value::Int(1))]);
     assert!(repo
-        .update(updated_row_5)
+        .update(updated_row_5, None)
         .await
         .is_err());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
@@ -2064,7 +2064,7 @@ async fn table_repository_assigned_id() {
         .unwrap();
     assert_eq!(created["id"], Value::Int(1));
     let removed = repo
-        .delete(record(&[("id", Value::Int(1)), ("name", Value::from("z"))]))
+        .delete(record(&[("id", Value::Int(1)), ("name", Value::from("z"))]), None)
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
@@ -2130,13 +2130,13 @@ async fn table_repository_crud_mapper() {
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO people (full_name) VALUES ($full_name)"
     );
-    let updated = repo.update(row.clone()).await.unwrap();
+    let updated = repo.update(row.clone(), None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE people SET full_name = $full_name WHERE user_id = $user_id"
     );
-    let removed = repo.delete(row).await.unwrap();
+    let removed = repo.delete(row, None).await.unwrap();
     assert_eq!(removed.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[2].0,
@@ -2342,7 +2342,7 @@ async fn create_omits_null_datetime_and_version_and_update_writes_them() {
                 ("version", Value::Null),
             ]);
     let updated = repo
-        .update(updated_row_6)
+        .update(updated_row_6, None)
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);

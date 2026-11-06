@@ -262,7 +262,7 @@ async fn update_resolves_lookup_name() {
         .update(record(&[
                 ("Id", created.get("Id").unwrap().clone()),
                 ("TypeName", Value::from("work")),
-            ]))
+            ]), None)
         .await
         .unwrap();
     assert_eq!(
@@ -487,7 +487,7 @@ async fn round_trips_string_and_object_dictionaries() {
         ),
     ]);
     hosts
-        .update(updated_row_1)
+        .update(updated_row_1, None)
         .await
         .unwrap();
     let updated = hosts.read_single(&(), None).await.unwrap().unwrap();
@@ -704,7 +704,7 @@ async fn deep_update_replace_syncs_children() {
                 ),
             ]);
     let updated = parents
-        .update(updated_row_2)
+        .update(updated_row_2, None)
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
@@ -793,7 +793,7 @@ async fn cascade_update_deletes_children_and_recreates() {
                 ),
             ]);
     let updated = parents
-        .update(updated_row_3)
+        .update(updated_row_3, None)
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
@@ -875,7 +875,7 @@ async fn cascade_update_replaces_links_and_keeps_related() {
                 ("Tags", encode_rows(&[record(&[("Id", keep_id.clone())])])),
             ]);
     let updated = parents
-        .update(updated_row_4)
+        .update(updated_row_4, None)
         .await
         .unwrap();
     assert_eq!(updated.rows_affected, 1);
@@ -1042,7 +1042,7 @@ async fn deep_delete_cascades_children_then_parent() {
         None,
     );
     let removed = parents
-        .delete(record(&[("Id", parent_id)]))
+        .delete(record(&[("Id", parent_id)]), None)
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);

@@ -94,7 +94,7 @@ mod tests {
             children.clone(),
             None,
         );
-        parents.delete(created).await.unwrap();
+        parents.delete(created, None).await.unwrap();
         let left = children.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].get("label"), Some(&Value::from("a")));

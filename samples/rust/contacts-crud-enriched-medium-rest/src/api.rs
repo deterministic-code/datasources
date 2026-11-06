@@ -88,7 +88,7 @@ impl Api {
         }
         let mut contact = stamp(read(body)?, &self.clock);
         contact.id = i32::try_from(id).map_err(|_| ApiError::bad("id is required"))?;
-        self.contacts.update(contact).await?;
+        self.contacts.update(contact, None).await?;
         Ok(ok(200, &self.contacts.read_single(&by).await?.unwrap_or_default())?)
     }
 
@@ -98,7 +98,7 @@ impl Api {
         let Some(contact) = self.contacts.read_single(&by).await? else {
             return Ok(empty(404));
         };
-        self.contacts.delete(contact).await?;
+        self.contacts.delete(contact, None).await?;
         Ok(empty(204))
     }
 
@@ -123,7 +123,7 @@ impl Api {
         }
         let mut group = stamp_group(read(body)?, &self.clock);
         group.id = i32::try_from(id).map_err(|_| ApiError::bad("id is required"))?;
-        self.groups_repo.update(group).await?;
+        self.groups_repo.update(group, None).await?;
         Ok(ok(200, &self.groups_repo.read_single(&by).await?.unwrap_or_default())?)
     }
 
@@ -156,7 +156,7 @@ impl Api {
         }
         let mut row = text_legacy(read(body)?, &self.clock);
         row.key = key;
-        self.legacy.update(row).await?;
+        self.legacy.update(row, None).await?;
         Ok(ok(200, &self.legacy.read_single(&by).await?.unwrap_or_default())?)
     }
 
@@ -166,7 +166,7 @@ impl Api {
         let Some(row) = self.legacy.read_single(&by).await? else {
             return Ok(empty(404));
         };
-        self.legacy.delete(row).await?;
+        self.legacy.delete(row, None).await?;
         Ok(empty(204))
     }
 
