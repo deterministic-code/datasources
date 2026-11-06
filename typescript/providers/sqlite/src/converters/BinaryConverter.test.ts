@@ -4,8 +4,10 @@ import { BinaryConverter } from "./BinaryConverter.ts";
 describe("BinaryConverter", () => {
   it("maps binary", () => {
     const converter = new BinaryConverter();
-    const bytes = new Uint8Array([1, 2]);
-    expect(converter.convert(bytes)).toBe(bytes);
-    expect(converter.reverseConvert(bytes)).toBe(bytes);
+    const raw = new Uint8Array([1, 2]);
+    expect(converter.convert(raw)).toBe("AQI=");
+    expect(converter.convert("AQI=")).toBe("AQI=");
+    expect(converter.reverseConvert("AQI=")).toEqual(raw);
+    expect(converter.reverseConvert(raw)).toBe(raw);
   });
 });

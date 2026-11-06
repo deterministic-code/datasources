@@ -1,4 +1,4 @@
-import { CRUDRepository, Datasource, Native, createCRUDRepositoryOptions, type IConnection } from "@deterministic-code/datasources";
+import { CRUDRepository, Datasource, Native, Schema, createCRUDRepositoryOptions, type IConnection } from "@deterministic-code/datasources";
 import { SqliteDriver } from "@deterministic-code/datasources-sqlite";
 import { describe, expect, it } from "vitest";
 
@@ -6,13 +6,15 @@ class UserStamp {
   id = 0;
   username = "";
   created: Date | null = null;
-  updated: Uint8Array | null = null;
+  updated: string | null = null;
 }
 
-const bytes = (value: Uint8Array | null): number[] => [...(value ?? new Uint8Array())];
+const driver = new SqliteDriver();
+const versionOf = (value: Uint8Array): string =>
+  driver.rowTypeConverters.binary.convert(value) as string;
 
 const open = async (): Promise<IConnection> => {
-  const ds = new Datasource("sqlite", new SqliteDriver(), { DATASOURCE_URL: "sqlite:///:memory:" });
+  const ds = new Datasource("sqlite", driver, { DATASOURCE_URL: "sqlite:///:memory:" });
   const connection = await ds.createConnection();
   await connection.open();
   await connection.createCommand().executeNative(new Native(`
@@ -29,7 +31,16 @@ const open = async (): Promise<IConnection> => {
 describe("null write", () => {
   it("omits null created and updated", async () => {
     const connection = await open();
-    const repo = new CRUDRepository(connection, { ...createCRUDRepositoryOptions(UserStamp), entity: "users" });
+    const repo = new CRUDRepository(connection, {
+      ...createCRUDRepositoryOptions(UserStamp, driver.rowTypeConverters),
+      entity: "users",
+      schema: new Schema({
+        id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        username: { type: "string", nullable: false, hasDefault: false },
+        created: { type: "datetime", nullable: false, hasDefault: true },
+        updated: { type: "binary", nullable: false, hasDefault: true },
+      }),
+    });
     const omitted = Object.assign(new UserStamp(), { username: "ada" });
     await repo.create(omitted);
     const stored = await repo.readSingleById(omitted.id);
@@ -39,17 +50,17 @@ describe("null write", () => {
     const explicit = Object.assign(new UserStamp(), {
       username: "grace",
       created: new Date("2024-06-01T00:00:00.000Z"),
-      updated: new Uint8Array([9, 9]),
+      updated: versionOf(new Uint8Array([9, 9])),
     });
     await repo.create(explicit);
     const written = await repo.readSingleById(explicit.id);
 
-    expect(stored?.created).toBe("2020-01-01T00:00:00.000Z");
-    expect(bytes(stored?.updated ?? null)).toEqual([1, 2]);
+    expect(stored?.created).toEqual(new Date("2020-01-01T00:00:00.000Z"));
+    expect(stored?.updated).toBe(versionOf(new Uint8Array([1, 2])));
     expect(kept?.username).toBe("ada-v2");
-    expect(kept?.created).toBe(stored?.created);
-    expect(bytes(kept?.updated ?? null)).toEqual(bytes(stored?.updated ?? null));
-    expect(written?.created).toBe("2024-06-01T00:00:00.000Z");
-    expect(bytes(written?.updated ?? null)).toEqual([9, 9]);
+    expect(kept?.created).toEqual(stored?.created);
+    expect(kept?.updated).toBe(stored?.updated);
+    expect(written?.created).toEqual(new Date("2024-06-01T00:00:00.000Z"));
+    expect(written?.updated).toBe(versionOf(new Uint8Array([9, 9])));
   });
 });
