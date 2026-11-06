@@ -1,0 +1,1 @@
+import{_ as e,o as r,c as a,a3 as n}from"./chunks/framework.DDp5PACv.js";const h=JSON.parse('{"title":"Features","description":"","frontmatter":{},"headers":[],"relativePath":"features.md","filePath":"features.md"}'),d={name:"features.md"};function s(l,t,i,c,o,y){return r(),a("div",null,[...t[0]||(t[0]=[n("",4)])])}const g=e(d,[["render",s]]);export{h as __pageData,g as default};
