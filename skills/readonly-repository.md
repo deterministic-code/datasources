@@ -708,7 +708,7 @@ execute_sql(
 let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
-let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
+let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
     .read_single(&Where::binary("Id", eq, 1_i64), None)
     .await
@@ -881,7 +881,7 @@ let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 options.object_converter = Some(Box::new(UserConverter));
-let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
+let users_repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let user = users_repo
     .read_single(&Where::binary("Id", eq, 1_i64), None)
     .await
@@ -1046,7 +1046,7 @@ type_options.property_mappings =
 let mut users_repo =
     ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
 let types =
-    ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
+    ds.create_readonly_repository::<Row>(Some(connection), Some(type_options));
 users_repo.add_enriched(
     datasources::Enrichment::new(
         "UserType",
@@ -1236,7 +1236,7 @@ options.schema = Schema::new(HashMap::from([
     ("Active".into(), "boolean".into()),
     ("Opened".into(), "datetime".into()),
 ]));
-let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
+let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
     .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)

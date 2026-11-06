@@ -60,6 +60,6 @@ let updated_row_3 = record(&[
             ),
         ]);
 let updated = parents
-    .update(updated_row_3)
+    .update(updated_row_3, None)
     .await
     .unwrap();

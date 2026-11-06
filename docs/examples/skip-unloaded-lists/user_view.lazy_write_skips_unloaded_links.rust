@@ -18,7 +18,7 @@ let next = record(&[
     ("is_enabled", Value::Bool(false)),
     ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
 ]);
-let skipped = users.update(next).await.unwrap();
+let skipped = users.update(next, None).await.unwrap();
 let after_skip = users
     .read_single_by_id(created.get("id").unwrap())
     .await
@@ -33,10 +33,10 @@ let linked_row = record(&[
     ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
     ("roles", encode_rows(&[seeded.editor_role.clone()])),
 ]);
-let linked = users.update(linked_row).await.unwrap();
+let linked = users.update(linked_row, None).await.unwrap();
 let linked_role_links = seeded.user_roles.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
 let linked_group_links = seeded.user_groups.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
-    .delete(record(&[("id", created.get("id").unwrap().clone())]))
+    .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
     .unwrap();

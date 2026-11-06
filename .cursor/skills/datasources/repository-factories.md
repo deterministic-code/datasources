@@ -805,12 +805,12 @@ See [Datasource](docs/sections/datasource.md) for `CreateRepository` / `createRe
     var created = factory.Create<Item>();
 ```
 
-#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L224-L228)
+#### Rust [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/rust/datasources/src/repository_factory.rs#L228-L232)
 
 ```rust
 let factory = RepositoryFactory::new();
-factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
-let created = factory.create::<Item>().unwrap();
+factory.register(Arc::new(StubRepository::new("memory")));
+let created = factory.create::<Row>().unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/RepositoryFactory.test.ts#L19-L25)
