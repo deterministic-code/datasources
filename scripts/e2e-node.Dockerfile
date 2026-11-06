@@ -4,4 +4,4 @@ WORKDIR /work
 COPY e2e-workdir.sh /e2e-workdir.sh
 COPY e2e-quickstarts.sh /e2e-quickstarts.sh
 ENTRYPOINT ["sh", "/e2e-workdir.sh"]
-CMD ["sh", "-ec", "sh -e sqlite.sh --local && sh -e mysql-postgres.sh --local"]
+CMD ["sh", "-ec", "set -o pipefail; sh -e -o pipefail sqlite.sh --local && sh -e -o pipefail mysql-postgres.sh --local"]

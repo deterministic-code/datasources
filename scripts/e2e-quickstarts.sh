@@ -1,4 +1,4 @@
-set -e
+set -e -o pipefail
 cd /work
 unset DATASOURCES_REPO
 ln -sfn /repo/quick_starts /work/quick_starts
@@ -8,6 +8,6 @@ for script in sqlite.sh mysql-postgres.sh; do
   rm -rf dest
   mkdir dest
   if [ "$script" = mysql-postgres.sh ]; then sh /repo/scripts/e2e-reset-engines.sh; fi
-  (cd dest && sh -e "/repo/quick_starts/contacts_cli/$lang/$script")
+  (cd dest && sh -e -o pipefail "/repo/quick_starts/contacts_cli/$lang/$script")
   rm -rf dest
 done

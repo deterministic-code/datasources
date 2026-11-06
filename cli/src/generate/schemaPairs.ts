@@ -12,13 +12,6 @@ export type SchemaPair = {
   isId: boolean;
 };
 
-const tableNameOf = (authored: Type, specName: string): string =>
-  authored.tags.includes("view_type") &&
-  authored.inherits !== undefined &&
-  authored.inherits !== "dictionary"
-    ? authored.inherits
-    : specName;
-
 export const schemaPairs = (
   model: RepositoryModel,
   spec: IDeterministic | undefined,
@@ -27,7 +20,7 @@ export const schemaPairs = (
   const expanded = new Map(inferReferenceFieldTypes(spec?.expandedTypes ?? []).map((type) => [type.name, type]));
   const types = new Map(inferReferenceFieldTypes(spec?.types ?? []).map((type) => [type.name, type]));
   const authored = types.get(model.specName) ?? ({ name: model.specName, fields: [], tags: [] } as Type);
-  const tableType = (expanded.get(tableNameOf(authored, model.specName)) ?? expanded.get(authored.name) ?? authored) as Type;
+  const tableType = (expanded.get(authored.name) ?? expanded.get(model.specName) ?? authored) as Type;
   const property = (name: string): string => casing.convertFields(name);
   return persistedColumnFields(tableType, expanded).flatMap((field) =>
     field.type.length === 0

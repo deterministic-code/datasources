@@ -123,7 +123,6 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
       relatedProperty: item.relatedProperty === undefined ? undefined : this.quote(item.relatedProperty),
       via: childField(casing, item.via),
       viaType: item.viaType,
-      object: item.kind === "object" ? {} : undefined,
       dictionary: item.kind === "dictionary" ? {} : undefined,
       list: item.kind === "list" || item.kind === "linked" ? {} : undefined,
       linked: isLinked(item)
