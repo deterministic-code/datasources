@@ -75,12 +75,14 @@ export const planRepositories = (
     if (authored === undefined) throw new Error(`${table.name}: no matching type in types.yaml`);
     if (authored.inherits === "dictionary") return [];
     const removed = authored.removeFields ?? [];
+    const dropped = new Set(removed);
     const full = expanded.get(authored.name) as Type;
     const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
     const projected = new Set(Object.values(authored.mapping ?? {}));
     const columns = persistedColumnFields(tableType, expanded)
       .filter((field) => !projected.has(field.name));
+    const writable = columns.filter((field) => !dropped.has(field.name));
     return [
       {
         specName: authored.name,
@@ -94,12 +96,12 @@ export const planRepositories = (
         }),
         ids: identityColumns(tableType, table).map(property),
         readProperties: columns.map((field) => property(field.name)),
-        createProperties: columns
+        createProperties: writable
           .filter((field) =>
             writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInCreate,
           )
           .map((field) => property(field.name)),
-        updateProperties: columns
+        updateProperties: writable
           .filter((field) =>
             writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInUpdate,
           )

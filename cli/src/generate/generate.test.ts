@@ -472,9 +472,9 @@ types: []
     expect(contactCs).toContain("new CRUDRepositoryBuilder<Backend.Types.View.Contact>()");
     expect(contactCs).toContain('.Add("mysql", new()');
     expect(contactCs).toContain('.Add("postgres", new()');
-    expect(contactCs).toContain('CreateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"]');
-    expect(contactCs).toContain('CreateProperties = ["ContactSourceId", "FirstName", "LastName", "Email", "Notes"]');
-    expect(contactCs).toContain('UpdateProperties = ["Uuid", "Version", "ContactSourceId", "FirstName", "LastName", "Email", "Notes"]');
+    expect(contactCs).toContain('CreateProperties = ["Uuid", "Version", "FirstName", "LastName", "Email", "Notes"]');
+    expect(contactCs).toContain('CreateProperties = ["FirstName", "LastName", "Email", "Notes"]');
+    expect(contactCs).toContain('UpdateProperties = ["Uuid", "Version", "FirstName", "LastName", "Email", "Notes"]');
     expect(contactCs).toContain(".For(connection)");
     expect(contactCs).toContain("EnrichmentPropertyType.List");
     expect(contactCs).toContain('"Version"');
@@ -489,8 +489,8 @@ types: []
     expect(contactTs).toContain("new CRUDRepositoryBuilder<Contact>()");
     expect(contactTs).toContain('.add("mysql", {');
     expect(contactTs).toContain('.add("postgres", {');
-    expect(contactTs).toContain('createProperties: ["uuid", "version", "contactSourceId", "firstName", "lastName", "email", "notes"]');
-    expect(contactTs).toContain('createProperties: ["contactSourceId", "firstName", "lastName", "email", "notes"]');
+    expect(contactTs).toContain('createProperties: ["uuid", "version", "firstName", "lastName", "email", "notes"]');
+    expect(contactTs).toContain('createProperties: ["firstName", "lastName", "email", "notes"]');
     expect(contactTs).not.toContain("this.createZeros");
     expect(contactTs).toContain('firstName: { type: "string"');
     expect(contactTs).toContain('lastName: { type: "string"');
@@ -531,7 +531,9 @@ types: []
     expect(contactRs).toContain("CRUDRepositoryBuilder::new()");
     expect(contactRs).toContain('.add_for("mysql"');
     expect(contactRs).toContain('.add_for("postgres"');
-    expect(contactRs).toContain('vec!["contact_source_id".into()');
+    expect(contactRs).toMatch(/read_properties = vec!\[[^\]]*contact_source_id/);
+    expect(contactRs).not.toMatch(/create_properties = Some\(vec!\[[^\]]*contact_source_id/);
+    expect(contactRs).not.toMatch(/update_properties = Some\(vec!\[[^\]]*contact_source_id/);
     expect(contactRs).toContain("for_connection(connection.as_ref())");
     expect(contactRs).toContain("pub struct ContactsRepository");
     expect(contactRs).toContain("pub address: Arc<CRUDRepository<Address>>");
@@ -567,6 +569,15 @@ types: []
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain("readonly contacts: ContactsRepository;");
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"Contact", "contacts"');
     expect(textOf(typescript, "repositoryRegistry.ts")).toContain('"ContactGroup", "contactGroups"');
+    expect(textOf(csharp, "AddressesRepository.cs")).toMatch(/ReadProperties = \[[^\]]*AddressTypeId/);
+    expect(textOf(csharp, "AddressesRepository.cs")).not.toMatch(/CreateProperties = \[[^\]]*AddressTypeId/);
+    expect(textOf(csharp, "AddressesRepository.cs")).not.toMatch(/UpdateProperties = \[[^\]]*AddressTypeId/);
+    expect(textOf(typescript, "addressesRepository.ts")).toMatch(/readProperties: \[[^\]]*addressTypeId/);
+    expect(textOf(typescript, "addressesRepository.ts")).not.toMatch(/createProperties: \[[^\]]*addressTypeId/);
+    expect(textOf(typescript, "addressesRepository.ts")).not.toMatch(/updateProperties: \[[^\]]*addressTypeId/);
+    expect(textOf(rust, "addressesRepository.rs")).toMatch(/read_properties = vec!\[[^\]]*address_type_id/);
+    expect(textOf(rust, "addressesRepository.rs")).not.toMatch(/create_properties = Some\(vec!\[[^\]]*address_type_id/);
+    expect(textOf(rust, "addressesRepository.rs")).not.toMatch(/update_properties = Some\(vec!\[[^\]]*address_type_id/);
     expect(contactTs).toContain("createReadonly");
     expect(contactTs.slice(contactTs.indexOf("createReadonly"))).not.toContain("ids:");
     expect(legacyTs.slice(legacyTs.indexOf("createReadonly"))).not.toContain("ids:");
@@ -588,6 +599,76 @@ types: []
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contacts(&self)");
     expect(textOf(rust, "repositoryRegistry.rs")).toContain("fn contact_groups(&self)");
     expect(textOf(rust, "mod.rs")).toContain("pub mod repositoryRegistry;");
+  });
+
+  it("drops remove_fields from create and update on every language", async () => {
+    const files = {
+      "types.yaml": `version: 1.0.0
+types:
+  - template_type:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - name:
+            type: string
+  - template_base:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+        - template_type_id:
+            references: template_type.id
+        - name:
+            type: string
+        - content:
+            type: string
+  - template:
+      tags: [view_type]
+      inherits: template_base
+      remove_fields:
+        - template_type_id
+      union:
+        - template_type
+      extract:
+        - template_type.name
+      mapping:
+        template_type.name: template_type_name
+`,
+      "datasource.yaml": `version: 1.0.0
+includes:
+  - types:
+      filter: tag == "datasource_type"
+types: []
+`,
+    };
+    const spec = await DeterministicParser(memoryReader(files)).parse({ "backend.datasources": "sqlite" });
+    const csharp = planRepositories(spec, "csharp", { "backend.datasources": "sqlite" });
+    const typescript = planRepositories(spec, "typescript", {
+      "backend.datasources": "sqlite",
+      "languages.typescript.casing.fields": "camel",
+    });
+    const rust = planRepositories(spec, "rust", { "backend.datasources": "sqlite" });
+    const template = (models: ReturnType<typeof planRepositories>) => models.find((model) => model.specName === "template");
+    expect(template(csharp)?.readProperties).toContain("TemplateTypeId");
+    expect(template(csharp)?.createProperties).not.toContain("TemplateTypeId");
+    expect(template(csharp)?.updateProperties).not.toContain("TemplateTypeId");
+    expect(template(typescript)?.readProperties).toContain("templateTypeId");
+    expect(template(typescript)?.createProperties).not.toContain("templateTypeId");
+    expect(template(typescript)?.updateProperties).not.toContain("templateTypeId");
+    expect(template(rust)?.readProperties).toContain("template_type_id");
+    expect(template(rust)?.createProperties).not.toContain("template_type_id");
+    expect(template(rust)?.updateProperties).not.toContain("template_type_id");
+    const address = planRepositories(
+      await DeterministicParser(memoryReader(contactsFiles())).parse({ "backend.datasources": "sqlite" }),
+      "csharp",
+      { "backend.datasources": "sqlite" },
+    ).find((model) => model.specName === "address");
+    expect(address?.readProperties).toContain("AddressTypeId");
+    expect(address?.createProperties).not.toContain("AddressTypeId");
+    expect(address?.updateProperties).not.toContain("AddressTypeId");
   });
 
   it("keeps default write lists when an engine file omits a type", async () => {
