@@ -1,5 +1,7 @@
 set -e
 repo="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck disable=SC1091
+. "$repo/scripts/e2e-fail-fast.sh"
 samples="
 samples/typescript/contacts-simple-cli
 samples/typescript/contacts-crud-enriched-medium-rest
@@ -15,15 +17,40 @@ samples/rust/complex-game-rest
 samples/rust/user-roles-simple-cli
 "
 down_flags="down -v --remove-orphans -t 0"
-parallel="${E2E_PARALLEL:-3}"
 fail=0
 live=""
+live_projects=""
+sample_dirs=""
+suite_pid=$$
 
 down_one() {
   project=$1
   file=$2
   COMPOSE_PROJECT_NAME=$project docker compose -f "$file" $down_flags
 }
+
+kill_suite() {
+  if [ $$ -ne "$suite_pid" ]; then
+    kill -USR1 "$suite_pid" 2>/dev/null || true
+    exit 1
+  fi
+  trap - USR1 EXIT
+  e2e_log "fail $*"
+  for pid in $live; do
+    kill "$pid" 2>/dev/null || true
+  done
+  for entry in $live_projects; do
+    project=${entry%%:*}
+    file=${entry#*:}
+    down_one "$project" "$file"
+  done
+  for pid in $live; do
+    kill -9 "$pid" 2>/dev/null || true
+  done
+  wait 2>/dev/null || true
+  exit 1
+}
+trap 'kill_suite signal' USR1
 
 maybe_prune() {
   [ "${E2E_PRUNE:-}" = 1 ] || return 0
@@ -120,6 +147,7 @@ slug() {
 }
 
 await_slot() {
+  [ "$fail" -eq 0 ] || kill_suite "already failed"
   while :; do
     next=""
     n=0
@@ -128,7 +156,7 @@ await_slot() {
         next="$next $pid"
         n=$((n + 1))
       else
-        wait "$pid" || fail=1
+        wait "$pid" || kill_suite "sample exited $?"
       fi
     done
     live=$next
@@ -139,13 +167,24 @@ await_slot() {
 
 await_all() {
   for pid in $live; do
-    wait "$pid" || fail=1
+    wait "$pid" || kill_suite "sample exited $?"
   done
   live=""
 }
 
-run_runner() {
-  docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" runner "$@"
+run_watched() {
+  status_file=/tmp/e2e-watch.$$.$RANDOM
+  line=0
+  (
+    "$@" 2>&1
+    echo $? >"$status_file"
+  ) | e2e_watch || line=$?
+  cmd=$(cat "$status_file" 2>/dev/null || echo 1)
+  rm -f "$status_file"
+  if [ "$line" -ne 0 ]; then
+    return 1
+  fi
+  return "$cmd"
 }
 
 run_compose() {
@@ -153,26 +192,34 @@ run_compose() {
   project="$2"
   if [ ! -f "$repo/$dir/compose.yml" ]; then
     printf 'e2e-docker: %s has no compose.yml\n' "$dir" >&2
-    exit 1
+    return 1
   fi
-  (
-    cd "$repo/$dir"
-    export COMPOSE_PROJECT_NAME=$project
+  cd "$repo/$dir"
+  export COMPOSE_PROJECT_NAME=$project
+  start=$(date +%s)
+  e2e_log "start $dir"
+  up=0
+  run_watched docker compose up -d --wait mysql postgres || up=$?
+  if [ "$up" -ne 0 ]; then
+    return "$up"
+  fi
+  run=0
+  run_watched docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" runner sh -ec '
+    set -e -o pipefail
     start=$(date +%s)
-    e2e_log "start $dir"
-    docker compose up -d --wait mysql postgres
-    run_runner sh -ec '
-      start=$(date +%s)
-      printf "e2e-workdir: start sqlite\n"
-      sh -e sqlite.sh --local
-      printf "e2e-workdir: done sqlite %ss\n" "$(($(date +%s) - start))"
-      start=$(date +%s)
-      printf "e2e-workdir: start mysql-postgres\n"
-      sh -e mysql-postgres.sh --local
-      printf "e2e-workdir: done mysql-postgres %ss\n" "$(($(date +%s) - start))"
-    '
-    e2e_log "done $dir $(($(date +%s) - start))s"
-  )
+    printf "e2e-workdir: start sqlite\n"
+    sh -e -o pipefail sqlite.sh --local
+    printf "e2e-workdir: done sqlite %ss\n" "$(($(date +%s) - start))"
+    start=$(date +%s)
+    printf "e2e-workdir: start mysql-postgres\n"
+    sh -e -o pipefail mysql-postgres.sh --local
+    printf "e2e-workdir: done mysql-postgres %ss\n" "$(($(date +%s) - start))"
+  ' || run=$?
+  if [ "$run" -ne 0 ]; then
+    return "$run"
+  fi
+  e2e_log "done $dir $(($(date +%s) - start))s"
+  return 0
 }
 
 quickstart_npm_cache() {
@@ -191,7 +238,7 @@ if [ -n "$quickstarts" ]; then
     done
     maybe_prune
   }
-  trap down EXIT
+  trap 'down; trap - USR1' EXIT
   build_image datasources-e2e-node e2e-node.Dockerfile
   build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
   build_image datasources-e2e-rust e2e-rust.Dockerfile
@@ -200,19 +247,27 @@ if [ -n "$quickstarts" ]; then
     await_slot
     project="e2e-quickstart-$language"
     compose="$repo/quick_starts/contacts_cli/$language/compose.yml"
+    live_projects="$live_projects $project:$compose"
     (
       cd "$repo/quick_starts/contacts_cli/$language"
-      status=0
       export COMPOSE_PROJECT_NAME=$project
-      docker compose up -d --wait mysql postgres
-      docker compose run --rm --no-deps -v "$repo:/repo:ro" -e E2E_LANG="$language" -e npm_config_cache="$npm_cache" runner sh /e2e-quickstarts.sh || status=$?
+      up=0
+      run_watched docker compose up -d --wait mysql postgres || up=$?
+      if [ "$up" -ne 0 ]; then
+        kill_suite "$language compose up $up"
+      fi
+      run=0
+      run_watched docker compose run --rm --no-deps -v "$repo:/repo:ro" -e E2E_LANG="$language" -e npm_config_cache="$npm_cache" runner sh /e2e-quickstarts.sh || run=$?
+      if [ "$run" -ne 0 ]; then
+        kill_suite "$language runner $run"
+      fi
       down_one "$project" "$compose"
-      exit $status
+      exit 0
     ) &
     live="$live $!"
   done
   await_all
-  exit "$fail"
+  exit 0
 fi
 
 if [ $# -eq 0 ]; then
@@ -221,15 +276,19 @@ if [ $# -eq 0 ]; then
 fi
 
 sample_dirs="$*"
-if [ -z "${E2E_PARALLEL:-}" ]; then
-  rust_only=1
-  for dir in $sample_dirs; do
-    case "$dir" in
-      samples/rust/*) ;;
-      *) rust_only= ;;
-    esac
-  done
-  [ -n "$rust_only" ] && parallel=1
+rust_only=1
+for dir in $sample_dirs; do
+  case "$dir" in
+    samples/rust/*) ;;
+    *) rust_only= ;;
+  esac
+done
+if [ -n "${E2E_PARALLEL:-}" ]; then
+  parallel=$E2E_PARALLEL
+elif [ -n "$rust_only" ]; then
+  parallel=1
+else
+  parallel=3
 fi
 down() {
   for dir in $sample_dirs; do
@@ -237,7 +296,7 @@ down() {
   done
   maybe_prune
 }
-trap down EXIT
+trap 'down; trap - USR1' EXIT
 
 suite_start=$(date +%s)
 e2e_log "suite start"
@@ -249,11 +308,15 @@ for dir in "$@"; do
   await_slot
   project="e2e-$(slug "$dir")"
   compose="$repo/$dir/compose.yml"
+  live_projects="$live_projects $project:$compose"
   (
-    status=0
-    run_compose "$dir" "$project" || status=$?
+    run=0
+    ( run_compose "$dir" "$project" ) || run=$?
+    if [ "$run" -ne 0 ]; then
+      kill_suite "$dir $run"
+    fi
     e2e_step "down $dir" down_one "$project" "$compose"
-    exit $status
+    exit 0
   ) &
   live="$live $!"
 done

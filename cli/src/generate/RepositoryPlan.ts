@@ -79,10 +79,8 @@ export const planRepositories = (
     const full = expanded.get(authored.name) as Type;
     const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
-    const projected = new Set(Object.values(authored.mapping ?? {}));
-    const columns = persistedColumnFields(tableType, expanded)
-      .filter((field) => !projected.has(field.name));
-    const writable = columns.filter((field) => !dropped.has(field.name));
+    const columns = persistedColumnFields(full, expanded);
+    const writable = persistedColumnFields(tableType, expanded).filter((field) => !dropped.has(field.name));
     return [
       {
         specName: authored.name,
@@ -107,7 +105,7 @@ export const planRepositories = (
           )
           .map((field) => property(field.name)),
         optimisticConcurrency: concurrencyToken(table, tableType, property),
-        enrichments: relations(authored, full, casing, types, expanded, repoName, identity, typeName),
+        enrichments: relations(authored, casing, types, expanded, repoName, identity, typeName),
         removeFields: removed.map(property),
       },
     ];
@@ -134,7 +132,6 @@ const concurrencyToken = (
 
 const relations = (
   authored: Type,
-  full: Type,
   casing: ICasingStrategy,
   types: Map<string, Type>,
   expanded: Map<string, Type>,
@@ -210,28 +207,6 @@ const relations = (
         viaType: via.viaType,
       });
     }
-  }
-  for (const [key, dest] of Object.entries(authored.mapping ?? {})) {
-    const dotted = key.includes(".") ? key.split(".") : undefined;
-    const memberName =
-      dotted?.[0] ?? (authored.union ?? []).find((name) => (expanded.get(name) as Type).fields.some((field) => field.name === key));
-    const parent = types.get(authored.inherits ?? "");
-    const fk =
-      memberName === undefined
-        ? undefined
-        : full.fields.find((field) => referenceOf(field.references)?.type === memberName)
-          ?? parent?.fields.find((field) => referenceOf(field.references)?.type === memberName);
-    if (memberName === undefined || fk === undefined) continue;
-    const via = named(memberName);
-    planned.push({
-      destination: property(dest),
-      source: property(fk.name),
-      relatedKey: identity(memberName),
-      relatedProperty: property(dotted?.[1] ?? key),
-      kind: "object",
-      via: via.via,
-      viaType: via.viaType,
-    });
   }
   return planned;
 };

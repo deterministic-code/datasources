@@ -1,4 +1,4 @@
-set -e
+set -e -o pipefail
 cd /work
 sample="${E2E_SAMPLE:?}"
 npm install --prefix cli
@@ -8,6 +8,6 @@ npm install --omit=dev --prefix typescript/code-generators
 case "$sample" in
 samples/typescript/*) npm install --prefix "$sample" ;;
 esac
-(cd "$sample" && sh -e sqlite.sh)
+(cd "$sample" && sh -e -o pipefail sqlite.sh)
 sh scripts/e2e-reset-engines.sh
-(cd "$sample" && sh -e mysql-postgres.sh)
+(cd "$sample" && sh -e -o pipefail mysql-postgres.sh)
