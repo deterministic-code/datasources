@@ -263,7 +263,7 @@ async fn omits_null_created_and_updated() {
         .unwrap();
     let mut renamed = stored.clone();
     renamed.insert("username".into(), Value::from("ada-v2"));
-    repo.update(renamed).await.unwrap();
+    repo.update(renamed, None).await.unwrap();
     let kept = repo
         .read_single_by_id(omitted.get("id").unwrap())
         .await

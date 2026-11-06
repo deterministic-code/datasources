@@ -1,13 +1,20 @@
+use crate::connection::Connection;
 use crate::converters::{MetaDataRowTypeConverter, SchemaObject, TypeConverter};
+use crate::crud_repository::CRUDRepository;
+use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::enrichment_payload::{
     cell_from_row, cell_from_struct, payload_from_row, payload_from_struct, set_cell_on_row,
     set_cell_on_struct, set_one_on_struct, set_payload_on_row, set_payload_on_struct,
     set_typed_list_on_struct, typed_list_from_struct,
 };
+use crate::readonly_repository::ReadonlyRepository;
+use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
+use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use facet::{Def, Peek};
+use std::sync::Arc;
 
 pub trait Entity: Clone + Default + Send + Sync + 'static {
     fn object_converter() -> Box<dyn TypeConverter<Self, Row> + Send + Sync>;
@@ -99,6 +106,30 @@ pub trait Entity: Clone + Default + Send + Sync + 'static {
             .collect::<Result<Vec<_>>>()?;
         parent.set_payload(name, rows)
     }
+
+    #[doc(hidden)]
+    fn create_repository(
+        connection: Arc<dyn Connection>,
+        options: CRUDRepositoryOptions,
+        from_row: impl FnOnce(
+            Arc<dyn Connection>,
+            CRUDRepositoryOptions,
+        ) -> Arc<dyn ICRUDRepository<Row>>,
+    ) -> Arc<dyn ICRUDRepository<Self>>
+    where
+        Self: Sized;
+
+    #[doc(hidden)]
+    fn create_readonly_repository(
+        connection: Arc<dyn Connection>,
+        options: ReadonlyRepositoryMappingOptions,
+        from_row: impl FnOnce(
+            Arc<dyn Connection>,
+            ReadonlyRepositoryMappingOptions,
+        ) -> Arc<dyn IReadonlyRepository<Row>>,
+    ) -> Arc<dyn IReadonlyRepository<Self>>
+    where
+        Self: Sized;
 }
 
 impl Entity for Row {
@@ -130,6 +161,28 @@ impl Entity for Row {
 
     fn has(&self, name: &str) -> bool {
         self.contains_key(name)
+    }
+
+    fn create_repository(
+        connection: Arc<dyn Connection>,
+        options: CRUDRepositoryOptions,
+        from_row: impl FnOnce(
+            Arc<dyn Connection>,
+            CRUDRepositoryOptions,
+        ) -> Arc<dyn ICRUDRepository<Row>>,
+    ) -> Arc<dyn ICRUDRepository<Self>> {
+        from_row(connection, options)
+    }
+
+    fn create_readonly_repository(
+        connection: Arc<dyn Connection>,
+        options: ReadonlyRepositoryMappingOptions,
+        from_row: impl FnOnce(
+            Arc<dyn Connection>,
+            ReadonlyRepositoryMappingOptions,
+        ) -> Arc<dyn IReadonlyRepository<Row>>,
+    ) -> Arc<dyn IReadonlyRepository<Self>> {
+        from_row(connection, options)
     }
 }
 
@@ -204,6 +257,28 @@ impl<T: SchemaObject> Entity for T {
 
     fn install_list<P: Entity>(parent: &mut P, name: &str, items: Vec<Self>) -> Result<()> {
         parent.set_schema_list(name, items)
+    }
+
+    fn create_repository(
+        connection: Arc<dyn Connection>,
+        options: CRUDRepositoryOptions,
+        _from_row: impl FnOnce(
+            Arc<dyn Connection>,
+            CRUDRepositoryOptions,
+        ) -> Arc<dyn ICRUDRepository<Row>>,
+    ) -> Arc<dyn ICRUDRepository<Self>> {
+        Arc::new(CRUDRepository::<T>::new(connection, options).expect("repository"))
+    }
+
+    fn create_readonly_repository(
+        connection: Arc<dyn Connection>,
+        options: ReadonlyRepositoryMappingOptions,
+        _from_row: impl FnOnce(
+            Arc<dyn Connection>,
+            ReadonlyRepositoryMappingOptions,
+        ) -> Arc<dyn IReadonlyRepository<Row>>,
+    ) -> Arc<dyn IReadonlyRepository<Self>> {
+        Arc::new(ReadonlyRepository::<T>::new(connection, options).expect("repository"))
     }
 }
 

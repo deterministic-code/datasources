@@ -154,7 +154,7 @@ async fn main() -> Result<()> {
             settings: HashMap::from([("theme".into(), "sepia".into())]),
             prefs: ada.prefs.clone(),
             ..Default::default()
-        })
+        }, None)
         .await?;
     let ada_after = contacts_repo
         .read_single(&Where::new(Operator::equals("id", ada.id)))
@@ -219,7 +219,7 @@ async fn main() -> Result<()> {
                 ..Default::default()
             }],
             ..Default::default()
-        })
+        }, None)
         .await?;
     let valued = contacts_repo
         .read_single(&Where::new(Operator::equals("id", omitted.id)))
@@ -256,7 +256,7 @@ async fn main() -> Result<()> {
                 ..Default::default()
             }],
             ..Default::default()
-        })
+        }, None)
         .await?;
     let zeroed = contacts_repo
         .read_single(&Where::new(Operator::equals("id", omitted.id)))
@@ -270,7 +270,7 @@ async fn main() -> Result<()> {
         return Err(DatasourceError::message("outlier zero"));
     }
 
-    contacts_repo.delete(ada_after).await?;
+    contacts_repo.delete(ada_after, None).await?;
     if contacts_repo
         .read_single(&Where::new(Operator::equals("id", ada.id)))
         .await?
@@ -278,7 +278,7 @@ async fn main() -> Result<()> {
     {
         return Err(DatasourceError::message("delete ada"));
     }
-    contacts_repo.delete(alan_read).await?;
+    contacts_repo.delete(alan_read, None).await?;
     if contacts_repo
         .read_single(&Where::new(Operator::equals("id", alan.id)))
         .await?

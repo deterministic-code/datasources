@@ -17,7 +17,7 @@ execute_sql(
 let mut options = create_readonly_repository_mapping_options::<User>();
 options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
-let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
+let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
     .read_single(&Where::binary("Id", eq, 1_i64), None)
     .await

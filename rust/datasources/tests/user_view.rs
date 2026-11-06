@@ -188,7 +188,7 @@ async fn create_update_and_delete_syncs_link_rows() {
         encode_rows(&[seeded.engineering.clone(), seeded.ops.clone()]),
     );
     next.insert("id".into(), created.get("id").unwrap().clone());
-    let saved = users.update(next).await.unwrap();
+    let saved = users.update(next, None).await.unwrap();
     let updated = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -197,7 +197,7 @@ async fn create_update_and_delete_syncs_link_rows() {
     let updated_role_links = seeded.user_roles.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
     let updated_group_links = seeded.user_groups.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
     let removed = users
-        .delete(record(&[("id", created.get("id").unwrap().clone())]))
+        .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
         .await
         .unwrap();
 
@@ -319,7 +319,7 @@ async fn null_list_clears_that_association() {
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
         ("groups", encode_rows(&[seeded.engineering.clone()])),
     ]);
-    let saved = users.update(next).await.unwrap();
+    let saved = users.update(next, None).await.unwrap();
     let loaded = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -371,7 +371,7 @@ async fn empty_list_clears_that_association() {
         ("roles", encode_rows(&[])),
         ("groups", encode_rows(&[seeded.engineering.clone()])),
     ]);
-    let saved = users.update(next).await.unwrap();
+    let saved = users.update(next, None).await.unwrap();
     let loaded = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -479,7 +479,7 @@ async fn lazy_write_skips_unloaded_links() {
         ("is_enabled", Value::Bool(false)),
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
     ]);
-    let skipped = users.update(next).await.unwrap();
+    let skipped = users.update(next, None).await.unwrap();
     let after_skip = users
         .read_single_by_id(created.get("id").unwrap())
         .await
@@ -494,11 +494,11 @@ async fn lazy_write_skips_unloaded_links() {
         ("user_type_id", seeded.admin_type.get("id").unwrap().clone()),
         ("roles", encode_rows(&[seeded.editor_role.clone()])),
     ]);
-    let linked = users.update(linked_row).await.unwrap();
+    let linked = users.update(linked_row, None).await.unwrap();
     let linked_role_links = seeded.user_roles.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
     let linked_group_links = seeded.user_groups.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
     let removed = users
-        .delete(record(&[("id", created.get("id").unwrap().clone())]))
+        .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
         .await
         .unwrap();
     assert_eq!(num(&created, "id") > 0, true);

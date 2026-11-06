@@ -54,12 +54,12 @@ impl MockRepository {
         *self.delete_error.lock().expect("mock") = Some(message.into());
     }
 
-    pub async fn update(&self, item: Row) -> Result<Response> {
-        ICRUDRepository::update(self, item, None).await
+    pub async fn update(&self, item: Row, by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
+        ICRUDRepository::update(self, item, by_where).await
     }
 
-    pub async fn delete(&self, item: Row) -> Result<Response> {
-        ICRUDRepository::delete(self, item, None).await
+    pub async fn delete(&self, item: Row, by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
+        ICRUDRepository::delete(self, item, by_where).await
     }
 }
 

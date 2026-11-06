@@ -546,26 +546,26 @@ async fn create_command(&self, connection: Option<Arc<dyn Connection>>) -> Resul
 Creates a CRUD repository.
 
 ```rust
-fn create_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<CRUDRepositoryOptions>) -> Arc<dyn ICRUDRepository>
+fn create_repository<T: Entity>(&self, connection: Option<Arc<dyn Connection>>, options: Option<CRUDRepositoryOptions>) -> Arc<dyn ICRUDRepository<T>>
 ```
 
 - `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
-- `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
+- `options` — optional [CRUDRepositoryOptions](./crud-repository.md#crudrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults. `T` is `Row` or a [SchemaObject](./metadata-row-type-converter.md)
 
-**Returns** `Arc<dyn `[CRUDRepository](./crud-repository.md)`>`
+**Returns** `Arc<dyn `[ICRUDRepository](./crud-repository.md)`<T>>`
 
 ##### create_readonly_repository(connection, options)
 
 Creates a read-only repository.
 
 ```rust
-fn create_readonly_repository<T: ConvertSchema + 'static>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryMappingOptions>) -> Arc<dyn IReadonlyRepository>
+fn create_readonly_repository<T: Entity>(&self, connection: Option<Arc<dyn Connection>>, options: Option<ReadonlyRepositoryMappingOptions>) -> Arc<dyn IReadonlyRepository<T>>
 ```
 
 - `connection` — optional [Connection](./connection.md); omitted uses the datasource connection
-- `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults
+- `options` — optional [ReadonlyRepositoryMappingOptions](./readonly-repository.md#readonlyrepositoryoptions). Entity, columns, and mappers overlay the type defaults. `None` uses the type defaults. `T` is `Row` or a [SchemaObject](./metadata-row-type-converter.md)
 
-**Returns** `Arc<dyn `[ReadonlyRepository](./readonly-repository.md)`>`
+**Returns** `Arc<dyn `[IReadonlyRepository](./readonly-repository.md)`<T>>`
 
 ##### repositories()
 
@@ -582,7 +582,7 @@ fn repositories(&self) -> &RepositoryFactory
 Creates a registered CRUD repository by entity or plural name.
 
 ```rust
-fn create_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ICRUDRepository>>
+fn create_repository_by_name<T: Entity>(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn ICRUDRepository<T>>>
 ```
 
 - `name` — entity name (`Contact`) or plural name (`contacts`)
@@ -595,7 +595,7 @@ fn create_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Conne
 Creates a registered read-only repository by entity or plural name.
 
 ```rust
-fn create_readonly_repository_by_name(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn IReadonlyRepository>>
+fn create_readonly_repository_by_name<T: Entity>(&self, name: &str, connection: Option<Arc<dyn Connection>>) -> Result<Arc<dyn IReadonlyRepository<T>>>
 ```
 
 - `name` — entity name (`Contact`) or plural name (`contacts`)

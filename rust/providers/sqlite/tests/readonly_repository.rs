@@ -71,7 +71,7 @@ async fn reads_users_by_id_and_by_username_and_enabled() {
     let mut options = create_readonly_repository_mapping_options::<User>();
     options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
     options.property_mappings = Some(std::sync::Arc::new(snake()));
-    let repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
+    let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let by_id = repo
         .read_single(&Where::binary("Id", eq, 1_i64), None)
         .await
@@ -136,7 +136,7 @@ async fn maps_an_object_explicitly() {
     options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
     options.property_mappings = Some(std::sync::Arc::new(snake()));
     options.object_converter = Some(Box::new(UserConverter));
-    let users_repo = ds.create_readonly_repository::<User>(Some(connection), Some(options));
+    let users_repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let user = users_repo
         .read_single(&Where::binary("Id", eq, 1_i64), None)
         .await
@@ -182,7 +182,7 @@ async fn reads_user_by_guid_username_and_created() {
         ("Active".into(), "boolean".into()),
         ("Opened".into(), "datetime".into()),
     ]));
-    let repo = ds.create_readonly_repository::<UserAccount>(Some(connection), Some(options));
+    let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
     let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
     let by_id = repo
         .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
@@ -298,7 +298,7 @@ mod user_view {
         let mut users_repo =
             ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
         let types =
-            ds.create_readonly_repository::<UserType>(Some(connection), Some(type_options));
+            ds.create_readonly_repository::<Row>(Some(connection), Some(type_options));
         users_repo.add_enriched(
             datasources::Enrichment::new(
                 "UserType",
@@ -453,12 +453,12 @@ mod users_view_roles {
         ])));
         let mut users_repo =
             ReadonlyRepository::<Row>::new(connection.clone(), users_options).unwrap();
-        let types = ds.create_readonly_repository::<UserType>(
+        let types = ds.create_readonly_repository::<Row>(
             Some(connection.clone()),
             Some(type_options),
         );
         let roles =
-            ds.create_readonly_repository::<UserRole>(Some(connection), Some(role_options));
+            ds.create_readonly_repository::<Row>(Some(connection), Some(role_options));
         let strategy = Arc::new(HashsetOptimizedReadonlyEnrichmentStrategy);
         users_repo.add_enriched(
             datasources::Enrichment::new("UserType", "UserType", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
@@ -619,7 +619,7 @@ mod user_crud {
         let mut options = create_crud_repository_options::<User>();
         options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
         options.ids = vec!["Id".into()];
-        let users_repo = ds.create_repository::<User>(Some(connection), Some(options));
+        let users_repo = ds.create_repository::<Row>(Some(connection), Some(options));
         let mut created = datasources::Row::new();
         created.insert("Username".into(), Value::from("ada"));
         created.insert("IsEnabled".into(), Value::Bool(true));
@@ -828,7 +828,7 @@ mod user_crud {
         let stale = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_version))
             .await
             .unwrap();
-        let removed = users_repo.delete(loaded).await.unwrap();
+        let removed = users_repo.delete(loaded, None).await.unwrap();
         let gone = users_repo.read_single_by_id(&key).await.unwrap();
         assert_eq!(current.get("Version"), Some(&Value::Int(2)));
         assert_eq!(current.get("Login"), Some(&Value::from("ada-v2")));
@@ -883,9 +883,9 @@ mod user_crud {
         key.insert("Id".into(), Value::Int(1));
         let mut ada = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
         ada.insert("Name".into(), Value::from("ada-v2"));
-        let updated = accounts_repo.update(ada.clone()).await.unwrap();
+        let updated = accounts_repo.update(ada.clone(), None).await.unwrap();
         let renamed = accounts_repo.read_single_by_id(&key).await.unwrap().unwrap();
-        let removed = accounts_repo.delete(ada).await.unwrap();
+        let removed = accounts_repo.delete(ada, None).await.unwrap();
         let gone = accounts_repo.read_single_by_id(&key).await.unwrap();
         let mut other = datasources::Row::new();
         other.insert("TenantId".into(), Value::Int(2));

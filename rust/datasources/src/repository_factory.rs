@@ -21,19 +21,19 @@ struct Named {
 }
 
 struct Maps {
-    readonly: HashMap<TypeId, Arc<dyn IReadonlyRepository>>,
-    crud: HashMap<TypeId, Arc<dyn ICRUDRepository>>,
+    readonly: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
+    crud: HashMap<TypeId, Arc<dyn Any + Send + Sync>>,
     named: HashMap<String, Named>,
 }
 
 pub trait ReadonlyRepositoryFactory: Send + Sync {
-    fn register(&self, repository: Arc<dyn IReadonlyRepository>);
-    fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>>;
+    fn register<T: Entity>(&self, repository: Arc<dyn IReadonlyRepository<T>>);
+    fn create<T: Entity>(&self) -> Result<Arc<dyn IReadonlyRepository<T>>>;
 }
 
 pub trait CRUDRepositoryFactory: Send + Sync {
-    fn register(&self, repository: Arc<dyn ICRUDRepository>);
-    fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>>;
+    fn register<T: Entity>(&self, repository: Arc<dyn ICRUDRepository<T>>);
+    fn create<T: Entity>(&self) -> Result<Arc<dyn ICRUDRepository<T>>>;
 }
 
 #[derive(Clone)]
@@ -78,12 +78,12 @@ impl RepositoryFactory {
         }
     }
 
-    pub fn register(&self, repository: Arc<dyn ICRUDRepository>) {
-        let type_id = repository.entity_type();
-        let readonly = as_readonly(repository.clone());
+    pub fn register<T: Entity>(&self, repository: Arc<dyn ICRUDRepository<T>>) {
+        let type_id = TypeId::of::<T>();
+        let readonly = as_readonly(Arc::clone(&repository));
         let mut maps = self.lock();
-        maps.readonly.insert(type_id, readonly);
-        maps.crud.insert(type_id, repository);
+        maps.readonly.insert(type_id, Arc::new(readonly));
+        maps.crud.insert(type_id, Arc::new(repository));
     }
 
     pub fn register_named<T: Entity>(
@@ -105,13 +105,16 @@ impl RepositoryFactory {
         maps.named.insert(plural_name.into(), named);
     }
 
-    pub fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>> {
-        let type_id = TypeId::of::<T>();
-        let repository = {
+    pub fn create<T: Entity>(&self) -> Result<Arc<dyn ICRUDRepository<T>>> {
+        let stored = {
             let maps = self.lock();
-            maps.crud.get(&type_id).cloned()
+            maps.crud.get(&TypeId::of::<T>()).cloned()
         };
-        repository.ok_or_else(|| missing(&short_name::<T>()))
+        stored
+            .ok_or_else(|| missing(&short_name::<T>()))?
+            .downcast::<Arc<dyn ICRUDRepository<T>>>()
+            .map(|repo| (*repo).clone())
+            .map_err(|_| missing(&short_name::<T>()))
     }
 
     pub fn create_named<T: Entity>(
@@ -170,37 +173,40 @@ impl Named {
 }
 
 impl ReadonlyRepositoryFactory for RepositoryFactory {
-    fn register(&self, repository: Arc<dyn IReadonlyRepository>) {
-        let type_id = repository.entity_type();
-        self.lock().readonly.insert(type_id, repository);
+    fn register<T: Entity>(&self, repository: Arc<dyn IReadonlyRepository<T>>) {
+        let type_id = TypeId::of::<T>();
+        self.lock()
+            .readonly
+            .insert(type_id, Arc::new(repository));
     }
 
-    fn create<T: 'static>(&self) -> Result<Arc<dyn IReadonlyRepository>> {
-        let type_id = TypeId::of::<T>();
-        let repository = {
+    fn create<T: Entity>(&self) -> Result<Arc<dyn IReadonlyRepository<T>>> {
+        let stored = {
             let maps = self.lock();
-            maps.readonly.get(&type_id).cloned()
+            maps.readonly.get(&TypeId::of::<T>()).cloned()
         };
-        repository.ok_or_else(|| missing(&short_name::<T>()))
+        stored
+            .ok_or_else(|| missing(&short_name::<T>()))?
+            .downcast::<Arc<dyn IReadonlyRepository<T>>>()
+            .map(|repo| (*repo).clone())
+            .map_err(|_| missing(&short_name::<T>()))
     }
 }
 
 impl CRUDRepositoryFactory for RepositoryFactory {
-    fn register(&self, repository: Arc<dyn ICRUDRepository>) {
+    fn register<T: Entity>(&self, repository: Arc<dyn ICRUDRepository<T>>) {
         RepositoryFactory::register(self, repository);
     }
 
-    fn create<T: 'static>(&self) -> Result<Arc<dyn ICRUDRepository>> {
+    fn create<T: Entity>(&self) -> Result<Arc<dyn ICRUDRepository<T>>> {
         RepositoryFactory::create::<T>(self)
     }
 }
 
 fn short_name<T: ?Sized>() -> String {
-    std::any::type_name::<T>()
-        .rsplit("::")
-        .next()
-        .unwrap_or(std::any::type_name::<T>())
-        .to_string()
+    let name = std::any::type_name::<T>();
+    let head = name.split('<').next().unwrap_or(name);
+    head.rsplit("::").next().unwrap_or(head).to_string()
 }
 
 fn missing(name: &str) -> DatasourceError {
@@ -217,20 +223,18 @@ mod tests {
     use crate::row::Row;
     use crate::stubs::{StubConnection, StubRepository};
 
-    struct Item;
-
     #[test]
     fn registers_and_creates() {
         let factory = RepositoryFactory::new();
-        factory.register(Arc::new(StubRepository::typed::<Item>("memory")));
-        let created = factory.create::<Item>().unwrap();
+        factory.register(Arc::new(StubRepository::new("memory")));
+        let created = factory.create::<Row>().unwrap();
 
-        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        assert_eq!(created.entity_type(), TypeId::of::<Row>());
         assert_eq!(
-            ReadonlyRepositoryFactory::create::<Item>(&factory)
+            ReadonlyRepositoryFactory::create::<Row>(&factory)
                 .unwrap()
                 .entity_type(),
-            TypeId::of::<Item>()
+            TypeId::of::<Row>()
         );
     }
 
@@ -239,22 +243,22 @@ mod tests {
         let factory = RepositoryFactory::new();
         ReadonlyRepositoryFactory::register(
             &factory,
-            as_readonly(Arc::new(StubRepository::typed::<Item>("memory"))),
+            as_readonly(Arc::new(StubRepository::new("memory"))),
         );
 
-        assert!(ReadonlyRepositoryFactory::create::<Item>(&factory).is_ok());
-        match factory.create::<Item>() {
+        assert!(ReadonlyRepositoryFactory::create::<Row>(&factory).is_ok());
+        match factory.create::<Row>() {
             Ok(_) => panic!("expected missing crud"),
-            Err(err) => assert!(err.to_string().contains("Item")),
+            Err(err) => assert!(err.to_string().contains("HashMap")),
         }
     }
 
     #[test]
     fn missing_throws() {
         let factory = RepositoryFactory::new();
-        match factory.create::<Item>() {
+        match factory.create::<Row>() {
             Ok(_) => panic!("expected missing type"),
-            Err(err) => assert_eq!(err.to_string(), "CRUDRepository \"Item\" is not registered"),
+            Err(err) => assert_eq!(err.to_string(), "CRUDRepository \"HashMap\" is not registered"),
         }
     }
 
@@ -264,25 +268,25 @@ mod tests {
         factory.register_named(
             "Contact",
             "contacts",
-            |_| Arc::new(StubRepository::typed::<Item>("crud")),
-            |_| as_readonly(Arc::new(StubRepository::typed::<Item>("read"))),
+            |_| Arc::new(StubRepository::new("crud")),
+            |_| as_readonly(Arc::new(StubRepository::new("read"))),
         );
         let connection: Arc<dyn Connection> = Arc::new(StubConnection::new("memory"));
         let created = factory
             .create_named::<Row>("contacts", Arc::clone(&connection))
             .unwrap();
-        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        assert_eq!(created.entity_type(), TypeId::of::<Row>());
         let readonly = factory
             .create_readonly_named::<Row>("Contact", connection)
             .unwrap();
-        assert_eq!(readonly.entity_type(), TypeId::of::<Item>());
+        assert_eq!(readonly.entity_type(), TypeId::of::<Row>());
     }
 
     #[test]
     fn bind_registers_on_construct() {
         RepositoryFactory::reset_binders();
-        let crud = Arc::new(StubRepository::typed::<Item>("crud"));
-        let read = as_readonly(Arc::new(StubRepository::typed::<Item>("read")));
+        let crud = Arc::new(StubRepository::new("crud"));
+        let read = as_readonly(Arc::new(StubRepository::new("read")));
         RepositoryFactory::bind(move |factory| {
             factory.register_named(
                 "Contact",
@@ -302,15 +306,15 @@ mod tests {
         let created = factory
             .create_named::<Row>("contacts", Arc::clone(&connection))
             .unwrap();
-        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        assert_eq!(created.entity_type(), TypeId::of::<Row>());
         RepositoryFactory::reset_binders();
     }
 
     #[test]
     fn bind_registers_on_access() {
         RepositoryFactory::reset_binders();
-        let crud = Arc::new(StubRepository::typed::<Item>("crud"));
-        let read = as_readonly(Arc::new(StubRepository::typed::<Item>("read")));
+        let crud = Arc::new(StubRepository::new("crud"));
+        let read = as_readonly(Arc::new(StubRepository::new("read")));
         RepositoryFactory::bind(move |factory| {
             factory.register_named(
                 "Contact",
@@ -331,7 +335,7 @@ mod tests {
             .access("contacts", Arc::clone(&connection))
             .create()
             .unwrap();
-        assert_eq!(created.entity_type(), TypeId::of::<Item>());
+        assert_eq!(created.entity_type(), TypeId::of::<Row>());
         RepositoryFactory::reset_binders();
     }
 
