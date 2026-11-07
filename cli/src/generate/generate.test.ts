@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse, stringify } from "yaml";
 import { memoryReader } from "@deterministic-code/generators-common/deterministic-reader";
 import { content, patch } from "@deterministic-code/generators-common/generate-entry";
 import { DeterministicParser } from "@deterministic-code/deterministic-generators-common/parser";
@@ -1692,9 +1693,29 @@ types: []
     const store = mem(seeded);
     expect(await exec(["migrations", "create", "--cwd", cwd], deps(store.fs), cwd)).toBe(0);
     expect(store.files[stale]).toBeUndefined();
-    expect(store.files[join(migrations, "0001_up.sql")]).toBeUndefined();
+    expect(store.files[join(migrations, "0001_up.sql")]).toMatch(/CREATE TABLE/i);
+    expect(store.files[join(migrations, "0001_initial_up.sql")]).toBeUndefined();
     expect(store.files[handwritten]).toBe("INSERT INTO categories VALUES (2);\n");
+  });
+
+  it("keeps 0001_initial_up.sql when version snapshots would emit 0001_up.sql", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const migrations = join(cwd, "sql/sqlite/migrations");
+    const seeded = Object.fromEntries(Object.entries(contactsFiles()).map(([name, text]) => [join(input, name), text]));
+    seeded[join(input, "settings.yaml")] = "settings:\n  backend:\n    datasources: sqlite\n";
+    seeded[join(cwd, ".env")] = "INSTALLED_PROVIDERS=sqlite\n";
+    seeded[join(input, "version-20261016T000000Z-001", "diff.yaml")] = stringify({
+      "types.yaml": { added: true, content: parse(typesYaml) },
+    });
+    seeded[join(migrations, "0001_initial_up.sql")] = "CREATE TABLE leftover;\n";
+    seeded[join(migrations, "0001_initial_down.sql")] = "DROP TABLE leftover;\n";
+    const store = mem(seeded);
+    expect(await exec(["migrations", "create", "--cwd", cwd], deps(store.fs), cwd)).toBe(0);
     expect(store.files[join(migrations, "0001_initial_up.sql")]).toMatch(/CREATE TABLE/i);
+    expect(store.files[join(migrations, "0001_initial_down.sql")]).toMatch(/DROP TABLE/i);
+    expect(store.files[join(migrations, "0001_up.sql")]).toBeUndefined();
+    expect(store.files[join(migrations, "0001_down.sql")]).toBeUndefined();
   });
 
   it("applies SQL casing flags to migrations and repositories", async () => {
