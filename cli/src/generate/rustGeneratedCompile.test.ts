@@ -248,9 +248,9 @@ describe("generated rust compiles", () => {
 `,
       ),
     );
-    expect(textOf(texts, "contactsRepository.rs")).not.toContain("EnrichmentPropertyType::Object");
-    expect(textOf(texts, "contactsRepository.rs")).toMatch(/read_properties = vec!\[[^\]]*source_name/);
-    expect(textOf(texts, "contactsRepository.rs")).not.toContain('Enrichment::new("source_name"');
+    expect(textOf(texts, "contactsRepository.rs")).toContain("EnrichmentPropertyType::Object");
+    expect(textOf(texts, "contactsRepository.rs")).not.toMatch(/read_properties = vec!\[[^\]]*source_name/);
+    expect(textOf(texts, "contactsRepository.rs")).toContain('Enrichment::new("source_name"');
   });
 
   it("dictionary", async () => {
@@ -403,7 +403,7 @@ describe("generated rust compiles", () => {
   it("REST contacts", async () => {
     const texts = await generate(restFiles(), { "languages.typescript.casing.fields": "camel" });
     expect(textOf(texts, "contactsRepository.rs")).toContain(
-      "Ok(Self { repo: Arc::new(repo), address, phone, contact_settings, contact_preferences })",
+      "Ok(Self { repo: Arc::new(repo), address, phone, contact_settings, contact_preferences, contact_source })",
     );
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
   });

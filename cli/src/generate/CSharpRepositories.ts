@@ -6,7 +6,6 @@ import { fill } from "@deterministic-code/generators-common/fill";
 import { content, type GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import type { RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
-import { schemaPairs } from "./schemaPairs.ts";
 import { registryTmpl, repositoryTmpl } from "./templates/csharp.ts";
 
 class CSharpRepositories extends RepositoryGenerator {
@@ -14,10 +13,10 @@ class CSharpRepositories extends RepositoryGenerator {
 
   typesPrefix = (): string => "";
 
-  generate(models: RepositoryModel[], settings: Record<string, string>, spec: IDeterministic): GenerateEntry[] {
+  generate(models: RepositoryModel[], settings: Record<string, string>, _spec: IDeterministic): GenerateEntry[] {
     const casing = createCasingStrategy("csharp", settings);
     return [
-      ...models.map((model) => content(`${this.repositoryFile(model.specName, casing)}.cs`, fill(repositoryTmpl, this.repository(model, spec, casing)))),
+      ...models.map((model) => content(`${this.repositoryFile(model.specName, casing)}.cs`, fill(repositoryTmpl, this.repository(model, casing)))),
       content(
         `${casing.convertFileName("repository_registry")}.cs`,
         fill(registryTmpl, {
@@ -32,10 +31,10 @@ class CSharpRepositories extends RepositoryGenerator {
     ];
   }
 
-  private repository(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown> {
+  private repository(model: RepositoryModel, casing: ICasingStrategy): Record<string, unknown> {
     const children = this.childrenOf(model, casing);
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
-    const dialects = this.dialectsBag(model, spec, casing);
+    const dialects = this.dialectsBag(model);
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
@@ -45,7 +44,7 @@ class CSharpRepositories extends RepositoryGenerator {
       enrichments,
       setup: children.length === 0 && enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      schema: this.schemaBag(schemaPairs(model, spec, casing)),
+      schema: this.schemaBag(model.schema),
       ...this.optionsOf(model),
       optimisticConcurrency: token === undefined
         ? undefined

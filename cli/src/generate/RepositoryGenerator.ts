@@ -4,7 +4,7 @@ import type { GenerateEntry } from "@deterministic-code/generators-common/genera
 import { Paths, type TypeKind } from "@deterministic-code/generators-common/paths";
 import { caseDirectories } from "./casing.ts";
 import type { IRepositoryGenerator } from "./IRepositoryGenerator.ts";
-import { schemaPairs, type SchemaPair } from "./schemaPairs.ts";
+import type { SchemaColumn } from "./schemaFields.ts";
 import {
   childField,
   children as childModels,
@@ -73,7 +73,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     return `[${pairs.map((pair) => `["${this.quote(pair.from)}", "${this.quote(pair.to)}"]`).join(", ")}]`;
   }
 
-  protected schemaBag(pairs: SchemaPair[]): Record<string, unknown>[] {
+  protected schemaBag(pairs: SchemaColumn[]): Record<string, unknown>[] {
     return pairs.map((column, index) => ({
       from: this.quote(column.from),
       name: this.quote(column.from),
@@ -107,11 +107,11 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     };
   }
 
-  protected dialectsBag(model: RepositoryModel, spec: IDeterministic, casing: ICasingStrategy): Record<string, unknown>[] {
+  protected dialectsBag(model: RepositoryModel): Record<string, unknown>[] {
     return dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ typeName: model.typeName, ...planned }),
-      schema: this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
+      schema: this.schemaBag(model.schema),
     }));
   }
 
@@ -123,6 +123,7 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
       relatedProperty: item.relatedProperty === undefined ? undefined : this.quote(item.relatedProperty),
       via: childField(casing, item.via),
       viaType: item.viaType,
+      object: item.kind === "object" ? {} : undefined,
       dictionary: item.kind === "dictionary" ? {} : undefined,
       list: item.kind === "list" || item.kind === "linked" ? {} : undefined,
       linked: isLinked(item)

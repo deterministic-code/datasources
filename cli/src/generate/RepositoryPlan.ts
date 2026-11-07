@@ -1,6 +1,5 @@
 import { CreateTableStatement } from "@deterministic-code/datasources";
 import { createCasing } from "@deterministic-code/datasources-code-generators/sql/common/default-casing";
-import { inferReferenceFieldTypes } from "@deterministic-code/datasources-code-generators/sql/common/infer-reference-types";
 import { createCasingStrategy, type ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
 import { Paths } from "@deterministic-code/generators-common/paths";
 import { identityColumns, isCollectionField, persistedColumnFields } from "@deterministic-code/generators-common/spec-types";
@@ -8,6 +7,7 @@ import { writeInclusionOf } from "@deterministic-code/datasources-code-generator
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
+import { inferredSpec, schemaFields } from "./schemaFields.ts";
 
 const referenceOf = (references: TypeField["references"]): { type: string; field: string } | undefined => {
   if (references === undefined) return undefined;
@@ -40,11 +40,7 @@ export const planRepositories = (
   const paths = new Paths();
   const naming = createCasing(settings);
   const typeName = (specName: string): string => casing.convertTypes(paths.typeStem(specName));
-  spec = {
-    ...spec,
-    types: inferReferenceFieldTypes(spec.types),
-    expandedTypes: inferReferenceFieldTypes(spec.expandedTypes),
-  };
+  spec = inferredSpec(spec);
   const types = new Map(spec.types.map((type) => [type.name, type]));
   const expanded = new Map(spec.expandedTypes.map((type) => [type.name, type]));
   const referenced = new Set<string>();
@@ -66,47 +62,47 @@ export const planRepositories = (
   const property = (name: string): string => casing.convertFields(name);
   const identity = (name: string): string => property(identityColumns(expanded.get(name), spec.datasource.find((table) => table.name === name))[0] ?? "id");
   const included = new Set(spec.datasource.map((table) => table.name));
+  const skip = (table: DatasourceTable, repoType: Type | undefined): boolean => {
+    if (abstractParent(table)) return true;
+    if (repoType === undefined) throw new Error(`${table.name}: no matching type in types.yaml`);
+    if (repoType.inherits === "dictionary") return true;
+    const asView = types.get(table.name);
+    return asView?.tags.includes("view_type") === true && asView.inherits !== undefined && included.has(asView.inherits);
+  };
   const models = spec.datasource.flatMap((table): RepositoryModel[] => {
-    if (abstractParent(table)) return [];
-    const view = types.get(table.name);
-    if (view?.tags.includes("view_type") === true && view.inherits !== undefined && included.has(view.inherits))
-      return [];
     const authored = viewByTable.get(table.name) ?? types.get(table.name);
-    if (authored === undefined) throw new Error(`${table.name}: no matching type in types.yaml`);
-    if (authored.inherits === "dictionary") return [];
-    const removed = authored.removeFields ?? [];
-    const dropped = new Set(removed);
-    const full = expanded.get(authored.name) as Type;
-    const tableType = (expanded.get(table.name) ?? types.get(table.name) ?? full) as Type;
+    if (skip(table, authored)) return [];
+    const shape = expanded.get(authored!.name);
+    if (shape === undefined) throw new Error(`${authored!.name}: no expanded type`);
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
-    const columns = persistedColumnFields(full, expanded);
-    const writable = persistedColumnFields(tableType, expanded).filter((field) => !dropped.has(field.name));
+    const enrichments = relations(authored!, casing, types, expanded, repoName, identity, typeName);
+    const skipColumns = new Set(enrichments.filter((item) => item.kind === "object").map((item) => item.destination));
+    const schema = schemaFields(shape, property, skipColumns);
+    const names = new Set(schema.map((column) => column.from));
+    const columns = persistedColumnFields(shape).filter((field) => names.has(property(field.name)));
+    const ids = identityColumns(shape, table);
     return [
       {
-        specName: authored.name,
-        typeName: typeName(authored.name),
-        typeHome: authored.tags.includes("view_type") ? "view" : "datasource",
+        specName: authored!.name,
+        typeName: typeName(authored!.name),
+        typeHome: authored!.tags.includes("view_type") ? "view" : "datasource",
         table: CreateTableStatement.tableName(table.mapping ?? table.name, naming.naming),
         propertyMappings: columns.flatMap((field) => {
           const from = property(field.name);
           const to = CreateTableStatement.columnName(overlays.get(field.name)?.mapping ?? field.name, naming.naming);
           return from === to ? [] : [{ from, to }];
         }),
-        ids: identityColumns(tableType, table).map(property),
-        readProperties: columns.map((field) => property(field.name)),
-        createProperties: writable
-          .filter((field) =>
-            writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInCreate,
-          )
+        ids: ids.map(property),
+        readProperties: schema.map((column) => column.from),
+        createProperties: columns
+          .filter((field) => writeInclusionOf(field, ids, overlays.get(field.name)).includeInCreate)
           .map((field) => property(field.name)),
-        updateProperties: writable
-          .filter((field) =>
-            writeInclusionOf(field, identityColumns(tableType, table), overlays.get(field.name)).includeInUpdate,
-          )
+        updateProperties: columns
+          .filter((field) => writeInclusionOf(field, ids, overlays.get(field.name)).includeInUpdate)
           .map((field) => property(field.name)),
-        optimisticConcurrency: concurrencyToken(table, tableType, property),
-        enrichments: relations(authored, casing, types, expanded, repoName, identity, typeName),
-        removeFields: removed.map(property),
+        schema,
+        optimisticConcurrency: concurrencyToken(table, shape, property),
+        enrichments,
       },
     ];
   });
@@ -116,7 +112,7 @@ export const planRepositories = (
 
 const concurrencyToken = (
   table: DatasourceTable,
-  tableType: Type,
+  shape: Type,
   property: (name: string) => string,
 ): { property: string; increment: boolean } | undefined => {
   if (table.useOptimisticConcurrency === false) return undefined;
@@ -124,9 +120,7 @@ const concurrencyToken = (
   if (token === undefined) return undefined;
   return {
     property: property(token.name),
-    increment: tableType.fields.some((field) =>
-      field.name === token.name && (field as { type?: string }).type === "integer",
-    ),
+    increment: shape.fields.some((field) => field.name === token.name && field.type === "integer"),
   };
 };
 
@@ -203,6 +197,37 @@ const relations = (
         source,
         relatedKey: property(ref.field),
         kind: "list",
+        via: via.via,
+        viaType: via.viaType,
+      });
+    }
+  }
+  const parent = types.get(authored.inherits ?? "") ?? expanded.get(authored.inherits ?? "");
+  for (const memberName of authored.union ?? []) {
+    const related = (expanded.get(memberName) ?? types.get(memberName)) as Type | undefined;
+    const fk =
+      authored.fields.find((field) => referenceOf(field.references)?.type === memberName) ??
+      parent?.fields.find((field) => referenceOf(field.references)?.type === memberName);
+    if (related === undefined || fk === undefined) continue;
+    const extracted = (authored.extract ?? []).flatMap((item) => {
+      const dotted = item.includes(".") ? item.split(".") : undefined;
+      const owner = dotted?.[0];
+      const fieldName = dotted?.[1] ?? item;
+      if (owner !== undefined && owner !== memberName) return [];
+      if (owner === undefined && !related.fields.some((field) => field.name === fieldName)) return [];
+      return [fieldName];
+    });
+    const fields = extracted.length > 0 ? extracted : related.fields.some((field) => field.name === "name") ? ["name"] : [];
+    const via = named(memberName);
+    for (const fieldName of fields) {
+      const dest =
+        authored.mapping?.[`${memberName}.${fieldName}`] ?? authored.mapping?.[fieldName] ?? fieldName;
+      planned.push({
+        destination: property(dest),
+        source: property(fk.name),
+        relatedKey: identity(memberName),
+        relatedProperty: property(fieldName),
+        kind: "object",
         via: via.via,
         viaType: via.viaType,
       });
