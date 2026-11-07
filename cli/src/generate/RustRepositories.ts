@@ -9,7 +9,6 @@ import type { TypeKind } from "@deterministic-code/generators-common/paths";
 import { dialectsOf, isLinked, optimisticClass, type RepositoryModel } from "./RepositoryModel.ts";
 import { RepositoryGenerator } from "./RepositoryGenerator.ts";
 import { caseDirectories } from "./casing.ts";
-import { schemaPairs } from "./schemaPairs.ts";
 import { crateModTmpl, modTmpl, registryTmpl, repositoryTmpl, schemaObjectsTmpl } from "./templates/rust.ts";
 
 class RustRepositories extends RepositoryGenerator {
@@ -40,7 +39,7 @@ class RustRepositories extends RepositoryGenerator {
     const dialects = dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ typeName: model.typeName, ...planned }),
-      schema: this.schemaBag(schemaPairs({ ...model, ...planned }, spec, casing)),
+      schema: this.schemaBag(model.schema),
     }));
     const token = model.optimisticConcurrency;
     const vias = new Map<string, string>();
@@ -64,7 +63,7 @@ class RustRepositories extends RepositoryGenerator {
       wrapped: child.length === 0 ? undefined : {},
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      schema: this.schemaBag(schemaPairs(model, spec, casing)),
+      schema: this.schemaBag(model.schema),
       readonlyChildren: [...vias].map(([specName]) => ({
         field: child.find((item) => item.specName === specName)?.field,
         module: this.ident(this.repositoryFile(specName, casing)),
