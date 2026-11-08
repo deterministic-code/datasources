@@ -1,17 +1,12 @@
 # Contacts CLI
 
-Dest is a new folder inside this clone. From the clone, `mkdir dest && cd dest`, then copy this sample onto `./`, install Datasources, generate, build, and run.
-
-Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` in `.env`), not every engine listed in `settings.yaml`. The program prints [`expected.txt`](expected.txt).
+From this folder, install the published Datasources packages, generate, build, and run. Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` in `.env`), not every engine listed in `settings.yaml`. The program prints [`expected.txt`](expected.txt).
 
 ## sqlite
 
 ```sh
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
-dotnet new console
-cp -R ../quick_starts/contacts_cli/csharp/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 dotnet add package Datasources
 npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect csharp
@@ -24,9 +19,6 @@ dotnet run
 ```sh
 export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
-dotnet new console
-cp -R ../quick_starts/contacts_cli/csharp/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 docker compose up -d --wait
 dotnet add package Datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres

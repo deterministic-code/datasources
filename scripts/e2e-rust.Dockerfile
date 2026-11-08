@@ -4,4 +4,3 @@ RUN apk add --no-cache nodejs npm git curl build-base python3 pkgconf openssl-de
 ENV CARGO_HOME=/cargo
 ENV npm_config_cache=/npm-cache
 WORKDIR /work
-COPY e2e-quickstarts.sh /e2e-quickstarts.sh

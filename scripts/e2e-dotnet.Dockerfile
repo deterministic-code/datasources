@@ -6,4 +6,3 @@ RUN curl -fsSL https://dist.nuget.org/win-x86-commandline/v6.14.0/nuget.exe -o /
     && printf '#!/bin/sh\nexec mono /usr/local/lib/nuget.exe "$@"\n' > /usr/local/bin/nuget \
     && chmod +x /usr/local/bin/nuget
 WORKDIR /work
-COPY e2e-quickstarts.sh /e2e-quickstarts.sh

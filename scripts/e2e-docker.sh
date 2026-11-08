@@ -89,9 +89,9 @@ build_toolchains() {
   node= dotnet= rust=
   for dir in "$@"; do
     case "$dir" in
-      samples/typescript/*) node=1 ;;
-      samples/csharp/*) dotnet=1 ;;
-      samples/rust/*) rust=1 ;;
+      samples/typescript/*|quick_starts/contacts_cli/typescript) node=1 ;;
+      samples/csharp/*|quick_starts/contacts_cli/csharp) dotnet=1 ;;
+      samples/rust/*|quick_starts/contacts_cli/rust) rust=1 ;;
     esac
   done
   # CLI install is Node.
@@ -165,7 +165,7 @@ await_slot() {
     done
     rust_live=$rust_kept
     case "$waiting" in
-      samples/rust/*)
+      samples/rust/*|quick_starts/contacts_cli/rust)
         [ "$rust_n" -eq 0 ] && [ "$running" -lt "$parallel" ] && return
         ;;
       *)
@@ -233,56 +233,12 @@ run_compose() {
   return 0
 }
 
-quickstart_npm_cache() {
-  case "${E2E_NPM_CACHE_TMPFS:-1}" in
-    0) printf '%s' /npm-cache ;;
-    *) printf '%s' /tmp/npm-cache ;;
-  esac
-}
-
 if [ -n "$quickstarts" ]; then
-  parallel=1
-  npm_cache=$(quickstart_npm_cache)
-  down() {
-    for language in typescript csharp rust; do
-      down_one "e2e-quickstart-$language" "$repo/quick_starts/contacts_cli/$language/compose.yml"
-    done
-    maybe_prune
-  }
-  trap 'down; trap - USR1' EXIT
-  mkdir -p "${HOME}/.cache/datasources-npm" "${HOME}/.cache/datasources-nuget" "${HOME}/.cache/datasources-cargo"
-  build_image datasources-e2e-node e2e-node.Dockerfile
-  build_image datasources-e2e-dotnet e2e-dotnet.Dockerfile
-  build_image datasources-e2e-rust e2e-rust.Dockerfile
-  e2e_log "npm-cache $npm_cache"
-  for language in typescript csharp rust; do
-    await_slot
-    project="e2e-quickstart-$language"
-    compose="$repo/quick_starts/contacts_cli/$language/compose.yml"
-    live_projects="$live_projects $project:$compose"
-    (
-      cd "$repo/quick_starts/contacts_cli/$language"
-      export COMPOSE_PROJECT_NAME=$project
-      up=0
-      run_watched docker compose up -d --wait mysql postgres || up=$?
-      if [ "$up" -ne 0 ]; then
-        kill_suite "$language compose up $up"
-      fi
-      run=0
-      run_watched docker compose run --rm --no-deps -v "$repo:/repo:ro" -e E2E_LANG="$language" -e npm_config_cache="$npm_cache" runner sh /e2e-quickstarts.sh || run=$?
-      if [ "$run" -ne 0 ]; then
-        kill_suite "$language runner $run"
-      fi
-      down_one "$project" "$compose"
-      exit 0
-    ) &
-    live="$live $!"
-  done
-  await_all
-  exit 0
-fi
-
-if [ $# -eq 0 ]; then
+  set -- \
+    quick_starts/contacts_cli/typescript \
+    quick_starts/contacts_cli/csharp \
+    quick_starts/contacts_cli/rust
+elif [ $# -eq 0 ]; then
   # shellcheck disable=SC2086
   set -- $samples
 fi
@@ -291,7 +247,7 @@ sample_dirs="$*"
 rust_only=1
 for dir in $sample_dirs; do
   case "$dir" in
-    samples/rust/*) ;;
+    samples/rust/*|quick_starts/contacts_cli/rust) ;;
     *) rust_only= ;;
   esac
 done
@@ -332,7 +288,7 @@ for dir in "$@"; do
   ) &
   live="$live $!"
   case "$dir" in
-    samples/rust/*) rust_live="$rust_live $!" ;;
+    samples/rust/*|quick_starts/contacts_cli/rust) rust_live="$rust_live $!" ;;
   esac
 done
 await_all
