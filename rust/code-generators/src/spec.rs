@@ -151,62 +151,18 @@ pub fn parse(files: &HashMap<String, String>) -> Result<ParsedSpec> {
     )
     .parse(&HashMap::new())
     .map_err(|error| DatasourceError::message(error.to_string()))?;
-    let parsed = ParsedSpec {
-        types: spec.types.iter().map(map_type).collect(),
-        expanded_types: spec.expanded_types.iter().map(map_type).collect(),
+    let types: Vec<SpecType> = spec.types.iter().map(map_type).collect();
+    require_id_is_id(&types)?;
+    Ok(ParsedSpec {
+        types: types.clone(),
+        expanded_types: expand_types(&types)?,
         datasource: spec.datasource.iter().map(map_table).collect(),
         datasource_seeds: spec
             .datasource_seeds
             .iter()
             .map(|(name, rows)| (name.clone(), rows.iter().map(map_seed).collect()))
             .collect(),
-    };
-    require_id_is_id(&parsed.types)?;
-    Ok(ParsedSpec {
-        types: infer_reference_types(parsed.types),
-        expanded_types: infer_reference_types(parsed.expanded_types),
-        datasource: parsed.datasource,
-        datasource_seeds: parsed.datasource_seeds,
     })
-}
-
-fn infer_reference_types(types: Vec<SpecType>) -> Vec<SpecType> {
-    let mut working = types;
-    for _ in 0..working.len().max(1) {
-        let by_name: HashMap<String, SpecType> = working.iter().map(|t| (t.name.clone(), t.clone())).collect();
-        let mut changed = false;
-        for type_ in &mut working {
-            for field in &mut type_.fields {
-                if !needs_inferred_type(field) {
-                    continue;
-                }
-                let (table, column) = reference_target(field);
-                let Some(parent) = by_name.get(&table).and_then(|t| t.fields.iter().find(|f| f.name == column)) else {
-                    continue;
-                };
-                if parent.type_name == "string" && parent.size.is_none() {
-                    continue;
-                }
-                field.type_name = parent.type_name.clone();
-                field.kind = parent.kind.clone();
-                field.base = parent.base.clone();
-                field.size = parent.size.clone();
-                changed = true;
-            }
-        }
-        if !changed {
-            break;
-        }
-    }
-    working
-}
-
-fn needs_inferred_type(field: &SpecTypeField) -> bool {
-    !field.is_array
-        && !field.is_map
-        && (field.references.is_some() || field.reference_pair.is_some())
-        && field.type_name == "string"
-        && field.size.is_none()
 }
 
 fn require_id_is_id(types: &[SpecType]) -> Result<()> {
@@ -714,7 +670,7 @@ pub fn expand_types(types: &[SpecType]) -> Result<Vec<SpecType>> {
         }
     }
 
-    types
+    let expanded = types
         .iter()
         .map(|type_| {
             let ids = type_.ids.clone().or_else(|| resolve_ids(&type_.name, &by_name, &mut HashSet::new()));
@@ -735,7 +691,46 @@ pub fn expand_types(types: &[SpecType]) -> Result<Vec<SpecType>> {
                 fields: resolve(&type_.name, &by_name, &mut cache, &mut HashSet::new())?,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>>>()?;
+    Ok(copy_referenced_field_types(expanded))
+}
+
+fn needs_referenced_type(field: &SpecTypeField) -> bool {
+    !field.is_array
+        && !field.is_map
+        && (field.references.is_some() || field.reference_pair.is_some())
+        && field.type_name == "string"
+        && field.size.is_none()
+}
+
+fn copy_referenced_field_types(mut types: Vec<SpecType>) -> Vec<SpecType> {
+    for _ in 0..types.len().max(1) {
+        let by_name: HashMap<String, SpecType> = types.iter().map(|t| (t.name.clone(), t.clone())).collect();
+        let mut changed = false;
+        for type_ in &mut types {
+            for field in &mut type_.fields {
+                if !needs_referenced_type(field) {
+                    continue;
+                }
+                let (table, column) = reference_target(field);
+                let Some(parent) = by_name.get(&table).and_then(|t| t.fields.iter().find(|f| f.name == column)) else {
+                    continue;
+                };
+                if parent.type_name == "string" && parent.size.is_none() {
+                    continue;
+                }
+                field.type_name = parent.type_name.clone();
+                field.kind = parent.kind.clone();
+                field.base = parent.base.clone();
+                field.size = parent.size.clone();
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    types
 }
 
 fn extract(fields: Vec<SpecTypeField>, extract: Option<&[String]>) -> Vec<SpecTypeField> {

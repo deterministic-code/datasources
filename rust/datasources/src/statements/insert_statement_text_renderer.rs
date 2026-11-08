@@ -12,7 +12,11 @@ impl InsertStatementTextRenderer {
     }
 
     pub fn render(&self, statement: &InsertStatement) -> String {
-        Self::render_with(statement, |name| self.quote(name), |name| self.parameter(name))
+        Self::render_with(
+            statement,
+            |name| self.quote(name),
+            |name| self.parameter(name),
+        )
     }
 
     pub fn render_with(

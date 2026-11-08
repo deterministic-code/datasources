@@ -1,6 +1,6 @@
-use futures_util::TryStreamExt;
 use datasources::*;
 use datasources_memory::MemoryDriver;
+use futures_util::TryStreamExt;
 use std::sync::Arc;
 
 fn record(pairs: &[(&str, Value)]) -> Row {
@@ -63,7 +63,10 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
     let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
     let types = Arc::new(types_repo(connection.clone()));
-    let created_type = types.create(record(&[("Name", Value::from("person"))])).await.unwrap();
+    let created_type = types
+        .create(record(&[("Name", Value::from("person"))]))
+        .await
+        .unwrap();
     let mut parents = parents_repo(connection);
     parents.add_enriched(
         Enrichment::new(
@@ -95,46 +98,41 @@ async fn read_with_where_clause_and_custom_flat_to_nested_object_mapping_options
             ("Label", Value::from("b")),
         ]),
     ]);
-    let join_repo = parents_repo(MockConnection::with_command_provider(
-        command,
-        "memory",
-    ));
+    let join_repo = parents_repo(MockConnection::with_command_provider(command, "memory"));
     let where_clause = Where::new(Operator::equals("Parent.Id", Value::Int(1)));
     let join = SelectStatement::new(SelectStatementOptions {
         joins: &[Join::left("Child", "Parent.Id", "Child.ParentId")],
         where_clause: Some(&where_clause),
         ..SelectStatementOptions::new(
             "Parent",
-            &[
-                "Parent.Id",
-                "Parent.TypeName",
-                "Child.Id",
-                "Child.Label",
-            ],
+            &["Parent.Id", "Parent.TypeName", "Child.Id", "Child.Label"],
         )
     });
     let mut options = ReadonlyRepositoryMappingOptions::default();
     options.entity_mapper = Some(Arc::new(join_entity()));
-    options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap::new(
-        "Id",
-        vec![
-            ("Id".into(), TypeMapField::column("Id")),
-            ("TypeName".into(), TypeMapField::column("TypeName")),
-            (
-                "Children".into(),
-                TypeMapField::Group(TypeMapGroup::new(
-                    "ChildId",
-                    vec![
-                        ("Id".into(), TypeMapField::column("ChildId")),
-                        ("Label".into(), TypeMapField::column("Label")),
-                    ],
-                )),
-            ),
-        ],
-    ))));
+    options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(
+        TypeMap::new(
+            "Id",
+            vec![
+                ("Id".into(), TypeMapField::column("Id")),
+                ("TypeName".into(), TypeMapField::column("TypeName")),
+                (
+                    "Children".into(),
+                    TypeMapField::Group(TypeMapGroup::new(
+                        "ChildId",
+                        vec![
+                            ("Id".into(), TypeMapField::column("ChildId")),
+                            ("Label".into(), TypeMapField::column("Label")),
+                        ],
+                    )),
+                ),
+            ],
+        ),
+    )));
     let items = join_repo
         .read(Some(&join), Some(&options))
-        .try_collect::<Vec<_>>().await
+        .try_collect::<Vec<_>>()
+        .await
         .unwrap();
     assert_eq!(
         enriched.as_ref().unwrap().get("TypeName"),

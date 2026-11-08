@@ -1,8 +1,8 @@
 use super::statement::Statement;
 use super::statement_naming::StatementNaming;
 use super::statement_text_renderer::StatementTextRenderer;
-use crate::builders::Column;
 use super::table_constraint::TableConstraint;
+use crate::builders::Column;
 
 pub struct CreateTableStatement {
     pub table: String,
@@ -49,4 +49,3 @@ impl Statement for CreateTableStatement {
         self
     }
 }
-

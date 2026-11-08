@@ -19,6 +19,7 @@ import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
 import { Join, Operator, SelectStatement, Where } from "./statements/index.ts";
 import { WhereText } from "./statements/WhereText.ts";
+import { Schema } from "./Schema.ts";
 
 class UserType {
   Id = 0;
@@ -80,6 +81,19 @@ const remove = (connection: IConnection, row: Seed) =>
   connection.createCommand().execute("delete", [{ name: "id", value: row.id }]);
 
 describe("ReadonlyRepository", () => {
+  it("uses schema identity columns on the row converter", async () => {
+    const connection = await setup();
+    const parentsRepo = new ReadonlyRepository(connection, {
+      type: Parent,
+      schema: new Schema({
+        Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        TypeName: { type: "string", nullable: false, hasDefault: false },
+      }),
+      propertyMappings: columns,
+    });
+    expect(parentsRepo.schema.ids()).toEqual(["Id"]);
+  });
+
   it("reads one row through a where clause", async () => {
     const first: Seed = {};
     const second: Seed = {};

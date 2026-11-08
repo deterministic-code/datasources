@@ -85,11 +85,11 @@ impl CreateReadStoredProcedureStatement {
 
 impl Statement for CreateReadStoredProcedureStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
-        text.statements().visit_create_read_stored_procedure(self, text)
+        text.statements()
+            .visit_create_read_stored_procedure(self, text)
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 }
-

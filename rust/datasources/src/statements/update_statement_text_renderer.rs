@@ -1,7 +1,7 @@
 use super::i_where::IWhere;
-use crate::parameter::Parameter;
 use super::statement_text_renderer::StatementTextRenderer;
 use super::update_statement::UpdateStatement;
+use crate::parameter::Parameter;
 use std::collections::HashMap;
 
 pub struct UpdateStatementTextRenderer<'a> {
@@ -61,7 +61,11 @@ impl<'a> UpdateStatementTextRenderer<'a> {
             match values.get(&parameter.name) {
                 Some(current) if current != &parameter.value => {
                     let alias = format!("{}__where", parameter.name);
-                    tail = rename(&tail, &self.parameter(&parameter.name), &self.parameter(&alias));
+                    tail = rename(
+                        &tail,
+                        &self.parameter(&parameter.name),
+                        &self.parameter(&alias),
+                    );
                     bound.push(Parameter::new(alias, parameter.value));
                 }
                 _ => bound.push(parameter),
@@ -81,7 +85,13 @@ impl<'a> UpdateStatementTextRenderer<'a> {
     fn set(&self, fields: &[Parameter]) -> String {
         fields
             .iter()
-            .map(|field| format!("{} = {}", self.quote(&field.name), self.parameter(&field.name)))
+            .map(|field| {
+                format!(
+                    "{} = {}",
+                    self.quote(&field.name),
+                    self.parameter(&field.name)
+                )
+            })
             .collect::<Vec<_>>()
             .join(", ")
     }

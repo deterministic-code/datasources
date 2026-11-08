@@ -5,6 +5,7 @@ use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -31,6 +32,7 @@ impl<TRelated: crate::entity::Entity> ReadonlyEnrichmentStrategy<Row, TRelated>
         _enrichment: &Enrichment,
         parents: &mut Vec<Row>,
         sources: Option<&[Option<Row>]>,
+        _schema: &Schema,
     ) -> Result<()> {
         let rows = sources
             .unwrap_or(&[])

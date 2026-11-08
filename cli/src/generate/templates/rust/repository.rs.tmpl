@@ -25,7 +25,7 @@ impl {{className}} {
 {{/child}}
         let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = CRUDRepository::<{{entityType}}>::new({{#shareConnection}}Arc::clone(&connection){{/shareConnection}}{{^shareConnection}}connection{{/shareConnection}}, options)?;
 {{#enrichments}}
-        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), &{{via}}, Arc::clone(&{{link}}.inner) as Arc<dyn ICRUDRepository<_>>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), &{{via}}, None);{{/linked}}
+        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}.inner), Arc::clone(&{{link}}.inner) as Arc<dyn ICRUDRepository<_>>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}.inner), None);{{/linked}}
 {{/enrichments}}
         Ok(Self { inner: Arc::new(repo){{childFields}} })
     }
@@ -53,7 +53,7 @@ impl {{className}} {
 {{/readonlyChildren}}
         let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
 {{#enrichments}}
-        repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), &{{via}}, None);
+        repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}.inner), None);
 {{/enrichments}}
         Ok(repo)
     }
@@ -90,6 +90,10 @@ impl IRepository for {{className}} {
 impl IReadonlyRepository<{{entityType}}> for {{className}} {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<{{entityType}}>>> {
         Some(self)
+    }
+
+    fn schema(&self) -> Schema {
+        IReadonlyRepository::schema(self.inner.as_ref())
     }
 
     async fn read_single(
@@ -201,6 +205,10 @@ impl IRepository for {{optimisticClass}} {
 impl IReadonlyRepository<{{entityType}}> for {{optimisticClass}} {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<{{entityType}}>>> {
         Some(self)
+    }
+
+    fn schema(&self) -> Schema {
+        IReadonlyRepository::schema(&self.repo)
     }
 
     async fn read_single(

@@ -2,25 +2,25 @@ use crate::bulk_write_strategy::BulkWriteStrategy;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::crud_repository::CRUDRepository;
-use crate::entity::Entity;
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
+use crate::entity::Entity;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
-use crate::IWhere;
 use crate::id_key::IdKey;
-use crate::statement::Statement;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::single_command_i_bulk_write_strategy::SingleCommandIBulkWriteStrategy;
+use crate::statement::Statement;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
+use crate::IWhere;
 use async_trait::async_trait;
 use futures_core::Stream;
 use std::any::TypeId;
@@ -54,13 +54,11 @@ impl BulkCRUDRepository {
             .clone()
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
         let use_transaction = write.use_transaction();
-        let crud = Arc::new(CRUDRepository::<Row>::new(Arc::clone(&connection), options.clone())?);
-        let _ = crud.column(
-            crud.id_names()
-                .first()
-                .map(String::as_str)
-                .unwrap_or("id"),
-        );
+        let crud = Arc::new(CRUDRepository::<Row>::new(
+            Arc::clone(&connection),
+            options.clone(),
+        )?);
+        let _ = crud.column(crud.id_names().first().map(String::as_str).unwrap_or("id"));
         let _ = crud.enrichment_into("");
         strategy.set_repo(Arc::clone(&crud) as Arc<dyn ICRUDRepository>);
         strategy.attach(crud.command(), options, connection);
@@ -78,7 +76,10 @@ impl BulkCRUDRepository {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy>>) -> Self {
+    pub(crate) fn memory_with(
+        items: Vec<Row>,
+        write: Option<Arc<dyn WriteEnrichmentStrategy>>,
+    ) -> Self {
         let resolved = write
             .clone()
             .unwrap_or_else(|| Arc::new(crate::DefaultWriteEnrichmentStrategy::default()));
@@ -103,6 +104,7 @@ impl BulkCRUDRepository {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let persist_bulk = via.bulk_repo();
         let (via, persist) = via.into_repos();
+        let schema = via.schema();
         self.crud
             .enrichments
             .lock()
@@ -113,6 +115,7 @@ impl BulkCRUDRepository {
                 persist,
                 persist_bulk,
                 strategy,
+                schema,
             ));
         self
     }
@@ -247,6 +250,10 @@ impl IRepository for BulkCRUDRepository {
 impl IReadonlyRepository for BulkCRUDRepository {
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository>> {
         Some(self)
+    }
+
+    fn schema(&self) -> crate::schema::Schema {
+        IReadonlyRepository::schema(self.crud.as_ref())
     }
 
     async fn read_single(

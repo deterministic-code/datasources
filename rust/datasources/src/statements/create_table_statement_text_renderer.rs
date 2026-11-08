@@ -52,7 +52,9 @@ pub trait CreateTableStatementTextRenderer {
         match value {
             None => String::new(),
             Some(NotNull { name: None }) => " NOT NULL".into(),
-            Some(NotNull { name: Some(name) }) => format!(" CONSTRAINT {} NOT NULL", self.quote(name)),
+            Some(NotNull { name: Some(name) }) => {
+                format!(" CONSTRAINT {} NOT NULL", self.quote(name))
+            }
         }
     }
 

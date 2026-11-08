@@ -44,4 +44,3 @@ impl Statement for AlterTableStatement {
         self
     }
 }
-

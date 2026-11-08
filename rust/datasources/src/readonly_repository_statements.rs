@@ -1,5 +1,5 @@
-use crate::IWhere;
 use crate::statement_mappers::StatementMappers;
+use crate::IWhere;
 use crate::{SelectStatement, SelectStatementOptions};
 
 pub struct ReadonlyRepositoryStatements {

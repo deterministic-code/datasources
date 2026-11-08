@@ -24,7 +24,6 @@ impl ExecuteStoredProcedureStatement {
     }
 }
 
-
 impl Statement for ExecuteStoredProcedureStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
         text.statements().visit_execute_stored_procedure(self, text)

@@ -31,11 +31,27 @@ impl ProviderCatalog {
                 ("xml", "datasources_xml", "datasources_xml_driver"),
                 ("yaml", "datasources_yaml", "datasources_yaml_driver"),
                 ("mysql", "datasources_mysql", "datasources_mysql_driver"),
-                ("sqlserver", "datasources_sqlserver", "datasources_sqlserver_driver"),
-                ("postgres", "datasources_postgres", "datasources_postgres_driver"),
+                (
+                    "sqlserver",
+                    "datasources_sqlserver",
+                    "datasources_sqlserver_driver",
+                ),
+                (
+                    "postgres",
+                    "datasources_postgres",
+                    "datasources_postgres_driver",
+                ),
                 ("oracle", "datasources_oracle", "datasources_oracle_driver"),
-                ("mongodb", "datasources_mongodb", "datasources_mongodb_driver"),
-                ("dynamodb", "datasources_dynamodb", "datasources_dynamodb_driver"),
+                (
+                    "mongodb",
+                    "datasources_mongodb",
+                    "datasources_mongodb_driver",
+                ),
+                (
+                    "dynamodb",
+                    "datasources_dynamodb",
+                    "datasources_dynamodb_driver",
+                ),
             ]
             .into_iter()
             .map(|(name, location, module)| (name.to_string(), Self::new(name, location, module)))

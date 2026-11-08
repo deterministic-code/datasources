@@ -61,6 +61,92 @@ class NamedHost {
   Settings: Record<string, string> = {};
 }
 
+class NamedSettingRow {
+  id!: number;
+  parentId!: number;
+  name!: string;
+  value!: string;
+}
+
+class NamedHostRow {
+  id!: number;
+  label!: string;
+  settings: Record<string, string> = {};
+}
+
+class AsdfSettingRow {
+  id!: number;
+  parentId!: number;
+  asdfasdfa!: string;
+  value!: string;
+}
+
+class KeyedSettingRow {
+  id!: number;
+  parentId!: number;
+  key!: string;
+  value!: string;
+}
+
+class PrefValue {
+  locale!: string;
+  timezone!: string;
+}
+
+class PrefSettingRow {
+  id!: number;
+  parentId!: number;
+  name!: string;
+  locale!: string;
+  timezone!: string;
+}
+
+class PrefHostRow {
+  id!: number;
+  label!: string;
+  prefs: Record<string, PrefValue> = {};
+}
+
+class ChildRow {
+  id!: number;
+  parentId!: number;
+  label!: string;
+}
+
+class ParentRow {
+  id!: number;
+  label!: string;
+  children: ChildRow[] = [];
+}
+
+class TagRow {
+  id!: number;
+  name!: string;
+}
+
+class ParentTagRow {
+  id!: number;
+  parentId!: number;
+  tagId!: number;
+}
+
+class TaggedRow {
+  id!: number;
+  label!: string;
+  tags: TagRow[] = [];
+}
+
+class TypeRow {
+  id!: number;
+  name!: string;
+}
+
+class TypedRow {
+  id!: number;
+  typeId!: number;
+  typeName = "";
+}
+
 class Parent {
   Id = 0;
   Type = new UserType();
@@ -140,9 +226,32 @@ const repo = <T extends object>(
     propertyMappings: columns,
     write,
     ids: ["Id"],
-    schema: new Schema({
-      Id: { type: "integer", nullable: false, hasDefault: false, isId: true },
-    }),
+  });
+
+const camel = new ChangeCasingMapper("camelCase", "snakeCase");
+
+const generatedRepo = <T extends object>(connection: IConnection, entity: string, fields: string[]) =>
+  new CRUDRepository<T>(connection, {
+    entity,
+    entityMapper: new DictionaryMapper([[entity, `${entity.toLowerCase()}s`]]),
+    propertyMappings: camel,
+    ids: ["id"],
+    createProperties: fields.filter((name) => name !== "id"),
+    updateProperties: fields.filter((name) => name !== "id"),
+    readProperties: fields,
+    schema: new Schema(
+      Object.fromEntries(
+        fields.map((name) => [
+          name,
+          {
+            type: name === "id" || name.endsWith("Id") ? "integer" : "string",
+            nullable: false,
+            hasDefault: false,
+            isId: name === "id",
+          },
+        ]),
+      ),
+    ),
   });
 
 const read = <T extends object>(type: new () => T, connection: IConnection) =>
@@ -263,6 +372,204 @@ describe("CRUDRepository", () => {
     expect(stored?.Value).toBe("dark");
     const loaded = await hostsRepo.readSingle();
     expect(loaded?.Settings).toEqual({ theme: "dark" });
+  });
+
+  it("reads a name-keyed dictionary from child rows", async () => {
+    const connection = await setup();
+    const hostsRepo = generatedRepo<NamedHostRow>(connection, "Host", ["id", "label"]);
+    const settingsRepo = generatedRepo<NamedSettingRow>(connection, "Setting", ["id", "parentId", "name", "value"]);
+    hostsRepo.addEnriched(
+      { destinationProperty: "settings", sourceProperty: "id", relatedKey: "parentId", relatedProperty: "value", type: "dictionary" },
+      settingsRepo,
+    );
+    const created = await hostsRepo.create({ label: "ada", settings: {} } as NamedHostRow);
+    await settingsRepo.create({ parentId: created.id, name: "lives", value: "3" } as NamedSettingRow);
+    await settingsRepo.create({ parentId: created.id, name: "mode", value: "arcade" } as NamedSettingRow);
+    expect((await hostsRepo.readSingle())?.settings).toEqual({ lives: "3", mode: "arcade" });
+  });
+
+  it("reads a dictionary keyed by asdfasdfa, not name", async () => {
+    const connection = await setup();
+    const hostsRepo = generatedRepo<NamedHostRow>(connection, "Host", ["id", "label"]);
+    const settingsRepo = generatedRepo<AsdfSettingRow>(connection, "Setting", ["id", "parentId", "asdfasdfa", "value"]);
+    hostsRepo.addEnriched(
+      { destinationProperty: "settings", sourceProperty: "id", relatedKey: "parentId", relatedProperty: "value", type: "dictionary" },
+      settingsRepo,
+    );
+    const created = await hostsRepo.create({ label: "ada", settings: { alpha: "one", beta: "two" } } as NamedHostRow);
+    const stored = await collectAsync(settingsRepo.read());
+    expect(stored.map((row) => row.asdfasdfa).sort()).toEqual(["alpha", "beta"]);
+    expect(stored.find((row) => row.asdfasdfa === "alpha")?.value).toBe("one");
+    expect((created as { name?: string }).name).toBeUndefined();
+    expect((await hostsRepo.readSingle())?.settings).toEqual({ alpha: "one", beta: "two" });
+  });
+
+  it("updates a name-keyed dictionary by key and keeps surviving ids", async () => {
+    const connection = await setup();
+    const hostsRepo = generatedRepo<NamedHostRow>(connection, "Host", ["id", "label"]);
+    const settingsRepo = generatedRepo<NamedSettingRow>(connection, "Setting", ["id", "parentId", "name", "value"]);
+    hostsRepo.addEnriched(
+      { destinationProperty: "settings", sourceProperty: "id", relatedKey: "parentId", relatedProperty: "value", type: "dictionary" },
+      settingsRepo,
+    );
+    const created = await hostsRepo.create({ label: "ada", settings: {} } as NamedHostRow);
+    const lives = await settingsRepo.create({ parentId: created.id, name: "lives", value: "3" } as NamedSettingRow);
+    await settingsRepo.create({ parentId: created.id, name: "mode", value: "arcade" } as NamedSettingRow);
+    const loaded = await hostsRepo.readSingle();
+    await hostsRepo.update({ id: created.id, label: "ada", settings: { lives: "5", density: "high" } } as NamedHostRow);
+    const rows = await collectAsync(settingsRepo.read());
+    expect(rows).toHaveLength(2);
+    expect(rows.find((row) => row.name === "lives")?.id).toBe(lives.id);
+    expect(rows.find((row) => row.name === "lives")?.value).toBe("5");
+    expect(rows.find((row) => row.name === "density")?.value).toBe("high");
+    expect(rows.find((row) => row.name === "mode")).toBeUndefined();
+    expect((await hostsRepo.readSingle())?.settings).toEqual({ lives: "5", density: "high" });
+    expect(loaded?.settings).toEqual({ lives: "3", mode: "arcade" });
+  });
+
+  it("clears a name-keyed dictionary when the map is empty", async () => {
+    const connection = await setup();
+    const hostsRepo = generatedRepo<NamedHostRow>(connection, "Host", ["id", "label"]);
+    const settingsRepo = generatedRepo<NamedSettingRow>(connection, "Setting", ["id", "parentId", "name", "value"]);
+    hostsRepo.addEnriched(
+      { destinationProperty: "settings", sourceProperty: "id", relatedKey: "parentId", relatedProperty: "value", type: "dictionary" },
+      settingsRepo,
+    );
+    const created = await hostsRepo.create({ label: "ada", settings: { lives: "3" } } as NamedHostRow);
+    await hostsRepo.update({ id: created.id, label: "ada", settings: {} } as NamedHostRow);
+    expect(await collectAsync(settingsRepo.read())).toEqual([]);
+    expect((await hostsRepo.readSingle())?.settings).toEqual({});
+  });
+
+  it("round-trips an object dictionary keyed by name", async () => {
+    const connection = await setup();
+    const hostsRepo = generatedRepo<PrefHostRow>(connection, "Host", ["id", "label"]);
+    const prefsRepo = generatedRepo<PrefSettingRow>(connection, "Pref", ["id", "parentId", "name", "locale", "timezone"]);
+    hostsRepo.addEnriched(
+      { destinationProperty: "prefs", sourceProperty: "id", relatedKey: "parentId", type: "dictionary" },
+      prefsRepo,
+    );
+    const created = await hostsRepo.create({
+      label: "ada",
+      prefs: { home: { locale: "en-GB", timezone: "Europe/London" } as PrefValue },
+    } as PrefHostRow);
+    const stored = (await collectAsync(prefsRepo.read()))[0];
+    expect(stored?.name).toBe("home");
+    expect(stored?.locale).toBe("en-GB");
+    const loaded = await hostsRepo.readSingle();
+    expect(loaded?.prefs.home.locale).toBe("en-GB");
+    expect(loaded?.prefs.home.timezone).toBe("Europe/London");
+    await hostsRepo.update({
+      id: created.id,
+      label: "ada",
+      prefs: {
+        home: { locale: "en-GB", timezone: "Europe/Paris" } as PrefValue,
+        work: { locale: "en-US", timezone: "America/New_York" } as PrefValue,
+      },
+    } as PrefHostRow);
+    const updated = await hostsRepo.readSingle();
+    expect(updated?.prefs.home.timezone).toBe("Europe/Paris");
+    expect(updated?.prefs.work.locale).toBe("en-US");
+    expect((await collectAsync(prefsRepo.read())).find((row) => row.name === "home")?.id).toBe(stored?.id);
+  });
+
+  it("round-trips a dictionary whose column is key", async () => {
+    const connection = await setup();
+    const hostsRepo = generatedRepo<NamedHostRow>(connection, "Host", ["id", "label"]);
+    const settingsRepo = generatedRepo<KeyedSettingRow>(connection, "Setting", ["id", "parentId", "key", "value"]);
+    hostsRepo.addEnriched(
+      { destinationProperty: "settings", sourceProperty: "id", relatedKey: "parentId", relatedProperty: "value", type: "dictionary" },
+      settingsRepo,
+    );
+    const created = await hostsRepo.create({ label: "ada", settings: { theme: "dark" } } as NamedHostRow);
+    expect((await collectAsync(settingsRepo.read()))[0]?.key).toBe("theme");
+    expect((await hostsRepo.readSingle())?.settings).toEqual({ theme: "dark" });
+    await hostsRepo.update({ id: created.id, label: "ada", settings: { theme: "sepia" } } as NamedHostRow);
+    expect((await hostsRepo.readSingle())?.settings).toEqual({ theme: "sepia" });
+  });
+
+  it("reads list child foreign keys as the parent id", async () => {
+    const connection = await setup();
+    const id = { type: "integer", nullable: false, hasDefault: false, isId: true };
+    const parentId = { type: "integer", nullable: false, hasDefault: false };
+    const label = { type: "string", nullable: false, hasDefault: false };
+    const parentsRepo = new CRUDRepository<ParentRow>(connection, {
+      entity: "Parent",
+      entityMapper: new DictionaryMapper([["Parent", "parents"]]),
+      propertyMappings: camel,
+      ids: ["id"],
+      createProperties: ["label"],
+      updateProperties: ["label"],
+      readProperties: ["id", "label"],
+      schema: new Schema({ id, label }),
+    });
+    const childrenRepo = new CRUDRepository<ChildRow>(connection, {
+      entity: "Child",
+      entityMapper: new DictionaryMapper([["Child", "childs"]]),
+      propertyMappings: camel,
+      ids: ["id"],
+      createProperties: ["parentId", "label"],
+      updateProperties: ["parentId", "label"],
+      readProperties: ["id", "parentId", "label"],
+      schema: new Schema({ id, parentId, label }),
+    });
+    parentsRepo.addEnriched(
+      { destinationProperty: "children", sourceProperty: "id", relatedKey: "parentId", type: "list" },
+      childrenRepo,
+    );
+    const child = (init: Partial<ChildRow>): ChildRow => ({ ...init } as ChildRow);
+    await parentsRepo.create({ label: "p", children: [child({ label: "a" })] } as ParentRow);
+    const loaded = await parentsRepo.readSingle();
+    const actual = loaded?.children[0]?.parentId;
+    if (actual !== loaded?.id)
+      throw new Error(`child parentId ${String(actual)} !== parent id ${String(loaded?.id)}`);
+  });
+
+  it("keeps list children when the read payload is written back", async () => {
+    const connection = await setup();
+    const parentsRepo = generatedRepo<ParentRow>(connection, "Parent", ["id", "label"]);
+    const childrenRepo = generatedRepo<ChildRow>(connection, "Child", ["id", "parentId", "label"]);
+    parentsRepo.addEnriched({ destinationProperty: "children", sourceProperty: "id", relatedKey: "parentId", type: "list" }, childrenRepo);
+    const created = await parentsRepo.create({ label: "p", children: [{ label: "a" } as ChildRow, { label: "b" } as ChildRow] } as ParentRow);
+    const loaded = await parentsRepo.readSingle();
+    expect(loaded?.children.map((child) => child.label).sort()).toEqual(["a", "b"]);
+    await parentsRepo.update({ id: created.id, label: "p", children: loaded?.children ?? [] } as ParentRow);
+    const kept = await collectAsync(childrenRepo.read());
+    expect(kept).toHaveLength(2);
+    expect(kept.map((child) => child.id).sort()).toEqual((loaded?.children.map((child) => child.id) ?? []).sort());
+  });
+
+  it("keeps linked children when the read payload is written back", async () => {
+    const connection = await setup();
+    const parentsRepo = generatedRepo<TaggedRow>(connection, "Tagged", ["id", "label"]);
+    const tagsRepo = generatedRepo<TagRow>(connection, "Tag", ["id", "name"]);
+    const linksRepo = generatedRepo<ParentTagRow>(connection, "ParentTag", ["id", "parentId", "tagId"]);
+    const keep = await tagsRepo.create({ name: "keep" } as TagRow);
+    const extra = await tagsRepo.create({ name: "extra" } as TagRow);
+    expect(extra.id).toBeGreaterThan(0);
+    parentsRepo.addLinked(
+      { destinationProperty: "tags", sourceProperty: "id", relatedKey: "id", relatedProperty: "name", association: { parent: "parentId", related: "tagId" }, type: "list" },
+      tagsRepo,
+      linksRepo,
+    );
+    const created = await parentsRepo.create({ label: "p", tags: [{ id: keep.id, name: keep.name } as TagRow] } as TaggedRow);
+    const loaded = await parentsRepo.readSingle();
+    expect(loaded?.tags.map((tag) => tag.name)).toEqual(["keep"]);
+    await parentsRepo.update({ id: created.id, label: "p", tags: loaded?.tags ?? [] } as TaggedRow);
+    const links = await collectAsync(linksRepo.read());
+    expect(links).toHaveLength(1);
+    expect(links[0]?.tagId).toBe(keep.id);
+    expect(await collectAsync(tagsRepo.read())).toHaveLength(2);
+  });
+
+  it("copies an object enrichment related field on read", async () => {
+    const connection = await setup();
+    const typesRepo = generatedRepo<TypeRow>(connection, "Type", ["id", "name"]);
+    const hostsRepo = generatedRepo<TypedRow>(connection, "Host", ["id", "typeId"]);
+    const type = await typesRepo.create({ name: "arcade" } as TypeRow);
+    hostsRepo.addEnriched({ destinationProperty: "typeName", sourceProperty: "typeId", relatedKey: "id", relatedProperty: "name", type: "object" }, typesRepo);
+    await hostsRepo.create({ typeId: type.id } as TypedRow);
+    expect((await hostsRepo.readSingle())?.typeName).toBe("arcade");
   });
 
   it("creates children, stamps FK, and skips select", async () => {
@@ -523,6 +830,32 @@ describe("CRUDRepository", () => {
     expect(created.Id).toBeGreaterThan(0);
     expect(created.TypeName).toBe("work");
     expect((await parentsRepo.readSingle())?.TypeName).toBe("work");
+  });
+
+  it("create stamps a lookup key omitted from createProperties", async () => {
+    const connection = await setup();
+    const typesRepo = generatedRepo<TypeRow>(connection, "Type", ["id", "name"]);
+    await typesRepo.create({ name: "Female" } as TypeRow);
+    const hostsRepo = new CRUDRepository<{ id: number; label: string; typeName?: string }>(connection, {
+      entity: "Host",
+      entityMapper: new DictionaryMapper([["Host", "hosts"]]),
+      propertyMappings: camel,
+      ids: ["id"],
+      createProperties: ["label"],
+      updateProperties: ["label"],
+      readProperties: ["id", "label", "typeId"],
+      schema: new Schema({
+        id: { type: "integer", nullable: false, hasDefault: false, isId: true },
+        label: { type: "string", nullable: false, hasDefault: false },
+        typeId: { type: "integer", nullable: false, hasDefault: false },
+      }),
+    });
+    hostsRepo.addEnriched(
+      { destinationProperty: "typeName", sourceProperty: "typeId", relatedKey: "id", relatedProperty: "name", type: "object" },
+      typesRepo,
+    );
+    await hostsRepo.create({ label: "Ada", typeName: "Female" });
+    expect((await hostsRepo.readSingle())?.typeName).toBe("Female");
   });
 
   it("create-unknown-lookup-name-throws", async () => {

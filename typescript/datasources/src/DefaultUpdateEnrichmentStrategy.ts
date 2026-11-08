@@ -1,6 +1,7 @@
 import { DatasourceError } from "./DatasourceError.ts";
 import { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
-import type { Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, valueObjectNames, type Enrichment } from "./Enrichment.ts";
+import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 
@@ -9,6 +10,10 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
     const existing = await DeleteEnrichmentStrategy.load(writer, enrichment, parent);
     const rows = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);
     for (const related of rows) this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
+    if (enrichment.type === EnrichmentPropertyType.Dictionary) {
+      await this.updateDictionary(writer, enrichment, parent, existing, rows);
+      return;
+    }
     const keys = this.namesOf(writer, rows[0] ?? existing[0] ?? {} as TChild);
     const keep = new Set(rows.filter((row) => this.hasKey(row, keys)).map((row) => this.keyOf(row, keys)));
     for (const row of existing.filter((row) => !keep.has(this.keyOf(row, keys))))
@@ -18,6 +23,34 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
         ? await writer.update(related)
         : await writer.create(related);
   }
+
+  private updateDictionary = async <TChild extends object>(
+    writer: ICRUDRepository<TChild>,
+    enrichment: Enrichment,
+    parent: T,
+    existing: TChild[],
+    rows: TChild[],
+  ): Promise<void> => {
+    const keyName = dictionaryMapKey(
+      enrichment,
+      writer.schema,
+      valueObjectNames((parent as { [name: string]: object })[enrichment.destinationProperty] ?? {}),
+    );
+    const ids = this.namesOf(writer, rows[0] ?? existing[0] ?? {} as TChild);
+    const cell = (row: TChild): string => String(this.getCell(row, keyName) ?? "");
+    for (const related of rows) {
+      const match = existing.find((row) => cell(row) === cell(related));
+      if (!match) continue;
+      for (const name of ids) this.stampCell(related, name, this.getCell(match, name));
+    }
+    const keep = new Set(rows.map(cell));
+    for (const row of existing.filter((row) => !keep.has(cell(row))))
+      await writer.delete(row, DeleteEnrichmentStrategy.childrenWhere(writer, enrichment, parent));
+    for (const related of rows)
+      existing.some((row) => cell(row) === cell(related))
+        ? await writer.update(related)
+        : await writer.create(related);
+  };
 
   async updateLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
     const association = enrichment.association;
@@ -38,3 +71,4 @@ export class DefaultUpdateEnrichmentStrategy<T> extends UpdateEnrichmentStrategy
     }
   }
 }
+

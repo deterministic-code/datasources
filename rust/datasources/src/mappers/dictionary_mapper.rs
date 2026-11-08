@@ -38,7 +38,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::DictionaryMapper;
-    use crate::converters::{RowTypeConverter};
+    use crate::converters::RowTypeConverter;
     use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
     use crate::mappers::Mapper;
     use crate::mocks::{MockCommand, MockConnection};

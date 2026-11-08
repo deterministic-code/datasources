@@ -212,7 +212,11 @@ impl<T: SchemaObject> Entity for T {
     }
 
     fn has(&self, name: &str) -> bool {
-        Peek::new(self).into_struct().ok().and_then(|st| st.field_by_name(name).ok()).is_some()
+        Peek::new(self)
+            .into_struct()
+            .ok()
+            .and_then(|st| st.field_by_name(name).ok())
+            .is_some()
     }
 
     fn related<R: Entity>(&self, name: &str) -> Vec<R> {
@@ -290,7 +294,11 @@ pub fn assign_related<T: Entity, TRelated: Entity>(
     parent.set_related(name, items)
 }
 
-pub fn assign_one<T: Entity, TRelated: Entity>(parent: &mut T, name: &str, item: TRelated) -> Result<()> {
+pub fn assign_one<T: Entity, TRelated: Entity>(
+    parent: &mut T,
+    name: &str,
+    item: TRelated,
+) -> Result<()> {
     parent.set_one(name, item)
 }
 

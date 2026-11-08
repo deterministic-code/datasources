@@ -6,7 +6,6 @@ use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
-use crate::IWhere;
 use crate::mappers::Mapper;
 use crate::native::Native;
 use crate::parameter::Parameter;
@@ -14,6 +13,7 @@ use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
+use crate::IWhere;
 use crate::{
     BulkDeleteStatement, BulkInsertStatement, BulkUpdateRow, BulkUpdateStatement,
     DefaultStatementTextRenderer, Expression, Literal, Operator, Statement, Where,
@@ -116,7 +116,12 @@ impl BatchCommandIBulkWriteStrategy {
         }
     }
 
-    fn fields(&self, record: &Row, include: impl Fn(&str, &Value) -> bool, omit_null: bool) -> Result<Vec<Parameter>> {
+    fn fields(
+        &self,
+        record: &Row,
+        include: impl Fn(&str, &Value) -> bool,
+        omit_null: bool,
+    ) -> Result<Vec<Parameter>> {
         let columns = self.statements()?.read_columns().to_vec();
         let mapped: Vec<String> = match &self.options()?.property_mappings {
             Some(map) => columns.iter().map(|name| map.map(name.clone())).collect(),
@@ -136,7 +141,12 @@ impl BatchCommandIBulkWriteStrategy {
         pairs.sort_by(|left, right| left.0.cmp(&right.0));
         pairs
             .into_iter()
-            .map(|(name, value)| Ok(Parameter::new(name.clone(), self.cell(&name, &value, true)?)))
+            .map(|(name, value)| {
+                Ok(Parameter::new(
+                    name.clone(),
+                    self.cell(&name, &value, true)?,
+                ))
+            })
             .collect()
     }
 
@@ -148,7 +158,10 @@ impl BatchCommandIBulkWriteStrategy {
                 let value = record.get(col).ok_or_else(|| {
                     DatasourceError::message(format!("Missing Id value \"{col}\""))
                 })?;
-                Ok(Expression::from(Operator::equals(col.clone(), value.clone())))
+                Ok(Expression::from(Operator::equals(
+                    col.clone(),
+                    value.clone(),
+                )))
             })
             .collect::<Result<Vec<_>>>()?;
         Ok(Where::new(and_all(children)))
@@ -191,9 +204,11 @@ impl BatchCommandIBulkWriteStrategy {
             ));
         }
         let clause = self.id_where(&record)?;
-        let statement = self.statements()?.update(&fields, &clause, &|name, value| {
-            self.cell(name, value, true)
-        })?;
+        let statement = self
+            .statements()?
+            .update(&fields, &clause, &|name, value| {
+                self.cell(name, value, true)
+            })?;
         Ok(Updated {
             table: statement.table().to_string(),
             fields: statement.fields().to_vec(),
@@ -207,9 +222,9 @@ impl BatchCommandIBulkWriteStrategy {
     fn mapped_delete(&self, item: &Row) -> Result<Deleted> {
         let record = self.reverse(item)?;
         let clause = self.id_where(&record)?;
-        let statement = self.statements()?.delete(&clause, &|name, value| {
-            self.cell(name, value, true)
-        })?;
+        let statement = self
+            .statements()?
+            .delete(&clause, &|name, value| self.cell(name, value, true))?;
         Ok(Deleted {
             table: statement.table().to_string(),
             ids: statement
@@ -262,9 +277,9 @@ impl BatchCommandIBulkWriteStrategy {
             }
         };
         let applied = by_where.is_none();
-        let statement = self.statements()?.delete(clause, &|name, value| {
-            self.cell(name, value, applied)
-        })?;
+        let statement = self
+            .statements()?
+            .delete(clause, &|name, value| self.cell(name, value, applied))?;
         let parameters = statement
             .where_clause()
             .map(|clause| clause.parameters())
@@ -281,7 +296,11 @@ impl BatchCommandIBulkWriteStrategy {
         })
     }
 
-    async fn execute(&self, statement: &dyn Statement, parameters: Vec<Parameter>) -> Result<Response> {
+    async fn execute(
+        &self,
+        statement: &dyn Statement,
+        parameters: Vec<Parameter>,
+    ) -> Result<Response> {
         self.command()?
             .execute_statement(statement, Some(&parameters))
             .await
@@ -325,7 +344,10 @@ impl BatchCommandIBulkWriteStrategy {
         self.chunked(&rows, columns.len(), |chunk| {
             let table = table.clone();
             let columns = columns.clone();
-            let fields = chunk.iter().map(|row| row.fields.clone()).collect::<Vec<_>>();
+            let fields = chunk
+                .iter()
+                .map(|row| row.fields.clone())
+                .collect::<Vec<_>>();
             async move {
                 let statement = BulkInsertStatement::new(&table, &columns, fields);
                 let parameters = statement.parameters();
@@ -467,7 +489,9 @@ fn and_all(parts: Vec<Expression>) -> Expression {
         })
 }
 
-fn columns<'a>(rows: impl IntoIterator<Item = impl IntoIterator<Item = &'a Parameter>>) -> Vec<String> {
+fn columns<'a>(
+    rows: impl IntoIterator<Item = impl IntoIterator<Item = &'a Parameter>>,
+) -> Vec<String> {
     let mut seen = HashSet::new();
     let mut columns = Vec::new();
     for field in rows.into_iter().flatten() {
@@ -477,4 +501,3 @@ fn columns<'a>(rows: impl IntoIterator<Item = impl IntoIterator<Item = &'a Param
     }
     columns
 }
-

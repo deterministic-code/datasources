@@ -57,6 +57,14 @@ public class CRUDRepositoryTests
         public Dictionary<string, string> Settings { get; set; } = [];
     }
 
+    sealed class AsdfSetting
+    {
+        public long Id { get; set; }
+        public long ParentId { get; set; }
+        public string Asdfasdfa { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
     sealed class Parent
     {
         public long Id { get; set; }
@@ -195,6 +203,10 @@ public class CRUDRepositoryTests
         var child = Assert.Single(await childrenRepo.Read().ToListAsync());
         Assert.Equal(created.Id, parent.Id);
         Assert.Equal(parent.Id, child.ParentId);
+        var loaded = await parentsRepo.ReadSingle();
+        Assert.NotNull(loaded);
+        var nested = Assert.Single(loaded.Children);
+        Assert.Equal(loaded.Id, nested.ParentId);
     }
 
     [Fact]
@@ -259,6 +271,46 @@ public class CRUDRepositoryTests
         Assert.Equal("dark", stored.Value);
         var loaded = await hostsRepo.ReadSingle();
         Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark" }, loaded!.Settings);
+    }
+
+    [Fact]
+    public async Task RoundTripsDictionaryWhenKeyPropertyIsName()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<NamedHost>(connection);
+        var settingsRepo = Open<NamedSetting>(connection);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
+        var created = await hostsRepo.Create(new NamedHost
+        {
+            Label = "ada",
+            Settings = { ["theme"] = "dark", ["locale"] = "en-GB" },
+        });
+        Assert.True(created.Id > 0);
+        var loaded = await hostsRepo.ReadSingle();
+        Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark", ["locale"] = "en-GB" }, loaded!.Settings);
+        await hostsRepo.Update(new NamedHost { Id = created.Id, Label = "ada", Settings = [] });
+        Assert.Empty((await hostsRepo.ReadSingle())!.Settings);
+    }
+
+    [Fact]
+    public async Task RoundTripsDictionaryWhenKeyPropertyIsAsdfasdfa()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<NamedHost>(connection);
+        var settingsRepo = Open<AsdfSetting>(connection);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
+        var created = await hostsRepo.Create(new NamedHost
+        {
+            Label = "ada",
+            Settings = { ["alpha"] = "one", ["beta"] = "two" },
+        });
+        var stored = await settingsRepo.Read().ToListAsync();
+        Assert.Equal(2, stored.Count);
+        Assert.Contains(stored, row => row.Asdfasdfa == "alpha" && row.Value == "one");
+        Assert.Contains(stored, row => row.Asdfasdfa == "beta" && row.Value == "two");
+        Assert.Equal(new Dictionary<string, string> { ["alpha"] = "one", ["beta"] = "two" }, (await hostsRepo.ReadSingle())!.Settings);
+        await hostsRepo.Update(new NamedHost { Id = created.Id, Label = "ada", Settings = { ["alpha"] = "uno" } });
+        Assert.Equal(new Dictionary<string, string> { ["alpha"] = "uno" }, (await hostsRepo.ReadSingle())!.Settings);
     }
 
     [Fact]
@@ -493,6 +545,32 @@ public class CRUDRepositoryTests
         await parentsRepo.Create(new Parent { Type = new UserType { Id = home.Id }, TypeName = "work" });
         Assert.Equal("home", (await parentsRepo.ReadSingle())!.TypeName);
         Assert.Equal(2, (await typesRepo.Read().ToListAsync()).Count);
+    }
+
+    [Fact]
+    public async Task CreateStampsLookupKeyOmittedFromCreateProperties()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        await typesRepo.Create(new UserType { Name = "Female" });
+        var hostsRepo = new CRUDRepository<Named>(connection, new CRUDRepositoryOptions<Named>
+        {
+            Entity = "Host",
+            EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Host"] = "hosts" }),
+            PropertyMappings = new ChangeCasingMapper(Casing.Pascal, Casing.Snake),
+            Ids = ["Id"],
+            CreateProperties = [],
+            UpdateProperties = [],
+            ReadProperties = ["Id", "TypeId"],
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Id"] = new("integer", IsId: true),
+                ["TypeId"] = new("integer"),
+            }),
+        });
+        hostsRepo.AddEnriched(new("TypeName", "TypeId", "Id", "Name"), typesRepo);
+        await hostsRepo.Create(new Named { TypeName = "Female" });
+        Assert.Equal("Female", (await hostsRepo.ReadSingle())!.TypeName);
     }
 
     [Fact]

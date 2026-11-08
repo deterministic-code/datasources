@@ -1,12 +1,16 @@
+use super::execute_stored_procedure_statement::ExecuteStoredProcedureStatement;
 use crate::parameter::Parameter;
 use crate::parameter_direction::ParameterDirection;
-use super::execute_stored_procedure_statement::ExecuteStoredProcedureStatement;
 
 pub struct ExecuteStoredProcedureStatementTextRenderer;
 
 impl ExecuteStoredProcedureStatementTextRenderer {
     pub fn render(&self, statement: &ExecuteStoredProcedureStatement) -> String {
-        format!("CALL {}({})", statement.name(), args(statement.parameters()))
+        format!(
+            "CALL {}({})",
+            statement.name(),
+            args(statement.parameters())
+        )
     }
 }
 

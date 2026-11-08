@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "pretest": "node ../cli/scripts/build-generators.mjs",
     "test": "npm run test -w @deterministic-code/datasources -w @deterministic-code/datasources-code-generators -w @deterministic-code/datasources-sqlite -w @deterministic-code/datasources-memory --if-present",
     "typecheck": "npm run build && npm run typecheck --workspaces --if-present"
   },

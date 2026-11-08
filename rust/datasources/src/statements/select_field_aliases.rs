@@ -72,7 +72,10 @@ pub fn function_of(field: &str) -> Option<(&str, &str)> {
     if open == 0 || !field.ends_with(')') {
         return None;
     }
-    Some((field[..open].trim(), field[open + 1..field.len() - 1].trim()))
+    Some((
+        field[..open].trim(),
+        field[open + 1..field.len() - 1].trim(),
+    ))
 }
 
 pub fn as_index(field: &str) -> Option<usize> {

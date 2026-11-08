@@ -21,7 +21,9 @@ pub trait AlterTableStatementTextRenderer: CreateTableStatementTextRenderer {
                 format!("RENAME COLUMN {} TO {}", self.quote(from), self.quote(to))
             }
             AlterAction::RenameTable { to } => format!("RENAME TO {}", self.quote(to)),
-            AlterAction::AddConstraint(constraint) => format!("ADD {}", self.constraint(constraint)),
+            AlterAction::AddConstraint(constraint) => {
+                format!("ADD {}", self.constraint(constraint))
+            }
             AlterAction::DropConstraint { name } => {
                 format!("DROP CONSTRAINT {}", self.quote(name))
             }

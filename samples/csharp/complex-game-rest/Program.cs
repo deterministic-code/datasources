@@ -28,23 +28,34 @@ var user = await Call(api, "POST", "/users", Json(new
 {
     username = "ada",
     password = "secret",
-    settings = new Dictionary<string, string> { ["theme"] = "dark" },
+    settings = new Dictionary<string, string> { ["theme"] = "dark", ["locale"] = "en-GB" },
     roles = new[] { new { name = role.Name, description = role.Description } },
     groups = new[] { new { name = group.Name, description = group.Description } },
 }), 201);
 var userId = user.GetProperty("id").GetInt64();
 var listed = await Call(api, "GET", "/users?username=ada", null, 200);
 if (listed.GetArrayLength() != 1) throw new InvalidOperationException("get users username");
+RequireUser(listed[0], "ada", new Dictionary<string, string> { ["theme"] = "dark", ["locale"] = "en-GB" }, role.Name, group.Name);
 await Call(api, "PUT", $"/users?id={userId}", Json(new
 {
     username = "ada-byron",
     password = "secret",
-    settings = new Dictionary<string, string> { ["theme"] = "sepia" },
+    settings = new Dictionary<string, string> { ["theme"] = "sepia", ["locale"] = "en-US" },
     roles = new[] { new { name = role.Name } },
     groups = new[] { new { name = group.Name } },
 }), 200);
 var loaded = await Call(api, "GET", $"/users?id={userId}", null, 200);
 if (loaded[0].GetProperty("username").GetString() != "ada-byron") throw new InvalidOperationException("put users");
+RequireUser(loaded[0], "ada-byron", new Dictionary<string, string> { ["theme"] = "sepia", ["locale"] = "en-US" }, role.Name, group.Name);
+await Call(api, "PUT", $"/users?id={userId}", Json(new
+{
+    username = "ada-byron",
+    password = "secret",
+    settings = new Dictionary<string, string>(),
+    roles = new[] { new { name = role.Name } },
+    groups = new[] { new { name = group.Name } },
+}), 200);
+RequireUser((await Call(api, "GET", $"/users?id={userId}", null, 200))[0], "ada-byron", new Dictionary<string, string>(), role.Name, group.Name);
 
 var root = await Call(api, "POST", "/categories", Json(new { name = "arcade", description = "root" }), 201);
 var rootId = root.GetProperty("id").GetInt64();
@@ -62,19 +73,29 @@ var game = await Call(api, "POST", "/games", Json(new
     name = "star",
     description = "space",
     location = "orbit",
-    settings = new Dictionary<string, string> { ["lives"] = "3" },
+    settings = new Dictionary<string, string> { ["lives"] = "3", ["mode"] = "arcade" },
     categories = new[] { new { id = childId, name = "shooter" } },
 }), 201);
 var gameId = game.GetProperty("id").GetInt64();
-await Call(api, "GET", $"/games?id={gameId}", null, 200);
+RequireGame(await Call(api, "GET", $"/games?id={gameId}", null, 200), "star", new Dictionary<string, string> { ["lives"] = "3", ["mode"] = "arcade" }, childId);
 await Call(api, "PUT", $"/games?id={gameId}", Json(new
 {
     name = "star-2",
     description = "space",
     location = "orbit",
-    settings = new Dictionary<string, string> { ["lives"] = "5" },
+    settings = new Dictionary<string, string> { ["lives"] = "5", ["mode"] = "hard" },
     categories = new[] { new { id = childId, name = "shooter" } },
 }), 200);
+RequireGame(await Call(api, "GET", $"/games?id={gameId}", null, 200), "star-2", new Dictionary<string, string> { ["lives"] = "5", ["mode"] = "hard" }, childId);
+await Call(api, "PUT", $"/games?id={gameId}", Json(new
+{
+    name = "star-2",
+    description = "space",
+    location = "orbit",
+    settings = new Dictionary<string, string>(),
+    categories = new[] { new { id = childId, name = "shooter" } },
+}), 200);
+RequireGame(await Call(api, "GET", $"/games?id={gameId}", null, 200), "star-2", new Dictionary<string, string>(), childId);
 
 var review = await Call(api, "POST", "/reviews", Json(new { gameId, userId, description = "fun", rating = "4.50", isApproved = true }), 201);
 var reviewId = review.GetProperty("id").GetInt64();
@@ -92,6 +113,8 @@ var contact = await Call(api, "POST", "/contacts", Json(new
     lastName = "Lovelace",
     contactSourceName = "Manual",
     userId = userId.ToString(),
+    settings = new Dictionary<string, string> { ["theme"] = "dark", ["volume"] = "loud" },
+    prefs = new Dictionary<string, object> { ["home"] = new { locale = "en-GB", timezone = "Europe/London" } },
     addresses = new object[]
     {
         new { addressTypeName = "Home", line1 = "12 Analytical Engine", city = "London", country = "GB" },
@@ -102,6 +125,7 @@ var contact = await Call(api, "POST", "/contacts", Json(new
 var contactId = contact.GetProperty("id").GetInt64();
 var created = await Call(api, "GET", $"/contacts?id={contactId}", null, 200);
 RequireAdaChildren(created, "Home", "London", "555-0100");
+RequireContactMaps(created, new Dictionary<string, string> { ["theme"] = "dark", ["volume"] = "loud" }, "en-GB", "Europe/London");
 if (AddressByLine1(ContactRow(created), "1 Strand").GetProperty("addressTypeName").GetString() != "Work")
     throw new InvalidOperationException("create work address");
 var engine = AddressByLine1(ContactRow(created), "12 Analytical Engine");
@@ -112,6 +136,8 @@ await Call(api, "PUT", $"/contacts?id={contactId}", Json(new
     lastName = "Lovelace",
     contactSourceName = "Manual",
     userId = userId.ToString(),
+    settings = new Dictionary<string, string> { ["theme"] = "sepia", ["volume"] = "quiet" },
+    prefs = new Dictionary<string, object> { ["home"] = new { locale = "en-US", timezone = "America/New_York" } },
     addresses = new object[]
     {
         new
@@ -136,8 +162,48 @@ await Call(api, "PUT", $"/contacts?id={contactId}", Json(new
 }), 200);
 var updated = await Call(api, "GET", $"/contacts?id={contactId}", null, 200);
 RequireAdaChildren(updated, "Work", "Cambridge", "555-0111");
+RequireContactMaps(updated, new Dictionary<string, string> { ["theme"] = "sepia", ["volume"] = "quiet" }, "en-US", "America/New_York");
 if (AddressByLine1(ContactRow(updated), "1 College").GetProperty("addressTypeName").GetString() != "Home")
     throw new InvalidOperationException("update home address");
+var college = AddressByLine1(ContactRow(updated), "1 College");
+await Call(api, "PUT", $"/contacts?id={contactId}", Json(new
+{
+    firstName = "Ada Byron",
+    lastName = "Lovelace",
+    contactSourceName = "Manual",
+    userId = userId.ToString(),
+    settings = new Dictionary<string, string>(),
+    prefs = new Dictionary<string, object> { ["home"] = new { locale = "en-US", timezone = "America/New_York" } },
+    addresses = new object[]
+    {
+        new
+        {
+            id = engine.GetProperty("id").GetInt64(),
+            addressTypeName = "Work",
+            line1 = "12 Analytical Engine",
+            city = "Cambridge",
+            country = "FR",
+        },
+        new
+        {
+            id = college.GetProperty("id").GetInt64(),
+            addressTypeName = "Home",
+            line1 = "1 College",
+            city = "Cambridge",
+            country = "GB",
+        },
+    },
+    phones = new object[]
+    {
+        new
+        {
+            id = phone.GetProperty("id").GetInt64(),
+            phoneTypeName = "Mobile",
+            number = "555-0111",
+        },
+    },
+}), 200);
+RequireContactMaps(await Call(api, "GET", $"/contacts?id={contactId}", null, 200), new Dictionary<string, string>(), "en-US", "America/New_York");
 
 foreach (var target in new[]
 {
@@ -153,6 +219,48 @@ foreach (var target in new[]
     await Call(api, "DELETE", target, null, 204);
     await Call(api, "DELETE", target, null, 404);
     await Call(api, "PUT", target, "{}", 404);
+}
+
+static void RequireSettings(JsonElement row, Dictionary<string, string> expected, string label)
+{
+    if (!row.TryGetProperty("settings", out var settings) || settings.ValueKind != JsonValueKind.Object)
+        throw new InvalidOperationException(label);
+    if (settings.EnumerateObject().Count() != expected.Count)
+        throw new InvalidOperationException(label);
+    foreach (var pair in expected)
+        if (!settings.TryGetProperty(pair.Key, out var got) || got.GetString() != pair.Value)
+            throw new InvalidOperationException(label);
+}
+
+static void RequireUser(JsonElement user, string username, Dictionary<string, string> settings, string roleName, string groupName)
+{
+    if (user.GetProperty("username").GetString() != username) throw new InvalidOperationException("user username");
+    RequireSettings(user, settings, "user settings");
+    if (!user.GetProperty("roles").EnumerateArray().Any(item => item.GetProperty("name").GetString() == roleName))
+        throw new InvalidOperationException("user roles");
+    if (!user.GetProperty("groups").EnumerateArray().Any(item => item.GetProperty("name").GetString() == groupName))
+        throw new InvalidOperationException("user groups");
+}
+
+static void RequireGame(JsonElement listed, string name, Dictionary<string, string> settings, long categoryId)
+{
+    if (listed.ValueKind != JsonValueKind.Array || listed.GetArrayLength() != 1)
+        throw new InvalidOperationException("game list");
+    var game = listed[0];
+    if (game.GetProperty("name").GetString() != name) throw new InvalidOperationException("game name");
+    RequireSettings(game, settings, "game settings");
+    if (!game.GetProperty("categories").EnumerateArray().Any(item =>
+        item.GetProperty("id").GetInt64() == categoryId && item.GetProperty("name").GetString() == "shooter"))
+        throw new InvalidOperationException("game categories");
+}
+
+static void RequireContactMaps(JsonElement listed, Dictionary<string, string> settings, string locale, string timezone)
+{
+    var contact = ContactRow(listed);
+    RequireSettings(contact, settings, "contact settings");
+    var home = contact.GetProperty("prefs").GetProperty("home");
+    if (home.GetProperty("locale").GetString() != locale || home.GetProperty("timezone").GetString() != timezone)
+        throw new InvalidOperationException("contact prefs");
 }
 
 static JsonElement ContactRow(JsonElement listed)

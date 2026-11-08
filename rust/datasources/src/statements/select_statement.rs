@@ -1,6 +1,6 @@
-use crate::builders::Join;
 use super::i_select_statement::ISelectStatement;
 use super::i_where::IWhere;
+use crate::builders::Join;
 use crate::statements::statement::Statement;
 use crate::statements::{OrderBy, SelectStatementOptions};
 use crate::{DefaultStatementTextRenderer, StatementTextRenderer};
@@ -82,7 +82,6 @@ impl Statement for SelectStatement {
         self.where_clause.as_deref()
     }
 }
-
 
 impl ISelectStatement for SelectStatement {
     fn where_clause(&self) -> Option<&dyn IWhere> {

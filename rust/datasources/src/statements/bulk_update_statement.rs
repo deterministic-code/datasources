@@ -63,7 +63,6 @@ impl BulkUpdateStatement {
     }
 }
 
-
 impl Statement for BulkUpdateStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
         text.statements().visit_bulk_update(self, text)

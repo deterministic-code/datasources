@@ -44,22 +44,32 @@ await new PhoneTypesRepository(connection).create({ name: "Mobile" } as PhoneTyp
 const user = await call(api, "POST", "/users", {
   username: "ada",
   password: "secret",
-  settings: { theme: "dark" },
+  settings: { theme: "dark", locale: "en-GB" },
   roles: [{ name: role.name, description: role.description }],
   groups: [{ name: group.name, description: group.description }],
 }, 201);
 const userId = user.id as number;
 const listed = await call(api, "GET", "/users?username=ada", undefined, 200);
 if (!Array.isArray(listed) || listed.length !== 1) throw new Error("get users username");
+requireUser(listed[0], "ada", { theme: "dark", locale: "en-GB" }, role.name, group.name);
 await call(api, "PUT", `/users?id=${userId}`, {
   username: "ada-byron",
   password: "secret",
-  settings: { theme: "sepia" },
+  settings: { theme: "sepia", locale: "en-US" },
   roles: [{ name: role.name }],
   groups: [{ name: group.name }],
 }, 200);
 const loaded = await call(api, "GET", `/users?id=${userId}`, undefined, 200);
 if (!Array.isArray(loaded) || loaded[0]?.username !== "ada-byron") throw new Error("put users");
+requireUser(loaded[0], "ada-byron", { theme: "sepia", locale: "en-US" }, role.name, group.name);
+await call(api, "PUT", `/users?id=${userId}`, {
+  username: "ada-byron",
+  password: "secret",
+  settings: {},
+  roles: [{ name: role.name }],
+  groups: [{ name: group.name }],
+}, 200);
+requireUser((await call(api, "GET", `/users?id=${userId}`, undefined, 200))[0], "ada-byron", {}, role.name, group.name);
 
 const root = await call(api, "POST", "/categories", { name: "arcade", description: "root" }, 201);
 const rootId = root.id as number;
@@ -74,18 +84,29 @@ const game = await call(api, "POST", "/games", {
   name: "star",
   description: "space",
   location: "orbit",
-  settings: { lives: "3" },
+  settings: { lives: "3", mode: "arcade" },
   categories: [{ id: childId, name: "shooter" }],
 }, 201);
 const gameId = game.id as number;
-await call(api, "GET", `/games?id=${gameId}`, undefined, 200);
+const createdGame = await call(api, "GET", `/games?id=${gameId}`, undefined, 200);
+requireGame(createdGame, "star", { lives: "3", mode: "arcade" }, childId);
 await call(api, "PUT", `/games?id=${gameId}`, {
   name: "star-2",
   description: "space",
   location: "orbit",
-  settings: { lives: "5" },
+  settings: { lives: "5", mode: "hard" },
   categories: [{ id: childId, name: "shooter" }],
 }, 200);
+const updatedGame = await call(api, "GET", `/games?id=${gameId}`, undefined, 200);
+requireGame(updatedGame, "star-2", { lives: "5", mode: "hard" }, childId);
+await call(api, "PUT", `/games?id=${gameId}`, {
+  name: "star-2",
+  description: "space",
+  location: "orbit",
+  settings: {},
+  categories: [{ id: childId, name: "shooter" }],
+}, 200);
+requireGame(await call(api, "GET", `/games?id=${gameId}`, undefined, 200), "star-2", {}, childId);
 
 const review = await call(api, "POST", "/reviews", { gameId, userId, description: "fun", rating: "4.50", isApproved: true }, 201);
 const reviewId = review.id as number;
@@ -102,6 +123,8 @@ const contact = await call(api, "POST", "/contacts", {
   lastName: "Lovelace",
   contactSourceName: "Manual",
   userId,
+  settings: { theme: "dark", volume: "loud" },
+  prefs: { home: { locale: "en-GB", timezone: "Europe/London" } },
   addresses: [
     { addressTypeName: "Home", line1: "12 Analytical Engine", city: "London", country: "GB" },
     { addressTypeName: "Work", line1: "1 Strand", city: "London", country: "GB" },
@@ -111,6 +134,7 @@ const contact = await call(api, "POST", "/contacts", {
 const contactId = contact.id as number;
 const created = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200);
 requireAdaChildren(created, "Home", "London", "555-0100");
+requireContactMaps(created, { theme: "dark", volume: "loud" }, "en-GB", "Europe/London");
 if (addressByLine1(contactRow(created), "1 Strand").addressTypeName !== "Work")
   throw new Error("create work address");
 const engine = addressByLine1(contactRow(created), "12 Analytical Engine");
@@ -120,6 +144,8 @@ await call(api, "PUT", `/contacts?id=${contactId}`, {
   lastName: "Lovelace",
   contactSourceName: "Manual",
   userId,
+  settings: { theme: "sepia", volume: "quiet" },
+  prefs: { home: { locale: "en-US", timezone: "America/New_York" } },
   addresses: [
     {
       id: engine.id,
@@ -134,8 +160,36 @@ await call(api, "PUT", `/contacts?id=${contactId}`, {
 }, 200);
 const updated = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200);
 requireAdaChildren(updated, "Work", "Cambridge", "555-0111");
+requireContactMaps(updated, { theme: "sepia", volume: "quiet" }, "en-US", "America/New_York");
 if (addressByLine1(contactRow(updated), "1 College").addressTypeName !== "Home")
   throw new Error("update home address");
+const college = addressByLine1(contactRow(updated), "1 College");
+await call(api, "PUT", `/contacts?id=${contactId}`, {
+  firstName: "Ada Byron",
+  lastName: "Lovelace",
+  contactSourceName: "Manual",
+  userId,
+  settings: {},
+  prefs: { home: { locale: "en-US", timezone: "America/New_York" } },
+  addresses: [
+    {
+      id: engine.id,
+      addressTypeName: "Work",
+      line1: "12 Analytical Engine",
+      city: "Cambridge",
+      country: "FR",
+    },
+    {
+      id: college.id,
+      addressTypeName: "Home",
+      line1: "1 College",
+      city: "Cambridge",
+      country: "GB",
+    },
+  ],
+  phones: [{ id: phone.id, phoneTypeName: "Mobile", number: "555-0111" }],
+}, 200);
+requireContactMaps(await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200), {}, "en-US", "America/New_York");
 
 for (const target of [
   `/contacts?id=${contactId}`,
@@ -159,9 +213,59 @@ async function call(api: Api, method: string, target: string, body: object | und
 
 type ContactJson = {
   id: number;
+  settings: Record<string, string>;
+  prefs: Record<string, { locale: string; timezone: string }>;
   addresses: Array<{ id?: number; line1: string; addressTypeName: string; city: string; contactId: number }>;
   phones: Array<{ id?: number; number: string; phoneTypeName: string; contactId: number }>;
 };
+
+type UserJson = {
+  username: string;
+  settings: Record<string, string>;
+  roles: Array<{ name: string }>;
+  groups: Array<{ name: string }>;
+};
+
+type GameJson = {
+  name: string;
+  settings: Record<string, string>;
+  categories: Array<{ id: number; name: string }>;
+};
+
+function rowOf<T>(listed: unknown, label: string): T {
+  if (!Array.isArray(listed) || listed.length !== 1) throw new Error(label);
+  return listed[0] as T;
+}
+
+function requireSettings(got: Record<string, string> | undefined, expected: Record<string, string>, label: string) {
+  const settings = got ?? {};
+  const keys = Object.keys(expected);
+  if (Object.keys(settings).length !== keys.length) throw new Error(label);
+  for (const key of keys) {
+    if (settings[key] !== expected[key]) throw new Error(label);
+  }
+}
+
+function requireUser(row: unknown, username: string, settings: Record<string, string>, roleName: string, groupName: string) {
+  const user = row as UserJson;
+  if (user.username !== username) throw new Error("user username");
+  requireSettings(user.settings, settings, "user settings");
+  if (!user.roles?.some((item) => item.name === roleName)) throw new Error("user roles");
+  if (!user.groups?.some((item) => item.name === groupName)) throw new Error("user groups");
+}
+
+function requireGame(listed: unknown, name: string, settings: Record<string, string>, categoryId: number) {
+  const game = rowOf<GameJson>(listed, "game list");
+  if (game.name !== name) throw new Error("game name");
+  requireSettings(game.settings, settings, "game settings");
+  if (!game.categories?.some((item) => item.id === categoryId && item.name === "shooter")) throw new Error("game categories");
+}
+
+function requireContactMaps(listed: unknown, settings: Record<string, string>, locale: string, timezone: string) {
+  const contact = contactRow(listed);
+  requireSettings(contact.settings, settings, "contact settings");
+  if (contact.prefs?.home?.locale !== locale || contact.prefs.home.timezone !== timezone) throw new Error("contact prefs");
+}
 
 function contactRow(listed: unknown): ContactJson {
   if (!Array.isArray(listed) || listed.length !== 1) throw new Error("contact list");

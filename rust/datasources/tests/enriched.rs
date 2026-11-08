@@ -1,6 +1,6 @@
-use futures_util::TryStreamExt;
 use datasources::*;
 use datasources_memory::MemoryDriver;
+use futures_util::TryStreamExt;
 use std::sync::Arc;
 
 fn record(pairs: &[(&str, Value)]) -> Row {
@@ -26,18 +26,54 @@ async fn setup(rows: &mut [Row]) -> Arc<dyn Connection> {
 }
 
 fn mapped_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository {
+    mapped_crud_with(connection, entity, &[])
+}
+
+fn mapped_crud_with(
+    connection: Arc<dyn Connection>,
+    entity: &str,
+    names: &[&str],
+) -> CRUDRepository {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
     options.property_mappings = Some(std::sync::Arc::new(columns()));
+    if !names.is_empty() {
+        options.schema = Schema::new(
+            names
+                .iter()
+                .map(|name| {
+                    (
+                        (*name).into(),
+                        SchemaColumn {
+                            type_name: if *name == "Id" || name.ends_with("Id") {
+                                "integer".into()
+                            } else {
+                                "string".into()
+                            },
+                            nullable: false,
+                            has_default: false,
+                            is_id: false,
+                        },
+                    )
+                })
+                .collect(),
+        );
+    }
     CRUDRepository::<Row>::new(connection, options).unwrap()
 }
 
 fn create_lookup_repo(connection: Arc<dyn Connection>, entity: &str) -> ReadonlyRepository {
     let mut options = ReadonlyRepositoryMappingOptions::default();
     options.entity = entity.into();
-    options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
-    options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(
+        Casing::Pascal,
+        Casing::Snake,
+    )));
+    options.property_mappings = Some(std::sync::Arc::new(ChangeCasingMapper::new(
+        Casing::Pascal,
+        Casing::Snake,
+    )));
     ReadonlyRepository::<Row>::new(connection, options).unwrap()
 }
 
@@ -101,33 +137,69 @@ fn open_contacts(
     mut phones: CRUDRepository,
 ) -> CRUDRepository {
     addresses.add_enriched(
-        Enrichment::new("AddressType", "AddressType", "Id", None, datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "AddressType",
+            "AddressType",
+            "Id",
+            None,
+            datasources::EnrichmentPropertyType::Object,
+        ),
         address_types,
         None,
     );
     phones.add_enriched(
-        Enrichment::new("PhoneType", "PhoneType", "Id", None, datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "PhoneType",
+            "PhoneType",
+            "Id",
+            None,
+            datasources::EnrichmentPropertyType::Object,
+        ),
         phone_types,
         None,
     );
     contacts
         .add_enriched(
-            Enrichment::new("ContactType", "ContactType", "Id", None, datasources::EnrichmentPropertyType::Object),
+            Enrichment::new(
+                "ContactType",
+                "ContactType",
+                "Id",
+                None,
+                datasources::EnrichmentPropertyType::Object,
+            ),
             types,
             None,
         )
         .add_enriched(
-            Enrichment::new("ContactSource", "ContactSource", "Id", None, datasources::EnrichmentPropertyType::Object),
+            Enrichment::new(
+                "ContactSource",
+                "ContactSource",
+                "Id",
+                None,
+                datasources::EnrichmentPropertyType::Object,
+            ),
             sources,
             None,
         )
         .add_enriched(
-            Enrichment::new("Addresses", "Id", "Contact", None, datasources::EnrichmentPropertyType::List),
+            Enrichment::new(
+                "Addresses",
+                "Id",
+                "Contact",
+                None,
+                datasources::EnrichmentPropertyType::List,
+            ),
             Arc::new(addresses),
             None,
         )
         .add_enriched(
-            Enrichment::new("Phones", "Id", "Contact", None, datasources::EnrichmentPropertyType::List),
+            Enrichment::new(
+                "Phones",
+                "Id",
+                "Contact",
+                None,
+                datasources::EnrichmentPropertyType::List,
+            ),
             Arc::new(phones),
             None,
         );
@@ -152,11 +224,21 @@ async fn enriched_fills_lookup_select_and_leaves_missing_default() {
     let mut parents_repo = mapped(connection, "Parent");
     let types_repo = Arc::new(mapped(types_connection, "UserType"));
     parents_repo.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types_repo,
         None,
     );
-    let items = parents_repo.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let items = parents_repo
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(items[0]["TypeName"], Value::from("person"));
     assert!(!items[1].contains_key("TypeName") || items[1]["TypeName"] == Value::from(""));
 }
@@ -174,12 +256,24 @@ async fn deep_create_writes_children_stamps_fk() {
     assert!(num(&kind, "Id") > 0);
     parents
         .add_enriched(
-            Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+            Enrichment::new(
+                "TypeName",
+                "Type",
+                "Id",
+                Some("Name".into()),
+                datasources::EnrichmentPropertyType::Object,
+            ),
             types.clone(),
             None,
         )
         .add_enriched(
-            Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+            Enrichment::new(
+                "Children",
+                "Id",
+                "ParentId",
+                None,
+                datasources::EnrichmentPropertyType::List,
+            ),
             children.clone(),
             None,
         );
@@ -198,14 +292,29 @@ async fn deep_create_writes_children_stamps_fk() {
         .await
         .unwrap();
     assert!(num(&created, "Id") > 0);
-    let stored_parents = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
-    let stored = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let stored_parents = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    let stored = children
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(stored_parents[0]["Id"], created["Id"]);
     assert_eq!(stored.len(), 2);
     assert_eq!(stored[0]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(stored[1]["ParentId"], stored_parents[0]["Id"]);
+    let nested = decode_rows(stored_parents[0].get("Children"));
+    assert_eq!(nested[0]["ParentId"], stored_parents[0]["Id"]);
+    assert_eq!(nested[1]["ParentId"], stored_parents[0]["Id"]);
     assert_eq!(
-        types.read(None, None).try_collect::<Vec<_>>().await.unwrap()[0]["Name"],
+        types
+            .read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()[0]["Name"],
         Value::from("person")
     );
 }
@@ -220,7 +329,13 @@ async fn create_resolves_lookup_name() {
         .await
         .unwrap();
     parents.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types,
         None,
     );
@@ -250,7 +365,13 @@ async fn update_resolves_lookup_name() {
         .await
         .unwrap();
     parents.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types,
         None,
     );
@@ -259,10 +380,13 @@ async fn update_resolves_lookup_name() {
         .await
         .unwrap();
     parents
-        .update(record(&[
+        .update(
+            record(&[
                 ("Id", created.get("Id").unwrap().clone()),
                 ("TypeName", Value::from("work")),
-            ]), None)
+            ]),
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(
@@ -285,7 +409,13 @@ async fn create_keeps_existing_lookup_key() {
         .await
         .unwrap();
     parents.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types.clone(),
         None,
     );
@@ -301,7 +431,12 @@ async fn create_keeps_existing_lookup_key() {
         Value::from("home")
     );
     assert_eq!(
-        types.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(),
+        types
+            .read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()
+            .len(),
         2
     );
 }
@@ -316,7 +451,13 @@ async fn create_resolves_lookup_name_without_source_property() {
         .await
         .unwrap();
     parents.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types,
         None,
     );
@@ -338,7 +479,13 @@ async fn create_unknown_lookup_name_throws() {
     let types = Arc::new(mapped_crud(connection.clone(), "UserType"));
     let mut parents = mapped_crud(connection, "Parent");
     parents.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types,
         None,
     );
@@ -360,13 +507,25 @@ async fn nested_child_resolves_lookup_name() {
         .await
         .unwrap();
     children.add_enriched(
-        Enrichment::new("TypeName", "Type", "Id", Some("Name".into()), datasources::EnrichmentPropertyType::Object),
+        Enrichment::new(
+            "TypeName",
+            "Type",
+            "Id",
+            Some("Name".into()),
+            datasources::EnrichmentPropertyType::Object,
+        ),
         types,
         None,
     );
     let children = Arc::new(children);
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         children.clone(),
         None,
     );
@@ -380,11 +539,7 @@ async fn nested_child_resolves_lookup_name() {
         )]))
         .await
         .unwrap();
-    let child = children
-        .read_single(None, None)
-        .await
-        .unwrap()
-        .unwrap();
+    let child = children.read_single(None, None).await.unwrap().unwrap();
     assert_eq!(child["Label"], Value::from("a"));
     assert_eq!(child["TypeName"], Value::from("home"));
 }
@@ -393,8 +548,16 @@ async fn nested_child_resolves_lookup_name() {
 async fn round_trips_string_and_object_dictionaries() {
     let connection = setup(&mut []).await;
     let mut hosts = mapped_crud(connection.clone(), "Host");
-    let settings = Arc::new(mapped_crud(connection.clone(), "Setting"));
-    let prefs = Arc::new(mapped_crud(connection, "Pref"));
+    let settings = Arc::new(mapped_crud_with(
+        connection.clone(),
+        "Setting",
+        &["Id", "ParentId", "Key", "Value"],
+    ));
+    let prefs = Arc::new(mapped_crud_with(
+        connection,
+        "Pref",
+        &["Id", "ParentId", "Key", "Locale", "Timezone"],
+    ));
     hosts
         .add_enriched(
             Enrichment::new(
@@ -424,7 +587,10 @@ async fn round_trips_string_and_object_dictionaries() {
             (
                 "Settings",
                 encode_rows(&[
-                    record(&[("Key", Value::from("theme")), ("Value", Value::from("dark"))]),
+                    record(&[
+                        ("Key", Value::from("theme")),
+                        ("Value", Value::from("dark")),
+                    ]),
                     record(&[
                         ("Key", Value::from("density")),
                         ("Value", Value::from("comfortable")),
@@ -466,7 +632,10 @@ async fn round_trips_string_and_object_dictionaries() {
         (
             "Settings",
             encode_rows(&[
-                record(&[("Key", Value::from("theme")), ("Value", Value::from("light"))]),
+                record(&[
+                    ("Key", Value::from("theme")),
+                    ("Value", Value::from("light")),
+                ]),
                 record(&[("Key", Value::from("locale")), ("Value", Value::from("en"))]),
             ]),
         ),
@@ -486,10 +655,7 @@ async fn round_trips_string_and_object_dictionaries() {
             ]),
         ),
     ]);
-    hosts
-        .update(updated_row_1, None)
-        .await
-        .unwrap();
+    hosts.update(updated_row_1, None).await.unwrap();
     let updated = hosts.read_single(None, None).await.unwrap().unwrap();
     let settings_text = updated["Settings"].wire_text();
     assert!(settings_text.contains("Key=theme"));
@@ -500,9 +666,17 @@ async fn round_trips_string_and_object_dictionaries() {
     assert!(prefs_text.contains("Timezone=Europe/Paris"));
     assert!(prefs_text.contains("Key=work"));
     assert!(!prefs_text.contains("Key=travel"));
-    let settings_rows = settings.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let settings_rows = settings
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(settings_rows.len(), 2);
-    let pref_rows = prefs.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let pref_rows = prefs
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(pref_rows.len(), 2);
 }
 
@@ -574,17 +748,22 @@ async fn contacts_service_fills_names_and_child_lists() {
     assert!(num(&created, "Id") > 0);
     let contact = service
         .read(None, None)
-        .try_collect::<Vec<_>>().await
+        .try_collect::<Vec<_>>()
+        .await
         .unwrap()
         .into_iter()
         .find(|item| item.get("FirstName") == Some(&Value::from("Ada")))
         .unwrap();
     assert_eq!(contact["Id"], created["Id"]);
     assert_ne!(contact["Id"], other["Id"]);
-    assert!(contact["ContactType"].wire_text().contains("Name=person")
-        || contact["ContactType"].wire_text().contains("name=person"));
-    assert!(contact["ContactSource"].wire_text().contains("Name=import")
-        || contact["ContactSource"].wire_text().contains("name=import"));
+    assert!(
+        contact["ContactType"].wire_text().contains("Name=person")
+            || contact["ContactType"].wire_text().contains("name=person")
+    );
+    assert!(
+        contact["ContactSource"].wire_text().contains("Name=import")
+            || contact["ContactSource"].wire_text().contains("name=import")
+    );
     let addresses = contact["Addresses"].wire_text();
     assert!(addresses.contains("Line1=1 Main"), "{addresses}");
     assert!(
@@ -597,7 +776,9 @@ async fn contacts_service_fills_names_and_child_lists() {
     let phones = contact["Phones"].wire_text();
     assert!(phones.contains("Number=555"), "{phones}");
     assert!(
-        phones.contains("Name=Work") || phones.contains("name=Work") || phones.contains("Name%3DWork"),
+        phones.contains("Name=Work")
+            || phones.contains("name=Work")
+            || phones.contains("Name%3DWork"),
         "{phones}"
     );
 }
@@ -606,7 +787,10 @@ fn domain_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository 
     let mut options = CRUDRepositoryOptions::default();
     options.entity = entity.into();
     options.ids = vec!["Id".into()];
-    options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(Casing::Pascal, Casing::Snake)));
+    options.entity_mapper = Some(std::sync::Arc::new(ChangeCasingMapper::new(
+        Casing::Pascal,
+        Casing::Snake,
+    )));
     options.property_mappings = Some(std::sync::Arc::new(contact_columns()));
     options.object_converter = Some(Box::new(
         MetaDataRowTypeConverter::new()
@@ -616,10 +800,16 @@ fn domain_crud(connection: Arc<dyn Connection>, entity: &str) -> CRUDRepository 
 }
 
 fn contact_references() -> Vec<String> {
-    ["Contact", "AddressType", "ContactType", "ContactSource", "PhoneType"]
-        .into_iter()
-        .map(str::to_string)
-        .collect()
+    [
+        "Contact",
+        "AddressType",
+        "ContactType",
+        "ContactSource",
+        "PhoneType",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
 }
 
 fn contact_columns() -> TransformMapper<String, String> {
@@ -685,30 +875,37 @@ async fn deep_update_replace_syncs_children() {
         .unwrap();
     assert!(num(&dropped, "Id") > 0);
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         children.clone(),
         None,
     );
     let updated_row_2 = record(&[
-                ("Id", parent_id.clone()),
-                ("Label", Value::from("p")),
-                (
-                    "Children",
-                    encode_rows(&[
-                        record(&[
-                            ("Id", kept.get("Id").unwrap().clone()),
-                            ("Label", Value::from("aa")),
-                        ]),
-                        record(&[("Label", Value::from("c"))]),
-                    ]),
-                ),
-            ]);
-    let updated = parents
-        .update(updated_row_2, None)
+        ("Id", parent_id.clone()),
+        ("Label", Value::from("p")),
+        (
+            "Children",
+            encode_rows(&[
+                record(&[
+                    ("Id", kept.get("Id").unwrap().clone()),
+                    ("Label", Value::from("aa")),
+                ]),
+                record(&[("Label", Value::from("c"))]),
+            ]),
+        ),
+    ]);
+    let updated = parents.update(updated_row_2, None).await.unwrap();
+    assert_eq!(updated.rows_affected, 1);
+    let stored = children
+        .read(None, None)
+        .try_collect::<Vec<_>>()
         .await
         .unwrap();
-    assert_eq!(updated.rows_affected, 1);
-    let stored = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     assert_eq!(stored.len(), 2);
     assert_eq!(
         stored
@@ -771,33 +968,46 @@ async fn cascade_update_deletes_children_and_recreates() {
         .unwrap();
     assert!(num(&note, "Id") > 0);
     children_repo.add_enriched(
-        Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Notes",
+            "Id",
+            "ChildId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         notes.clone(),
         None,
     );
     let children = Arc::new(children_repo);
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         children.clone(),
         None,
     );
     let updated_row_3 = record(&[
-                ("Id", parent_id.clone()),
-                ("Label", Value::from("p")),
-                (
-                    "Children",
-                    encode_rows(&[record(&[
-                        ("Id", child_id.clone()),
-                        ("Label", Value::from("fresh")),
-                    ])]),
-                ),
-            ]);
-    let updated = parents
-        .update(updated_row_3, None)
+        ("Id", parent_id.clone()),
+        ("Label", Value::from("p")),
+        (
+            "Children",
+            encode_rows(&[record(&[
+                ("Id", child_id.clone()),
+                ("Label", Value::from("fresh")),
+            ])]),
+        ),
+    ]);
+    let updated = parents.update(updated_row_3, None).await.unwrap();
+    assert_eq!(updated.rows_affected, 1);
+    let stored = children
+        .read(None, None)
+        .try_collect::<Vec<_>>()
         .await
         .unwrap();
-    assert_eq!(updated.rows_affected, 1);
-    let stored = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
     let created = stored
         .iter()
         .find(|row| row.get("Label") == Some(&Value::from("fresh")))
@@ -806,7 +1016,12 @@ async fn cascade_update_deletes_children_and_recreates() {
     assert_eq!(created.get("Id"), Some(&child_id));
     assert_eq!(created.get("Label"), Some(&Value::from("fresh")));
     assert_eq!(created.get("ParentId"), Some(&parent_id));
-    assert!(notes.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+    assert!(notes
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 #[tokio::test]
@@ -863,25 +1078,29 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     assert!(num(&leftover, "Id") > 0);
     let old_link_id = old_link.get("Id").unwrap().clone();
     parents.add_linked(
-        Enrichment::new("Tags", "Id", "Id", None, datasources::EnrichmentPropertyType::List)
-            .linked(Association::new("ParentId", "TagId")),
+        Enrichment::new(
+            "Tags",
+            "Id",
+            "Id",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        )
+        .linked(Association::new("ParentId", "TagId")),
         tags.clone(),
         links.clone(),
         None,
     );
     let updated_row_4 = record(&[
-                ("Id", parent_id.clone()),
-                ("Label", Value::from("p")),
-                ("Tags", encode_rows(&[record(&[("Id", keep_id.clone())])])),
-            ]);
-    let updated = parents
-        .update(updated_row_4, None)
-        .await
-        .unwrap();
+        ("Id", parent_id.clone()),
+        ("Label", Value::from("p")),
+        ("Tags", encode_rows(&[record(&[("Id", keep_id.clone())])])),
+    ]);
+    let updated = parents.update(updated_row_4, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let stored_links: Vec<_> = links
         .read(None, None)
-        .try_collect::<Vec<_>>().await
+        .try_collect::<Vec<_>>()
+        .await
         .unwrap()
         .into_iter()
         .filter(|row| row.get("ParentId") == Some(&parent_id))
@@ -890,7 +1109,14 @@ async fn cascade_update_replaces_links_and_keeps_related() {
     assert_eq!(stored_links[0].get("TagId"), Some(&keep_id));
     assert_eq!(stored_links[0].get("ParentId"), Some(&parent_id));
     assert_ne!(stored_links[0].get("Id"), Some(&old_link_id));
-    assert_eq!(tags.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(), 2);
+    assert_eq!(
+        tags.read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
 }
 
 #[tokio::test]
@@ -906,7 +1132,11 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         ])
         .await
         .unwrap();
-    let stored = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();
@@ -930,7 +1160,11 @@ async fn bulk_update_keeps_earlier_write_when_transaction_is_off() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("Missing Id"));
-    let after = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let after = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(
         after
             .iter()
@@ -957,7 +1191,11 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         ])
         .await
         .unwrap();
-    let stored = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let stored = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     let mut created_ids: Vec<_> = created.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();
@@ -981,7 +1219,11 @@ async fn bulk_update_rolls_back_when_transaction_is_on() {
         .await
         .unwrap_err();
     assert!(error.to_string().contains("Missing Id"));
-    let after = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let after = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(
         after
             .iter()
@@ -1014,10 +1256,7 @@ async fn deep_delete_cascades_children_then_parent() {
     assert!(num(&child, "Id") > 0);
     let child_id = child.get("Id").unwrap().clone();
     let note = notes
-        .create(record(&[
-            ("ChildId", child_id),
-            ("Text", Value::from("n")),
-        ]))
+        .create(record(&[("ChildId", child_id), ("Text", Value::from("n"))]))
         .await
         .unwrap();
     assert!(num(&note, "Id") > 0);
@@ -1030,14 +1269,26 @@ async fn deep_delete_cascades_children_then_parent() {
         .unwrap();
     assert!(num(&other, "Id") > 0);
     children_repo.add_enriched(
-        Enrichment::new("Notes", "Id", "ChildId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Notes",
+            "Id",
+            "ChildId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         notes.clone(),
         None,
     );
     let children = Arc::new(children_repo);
     let mut parents = parents;
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         children.clone(),
         None,
     );
@@ -1046,10 +1297,24 @@ async fn deep_delete_cascades_children_then_parent() {
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
-    assert!(parents.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
-    assert!(children.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+    assert!(parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(children
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap()
+        .is_empty());
     assert_eq!(
-        notes.read(None, None).try_collect::<Vec<_>>().await.unwrap()[0]["Text"],
+        notes
+            .read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()[0]["Text"],
         Value::from("other")
     );
 }
@@ -1059,7 +1324,13 @@ async fn deep_many_readonly_via_throws() {
     let connection = setup(&mut []).await;
     let mut parents = mapped_crud(connection.clone(), "Parent");
     parents.add_enriched(
-        Enrichment::new("Children", "Id", "ParentId", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "Children",
+            "Id",
+            "ParentId",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         Arc::new(mapped(connection, "Child")),
         None,
     );
@@ -1083,7 +1354,13 @@ async fn bulk_create_writes_parents_and_children() {
     child_options.entity = "Child".into();
     let children = Arc::new(BulkCRUDRepository::new(connection, child_options).unwrap());
     parents.add_enriched(
-        Enrichment::new("children", "id", "parent_id", None, datasources::EnrichmentPropertyType::List),
+        Enrichment::new(
+            "children",
+            "id",
+            "parent_id",
+            None,
+            datasources::EnrichmentPropertyType::List,
+        ),
         children.clone(),
         None,
     );
@@ -1103,9 +1380,21 @@ async fn bulk_create_writes_parents_and_children() {
         ])
         .await
         .unwrap();
-    let stored_parents = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let stored_parents = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(stored_parents.len(), 2);
-    assert_eq!(children.read(None, None).try_collect::<Vec<_>>().await.unwrap().len(), 3);
+    assert_eq!(
+        children
+            .read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()
+            .len(),
+        3
+    );
     let mut created_ids: Vec<_> = ids.iter().map(|row| num(row, "id")).collect();
     let mut stored_ids: Vec<_> = stored_parents.iter().map(|row| num(row, "id")).collect();
     created_ids.sort();

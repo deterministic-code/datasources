@@ -12,8 +12,8 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::statement::Statement;
 use crate::statements::SelectInsertedIdStatement;
-use crate::value::Value;
 use crate::stubs::StubConnection;
+use crate::value::Value;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 
@@ -98,7 +98,8 @@ impl Command for MockCommand {
             Some(inserted) => format!("{}.{}", inserted.table, inserted.column),
             _ => crate::DefaultStatementTextRenderer::instance().render(statement),
         };
-        self.execute_reader_native(&Native::new(text), parameters).await
+        self.execute_reader_native(&Native::new(text), parameters)
+            .await
     }
 
     async fn execute_native(

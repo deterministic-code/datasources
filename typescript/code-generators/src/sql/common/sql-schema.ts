@@ -14,7 +14,6 @@ import {
   tableByName,
 } from "@deterministic-code/generators-common/spec-types";
 import { CreateTableStatement, type StatementNaming } from "@deterministic-code/datasources";
-import { inferReferenceFieldTypes } from "./infer-reference-types.ts";
 import { referenceTarget } from "./reference-target.ts";
 
 export { referenceTarget };
@@ -87,7 +86,6 @@ export const usesGeneratedIdColumn = (
 
 export const sqlTablesFrom = (spec: IDeterministic): SqlTable[] => {
   requireIdIsId(spec);
-  spec = { ...spec, expandedTypes: inferReferenceFieldTypes(spec.expandedTypes) };
   const overlays = tableByName(spec);
   const byName = new Map(spec.expandedTypes.map((t) => [t.name, t]));
   return datasourceTypesOf(spec).map((type) => {

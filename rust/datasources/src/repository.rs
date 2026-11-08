@@ -1,12 +1,13 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::entity::Entity;
 use crate::i_repository::IRepository;
-use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::schema::Schema;
 use crate::statement::Statement;
+use crate::IWhere;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::StreamExt;
@@ -18,6 +19,10 @@ use std::sync::Arc;
 pub trait IReadonlyRepository<T: Entity = Row>: IRepository {
     fn is_schema_required(&self) -> bool {
         true
+    }
+
+    fn schema(&self) -> Schema {
+        Schema::default()
     }
 
     fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<T>>>
@@ -73,6 +78,10 @@ impl<T: Entity> IRepository for AsReadonly<T> {
 
 #[async_trait]
 impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
+    fn schema(&self) -> Schema {
+        self.0.schema()
+    }
+
     async fn read_single(
         &self,
         query: Option<&dyn Statement>,
@@ -106,7 +115,9 @@ impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
     }
 }
 
-pub fn as_readonly<T: Entity>(repo: Arc<dyn ICRUDRepository<T>>) -> Arc<dyn IReadonlyRepository<T>> {
+pub fn as_readonly<T: Entity>(
+    repo: Arc<dyn ICRUDRepository<T>>,
+) -> Arc<dyn IReadonlyRepository<T>> {
     Arc::new(AsReadonly(repo))
 }
 

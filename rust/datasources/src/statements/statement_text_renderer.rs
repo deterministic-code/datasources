@@ -1,12 +1,12 @@
 use super::condition_renderer::ConditionRenderer;
+use super::i_condition::ICondition;
 use super::i_condition_visitor::ConditionVisitor;
+use super::i_where::IWhere;
 use super::keyword_casing::KeywordCasing;
 use super::procedure_source::ProcedureSource;
 use super::statement::Statement;
 use super::statement_naming::StatementNaming;
 use super::statement_renderer::{StatementRenderer, StatementVisitor};
-use super::i_condition::ICondition;
-use super::i_where::IWhere;
 use std::sync::Arc;
 
 pub type ApplyKeywords = fn(&str, &dyn Fn(&str) -> String) -> String;

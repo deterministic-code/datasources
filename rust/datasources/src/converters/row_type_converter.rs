@@ -15,7 +15,9 @@ impl Clone for RowTypeConverter {
 }
 
 impl RowTypeConverter {
-    pub fn new(fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>) -> Self {
+    pub fn new(
+        fields: HashMap<String, Box<dyn TypeConverter<Value, Value> + Send + Sync>>,
+    ) -> Self {
         Self { fields }
     }
 
@@ -133,7 +135,10 @@ mod tests {
         impl TypeConverter<Value, Value> for TextInt {
             fn convert(&self, from: &Value) -> Result<Value> {
                 Ok(match from {
-                    Value::Text(text) => text.parse::<i64>().map(Value::Int).unwrap_or_else(|_| from.clone()),
+                    Value::Text(text) => text
+                        .parse::<i64>()
+                        .map(Value::Int)
+                        .unwrap_or_else(|_| from.clone()),
                     other => other.clone(),
                 })
             }
@@ -142,18 +147,24 @@ mod tests {
             }
         }
         let converter = RowTypeConverter::from(
-            || HashMap::from([(
-                "integer".into(),
-                Box::new(TextInt) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
-            )]),
+            || {
+                HashMap::from([(
+                    "integer".into(),
+                    Box::new(TextInt) as Box<dyn TypeConverter<Value, Value> + Send + Sync>,
+                )])
+            },
             &HashMap::from([("id".into(), "unsignedinteger".into())]),
         );
         assert_eq!(
-            converter.convert(&record(&[("id", Value::from("9"))])).unwrap()["id"],
+            converter
+                .convert(&record(&[("id", Value::from("9"))]))
+                .unwrap()["id"],
             Value::Int(9)
         );
         assert_eq!(
-            converter.convert(&record(&[("name", Value::from("9"))])).unwrap()["name"],
+            converter
+                .convert(&record(&[("name", Value::from("9"))]))
+                .unwrap()["name"],
             Value::from("9")
         );
     }
@@ -204,7 +215,10 @@ mod tests {
         );
         assert_eq!(
             converter
-                .convert(&record(&[("created", Value::from("2020-01-02T03:04:05.000Z"))]))
+                .convert(&record(&[(
+                    "created",
+                    Value::from("2020-01-02T03:04:05.000Z")
+                )]))
                 .unwrap()["created"],
             Value::from("dt:2020-01-02T03:04:05.000Z")
         );

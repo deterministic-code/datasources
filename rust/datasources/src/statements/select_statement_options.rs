@@ -1,5 +1,5 @@
-use crate::builders::Join;
 use super::i_where::IWhere;
+use crate::builders::Join;
 use crate::statements::OrderBy;
 
 pub struct SelectStatementOptions<'a> {

@@ -6,7 +6,7 @@ import type { ICRUDRepository } from "./ICRUDRepository.ts";
 export class DefaultCreateEnrichmentStrategy<T> extends CreateEnrichmentStrategy<T> {
   async createChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void> {
     for (const related of this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer)) {
-      this.stampCell(related, enrichment.relatedKey, this.getCell(parent, enrichment.sourceProperty));
+      Object.assign(related, { [enrichment.relatedKey]: this.requiredKey(parent, enrichment) });
       await writer.create(related);
     }
   }

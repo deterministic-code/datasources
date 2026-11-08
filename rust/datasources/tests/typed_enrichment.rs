@@ -31,18 +31,24 @@ fn parent_options() -> CRUDRepositoryOptions {
     options.read_properties = vec!["id".into(), "label".into()];
     options.create_properties = Some(vec!["label".into()]);
     options.schema = Schema::new(std::collections::HashMap::from([
-        ("id".into(), SchemaColumn {
-            type_name: "integer".into(),
-            nullable: false,
-            has_default: true,
-            is_id: true,
-        }),
-        ("label".into(), SchemaColumn {
-            type_name: "string".into(),
-            nullable: false,
-            has_default: false,
-            is_id: false,
-        }),
+        (
+            "id".into(),
+            SchemaColumn {
+                type_name: "integer".into(),
+                nullable: false,
+                has_default: true,
+                is_id: true,
+            },
+        ),
+        (
+            "label".into(),
+            SchemaColumn {
+                type_name: "string".into(),
+                nullable: false,
+                has_default: false,
+                is_id: false,
+            },
+        ),
     ]));
     options
 }
@@ -51,8 +57,19 @@ fn child_options() -> CRUDRepositoryOptions {
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "Child".into();
     options.ids = vec!["id".into()];
-    options.read_properties = vec!["id".into(), "parent_id".into(), "label".into(), "line2".into(), "created".into()];
-    options.create_properties = Some(vec!["parent_id".into(), "label".into(), "line2".into(), "created".into()]);
+    options.read_properties = vec![
+        "id".into(),
+        "parent_id".into(),
+        "label".into(),
+        "line2".into(),
+        "created".into(),
+    ];
+    options.create_properties = Some(vec![
+        "parent_id".into(),
+        "label".into(),
+        "line2".into(),
+        "created".into(),
+    ]);
     options
 }
 
@@ -86,7 +103,8 @@ fn typed_parent_payload_reads_children() {
 async fn typed_create_persists_and_reads_list_children() {
     let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
-    let mut parents = CRUDRepository::<Parent>::new(Arc::clone(&connection), parent_options()).unwrap();
+    let mut parents =
+        CRUDRepository::<Parent>::new(Arc::clone(&connection), parent_options()).unwrap();
     let children = child_repo(connection);
     parents.add_enriched(
         Enrichment::new(
@@ -121,7 +139,11 @@ async fn typed_create_persists_and_reads_list_children() {
     assert_eq!(created.children[0].parent_id, created.id);
     assert_eq!(created.children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(created.children[0].created, Some(stamp));
-    let read = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let read = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(read.len(), 1);
     assert_eq!(read[0].children[0].label, "a");
     assert_eq!(read[0].children[0].line2.as_deref(), Some("Room 12"));
@@ -132,7 +154,8 @@ async fn typed_create_persists_and_reads_list_children() {
 async fn typed_create_persists_list_children_on_typed_repo() {
     let connection = MemoryDriver.connection(None);
     connection.open().await.unwrap();
-    let mut parents = CRUDRepository::<Parent>::new(Arc::clone(&connection), parent_options()).unwrap();
+    let mut parents =
+        CRUDRepository::<Parent>::new(Arc::clone(&connection), parent_options()).unwrap();
     let children = child_typed_repo(connection);
     parents.add_enriched(
         Enrichment::new(
@@ -165,7 +188,11 @@ async fn typed_create_persists_list_children_on_typed_repo() {
     assert_eq!(created.children.len(), 1);
     assert_eq!(created.children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(created.children[0].parent_id, created.id);
-    let read = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let read = parents
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(read[0].children[0].line2.as_deref(), Some("Room 12"));
     assert_eq!(read[0].children[0].created, Some(stamp));
 }
@@ -184,20 +211,26 @@ fn person_options() -> CRUDRepositoryOptions {
     options.entity = "Person".into();
     options.ids = vec!["id".into()];
     options.read_properties = vec!["id".into(), "gender_type_id".into()];
-    options.create_properties = Some(vec!["gender_type_id".into()]);
+    options.create_properties = Some(vec![]);
     options.schema = Schema::new(std::collections::HashMap::from([
-        ("id".into(), SchemaColumn {
-            type_name: "integer".into(),
-            nullable: false,
-            has_default: true,
-            is_id: true,
-        }),
-        ("gender_type_id".into(), SchemaColumn {
-            type_name: "integer".into(),
-            nullable: false,
-            has_default: false,
-            is_id: false,
-        }),
+        (
+            "id".into(),
+            SchemaColumn {
+                type_name: "integer".into(),
+                nullable: false,
+                has_default: true,
+                is_id: true,
+            },
+        ),
+        (
+            "gender_type_id".into(),
+            SchemaColumn {
+                type_name: "integer".into(),
+                nullable: false,
+                has_default: false,
+                is_id: false,
+            },
+        ),
     ]));
     options
 }
@@ -258,7 +291,11 @@ async fn typed_create_resolves_lookup_name_without_source_property() {
     assert!(created.id > 0);
     assert_eq!(created.gender_type_name, "Female");
     assert_eq!(female.get("name"), Some(&Value::from("Female")));
-    let read = people.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let read = people
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(read.len(), 1);
     assert_eq!(read[0].gender_type_name, "Female");
     let unknown = people
@@ -306,7 +343,11 @@ async fn typed_create_resolves_lookup_on_typed_gender_repo() {
     assert!(created.id > 0);
     assert_eq!(created.gender_type_name, "Female");
     assert_eq!(female.name, "Female");
-    let read = people.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let read = people
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(read[0].gender_type_name, "Female");
 }
 
@@ -371,18 +412,18 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
                 SchemaColumn {
                     type_name: "integer".into(),
                     nullable: false,
-                has_default: false,
-                is_id: false,
-            },
+                    has_default: false,
+                    is_id: false,
+                },
             ),
             (
                 "line".into(),
                 SchemaColumn {
                     type_name: "string".into(),
                     nullable: false,
-                has_default: false,
-                is_id: false,
-            },
+                    has_default: false,
+                    is_id: false,
+                },
             ),
         ]));
         options
@@ -418,6 +459,10 @@ async fn typed_via_skips_integer_contact_id_on_string_view() {
         .await
         .unwrap();
     assert!(created.id > 0);
-    let read = contacts.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+    let read = contacts
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(read.len(), 1);
 }

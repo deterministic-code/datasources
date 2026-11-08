@@ -1,10 +1,10 @@
-use crate::builders::Join;
-use crate::mappers::{TypeMap, TypeMapField, TypeMapGroup};
 use super::nested_select_builder_options::NestedSelectBuilderOptions;
 use super::nested_select_relation_kind::NestedSelectRelationKind;
 use super::nested_select_statement::NestedSelectStatement;
 use super::nested_select_type::NestedSelectType;
 use super::select_field_aliases::select_field_aliases;
+use crate::builders::Join;
+use crate::mappers::{TypeMap, TypeMapField, TypeMapGroup};
 use crate::statements::SelectStatementOptions;
 use crate::SelectStatement;
 use std::collections::HashMap;

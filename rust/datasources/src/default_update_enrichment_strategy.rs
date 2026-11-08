@@ -5,6 +5,7 @@ use crate::enrichment::Enrichment;
 use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
+use crate::schema::Schema;
 use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::{Operator, Where};
@@ -23,7 +24,7 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for DefaultUpdateEnrichmentStrategy 
         enrichment: &Enrichment,
         parent: &mut T,
     ) -> Result<()> {
-        update_children(writer.as_ref(), enrichment, parent).await
+        update_children(writer.as_ref(), enrichment, parent, &Schema::default()).await
     }
 
     async fn update_linked(
@@ -40,11 +41,16 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
     writer: &dyn ICRUDRepository<TChild>,
     enrichment: &Enrichment,
     parent: &mut T,
+    schema: &Schema,
 ) -> Result<()> {
     let existing = load(writer, enrichment, parent).await?;
-    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent)?;
+    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent, schema)?;
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
-        related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
+        let key_name = crate::create_enrichment_strategy::map_key(schema, enrichment, &[])?;
+        related.sort_by(|left, right| {
+            crate::create_enrichment_strategy::dict_sort_key(left, &key_name)
+                .cmp(&crate::create_enrichment_strategy::dict_sort_key(right, &key_name))
+        });
     }
     if let Some(key) = parent.cell(&enrichment.source_property) {
         for child in &mut related {
@@ -52,7 +58,10 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
         }
     }
     let ids = writer.id_names();
-    let keep: HashSet<String> = related.iter().filter_map(|child| child_key(child, &ids)).collect();
+    let keep: HashSet<String> = related
+        .iter()
+        .filter_map(|child| child_key(child, &ids))
+        .collect();
     for child in existing.iter().filter(|child| {
         child_key::<TChild>(*child, &ids)
             .map(|key| !keep.contains(&key))
@@ -92,10 +101,13 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         &enrichment.destination_property,
     )?;
     let existing = writer
-        .read_where(&Where::new(Operator::equals(
-            association.parent.clone(),
-            parent_key.clone(),
-        )), None)
+        .read_where(
+            &Where::new(Operator::equals(
+                association.parent.clone(),
+                parent_key.clone(),
+            )),
+            None,
+        )
         .try_collect::<Vec<_>>()
         .await?;
     let wanted = related_ids(parent, enrichment)?;
@@ -112,10 +124,11 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         writer.delete(row.clone(), None).await?;
     }
     for id in wanted {
-        if existing
-            .iter()
-            .any(|row| row.cell(&association.related).map(|value| value.wire_text()) == Some(id.wire_text()))
-        {
+        if existing.iter().any(|row| {
+            row.cell(&association.related)
+                .map(|value| value.wire_text())
+                == Some(id.wire_text())
+        }) {
             continue;
         }
         let mut row = TLink::default();
@@ -126,19 +139,13 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
     Ok(())
 }
 
-fn dict_key<TChild: Entity>(child: &TChild) -> String {
-    child
-        .cell("Key")
-        .or_else(|| child.cell("key"))
-        .map(|value| value.wire_text())
-        .unwrap_or_default()
-}
-
 fn child_key<TChild: Entity>(child: &TChild, ids: &[String]) -> Option<String> {
     if ids.is_empty()
         || ids.iter().any(|name| match child.cell(name) {
-            Some(value) => matches!(value, Value::Null | Value::Int(0))
-                || matches!(&value, Value::Text(text) if text.is_empty()),
+            Some(value) => {
+                matches!(value, Value::Null | Value::Int(0))
+                    || matches!(&value, Value::Text(text) if text.is_empty())
+            }
             None => true,
         })
     {
@@ -146,7 +153,12 @@ fn child_key<TChild: Entity>(child: &TChild, ids: &[String]) -> Option<String> {
     }
     Some(
         ids.iter()
-            .map(|name| child.cell(name).map(|value| value.wire_text()).unwrap_or_default())
+            .map(|name| {
+                child
+                    .cell(name)
+                    .map(|value| value.wire_text())
+                    .unwrap_or_default()
+            })
             .collect::<Vec<_>>()
             .join("\u{1f}"),
     )

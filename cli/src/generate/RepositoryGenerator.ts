@@ -1,10 +1,9 @@
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
-import type { IDeterministic } from "@deterministic-code/deterministic-generators-common/parser";
+import type { IDeterministic, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { GenerateEntry } from "@deterministic-code/generators-common/generate-entry";
 import { Paths, type TypeKind } from "@deterministic-code/generators-common/paths";
 import { caseDirectories } from "./casing.ts";
 import type { IRepositoryGenerator } from "./IRepositoryGenerator.ts";
-import type { SchemaColumn } from "./schemaFields.ts";
 import {
   childField,
   children as childModels,
@@ -73,19 +72,22 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     return `[${pairs.map((pair) => `["${this.quote(pair.from)}", "${this.quote(pair.to)}"]`).join(", ")}]`;
   }
 
-  protected schemaBag(pairs: SchemaColumn[]): Record<string, unknown>[] {
-    return pairs.map((column, index) => ({
-      from: this.quote(column.from),
-      name: this.quote(column.from),
-      type: this.quote(column.type),
-      to: this.quote(column.type),
-      nullable: column.nullable ? {} : undefined,
-      hasDefault: column.hasDefault ? {} : undefined,
-      isId: column.isId ? {} : undefined,
-      first: index === 0 ? {} : undefined,
-      last: index === pairs.length - 1 ? {} : undefined,
-      comma: index > 0 ? {} : undefined,
-    }));
+  protected schemaBag(fields: TypeField[], casing: ICasingStrategy): Record<string, unknown>[] {
+    return fields.map((field, index) => {
+      const name = this.quote(casing.convertFields(field.name));
+      return {
+        from: name,
+        name,
+        type: this.quote(field.type),
+        to: this.quote(field.type),
+        nullable: field.isNullable ? {} : undefined,
+        hasDefault: field.defaultValue !== undefined && field.defaultValue !== null ? {} : undefined,
+        isId: field.isId === true ? {} : undefined,
+        first: index === 0 ? {} : undefined,
+        last: index === fields.length - 1 ? {} : undefined,
+        comma: index > 0 ? {} : undefined,
+      };
+    });
   }
 
   protected optionsOf(model: RepositoryOptionsModel & { typeName: string }): Record<string, unknown> {
@@ -107,11 +109,11 @@ export abstract class RepositoryGenerator implements IRepositoryGenerator {
     };
   }
 
-  protected dialectsBag(model: RepositoryModel): Record<string, unknown>[] {
+  protected dialectsBag(model: RepositoryModel, casing: ICasingStrategy): Record<string, unknown>[] {
     return dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ typeName: model.typeName, ...planned }),
-      schema: this.schemaBag(model.schema),
+      schema: this.schemaBag(model.schema, casing),
     }));
   }
 

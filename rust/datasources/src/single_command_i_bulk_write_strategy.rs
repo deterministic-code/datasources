@@ -1,10 +1,10 @@
 use crate::bulk_write_strategy::BulkWriteStrategy;
-use crate::IWhere;
 use crate::repository::ICRUDRepository;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
+use crate::IWhere;
 use async_trait::async_trait;
 use std::sync::{Arc, OnceLock, Weak};
 
@@ -40,11 +40,7 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
         Ok(Response::new(Value::Null, items.len() as i64, None))
     }
 
-    async fn update(
-        &self,
-        items: &[Row],
-        by_where: Option<&dyn IWhere>,
-    ) -> Result<Response> {
+    async fn update(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response> {
         let repo = self.repo()?;
         let mut result = Value::Null;
         let mut rows_affected = 0;
@@ -57,11 +53,7 @@ impl BulkWriteStrategy for SingleCommandIBulkWriteStrategy {
         Ok(Response::new(result, rows_affected, None))
     }
 
-    async fn delete(
-        &self,
-        items: &[Row],
-        by_where: Option<&dyn IWhere>,
-    ) -> Result<Response> {
+    async fn delete(&self, items: &[Row], by_where: Option<&dyn IWhere>) -> Result<Response> {
         let repo = self.repo()?;
         let mut result = Value::Null;
         let mut rows_affected = 0;

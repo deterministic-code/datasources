@@ -3,31 +3,31 @@ use crate::command::Command;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
 use crate::converters::{MetaDataRowTypeConverter, RowTypeConverter, TypeConverter};
-use crate::entity::Entity;
 use crate::datasource_error::DatasourceError;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
+use crate::entity::Entity;
 use crate::i_repository::IRepository;
-use crate::IWhere;
 use crate::mappers::{IdentityMapper, Mapper};
+use crate::mocks::MockConnection;
 use crate::parameter::Parameter;
 use crate::reader::Reader;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
+use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
+use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::repository::{map_stream, IReadonlyRepository};
 use crate::result::Result;
 use crate::row::Row;
 use crate::schema::Schema;
-use crate::SelectStatement;
 use crate::shared_items::SharedItems;
 use crate::statement::{Statement, StatementKind};
-use crate::statements::Where;
 use crate::statement_mappers::StatementMappers;
+use crate::statements::Where;
 use crate::stored_enrichment::StoredEnrichment;
-use crate::mocks::MockConnection;
-use crate::readonly_repository_builder::ReadonlyRepositoryBuilder;
-use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
 use crate::value::Value;
+use crate::IWhere;
+use crate::SelectStatement;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::stream::try_unfold;
@@ -159,10 +159,11 @@ impl<T: Entity> ReadonlyRepository<T> {
     ) -> &mut Self {
         let strategy = strategy.unwrap_or_else(|| Arc::new(DefaultReadonlyEnrichmentStrategy));
         let via = via.read_via();
+        let schema = via.schema();
         self.enrichments
             .lock()
             .expect("enrichments")
-            .push(StoredEnrichment::direct(enrichment, via, None, strategy));
+            .push(StoredEnrichment::direct(enrichment, via, None, strategy, schema));
         self
     }
 
@@ -313,7 +314,9 @@ impl<T: Entity> ReadonlyRepository<T> {
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
         let mappers = self.mappers(options);
-        let sources = self.fetch_renamed(query, parameters, &mappers, options).await?;
+        let sources = self
+            .fetch_renamed(query, parameters, &mappers, options)
+            .await?;
         if self.memory.is_some() {
             return Ok(sources
                 .into_iter()
@@ -382,9 +385,13 @@ impl<T: Entity> ReadonlyRepository<T> {
                 let stored = statement
                     .as_any()
                     .downcast_ref::<crate::statements::ExecuteStoredProcedureStatement>();
-                let from_statement = stored.map(crate::statements::ExecuteStoredProcedureStatement::parameters);
+                let from_statement =
+                    stored.map(crate::statements::ExecuteStoredProcedureStatement::parameters);
                 self.command()
-                    .execute_reader_statement(statement, Some(parameters.or(from_statement).unwrap_or(&[])))
+                    .execute_reader_statement(
+                        statement,
+                        Some(parameters.or(from_statement).unwrap_or(&[])),
+                    )
                     .await
             }
             Some(statement) => match statement.as_any().downcast_ref::<SelectStatement>() {
@@ -415,7 +422,8 @@ impl<T: Entity> ReadonlyRepository<T> {
                 }
             },
             None => {
-                let statement = self.own(self.readonly_statements.select(None), mappers, options)?;
+                let statement =
+                    self.own(self.readonly_statements.select(None), mappers, options)?;
                 self.command()
                     .execute_reader_statement(&statement, Some(parameters.unwrap_or(&[])))
                     .await
@@ -430,9 +438,9 @@ impl<T: Entity> ReadonlyRepository<T> {
     ) -> Result<Vec<Row>> {
         let mut rows = Vec::new();
         while reader.next().await? {
-            let row = reader.current().ok_or_else(|| {
-                DatasourceError::message("Reader current must be a row")
-            })?;
+            let row = reader
+                .current()
+                .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
             rows.push(self.column_to_property_name(row, mappers));
         }
         Ok(rows)
@@ -467,10 +475,7 @@ impl<T: Entity> ReadonlyRepository<T> {
             .ok_or_else(|| DatasourceError::message("Reader current must be a row"))?;
         let renamed = self.column_to_property_name(current, &mappers);
         let item = self.convert_renamed(renamed, options)?;
-        Ok(Some((
-            item,
-            ReadRun::Source { reader, mappers },
-        )))
+        Ok(Some((item, ReadRun::Source { reader, mappers })))
     }
 
     async fn apply(&self, pairs: Vec<(Row, Option<Row>)>) -> Result<Vec<(Row, Option<Row>)>> {
@@ -488,9 +493,16 @@ impl<T: Entity> ReadonlyRepository<T> {
             strategy
                 .apply(
                     via,
-                    &crate::Enrichment::new("", "", "", None, crate::EnrichmentPropertyType::Object),
+                    &crate::Enrichment::new(
+                        "",
+                        "",
+                        "",
+                        None,
+                        crate::EnrichmentPropertyType::Object,
+                    ),
                     &mut rows,
                     Some(&sources),
+                    &Schema::default(),
                 )
                 .await?;
             return rows.into_iter().map(crate::repository::map_row).collect();
@@ -608,7 +620,9 @@ impl<T: Entity> ReadonlyRepository<T> {
                         return next_buffered(items);
                     }
                     let mappers = self.mappers(options);
-                    let reader = self.reader_for(query, parameters, &mappers, options).await?;
+                    let reader = self
+                        .reader_for(query, parameters, &mappers, options)
+                        .await?;
                     self.next_source(reader, mappers, options).await
                 }
                 ReadRun::Buffered(items) => next_buffered_iter(items),
@@ -622,6 +636,10 @@ impl<T: Entity> ReadonlyRepository<T> {
 
 #[async_trait]
 impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
+    fn schema(&self) -> Schema {
+        self.schema.clone()
+    }
+
     async fn read_single(
         &self,
         query: Option<&dyn Statement>,
@@ -680,7 +698,9 @@ fn next_entities<T>(items: Vec<T>) -> Result<Option<(T, Option<std::vec::IntoIte
     next_entities_iter(items.into_iter())
 }
 
-fn next_entities_iter<T>(mut items: std::vec::IntoIter<T>) -> Result<Option<(T, Option<std::vec::IntoIter<T>>)>> {
+fn next_entities_iter<T>(
+    mut items: std::vec::IntoIter<T>,
+) -> Result<Option<(T, Option<std::vec::IntoIter<T>>)>> {
     Ok(items.next().map(|item| (item, Some(items))))
 }
 

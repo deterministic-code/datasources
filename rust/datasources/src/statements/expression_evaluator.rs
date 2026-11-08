@@ -1,7 +1,7 @@
 use super::expression::Expression;
+use super::i_where::IWhere;
 use super::operator::Operator;
 use super::r#where::Where;
-use super::i_where::IWhere;
 use crate::row::Row;
 use crate::value::Value;
 

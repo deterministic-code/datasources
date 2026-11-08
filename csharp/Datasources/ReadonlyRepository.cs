@@ -12,6 +12,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
     readonly StatementMappers statementMappers = new(new IdentityMapper<string>(), new IdentityMapper<string>());
     readonly ReadonlyRepositoryStatements? readonlyStatements;
 
+    public Schema Schema { get; }
+
     public Type Type => typeof(T);
     public bool IsSchemaRequired => false;
     IReadOnlyList<StoredEnrichment> IEnrichmentHost.Enrichments => enrichments;
@@ -24,9 +26,10 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         this(new ReadonlyRepositoryBuilder<T>().Parts(connection, options)) { }
 
     public ReadonlyRepository(BuiltRepository<T> built) :
-        this(built.Connection, built.RowConverter, built.ObjectConverter, built.PropertyMappings, built.EntityMapper, built.Statements) { }
+        this(built.Connection, built.RowConverter, built.ObjectConverter, built.PropertyMappings, built.EntityMapper, built.Statements, built.Schema) { }
 
-    protected ReadonlyRepository() { }
+    protected ReadonlyRepository() =>
+        Schema = new Schema(new Dictionary<string, SchemaColumn>());
 
     protected ReadonlyRepository(
         IConnection connection,
@@ -34,7 +37,8 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         TypeConverter<T, Row> objectConverter,
         IMapper<string, string> propertyMappers,
         IMapper<string, string> entityMappers,
-        ReadonlyRepositoryStatements statements)
+        ReadonlyRepositoryStatements statements,
+        Schema schema)
     {
         this.connection = connection;
         this.rowConverter = rowConverter;
@@ -43,6 +47,7 @@ public class ReadonlyRepository<T> : IReadonlyRepository<T>, IEnriched<T>, IEnri
         this.entityMappers = entityMappers;
         statementMappers = new StatementMappers(entityMappers, propertyMappers);
         readonlyStatements = statements;
+        Schema = schema;
     }
 
     public ReadonlyRepository<T> AddMiddleware(ICommandMiddleware middleware)

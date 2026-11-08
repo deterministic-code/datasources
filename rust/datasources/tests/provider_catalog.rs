@@ -78,8 +78,17 @@ fn default_lists_monorepo_providers() {
     assert_eq!(
         keys,
         [
-            "dynamodb", "json", "memory", "mongodb", "mysql", "oracle", "postgres", "sqlite",
-            "sqlserver", "xml", "yaml",
+            "dynamodb",
+            "json",
+            "memory",
+            "mongodb",
+            "mysql",
+            "oracle",
+            "postgres",
+            "sqlite",
+            "sqlserver",
+            "xml",
+            "yaml",
         ]
     );
 }

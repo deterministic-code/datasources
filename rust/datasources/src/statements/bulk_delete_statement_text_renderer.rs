@@ -12,7 +12,11 @@ impl BulkDeleteStatementTextRenderer {
     }
 
     pub fn render(&self, statement: &BulkDeleteStatement) -> String {
-        Self::render_with(statement, |name| self.quote(name), |name| self.parameter(name))
+        Self::render_with(
+            statement,
+            |name| self.quote(name),
+            |name| self.parameter(name),
+        )
     }
 
     pub fn render_with(

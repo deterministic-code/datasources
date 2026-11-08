@@ -1,4 +1,3 @@
-use futures_util::TryStreamExt;
 use crate::delete_nested::DeleteNested;
 use crate::enrichment::Enrichment;
 use crate::entity::Entity;
@@ -7,6 +6,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::{Operator, Where};
 use async_trait::async_trait;
+use futures_util::TryStreamExt;
 use std::sync::Arc;
 
 #[async_trait]
@@ -36,8 +36,12 @@ pub(crate) async fn load<T: Entity, TChild: Entity>(
         return Ok(Vec::new());
     };
     writer
-        .read_where(&Where::new(Operator::equals(enrichment.related_key.clone(), key)), None)
-        .try_collect::<Vec<_>>().await
+        .read_where(
+            &Where::new(Operator::equals(enrichment.related_key.clone(), key)),
+            None,
+        )
+        .try_collect::<Vec<_>>()
+        .await
 }
 
 #[cfg(test)]
@@ -90,14 +94,29 @@ mod tests {
         child.insert("label".into(), Value::from("a"));
         children.create(child).await.unwrap();
         parents.add_enriched(
-            Enrichment::new("children", "id", "parent_id", None, crate::EnrichmentPropertyType::List),
+            Enrichment::new(
+                "children",
+                "id",
+                "parent_id",
+                None,
+                crate::EnrichmentPropertyType::List,
+            ),
             children.clone(),
             None,
         );
         parents.delete(created, None).await.unwrap();
-        let left = children.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+        let left = children
+            .read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].get("label"), Some(&Value::from("a")));
-        assert!(parents.read(None, None).try_collect::<Vec<_>>().await.unwrap().is_empty());
+        assert!(parents
+            .read(None, None)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap()
+            .is_empty());
     }
 }

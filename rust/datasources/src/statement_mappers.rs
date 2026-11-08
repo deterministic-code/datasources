@@ -1,15 +1,17 @@
 use crate::builders::Join;
-use crate::statements::select_field_aliases::{
-    apply_select_field_alias, as_index, function_of, select_field_aliases, segments,
-};
-use crate::IWhere;
 use crate::mappers::Mapper;
 use crate::parameter::Parameter;
 use crate::result::Result;
+use crate::statements::select_field_aliases::{
+    apply_select_field_alias, as_index, function_of, segments, select_field_aliases,
+};
 use crate::statements::statement::Statement;
 use crate::statements::{OrderBy, SelectStatementOptions, Where};
 use crate::value::Value;
-use crate::{DeleteStatement, InsertStatement, SelectInsertedIdStatement, SelectStatement, UpdateStatement};
+use crate::IWhere;
+use crate::{
+    DeleteStatement, InsertStatement, SelectInsertedIdStatement, SelectStatement, UpdateStatement,
+};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -72,7 +74,11 @@ impl StatementMappers {
         let table = self.entity(&select.table);
         let fields = self.map_select_fields(&select.table, &select.fields, &select.aliases)?;
         let field_refs: Vec<&str> = fields.iter().map(String::as_str).collect();
-        let group: Vec<String> = select.group_by.iter().map(|column| self.column(column)).collect();
+        let group: Vec<String> = select
+            .group_by
+            .iter()
+            .map(|column| self.column(column))
+            .collect();
         let group_refs: Vec<&str> = group.iter().map(String::as_str).collect();
         let order: Vec<OrderBy> = select
             .order_by
@@ -88,7 +94,10 @@ impl StatementMappers {
             .map(|join| Join {
                 kind: join.kind,
                 table: self.entity(&join.table),
-                on: join.on.as_ref().map(|on| map_on(on, |name| self.column(name))),
+                on: join
+                    .on
+                    .as_ref()
+                    .map(|on| map_on(on, |name| self.column(name))),
             })
             .collect();
         let mapped_where = self.apply_predicate(select.predicate(), cell)?;
@@ -156,7 +165,11 @@ impl StatementMappers {
             Some(where_clause) => Some(where_clause),
             None => update.where_clause(),
         };
-        Ok(UpdateStatement::new(self.entity(update.table()), &fields, clause))
+        Ok(UpdateStatement::new(
+            self.entity(update.table()),
+            &fields,
+            clause,
+        ))
     }
 
     pub fn apply_delete(
@@ -172,7 +185,10 @@ impl StatementMappers {
         Ok(DeleteStatement::new(self.entity(delete.table()), clause))
     }
 
-    pub fn apply_inserted(&self, inserted: &SelectInsertedIdStatement) -> SelectInsertedIdStatement {
+    pub fn apply_inserted(
+        &self,
+        inserted: &SelectInsertedIdStatement,
+    ) -> SelectInsertedIdStatement {
         SelectInsertedIdStatement::new(self.entity(&inserted.table), self.column(&inserted.column))
     }
 
@@ -239,4 +255,3 @@ fn map_on(on: &str, column: impl Fn(&str) -> String) -> String {
         _ => on.to_string(),
     }
 }
-

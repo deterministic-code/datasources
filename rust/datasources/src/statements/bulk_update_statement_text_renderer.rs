@@ -54,10 +54,7 @@ pub fn on(statement: &BulkUpdateStatement) -> String {
         .join(" AND ")
 }
 
-pub fn source(
-    statement: &BulkUpdateStatement,
-    cell: fn(&str, usize, &Value) -> String,
-) -> String {
+pub fn source(statement: &BulkUpdateStatement, cell: fn(&str, usize, &Value) -> String) -> String {
     let columns: Vec<&String> = statement.set().iter().chain(statement.ids()).collect();
     let selects = statement
         .rows()
@@ -77,7 +74,10 @@ pub fn source(
                     .map(|column| cell(
                         column,
                         index,
-                        by_name.get(column.as_str()).copied().unwrap_or(&Value::Null)
+                        by_name
+                            .get(column.as_str())
+                            .copied()
+                            .unwrap_or(&Value::Null)
                     ))
                     .collect::<Vec<_>>()
                     .join(", ")

@@ -27,7 +27,10 @@ pub fn payload_from_struct<T: SchemaObject>(item: &T, name: &str) -> Vec<Row> {
         return list.iter().filter_map(row_from_peek).collect();
     }
     if let Ok(map) = field.into_map() {
-        return map.iter().map(|(key, value)| row_from_map_entry(key, value)).collect();
+        return map
+            .iter()
+            .map(|(key, value)| row_from_map_entry(key, value))
+            .collect();
     }
     Vec::new()
 }
@@ -53,9 +56,16 @@ pub fn set_cell_on_struct<T: SchemaObject>(item: &T, name: &str, cell: Value) ->
     if !is_column(field.shape()) || cell == Value::Null {
         return Ok(item.clone());
     }
-    let partial = Partial::alloc::<T>().map_err(reflect)?.set(item.clone()).map_err(reflect)?;
+    let partial = Partial::alloc::<T>()
+        .map_err(reflect)?
+        .set(item.clone())
+        .map_err(reflect)?;
     let partial = set_changed_field(partial, name, &cell, field.shape())?;
-    partial.build().map_err(reflect)?.materialize().map_err(reflect)
+    partial
+        .build()
+        .map_err(reflect)?
+        .materialize()
+        .map_err(reflect)
 }
 
 pub fn typed_list_from_struct<T: SchemaObject, R: SchemaObject>(item: &T, name: &str) -> Vec<R> {
@@ -95,13 +105,26 @@ pub fn set_typed_list_on_struct<T: SchemaObject, R: SchemaObject>(
             }
             partial.end().map_err(reflect)?
         } else {
-            copy_field(partial, index, field.shape(), st.field(index).map_err(reflect)?)?
+            copy_field(
+                partial,
+                index,
+                field.shape(),
+                st.field(index).map_err(reflect)?,
+            )?
         };
     }
-    partial.build().map_err(reflect)?.materialize().map_err(reflect)
+    partial
+        .build()
+        .map_err(reflect)?
+        .materialize()
+        .map_err(reflect)
 }
 
-pub fn set_one_on_struct<T: SchemaObject, R: SchemaObject>(item: &T, name: &str, related: R) -> Result<T> {
+pub fn set_one_on_struct<T: SchemaObject, R: SchemaObject>(
+    item: &T,
+    name: &str,
+    related: R,
+) -> Result<T> {
     let st = Peek::new(item).into_struct().map_err(reflect)?;
     let fields = struct_fields(T::SHAPE)?;
     let mut partial = Partial::alloc::<T>().map_err(reflect)?;
@@ -115,10 +138,19 @@ pub fn set_one_on_struct<T: SchemaObject, R: SchemaObject>(item: &T, name: &str,
                 .end()
                 .map_err(reflect)?
         } else {
-            copy_field(partial, index, field.shape(), st.field(index).map_err(reflect)?)?
+            copy_field(
+                partial,
+                index,
+                field.shape(),
+                st.field(index).map_err(reflect)?,
+            )?
         };
     }
-    partial.build().map_err(reflect)?.materialize().map_err(reflect)
+    partial
+        .build()
+        .map_err(reflect)?
+        .materialize()
+        .map_err(reflect)
 }
 
 pub fn set_payload_on_struct<T: SchemaObject>(item: &T, name: &str, rows: Vec<Row>) -> Result<T> {
@@ -128,12 +160,23 @@ pub fn set_payload_on_struct<T: SchemaObject>(item: &T, name: &str, rows: Vec<Ro
     for (index, field) in fields.iter().enumerate() {
         partial = if field.name == name {
             let partial = partial.begin_field(field.name).map_err(reflect)?;
-            set_destination(partial, field.shape(), rows.clone())?.end().map_err(reflect)?
+            set_destination(partial, field.shape(), rows.clone())?
+                .end()
+                .map_err(reflect)?
         } else {
-            copy_field(partial, index, field.shape(), st.field(index).map_err(reflect)?)?
+            copy_field(
+                partial,
+                index,
+                field.shape(),
+                st.field(index).map_err(reflect)?,
+            )?
         };
     }
-    partial.build().map_err(reflect)?.materialize().map_err(reflect)
+    partial
+        .build()
+        .map_err(reflect)?
+        .materialize()
+        .map_err(reflect)
 }
 
 fn row_from_map_entry(key: Peek<'_, '_>, value: Peek<'_, '_>) -> Row {
@@ -175,9 +218,12 @@ fn copy_field<'a>(
     let partial = if is_column(shape) {
         match peek_value(value) {
             Some(cell) if cell != Value::Null => set_value(partial, &cell, shape, true)?,
-            _ if shape.type_identifier.contains("DateTime") => {
-                set_value(partial, &Value::DateTime(chrono::DateTime::<chrono::Utc>::default()), shape, true)?
-            }
+            _ if shape.type_identifier.contains("DateTime") => set_value(
+                partial,
+                &Value::DateTime(chrono::DateTime::<chrono::Utc>::default()),
+                shape,
+                true,
+            )?,
             _ => partial.set_default().map_err(reflect)?,
         }
     } else {
@@ -191,7 +237,10 @@ fn payload_from_peek(value: Peek<'_, '_>) -> Vec<Row> {
         return list.iter().filter_map(row_from_peek).collect();
     }
     if let Ok(map) = value.into_map() {
-        return map.iter().map(|(key, value)| row_from_map_entry(key, value)).collect();
+        return map
+            .iter()
+            .map(|(key, value)| row_from_map_entry(key, value))
+            .collect();
     }
     Vec::new()
 }
@@ -213,7 +262,9 @@ fn set_list<'a>(
     child: &'static facet::Shape,
     rows: Vec<Row>,
 ) -> Result<Partial<'a>> {
-    let mut partial = partial.init_list_with_capacity(rows.len()).map_err(reflect)?;
+    let mut partial = partial
+        .init_list_with_capacity(rows.len())
+        .map_err(reflect)?;
     let fields = match child.ty {
         Type::User(UserType::Struct(_)) => struct_fields(child)?,
         _ => &[],
@@ -301,7 +352,28 @@ fn set_map_value<'a>(
 mod tests {
     use super::*;
     use crate::converters::SchemaObject;
+    use crate::schema::{Schema, SchemaColumn};
     use facet::Facet;
+    use std::collections::HashMap;
+
+    fn schema(columns: &[(&str, &str, bool, bool)]) -> Schema {
+        Schema::new(
+            columns
+                .iter()
+                .map(|(name, type_name, has_default, is_id)| {
+                    (
+                        (*name).into(),
+                        SchemaColumn {
+                            type_name: (*type_name).into(),
+                            nullable: false,
+                            has_default: *has_default,
+                            is_id: *is_id,
+                        },
+                    )
+                })
+                .collect::<HashMap<_, _>>(),
+        )
+    }
 
     #[derive(Clone, Debug, Default, PartialEq, Facet)]
     struct Kid {
@@ -371,19 +443,23 @@ mod tests {
             None,
             crate::EnrichmentPropertyType::List,
         );
-        let from_children = crate::create_enrichment_strategy::children::<House, Kid>(&enrichment, &house)
-            .unwrap();
-        assert_eq!(from_children[0].extra.as_deref(), Some("Room 12"));
-        dest
-            .set_related(
-                "kids",
-                vec![Kid {
-                    id: 2,
-                    label: "home".into(),
-                    extra: Some("Room 12".into()),
-                }],
+        let from_children =
+            crate::create_enrichment_strategy::children::<House, Kid>(
+                &enrichment,
+                &house,
+                &Schema::default(),
             )
             .unwrap();
+        assert_eq!(from_children[0].extra.as_deref(), Some("Room 12"));
+        dest.set_related(
+            "kids",
+            vec![Kid {
+                id: 2,
+                label: "home".into(),
+                extra: Some("Room 12".into()),
+            }],
+        )
+        .unwrap();
         assert_eq!(dest.kids[0].extra.as_deref(), Some("Room 12"));
     }
 
@@ -446,6 +522,16 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("uuid", "uuid", true, false),
+                ("created", "datetime", true, false),
+                ("updated", "datetime", true, false),
+                ("version", "binary", true, false),
+                ("contact_id", "integer", false, false),
+                ("key", "string", false, false),
+                ("value", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(settings.len(), 1);
@@ -460,6 +546,11 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("key", "string", false, false),
+                ("locale", "string", false, false),
+                ("timezone", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(prefs.len(), 1);
@@ -473,6 +564,12 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("key", "string", false, false),
+                ("locale", "string", false, false),
+                ("timezone", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(prefs_rows[0].key, "home");
@@ -493,6 +590,16 @@ mod tests {
 
     impl SchemaObject for NamedSettingRow {}
 
+    #[derive(Clone, Debug, Default, PartialEq, Facet)]
+    struct AsdfSettingRow {
+        id: i32,
+        contact_id: i32,
+        asdfasdfa: String,
+        value: String,
+    }
+
+    impl SchemaObject for AsdfSettingRow {}
+
     #[test]
     fn dictionary_rows_use_name_when_child_has_no_key() {
         let house = House {
@@ -508,10 +615,118 @@ mod tests {
                 crate::EnrichmentPropertyType::Dictionary,
             ),
             &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("contact_id", "integer", false, false),
+                ("name", "string", false, false),
+                ("value", "string", false, false),
+            ]),
         )
         .unwrap();
         assert_eq!(settings[0].name, "theme");
         assert_eq!(settings[0].value, "dark");
+    }
+
+    #[test]
+    fn dictionary_children_use_schema_key_property() {
+        let house = House {
+            settings: std::collections::HashMap::from([
+                ("lives".into(), "3".into()),
+                ("mode".into(), "arcade".into()),
+            ]),
+            ..House::default()
+        };
+        let settings = crate::create_enrichment_strategy::children::<House, NamedSettingRow>(
+            &crate::Enrichment::new(
+                "settings",
+                "id",
+                "contact_id",
+                Some("value".into()),
+                crate::EnrichmentPropertyType::Dictionary,
+            ),
+            &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("contact_id", "integer", false, false),
+                ("name", "string", false, false),
+                ("value", "string", false, false),
+            ]),
+        )
+        .unwrap();
+        let mut pairs: Vec<_> = settings
+            .into_iter()
+            .map(|row| (row.name, row.value))
+            .collect();
+        pairs.sort();
+        assert_eq!(
+            pairs,
+            vec![
+                ("lives".into(), "3".into()),
+                ("mode".into(), "arcade".into())
+            ]
+        );
+    }
+
+    #[test]
+    fn dictionary_children_use_asdfasdfa_key_property() {
+        let house = House {
+            settings: std::collections::HashMap::from([
+                ("alpha".into(), "one".into()),
+                ("beta".into(), "two".into()),
+            ]),
+            ..House::default()
+        };
+        let enrichment = crate::Enrichment::new(
+            "settings",
+            "id",
+            "contact_id",
+            Some("value".into()),
+            crate::EnrichmentPropertyType::Dictionary,
+        )
+        ;
+        let settings = crate::create_enrichment_strategy::children::<House, AsdfSettingRow>(
+            &enrichment,
+            &house,
+            &schema(&[
+                ("id", "integer", false, true),
+                ("contact_id", "integer", false, false),
+                ("asdfasdfa", "string", false, false),
+                ("value", "string", false, false),
+            ]),
+        )
+        .unwrap();
+        let mut pairs: Vec<_> = settings
+            .into_iter()
+            .map(|row| (row.asdfasdfa, row.value))
+            .collect();
+        pairs.sort();
+        assert_eq!(
+            pairs,
+            vec![("alpha".into(), "one".into()), ("beta".into(), "two".into())]
+        );
+    }
+
+    #[test]
+    fn set_payload_fills_map_from_key_value_rows() {
+        let filled = set_payload_on_struct(
+            &House::default(),
+            "settings",
+            vec![
+                Row::from_iter([
+                    ("key".into(), Value::from("lives")),
+                    ("value".into(), Value::from("3")),
+                ]),
+                Row::from_iter([
+                    ("key".into(), Value::from("mode")),
+                    ("value".into(), Value::from("arcade")),
+                ]),
+            ],
+        )
+        .unwrap();
+        assert_eq!(filled.settings.get("lives"), Some(&"3".to_string()));
+        assert_eq!(filled.settings.get("mode"), Some(&"arcade".to_string()));
+        let empty = set_payload_on_struct(&filled, "settings", Vec::new()).unwrap();
+        assert!(empty.settings.is_empty());
     }
 
     #[test]
@@ -556,7 +771,7 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Facet)]
     struct AddressStamp {
         id: i32,
-        contact_id: String,
+        contact_id: i32,
         line2: Option<String>,
         created: chrono::DateTime<chrono::Utc>,
         latitude: Option<i32>,
@@ -567,7 +782,7 @@ mod tests {
         fn default() -> Self {
             Self {
                 id: 0,
-                contact_id: String::new(),
+                contact_id: 0,
                 line2: None,
                 created: chrono::DateTime::<chrono::Utc>::default(),
                 latitude: None,
@@ -591,7 +806,7 @@ mod tests {
             ..AddressStamp::default()
         };
         set(&mut address, "contact_id", Value::Int(9)).unwrap();
-        assert_eq!(address.contact_id, "9");
+        assert_eq!(address.contact_id, 9);
         assert_eq!(address.line2.as_deref(), Some("Room 12"));
         assert_eq!(address.address_type_name, "Home");
         assert!(address.latitude.is_none());

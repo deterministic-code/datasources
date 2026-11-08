@@ -27,7 +27,7 @@ class TypeScriptRepositories extends RepositoryGenerator {
       repoImport: `./${this.repositoryFile(child.specName, casing)}`,
     }));
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
-    const dialects = this.dialectsBag(model);
+    const dialects = this.dialectsBag(model, casing);
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
@@ -37,7 +37,7 @@ class TypeScriptRepositories extends RepositoryGenerator {
       enrichments,
       setup: children.length === 0 && enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      schema: this.schemaBag(model.schema),
+      schema: this.schemaBag(model.schema, casing),
       ...this.optionsOf(model),
       optimisticConcurrency: token === undefined
         ? undefined

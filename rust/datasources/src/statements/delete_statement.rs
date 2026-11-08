@@ -1,6 +1,6 @@
+use super::i_where::IWhere;
 use super::statement::Statement;
 use super::statement_text_renderer::StatementTextRenderer;
-use super::i_where::IWhere;
 use super::where_text::boxed;
 
 pub struct DeleteStatement {
@@ -24,7 +24,6 @@ impl DeleteStatement {
         self.where_clause.as_deref()
     }
 }
-
 
 impl Statement for DeleteStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

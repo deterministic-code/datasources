@@ -39,7 +39,7 @@ class RustRepositories extends RepositoryGenerator {
     const dialects = dialectsOf(model).map(([engine, planned]) => ({
       engine: this.quote(engine),
       ...this.optionsOf({ typeName: model.typeName, ...planned }),
-      schema: this.schemaBag(model.schema),
+      schema: this.schemaBag(model.schema, casing),
     }));
     const token = model.optimisticConcurrency;
     const vias = new Map<string, string>();
@@ -62,7 +62,7 @@ class RustRepositories extends RepositoryGenerator {
       hasLinked: model.enrichments.some(isLinked) ? {} : undefined,
       setup: enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      schema: this.schemaBag(model.schema),
+      schema: this.schemaBag(model.schema, casing),
       readonlyChildren: [...vias].map(([specName]) => ({
         field: child.find((item) => item.specName === specName)?.field,
         module: this.ident(this.repositoryFile(specName, casing)),

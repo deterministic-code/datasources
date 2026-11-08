@@ -4,6 +4,7 @@ import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import type { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
+import type { Schema } from "./Schema.ts";
 
 export type BuiltRepository<T = Cells> = {
   connection: IConnection;
@@ -14,4 +15,5 @@ export type BuiltRepository<T = Cells> = {
   statements: ReadonlyRepositoryStatements;
   ids: string[];
   type: Constructable<T>;
+  schema: Schema;
 };

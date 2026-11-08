@@ -1,11 +1,11 @@
 use super::array_expression::ArrayExpression;
-use super::expression_renderer::parameter_name;
 use super::expression::Expression;
+use super::expression_renderer::parameter_name;
+use super::i_where::IWhere;
 use super::identifier::Identifier;
 use super::literal::Literal;
 use super::operator::Operator;
 use super::statement_text_renderer::StatementTextRenderer;
-use super::i_where::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
 use crate::value::Value;
@@ -52,7 +52,6 @@ impl Where {
         Ok(Self::new(rewrite(&self.condition, &column, &value)?))
     }
 }
-
 
 impl crate::ICondition for Where {
     fn as_any(&self) -> &dyn std::any::Any {

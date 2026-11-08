@@ -50,4 +50,3 @@ impl Statement for IdentityInsertStatement {
         self
     }
 }
-

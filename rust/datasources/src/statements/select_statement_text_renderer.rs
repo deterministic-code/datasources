@@ -1,10 +1,10 @@
-use crate::builders::{Join, JoinKind};
 use super::i_where::IWhere;
+use super::order_by::{OrderBy, SortDirection};
 use super::select_field_aliases::{as_index, segments};
 use super::select_statement::SelectStatement;
-use super::where_text::WhereText;
-use super::order_by::{OrderBy, SortDirection};
 use super::statement_text_renderer::StatementTextRenderer;
+use super::where_text::WhereText;
+use crate::builders::{Join, JoinKind};
 
 pub struct SelectStatementTextRenderer<'a> {
     text: &'a StatementTextRenderer,
@@ -33,7 +33,13 @@ impl<'a> SelectStatementTextRenderer<'a> {
                 .iter()
                 .enumerate()
                 .map(|(index, field)| {
-                    self.field_sql(field, statement.aliases.get(index).and_then(|item| item.as_deref()))
+                    self.field_sql(
+                        field,
+                        statement
+                            .aliases
+                            .get(index)
+                            .and_then(|item| item.as_deref()),
+                    )
                 })
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -129,9 +135,8 @@ impl<'a> SelectStatementTextRenderer<'a> {
                     " {} {} ON {}",
                     keyword(kind),
                     self.quote(&join.table),
-                    self.text.render_where(&WhereText::new(
-                        join.on.as_deref().expect("empty join"),
-                    ))
+                    self.text
+                        .render_where(&WhereText::new(join.on.as_deref().expect("empty join"),))
                 ),
             })
             .collect()

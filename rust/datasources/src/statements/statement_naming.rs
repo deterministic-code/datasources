@@ -4,8 +4,10 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 static SNAKE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z_][a-z0-9_]*$").expect("snake"));
-static CAMEL_BOUNDARY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([a-z0-9])([A-Z])").expect("camel"));
-static ACRONYM_BOUNDARY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([A-Z]+)([A-Z][a-z])").expect("acronym"));
+static CAMEL_BOUNDARY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"([a-z0-9])([A-Z])").expect("camel"));
+static ACRONYM_BOUNDARY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"([A-Z]+)([A-Z][a-z])").expect("acronym"));
 static SEPARATORS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[_\-.]+").expect("sep"));
 
 #[derive(Clone, Debug)]

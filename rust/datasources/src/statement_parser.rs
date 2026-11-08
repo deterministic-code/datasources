@@ -1,8 +1,6 @@
 use crate::builders::{Join, JoinKind};
-use crate::IWhere;
 use crate::parameter::Parameter;
 use crate::result::Result;
-use crate::SelectStatement;
 use crate::statements::statement::Statement;
 use crate::statements::DefaultStatementTextRenderer;
 use crate::statements::{
@@ -11,6 +9,8 @@ use crate::statements::{
 };
 use crate::value::Value;
 use crate::DatasourceError;
+use crate::IWhere;
+use crate::SelectStatement;
 
 pub struct StatementParser;
 
@@ -287,8 +287,7 @@ impl<'a> Cursor<'a> {
                 Join::condition(
                     kind,
                     table,
-                    DefaultStatementTextRenderer::instance()
-                        .render_where(&Where::new(self.on()?)),
+                    DefaultStatementTextRenderer::instance().render_where(&Where::new(self.on()?)),
                 )
             });
         }

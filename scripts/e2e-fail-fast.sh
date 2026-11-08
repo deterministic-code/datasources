@@ -2,7 +2,7 @@
 
 e2e_fail_line() {
   case "$1" in
-    *"0 Warning(s)"* | *"0 Error(s)"* | *"npm warn Unknown env config"* | *"npm warn deprecated"* | *"warning NU1902"* | *"warning: the following packages contain code that will be rejected by a future version of Rust"*) return 1 ;;
+    *"0 Warning(s)"* | *"0 Error(s)"* | *"npm warn Unknown env config"* | *"npm warn deprecated"* | *"npm warn exec"* | *"warning NU1902"* | *"warning: the following packages contain code that will be rejected by a future version of Rust"*) return 1 ;;
     *"warning:"* | *"error:"* | *"error["* | *": error "* | *"warning NU"* | *"npm warn"* | *"npm error"*) return 0 ;;
     *) return 1 ;;
   esac

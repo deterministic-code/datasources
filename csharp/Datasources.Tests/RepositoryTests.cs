@@ -365,7 +365,11 @@ public class RepositoryTests
         var fromId = CreateCRUDRepositoryOptions.FromType<Item>(typeof(Item));
         Assert.Equal(new[] { "Id" }, fromId.Ids);
         Assert.Equal(nameof(Item), fromId.Entity);
+        Assert.False(fromId.Schema!.Columns["Id"].IsId);
+        Assert.Equal("integer", fromId.Schema.Columns["Id"].Type);
+        Assert.True(fromId.Schema.Columns.ContainsKey("Name"));
         Assert.Empty(CreateCRUDRepositoryOptions.FromType<Label>().Ids);
+        Assert.True(CreateCRUDRepositoryOptions.FromType<Label>().Schema!.Columns.ContainsKey("Name"));
         Assert.Equal(nameof(Item), CreateReadonlyRepositoryMappingOptions.FromType<Item>().Entity);
         Assert.NotNull(new CRUDRepository<Item>(connection, fromId));
         Assert.NotNull(new CRUDRepository<Item>(connection));

@@ -26,4 +26,3 @@ impl Statement for DropRoutineStatement {
         self
     }
 }
-

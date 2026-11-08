@@ -40,7 +40,8 @@ public class ReadonlyRepositoryBuilder<T> where T : new()
             property,
             entity,
             Statements(options.Entity ?? typeof(T).Name, columns),
-            Ids(options));
+            Ids(options),
+            options.Schema ?? CreateReadonlyRepositoryMappingOptions.FromType<T>().Schema!);
     }
 
     protected virtual IReadOnlyList<string> Ids(ReadonlyRepositoryMappingOptions<T> options) => [];

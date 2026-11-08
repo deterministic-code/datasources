@@ -13,5 +13,8 @@ pub(crate) fn registry() -> MutexGuard<'static, Option<HashMap<String, FactoryPa
 }
 
 pub(crate) fn registered_driver(name: &str) -> Option<Arc<dyn Driver>> {
-    registry().as_ref()?.get(name).map(|pair| pair.driver.clone())
+    registry()
+        .as_ref()?
+        .get(name)
+        .map(|pair| pair.driver.clone())
 }

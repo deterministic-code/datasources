@@ -10,7 +10,9 @@ fn for_provider_returns_the_dialect_or_the_default() {
     let mut mysql = CRUDRepositoryOptions::default();
     mysql.create_properties = Some(vec!["id".into(), "name".into()]);
     let mut factory = RepositoryBuilderOptionsFactory::new();
-    factory.add(fallback.clone()).add_for("mysql", mysql.clone());
+    factory
+        .add(fallback.clone())
+        .add_for("mysql", mysql.clone());
     assert_eq!(
         factory.for_provider("mysql").unwrap().create_properties,
         mysql.create_properties
@@ -32,10 +34,13 @@ fn builder_selects_by_connection_provider() {
         .add_for("mysql", mysql.clone());
     assert_eq!(
         builder
-            .for_connection(MockConnection::with_command_provider(
-                std::sync::Arc::new(crate::mocks::MockCommand::new()),
-                "mysql",
-            ).as_ref())
+            .for_connection(
+                MockConnection::with_command_provider(
+                    std::sync::Arc::new(crate::mocks::MockCommand::new()),
+                    "mysql",
+                )
+                .as_ref()
+            )
             .unwrap()
             .create_properties,
         mysql.create_properties

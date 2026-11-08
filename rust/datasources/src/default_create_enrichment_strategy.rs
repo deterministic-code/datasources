@@ -5,6 +5,7 @@ use crate::enrichment::Enrichment;
 use crate::entity::Entity;
 use crate::repository::ICRUDRepository;
 use crate::result::Result;
+use crate::schema::Schema;
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -18,7 +19,7 @@ impl<T: Entity> CreateEnrichmentStrategy<T> for DefaultCreateEnrichmentStrategy 
         enrichment: &Enrichment,
         parent: &mut T,
     ) -> Result<()> {
-        create_children(writer.as_ref(), enrichment, parent).await
+        create_children(writer.as_ref(), enrichment, parent, &Schema::default()).await
     }
 
     async fn create_linked(
@@ -35,10 +36,15 @@ pub(crate) async fn create_children<T: Entity, TChild: Entity>(
     writer: &dyn ICRUDRepository<TChild>,
     enrichment: &Enrichment,
     parent: &mut T,
+    schema: &Schema,
 ) -> Result<()> {
-    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent)?;
+    let mut related = crate::create_enrichment_strategy::children::<T, TChild>(enrichment, parent, schema)?;
     if enrichment.r#type == crate::EnrichmentPropertyType::Dictionary {
-        related.sort_by(|left, right| dict_key(left).cmp(&dict_key(right)));
+        let key_name = crate::create_enrichment_strategy::map_key(schema, enrichment, &[])?;
+        related.sort_by(|left, right| {
+            crate::create_enrichment_strategy::dict_sort_key(left, &key_name)
+                .cmp(&crate::create_enrichment_strategy::dict_sort_key(right, &key_name))
+        });
     }
     let key = parent.cell(&enrichment.source_property);
     for child in &mut related {
@@ -73,10 +79,3 @@ pub(crate) async fn create_links<T: Entity, TLink: Entity>(
     Ok(())
 }
 
-fn dict_key<TChild: Entity>(child: &TChild) -> String {
-    child
-        .cell("Key")
-        .or_else(|| child.cell("key"))
-        .map(|value| value.wire_text())
-        .unwrap_or_default()
-}

@@ -24,7 +24,6 @@ impl InsertStatement {
     }
 }
 
-
 impl Statement for InsertStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
         text.statements().visit_insert(self, text)

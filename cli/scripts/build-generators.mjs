@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, glob, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,16 +34,6 @@ const rewriteTs = {
   },
 };
 
-const inferredHelper = `const inferredSpec = (spec: IDeterministic): IDeterministic => ({
-  ...spec,
-  types: inferReferenceFieldTypes(spec.types),
-  expandedTypes: inferReferenceFieldTypes(spec.expandedTypes),
-});
-`;
-
-const inferImport =
-  'import { inferReferenceFieldTypes } from "@deterministic-code/datasources-code-generators/sql/common/infer-reference-types";\n';
-
 const typeEmitters = [
   ["csharp-generators", "src/generate-datasource-types.ts"],
   ["csharp-generators", "src/generate-view-types.ts"],
@@ -52,24 +42,16 @@ const typeEmitters = [
   ["rust-generators", "src/generate-view-types.ts"],
 ];
 
-const ensureInferredSpec = async () => {
+const unwrapInferredSpec = async () => {
   for (const [name, file] of typeEmitters) {
     const path = join(packages, name, file);
     let text = await readFile(path, "utf8");
-    if (text.includes("inferredSpec(") || text.includes("inferReferenceFieldTypes")) continue;
-    if (!text.includes("IDeterministic")) throw new Error(`${file} does not import IDeterministic`);
-    const marker = text.includes("export const generateShapedTypes")
-      ? "export const generateShapedTypes"
-      : "export const generate = async";
-    const at = text.indexOf(marker);
-    if (at < 0) throw new Error(`${file} has no generate export`);
-    text = inferImport + text.slice(0, at) + inferredHelper + "\n" + text.slice(at);
-    const next = text.replace(
-      /await DeterministicParser\(ctx\.reader\)\.parse\(\s*ctx\.settings,?\s*\)/g,
-      "inferredSpec(await DeterministicParser(ctx.reader).parse(ctx.settings))",
+    text = text.replace(/^import \{ inferredSpec \} from "\.\/inferred-spec\.ts";\n/m, "");
+    text = text.replace(
+      /inferredSpec\(\s*await DeterministicParser\(ctx\.reader\)\.parse\(ctx\.settings\),?\s*\)/g,
+      "await DeterministicParser(ctx.reader).parse(ctx.settings)",
     );
-    if (next === text) throw new Error(`${file} did not parse a spec`);
-    await writeFile(path, next);
+    await writeFile(path, text);
   }
 };
 
@@ -106,20 +88,112 @@ const transpile = async (name) => {
   await cp(join(src, "templates"), join(dist, "templates"), { recursive: true }).catch(() => undefined);
 };
 
-const parserRoot = join(packages, "deterministic-generators-common/typescript/parser");
-const parserSource = join(parserRoot, "parser/specification-parser.ts");
-const parserText = await readFile(parserSource, "utf8");
-if (!parserText.startsWith("// @ts-nocheck")) await writeFile(parserSource, `// @ts-nocheck\n${parserText}`);
+const copyReferencedFieldTypes = `const referencedField = (
+  types: Type[],
+  references: TypeField["references"],
+): TypeField | undefined => {
+  if (references === undefined) return undefined;
+  const [table, column] = Array.isArray(references)
+    ? references
+    : references.split(".");
+  if (table === undefined || column === undefined) return undefined;
+  return types.find((type) => type.name === table)?.fields.find((field) => field.name === column);
+};
 
-await build({
-  entryPoints: [join(parserRoot, "specification-parser.ts")],
-  bundle: true,
-  format: "esm",
-  platform: "node",
-  packages: "external",
-  outfile: join(parserRoot, "dist/specification-parser.js"),
-  logLevel: "warning",
-});
+const needsReferencedType = (field: TypeField): boolean =>
+  !field.isArray &&
+  field.isMap !== true &&
+  field.references !== undefined &&
+  field.type === "string" &&
+  field.size === undefined;
+
+const referencedTypeReady = (field: TypeField): boolean =>
+  field.type !== "string" || field.size !== undefined;
+
+const copyReferencedFieldTypes = (types: Type[]): Type[] => {
+  const working = types.map((type) => ({
+    ...type,
+    fields: type.fields.map((field) => ({ ...field })),
+  }));
+  for (let pass = 0; pass < working.length; pass++) {
+    let changed = false;
+    for (const type of working) {
+      type.fields = type.fields.map((field) => {
+        if (!needsReferencedType(field)) return field;
+        const parent = referencedField(working, field.references);
+        if (parent === undefined || !referencedTypeReady(parent)) return field;
+        changed = true;
+        return {
+          ...field,
+          type: parent.type,
+          kind: parent.kind,
+          base: parent.base,
+          ...(parent.size !== undefined ? { size: parent.size } : {}),
+        };
+      });
+    }
+    if (!changed) break;
+  }
+  return working;
+};
+
+`;
+
+const expandReturn = `  return types.map((type) => {
+    const ids = type.ids ?? resolveIds(type.name, new Set());
+    return {
+      ...type,
+      ...(ids !== undefined && ids.length > 0 ? { ids } : {}),
+      fields: resolve(type.name, new Set()),
+    };
+  });
+};`;
+
+const copiedReturn = `  return copyReferencedFieldTypes(
+    types.map((type) => {
+      const ids = type.ids ?? resolveIds(type.name, new Set());
+      return {
+        ...type,
+        ...(ids !== undefined && ids.length > 0 ? { ids } : {}),
+        fields: resolve(type.name, new Set()),
+      };
+    }),
+  );
+};`;
+
+const patchParser = async (parserRoot) => {
+  const parserSource = join(parserRoot, "parser/specification-parser.ts");
+  const parserText = await readFile(parserSource, "utf8");
+  if (!parserText.startsWith("// @ts-nocheck")) await writeFile(parserSource, `// @ts-nocheck\n${parserText}`);
+  const specificationSource = join(parserRoot, "specification.ts");
+  let specification = await readFile(specificationSource, "utf8");
+  if (!specification.includes("copyReferencedFieldTypes")) {
+    if (!specification.includes("export const expandTypes")) throw new Error(`${specificationSource} has no expandTypes`);
+    if (!specification.includes(expandReturn)) throw new Error(`${specificationSource} expandTypes return is not the parser expand`);
+    specification = specification
+      .replace("export const expandTypes", `${copyReferencedFieldTypes}export const expandTypes`)
+      .replace(expandReturn, copiedReturn);
+    await writeFile(specificationSource, specification);
+  }
+  if (!specification.includes("copyReferencedFieldTypes")) throw new Error(`${specificationSource} expandTypes must copy referenced field types`);
+  await build({
+    entryPoints: [join(parserRoot, "specification-parser.ts")],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    packages: "external",
+    outfile: join(parserRoot, "dist/specification-parser.js"),
+    logLevel: "warning",
+  });
+};
+
+const repoRoot = join(root, "..");
+for await (const spec of glob(
+  "**/node_modules/@deterministic-code/deterministic-generators-common/typescript/parser/specification.ts",
+  { cwd: repoRoot },
+)) {
+  await patchParser(dirname(join(repoRoot, spec)));
+}
 
 const includesRoot = join(packages, "deterministic-generators-common/typescript/includes");
 await build({
@@ -132,7 +206,7 @@ await build({
   logLevel: "warning",
 });
 
-await ensureInferredSpec();
+await unwrapInferredSpec();
 
 for (const name of ["generators-common", "typescript-generators", "csharp-generators", "rust-generators"]) {
   await transpile(name);

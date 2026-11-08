@@ -236,7 +236,12 @@ fn compiles_an_alter_table_add_column() {
 
 #[test]
 fn compiles_an_alter_table_drop_column() {
-    let alter = AlterTableStatement::new("users", AlterAction::DropColumn { name: "email".into() });
+    let alter = AlterTableStatement::new(
+        "users",
+        AlterAction::DropColumn {
+            name: "email".into(),
+        },
+    );
     assert_eq!(stmt_text(&alter), "ALTER TABLE users DROP COLUMN email");
 }
 

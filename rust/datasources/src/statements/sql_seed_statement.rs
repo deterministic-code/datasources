@@ -64,4 +64,3 @@ impl Statement for SqlSeedStatement {
         self
     }
 }
-

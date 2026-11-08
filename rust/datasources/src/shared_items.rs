@@ -1,11 +1,11 @@
 use crate::datasource_error::DatasourceError;
-use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
-use crate::statements::{Operator, ExpressionEvaluator, Where};
+use crate::statements::{ExpressionEvaluator, Operator, Where};
 use crate::value::Value;
+use crate::IWhere;
 use std::sync::{Arc, Mutex};
 
 pub struct SharedItems {

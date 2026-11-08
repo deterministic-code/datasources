@@ -1,5 +1,5 @@
-use crate::entity::{assign_one, assign_related, Entity};
 use crate::enrichment::Enrichment;
+use crate::entity::{assign_one, assign_related, Entity};
 use crate::readonly_enrichment_strategy::{
     key_of, source_at, source_key_of, ReadonlyEnrichmentStrategy,
 };
@@ -31,10 +31,13 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             return Ok(());
         }
         let loaded = via
-            .read_where(&Where::new(Operator::in_list(
-                enrichment.related_key.clone(),
-                keys.values().cloned().collect(),
-            )), None)
+            .read_where(
+                &Where::new(Operator::in_list(
+                    enrichment.related_key.clone(),
+                    keys.values().cloned().collect(),
+                )),
+                None,
+            )
             .try_collect::<Vec<_>>()
             .await?;
         let mut index = HashMap::new();
@@ -78,10 +81,13 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             return Ok(());
         }
         let loaded = via
-            .read_where(&Where::new(Operator::in_list(
-                enrichment.related_key.clone(),
-                keys.values().cloned().collect(),
-            )), None)
+            .read_where(
+                &Where::new(Operator::in_list(
+                    enrichment.related_key.clone(),
+                    keys.values().cloned().collect(),
+                )),
+                None,
+            )
             .try_collect::<Vec<_>>()
             .await?;
         let mut index: HashMap<String, Vec<TRelated>> = HashMap::new();
@@ -105,7 +111,11 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
     }
 }
 
-fn keys<T: Entity>(parents: &[T], sources: Option<&[Option<Row>]>, from: &str) -> HashMap<String, Value> {
+fn keys<T: Entity>(
+    parents: &[T],
+    sources: Option<&[Option<Row>]>,
+    from: &str,
+) -> HashMap<String, Value> {
     let mut keys = HashMap::new();
     for (index, parent) in parents.iter().enumerate() {
         if let Some(key) = source_key_of(parent, from, source_at(sources, index)) {

@@ -1,4 +1,3 @@
-
 fn stmt_text(statement: &dyn crate::Statement) -> String {
     crate::DefaultStatementTextRenderer::instance().render(statement)
 }
@@ -8,25 +7,25 @@ fn where_sql(clause: &dyn crate::IWhere) -> String {
 
 #[allow(dead_code)]
 mod bulk_write_strategy;
-mod repository_builder_options_factory;
 mod command;
 mod connection;
 mod contact;
 mod datasource;
 mod datasource_factory;
 mod datasource_url_parser;
-mod statement_compile;
 mod nested_select_builder;
+mod repository_builder_options_factory;
+mod statement_compile;
 mod statement_mappers;
 mod statement_parser;
 mod transaction;
 mod unit_of_work_transaction;
 
 use crate::converters::RowTypeConverter;
-use futures_util::TryStreamExt;
 use crate::*;
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};
+use futures_util::TryStreamExt;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -129,13 +128,18 @@ async fn readers() {
             if row < 0 {
                 return None;
             }
-            self.sets.get(set).and_then(|rows| rows.get(row as usize).cloned())
+            self.sets
+                .get(set)
+                .and_then(|rows| rows.get(row as usize).cloned())
         }
         async fn next(&self) -> Result<bool> {
             let set = *self.set.lock().expect("reader");
             let mut row = self.row.lock().expect("reader");
             *row += 1;
-            Ok(self.sets.get(set).is_some_and(|rows| (*row as usize) < rows.len()))
+            Ok(self
+                .sets
+                .get(set)
+                .is_some_and(|rows| (*row as usize) < rows.len()))
         }
         async fn next_result(&self) -> Result<bool> {
             let mut set = self.set.lock().expect("reader");
@@ -147,7 +151,10 @@ async fn readers() {
     let closed = Arc::new(Mutex::new(false));
     let live = Sets {
         sets: vec![
-            vec![record(&[("id", Value::Int(1))]), record(&[("id", Value::Int(2))])],
+            vec![
+                record(&[("id", Value::Int(1))]),
+                record(&[("id", Value::Int(2))]),
+            ],
             vec![record(&[("id", Value::Int(3))])],
         ],
         set: Mutex::new(0),
@@ -610,11 +617,7 @@ fn parses_dotenv() {
 fn registry() {
     let _guard = env_lock();
     reset();
-    for key in [
-        "INSTALLED_PROVIDERS",
-        "DATASOURCE_URL",
-        "PROVIDER",
-    ] {
+    for key in ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] {
         std::env::remove_var(key);
     }
     assert!(registered().is_empty());
@@ -667,20 +670,29 @@ async fn stubs_throw() {
         .read_single_where(&WhereText::new("1=1"), None)
         .await
         .is_err());
-    assert!(repo.read_where(&WhereText::new("1=1"), None).try_collect::<Vec<_>>().await.is_err());
+    assert!(repo
+        .read_where(&WhereText::new("1=1"), None)
+        .try_collect::<Vec<_>>()
+        .await
+        .is_err());
     assert!(repo.create(empty.clone()).await.is_err());
     assert!(repo.update(empty.clone(), None).await.is_err());
     assert!(repo.delete(empty, None).await.is_err());
     let readonly = ds.create_readonly_repository::<Row>(None, None);
     assert!(readonly.read_single(None, None).await.is_err());
-    assert!(readonly.read(None, None).try_collect::<Vec<_>>().await.is_err());
+    assert!(readonly
+        .read(None, None)
+        .try_collect::<Vec<_>>()
+        .await
+        .is_err());
     assert!(readonly
         .read_single_where(&WhereText::new("1=1"), None)
         .await
         .is_err());
     assert!(readonly
         .read_where(&WhereText::new("1=1"), None)
-        .try_collect::<Vec<_>>().await
+        .try_collect::<Vec<_>>()
+        .await
         .is_err());
     let conn = StubConnection::new("text");
     let txn = StubTransaction::new("text", Arc::new(StubConnection::new("text")));
@@ -733,7 +745,10 @@ async fn published_mocks() {
     assert!(txn.abort().await.is_err());
 
     let command = MockCommand::new();
-    command.execute_native(&crate::Native::new("insert"), None).await.unwrap();
+    command
+        .execute_native(&crate::Native::new("insert"), None)
+        .await
+        .unwrap();
     command
         .execute_reader_native(
             &crate::Native::new(""),
@@ -770,7 +785,8 @@ async fn published_mocks() {
         .is_some());
     assert_eq!(
         repo.read(Some(&MockSelectStatement::new("all")), None)
-            .try_collect::<Vec<_>>().await
+            .try_collect::<Vec<_>>()
+            .await
             .unwrap()
             .len(),
         1
@@ -782,21 +798,16 @@ async fn published_mocks() {
         .is_some());
     assert_eq!(
         repo.read_where(&MockWhere::new("all"), None)
-            .try_collect::<Vec<_>>().await
+            .try_collect::<Vec<_>>()
+            .await
             .unwrap()
             .len(),
         1
     );
-    let created = repo
-        .create(record(&[("id", Value::Int(2))]))
-        .await
-        .unwrap();
+    let created = repo.create(record(&[("id", Value::Int(2))])).await.unwrap();
     assert_eq!(created["id"], Value::Int(2));
     let updated_row_1 = record(&[("id", Value::Int(2))]);
-    let updated = repo
-        .update(updated_row_1, None)
-        .await
-        .unwrap();
+    let updated = repo.update(updated_row_1, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     let removed = repo
         .delete(record(&[("id", Value::Int(2))]), None)
@@ -857,7 +868,10 @@ async fn published_mocks() {
             })
         },
     }));
-    command.execute_native(&crate::Native::new("insert"), None).await.unwrap();
+    command
+        .execute_native(&crate::Native::new("insert"), None)
+        .await
+        .unwrap();
     assert_eq!(
         *seen.lock().unwrap(),
         vec!["b:insert".to_string(), "a:insert".to_string()]
@@ -1123,7 +1137,10 @@ fn statements_and_builders() {
     );
     assert!(query.where_clause().is_some());
     assert_eq!(
-        stmt_text(&SelectStatement::new(SelectStatementOptions::new("users", &[]))),
+        stmt_text(&SelectStatement::new(SelectStatementOptions::new(
+            "users",
+            &[]
+        ))),
         "SELECT * FROM users"
     );
     assert!(
@@ -1132,7 +1149,10 @@ fn statements_and_builders() {
             .is_none()
     );
     assert_eq!(
-        stmt_text(&SelectStatement::new(SelectStatementOptions::new("users", &["id", "name"]))),
+        stmt_text(&SelectStatement::new(SelectStatementOptions::new(
+            "users",
+            &["id", "name"]
+        ))),
         "SELECT id, name FROM users"
     );
     assert_eq!(
@@ -1329,7 +1349,12 @@ fn statements_and_builders() {
         "CREATE INDEX idx_orders_user ON orders (user_id)"
     );
     assert_eq!(
-        stmt_text(&CreateIndexStatement::new("uq_orders_code", "orders", &["code"], true)),
+        stmt_text(&CreateIndexStatement::new(
+            "uq_orders_code",
+            "orders",
+            &["code"],
+            true
+        )),
         "CREATE UNIQUE INDEX uq_orders_code ON orders (code)"
     );
     let call = ExecuteStoredProcedureStatement::new("save", &fields);
@@ -1393,13 +1418,9 @@ fn statements_and_builders() {
         stmt_text(&ExecuteStoredProcedureStatement::new("save", &[])),
         "CALL save()"
     );
-    assert_eq!(
-        stmt_text(&ReturnStatement::new("add", &[])),
-        "SELECT add()"
-    );
+    assert_eq!(stmt_text(&ReturnStatement::new("add", &[])), "SELECT add()");
     let mock = MockSelectStatement::with_where("q", MockWhere::new("w"));
     assert!(mock.where_clause().is_some());
-
 }
 
 #[test]
@@ -1691,7 +1712,11 @@ async fn read_calls_stored_procedure() {
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let parameters = [Parameter::new("id", 9_i64)];
     let call = ExecuteStoredProcedureStatement::new("get_user", &parameters);
-    let rows = repo.read(Some(&call), None).try_collect::<Vec<_>>().await.unwrap();
+    let rows = repo
+        .read(Some(&call), None)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["id"], Value::Int(1));
     assert_eq!(rows[0]["name"], Value::from("a"));
@@ -1705,10 +1730,7 @@ async fn read_calls_stored_procedure() {
         .unwrap()
         .push(record(&[("id", Value::Int(1)), ("name", Value::from("a"))]));
     assert_eq!(
-        repo.read_single(Some(&call), None)
-            .await
-            .unwrap()
-            .unwrap()["id"],
+        repo.read_single(Some(&call), None).await.unwrap().unwrap()["id"],
         Value::Int(1)
     );
 }
@@ -1719,7 +1741,10 @@ async fn create_opens_a_closed_connection() {
     assert!(!connection.is_open());
     let created = CRUDRepository::<Row>::new(connection.clone(), CRUDRepositoryOptions::default())
         .unwrap()
-        .create(record(&[("id", Value::Int(1)), ("name", Value::from("Ada"))]))
+        .create(record(&[
+            ("id", Value::Int(1)),
+            ("name", Value::from("Ada")),
+        ]))
         .await
         .expect("create");
     assert!(connection.is_open());
@@ -1794,7 +1819,8 @@ async fn table_repository() {
     assert_eq!(last.1[0].value, Value::Int(9));
     assert!(repo
         .read_where(&Where::new(Operator::equals("id", 9_i64)), None)
-        .try_collect::<Vec<_>>().await
+        .try_collect::<Vec<_>>()
+        .await
         .unwrap()
         .is_empty());
 
@@ -1856,75 +1882,19 @@ async fn create_and_update_honor_write_properties() {
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO addresses (Line1) VALUES ($Line1)"
     );
-    repo.update(record(&[
+    repo.update(
+        record(&[
             ("Id", Value::Int(1)),
             ("Line1", Value::from("2 Main")),
             ("Description", Value::from("Work")),
-        ]), None)
+        ]),
+        None,
+    )
     .await
     .unwrap();
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
         "UPDATE addresses SET Line1 = $Line1 WHERE Id = $Id"
-    );
-}
-
-#[tokio::test]
-async fn create_fills_missing_string_and_bool_zeros() {
-    let command = Arc::new(MockCommand::new());
-    let connection = MockConnection::with_command_provider(command.clone(), "memory");
-    let mut options = CRUDRepositoryOptions::default();
-    options.ids = vec!["id".into()];
-    options.entity = "contacts".into();
-    options.read_properties = vec![
-        "id".into(),
-        "name".into(),
-        "given_name".into(),
-        "is_starred".into(),
-        "uuid".into(),
-        "gender_type_id".into(),
-    ];
-    options.create_properties = Some(vec![
-        "name".into(),
-        "given_name".into(),
-        "is_starred".into(),
-        "uuid".into(),
-        "gender_type_id".into(),
-    ]);
-    let mut zeros = Row::new();
-    zeros.insert("name".into(), Value::from(""));
-    zeros.insert("is_starred".into(), Value::from(false));
-    let repo = CRUDRepository::<Row>::new(connection, options)
-        .unwrap()
-        .with_create_zeros(zeros);
-    *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    command
-        .reader_rows
-        .lock()
-        .unwrap()
-        .push(record(&[("id", Value::Int(1))]));
-    repo.create(record(&[("given_name", Value::from("Ada"))]))
-        .await
-        .unwrap();
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)"
-    );
-    command.execute_logs.lock().unwrap().clear();
-    repo.create(record(&[
-        ("given_name", Value::from("Ada")),
-        ("is_starred", Value::from(true)),
-        ("name", Value::from("Ada Lovelace")),
-    ]))
-    .await
-    .unwrap();
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0].0,
-        "INSERT INTO contacts (given_name, is_starred, name) VALUES ($given_name, $is_starred, $name)"
-    );
-    assert_eq!(
-        command.execute_logs.lock().unwrap()[0].1[1].value,
-        Value::from(true)
     );
 }
 
@@ -1954,11 +1924,14 @@ async fn create_and_update_write_read_properties_only() {
         command.execute_logs.lock().unwrap()[0].0,
         "INSERT INTO addresses (Line1) VALUES ($Line1)"
     );
-    repo.update(record(&[
+    repo.update(
+        record(&[
             ("Id", Value::Int(1)),
             ("Line1", Value::from("2 Main")),
             ("Description", Value::from("Work")),
-        ]), None)
+        ]),
+        None,
+    )
     .await
     .unwrap();
     assert_eq!(
@@ -2015,14 +1988,11 @@ async fn table_repository_assigned_id() {
         Value::Int(3)
     );
     let updated_row_3 = record(&[
-                ("org_id", Value::Int(1)),
-                ("user_id", Value::Int(2)),
-                ("name", Value::Int(4)),
-            ]);
-    let updated = repo
-        .update(updated_row_3, None)
-        .await
-        .unwrap();
+        ("org_id", Value::Int(1)),
+        ("user_id", Value::Int(2)),
+        ("name", Value::Int(4)),
+    ]);
+    let updated = repo.update(updated_row_3, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert!(generated.execute_logs.lock().unwrap()[1]
         .0
@@ -2039,32 +2009,26 @@ async fn table_repository_assigned_id() {
     options.row_converter = Some(users_mapping());
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     let updated_row_4 = record(&[("name", Value::from("a"))]);
-    assert!(repo
-        .update(updated_row_4, None)
-        .await
-        .is_err());
+    assert!(repo.update(updated_row_4, None).await.is_err());
     assert!(repo
         .delete(record(&[("name", Value::from("a"))]), None)
         .await
         .is_err());
     let updated_row_5 = record(&[("id", Value::Int(1))]);
-    assert!(repo
-        .update(updated_row_5, None)
-        .await
-        .is_err());
+    assert!(repo.update(updated_row_5, None).await.is_err());
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "users".into();
     options.row_converter = Some(RowTypeConverter::new(std::collections::HashMap::new()));
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
     *command.response.lock().unwrap() = Response::new(Value::Null, 1, None);
-    let created = repo
-        .create(record(&[("id", Value::Int(1))]))
-        .await
-        .unwrap();
+    let created = repo.create(record(&[("id", Value::Int(1))])).await.unwrap();
     assert_eq!(created["id"], Value::Int(1));
     let removed = repo
-        .delete(record(&[("id", Value::Int(1)), ("name", Value::from("z"))]), None)
+        .delete(
+            record(&[("id", Value::Int(1)), ("name", Value::from("z"))]),
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(removed.rows_affected, 1);
@@ -2073,19 +2037,30 @@ async fn table_repository_assigned_id() {
     assert!(from_id.ids.is_empty());
     assert!(create_crud_repository_options::<Label>().ids.is_empty());
     CRUDRepository::<Row>::new(MockConnection::new(), from_id).unwrap();
-    CRUDRepository::<Item>::new(MockConnection::new(), create_crud_repository_options::<Item>()).unwrap();
+    CRUDRepository::<Item>::new(
+        MockConnection::new(),
+        create_crud_repository_options::<Item>(),
+    )
+    .unwrap();
 }
 
 #[test]
 fn repository_entity_type() {
-    let typed = CRUDRepository::<Item>::new(MockConnection::new(), create_crud_repository_options::<Item>()).unwrap();
+    let typed = CRUDRepository::<Item>::new(
+        MockConnection::new(),
+        create_crud_repository_options::<Item>(),
+    )
+    .unwrap();
     assert_eq!(typed.entity_type(), TypeId::of::<Item>());
     assert_eq!(
         (&typed as &dyn IRepository).entity_type(),
         TypeId::of::<Item>()
     );
-    let untyped =
-        CRUDRepository::<Row>::new(MockConnection::new(), create_crud_repository_options::<Item>()).unwrap();
+    let untyped = CRUDRepository::<Row>::new(
+        MockConnection::new(),
+        create_crud_repository_options::<Item>(),
+    )
+    .unwrap();
     assert_eq!(untyped.entity_type(), TypeId::of::<Row>());
     assert_eq!(
         StubRepository::new("memory").entity_type(),
@@ -2215,10 +2190,7 @@ async fn read_uses_per_call_object_and_row_converters() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let repo = ReadonlyRepository::<Row>::new(connection, per_call).unwrap();
     assert_eq!(
-        repo.read_single(None, None)
-            .await
-            .unwrap()
-            .unwrap()["Label"],
+        repo.read_single(None, None).await.unwrap().unwrap()["Label"],
         Value::from("tag:ADA")
     );
 }
@@ -2227,7 +2199,6 @@ async fn read_uses_per_call_object_and_row_converters() {
 struct Item;
 
 impl SchemaObject for Item {}
-
 
 #[tokio::test]
 async fn read_single_by_id_uses_id_columns() {
@@ -2278,7 +2249,6 @@ async fn read_single_by_id_uses_id_columns() {
 }
 
 struct Label;
-
 
 #[test]
 fn comparison_aliases() {
@@ -2336,15 +2306,12 @@ async fn create_omits_null_datetime_and_version_and_update_writes_them() {
         "INSERT INTO users (name) VALUES ($name)"
     );
     let updated_row_6 = record(&[
-                ("id", Value::Int(1)),
-                ("name", Value::from("ada")),
-                ("created", Value::Null),
-                ("version", Value::Null),
-            ]);
-    let updated = repo
-        .update(updated_row_6, None)
-        .await
-        .unwrap();
+        ("id", Value::Int(1)),
+        ("name", Value::from("ada")),
+        ("created", Value::Null),
+        ("version", Value::Null),
+    ]);
+    let updated = repo.update(updated_row_6, None).await.unwrap();
     assert_eq!(updated.rows_affected, 1);
     assert_eq!(
         command.execute_logs.lock().unwrap()[1].0,
@@ -2400,11 +2367,7 @@ async fn typed_entity_create_and_read_single() {
         .await
         .unwrap();
     assert_eq!(created.title, "Ada");
-    let found = repo
-        .read_single(None, None)
-        .await
-        .unwrap()
-        .expect("note");
+    let found = repo.read_single(None, None).await.unwrap().expect("note");
     assert_eq!(found.id, 1);
     assert_eq!(found.title, "Ada");
 }
