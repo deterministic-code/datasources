@@ -1,6 +1,6 @@
 import { collectAsync } from "../../collectAsync.ts";
 import { ConsoleCommandMiddleware } from "../../ConsoleCommandMiddleware.ts";
-import type { Cells } from "../../converters/Cell.ts";
+import type { Cells } from "../../converters/Value.ts";
 import { FlatToNestedMapper } from "../../mappers/FlatToNestedMapper.ts";
 import type { IConnection } from "../../IConnection.ts";
 import { CRUDRepository } from "../../CRUDRepository.ts";

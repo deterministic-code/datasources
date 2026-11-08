@@ -2,7 +2,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import { identityKey } from "./identity.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
@@ -45,15 +45,19 @@ export abstract class CreateEnrichmentStrategy<T> {
         const id = this.getCell(found, enrichment.relatedKey);
         if (!this.presentCell(id))
           throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
-        this.stamp(item as T & object, enrichment.sourceProperty, id, enrichment.relatedKey);
+        this.stamp(item as T & object, enrichment.sourceProperty, id);
       }
     }
   }
 
-  private resolveLinked = async (via: IReadonlyRepository, enrichment: Enrichment, item: T): Promise<void> => {
+  private resolveLinked = async <TRelated>(
+    via: IReadonlyRepository<TRelated>,
+    enrichment: Enrichment,
+    item: T,
+  ): Promise<void> => {
     const property = enrichment.relatedProperty;
     if (!property) return;
-    for (const related of this.payloadOf<object, T>(item, enrichment.destinationProperty)) {
+    for (const related of this.payloadOf<TRelated, T>(item, enrichment.destinationProperty)) {
       if (this.presentCell(this.getCell(related, enrichment.relatedKey))) continue;
       const name = this.getCell(related, property);
       if (!this.presentCell(name)) continue;
@@ -67,17 +71,17 @@ export abstract class CreateEnrichmentStrategy<T> {
     }
   };
 
-  collectChildren<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): TChild[] {
+  collectChildren<TChild>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): TChild[] {
     const children = this.payloadOf<TChild, T>(parent, enrichment.destinationProperty, enrichment, writer);
     if (children.length === 0) return children;
     const key = this.requiredKey(parent, enrichment);
-    for (const child of children) this.stampCell(child, enrichment.relatedKey, key);
+    for (const child of children) this.stamp(child, enrichment.relatedKey, key);
     return children;
   }
 
   protected keyOf = (value: Scalar | object | undefined, name: string): Scalar | object | undefined => {
     const key = identityKey(value, name);
-    return key !== undefined && key !== null && typeof key !== "object" ? key : undefined;
+    return this.presentCell(key) ? key : undefined;
   };
 
   protected getCell = <TItem>(item: TItem, name: string): Scalar | object | undefined =>
@@ -86,7 +90,7 @@ export abstract class CreateEnrichmentStrategy<T> {
   protected presentCell = (value: Scalar | object | undefined): value is Scalar =>
     value !== undefined && value !== null && typeof value !== "object" && value !== 0 && value !== 0n && value !== "";
 
-  protected payloadOf = <TChild extends object, TParent>(
+  protected payloadOf = <TChild, TParent>(
     parent: TParent,
     into: string,
     enrichment?: Enrichment,
@@ -97,14 +101,13 @@ export abstract class CreateEnrichmentStrategy<T> {
     related: TItem,
     by: string,
     key: Scalar | object | undefined,
-    id = by,
   ): void => {
     if (key === undefined || key === null || typeof key === "object") return;
     const current = this.getCell(related, by);
     if (current !== null && typeof current === "object" && !Array.isArray(current)) {
       const target = current as Props;
-      const name = id in target ? id : "Id" in target ? "Id" : "id";
-      target[name] = key;
+      const name = identityKey(target, by) !== target ? by : "Id" in target ? "Id" : "id";
+      Object.assign(target, { [name]: key });
       return;
     }
     if (by in related) {
@@ -122,7 +125,7 @@ export abstract class CreateEnrichmentStrategy<T> {
   protected relatedIds = <TParent>(parent: TParent, enrichment: Enrichment): Scalar[] => {
     const ids: Scalar[] = [];
     const seen = new Set<string>();
-    for (const related of this.payloadOf<object, TParent>(parent, enrichment.destinationProperty)) {
+    for (const related of this.payloadOf<Cells, TParent>(parent, enrichment.destinationProperty)) {
       const id = this.getCell(related, enrichment.relatedKey);
       if (!this.presentCell(id)) throw new DatasourceError(`${enrichment.destinationProperty} requires "${enrichment.relatedKey}"`);
       const key = String(id);

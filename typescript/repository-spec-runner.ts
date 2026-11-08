@@ -10,7 +10,7 @@ import {
   Literal,
   Operator,
   Where,
-  type Cell,
+  type Value,
   type Cells,
   type Constructable,
   type IConnection,
@@ -41,7 +41,7 @@ export const repositorySpecFiles = (root = specsDir()): string[] =>
     .filter((name) => name.endsWith(".yaml"))
     .map((name) => join(root, "repositories", name));
 
-const defaultOf = (canonical: CanonicalType): Cell =>
+const defaultOf = (canonical: CanonicalType): Value =>
   ({
     int: 0,
     uuid: "00000000-0000-0000-0000-000000000000",
@@ -67,7 +67,7 @@ const typeOf = (type: RepositoryTypeSpec): Constructable<Cells> => {
 const unquoteSql = (text: string): string =>
   text.replaceAll(/`([^`]+)`/g, "$1").replaceAll(/"([^"]+)"/g, "$1");
 
-type SpecValue = Cell | SpecRow;
+type SpecValue = Value | SpecRow;
 type SpecRow = { [key: string]: SpecValue };
 
 const whereOf = (mapping: MetaDataRowTypeConverter<SpecRow>, row: RepositoryRow) => {
@@ -101,7 +101,7 @@ const isRow = (value: SpecValue | RepositoryRow | Scalar | undefined): value is 
   !(value instanceof Uint8Array) &&
   !Array.isArray(value);
 
-const cellOf = (value: Cell): Scalar =>
+const cellOf = (value: Value): Scalar =>
   value instanceof Date
     ? value.toISOString()
     : value instanceof Uint8Array
@@ -122,8 +122,8 @@ const rowOf = (row: SpecRow): RepositoryRow =>
 
 const fieldsOf = (
   spec: RepositoryTypeSpec,
-  catalog: Record<string, TypeConverter<Cell, Cell>>,
-): Record<string, TypeConverter<Cell, Cell>> =>
+  catalog: Record<string, TypeConverter<Value, Value>>,
+): Record<string, TypeConverter<Value, Value>> =>
   Object.fromEntries(
     [
       ...Object.entries(spec.fields),
@@ -188,7 +188,7 @@ export const runRepositorySpec = async (
   connection: IConnection,
   execute: (statement: CreateTableStatement) => Promise<unknown>,
   dialect: RepositoryDialect,
-  types: Record<string, TypeConverter<Cell, Cell>>,
+  types: Record<string, TypeConverter<Value, Value>>,
 ): Promise<void> => {
   const spec = parse(readFileSync(path, "utf8")) as RepositorySpec;
   if (specVerbose()) console.log(`\n--- ${spec.name} (${connection.provider}) ---`);

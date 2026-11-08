@@ -178,7 +178,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         for (const name of names) if (name in obj) row[name] = obj[name];
         rowsAffected += 1;
       }
-      return { result: undefined, rowsAffected };
+      return { result: null, rowsAffected };
     }
     const next = { ...obj };
     delete next.$where;
@@ -199,7 +199,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
       const rowsAffected = rows.length - remaining.length;
       rows.length = 0;
       rows.push(...remaining);
-      return { result: undefined, rowsAffected };
+      return { result: null, rowsAffected };
     }
     const filter = looksJson(renderWhere(where)) ? parseFilter(renderWhere(where)!) : obj;
     return this.applyDelete(rows, filter);
@@ -217,7 +217,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
         rowsAffected += 1;
       }
     }
-    return { result: obj, rowsAffected };
+    return { result: null, rowsAffected };
   }
 
   private applyDelete(collection: MemoryRecord[], filter: MemoryRecord): Response {
@@ -225,7 +225,7 @@ export class MemoryCommand extends CommandMiddlewareHost implements ICommand {
     const rowsAffected = collection.length - remaining.length;
     collection.length = 0;
     collection.push(...remaining);
-    return { result: undefined, rowsAffected };
+    return { result: null, rowsAffected };
   }
 }
 

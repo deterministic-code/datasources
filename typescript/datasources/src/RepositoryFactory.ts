@@ -1,4 +1,5 @@
 import type { Constructable } from "./converters/Constructable.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { IConnection } from "./IConnection.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepository } from "./IRepository.ts";
@@ -9,15 +10,15 @@ import { RepositoryAccess } from "./RepositoryAccess.ts";
 import { RepositoryNotRegisteredError } from "./RepositoryNotRegisteredError.ts";
 
 type Named = {
-  create: (connection: IConnection) => ICRUDRepository;
-  createReadonly: (connection: IConnection) => IReadonlyRepository;
+  create: <T>(connection: IConnection) => ICRUDRepository<T>;
+  createReadonly: <T>(connection: IConnection) => IReadonlyRepository<T>;
 };
 
 const binders: Array<(factory: RepositoryFactory) => void> = [];
 
 export class RepositoryFactory implements ICRUDRepositoryFactory {
-  readonly #readonlyByType = new Map<Constructable<unknown>, IRepository>();
-  readonly #crudByType = new Map<Constructable<unknown>, IRepository>();
+  readonly #readonlyByType = new Map<Constructable<Cells>, IRepository<Cells>>();
+  readonly #crudByType = new Map<Constructable<Cells>, IRepository<Cells>>();
   readonly #byName = new Map<string, Named>();
 
   constructor() {
@@ -36,21 +37,21 @@ export class RepositoryFactory implements ICRUDRepositoryFactory {
     for (const register of binders) register(this);
   }
 
-  register(repository: IRepository): void;
-  register(
+  register<T>(repository: IRepository<T>): void;
+  register<T>(
     typeName: string,
     pluralName: string,
-    create: (connection: IConnection) => ICRUDRepository,
-    createReadonly: (connection: IConnection) => IReadonlyRepository,
+    create: (connection: IConnection) => ICRUDRepository<T>,
+    createReadonly: (connection: IConnection) => IReadonlyRepository<T>,
   ): void;
-  register(
-    repositoryOrType: IRepository | string,
+  register<T>(
+    repositoryOrType: IRepository<T> | string,
     pluralName?: string,
-    create?: (connection: IConnection) => ICRUDRepository,
-    createReadonly?: (connection: IConnection) => IReadonlyRepository,
+    create?: (connection: IConnection) => ICRUDRepository<T>,
+    createReadonly?: (connection: IConnection) => IReadonlyRepository<T>,
   ): void {
     if (typeof repositoryOrType !== "string") {
-      this.#put(repositoryOrType, true);
+      this.#put(repositoryOrType);
       return;
     }
     const named = { create: create as Named["create"], createReadonly: createReadonly as Named["createReadonly"] };
@@ -59,23 +60,23 @@ export class RepositoryFactory implements ICRUDRepositoryFactory {
   }
 
   create<T>(type: Constructable<T>): ICRUDRepository<T>;
-  create(name: string, connection: IConnection): ICRUDRepository;
-  create(
-    typeOrName: Constructable<unknown> | string,
+  create<T>(name: string, connection: IConnection): ICRUDRepository<T>;
+  create<T>(
+    typeOrName: Constructable<T> | string,
     connection?: IConnection,
-  ): ICRUDRepository {
+  ): ICRUDRepository<T> {
     if (typeof typeOrName !== "string")
-      return this.#get(this.#crudByType, typeOrName) as ICRUDRepository;
+      return this.#get(this.#crudByType, typeOrName) as ICRUDRepository<T>;
     this.applyBound();
     return this.#lookup(typeOrName).create(connection as IConnection);
   }
 
-  createReadonly = (name: string, connection: IConnection): IReadonlyRepository => {
+  createReadonly = <T>(name: string, connection: IConnection): IReadonlyRepository<T> => {
     this.applyBound();
     return this.#lookup(name).createReadonly(connection);
   };
 
-  access = (name: string, connection: IConnection): RepositoryAccess => {
+  access = <T>(name: string, connection: IConnection): RepositoryAccess<T> => {
     this.applyBound();
     const named = this.#lookup(name);
     return new RepositoryAccess(named.create, named.createReadonly, connection);
@@ -92,18 +93,20 @@ export class RepositoryFactory implements ICRUDRepositoryFactory {
       this.#get(this.#readonlyByType, type) as IReadonlyRepository<T>,
   };
 
-  #put = (repository: IRepository, crud: boolean): void => {
-    this.#readonlyByType.set(repository.type, repository);
+  #put = <T>(repository: IRepository<T>, crud = true): void => {
+    const type = repository.type as Constructable<Cells>;
+    const stored = repository as IRepository<Cells>;
+    this.#readonlyByType.set(type, stored);
     if (!crud) return;
-    this.#crudByType.set(repository.type, repository);
+    this.#crudByType.set(type, stored);
   };
 
   #get = (
-    map: Map<Constructable<unknown>, IRepository>,
-    type: Constructable<unknown>,
-  ): IRepository => {
-    const repository = map.get(type);
-    if (!repository) throw new RepositoryNotRegisteredError(type.name);
+    map: Map<Constructable<Cells>, IRepository<Cells>>,
+    type: Constructable<Cells> | Constructable,
+  ): IRepository<Cells> => {
+    const repository = map.get(type as Constructable<Cells>);
+    if (!repository) throw new RepositoryNotRegisteredError((type as Constructable<Cells>).name);
     return repository;
   };
 

@@ -1,4 +1,4 @@
-import { parametersToRecord, type Cell, type Parameter } from "@deterministic-code/datasources";
+import { parametersToRecord, type Value, type Parameter } from "@deterministic-code/datasources";
 import { isBase64 } from "./converters/BinaryConverter.ts";
 import { isIsoDate } from "./converters/DateTimeConverter.ts";
 import { reverse } from "./converters/PostgresRowTypeConverters.ts";
@@ -45,6 +45,6 @@ export const bindParameters = (
   const record = parametersToRecord(parameters);
   const bound: Record<string, Scalar> = {};
   for (const [name, value] of Object.entries(record))
-    bound[name] = reverse(value as Cell) as Scalar;
+    bound[name] = reverse(value as Value) as Scalar;
   return bound;
 };

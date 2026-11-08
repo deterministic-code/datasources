@@ -1,4 +1,4 @@
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
@@ -12,7 +12,7 @@ export type ReadonlyRepositoryMappingOptions<T = Cells> = {
   rowConverter?: TypeConverter<Cells, Cells>;
   objectConverter?: TypeConverter<T, Cells>;
   type?: Constructable<T>;
-  rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>;
+  rowTypeConverters?: Record<string, TypeConverter<Value, Value>>;
   readProperties?: string[];
   schema?: Schema;
   enrichment?: IReadonlyEnrichmentStrategy<T & object>;

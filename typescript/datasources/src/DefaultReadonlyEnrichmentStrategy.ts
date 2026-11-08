@@ -46,7 +46,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
         new Where(new Operator.Equals(association.parent, this.scalar(key))),
       )) {
         const id = this.props(row)[association.related];
-        if (id === undefined || id === null || typeof id === "object") continue;
+        if (id === undefined || id === null) continue;
         const entity = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedKey, id)));
         if (entity) related.push(entity);
       }
@@ -112,7 +112,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
       )) {
         const row = this.props(item);
         const entry = row[mapKey];
-        if (entry === undefined || entry === null || typeof entry === "object") continue;
+        if (entry === undefined || entry === null) continue;
         map[String(entry)] = enrichment.relatedProperty
           ? (row[enrichment.relatedProperty] ?? null)
           : this.copyValue(item, (parent as Props)[enrichment.destinationProperty], enrichment, mapKey);
@@ -136,7 +136,7 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
 
   protected keyOf = (key: Scalar | object, name = ""): string => String(this.lookupKey(key, name));
 
-  protected lookupKey = (value: Scalar | object | undefined, name: string): Scalar | object | undefined =>
+  protected lookupKey = (value: Scalar | object | undefined, name = ""): Scalar | object | undefined =>
     identityKey(value, name);
 
   private copyValue = (

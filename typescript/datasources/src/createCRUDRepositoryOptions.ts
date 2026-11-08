@@ -1,4 +1,4 @@
-import type { Cell } from "./converters/Cell.ts";
+import type { Value } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -18,7 +18,7 @@ export const defaultId = (schema?: Schema, names: readonly string[] = []): strin
 
 export const createCRUDRepositoryOptions = <T>(
   type: Constructable<T>,
-  rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>,
+  rowTypeConverters?: Record<string, TypeConverter<Value, Value>>,
 ): CRUDRepositoryOptions<T> => {
   const read = createReadonlyRepositoryMappingOptions(type, rowTypeConverters);
   return {

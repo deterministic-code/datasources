@@ -1,7 +1,7 @@
 import {
   AlterTableStatement,
   BulkUpdateStatement,
-  type Cell,
+  type Value,
   ColumnDefault,
   CreateBulkCreateStoredProcedureStatement,
   CreateBulkDeleteStoredProcedureStatement,
@@ -103,7 +103,7 @@ describe("PostgresStatementRenderer", () => {
           { name: "at", value: new Date("2020-01-02T03:04:05.000Z") },
           { name: "blob", value: new Uint8Array([1]) },
           { name: "x", value: null },
-        ] as { name: string; value: Cell }[],
+        ] as { name: string; value: Value }[],
         ids: [{ name: "id", value: 1n }],
       },
     ]);

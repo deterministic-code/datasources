@@ -7,7 +7,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
 import { Literal } from "./statements/Literal.ts";
 import { DefaultStatementTextRenderer, Operator, Where } from "./statements/index.ts";
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import { repositoryParts } from "./CRUDRepositoryBuilder.ts";
@@ -18,7 +18,7 @@ import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
-import { StoredEnrichment } from "./StoredEnrichment.ts";
+import { asRelated, StoredEnrichment } from "./StoredEnrichment.ts";
 import { execute, executeReader } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import { lookupKeys, mergeLookups } from "./CreateEnrichmentStrategy.ts";
@@ -33,13 +33,13 @@ import { SchemaDefault } from "./SchemaDefault.ts";
 
 type Props = Record<string, Scalar | object>;
 
-const assigned = (value: Cell): boolean =>
+const assigned = (value: Value): boolean =>
   value !== null && value !== "" && value !== 0 && value !== 0n;
 
 const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
   list === undefined ? fallback : list.includes(col);
 
-const languageZero = (value: Cell): boolean => value === "" || value === false;
+const languageZero = (value: Value): boolean => value === "" || value === false;
 
 const applyEmptyDefaults = (
   record: Cells,
@@ -78,7 +78,7 @@ const fieldsOf = (
   record: Cells,
   include: (col: string) => boolean,
   extras: Set<string>,
-  cell: (property: string, value: Cell, fieldsApplied: boolean) => Cell,
+  cell: (property: string, value: Value, fieldsApplied: boolean) => Value,
   enrichmentInto: (name: string) => boolean,
   columns: readonly string[],
   column: (property: string) => string,
@@ -360,4 +360,4 @@ const writerOf = <TRelated>(via: IReadonlyRepository<TRelated>): ICRUDRepository
   "create" in via && typeof via.create === "function" ? (via as ICRUDRepository<TRelated>) : undefined;
 
 const lastEnrichment = <T, TRelated = T, TLink = TRelated>(host: object): StoredEnrichment<T, TRelated, TLink> =>
-  enrichmentsOf<T>(host)!.at(-1)! as unknown as StoredEnrichment<T, TRelated, TLink>;
+  asRelated(enrichmentsOf<T>(host)!.at(-1)!);

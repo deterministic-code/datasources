@@ -19,7 +19,7 @@ import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 import { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
@@ -167,7 +167,7 @@ describe("statement and repository edges", () => {
       { type: Item, entity: "items", objectConverter: new DropId() },
       new BatchCommandIBulkWriteStrategy<Item>(),
     );
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     await expect(dropped.deleteBulk([new Item()])).rejects.toThrow(/id/);
 
     const plain = new BulkCRUDRepository<Item>(connection, { type: Item, entity: "items" });

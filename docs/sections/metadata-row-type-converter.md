@@ -23,7 +23,7 @@ class MetaDataRowTypeConverter<T = Cells> extends TypeConverter<T, Cells>
 Builds the default object converter. Convert uses [fields](#metadatarowtypeconverter-fields).
 
 ```typescript
-constructor(fields?: Record<string, TypeConverter<Cell, Cell>>)
+constructor(fields?: Record<string, TypeConverter<Value, Value>>)
 ```
 
 - `fields` — per-column TypeConverter
@@ -35,7 +35,7 @@ constructor(fields?: Record<string, TypeConverter<Cell, Cell>>)
 Per-column converters. Convert uses `fields[name]`.
 
 ```typescript
-fields: Record<string, TypeConverter<Cell, Cell>>
+fields: Record<string, TypeConverter<Value, Value>>
 ```
 
 **Methods**

@@ -29,12 +29,12 @@ constructor(condition: IExpression)
 Builds a comparison from a column, a [Cmp](./expressions.md#cmp) alias, and a literal.
 
 ```typescript
-constructor(column: string, op: Comparison, value: Cell)
+constructor(column: string, op: Comparison, value: Value)
 ```
 
 - `column` — column name
 - `op` — [Cmp](./expressions.md#cmp) alias such as `eq` or `gt`
-- `value` — [Cell](./flat-to-nested-mapper.md#cell)
+- `value` — [Value](./flat-to-nested-mapper.md#cell)
 
 **Properties**
 
@@ -74,13 +74,13 @@ accept(visitor: IConditionVisitor): string
 Nests this clause with another comparison under [Operator.And](./expressions.md#operator) or `Operator.Or`.
 
 ```typescript
-and(column: string, op: Comparison, value: Cell): Where
-or(column: string, op: Comparison, value: Cell): Where
+and(column: string, op: Comparison, value: Value): Where
+or(column: string, op: Comparison, value: Value): Where
 ```
 
 - `column` — column name
 - `op` — [Cmp](./expressions.md#cmp) alias
-- `value` — [Cell](./flat-to-nested-mapper.md#cell)
+- `value` — [Value](./flat-to-nested-mapper.md#cell)
 
 **Returns** [Where](#where)
 
@@ -89,7 +89,7 @@ or(column: string, op: Comparison, value: Cell): Where
 Rewrites identifiers through `column` and the literals beside them through `value`. The repository calls this so a clause uses stored column names. A field converter, when one is set, rewrites that property's literals.
 
 ```typescript
-map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): Where
+map(column: (name: string) => string, value: (name: string, cell: Value) => Value): Where
 ```
 
 - `column` — property name to stored column
@@ -190,7 +190,7 @@ accept(visitor: IConditionVisitor): string
 type Scalar = string | number | boolean | bigint | null
 ```
 
-Cell value used by [Where](#where) and [Identifier](./expressions.md#identifier).
+Value used by [Where](#where) and [Identifier](./expressions.md#identifier).
 
 ### csharp
 #### Where

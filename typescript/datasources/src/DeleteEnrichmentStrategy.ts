@@ -24,7 +24,7 @@ export abstract class DeleteEnrichmentStrategy<T> {
     parent: TParent,
   ): Promise<TChild[]> => {
     const key = get(parent, enrichment.sourceProperty);
-    if (key === undefined || key === null || typeof key === "object") return [];
+    if (key === undefined || key === null) return [];
     const items: TChild[] = [];
     for await (const item of writer.read(new Where(new Operator.Equals(enrichment.relatedKey, key))))
       items.push(item);
@@ -38,7 +38,7 @@ export abstract class DeleteEnrichmentStrategy<T> {
   ): Where | undefined => {
     if (writer.ids.length > 0) return undefined;
     const key = get(parent, enrichment.sourceProperty);
-    return key === undefined || key === null || typeof key === "object"
+    return key === undefined || key === null
       ? undefined
       : new Where(new Operator.Equals(enrichment.relatedKey, key));
   };

@@ -3,7 +3,7 @@ import type { IReader } from "./IReader.ts";
 import type { Parameter } from "./Parameter.ts";
 import type { Response } from "./Response.ts";
 import type { Row } from "./Row.ts";
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import type { IStatement } from "./statements/IStatement.ts";
 import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextRenderer.ts";
 import { Native } from "./statements/Native.ts";
@@ -12,18 +12,7 @@ import { StatementParser } from "./statements/StatementParser.ts";
 const asError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
-type ExecuteBody = { result: Cell; rowsAffected: number };
-
-const resultOf = (value: Cell | object | null): Cell =>
-  value instanceof Date ||
-  value instanceof Uint8Array ||
-  value === null ||
-  typeof value === "string" ||
-  typeof value === "number" ||
-  typeof value === "boolean" ||
-  typeof value === "bigint"
-    ? value
-    : String(value);
+type ExecuteBody = { result: Value; rowsAffected: number };
 
 const isResponse = (value: object): value is ExecuteBody =>
   "rowsAffected" in value && typeof (value as ExecuteBody).rowsAffected === "number";
@@ -31,7 +20,7 @@ const isResponse = (value: object): value is ExecuteBody =>
 const logged = <T>(value: T, rows: readonly Row[]): readonly Row[] =>
   rows.length > 0 || value === null || typeof value !== "object" || !isResponse(value)
     ? rows
-    : [{ result: resultOf(value.result), rowsAffected: value.rowsAffected }];
+    : [{ result: value.result, rowsAffected: value.rowsAffected }];
 
 export class CommandMiddlewareHost {
   private readonly middlewares: ICommandMiddleware[] = [];

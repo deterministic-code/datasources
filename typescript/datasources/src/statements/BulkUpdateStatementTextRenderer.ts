@@ -1,4 +1,4 @@
-import type { Cell } from "../converters/Cell.ts";
+import type { Value } from "../converters/Value.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { BulkUpdateStatement } from "./BulkUpdateStatement.ts";
 
@@ -22,9 +22,9 @@ export class BulkUpdateStatementTextRenderer {
   protected source = (statement: BulkUpdateStatement): string => {
     const columns = [...statement.set, ...statement.ids];
     const selects = statement.rows.map((row, index) => {
-      const byName = new Map<string, Cell>();
+      const byName = new Map<string, Value>();
       for (const field of [...row.fields, ...row.ids] as Parameter[])
-        byName.set(field.name, (field.value ?? null) as Cell);
+        byName.set(field.name, (field.value ?? null) as Value);
       return `SELECT ${columns
         .map((column) => this.cell(column, index, byName.get(column) ?? null))
         .join(", ")}`;
@@ -32,6 +32,6 @@ export class BulkUpdateStatementTextRenderer {
     return `(${selects.join(" UNION ALL ")}) AS data`;
   };
 
-  protected cell = (column: string, index: number, _value: Cell): string =>
+  protected cell = (column: string, index: number, _value: Value): string =>
     `${this.parameter(`${column}__${index}`)} AS ${this.quote(column)}`;
 }

@@ -1,6 +1,6 @@
-import { TypeConverter, type Cell } from "@deterministic-code/datasources";
+import { TypeConverter, type Value } from "@deterministic-code/datasources";
 
-export class BinaryConverter extends TypeConverter<Cell, Cell> {
-  convert = (from: Cell): Cell => from;
-  reverseConvert = (to: Cell): Cell => to;
+export class BinaryConverter extends TypeConverter<Value, Value> {
+  convert = (from: Value): Value => from;
+  reverseConvert = (to: Value): Value => to;
 }

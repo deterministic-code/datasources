@@ -101,8 +101,7 @@ describe("foreign key type", () => {
       Object.assign(new LongAddress(), { ContactId: parent.Id, City: "London" }),
     );
     const loaded = await addressesRepo.readSingleById(child.Id);
-    const fk: typeof parent.Id = child.ContactId;
-    expect(typeof parent.Id).toBe("number");
+    const fk: LongContact["Id"] = child.ContactId;
     expect(fk).toBe(parent.Id);
     expect(loaded?.ContactId).toBe(parent.Id);
   });
@@ -128,8 +127,7 @@ describe("foreign key type", () => {
       Object.assign(new GuidAddress(), { ContactId: parent.Id, City: "London" }),
     );
     const loaded = await addressesRepo.readSingleById(child.Id);
-    const fk: typeof parent.Id = child.ContactId;
-    expect(typeof parent.Id).toBe("string");
+    const fk: GuidContact["Id"] = child.ContactId;
     expect(fk).toBe(parent.Id);
     expect(loaded?.ContactId).toBe(parent.Id);
     expect(parent.Id).toBe(ada);

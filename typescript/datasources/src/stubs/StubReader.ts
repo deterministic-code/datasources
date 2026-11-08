@@ -1,8 +1,9 @@
 import type { IReader } from "../IReader.ts";
 import { readerToAsyncIterable } from "../readerToAsyncIterable.ts";
+import type { Cells } from "../converters/Value.ts";
 import { notImplemented } from "./notImplemented.ts";
 
-export class StubReader<T = unknown> implements IReader<T> {
+export class StubReader<T = Cells> implements IReader<T> {
   current: T | undefined = undefined;
 
   constructor(readonly provider: string) {}

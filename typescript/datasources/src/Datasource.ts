@@ -93,7 +93,7 @@ export class Datasource implements IDatasource {
     connection?: IConnection,
     options?: CRUDRepositoryOptions<T>,
   ): ICRUDRepository<T>;
-  createRepository(typeName: string, connection?: IConnection): ICRUDRepository;
+  createRepository<T>(typeName: string, connection?: IConnection): ICRUDRepository<T>;
   createRepository<T>(
     typeOrName: Constructable<T> | string,
     connection?: IConnection,
@@ -112,7 +112,7 @@ export class Datasource implements IDatasource {
     connection?: IConnection,
     options?: ReadonlyRepositoryMappingOptions<T>,
   ): IReadonlyRepository<T>;
-  createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository;
+  createReadonlyRepository<T>(typeName: string, connection?: IConnection): IReadonlyRepository<T>;
   createReadonlyRepository<T>(
     typeOrName: Constructable<T> | string,
     connection?: IConnection,

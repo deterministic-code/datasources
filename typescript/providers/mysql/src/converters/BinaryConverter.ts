@@ -1,9 +1,9 @@
-import { TypeConverter, type Cell } from "@deterministic-code/datasources";
+import { TypeConverter, type Value } from "@deterministic-code/datasources";
 
-const bytes = (value: Cell): Cell =>
+const bytes = (value: Value): Value =>
   typeof value === "string" ? Uint8Array.from(Buffer.from(value, "base64")) : value;
 
-export class BinaryConverter extends TypeConverter<Cell, Cell> {
-  convert = (from: Cell): Cell => bytes(from);
-  reverseConvert = (to: Cell): Cell => bytes(to);
+export class BinaryConverter extends TypeConverter<Value, Value> {
+  convert = (from: Value): Value => bytes(from);
+  reverseConvert = (to: Value): Value => bytes(to);
 }

@@ -325,8 +325,8 @@ let item = rows.convert(&row)?;
 ```
 ```typescript
 class FlagConverter extends TypeConverter {
-  convert = (value: Cell): Cell => value === 1;
-  reverseConvert = (value: Cell): Cell => value;
+  convert = (value: Value): Value => value === 1;
+  reverseConvert = (value: Value): Value => value;
 }
 
 const rows = new MetaDataRowTypeConverter({ flag: new FlagConverter() });

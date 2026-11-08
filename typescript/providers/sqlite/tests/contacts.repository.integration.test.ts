@@ -25,7 +25,7 @@ import { specsDir, specVerbose } from "../../../sql-spec-runner.ts";
 import { Native } from "@deterministic-code/datasources";
 import { applyContacts } from "../../../contacts-spec.ts";
 import { FlatToNestedMapper, CRUDRepository } from "../../../datasources/src/index.ts";
-import type { Cells } from "../../../datasources/src/converters/Cell.ts";
+import type { Cells } from "../../../datasources/src/converters/Value.ts";
 import { SqliteCommand } from "../src/command.ts";
 import { SqliteConnection } from "../src/connection.ts";
 import { SqliteDriver } from "../src/SqliteDriver.ts";

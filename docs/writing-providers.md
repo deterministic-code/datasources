@@ -58,10 +58,10 @@ transaction(connection: IConnection, isolation?: IsolationLevel): ITransaction
 Row cell converters keyed by canonical type name (`bool`, `datetime`, …). Empty for stubs and file dialects.
 
 ```typescript
-rowTypeConverters: Record<string, TypeConverter<Cell, Cell>>
+rowTypeConverters: Record<string, TypeConverter<Value, Value>>
 ```
 
-**Returns** `Record<string, TypeConverter<Cell, Cell>>`
+**Returns** `Record<string, TypeConverter<Value, Value>>`
 
 ##### columnType(name)
 

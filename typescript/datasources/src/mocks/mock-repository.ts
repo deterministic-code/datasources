@@ -1,5 +1,5 @@
 import type { Scalar } from "../builders/Scalar.ts";
-import type { Cells } from "../converters/Cell.ts";
+import type { Cells } from "../converters/Value.ts";
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { Parameter } from "../Parameter.ts";
@@ -11,7 +11,7 @@ import type { ReadonlyRepositoryMappingOptions } from "../ReadonlyRepositoryMapp
 import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 
-export class MockRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
+export class MockRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   readonly ids: readonly string[] = [];
   items: T[] = [];
   readSingleCalls: Array<ISelectStatement | IWhere | IExecuteStoredProcedureStatement | undefined> = [];
@@ -24,9 +24,9 @@ export class MockRepository<T = unknown> extends ReadonlyRepository<T> implement
   addError?: unknown;
   updateError?: unknown;
   deleteError?: unknown;
-  addResponse: Response = { result: undefined, rowsAffected: 1 };
-  updateResponse: Response = { result: undefined, rowsAffected: 1 };
-  deleteResponse: Response = { result: undefined, rowsAffected: 1 };
+  addResponse: Response = { result: null, rowsAffected: 1 };
+  updateResponse: Response = { result: null, rowsAffected: 1 };
+  deleteResponse: Response = { result: null, rowsAffected: 1 };
 
   constructor(
     _connection: IConnection,

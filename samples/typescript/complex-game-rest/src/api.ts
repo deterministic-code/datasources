@@ -19,7 +19,7 @@ import type { Category } from "../generated/types/view/category.ts";
 import type { Review } from "../generated/types/datasource/review.ts";
 import type { GameState } from "../generated/types/datasource/gameState.ts";
 import { clock } from "./clock.ts";
-import { jsonObject } from "./jsonObject.ts";
+import { toJson } from "./jsonObject.ts";
 
 export type HttpResult = { status: number; body: string };
 
@@ -40,28 +40,28 @@ export class Api {
       const query = parse(split < 0 ? "" : target.slice(split + 1));
       return await ({
         "GET /users": () => get(this.users, query, ["id", "username"]),
-        "POST /users": () => post(this.users, stampUser(read<User>(body))),
-        "PUT /users": () => put(this.users, query, stampUser(read<User>(body)), (row, id) => { row.id = id; }),
+        "POST /users": () => post(this.users, stampUser(read(body))),
+        "PUT /users": () => put(this.users, query, stampUser(read(body)), (row, id) => { row.id = id; }),
         "DELETE /users": () => remove(this.users, query),
         "GET /categories": () => this.getCategories(query),
-        "POST /categories": () => post(this.categories, stampRow(read<Category>(body))),
-        "PUT /categories": () => put(this.categories, query, stampRow(read<Category>(body)), (row, id) => { row.id = id; }),
+        "POST /categories": () => post(this.categories, stampRow(read(body))),
+        "PUT /categories": () => put(this.categories, query, stampRow(read(body)), (row, id) => { row.id = id; }),
         "DELETE /categories": () => remove(this.categories, query),
         "GET /games": () => get(this.games, query, ["id", "name"]),
-        "POST /games": () => post(this.games, stampGame(read<Game>(body))),
-        "PUT /games": () => put(this.games, query, stampGame(read<Game>(body)), (row, id) => { row.id = id; }),
+        "POST /games": () => post(this.games, stampGame(read(body))),
+        "PUT /games": () => put(this.games, query, stampGame(read(body)), (row, id) => { row.id = id; }),
         "DELETE /games": () => remove(this.games, query),
         "GET /reviews": () => get(this.reviews, query, ["id", "gameId", "userId"]),
-        "POST /reviews": () => post(this.reviews, stampRow(read<Review>(body))),
-        "PUT /reviews": () => put(this.reviews, query, stampRow(read<Review>(body)), (row, id) => { row.id = id; }),
+        "POST /reviews": () => post(this.reviews, stampRow(read(body))),
+        "PUT /reviews": () => put(this.reviews, query, stampRow(read(body)), (row, id) => { row.id = id; }),
         "DELETE /reviews": () => remove(this.reviews, query),
         "GET /game_states": () => get(this.states, query, ["id", "gameId", "userId"]),
-        "POST /game_states": () => post(this.states, stampRow(read<GameState>(body))),
-        "PUT /game_states": () => put(this.states, query, stampRow(read<GameState>(body)), (row, id) => { row.id = id; }),
+        "POST /game_states": () => post(this.states, stampRow(read(body))),
+        "PUT /game_states": () => put(this.states, query, stampRow(read(body)), (row, id) => { row.id = id; }),
         "DELETE /game_states": () => remove(this.states, query),
         "GET /contacts": () => get(this.contacts, query, ["id", "userId"]),
-        "POST /contacts": () => post(this.contacts, stampContact(read<Contact>(body))),
-        "PUT /contacts": () => put(this.contacts, query, stampContact(read<Contact>(body)), (row, id) => { row.id = id; }),
+        "POST /contacts": () => post(this.contacts, stampContact(read(body))),
+        "PUT /contacts": () => put(this.contacts, query, stampContact(read(body)), (row, id) => { row.id = id; }),
         "DELETE /contacts": () => remove(this.contacts, query),
       }[`${method.toUpperCase()} ${path}`] ?? (() => Promise.resolve({ status: 404, body: "" })))();
     } catch (error) {
@@ -81,7 +81,7 @@ export class Api {
     const filter = raw.length === 0
       ? new Where(new Operator.IsNull(new Identifier("categoryId")))
       : new Where(new Operator.Equals("categoryId", Number(raw)));
-    return { status: 200, body: jsonObject.toString(await list(this.categories, filter)) };
+    return { status: 200, body: toJson(await list(this.categories, filter)) };
   };
 }
 
@@ -135,10 +135,10 @@ const stampRow = <T extends { uuid?: string; created?: Date; updated?: Date; ver
 };
 
 const get = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>, keys: string[]): Promise<HttpResult> =>
-  ({ status: 200, body: jsonObject.toString(await list(repo, whereOf(query, keys))) });
+  ({ status: 200, body: toJson(await list(repo, whereOf(query, keys))) });
 
 const post = async <T>(repo: ICRUDRepository<T>, row: T): Promise<HttpResult> =>
-  ({ status: 201, body: jsonObject.toString(await repo.create(row)) });
+  ({ status: 201, body: toJson(await repo.create(row)) });
 
 const put = async <T>(
   repo: ICRUDRepository<T>,
@@ -150,7 +150,7 @@ const put = async <T>(
   if ((await repo.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
   setId(row, id);
   await repo.update(row);
-  return { status: 200, body: jsonObject.toString(await repo.readSingle(new Where(new Operator.Equals("id", id)))) };
+  return { status: 200, body: toJson(await repo.readSingle(new Where(new Operator.Equals("id", id)))) };
 };
 
 const remove = async <T>(repo: ICRUDRepository<T>, query: Record<string, string>): Promise<HttpResult> => {
@@ -176,7 +176,7 @@ const whereOf = (query: Record<string, string>, keys: string[]): IWhere | undefi
 
 const numberKey = (key: string): boolean => key === "id" || key === "userId" || key === "gameId" || key === "categoryId";
 
-const read = <T>(body: string | undefined): T => jsonObject.fromString<T>(body);
+const read = (body: string | undefined) => JSON.parse(body || "{}");
 
 const requiredNumber = (query: Record<string, string>, key: string): number => {
   const value = Number(required(query, key));

@@ -1,4 +1,4 @@
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { Response } from "./Response.ts";
 import type { IWhere } from "./statements/IWhere.ts";
@@ -24,7 +24,7 @@ const object = (row: Cells): string =>
     .map(([key, value]) => `${quote(key)}:${scalar(value)}`)
     .join(",")}}`;
 
-const scalar = (value: Cell): string => {
+const scalar = (value: Value): string => {
   if (value === null || value === undefined) return "null";
   if (typeof value === "boolean") return value ? "true" : "false";
   if (typeof value === "number") return Number.isFinite(value) ? JSON.stringify(value) : fail();
@@ -137,14 +137,14 @@ export class StoredProcedureBulkWriteStrategy<T extends object> implements IBulk
   };
 }
 
-const assigned = (value: Cell | undefined): boolean => {
+const assigned = (value: Value | undefined): boolean => {
   if (value === null || value === undefined) return false;
   if (value === 0 || value === 0n) return false;
   if (typeof value === "string") return value.length > 0;
   return true;
 };
 
-const parseIds = (value: Cell | undefined): number[] => {
+const parseIds = (value: Value | undefined): number[] => {
   const text =
     typeof value === "string" ? value.trim()
     : typeof value === "number" || typeof value === "bigint" ? String(value)
@@ -164,5 +164,5 @@ const stamp = <T extends object>(item: T, column: string, id: number): void => {
     column in item
       ? column
       : (Object.keys(item).find((name) => name.toLowerCase() === column.toLowerCase()) ?? column);
-  (item as Record<string, Cell>)[key] = id;
+  (item as Record<string, Value>)[key] = id;
 };

@@ -18,8 +18,8 @@ import { TypeConverter } from "./converters/TypeConverter.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 
-const selectText = async (
-  repo: { read(): AsyncIterable<unknown> },
+const selectText = async <T>(
+  repo: { read(): AsyncIterable<T> },
   connection: IConnection,
 ): Promise<string | undefined> => {
   if (!(connection instanceof MockConnection)) throw new Error("expected mock connection");

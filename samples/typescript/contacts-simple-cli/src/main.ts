@@ -1,5 +1,6 @@
 import { address, contact, email, phone } from "../generated/repositories/repositoryRegistry.ts";
 import { Datasource, Operator, Where } from "@deterministic-code/datasources";
+import type { Contact } from "../generated/types/view/contact.ts";
 
 await using ds = Datasource.default;
 const contactsRepo = ds.contacts;
@@ -23,9 +24,9 @@ console.log(`created ${alan.id} ${alan.givenName} ${alan.emails[0].address} ${al
 
 const adaRead = await contactsRepo.readSingle(new Where(new Operator.Equals("id", ada.id)));
 if (adaRead == null) throw new Error("read");
-const addressFk: typeof adaRead.id = adaRead.addresses[0].contactId;
-const emailFk: typeof adaRead.id = adaRead.emails[0].contactId;
-const phoneFk: typeof adaRead.id = adaRead.phones[0].contactId;
+const addressFk: Contact["id"] = adaRead.addresses[0].contactId;
+const emailFk: Contact["id"] = adaRead.emails[0].contactId;
+const phoneFk: Contact["id"] = adaRead.phones[0].contactId;
 if (addressFk !== adaRead.id || emailFk !== adaRead.id || phoneFk !== adaRead.id) throw new Error("foreign key");
 console.log(`read ${adaRead.id} ${adaRead.givenName} emails=${adaRead.emails.length} phones=${adaRead.phones.length} addresses=${adaRead.addresses.length}`);
 

@@ -1,7 +1,7 @@
 import {
   DatasourceError,
   StatementTextRenderer,
-  type Cell,
+  type Value,
   type Column,
   type DatasourceOptions,
   type ICommand,
@@ -90,7 +90,7 @@ export class SqliteDriver implements IDriver {
     ],
     changeLogs: [],
   };
-  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = SqliteRowTypeConverters;
+  rowTypeConverters: Record<string, TypeConverter<Value, Value>> = SqliteRowTypeConverters;
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
   readonly typeConverter = types;

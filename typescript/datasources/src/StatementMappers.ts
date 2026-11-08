@@ -1,4 +1,4 @@
-import type { Cell } from "./converters/Cell.ts";
+import type { Value } from "./converters/Value.ts";
 import { DatasourceError } from "./DatasourceError.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { applySelectFieldAlias, asIndexOf, functionOf, segments, selectFieldAliases } from "./statements/SelectFieldAliases.ts";
@@ -44,7 +44,7 @@ export class StatementMappers implements IMapper<string, string> {
 
   apply = (
     query: IStatement | undefined,
-    cell: (property: string, value: Cell) => Cell,
+    cell: (property: string, value: Value) => Value,
   ): IStatement | undefined => {
     if (query instanceof SelectStatement && query.table)
       return new SelectStatement({
@@ -86,7 +86,7 @@ export class StatementMappers implements IMapper<string, string> {
 
   applyWhere = (
     where: IWhere | undefined,
-    cell: (property: string, value: Cell) => Cell,
+    cell: (property: string, value: Value) => Value,
   ): IWhere | undefined =>
     where instanceof Where ? where.map(this.column, cell) : where;
 

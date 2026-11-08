@@ -1,7 +1,7 @@
 import {
   DatasourceError,
   StatementTextRenderer,
-  type Cell,
+  type Value,
   type Column,
   type DatasourceOptions,
   type ICommand,
@@ -96,7 +96,7 @@ export class PostgresDriver implements IDriver {
     ],
     changeLogs: [],
   };
-  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = PostgresRowTypeConverters;
+  rowTypeConverters: Record<string, TypeConverter<Value, Value>> = PostgresRowTypeConverters;
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
   readonly typeConverter = types;

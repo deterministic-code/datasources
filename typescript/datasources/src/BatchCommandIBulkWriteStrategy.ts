@@ -6,7 +6,7 @@ import type { BulkCommand } from "./BulkCommand.ts";
 import { Native } from "./statements/Native.ts";
 import type { IBulkWriteStrategy } from "./IBulkWriteStrategy.ts";
 import { execute, type ICommand } from "./ICommand.ts";
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import type { Field } from "./builders/Field.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import type { IExpression } from "./statements/IExpression.ts";
@@ -29,7 +29,7 @@ const empty = (): Response => ({ result: null, rowsAffected: 0 });
 const budget = 8000;
 const maxRows = 250;
 
-const assigned = (value: Cell): boolean =>
+const assigned = (value: Value): boolean =>
   value !== null && value !== "" && value !== 0 && value !== 0n;
 
 const listed = (list: readonly string[] | undefined, col: string, fallback: boolean): boolean =>
@@ -221,7 +221,7 @@ export class BatchCommandIBulkWriteStrategy<T extends object> implements IBulkWr
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => ({ name, value: this.cell(name, value, true) as Scalar }));
 
-  private cell = (property: string, value: Cell, fieldsApplied: boolean): Cell =>
+  private cell = (property: string, value: Value, fieldsApplied: boolean): Value =>
     fieldsApplied
       ? value
       : this.options.objectConverter instanceof MetaDataRowTypeConverter &&

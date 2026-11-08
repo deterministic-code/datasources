@@ -1,4 +1,4 @@
-import { TypeConverter, type Cell } from "@deterministic-code/datasources";
+import { TypeConverter, type Value } from "@deterministic-code/datasources";
 
 const decimalText = (text: string): string => {
   const negative = text.startsWith("-");
@@ -11,7 +11,7 @@ const decimalText = (text: string): string => {
   return negative ? `-${digits}` : digits;
 };
 
-export const canonicalDecimal = (from: Cell): Cell => {
+export const canonicalDecimal = (from: Value): Value => {
   if (typeof from === "number") {
     if (!Number.isFinite(from)) return from;
     const text = String(from);
@@ -22,7 +22,7 @@ export const canonicalDecimal = (from: Cell): Cell => {
   return from;
 };
 
-export class DecimalConverter extends TypeConverter<Cell, Cell> {
-  convert = (from: Cell): Cell => canonicalDecimal(from);
-  reverseConvert = (to: Cell): Cell => canonicalDecimal(to);
+export class DecimalConverter extends TypeConverter<Value, Value> {
+  convert = (from: Value): Value => canonicalDecimal(from);
+  reverseConvert = (to: Value): Value => canonicalDecimal(to);
 }

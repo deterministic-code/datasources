@@ -5,6 +5,7 @@ import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrate
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
+import type { Response } from "./Response.ts";
 import { enrichmentsOf } from "./ReadonlyRepository.ts";
 import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
@@ -19,19 +20,16 @@ const unloaded = <TParent>(parent: TParent, into: string): boolean => {
   return value === undefined || value === null;
 };
 
-const asRelated = <TRelated>(writer: ICRUDRepository<TRelated>): ICRUDRepository<TRelated & object> =>
-  writer as ICRUDRepository<TRelated & object>;
-
-const childWriter = <TParent, TRelated>(entry: StoredEnrichment<TParent, TRelated>, into: string): ICRUDRepository<TRelated & object> => {
-  if (entry.persist) return asRelated(entry.persist);
+const childWriter = <TParent, TRelated>(entry: StoredEnrichment<TParent, TRelated>, into: string): ICRUDRepository<TRelated> => {
+  if (entry.persist) return entry.persist;
   throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
 const linkWriter = <TParent, TRelated, TLink>(
   entry: StoredEnrichment<TParent, TRelated, TLink>,
   into: string,
-): ICRUDRepository<TLink & object> => {
-  if (entry.link) return asRelated(entry.link);
+): ICRUDRepository<TLink> => {
+  if (entry.link) return entry.link;
   throw new DatasourceError(`Deep write requires a CRUD repository for "${into}"`);
 };
 
@@ -113,7 +111,10 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     const ready = parents.filter((parent) => !this.skip(parent, enrichment.destinationProperty, mode));
     const children = ready.flatMap((parent) => this.createStrategy.collectChildren(writer, enrichment, parent));
     if (children.length === 0) return;
-    const bulk = writer as ICRUDRepository<object> & { createBulk?: (items: object[]) => Promise<object[]>; updateBulk?: (items: object[]) => Promise<unknown> };
+    const bulk = writer as ICRUDRepository<typeof children[number]> & {
+      createBulk?: (items: typeof children) => Promise<typeof children>;
+      updateBulk?: (items: typeof children) => Promise<Response>;
+    };
     if (mode === "create") {
       if (bulk.createBulk) await bulk.createBulk(children);
       else for (const child of children) await writer.create(child);

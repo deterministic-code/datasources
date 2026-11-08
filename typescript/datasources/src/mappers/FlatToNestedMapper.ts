@@ -1,4 +1,4 @@
-import type { Cell, Cells } from "../converters/Cell.ts";
+import type { Value, Cells } from "../converters/Value.ts";
 import type { IFlatToNestedMapper } from "./IFlatToNestedMapper.ts";
 import type { TypeMap, TypeMapFields } from "./TypeMap.ts";
 import type { TypeMapGroup } from "./TypeMapGroup.ts";
@@ -13,7 +13,7 @@ const stringFields = (fields: TypeMapFields<object>): Record<string, string> =>
 const destOf = (fields: Record<string, string>, column: string) =>
   Object.entries(fields).find(([, source]) => source === column)?.[0] ?? column;
 
-const cellKey = (value: Cell | undefined) => (value == null ? null : String(value));
+const cellKey = (value: Value | undefined) => (value == null ? null : String(value));
 
 export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
   readonly spec: TypeMap<T>;
@@ -40,7 +40,7 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
   reverseMap = (values: T[]): Cells[] => [...values].flatMap((value) => this.explode(value));
 
   private _map = (row: Cells): T => {
-    const dest = {} as Record<string, Cell | Cells[]>;
+    const dest = {} as Record<string, Value | Cells[]>;
     for (const [name, column] of Object.entries(this.scalars)) dest[name] = row[column] ?? null;
     for (const [name, group] of Object.entries(this.groups)) {
       const key = row[group.key];
@@ -61,7 +61,7 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
     const seen = new Set<string>();
     for (const raw of rows) {
       const item = this.mapped(raw) ? raw : this._map(raw);
-      const parent = cellKey((item as Record<string, Cell>)[this.parentDest]);
+      const parent = cellKey((item as Record<string, Value>)[this.parentDest]);
       if (parent == null) continue;
       const existing = byParent.get(parent);
       if (!existing) {
@@ -75,7 +75,7 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
   };
 
   private explode = (value: T): Cells[] => {
-    const record = value as Record<string, Cell | Cells[]>;
+    const record = value as Record<string, Value | Cells[]>;
     let rows: Cells[] = [this.scalarsOf(record)];
     for (const [name, group] of Object.entries(this.groups)) {
       const children = (record[name] as Cells[] | undefined)?.length
@@ -86,10 +86,10 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
     return rows;
   };
 
-  private scalarsOf = (record: Record<string, Cell | Cells[]>): Cells => {
+  private scalarsOf = (record: Record<string, Value | Cells[]>): Cells => {
     const row: Cells = {};
     for (const [name, column] of Object.entries(this.scalars))
-      row[column] = (record[name] as Cell | undefined) ?? null;
+      row[column] = (record[name] as Value | undefined) ?? null;
     return row;
   };
 
@@ -100,7 +100,7 @@ export class FlatToNestedMapper<T> implements IFlatToNestedMapper<T> {
   };
 
   private mapped = (row: T | Cells): row is T =>
-    Object.keys(this.groups).every((name) => Array.isArray((row as Record<string, unknown>)[name]));
+    Object.keys(this.groups).every((name) => Array.isArray((row as T & Record<string, Cells[]>)[name]));
 
   private mark = (seen: Set<string>, parent: string, item: T) => {
     const record = item as Record<string, Cells[]>;

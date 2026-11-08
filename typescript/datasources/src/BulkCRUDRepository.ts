@@ -1,6 +1,6 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
 import { createCRUDRepositoryOptions } from "./createCRUDRepositoryOptions.ts";

@@ -15,9 +15,9 @@ import { SelectStatement } from "./statements/SelectStatement.ts";
 import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import { Where } from "./statements/Where.ts";
 import { WhereText } from "./statements/WhereText.ts";
-import type { Cell } from "./converters/Cell.ts";
+import type { Value } from "./converters/Value.ts";
 
-const mapper = (name: string, value: Cell): Cell =>
+const mapper = (name: string, value: Value): Value =>
   typeof value === "string" ? `${name}:${value.toUpperCase()}` : value;
 
 describe("StatementMappers", () => {

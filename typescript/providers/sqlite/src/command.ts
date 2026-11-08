@@ -12,7 +12,7 @@ import {
   splitStatements,
   statementParameters,
   StreamingReader,
-  type Cell,
+  type Value,
   type Cells,
   type Scalar,
   type ICommand,
@@ -112,7 +112,7 @@ export class SqliteCommand extends CommandMiddlewareHost implements ICommand {
 
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
     return this.run(text.text, parameters, async (query, params) => {
-      if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
+      if (!query.trim()) return { value: new Response(null, 0, params), rows: [] };
       this.connection.ensureOpen();
       const db = this.connection.require();
       const named = bound(params);
@@ -148,7 +148,7 @@ type SqliteColumn = { name: string; column: string | null; table: string | null;
 type ColumnStatement = SqliteStatement & {
   columns?: () => SqliteColumn[];
   raw?: (enabled: boolean) => {
-    iterate(params?: Record<string, Scalar>): IterableIterator<Cell[]>;
+    iterate(params?: Record<string, Scalar>): IterableIterator<Value[]>;
   };
 };
 
@@ -174,7 +174,7 @@ const closable = (
 };
 
 const namedRows = (
-  iter: IterableIterator<Cell[]>,
+  iter: IterableIterator<Value[]>,
   names: string[],
 ): IterableIterator<Cells> & { return(): IteratorResult<Cells> } => {
   /* v8 ignore next */

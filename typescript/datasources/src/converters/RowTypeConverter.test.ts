@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { Cell } from "./Cell.ts";
+import type { Value } from "./Value.ts";
 import { TypeConverter } from "./TypeConverter.ts";
 import { MetaDataRowTypeConverter } from "./MetaDataRowTypeConverter.ts";
 import { RowTypeConverter } from "./RowTypeConverter.ts";
 
-class OnlyOne extends TypeConverter<Cell, Cell> {
-  convert = (value: Cell): Cell => value === 1;
-  reverseConvert = (value: Cell): Cell => value;
+class OnlyOne extends TypeConverter<Value, Value> {
+  convert = (value: Value): Value => value === 1;
+  reverseConvert = (value: Value): Value => value;
 }
 
 describe("MetaDataRowTypeConverter", () => {
@@ -70,9 +70,9 @@ describe("MetaDataRowTypeConverter", () => {
     const created = new Date("2024-01-15T10:00:00.000Z");
     const blob = new Uint8Array([1, 2]);
     expect(dated.reverseConvert(Object.assign(new Dated(), { created, blob }))).toEqual({ created, blob });
-    class Flip extends TypeConverter<Cell, Cell> {
-      convert = (value: Cell): Cell => value;
-      reverseConvert = (): Cell => 7;
+    class Flip extends TypeConverter<Value, Value> {
+      convert = (value: Value): Value => value;
+      reverseConvert = (): Value => 7;
     }
     const flagged = new MetaDataRowTypeConverter<Item>({ Type: new Flip() });
     flagged.references.add("Type");

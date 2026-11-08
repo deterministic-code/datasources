@@ -2,7 +2,7 @@ import {
   columnType as identityColumnType,
   StatementTextRenderer,
   StubTransaction,
-  type Cell,
+  type Value,
   type Column,
   type DatasourceOptions,
   type ICommand,
@@ -82,7 +82,7 @@ export class OracleDriver implements IDriver {
     ],
     changeLogs: [],
   };
-  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Value, Value>> = {};
   readonly quoteLeft = '"';
   readonly quoteRight = '"';
   readonly typeConverter = types;

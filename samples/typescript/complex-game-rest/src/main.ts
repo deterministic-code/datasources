@@ -18,6 +18,7 @@ import type { Group } from "../generated/types/datasource/group.ts";
 import type { PhoneType } from "../generated/types/datasource/phoneType.ts";
 import type { Role } from "../generated/types/datasource/role.ts";
 import { Api } from "./api.ts";
+import { toJson } from "./jsonObject.ts";
 
 await using ds = Datasource.default;
 const connection = await ds.createConnection();
@@ -48,7 +49,7 @@ const user = await call(api, "POST", "/users", {
   roles: [{ name: role.name, description: role.description }],
   groups: [{ name: group.name, description: group.description }],
 }, 201);
-const userId = user.id as number;
+const userId = user.id;
 const listed = await call(api, "GET", "/users?username=ada", undefined, 200);
 if (!Array.isArray(listed) || listed.length !== 1) throw new Error("get users username");
 await call(api, "PUT", `/users?id=${userId}`, {
@@ -59,16 +60,16 @@ await call(api, "PUT", `/users?id=${userId}`, {
   groups: [{ name: group.name }],
 }, 200);
 const loaded = await call(api, "GET", `/users?id=${userId}`, undefined, 200);
-if (!Array.isArray(loaded) || loaded[0]?.username !== "ada-byron") throw new Error("put users");
+if (!Array.isArray(loaded) || loaded[0].username !== "ada-byron") throw new Error("put users");
 
 const root = await call(api, "POST", "/categories", { name: "arcade", description: "root" }, 201);
-const rootId = root.id as number;
+const rootId = root.id;
 const child = await call(api, "POST", "/categories", { name: "shooter", description: "child", categoryId: rootId }, 201);
-const childId = child.id as number;
+const childId = child.id;
 const roots = await call(api, "GET", "/categories?category_id=", undefined, 200);
-if (!Array.isArray(roots) || roots.length !== 1 || roots[0]?.id !== rootId) throw new Error("get category roots");
+if (!Array.isArray(roots) || roots.length !== 1 || roots[0].id !== rootId) throw new Error("get category roots");
 const children = await call(api, "GET", `/categories?categoryId=${rootId}`, undefined, 200);
-if (!Array.isArray(children) || children.length !== 1 || children[0]?.id !== childId) throw new Error("get category children");
+if (!Array.isArray(children) || children.length !== 1 || children[0].id !== childId) throw new Error("get category children");
 
 const game = await call(api, "POST", "/games", {
   name: "star",
@@ -77,7 +78,7 @@ const game = await call(api, "POST", "/games", {
   settings: { lives: "3" },
   categories: [{ id: childId, name: "shooter" }],
 }, 201);
-const gameId = game.id as number;
+const gameId = game.id;
 await call(api, "GET", `/games?id=${gameId}`, undefined, 200);
 await call(api, "PUT", `/games?id=${gameId}`, {
   name: "star-2",
@@ -88,12 +89,12 @@ await call(api, "PUT", `/games?id=${gameId}`, {
 }, 200);
 
 const review = await call(api, "POST", "/reviews", { gameId, userId, description: "fun", rating: "4.50", isApproved: true }, 201);
-const reviewId = review.id as number;
+const reviewId = review.id;
 await call(api, "GET", `/reviews?gameId=${gameId}&userId=${userId}`, undefined, 200);
 await call(api, "PUT", `/reviews?id=${reviewId}`, { gameId, userId, description: "great", rating: "5.00", isApproved: true }, 200);
 
 const state = await call(api, "POST", "/game_states", { gameId, userId, state: "intro" }, 201);
-const stateId = state.id as number;
+const stateId = state.id;
 await call(api, "GET", `/game_states?gameId=${gameId}&userId=${userId}`, undefined, 200);
 await call(api, "PUT", `/game_states?id=${stateId}`, { gameId, userId, state: "boss" }, 200);
 
@@ -108,7 +109,7 @@ const contact = await call(api, "POST", "/contacts", {
   ],
   phones: [{ phoneTypeName: "Mobile", number: "555-0100" }],
 }, 201);
-const contactId = contact.id as number;
+const contactId = contact.id;
 const created = await call(api, "GET", `/contacts?id=${contactId}`, undefined, 200);
 requireAdaChildren(created, "Home", "London", "555-0100");
 if (addressByLine1(contactRow(created), "1 Strand").addressTypeName !== "Work")
@@ -151,38 +152,30 @@ for (const target of [
   await call(api, "PUT", target, {}, 404);
 }
 
-async function call(api: Api, method: string, target: string, body: object | undefined, status: number): Promise<Record<string, never> & { id?: number; username?: string }> {
-  const result = await api.handle(method, target, body == null ? undefined : JSON.stringify(body));
+async function call(api: Api, method: string, target: string, body: object | undefined, status: number) {
+  const result = await api.handle(method, target, body == null ? undefined : toJson(body));
   if (result.status !== status) throw new Error(`${method} ${target} => ${result.status} ${result.body}`);
   return result.body.length === 0 ? {} : JSON.parse(result.body);
 }
 
-type ContactJson = {
-  id: number;
-  addresses: Array<{ id?: number; line1: string; addressTypeName: string; city: string; contactId: number }>;
-  phones: Array<{ id?: number; number: string; phoneTypeName: string; contactId: number }>;
-};
-
-function contactRow(listed: unknown): ContactJson {
+function contactRow(listed: any) {
   if (!Array.isArray(listed) || listed.length !== 1) throw new Error("contact list");
-  return listed[0] as ContactJson;
+  return listed[0];
 }
 
-function addressByLine1(contact: ContactJson, line1: string) {
+function addressByLine1(contact: any, line1: string) {
   const address = contact.addresses.find((row) => row.line1 === line1);
   if (address == null) throw new Error(line1);
   return address;
 }
 
-function requireAdaChildren(listed: unknown, engineType: string, engineCity: string, number: string) {
+function requireAdaChildren(listed: any, engineType: string, engineCity: string, number: string) {
   const contact = contactRow(listed);
   if (contact.addresses.length !== 2 || contact.phones.length !== 1) throw new Error("child counts");
   const engine = addressByLine1(contact, "12 Analytical Engine");
   if (engine.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
-  const addressFk: typeof contact.id = engine.contactId;
-  if (typeof engine.contactId !== "number" || addressFk !== contact.id) throw new Error("address contactId");
+  if (engine.contactId !== contact.id) throw new Error("address contactId");
   const phone = contact.phones[0];
   if (phone.number !== number || phone.phoneTypeName !== "Mobile") throw new Error("phone");
-  const phoneFk: typeof contact.id = phone.contactId;
-  if (typeof phone.contactId !== "number" || phoneFk !== contact.id) throw new Error("phone contactId");
+  if (phone.contactId !== contact.id) throw new Error("phone contactId");
 }

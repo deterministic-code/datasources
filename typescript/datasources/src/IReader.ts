@@ -1,4 +1,6 @@
-export interface IReader<T = unknown> {
+import type { Cells } from "./converters/Value.ts";
+
+export interface IReader<T = Cells> {
   readonly current: T | undefined;
   next(): Promise<boolean>;
   nextResult(): Promise<boolean>;

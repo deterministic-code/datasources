@@ -1,8 +1,8 @@
-import type { Cell } from "../converters/Cell.ts";
+import type { Value } from "../converters/Value.ts";
 import type { Condition } from "./Condition.ts";
 import { Operator } from "./Operator.ts";
 
-export type Comparison = (column: string, value: Cell) => Condition;
+export type Comparison = (column: string, value: Value) => Condition;
 
 export const eq: Comparison = (column, value) => new Operator.Equals(column, value);
 export const ne: Comparison = (column, value) => new Operator.NotEquals(column, value);

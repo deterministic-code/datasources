@@ -1,5 +1,5 @@
 import type { Parameter } from "../Parameter.ts";
-import type { Cell } from "../converters/Cell.ts";
+import type { Value } from "../converters/Value.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
 import { Identifier } from "./Identifier.ts";
 import type { IConditionVisitor } from "./IConditionVisitor.ts";
@@ -57,7 +57,7 @@ const side = (
   expression: IExpression,
   other: IExpression,
   column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
+  value: (name: string, cell: Value) => Value,
 ): IExpression =>
   expression instanceof Literal && other instanceof Identifier
     ? new Literal(value(other.name, expression.value))
@@ -67,7 +67,7 @@ const inRight = (
   left: IExpression,
   right: IExpression,
   column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
+  value: (name: string, cell: Value) => Value,
 ): IExpression =>
   left instanceof Identifier && right instanceof ArrayExpression
     ? new ArrayExpression(
@@ -83,7 +83,7 @@ const bound = (
   subject: IExpression,
   edge: IExpression,
   column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
+  value: (name: string, cell: Value) => Value,
 ): IExpression =>
   subject instanceof Identifier && edge instanceof Literal
     ? new Literal(value(subject.name, edge.value))
@@ -92,14 +92,14 @@ const bound = (
 const rewriteWhere = (
   where: IWhere | undefined,
   column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
+  value: (name: string, cell: Value) => Value,
 ): IWhere | undefined =>
   where instanceof Where ? new Where(rewrite(where.condition, column, value)) : where;
 
 const rewriteQuery = (
   query: SelectStatement,
   column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
+  value: (name: string, cell: Value) => Value,
 ): SelectStatement =>
   query.table === undefined
     ? query
@@ -122,7 +122,7 @@ const rewriteQuery = (
 const rewrite = (
   expression: IExpression,
   column: (name: string) => string,
-  value: (name: string, cell: Cell) => Cell,
+  value: (name: string, cell: Value) => Value,
 ): IExpression =>
   expression instanceof Where
     ? rewrite(expression.condition, column, value)
@@ -174,7 +174,7 @@ const rewrite = (
                                                     throw new Error("empty expression");
                                                   })();
 
-const listed = (name: string, elements: IExpression[]): Parameter<Cell>[] =>
+const listed = (name: string, elements: IExpression[]): Parameter<Value>[] =>
   elements.map((element, i) =>
     element instanceof Literal
       ? { name: `${parameterName(name)}_${i}`, value: element.value }
@@ -183,7 +183,7 @@ const listed = (name: string, elements: IExpression[]): Parameter<Cell>[] =>
         })(),
   );
 
-const collect = (expression: IExpression): Parameter<Cell>[] => {
+const collect = (expression: IExpression): Parameter<Value>[] => {
   if (expression instanceof Where) return collect(expression.condition);
   if (expression instanceof Literal || expression instanceof Identifier) return [];
   if (expression instanceof Operator.Not || expression instanceof Operator.IsNull || expression instanceof Operator.IsNotNull)
@@ -226,21 +226,21 @@ export class Where implements IWhere {
   readonly condition: IExpression;
 
   constructor(condition: IExpression);
-  constructor(column: string, op: Comparison, value: Cell);
-  constructor(columnOrCondition: IExpression | string, op: Comparison = eq, value: Cell = null) {
+  constructor(column: string, op: Comparison, value: Value);
+  constructor(columnOrCondition: IExpression | string, op: Comparison = eq, value: Value = null) {
     this.condition =
       typeof columnOrCondition === "string" ? op(columnOrCondition, value) : columnOrCondition;
   }
 
-  and(column: string, op: Comparison, value: Cell): Where {
+  and(column: string, op: Comparison, value: Value): Where {
     return new Where(new Operator.And(this.condition, op(column, value)));
   }
 
-  or(column: string, op: Comparison, value: Cell): Where {
+  or(column: string, op: Comparison, value: Value): Where {
     return new Where(new Operator.Or(this.condition, op(column, value)));
   }
 
-  map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): Where {
+  map(column: (name: string) => string, value: (name: string, cell: Value) => Value): Where {
     return new Where(rewrite(this.condition, column, value));
   }
 

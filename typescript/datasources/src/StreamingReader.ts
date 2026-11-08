@@ -1,4 +1,4 @@
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { IReader } from "./IReader.ts";
 import { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
 

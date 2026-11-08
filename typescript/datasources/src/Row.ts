@@ -1,3 +1,3 @@
-import type { Cell } from "./converters/Cell.ts";
+import type { Value } from "./converters/Value.ts";
 
-export type Row = Record<string, Cell>;
+export type Row = Record<string, Value>;

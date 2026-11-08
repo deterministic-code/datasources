@@ -1,7 +1,8 @@
 import { DatasourceError } from "./DatasourceError.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
+import type { Cells } from "./converters/Value.ts";
 
-export class RepositoryBuilderOptionsFactory<T = object> {
+export class RepositoryBuilderOptionsFactory<T = Cells> {
   private fallback?: CRUDRepositoryOptions<T>;
   private readonly items = new Map<string, CRUDRepositoryOptions<T>>();
 

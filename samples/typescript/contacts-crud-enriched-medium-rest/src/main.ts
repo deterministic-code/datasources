@@ -1,5 +1,6 @@
 import "../generated/repositories/repositoryRegistry.ts";
 import { Datasource, Operator, Where } from "@deterministic-code/datasources";
+import type { Contact } from "../generated/types/view/contact.ts";
 
 await using ds = Datasource.default;
 const contacts = ds.contacts;
@@ -126,22 +127,13 @@ await contacts.delete(after);
 if ((await contacts.readSingle(new Where(new Operator.Equals("id", ada.id)))) != null)
   throw new Error("delete ada");
 
-function requireAdaChildren(
-  row: {
-    id: number;
-    addresses: { line1: string; city: string; addressTypeName: string; contactId: number }[];
-    phones: { number: string; phoneTypeName: string; contactId: number }[];
-  },
-  engineType: string,
-  engineCity: string,
-  number: string,
-) {
+function requireAdaChildren(row: Contact, engineType: string, engineCity: string, number: string) {
   if (row.addresses.length !== 2 || row.phones.length !== 1) throw new Error("child counts");
   const engine = row.addresses.find((address) => address.line1 === "12 Analytical Engine");
   if (engine?.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
-  const addressFk: typeof row.id = engine.contactId;
+  const addressFk: Contact["id"] = engine.contactId;
   if (addressFk !== row.id) throw new Error("address contactId");
   if (row.phones[0].number !== number || row.phones[0].phoneTypeName !== "Mobile") throw new Error("phone");
-  const phoneFk: typeof row.id = row.phones[0].contactId;
+  const phoneFk: Contact["id"] = row.phones[0].contactId;
   if (phoneFk !== row.id) throw new Error("phone contactId");
 }
