@@ -45,12 +45,12 @@ fn by_or_key(by: &[String], key: &str) -> Vec<String> {
     }
 }
 
-fn type_of(parameters: &[RoutineParameter], name: &str, fallback: &str) -> String {
+fn type_of(parameters: &[RoutineParameter], name: &str) -> String {
     parameters
         .iter()
         .find(|p| p.name == name)
         .map(|p| p.r#type.clone())
-        .unwrap_or_else(|| fallback.to_string())
+        .unwrap_or_else(|| panic!("missing parameter \"{name}\""))
 }
 
 impl MysqlStoredProcedureStatementRenderer {
@@ -133,7 +133,7 @@ impl MysqlStoredProcedureStatementRenderer {
         let signature = statement
             .by_properties()
             .iter()
-            .map(|c| format!("IN {c} {}", type_of(statement.parameters(), c, statement.key_type())))
+            .map(|c| format!("IN {c} {}", type_of(statement.parameters(), c)))
             .collect::<Vec<_>>()
             .join(", ");
         procedure(
@@ -175,7 +175,7 @@ impl MysqlStoredProcedureStatementRenderer {
         let by = by_or_key(statement.by_properties(), statement.key());
         let signature = by
             .iter()
-            .map(|c| format!("IN {c} {}", type_of(statement.parameters(), c, statement.key_type())))
+            .map(|c| format!("IN {c} {}", type_of(statement.parameters(), c)))
             .collect::<Vec<_>>()
             .join(", ");
         procedure(
@@ -240,11 +240,7 @@ impl MysqlStoredProcedureStatementRenderer {
             .iter()
             .find(|c| c.name == statement.key())
             .cloned()
-            .unwrap_or(RoutineParameter {
-                name: statement.key().into(),
-                r#type: statement.key_type().into(),
-                field: None,
-            });
+            .unwrap_or_else(|| panic!("{}: missing key column \"{}\"", statement.name(), statement.key()));
         procedure(
             statement.name(),
             &format!("IN {} {}", statement.payload().name, statement.payload().r#type),

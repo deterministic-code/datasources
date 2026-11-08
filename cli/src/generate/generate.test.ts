@@ -233,7 +233,7 @@ types:
         cwd,
       ),
     ).toBe(1);
-    expect(errs).toEqual(['missing type "ghost"']);
+    expect(errs).toEqual(["address.ghosts references ghost.ghost_id has no type"]);
   });
 
   it("writes sqlite migrations for complex-game with local includes", async () => {
@@ -442,7 +442,7 @@ types: []
     expect(rust.some((entry) => entry.kind === "content" && entry.contents?.includes('Some("name".into())'))).toBe(true);
   });
 
-  it("reads a linked related type from expanded types and skips relatedProperty when that type is gone", async () => {
+  it("reads a linked related type from expanded types and throws when that type is gone", async () => {
     const files = {
       "types.yaml": `version: 1.0.0
 types:
@@ -491,8 +491,22 @@ types: []
       ...withoutRoleTable,
       expandedTypes: withoutRoleTable.expandedTypes.filter((type) => type.name !== "role"),
     };
-    const fromMissing = planRepositories(missing, "csharp", settings);
-    expect(fromMissing.find((model) => model.specName === "user")?.enrichments.find((item) => item.destination === "Roles")?.relatedProperty).toBeUndefined();
+    expect(() => planRepositories(missing, "csharp", settings)).toThrow("role: missing type");
+    expect(() =>
+      planRepositories(
+        {
+          ...spec,
+          types: spec.types.map((type) =>
+            type.name === "role" ? { ...type, fields: type.fields.filter((field) => field.name !== "id") } : type,
+          ),
+          expandedTypes: spec.expandedTypes.map((type) =>
+            type.name === "role" ? { ...type, fields: type.fields.filter((field) => field.name !== "id") } : type,
+          ),
+        },
+        "csharp",
+        settings,
+      ),
+    ).toThrow("role: missing primary key");
   });
 
   it("maps legacy contacts and enriches contact lists", async () => {
@@ -1539,6 +1553,8 @@ types:
       - id:
           type: integer
           is_id: true
+      - right_id:
+          references: right.id
       - rights:
           type: right[]
           references: right.left_id
@@ -1548,6 +1564,8 @@ types:
       - id:
           type: integer
           is_id: true
+      - left_id:
+          references: left.id
       - lefts:
           type: left[]
           references: left.right_id

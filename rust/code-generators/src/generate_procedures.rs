@@ -99,7 +99,7 @@ pub fn for_table(
             let parameters = logical
                 .iter()
                 .map(|name| {
-                    let field = t.fields.iter().find(|f| f.name == *name).cloned().unwrap_or_else(|| pk.clone());
+                    let field = t.fields.iter().find(|f| f.name == *name).cloned().unwrap_or_else(|| panic!("{}: missing field \"{name}\"", t.name));
                     param(&field)
                 })
                 .collect::<Vec<_>>();

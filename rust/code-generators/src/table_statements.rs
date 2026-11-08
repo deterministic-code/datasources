@@ -175,7 +175,7 @@ pub fn seed_insert(
         .map(|(i, column)| {
             Parameter::new(
                 column_name(naming, table, column),
-                sql_value(values.get(i).map(String::as_str).unwrap_or("NULL")),
+                sql_value(values.get(i).map(String::as_str).unwrap_or_else(|| panic!("{}: missing seed value for column \"{column}\"", table.name))),
             )
         })
         .collect();
@@ -191,7 +191,7 @@ pub fn identity_insert(
     let keys = table_identity(table);
     IdentityInsertStatement::new(
         table.table_name.clone(),
-        column_name(naming, table, keys.first().map(String::as_str).unwrap_or("id")),
+        column_name(naming, table, keys.first().map(String::as_str).unwrap_or_else(|| panic!("{}: missing primary key", table.name))),
         inserts,
         identity,
     )

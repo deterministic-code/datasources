@@ -43,11 +43,14 @@ const flattenTable = (
   const indexes = table.indexes.map((idx) =>
     renderSql(dialect, createIndexStatementOf(naming, table, idx)),
   );
-  const keyed = { ...table, pkName: pkName(table, overlayOf(table)) };
   const audit = hasAuditColumns(table)
     ? renderSql(
         dialect,
-        createTriggerStatementOf(keyed, naming, keyed.pkName ?? "id"),
+        createTriggerStatementOf(
+          table,
+          naming,
+          pkName(table, overlayOf(table)) ?? (() => { throw new Error(`${table.name}: missing primary key`); })(),
+        ),
       )
     : "";
   return [renderSql(dialect, createTableStatementOf(table, naming, live)), ...indexes, audit];

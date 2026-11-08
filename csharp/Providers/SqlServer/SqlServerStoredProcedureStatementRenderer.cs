@@ -54,7 +54,7 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
                 GO
                 """;
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"@{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"@{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         var pred = string.Join(" AND ", statement.ByProperties.Select(column => $"{column} = @{column}"));
         return $"""
             CREATE OR ALTER PROCEDURE {statement.Name} {signature}
@@ -95,7 +95,7 @@ internal sealed class SqlServerStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"@{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"@{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         var pred = string.Join(" AND ", by.Select(column => $"{column} = @{column}"));
         return $"""
             CREATE OR ALTER PROCEDURE {statement.Name} {signature}

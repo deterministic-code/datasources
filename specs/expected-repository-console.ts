@@ -190,7 +190,8 @@ export const repositoryQueries = (spec: RepositorySpec, provider = ""): string[]
     throw new Error(`${spec.name}: empty step`);
   }).flatMap((sql, index) => {
     const step = spec.steps[index];
-    const id = spec.type.ids[0] ?? "id";
+    const id = spec.type.ids[0];
+    if (id === undefined) throw new Error(`${spec.name}: missing primary key`);
     const inserted =
       step?.CREATE && spec.type.ids.length === 1
       && !assigned(flattenRepositoryRow(step.CREATE.row, type.mappings)[id])

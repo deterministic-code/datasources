@@ -13,6 +13,8 @@ import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
 import { PostgresDriver } from "./PostgresDriver.ts";
 
 const typeOf = (parameter: RoutineParameter): string => PostgresDriver.nativeParam(parameter);
+const param = (parameters: readonly RoutineParameter[], name: string, proc: string): RoutineParameter =>
+  parameters.find((p) => p.name === name) ?? (() => { throw new Error(`${proc}: missing parameter "${name}"`); })();
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  ${p.name} ${typeOf(p)}`).join(",\n");
@@ -52,7 +54,7 @@ LANGUAGE sql AS $$ ${select}; $$`;
 LANGUAGE sql AS $$ SELECT ${aliased} FROM ${statement.table} t ORDER BY t.${statement.key}; $$`;
     }
     const signature = statement.byProperties
-      .map((c) => `${c} ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
+      .map((c) => `${c} ${typeOf(param(statement.parameters, c, statement.name))}`)
       .join(", ");
     const pred = statement.byProperties
       .map((c) => `t.${c} = ${statement.name}.${c}`)
@@ -88,7 +90,7 @@ $$`;
   renderDelete(statement: CreateDeleteStoredProcedureStatement): string {
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
-      .map((c) => `${c} ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
+      .map((c) => `${c} ${typeOf(param(statement.parameters, c, statement.name))}`)
       .join(", ");
     const pred = by.map((c) => `t.${c} = ${statement.name}.${c}`).join(" AND ");
     return `CREATE OR REPLACE FUNCTION ${statement.name}(${signature}) RETURNS INT LANGUAGE plpgsql AS $$

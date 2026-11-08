@@ -37,4 +37,10 @@ describe("nestedSelectFromSpec", () => {
     expect(graph.relations.some((item) => item.name === "ContactSource" && item.kind === "object")).toBe(true);
     expect(graph.relations.some((item) => item.name === "Addresses" && item.kind === "list")).toBe(true);
   });
+
+  it("throws when the type has no primary key", () => {
+    expect(() => nestedSelectFromSpec([typed("item", [{ name: "name", type: "string" }])], "item")).toThrow(
+      "item: missing primary key",
+    );
+  });
 });

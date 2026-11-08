@@ -9,25 +9,8 @@ pub fn pk_of(table: &SqlTable) -> SpecTypeField {
         .fields
         .iter()
         .find(|f| f.name == pk_name)
-        .or_else(|| table.fields.iter().find(|f| f.name == "id"))
         .cloned()
-        .unwrap_or_else(|| SpecTypeField {
-            name: "id".into(),
-            type_name: "integer".into(),
-            kind: "primitive".into(),
-            base: "integer".into(),
-            is_array: false,
-            is_map: false,
-            is_nullable: false,
-            is_id: false,
-            size: None,
-            references: None,
-            reference_pair: None,
-            default_value: None,
-            has_default: false,
-            source: None,
-            original: None,
-        })
+        .unwrap_or_else(|| panic!("{}: missing primary key field \"{pk_name}\"", table.name))
 }
 
 pub fn create_params(table: &SqlTable) -> Vec<SpecTypeField> {

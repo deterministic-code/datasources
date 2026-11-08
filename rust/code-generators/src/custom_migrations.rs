@@ -41,7 +41,9 @@ pub fn of(
                 "discoverCustomMigrations: {path} does not match expected pattern <order>_<name>_(up|down).sql"
             )));
         };
-        let order: i32 = caps[1].parse().unwrap_or(0);
+        let order: i32 = caps[1].parse().map_err(|_| {
+            DatasourceError::message(format!("discoverCustomMigrations: {path} has invalid order"))
+        })?;
         if !(1..=999).contains(&order) {
             return Err(DatasourceError::message(format!(
                 "discoverCustomMigrations: {path} has order {order}; must be in [1, 999]"

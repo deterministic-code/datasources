@@ -62,7 +62,8 @@ export const procedureStatementsForTable = (
   });
   const byGroups: ProcedureByGroup[] = groups.map((logical) => {
     const parameters = logical.map((name) => {
-      const field = table.fields.find((f) => f.name === name) ?? pk;
+      const field = table.fields.find((f) => f.name === name);
+      if (field === undefined) throw new Error(`${t.name}: missing field "${name}"`);
       return param(field);
     });
     const update = [

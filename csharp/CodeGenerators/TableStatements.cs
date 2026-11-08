@@ -93,7 +93,7 @@ public static class TableStatements
         var keys = SqlSchema.TableIdentity(table);
         return new IdentityInsertStatement(
             table.TableName,
-            CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, keys.FirstOrDefault() ?? "id"), naming),
+            CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, keys.FirstOrDefault() ?? throw new InvalidOperationException($"{table.Name}: missing primary key")), naming),
             inserts,
             identity);
     }

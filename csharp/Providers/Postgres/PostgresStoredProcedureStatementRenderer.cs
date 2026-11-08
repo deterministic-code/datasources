@@ -48,7 +48,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
                 LANGUAGE sql AS $$ SELECT {aliased} FROM {PostgresDriver.Quote(statement.Table)} t ORDER BY t.{statement.Key}; $$
                 """;
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         var pred = string.Join(" AND ", statement.ByProperties.Select(column => $"t.{column} = {statement.Name}.{column}"));
         return $"""
             CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS SETOF {PostgresDriver.Quote(statement.Table)}
@@ -88,7 +88,7 @@ internal sealed class PostgresStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"{column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         var pred = string.Join(" AND ", by.Select(column => $"t.{column} = {statement.Name}.{column}"));
         return $"""
             CREATE OR REPLACE FUNCTION {statement.Name}({signature}) RETURNS INT LANGUAGE plpgsql AS $$

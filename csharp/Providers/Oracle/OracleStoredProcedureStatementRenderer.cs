@@ -47,7 +47,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
                 END;
                 """;
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"{column} IN {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"{column} IN {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         var pred = string.Join(" AND ", statement.ByProperties.Select(column => $"t.{column} = {column}"));
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({signature}) AS
@@ -84,7 +84,7 @@ internal sealed class OracleStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"{column} IN {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"{column} IN {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         var pred = string.Join(" AND ", by.Select(column => $"t.{column} = {column}"));
         return $"""
             CREATE OR REPLACE PROCEDURE {statement.Name}({signature}) AS

@@ -71,8 +71,11 @@ const trigger = (
   dialect: SqlDialect,
   table: LiveTable,
   naming: StatementNaming,
-): IStatement =>
-  createTriggerStatementOf(table, naming, pkName(table, overlayOf(table)) ?? "id");
+): IStatement => {
+  const pk = pkName(table, overlayOf(table));
+  if (pk === undefined) throw new Error(`${table.name}: missing primary key`);
+  return createTriggerStatementOf(table, naming, pk);
+};
 
 const dropTrigger = (
   dialect: SqlDialect,

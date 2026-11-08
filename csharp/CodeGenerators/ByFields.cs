@@ -7,7 +7,8 @@ public static class ByFields
             .Select(type =>
             {
                 var overlay = SqlSchema.OverlayOf(type);
-                var pk = SpecTables.PkName(type.AsType(), overlay);
+                var pk = SpecTables.IdentityColumns(type.AsType(), overlay).FirstOrDefault();
+                if (pk is null) return (type.Name, names: new List<string>());
                 var names = SpecTables.UniqueLookupFields(type.AsType(), overlay).Where(name => name != pk).ToList();
                 return (type.Name, names);
             })

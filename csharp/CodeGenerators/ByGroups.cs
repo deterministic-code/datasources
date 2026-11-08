@@ -3,14 +3,16 @@ namespace Datasources.CodeGenerators;
 public static class ByGroups
 {
     public static Dictionary<string, IReadOnlyList<IReadOnlyList<string>>> From(IReadOnlyList<SqlTable> types) =>
-        types.ToDictionary(type => type.Name, type => Of(type), StringComparer.Ordinal);
+        types
+            .Where(type => SpecTables.IdentityColumns(type.AsType(), SqlSchema.OverlayOf(type)).Count > 0)
+            .ToDictionary(type => type.Name, type => Of(type), StringComparer.Ordinal);
 
     static IReadOnlyList<IReadOnlyList<string>> Of(SqlTable type)
     {
         var overlay = SqlSchema.OverlayOf(type);
         var pk = SpecTables.PkName(type.AsType(), overlay);
         var groups = new List<IReadOnlyList<string>>();
-        if (pk is not null) groups.Add([pk]);
+        groups.Add([pk]);
         void Add(IReadOnlyList<string> props)
         {
             if (props.Count == 0) return;

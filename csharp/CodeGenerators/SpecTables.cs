@@ -25,11 +25,12 @@ public static class SpecTables
         if (marked.Count > 0) return marked;
         var fixedId = table?.Fields.FirstOrDefault(f => f.IsFixedId == true);
         if (fixedId is not null) return [fixedId.Name];
-        return type?.Inherits == "set" || type is null ? ["id"] : [];
+        return type?.Inherits == "set" ? ["id"] : [];
     }
 
     public static string PkName(SpecType type, DatasourceTable? table) =>
-        IdentityColumns(type, table).FirstOrDefault() ?? "id";
+        IdentityColumns(type, table).FirstOrDefault()
+        ?? throw new InvalidOperationException($"{type.Name}: missing primary key");
 
     public static bool IsPkField(SpecTypeField field, SpecType type, DatasourceTable? table) =>
         IdentityColumns(type, table).Contains(field.Name);
@@ -57,8 +58,11 @@ public static class SpecTables
     public static (string Table, string Column) ReferenceTarget(SpecTypeField field)
     {
         if (field.ReferencePair is { Count: 2 } pair) return (pair[0], pair[1]);
-        var parts = (field.References ?? "").Split('.', 2);
-        return (parts.ElementAtOrDefault(0) ?? "", parts.ElementAtOrDefault(1) ?? "");
+        if (string.IsNullOrEmpty(field.References)) return ("", "");
+        var i = field.References.IndexOf('.');
+        if (i < 1 || i == field.References.Length - 1)
+            throw new InvalidOperationException($"invalid reference \"{field.References}\"");
+        return (field.References[..i], field.References[(i + 1)..]);
     }
 
     public static (string Left, string Right)? SplitDot(string value)

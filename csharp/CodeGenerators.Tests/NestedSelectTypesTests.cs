@@ -21,6 +21,19 @@ public class NestedSelectTypesTests
         Assert.Contains(nested.Select.Fields, field => field.Contains("FirstName", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void ThrowsWhenTypeHasNoPrimaryKey()
+    {
+        var type = new SpecType
+        {
+            Name = "item",
+            Tags = ["datasource_type"],
+            Fields = [new SpecTypeField { Name = "name", Type = "string", Kind = "primitive", Base = "string", IsArray = false, IsNullable = false }],
+        };
+        var error = Assert.Throws<InvalidOperationException>(() => NestedSelectTypes.FromSpec([type], "item"));
+        Assert.Equal("item: missing primary key", error.Message);
+    }
+
     static IReadOnlyDictionary<string, string> Files()
     {
         var dir = Path.Combine(SpecParser.SpecsDir(), "contacts");

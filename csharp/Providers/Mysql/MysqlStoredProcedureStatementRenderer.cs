@@ -65,7 +65,7 @@ internal sealed class MysqlStoredProcedureStatementRenderer
         if (statement.ByProperties.Count == 0)
             return Procedure(statement.Name, "", $"  SELECT {aliased} FROM {MysqlDriver.Quote(statement.Table)} t ORDER BY t.{statement.Key};");
         var signature = string.Join(", ", statement.ByProperties.Select(column =>
-            $"IN {column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"IN {column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         return Procedure(statement.Name, signature, $"  SELECT {aliased} FROM {MysqlDriver.Quote(statement.Table)} t WHERE {Where(statement.ByProperties)};");
     }
 
@@ -91,7 +91,7 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     {
         var by = statement.ByProperties.Count > 0 ? statement.ByProperties : [statement.Key];
         var signature = string.Join(", ", by.Select(column =>
-            $"IN {column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? new RoutineParameter(column, statement.KeyType))}"));
+            $"IN {column} {TypeOf(statement.Parameters.FirstOrDefault(parameter => parameter.Name == column) ?? throw new InvalidOperationException($"{statement.Name}: missing parameter \"{column}\""))}"));
         return Procedure(statement.Name, signature, $"""
           DELETE t FROM {MysqlDriver.Quote(statement.Table)} t WHERE {Where(by)};
           SELECT ROW_COUNT() AS affected;
@@ -133,7 +133,7 @@ internal sealed class MysqlStoredProcedureStatementRenderer
     public string Render(CreateBulkDeleteStoredProcedureStatement statement)
     {
         var key = statement.Columns.FirstOrDefault(column => column.Name == statement.Key)
-            ?? new RoutineParameter(statement.Key, statement.KeyType);
+            ?? throw new InvalidOperationException($"{statement.Name}: missing key column \"{statement.Key}\"");
         return Procedure(statement.Name, $"IN {statement.Payload.Name} {TypeOf(statement.Payload)}",
             $"  DELETE c FROM {MysqlDriver.Quote(statement.Table)} c JOIN JSON_TABLE({statement.Payload.Name}, '$[*]' COLUMNS ({key.Name} {TypeOf(key)} PATH '$.{key.Name}')) AS payload_rows ON c.{statement.Key} = payload_rows.{statement.Key};");
     }

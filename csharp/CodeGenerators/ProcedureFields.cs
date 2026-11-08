@@ -6,8 +6,7 @@ public static class ProcedureFields
     {
         var pkName = SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table));
         return table.Fields.FirstOrDefault(f => f.Name == pkName)
-            ?? table.Fields.FirstOrDefault(f => f.Name == "id")
-            ?? new SpecTypeField { Name = "id", Type = "integer", Kind = "primitive", Base = "integer", IsArray = false, IsNullable = false };
+            ?? throw new InvalidOperationException($"{table.Name}: missing primary key field \"{pkName}\"");
     }
 
     public static IReadOnlyList<SpecTypeField> CreateParams(SqlTable table)

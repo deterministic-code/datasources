@@ -215,7 +215,7 @@ async fn payload_encodes_scalars() {
     let connection = MockConnection::with_command_provider(command.clone(), "memory");
     let mut options = CRUDRepositoryOptions::default();
     options.entity = "parents".into();
-    options.ids = Vec::new();
+    options.ids = vec!["id".into()];
     options.read_properties = vec![
         "amount".into(),
         "blob".into(),

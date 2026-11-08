@@ -146,7 +146,7 @@ public static class SchemaDiff
     }
 
     static CreateTriggerStatement Trigger(string dialect, SqlTable table, StatementNaming naming) =>
-        TableStatements.CreateTrigger(table, naming, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table)) ?? "id");
+        TableStatements.CreateTrigger(table, naming, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table)));
 
     static DropTriggerStatement DropTrigger(string dialect, SqlTable table, StatementNaming naming) =>
         TableStatements.DropTrigger(CreateTriggerStatement.NameOf(SqlSchema.TableStem(table), naming), table.TableName);
