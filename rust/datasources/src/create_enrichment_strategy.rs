@@ -7,8 +7,7 @@ use crate::row::Row;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::value::Value;
 use async_trait::async_trait;
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::Arc;
 
 #[async_trait]
 pub trait CreateEnrichmentStrategy<T: Entity = Row>: Send + Sync {
@@ -27,31 +26,9 @@ pub trait CreateEnrichmentStrategy<T: Entity = Row>: Send + Sync {
     ) -> Result<()>;
 }
 
-static LOOKUPS: OnceLock<Mutex<HashMap<usize, Row>>> = OnceLock::new();
-
-fn lookups() -> &'static Mutex<HashMap<usize, Row>> {
-    LOOKUPS.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-fn item_key<T>(item: &T) -> usize {
-    std::ptr::from_ref(item) as usize
-}
-
 fn missing(value: &Value) -> bool {
     matches!(value, Value::Null | Value::Int(0))
         || matches!(value, Value::Text(text) if text.is_empty())
-}
-
-pub(crate) fn try_get<T: Entity>(item: &T, name: &str) -> Option<Value> {
-    item.cell(name)
-}
-
-pub(crate) fn key(value: Option<Value>) -> Option<Value> {
-    match value {
-        None => None,
-        Some(Value::Null) => Some(Value::Null),
-        Some(other) => Some(other),
-    }
 }
 
 pub(crate) fn map_key<TChild: Entity>(related_key: &str) -> &'static str {
@@ -122,40 +99,13 @@ fn dictionary_children<T: Entity, TChild: Entity>(
 }
 
 pub(crate) fn set<T: Entity>(item: &mut T, name: &str, value: Value) -> Result<()> {
-    if T::is_dictionary() || item.has(name) {
-        return item.set_cell(name, value);
-    }
-    lookups()
-        .lock()
-        .expect("lookups")
-        .entry(item_key(item))
-        .or_default()
-        .insert(name.to_string(), value);
-    Ok(())
-}
-
-pub(crate) fn merge_lookups<T: Entity>(item: &T, record: &mut Row) {
-    let Some(extras) = lookups().lock().expect("lookups").get(&item_key(item)).cloned() else {
-        return;
-    };
-    for (key, value) in extras {
-        record.insert(key, value);
-    }
-}
-
-#[allow(dead_code)]
-pub(crate) fn lookup_keys<T: Entity>(item: &T) -> HashSet<String> {
-    lookups()
-        .lock()
-        .expect("lookups")
-        .get(&item_key(item))
-        .map(|row| row.keys().cloned().collect())
-        .unwrap_or_default()
+    item.set_cell(name, value)
 }
 
 pub(crate) async fn resolve_lookups<T: Entity>(
     entries: &[StoredEnrichment<T>],
     items: &mut [T],
+    record: &mut Row,
 ) -> Result<()> {
     for item in items.iter_mut() {
         for entry in entries {
@@ -170,11 +120,16 @@ pub(crate) async fn resolve_lookups<T: Entity>(
             if enrichment.r#type != crate::EnrichmentPropertyType::Object {
                 continue;
             }
-            let Some(name) = try_get(item, &enrichment.destination_property).filter(|value| !missing(value))
+            let Some(name) = record
+                .get(&enrichment.destination_property)
+                .cloned()
+                .filter(|value| !missing(value))
             else {
                 continue;
             };
-            if key(try_get(item, &enrichment.source_property)).is_some_and(|value| !missing(&value))
+            if record
+                .get(&enrichment.source_property)
+                .is_some_and(|value| !missing(value))
             {
                 continue;
             }
@@ -190,7 +145,7 @@ pub(crate) async fn resolve_lookups<T: Entity>(
                         name.wire_text()
                     ))
                 })?;
-            set(item, &enrichment.source_property, id)?;
+            set(record, &enrichment.source_property, id)?;
         }
     }
     Ok(())

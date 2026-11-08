@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace Datasources;
 
@@ -44,7 +43,7 @@ public abstract class CreateEnrichmentStrategy<T>
             _ => []
         };
 
-    internal async Task ResolveLookups(IReadOnlyList<StoredEnrichment> entries, IList<T> items)
+    internal async Task ResolveLookups(IReadOnlyList<StoredEnrichment> entries, IList<T> items, Row record)
     {
         foreach (var item in items)
         foreach (var entry in entries)
@@ -57,12 +56,13 @@ public abstract class CreateEnrichmentStrategy<T>
                 continue;
             }
             if (entry.Enrichment.Type is not EnrichmentPropertyType.Object) continue;
-            var name = Value.From(TryGet(item, entry.Enrichment.DestinationProperty));
-            if (Missing(name)) continue;
-            if (!Missing(Value.From(Key(TryGet(item, entry.Enrichment.SourceProperty), entry.Enrichment.RelatedKey)))) continue;
+            var dest = entry.Enrichment.DestinationProperty;
+            var source = entry.Enrichment.SourceProperty;
+            if (!record.TryGetValue(dest, out var name) || Missing(name)) continue;
+            if (record.TryGetValue(source, out var existing) && !Missing(existing)) continue;
             var id = await stored.Read.Lookup(related, name, entry.Enrichment.RelatedKey)
-                ?? throw new DatasourceException($"Unknown {entry.Enrichment.DestinationProperty} \"{name.ToObject()}\"");
-            Set(item, entry.Enrichment.SourceProperty, id.ToObject(), entry.Enrichment.RelatedKey);
+                ?? throw new DatasourceException($"Unknown {dest} \"{name.ToObject()}\"");
+            Set(record, source, id);
         }
     }
 
@@ -78,18 +78,6 @@ public abstract class CreateEnrichmentStrategy<T>
             Set(row, stored.Enrichment.RelatedKey, id.ToObject());
         }
     }
-
-    internal static void MergeLookups<TItem>(TItem item, Row record)
-    {
-        if (item is null || !Lookups.TryGetValue(item, out var extras)) return;
-        foreach (var pair in extras)
-            record[pair.Key] = pair.Value;
-    }
-
-    internal static IReadOnlySet<string> LookupKeys<TItem>(TItem item) =>
-        item is not null && Lookups.TryGetValue(item, out var extras) ? extras.Keys.ToHashSet() : [];
-
-    static readonly ConditionalWeakTable<object, Row> Lookups = new();
 
     public IReadOnlyList<TChild> CollectChildren<TChild>(ICRUDRepository<TChild> writer, Enrichment enrichment, T parent)
         where TChild : new()
@@ -167,11 +155,6 @@ public abstract class CreateEnrichmentStrategy<T>
         if (obj is IDictionary dict)
         {
             dict[name] = value;
-            return;
-        }
-        if (obj!.GetType().GetProperty(name) is null)
-        {
-            Lookups.GetOrCreateValue(obj)[name] = Value.From(value);
             return;
         }
         var prop = Prop(obj, name);

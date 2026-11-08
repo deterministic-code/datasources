@@ -27,7 +27,12 @@ pub trait WriteEnrichmentStrategy<T: Entity = Row>: Send + Sync {
         self.persist(tree, items, mode).await
     }
 
-    async fn resolve_lookups(&self, _tree: &RepositoryTree<T>, _items: &mut [T]) -> Result<()> {
+    async fn resolve_lookups(
+        &self,
+        _tree: &RepositoryTree<T>,
+        _items: &mut [T],
+        _record: &mut Row,
+    ) -> Result<()> {
         Ok(())
     }
 }

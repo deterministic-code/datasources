@@ -21,7 +21,6 @@ import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentSt
 import { asRelated, StoredEnrichment } from "./StoredEnrichment.ts";
 import { execute, executeReader } from "./ICommand.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import { lookupKeys, mergeLookups } from "./CreateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import { UnitOfWorkTransaction } from "./UnitOfWorkTransaction.ts";
@@ -199,7 +198,6 @@ export class CRUDRepository<T = Cells>
   };
 
   private createCore = async (item: T): Promise<T> => {
-    await this.write.resolveLookups?.(this.tree, [item]);
     await this.insert(item);
     if (!this.enriched) return item;
     await this.write.persist(this.tree, [item], "create");
@@ -209,7 +207,6 @@ export class CRUDRepository<T = Cells>
   };
 
   private updateCore = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    await this.write.resolveLookups?.(this.tree, [item]);
     const response = await this.save(item, byWhere);
     if (this.enriched) await this.write.persist(this.tree, [item], "update");
     return response;
@@ -224,8 +221,8 @@ export class CRUDRepository<T = Cells>
     this.readSingle(this.byId(id));
 
   private insert = async (item: T): Promise<Response> => {
-    const extras = lookupKeys(item as object);
-    const record = this.fillCreateZeros(this.reverseConvert(item));
+    const record = this.fillCreateZeros(await this.lookupRow(item));
+    const extras = this.objectSources();
     const fields = fieldsOf(
       record,
       (col) => extras.has(col) || listed(this.createProperties, col, !this.ids.includes(col) || assigned(record[col] ?? null)),
@@ -268,15 +265,15 @@ export class CRUDRepository<T = Cells>
   private idValue = (item: T): Scalar | undefined => scalarOf((item as Props)[this.ids[0]!]);
 
   private save = async (item: T, byWhere?: IWhere): Promise<Response> => {
-    const extras = lookupKeys(item as object);
     const record = applyEmptyDefaults(
-      this.reverseConvert(item),
+      await this.lookupRow(item),
       this.schema,
       this.ids,
       this.updateProperties,
       false,
       (name) => this.enrichmentSource(name),
     );
+    const extras = this.objectSources();
     const fields = fieldsOf(
       record,
       (col) => extras.has(col) || listed(this.updateProperties, col, !this.ids.includes(col)),
@@ -329,11 +326,40 @@ export class CRUDRepository<T = Cells>
     return applyEmptyDefaults(filled, this.schema, this.ids, this.createProperties, false, skip);
   };
 
-  private reverseConvert = (item: T): Cells => {
-    const row = this.objectConverter!.reverseConvert(item);
-    const converted = this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
-    mergeLookups(item as object, converted);
-    return converted;
+  private mapped = (row: Cells): Cells =>
+    this.rowConverter ? this.rowConverter.reverseConvert(row) : row;
+
+  private reverseConvert = (item: T): Cells => this.mapped(this.objectConverter!.reverseConvert(item));
+
+  private lookupRow = async (item: T): Promise<Cells> => {
+    const record = this.objectConverter!.reverseConvert(item);
+    this.alignLookupKeys(record, false);
+    await this.write.resolveLookups?.(this.tree, [item], record);
+    this.alignLookupKeys(record, true);
+    this.requireLookupSources(record);
+    return this.mapped(record);
+  };
+
+  private alignLookupKeys = (record: Cells, fromSource: boolean): void => {
+    for (const source of this.objectSourceProperties()) {
+      const column = this.column(source);
+      if (fromSource) {
+        if (assigned(record[source] ?? null)) record[column] = record[source]!;
+        continue;
+      }
+      if (!assigned(record[source] ?? null) && assigned(record[column] ?? null)) record[source] = record[column]!;
+    }
+  };
+
+  private requireLookupSources = (record: Cells): void => {
+    for (const entry of enrichmentsOf<T>(this)!) {
+      const enrichment = entry.enrichment;
+      if ((enrichment.type ?? "object") !== "object" || enrichment.association) continue;
+      if (assigned(record[enrichment.sourceProperty] ?? null)) continue;
+      const column = this.schema.columns[enrichment.destinationProperty];
+      if (!column || column.nullable) continue;
+      throw new DatasourceError(`Unknown ${enrichment.destinationProperty}`);
+    }
   };
 
   private idWhere = (record: Cells): IWhere => {
@@ -354,6 +380,14 @@ export class CRUDRepository<T = Cells>
 
   private enrichmentSource = (name: string): boolean =>
     enrichmentsOf<T>(this)!.some((entry) => entry.enrichment.sourceProperty === name);
+
+  private objectSourceProperties = (): string[] =>
+    enrichmentsOf<T>(this)!
+      .filter((entry) => (entry.enrichment.type ?? "object") === "object" && !entry.enrichment.association)
+      .map((entry) => entry.enrichment.sourceProperty);
+
+  private objectSources = (): Set<string> =>
+    new Set(this.objectSourceProperties().flatMap((source) => [source, this.column(source)]));
 }
 
 const writerOf = <TRelated>(via: IReadonlyRepository<TRelated>): ICRUDRepository<TRelated> | undefined =>

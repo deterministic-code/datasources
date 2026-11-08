@@ -119,7 +119,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<T> CreateCore(T item)
     {
-        await write.ResolveLookups(tree, [item!]);
         await Insert(item);
         if (!Enriched) return item;
         await write.Persist(tree, [item!], WriteMode.Create);
@@ -130,7 +129,6 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> UpdateCore(T item, IWhere? byWhere = null)
     {
-        await write.ResolveLookups(tree, [item!]);
         var response = await Save(item, byWhere);
         if (Enriched)
             await write.Persist(tree, [item!], WriteMode.Update);
@@ -158,8 +156,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Insert(T item)
     {
-        var record = MergeZeros(ReverseConvert(item));
-        var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
+        var record = MergeZeros(await LookupRow(item));
+        var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(createProperties, col, !ids.Contains(col) || Assigned(record, col)), extras);
         var statement = CRUDStatements.Insert(fields);
         var response = await Command().Execute(statement, statement.Fields);
@@ -207,8 +205,8 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
 
     async Task<Response> Save(T item, IWhere? byWhere)
     {
-        var record = ApplyEmptyDefaults(ReverseConvert(item), updateProperties, fillMissing: false);
-        var extras = CreateEnrichmentStrategy<T>.LookupKeys(item!);
+        var record = ApplyEmptyDefaults(await LookupRow(item), updateProperties, fillMissing: false);
+        var extras = EnrichmentSources();
         var fields = Params(record, col => extras.Contains(col) || Listed(updateProperties, col, !ids.Contains(col)), extras, omitNull: false);
         if (fields.Count == 0)
             throw new DatasourceException("Update requires at least one non-Id field");
@@ -301,12 +299,58 @@ public class CRUDRepository<T> : ReadonlyRepository<T>, ICRUDRepository<T> where
     bool EnrichmentSource(string name) =>
         ((IEnrichmentHost)this).Enrichments.Any(entry => entry.Enrichment.SourceProperty == name);
 
+    IEnumerable<string> ObjectSourceProperties() =>
+        ((IEnrichmentHost)this).Enrichments
+            .Where(entry => entry.Enrichment.Type is EnrichmentPropertyType.Object && entry.Enrichment.Association is null)
+            .Select(entry => entry.Enrichment.SourceProperty);
+
+    IReadOnlySet<string> EnrichmentSources() =>
+        ObjectSourceProperties().SelectMany(source => new[] { source, Column(source) }).ToHashSet();
+
+    async Task<Row> LookupRow(T item)
+    {
+        var record = ObjectConverter.ReverseConvert(item);
+        AlignLookupKeys(record, fromSource: false);
+        await write.ResolveLookups(tree, [item!], record);
+        AlignLookupKeys(record, fromSource: true);
+        RequireLookupSources(record);
+        return RowConverter?.ReverseConvert(record) ?? record;
+    }
+
+    void AlignLookupKeys(Row record, bool fromSource)
+    {
+        foreach (var source in ObjectSourceProperties())
+        {
+            var column = Column(source);
+            if (fromSource)
+            {
+                if (Assigned(record, source))
+                    record[column] = record[source];
+                continue;
+            }
+            if (!Assigned(record, source) && Assigned(record, column))
+                record[source] = record[column];
+        }
+    }
+
+    void RequireLookupSources(Row record)
+    {
+        foreach (var entry in ((IEnrichmentHost)this).Enrichments)
+        {
+            if (entry.Enrichment.Type is not EnrichmentPropertyType.Object || entry.Enrichment.Association is not null)
+                continue;
+            if (Assigned(record, entry.Enrichment.SourceProperty))
+                continue;
+            if (!schema.Columns.TryGetValue(entry.Enrichment.DestinationProperty, out var column) || column.Nullable)
+                continue;
+            throw new DatasourceException($"Unknown {entry.Enrichment.DestinationProperty}");
+        }
+    }
+
     Row ReverseConvert(T item)
     {
         var row = ObjectConverter.ReverseConvert(item);
-        row = RowConverter?.ReverseConvert(row) ?? row;
-        CreateEnrichmentStrategy<T>.MergeLookups(item!, row);
-        return row;
+        return RowConverter?.ReverseConvert(row) ?? row;
     }
 
     Value IdValue(T item)

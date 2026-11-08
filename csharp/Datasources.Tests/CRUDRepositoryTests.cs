@@ -522,6 +522,46 @@ public class CRUDRepositoryTests
     }
 
     [Fact]
+    public async Task CreateMissingRequiredLookupThrows()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+        {
+            Ids = ["Id"],
+            PropertyMappings = Columns,
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Id"] = new("integer", IsId: true),
+                ["TypeName"] = new("string"),
+            }),
+        });
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        var error = await Assert.ThrowsAsync<DatasourceException>(() => parentsRepo.Create(new Parent()));
+        Assert.Contains("TypeName", error.Message);
+    }
+
+    [Fact]
+    public async Task CreateMissingNullableLookupSkips()
+    {
+        var connection = await Setup();
+        var typesRepo = Open<UserType>(connection);
+        var parentsRepo = new CRUDRepository<Parent>(connection, new CRUDRepositoryOptions<Parent>
+        {
+            Ids = ["Id"],
+            PropertyMappings = Columns,
+            Schema = new Schema(new Dictionary<string, SchemaColumn>
+            {
+                ["Id"] = new("integer", IsId: true),
+                ["TypeName"] = new("string", Nullable: true),
+            }),
+        });
+        parentsRepo.AddEnriched(new("TypeName", "Type", "Id", "Name"), typesRepo);
+        var created = await parentsRepo.Create(new Parent());
+        Assert.True(created.Id > 0);
+    }
+
+    [Fact]
     public async Task NestedChildResolvesLookupName()
     {
         var connection = await Setup();

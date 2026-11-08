@@ -6,7 +6,6 @@ import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrate
 import { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
-import { lookupKeys, mergeLookups } from "./CreateEnrichmentStrategy.ts";
 import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
@@ -352,7 +351,6 @@ describe("enrichment edges", () => {
     const factory = { line1: "London" };
     creatingOpen["stampCell"](factory, "contactId", 7);
     expect(factory).toEqual({ line1: "London", contactId: 7 });
-    expect(lookupKeys(factory).size).toBe(0);
     class Address {
       contactId = 0;
       line1 = "";
@@ -366,9 +364,6 @@ describe("enrichment edges", () => {
     const omitted = new View();
     creatingOpen["stampCell"](omitted, "addressTypeId", 3);
     expect("addressTypeId" in omitted).toBe(false);
-    const extras: Cells = {};
-    mergeLookups(omitted, extras);
-    expect(extras.addressTypeId).toBe(3);
     creatingOpen["stampCell"](createFlat, "parent_id", undefined);
     creatingOpen["stampCell"](createFlat, "parent_id", null);
     creatingOpen["stampCell"](createFlat, "parent_id", { nested: true });

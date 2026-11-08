@@ -11,6 +11,7 @@ import type { IRepositoryTree } from "./IRepositoryTree.ts";
 import type { IWriteEnrichmentStrategy } from "./IWriteEnrichmentStrategy.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import type { Scalar } from "./builders/Scalar.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { DeleteEnrichmentStrategy } from "./DeleteEnrichmentStrategy.ts";
 import type { UpdateEnrichmentStrategy } from "./UpdateEnrichmentStrategy.ts";
 import type { WriteMode } from "./WriteMode.ts";
@@ -58,9 +59,9 @@ export class DefaultWriteEnrichmentStrategy<T> implements IWriteEnrichmentStrate
     this.useTransaction = useTransaction;
   }
 
-  resolveLookups = async (tree: IRepositoryTree, items: T[]): Promise<void> => {
+  resolveLookups = async (tree: IRepositoryTree, items: T[], record: Cells): Promise<void> => {
     const entries = enrichmentsOf<T>(tree.parent.value);
-    if (entries) await this.createStrategy.resolveLookups(entries, items);
+    if (entries) await this.createStrategy.resolveLookups(entries, items, record);
   };
 
   persist = async (tree: IRepositoryTree, items: T[], mode: WriteMode): Promise<void> => {
