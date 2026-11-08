@@ -452,7 +452,9 @@ pub trait IReadonlyRepository: IRepository
 | Name | Description |
 | --- | --- |
 | [read_single(query, options)](#rust-ireadonlyrepository-read_single-query-options) | Returns the first row, or `None` when the result is empty. |
+| [read_single_where(clause, options)](#rust-ireadonlyrepository-read_single_where-clause-options) | C# `ReadSingle(IWhere)`. |
 | [read(query, options)](#rust-ireadonlyrepository-read-query-options) | Returns every row. |
+| [read_where(clause, options)](#rust-ireadonlyrepository-read_where-clause-options) | C# `Read(IWhere)`. |
 
 ##### read_single(query, options) {#rust-ireadonlyrepository-read_single-query-options}
 
@@ -461,19 +463,29 @@ Returns the first row, or `None` when the result is empty.
 **Definition**
 
 ```rust
-async fn read_single(&self, query: &dyn ReadInput, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
+async fn read_single(&self, query: Option<&dyn Statement>, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | query, where, or stored procedure |
+| `query` | select or stored procedure; `None` reads the mapped entity |
 | `options` | optional [ReadonlyRepositoryMappingOptions](#rust-readonlyrepositorymappingoptions); omitted mapping uses the repository constructor |
 
 **Returns**
 
 `Result<Option<Row>>`
+
+##### read_single_where(clause, options) {#rust-ireadonlyrepository-read_single_where-clause-options}
+
+C# `ReadSingle(IWhere)`.
+
+**Definition**
+
+```rust
+async fn read_single_where(&self, clause: &dyn IWhere, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
+```
 
 ##### read(query, options) {#rust-ireadonlyrepository-read-query-options}
 
@@ -482,19 +494,29 @@ Returns every row.
 **Definition**
 
 ```rust
-fn read<'a>(&'a self, query: &'a dyn ReadInput, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
+fn read<'a>(&'a self, query: Option<&'a dyn Statement>, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `query` | query, where, or stored procedure |
+| `query` | select or stored procedure; `None` reads the mapped entity |
 | `options` | optional [ReadonlyRepositoryMappingOptions](#rust-readonlyrepositorymappingoptions); omitted mapping uses the repository constructor |
 
 **Returns**
 
 stream of `Result<Row>`
+
+##### read_where(clause, options) {#rust-ireadonlyrepository-read_where-clause-options}
+
+C# `Read(IWhere)`.
+
+**Definition**
+
+```rust
+fn read_where<'a>(&'a self, clause: &'a dyn IWhere, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
+```
 
 #### ReadonlyRepository {#rust-readonlyrepository}
 
@@ -710,12 +732,12 @@ options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(&Where::binary("Id", eq, 1_i64), None)
+    .read_single_where(&Where::binary("Id", eq, 1_i64), None)
     .await
     .unwrap()
     .unwrap();
 let row = repo
-    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
+    .read_where(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
     .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
@@ -883,7 +905,7 @@ options.property_mappings = Some(std::sync::Arc::new(snake()));
 options.object_converter = Some(Box::new(UserConverter));
 let users_repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let user = users_repo
-    .read_single(&Where::binary("Id", eq, 1_i64), None)
+    .read_single_where(&Where::binary("Id", eq, 1_i64), None)
     .await
     .unwrap()
     .unwrap();
@@ -1059,7 +1081,7 @@ users_repo.add_enriched(
     None,
 );
 let account = users_repo
-    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
+    .read_single_where(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
     .await
     .unwrap()
     .unwrap();
@@ -1239,16 +1261,16 @@ options.schema = Schema::new(HashMap::from([
 let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let opened = Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
 let by_id = repo
-    .read_single(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
+    .read_single_where(&Where::binary("Key", eq, Uuid::parse_str(ADA).unwrap()), None)
     .await
     .unwrap()
     .unwrap();
 let by_login = repo
-    .read(&Where::binary("Login", eq, "ada").and("Active", eq, true), None)
+    .read_where(&Where::binary("Login", eq, "ada").and("Active", eq, true), None)
     .try_collect::<Vec<_>>().await
     .unwrap();
 let later = repo
-    .read(&Where::binary("Active", eq, true).and("Opened", gt, opened), None)
+    .read_where(&Where::binary("Active", eq, true).and("Opened", gt, opened), None)
     .try_collect::<Vec<_>>().await
     .unwrap();
 ```
@@ -1712,7 +1734,7 @@ users_repo.add_enriched(
     ))),
 );
 let joined = joined_users();
-let items = users_repo.read(&joined, None).try_collect::<Vec<_>>().await.unwrap();
+let items = users_repo.read(Some(&joined), None).try_collect::<Vec<_>>().await.unwrap();
 let view = |login: &str| {
     items
         .iter()
@@ -1963,7 +1985,7 @@ parents.add_enriched(
 );
 let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
 parents.create(parent).await.unwrap();
-let enriched = parents.read_single(&(), None).await.unwrap();
+let enriched = parents.read_single(None, None).await.unwrap();
 
 let command = Arc::new(MockCommand::new());
 command.reader_rows.lock().unwrap().extend([
@@ -2018,7 +2040,7 @@ options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap
     ],
 ))));
 let items = join_repo
-    .read(&join, Some(&options))
+    .read(Some(&join), Some(&options))
     .try_collect::<Vec<_>>().await
     .unwrap();
 ```
