@@ -4,6 +4,7 @@ import type { IConnection } from "../IConnection.ts";
 import type { IDatasource } from "../IDatasource.ts";
 import type { IReadonlyRepository } from "../IReadonlyRepository.ts";
 import type { ICRUDRepository } from "../ICRUDRepository.ts";
+import type { Cells } from "../converters/Value.ts";
 import { DatasourceError } from "../DatasourceError.ts";
 import { RepositoryFactory } from "../RepositoryFactory.ts";
 import { MockCommand } from "./mock-command.ts";
@@ -15,7 +16,7 @@ export class MockDatasource implements IDatasource {
   createRepositoryCalls: Array<IConnection | undefined> = [];
   connection: IConnection;
   command?: ICommand;
-  repository?: ICRUDRepository;
+  repository?: ICRUDRepository<Cells>;
   readonly repositories = new RepositoryFactory();
 
   constructor(readonly provider = "mock") {
@@ -41,7 +42,7 @@ export class MockDatasource implements IDatasource {
   }
 
   createRepository<T>(type: Constructable<T>, connection?: IConnection): ICRUDRepository<T>;
-  createRepository(typeName: string, connection?: IConnection): ICRUDRepository;
+  createRepository<T>(typeName: string, connection?: IConnection): ICRUDRepository<T>;
   createRepository<T>(
     typeOrName: Constructable<T> | string,
     connection?: IConnection,
@@ -57,7 +58,7 @@ export class MockDatasource implements IDatasource {
     type: Constructable<T>,
     connection?: IConnection,
   ): IReadonlyRepository<T>;
-  createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository;
+  createReadonlyRepository<T>(typeName: string, connection?: IConnection): IReadonlyRepository<T>;
   createReadonlyRepository<T>(
     typeOrName: Constructable<T> | string,
     connection?: IConnection,

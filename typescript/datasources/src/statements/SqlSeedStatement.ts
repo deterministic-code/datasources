@@ -1,11 +1,12 @@
 import type { SpecField } from "../converters/SpecField.ts";
+import type { Value } from "../converters/Value.ts";
 import type { ISqlSeedStatement } from "./ISqlSeedStatement.ts";
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
 
 export type SqlSeedColumn = {
   column: string;
   field: SpecField;
-  value: unknown;
+  value: Value;
 };
 
 export class SqlSeedStatement implements ISqlSeedStatement {

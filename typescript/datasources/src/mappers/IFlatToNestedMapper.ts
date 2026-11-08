@@ -1,4 +1,4 @@
-import type { Cells } from "../converters/Cell.ts";
+import type { Cells } from "../converters/Value.ts";
 import type { IMapper } from "./IMapper.ts";
 import type { TypeMap } from "./TypeMap.ts";
 

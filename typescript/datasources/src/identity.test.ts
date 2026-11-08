@@ -14,5 +14,7 @@ describe("identity", () => {
     expect(defaultId(undefined, ["Id"])).toEqual(["Id"]);
     expect(defaultId(undefined, ["name"])).toEqual([]);
     expect(identityKey({ Key: "home", Name: "house" }, "Key")).toBe("home");
+    expect(identityKey({ Key: "home" }, "Missing")).toEqual({ Key: "home" });
+    expect(identityKey({ Key: null as string | null }, "Key")).toEqual({ Key: null });
   });
 });

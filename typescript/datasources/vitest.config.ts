@@ -78,7 +78,7 @@ export default defineConfig({
         "src/DatasourceOptions.ts",
         "src/Parameter.ts",
         "src/Row.ts",
-        "src/converters/Cell.ts",
+        "src/converters/Value.ts",
         "src/converters/Constructable.ts",
         "src/mappers/IMapper.ts",
         "src/**/I*.ts",

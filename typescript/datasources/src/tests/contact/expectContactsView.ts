@@ -1,6 +1,7 @@
 import { expect } from "vitest";
 
-type View = { id: number; addresses: unknown[]; phones: unknown[] };
+type Nested = { length: number };
+type View = { id: number; addresses: Nested[]; phones: Nested[] };
 
 export const contactWith = <T extends View>(
   contacts: T[],

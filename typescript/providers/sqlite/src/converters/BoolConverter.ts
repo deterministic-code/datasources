@@ -1,6 +1,6 @@
-import { TypeConverter, type Cell } from "@deterministic-code/datasources";
+import { TypeConverter, type Value } from "@deterministic-code/datasources";
 
-export class BoolConverter extends TypeConverter<Cell, Cell> {
-  convert = (from: Cell): Cell => (typeof from === "number" ? from !== 0 : from);
-  reverseConvert = (to: Cell): Cell => (typeof to === "boolean" ? (to ? 1 : 0) : to);
+export class BoolConverter extends TypeConverter<Value, Value> {
+  convert = (from: Value): Value => (typeof from === "number" ? from !== 0 : from);
+  reverseConvert = (to: Value): Value => (typeof to === "boolean" ? (to ? 1 : 0) : to);
 }

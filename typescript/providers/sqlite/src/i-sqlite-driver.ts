@@ -1,9 +1,9 @@
-import type { Cell, Cells, Scalar } from "@deterministic-code/datasources";
+import type { Value, Cells, Scalar } from "@deterministic-code/datasources";
 
 export interface SqliteStatement {
   run(params?: Record<string, Scalar>): {
     changes: number;
-    lastInsertRowid?: Cell;
+    lastInsertRowid?: Value;
   };
   all(params?: Record<string, Scalar>): Cells[];
   iterate(params?: Record<string, Scalar>): IterableIterator<Cells>;

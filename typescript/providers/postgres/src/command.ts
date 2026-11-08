@@ -76,7 +76,7 @@ export class PostgresCommand extends CommandMiddlewareHost implements ICommand {
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
     return this.run(text.text, parameters, async (query, params) => {
       if (!query.trim())
-        return { value: new Response(undefined, 0, params), rows: [] };
+        return { value: new Response(null, 0, params), rows: [] };
       this.connection.ensureOpen();
       const named = bindParameters(params);
       let rowsAffected = 0;

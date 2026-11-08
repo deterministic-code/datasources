@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Cells } from "../converters/Cell.ts";
+import type { Cells } from "../converters/Value.ts";
 import type { TypeMap } from "./TypeMap.ts";
 import { FlatToNestedMapper } from "./FlatToNestedMapper.ts";
 

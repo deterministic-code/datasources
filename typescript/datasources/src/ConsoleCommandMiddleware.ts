@@ -1,14 +1,14 @@
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { Parameter } from "./Parameter.ts";
 import type { Row } from "./Row.ts";
-import type { Cell } from "./converters/Cell.ts";
+import type { Value } from "./converters/Value.ts";
 
 export const formatElapsed = (elapsedMs: number): string =>
   elapsedMs < 1
     ? `${Math.round(elapsedMs * 1000)}μs`
     : `${Math.round(elapsedMs)}ms`;
 
-const cellOf = (value: Cell): string =>
+const cellOf = (value: Value): string =>
   value === null
     ? "null"
     : value instanceof Date
@@ -24,7 +24,7 @@ const cellOf = (value: Cell): string =>
               : String(value);
 
 const paramsOf = (params?: ReadonlyArray<Parameter>) =>
-  `{${(params ?? []).map((param) => `${param.name}: ${cellOf(param.value as Cell)}`).join(", ")}}`;
+  `{${(params ?? []).map((param) => `${param.name}: ${cellOf(param.value as Value)}`).join(", ")}}`;
 
 const rowsOf = (rows: ReadonlyArray<Row>) =>
   rows

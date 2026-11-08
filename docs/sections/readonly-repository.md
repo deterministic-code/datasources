@@ -166,7 +166,7 @@ type?: Constructable<T>
 Provider converters keyed by `bool`, `datetime`, `uuid`, `decimal`, and `binary`, merged into the row converter. The driver applies its converters when it binds a parameter. A field converter reverse-converts that property in the repository.
 
 ```typescript
-rowTypeConverters?: Record<string, TypeConverter<Cell, Cell>>
+rowTypeConverters?: Record<string, TypeConverter<Value, Value>>
 ```
 
 ##### readColumns

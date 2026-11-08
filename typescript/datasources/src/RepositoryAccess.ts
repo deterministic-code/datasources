@@ -1,14 +1,15 @@
 import type { IConnection } from "./IConnection.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
+import type { Cells } from "./converters/Value.ts";
 
-export class RepositoryAccess {
+export class RepositoryAccess<T = Cells> {
   constructor(
-    private readonly createRepo: (connection: IConnection) => ICRUDRepository,
-    private readonly createReadonlyRepo: (connection: IConnection) => IReadonlyRepository,
+    private readonly createRepo: (connection: IConnection) => ICRUDRepository<T>,
+    private readonly createReadonlyRepo: (connection: IConnection) => IReadonlyRepository<T>,
     private readonly connection: IConnection,
   ) {}
 
-  create = (): ICRUDRepository => this.createRepo(this.connection);
-  createReadonly = (): IReadonlyRepository => this.createReadonlyRepo(this.connection);
+  create = (): ICRUDRepository<T> => this.createRepo(this.connection);
+  createReadonly = (): IReadonlyRepository<T> => this.createReadonlyRepo(this.connection);
 }

@@ -59,7 +59,7 @@ Builds a comparison from a column, a [Cmp](expressions.md#typescript-cmp) alias,
 **Definition**
 
 ```typescript
-constructor(column: string, op: Comparison, value: Cell)
+constructor(column: string, op: Comparison, value: Value)
 ```
 
 **Parameters**
@@ -68,7 +68,7 @@ constructor(column: string, op: Comparison, value: Cell)
 | --- | --- |
 | `column` | column name |
 | `op` | [Cmp](expressions.md#typescript-cmp) alias such as `eq` or `gt` |
-| `value` | [Cell](mappings.md#typescript-cell) |
+| `value` | [Value](mappings.md#typescript-cell) |
 
 ##### accept(visitor) {#typescript-where-accept-visitor}
 
@@ -97,8 +97,8 @@ Nests this clause with another comparison under [Operator.And](expressions.md#ty
 **Definition**
 
 ```typescript
-and(column: string, op: Comparison, value: Cell): Where
-or(column: string, op: Comparison, value: Cell): Where
+and(column: string, op: Comparison, value: Value): Where
+or(column: string, op: Comparison, value: Value): Where
 ```
 
 **Parameters**
@@ -107,7 +107,7 @@ or(column: string, op: Comparison, value: Cell): Where
 | --- | --- |
 | `column` | column name |
 | `op` | [Cmp](expressions.md#typescript-cmp) alias |
-| `value` | [Cell](mappings.md#typescript-cell) |
+| `value` | [Value](mappings.md#typescript-cell) |
 
 **Returns**
 
@@ -120,7 +120,7 @@ Rewrites identifiers through `column` and the literals beside them through `valu
 **Definition**
 
 ```typescript
-map(column: (name: string) => string, value: (name: string, cell: Cell) => Cell): Where
+map(column: (name: string) => string, value: (name: string, cell: Value) => Value): Where
 ```
 
 **Parameters**

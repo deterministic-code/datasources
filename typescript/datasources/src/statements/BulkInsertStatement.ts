@@ -1,11 +1,11 @@
-import type { Cell } from "../converters/Cell.ts";
+import type { Value } from "../converters/Value.ts";
 import type { Parameter } from "../Parameter.ts";
 import type { IBulkInsertStatement } from "./IBulkInsertStatement.ts";
 import type { IStatementVisitor } from "./IStatementVisitor.ts";
 
-const lookup = (fields: readonly Parameter[]): Map<string, Cell> => {
-  const map = new Map<string, Cell>();
-  for (const field of fields) map.set(field.name, (field.value ?? null) as Cell);
+const lookup = (fields: readonly Parameter[]): Map<string, Value> => {
+  const map = new Map<string, Value>();
+  for (const field of fields) map.set(field.name, (field.value ?? null) as Value);
   return map;
 };
 

@@ -7,7 +7,7 @@ import {
   DatasourceError,
   DatasourceFactory,
   IsolationLevel,
-  type Cell,
+  type Value,
   type Cells,
   columnType,
   type IDriver,
@@ -36,7 +36,7 @@ class FakeDatabase implements SqliteDatabase {
   bySql?: Record<string, Cells[]>;
   omitRowid = false;
   columns?: Array<{ name: string; column: string | null; table: string | null }>;
-  rawRows?: Array<Array<Cell | null>>;
+  rawRows?: Array<Array<Value | null>>;
 
   constructor(public filename: string) {
     FakeDatabase.latest = this;
@@ -151,7 +151,7 @@ describe("SqliteCommand", () => {
       result: null,
       rowsAffected: 2,
     });
-    expect(await command.executeNative(new Native(""))).toEqual({ result: undefined, rowsAffected: 0 });
+    expect(await command.executeNative(new Native(""))).toEqual({ result: null, rowsAffected: 0 });
     db.rows = [{ abs: 3 }];
     const x = { name: "x", value: -3 };
     expect(await command.executeStatement(new ReturnStatement("abs", [x]), [x])).toEqual({

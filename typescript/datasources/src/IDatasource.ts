@@ -19,11 +19,11 @@ export interface IDatasource {
     connection?: IConnection,
     options?: CRUDRepositoryOptions<T>,
   ): ICRUDRepository<T>;
-  createRepository(typeName: string, connection?: IConnection): ICRUDRepository;
+  createRepository<T>(typeName: string, connection?: IConnection): ICRUDRepository<T>;
   createReadonlyRepository<T>(
     type: Constructable<T>,
     connection?: IConnection,
     options?: ReadonlyRepositoryMappingOptions<T>,
   ): IReadonlyRepository<T>;
-  createReadonlyRepository(typeName: string, connection?: IConnection): IReadonlyRepository;
+  createReadonlyRepository<T>(typeName: string, connection?: IConnection): IReadonlyRepository<T>;
 }

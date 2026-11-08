@@ -1,7 +1,7 @@
 import {
   columnType as identityColumnType,
   StubTransaction,
-  type Cell,
+  type Value,
   type DatasourceOptions,
   type ICommand,
   type IConnection,
@@ -13,7 +13,7 @@ import {
 import { MongoDbConnection } from "./connection.ts";
 
 export class MongoDbDriver implements IDriver {
-  rowTypeConverters: Record<string, TypeConverter<Cell, Cell>> = {};
+  rowTypeConverters: Record<string, TypeConverter<Value, Value>> = {};
   columnType = identityColumnType;
   connection = (options?: DatasourceOptions): IConnection =>
     MongoDbConnection.from(options);

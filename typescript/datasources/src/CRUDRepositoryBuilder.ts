@@ -5,6 +5,7 @@ import { CRUDRepository } from "./CRUDRepository.ts";
 import { CRUDRepositoryStatements } from "./CRUDRepositoryStatements.ts";
 import type { BuiltRepository } from "./BuiltRepository.ts";
 import type { Constructable } from "./converters/Constructable.ts";
+import type { Cells } from "./converters/Value.ts";
 import { ReadonlyRepositoryBuilder } from "./ReadonlyRepositoryBuilder.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappingOptions.ts";
@@ -36,7 +37,7 @@ export const repositoryParts = <T>(
   return { built, statements: builder.crudStatements! };
 };
 
-export class CRUDRepositoryBuilder<T = object> extends ReadonlyRepositoryBuilder<T> {
+export class CRUDRepositoryBuilder<T = Cells> extends ReadonlyRepositoryBuilder<T> {
   private readonly factory = new RepositoryBuilderOptionsFactory<T>();
   crudStatements?: CRUDRepositoryStatements;
 

@@ -232,7 +232,7 @@ import { Datasource } from "./Datasource.ts";
 import { DatasourceFactory } from "./DatasourceFactory.ts";
 Datasource.create = (options) => DatasourceFactory.create(options) as Datasource;
 export { DatasourceError } from "./DatasourceError.ts";
-export type { Cell, Cells } from "./converters/Cell.ts";
+export type { Value, Cells } from "./converters/Value.ts";
 export type { Constructable } from "./converters/Constructable.ts";
 export { TypeConverter } from "./converters/TypeConverter.ts";
 export {

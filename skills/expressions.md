@@ -23,7 +23,7 @@ abstract class Operator implements IExpression
 #### Cmp {#typescript-cmp}
 
 ```typescript
-function eq(column: string, value: Cell): IExpression
+function eq(column: string, value: Value): IExpression
 ```
 
 **Methods**
@@ -39,12 +39,12 @@ function eq(column: string, value: Cell): IExpression
 **Definition**
 
 ```typescript
-function eq(column: string, value: Cell): IExpression
-function ne(column: string, value: Cell): IExpression
-function gt(column: string, value: Cell): IExpression
-function lt(column: string, value: Cell): IExpression
-function ge(column: string, value: Cell): IExpression
-function le(column: string, value: Cell): IExpression
+function eq(column: string, value: Value): IExpression
+function ne(column: string, value: Value): IExpression
+function gt(column: string, value: Value): IExpression
+function lt(column: string, value: Value): IExpression
+function ge(column: string, value: Value): IExpression
+function le(column: string, value: Value): IExpression
 ```
 
 **Parameters**
@@ -52,7 +52,7 @@ function le(column: string, value: Cell): IExpression
 | Name | Description |
 | --- | --- |
 | `column` | column name |
-| `value` | [Cell](mappings.md#typescript-cell) |
+| `value` | [Value](mappings.md#typescript-cell) |
 
 **Returns**
 
@@ -117,14 +117,14 @@ class Literal implements IExpression
 **Definition**
 
 ```typescript
-constructor(value: Cell)
+constructor(value: Value)
 ```
 
 **Parameters**
 
 | Name | Description |
 | --- | --- |
-| `value` | [Cell](mappings.md#typescript-cell) |
+| `value` | [Value](mappings.md#typescript-cell) |
 
 #### ArrayExpression {#typescript-arrayexpression}
 

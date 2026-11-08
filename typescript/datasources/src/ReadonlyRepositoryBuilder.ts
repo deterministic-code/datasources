@@ -1,5 +1,6 @@
 import type { IConnection } from "./IConnection.ts";
 import type { Constructable } from "./converters/Constructable.ts";
+import type { Cells } from "./converters/Value.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { RowTypeConverter } from "./converters/RowTypeConverter.ts";
 import { fieldNamesOf } from "./createReadonlyRepositoryMappingOptions.ts";
@@ -10,7 +11,7 @@ import type { ReadonlyRepositoryMappingOptions } from "./ReadonlyRepositoryMappi
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
 
-export class ReadonlyRepositoryBuilder<T = object> {
+export class ReadonlyRepositoryBuilder<T = Cells> {
   protected entityMapper: IMapper<string, string> = new IdentityMapper();
   protected propertyMapper: IMapper<string, string> = new IdentityMapper();
 
@@ -28,21 +29,28 @@ export class ReadonlyRepositoryBuilder<T = object> {
     this.propertyMapper = propertyMappings;
     const entity = options.entity ?? options.type?.name ?? "";
     const names = options.readProperties ?? (options.type ? fieldNamesOf(options.type) : []);
-    if (objectConverter instanceof MetaDataRowTypeConverter && options.type) {
-      const instance = new options.type() as Record<string, string | number | boolean | bigint | null | object>;
-      objectConverter.references.clear();
+    if (objectConverter instanceof MetaDataRowTypeConverter) {
       objectConverter.referenceColumns = propertyMappings;
       objectConverter.ids = options.schema?.ids().length ? options.schema.ids() : this.ids(options);
-      for (const name of names) {
-        const value = instance[name];
-        if (
-          value !== null &&
-          typeof value === "object" &&
-          !Array.isArray(value) &&
-          !(value instanceof Date) &&
-          !(value instanceof Uint8Array)
-        )
-          objectConverter.references.add(name);
+      objectConverter.references.clear();
+      const columns = options.schema?.columns;
+      const schemaHasValues = !!columns && Object.keys(columns).some((name) => !columns[name].isId);
+      if (schemaHasValues) {
+        for (const name of names)
+          if (!(name in columns)) objectConverter.references.add(name);
+      } else if (options.type) {
+        const instance = new options.type() as T & Record<string, T>;
+        for (const name of names) {
+          const value = instance[name];
+          if (
+            value !== null &&
+            typeof value === "object" &&
+            !Array.isArray(value) &&
+            !(value instanceof Date) &&
+            !(value instanceof Uint8Array)
+          )
+            objectConverter.references.add(name);
+        }
       }
     }
     const columns = [...names].sort((left, right) =>

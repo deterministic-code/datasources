@@ -27,3 +27,7 @@ export class StoredEnrichment<T, TRelated = T, TLink = TRelated> {
     this.via = via;
   }
 }
+
+export const asRelated = <T, TRelated, TLink>(
+  entry: StoredEnrichment<T>,
+): StoredEnrichment<T, TRelated, TLink> => entry as StoredEnrichment<T, TRelated, TLink>;

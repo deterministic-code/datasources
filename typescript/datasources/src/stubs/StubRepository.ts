@@ -1,5 +1,5 @@
 import type { Scalar } from "../builders/Scalar.ts";
-import type { Cells } from "../converters/Cell.ts";
+import type { Cells } from "../converters/Value.ts";
 import type { Constructable } from "../converters/Constructable.ts";
 import type { IConnection } from "../IConnection.ts";
 import type { Parameter } from "../Parameter.ts";
@@ -12,7 +12,7 @@ import type { Response } from "../Response.ts";
 import type { IWhere } from "../statements/IWhere.ts";
 import { notImplemented } from "./notImplemented.ts";
 
-export class StubRepository<T = unknown> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
+export class StubRepository<T = Cells> extends ReadonlyRepository<T> implements ICRUDRepository<T> {
   readonly ids: readonly string[] = [];
   constructor(
     readonly provider: string,

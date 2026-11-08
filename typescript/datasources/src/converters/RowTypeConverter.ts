@@ -1,16 +1,16 @@
-import type { Cell, Cells } from "./Cell.ts";
+import type { Value, Cells } from "./Value.ts";
 import { TypeConverter } from "./TypeConverter.ts";
 
 export class RowTypeConverter extends TypeConverter<Cells, Cells> {
-  constructor(readonly fields: Record<string, TypeConverter<Cell, Cell>>) {
+  constructor(readonly fields: Record<string, TypeConverter<Value, Value>>) {
     super();
   }
 
   static from(
-    converters: Record<string, TypeConverter<Cell, Cell>>,
+    converters: Record<string, TypeConverter<Value, Value>>,
     columns: Record<string, string>,
   ): RowTypeConverter {
-    const fields: Record<string, TypeConverter<Cell, Cell>> = {};
+    const fields: Record<string, TypeConverter<Value, Value>> = {};
     for (const [name, type] of Object.entries(columns)) {
       const converter = converters[type] ?? (type.endsWith("integer") ? converters.integer : undefined);
       if (converter) fields[name] = converter;

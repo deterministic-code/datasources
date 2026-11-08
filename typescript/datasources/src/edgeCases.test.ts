@@ -6,6 +6,7 @@ import { CascadeDeleteEnrichmentStrategy } from "./CascadeDeleteEnrichmentStrate
 import { CascadeDeleteUpdateEnrichmentStrategy } from "./CascadeDeleteUpdateEnrichmentStrategy.ts";
 import { CRUDRepository } from "./CRUDRepository.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
+import { lookupKeys, mergeLookups } from "./CreateEnrichmentStrategy.ts";
 import { DefaultCreateEnrichmentStrategy } from "./DefaultCreateEnrichmentStrategy.ts";
 import { DefaultUpdateEnrichmentStrategy } from "./DefaultUpdateEnrichmentStrategy.ts";
 import { DefaultWriteEnrichmentStrategy } from "./DefaultWriteEnrichmentStrategy.ts";
@@ -19,7 +20,7 @@ import { RepositoryTreeNode } from "./RepositoryTreeNode.ts";
 import { BatchCommandIBulkWriteStrategy } from "./BatchCommandIBulkWriteStrategy.ts";
 import { SingleCommandIBulkWriteStrategy } from "./SingleCommandIBulkWriteStrategy.ts";
 import { StoredProcedureBulkWriteStrategy } from "./StoredProcedureBulkWriteStrategy.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { Scalar } from "./builders/Scalar.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import { MockCommand } from "./mocks/mock-command.ts";
@@ -167,7 +168,7 @@ describe("statement and repository edges", () => {
       { type: Item, entity: "items", objectConverter: new DropId() },
       new BatchCommandIBulkWriteStrategy<Item>(),
     );
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     await expect(dropped.deleteBulk([new Item()])).rejects.toThrow(/id/);
 
     const plain = new BulkCRUDRepository<Item>(connection, { type: Item, entity: "items" });
@@ -348,6 +349,26 @@ describe("enrichment edges", () => {
     const createFlat = { parent_id: 0 };
     creatingOpen["stampCell"](createFlat, "parent_id", 6);
     expect(createFlat.parent_id).toBe(6);
+    const factory = { line1: "London" };
+    creatingOpen["stampCell"](factory, "contactId", 7);
+    expect(factory).toEqual({ line1: "London", contactId: 7 });
+    expect(lookupKeys(factory).size).toBe(0);
+    class Address {
+      contactId = 0;
+      line1 = "";
+    }
+    const typed = new Address();
+    creatingOpen["stampCell"](typed, "contactId", 9);
+    expect(typed.contactId).toBe(9);
+    class View {
+      line1 = "";
+    }
+    const omitted = new View();
+    creatingOpen["stampCell"](omitted, "addressTypeId", 3);
+    expect("addressTypeId" in omitted).toBe(false);
+    const extras: Cells = {};
+    mergeLookups(omitted, extras);
+    expect(extras.addressTypeId).toBe(3);
     creatingOpen["stampCell"](createFlat, "parent_id", undefined);
     creatingOpen["stampCell"](createFlat, "parent_id", null);
     creatingOpen["stampCell"](createFlat, "parent_id", { nested: true });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MemoryDriver } from "@deterministic-code/datasources-memory";
 import { collectAsync } from "./collectAsync.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import { DefaultReadonlyEnrichmentStrategy } from "./DefaultReadonlyEnrichmentStrategy.ts";
 import { NestedToObjectEnrichmentStrategy } from "./NestedToObjectEnrichmentStrategy.ts";

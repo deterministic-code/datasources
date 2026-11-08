@@ -3,6 +3,6 @@ import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { IRepository } from "./IRepository.ts";
 
 export interface IRepositoryFactory {
-  register(repository: IRepository): void;
+  register<T>(repository: IRepository<T>): void;
   create<T>(type: Constructable<T>): IReadonlyRepository<T>;
 }

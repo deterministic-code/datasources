@@ -10,7 +10,7 @@ import type { IReadonlyRepository, ReadQuery } from "./IReadonlyRepository.ts";
 import type { Row } from "./Row.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import { MetaDataRowTypeConverter } from "./converters/MetaDataRowTypeConverter.ts";
 import { SelectStatement } from "./statements/SelectStatement.ts";
@@ -120,7 +120,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
         undefined,
         undefined,
         via,
-      ) as unknown as StoredEnrichment<T>,
+      ) as StoredEnrichment<T>,
     );
     return this;
   }
@@ -162,10 +162,10 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
 
   protected cell = (
     property: string,
-    value: Cell,
+    value: Value,
     fieldsApplied: boolean,
     options?: ReadonlyRepositoryMappingOptions<T>,
-  ): Cell => {
+  ): Value => {
     const objects = options?.objectConverter ?? this.objectConverter;
     const field =
       objects instanceof MetaDataRowTypeConverter ? objects.fields[property] : undefined;
@@ -173,7 +173,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
   };
 
   private entries = (): StoredEnrichment<T>[] =>
-    storedEnrichments.get(this) as unknown as StoredEnrichment<T>[];
+    storedEnrichments.get(this) as StoredEnrichment<T>[];
 
   private mappers = (options?: ReadonlyRepositoryMappingOptions<T>): StatementMappers =>
     options?.entityMapper === undefined && options?.propertyMappings === undefined

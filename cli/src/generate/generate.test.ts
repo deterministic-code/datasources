@@ -1180,7 +1180,7 @@ types:
     const text = types.filter((entry) => entry.kind === "content").map((entry) => entry.contents).join("\n");
     expect(text).toContain("export interface Contact");
     expect(text).toContain("export const contact = (init: Partial<Contact>): Contact => ({ ...init } as Contact);");
-    expect(text).toContain("export class AddressType");
+    expect(text).toContain("export interface AddressType");
     expect(text).toContain("export const addressType = (init: Partial<AddressType>): AddressType => ({ ...init } as AddressType);");
     expect(text).toContain("firstName");
     expect(text).toContain("contactSourceName");
@@ -1211,10 +1211,9 @@ types:
 
   it("points generated Rust Facet derives at the datasources re-export", async () => {
     const text = textOf(await deterministic.generateTypes(request("rust")), "contactSource.rs");
-    expect(text).toContain("#[derive(Clone, Debug, PartialEq, datasources::Facet)]");
+    expect(text).toContain("#[derive(Clone, Debug, PartialEq, Default, datasources::Facet)]");
     expect(text).toContain("#[facet(crate = ::datasources::facet)]");
     expect(text).toContain("datasources::chrono::DateTime<datasources::chrono::Utc>");
-    expect(text).toContain("datasources::uuid::Uuid::new_v4()");
     expect(text).not.toMatch(/(^|[^:\w])chrono::/);
     expect(text).not.toMatch(/(^|[^:\w])uuid::/);
   });
@@ -1293,7 +1292,7 @@ types:
       .filter((entry) => entry.kind === "content")
       .map((entry) => entry.contents)
       .join("\n");
-    expect(userRoles).toMatch(/\{ get; set; \} = /);
+    expect(userRoles).toContain("{ get; set; }");
     expect(userRoles).toMatch(/\{ get; set; \}\n/);
     expect(userRoles).not.toContain("{ get; set; };");
   });

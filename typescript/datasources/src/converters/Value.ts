@@ -1,4 +1,4 @@
-export type Cell =
+export type Value =
   | string
   | number
   | boolean
@@ -7,4 +7,4 @@ export type Cell =
   | Uint8Array
   | null;
 
-export type Cells = Record<string, Cell>;
+export type Cells = Record<string, Value>;

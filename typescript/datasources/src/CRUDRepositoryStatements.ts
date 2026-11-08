@@ -1,4 +1,4 @@
-import type { Cell } from "./converters/Cell.ts";
+import type { Value } from "./converters/Value.ts";
 import type { Field } from "./builders/Field.ts";
 import type { IMapper } from "./mappers/IMapper.ts";
 import { IdentityMapper } from "./mappers/IdentityMapper.ts";
@@ -10,7 +10,7 @@ import { UpdateStatement } from "./statements/UpdateStatement.ts";
 import type { IWhere } from "./statements/IWhere.ts";
 import { ReadonlyRepositoryStatements } from "./ReadonlyRepositoryStatements.ts";
 
-const same = (_name: string, value: Cell): Cell => value;
+const same = (_name: string, value: Value): Value => value;
 
 export class CRUDRepositoryStatements extends ReadonlyRepositoryStatements {
   private readonly mappings: StatementMappers;
@@ -31,11 +31,11 @@ export class CRUDRepositoryStatements extends ReadonlyRepositoryStatements {
   update = (
     fields: Field[],
     where?: IWhere,
-    cell: (name: string, value: Cell) => Cell = same,
+    cell: (name: string, value: Value) => Value = same,
   ): UpdateStatement =>
     this.mappings.apply(new UpdateStatement(this.table, fields, where), cell) as UpdateStatement;
 
-  delete = (where?: IWhere, cell: (name: string, value: Cell) => Cell = same): DeleteStatement =>
+  delete = (where?: IWhere, cell: (name: string, value: Value) => Value = same): DeleteStatement =>
     this.mappings.apply(new DeleteStatement(this.table, where), cell) as DeleteStatement;
 
   selectInsertedId = (column: string): SelectInsertedIdStatement =>

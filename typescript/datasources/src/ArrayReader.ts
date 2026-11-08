@@ -1,7 +1,8 @@
 import type { IReader } from "./IReader.ts";
 import { readerToAsyncIterable } from "./readerToAsyncIterable.ts";
+import type { Cells } from "./converters/Value.ts";
 
-export class ArrayReader<T = unknown> implements IReader<T> {
+export class ArrayReader<T = Cells> implements IReader<T> {
   private index = -1;
   current: T | undefined = undefined;
 

@@ -1,5 +1,5 @@
 import type { IConnection } from "./IConnection.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { TypeConverter } from "./converters/TypeConverter.ts";
 import type { IMapper } from "./mappers/IMapper.ts";

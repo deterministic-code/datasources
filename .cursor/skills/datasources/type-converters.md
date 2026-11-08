@@ -276,7 +276,7 @@ Builds the default object converter. Convert uses [fields](#typescript-metadatar
 **Definition**
 
 ```typescript
-constructor(fields?: Record<string, TypeConverter<Cell, Cell>>)
+constructor(fields?: Record<string, TypeConverter<Value, Value>>)
 ```
 
 **Parameters**

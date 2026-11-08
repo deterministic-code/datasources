@@ -7,7 +7,7 @@ import type { ContactGroup } from "../generated/types/view/contactGroup.ts";
 import { ContactsRepository } from "../generated/repositories/contacts-repository.ts";
 import { ContactGroupsRepository } from "../generated/repositories/contact-groups-repository.ts";
 import { clock } from "./clock.ts";
-import { jsonObject } from "./jsonObject.ts";
+import { toJson } from "./jsonObject.ts";
 import { LegacyContactsRepository } from "../generated/repositories/legacy-contacts-repository.ts";
 
 export type ContactWrite = Contact;
@@ -51,20 +51,20 @@ export class Api {
   };
 
   private getContacts = async (query: Record<string, string>): Promise<HttpResult> =>
-    ({ status: 200, body: jsonObject.toString(await list(this.contacts, where(query, ["id", "firstName", "lastName", "email"]))) });
+    ({ status: 200, body: toJson(await list(this.contacts, where(query, ["id", "firstName", "lastName", "email"]))) });
 
   private postContact = async (body: string | undefined): Promise<HttpResult> => {
-    const contact = this.stamp(read<ContactWrite>(body));
-    return { status: 201, body: jsonObject.toString(await this.contacts.create(contact)) };
+    const row = this.stamp(read(body));
+    return { status: 201, body: toJson(await this.contacts.create(row)) };
   };
 
   private putContact = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
     const id = requiredNumber(query, "id");
     if ((await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
-    const contact = this.stamp(read<ContactWrite>(body));
-    contact.id = id;
-    await this.contacts.update(contact);
-    return { status: 200, body: jsonObject.toString(await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) };
+    const row = this.stamp(read(body));
+    row.id = id;
+    await this.contacts.update(row);
+    return { status: 200, body: toJson(await this.contacts.readSingle(new Where(new Operator.Equals("id", id)))) };
   };
 
   private deleteContact = async (query: Record<string, string>): Promise<HttpResult> => {
@@ -76,21 +76,21 @@ export class Api {
   };
 
   private getLegacy = async (query: Record<string, string>): Promise<HttpResult> =>
-    ({ status: 200, body: jsonObject.toString(await list(this.legacy, where(query, ["key", "firstName", "lastName", "email"]))) });
+    ({ status: 200, body: toJson(await list(this.legacy, where(query, ["key", "firstName", "lastName", "email"]))) });
 
   private postLegacy = async (body: string | undefined): Promise<HttpResult> => {
-    const row = textLegacy(read<LegacyContact>(body));
+    const row = textLegacy(read(body));
     if (row.key.length === 0) throw new RequestError("key is required");
-    return { status: 201, body: jsonObject.toString(await this.legacy.create(row)) };
+    return { status: 201, body: toJson(await this.legacy.create(row)) };
   };
 
   private putLegacy = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
     const key = required(query, "key");
     if ((await this.legacy.readSingle(new Where(new Operator.Equals("key", key)))) == null) return { status: 404, body: "" };
-    const row = textLegacy(read<LegacyContact>(body));
+    const row = textLegacy(read(body));
     row.key = key;
     await this.legacy.update(row, new Where(new Operator.Equals("key", key)));
-    return { status: 200, body: jsonObject.toString(await this.legacy.readSingle(new Where(new Operator.Equals("key", key)))) };
+    return { status: 200, body: toJson(await this.legacy.readSingle(new Where(new Operator.Equals("key", key)))) };
   };
 
   private deleteLegacy = async (query: Record<string, string>): Promise<HttpResult> => {
@@ -102,20 +102,20 @@ export class Api {
   };
 
   private getGroups = async (query: Record<string, string>): Promise<HttpResult> =>
-    ({ status: 200, body: jsonObject.toString(await list(this.groupsRepo, where(query, ["id"]))) });
+    ({ status: 200, body: toJson(await list(this.groupsRepo, where(query, ["id"]))) });
 
   private postGroup = async (body: string | undefined): Promise<HttpResult> => {
-    const group = stampGroup(read<ContactGroup>(body));
-    return { status: 201, body: jsonObject.toString(await this.groupsRepo.create(group)) };
+    const group = stampGroup(read(body));
+    return { status: 201, body: toJson(await this.groupsRepo.create(group)) };
   };
 
   private putGroup = async (query: Record<string, string>, body: string | undefined): Promise<HttpResult> => {
     const id = requiredNumber(query, "id");
     if ((await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) == null) return { status: 404, body: "" };
-    const group = stampGroup(read<ContactGroup>(body));
+    const group = stampGroup(read(body));
     group.id = id;
     await this.groupsRepo.update(group);
-    return { status: 200, body: jsonObject.toString(await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) };
+    return { status: 200, body: toJson(await this.groupsRepo.readSingle(new Where(new Operator.Equals("id", id)))) };
   };
 
   private stamp = (contact: ContactWrite): ContactWrite => {
@@ -193,7 +193,7 @@ const where = (query: Record<string, string>, keys: string[]): IWhere | undefine
   return parts.length === 0 ? undefined : new Where(parts.reduce((left, right) => new Operator.And(left, right)));
 };
 
-const read = <T>(body: string | undefined): T => jsonObject.fromString<T>(body);
+const read = (body: string | undefined) => JSON.parse(body || "{}");
 
 const textLegacy = (row: LegacyContact): LegacyContact => ({
   ...row,

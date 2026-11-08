@@ -1,4 +1,4 @@
-import type { Cell } from "../converters/Cell.ts";
+import type { Value } from "../converters/Value.ts";
 import { ArrayExpression } from "./ArrayExpression.ts";
 import { is } from "./brand.ts";
 import type { IExpression } from "./IExpression.ts";
@@ -92,7 +92,7 @@ const symbol = (op: Operator): string => {
   throw new Error("empty expression");
 };
 
-const inline = (value: Cell): string =>
+const inline = (value: Value): string =>
   value === null
     ? "null"
     : typeof value === "boolean"

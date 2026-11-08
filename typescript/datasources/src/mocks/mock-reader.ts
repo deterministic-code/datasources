@@ -1,7 +1,8 @@
 import type { IReader } from "../IReader.ts";
 import { readerToAsyncIterable } from "../readerToAsyncIterable.ts";
+import type { Cells } from "../converters/Value.ts";
 
-export class MockReader<T = unknown> implements IReader<T> {
+export class MockReader<T = Cells> implements IReader<T> {
   current: T | undefined = undefined;
   nextCalls = 0;
   nextError?: unknown;

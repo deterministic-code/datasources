@@ -18,12 +18,12 @@ interface IExpression {}
 abstract class Operator implements IExpression
 ```
 
-Compare, group, not, and in nodes. Field constructors take a column and [Cell](./flat-to-nested-mapper.md#cell): `new Operator.Equals("id", 9)`.
+Compare, group, not, and in nodes. Field constructors take a column and [Value](./flat-to-nested-mapper.md#cell): `new Operator.Equals("id", 9)`.
 
 ##### Operator.Equals / NotEquals / GreaterThan / LessThan / GreaterThanOrEqual / LessThanOrEqual
 
 ```typescript
-new Operator.Equals(field: string, value: Cell)
+new Operator.Equals(field: string, value: Value)
 new Operator.Equals(left: IExpression, right: IExpression)
 ```
 
@@ -36,7 +36,7 @@ new Operator.And(left: IExpression, right: IExpression)
 ##### Operator.In
 
 ```typescript
-new Operator.In(field: string, values: Cell[])
+new Operator.In(field: string, values: Value[])
 new Operator.In(left: IExpression, right: IExpression)
 ```
 
@@ -51,7 +51,7 @@ new Operator.Not(argument: IExpression)
 Aliases for the comparison constructors. Pass one as the middle argument of [Where](./where-clause.md#where).
 
 ```typescript
-function eq(column: string, value: Cell): IExpression
+function eq(column: string, value: Value): IExpression
 ```
 
 **Methods**
@@ -61,16 +61,16 @@ function eq(column: string, value: Cell): IExpression
 `eq` is [Operator.Equals](#operator). `ne` is not-equals. `gt` / `lt` are greater-than and less-than. `ge` / `le` are the or-equal forms.
 
 ```typescript
-function eq(column: string, value: Cell): IExpression
-function ne(column: string, value: Cell): IExpression
-function gt(column: string, value: Cell): IExpression
-function lt(column: string, value: Cell): IExpression
-function ge(column: string, value: Cell): IExpression
-function le(column: string, value: Cell): IExpression
+function eq(column: string, value: Value): IExpression
+function ne(column: string, value: Value): IExpression
+function gt(column: string, value: Value): IExpression
+function lt(column: string, value: Value): IExpression
+function ge(column: string, value: Value): IExpression
+function le(column: string, value: Value): IExpression
 ```
 
 - `column` — column name
-- `value` — [Cell](./flat-to-nested-mapper.md#cell)
+- `value` — [Value](./flat-to-nested-mapper.md#cell)
 
 **Returns** [IExpression](#iexpression)
 
@@ -109,17 +109,17 @@ class Literal implements IExpression
 ##### Literal(value)
 
 ```typescript
-constructor(value: Cell)
+constructor(value: Value)
 ```
 
-- `value` — [Cell](./flat-to-nested-mapper.md#cell)
+- `value` — [Value](./flat-to-nested-mapper.md#cell)
 
 **Properties**
 
 ##### value
 
 ```typescript
-readonly value: Cell
+readonly value: Value
 ```
 
 #### ArrayExpression

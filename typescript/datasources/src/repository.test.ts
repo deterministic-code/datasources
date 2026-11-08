@@ -17,7 +17,7 @@ import {
 import { MockCommand } from "./mocks/mock-command.ts";
 import { MockConnection } from "./mocks/mock-connection.ts";
 import { MockReader } from "./mocks/mock-reader.ts";
-import type { Cell, Cells } from "./converters/Cell.ts";
+import type { Value, Cells } from "./converters/Value.ts";
 import { TypeConverter } from "./converters/TypeConverter.ts";
 import type { Constructable } from "./converters/Constructable.ts";
 import type { CRUDRepositoryOptions } from "./CRUDRepositoryOptions.ts";
@@ -119,7 +119,7 @@ describe("CRUDRepository", () => {
 
   it("adds updates and deletes through builders", async () => {
     const { repo, command } = create();
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 9 }]);
     const obj = { id: 0, name: "a" };
     const created = await repo.create(obj);
@@ -140,7 +140,7 @@ describe("CRUDRepository", () => {
 
   it("includes an assigned id on create", async () => {
     const { repo, command } = create();
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const created = await repo.create({ id: 42, name: "ada" });
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO users (id, name) VALUES ($id, $name)");
     expect(command.executeReaderCalls).toEqual([]);
@@ -149,7 +149,7 @@ describe("CRUDRepository", () => {
 
   it("maps create result onto Id when id is absent", async () => {
     const { repo, command } = create({ type: asType(PascalId), ids: ["Id"] });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ Id: 9 }]);
     const item = Object.assign(new PascalId(), { Id: 0 });
     const created = await repo.create(item);
@@ -158,7 +158,7 @@ describe("CRUDRepository", () => {
 
   it("updates without id columns using a tautology", async () => {
     const { repo, command } = create({ ids: [] });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const updated = await repo.update({ id: 1, name: "a" });
     expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[0]?.text).toContain("1 = 1");
@@ -173,7 +173,7 @@ describe("CRUDRepository", () => {
       { name: "name", value: "a" },
     ]);
     const versioned = create();
-    versioned.command.response = { result: undefined, rowsAffected: 1 };
+    versioned.command.response = { result: null, rowsAffected: 1 };
     const versionedUpdate = await versioned.repo.update(
       { id: 1, name: "b", name_extra: "x" },
       new Where(new Operator.And(
@@ -204,7 +204,7 @@ describe("CRUDRepository", () => {
       "INSERT INTO users (name, org_id, user_id) VALUES ($name, $org_id, $user_id)",
     );
     expect(command.executeCalls[0]?.parameters?.map((field) => field.value)).toEqual([3, 1, 2]);
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const updated = await repo.update({ org_id: 1, user_id: 2, name: 4 });
     expect(updated.rowsAffected).toBe(1);
     expect(command.executeCalls[1]?.text).toContain(
@@ -214,7 +214,7 @@ describe("CRUDRepository", () => {
 
   it("omits null datetime and version on create and writes them on update", async () => {
     const { repo, command } = create({ type: asType(Stamp) });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 7 }, { id: 7 }]);
     const created = await repo.create({ id: 0, name: "ada", created: null, version: undefined });
     expect(created.id).toBe(7);
@@ -240,7 +240,7 @@ describe("CRUDRepository", () => {
       createProperties: ["Line1"],
       updateProperties: ["Line1"],
     });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ Id: 1 }]);
     await repo.create({ Id: 0, Line1: "1 Main", Description: "Home" });
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO addresses (Line1) VALUES ($Line1)");
@@ -258,7 +258,7 @@ describe("CRUDRepository", () => {
       createProperties: ["name", "given_name", "is_starred", "uuid", "gender_type_id"],
     });
     Object.assign(repo, { createZeros: { name: "", is_starred: false } });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 1 }]);
     await repo.create({ given_name: "Ada" });
     expect(command.executeCalls[0]?.text).toBe(
@@ -287,7 +287,7 @@ describe("CRUDRepository", () => {
         secret: { type: "string", nullable: false, hasDefault: false },
       }),
     });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ id: 1 }]);
     await repo.create({ given_name: "Ada" });
     expect(command.executeCalls[0]?.text).toBe(
@@ -304,7 +304,7 @@ describe("CRUDRepository", () => {
       }),
     });
     Object.assign(skipped.repo, { createZeros: {} });
-    skipped.command.response = { result: undefined, rowsAffected: 1 };
+    skipped.command.response = { result: null, rowsAffected: 1 };
     skipped.command.reader = new MockReader([{ id: 1 }]);
     await skipped.repo.create({ name: "Ada" });
     expect(skipped.command.executeCalls[0]?.text).toBe("INSERT INTO contacts (name) VALUES ($name)");
@@ -316,7 +316,7 @@ describe("CRUDRepository", () => {
       ids: ["Id"],
       readProperties: ["Id", "Line1"],
     });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     command.reader = new MockReader([{ Id: 1 }]);
     await repo.create({ Id: 0, Line1: "1 Main", Description: "Home" });
     expect(command.executeCalls[0]?.text).toBe("INSERT INTO addresses (Line1) VALUES ($Line1)");
@@ -389,7 +389,7 @@ describe("CRUDRepository", () => {
         /* consume */
       }
     }).rejects.toThrow("Reader current must be a row");
-    query.response = { result: undefined, rowsAffected: 1 };
+    query.response = { result: null, rowsAffected: 1 };
     const updated = await repo.update({ id: 1, name: "a" }, new WhereText("id = 1"));
     expect(updated.rowsAffected).toBe(1);
     const typed = new CRUDRepository(connection, {
@@ -397,7 +397,7 @@ describe("CRUDRepository", () => {
       entity: "users",
       objectConverter: new MetaDataRowTypeConverter(),
     });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const created = await typed.create(Object.assign(new Item(), { id: 1, name: "a" }));
     expect(created.id).toBe(1);
     expect(command.executeCalls[0]?.text).toContain("INSERT INTO users");
@@ -441,7 +441,7 @@ describe("CRUDRepository", () => {
     expect(command.executeReaderCalls[0]?.text).toBe(
       "SELECT full_name, user_id FROM people",
     );
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const row = { id: 0, name: "a" };
     const created = await repo.create(row);
     expect(created.id).toBe(0);
@@ -461,9 +461,9 @@ describe("CRUDRepository", () => {
   });
 
   it("reverse-converts a field only before values are applied", async () => {
-    class Flag extends TypeConverter<Cell, Cell> {
-      convert = (value: Cell): Cell => value;
-      reverseConvert = (value: Cell): Cell => (value === true ? 1 : 0);
+    class Flag extends TypeConverter<Value, Value> {
+      convert = (value: Value): Value => value;
+      reverseConvert = (value: Value): Value => (value === true ? 1 : 0);
     }
     class Row {
       id = 0;
@@ -477,7 +477,7 @@ describe("CRUDRepository", () => {
       entity: "rows",
       objectConverter: new MetaDataRowTypeConverter<Row>({ on: new Flag() }),
     });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const created = await repo.create(Object.assign(new Row(), { id: 1, on: true }));
     expect(created.id).toBe(1);
     const updated = await repo.update(
@@ -501,7 +501,7 @@ describe("CRUDRepository", () => {
       entity: "items",
       objectConverter: new Plain(),
     });
-    command.response = { result: undefined, rowsAffected: 1 };
+    command.response = { result: null, rowsAffected: 1 };
     const updated = await repo.update(
       Object.assign(new Item(), { id: 1, name: "a" }),
       new Where(new Operator.Equals("name", "a")),

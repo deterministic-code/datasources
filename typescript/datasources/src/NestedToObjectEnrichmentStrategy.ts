@@ -1,4 +1,4 @@
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { Enrichment } from "./Enrichment.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import { FlatToNestedMapper } from "./mappers/FlatToNestedMapper.ts";

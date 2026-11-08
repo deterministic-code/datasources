@@ -3,7 +3,7 @@ import { DefaultStatementTextRenderer } from "./statements/DefaultStatementTextR
 import { Native } from "./statements/Native.ts";
 import type { ICommandMiddleware } from "./ICommandMiddleware.ts";
 import type { IConnection } from "./IConnection.ts";
-import type { Cells } from "./converters/Cell.ts";
+import type { Cells } from "./converters/Value.ts";
 import type { IReader } from "./IReader.ts";
 import type { Response } from "./Response.ts";
 import type { Parameter } from "./Parameter.ts";

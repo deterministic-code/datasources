@@ -91,7 +91,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
 
   async executeNative(text: Native, parameters?: Parameter[]): Promise<Response> {
     return this.run(text.text, parameters, async (query, params) => {
-      if (!query.trim()) return { value: new Response(undefined, 0, params), rows: [] };
+      if (!query.trim()) return { value: new Response(null, 0, params), rows: [] };
       this.connection.ensureOpen();
       const named = bindParameters(params);
       let rowsAffected = 0;
@@ -108,7 +108,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
         result = executed.result;
       }
       return {
-        value: new Response(result, rowsAffected, parameters),
+        value: new Response(result ?? null, rowsAffected, parameters),
         rows: [],
       };
     });
@@ -136,7 +136,7 @@ export class MysqlCommand extends CommandMiddlewareHost implements ICommand {
       const row = Array.isArray(rows) ? (rows[0] as Cells | undefined) : undefined;
       return {
         value: new Response(
-          undefined,
+          null,
           0,
           params?.map((parameter) =>
             row && parameter.direction && parameter.direction !== ParameterDirection.Input

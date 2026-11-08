@@ -89,7 +89,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
         if (op === "insert") {
           this.connection.getCollection().push(obj);
           await this.connection.persist();
-          return { value: new Response(obj, 1, params), rows: [] };
+          return { value: new Response(null, 1, params), rows: [] };
         }
         if (op === "update") {
           const whereText =
@@ -122,7 +122,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
       }
     }
     await this.connection.persist();
-    return { result: obj, rowsAffected };
+    return { result: null, rowsAffected };
   }
 
   private async applyDelete(
@@ -136,7 +136,7 @@ export class JsonCommand extends CommandMiddlewareHost implements ICommand {
     collection.length = 0;
     collection.push(...remaining);
     await this.connection.persist();
-    return { result: undefined, rowsAffected };
+    return { result: null, rowsAffected };
   }
 }
 
