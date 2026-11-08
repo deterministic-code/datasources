@@ -175,7 +175,7 @@ types:
         cwd,
       ),
     ).toBe(1);
-    expect(errs).toEqual(['missing type "user"']);
+    expect(errs).toEqual(["review.user_id references user.id has no type"]);
     expect(Object.keys(store.files).every((path) => !path.includes("generated") && !path.includes("sql/"))).toBe(true);
   });
 
@@ -198,8 +198,42 @@ types:
         cwd,
       ),
     ).toBe(1);
-    expect(errs).toEqual(['missing type "user_base"']);
+    expect(errs).toEqual(["user_settings.user_id references user_base.id has no type"]);
     expect(Object.keys(store.files).some((path) => path.includes("generated") || path.includes("sql/"))).toBe(false);
+  });
+
+  it("fails parse when a reference names a missing type or field", async () => {
+    const cwd = "app";
+    const input = join(cwd, "deterministic");
+    const store = mem({
+      [join(input, "types.yaml")]: `version: 1.0.0
+types:
+  - contact:
+      tags: [datasource_type]
+      fields:
+        - id:
+            type: integer
+            is_id: true
+  - address:
+      tags: [datasource_type]
+      fields:
+        - ghosts:
+            type: ghost[]
+            references: ghost.ghost_id
+`,
+      [join(input, "datasource.yaml")]: defaultDatasourceYaml,
+    });
+    const errs: string[] = [];
+    const io = deps(store.fs);
+    io.err = (line) => errs.push(line);
+    expect(
+      await exec(
+        ["generate", "all", "--dialect", "typescript", "--cwd", cwd, "--no-migrations", "--no-auto-migrate-up"],
+        io,
+        cwd,
+      ),
+    ).toBe(1);
+    expect(errs).toEqual(['missing type "ghost"']);
   });
 
   it("writes sqlite migrations for complex-game with local includes", async () => {
@@ -1354,7 +1388,7 @@ types:
       - pointed_id:
           references: pointed.id
       - loose:
-          references: nowhere
+          type: string
   - joined:
       tags: [view_type]
       inherits: pointer
@@ -1374,6 +1408,9 @@ types:
       mapping:
         missing: gone
       fields:
+      - id:
+          type: integer
+          is_id: true
       - label:
           type: string
       - items:
@@ -1381,9 +1418,6 @@ types:
           references: pointer.id
       - bare:
           type: pointer[]
-      - ghosts:
-          type: ghost[]
-          references: ghost.ghost_id
       - solos:
           type: solo[]
           references: solo.parent_id
