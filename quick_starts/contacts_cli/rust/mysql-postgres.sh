@@ -1,8 +1,5 @@
 export PROVIDER=mysql
 export DATASOURCE_URL="${MYSQL_URL:-mysql://ds:ds@mysql:3306/datasources}"
-cargo init
-cp -R ../quick_starts/contacts_cli/rust/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres
 npx @deterministic-code/datasources-cli generate all --dialect rust

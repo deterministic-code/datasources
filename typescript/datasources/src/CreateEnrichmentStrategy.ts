@@ -5,6 +5,7 @@ import type { Scalar } from "./builders/Scalar.ts";
 import type { Cells } from "./converters/Value.ts";
 import { identityKey } from "./identity.ts";
 import { DatasourceError } from "./DatasourceError.ts";
+import type { Schema } from "./Schema.ts";
 import type { StoredEnrichment } from "./StoredEnrichment.ts";
 import { Operator, Where } from "./statements/index.ts";
 
@@ -15,7 +16,7 @@ export abstract class CreateEnrichmentStrategy<T> {
 
   abstract createLinked<TChild extends object>(writer: ICRUDRepository<TChild>, enrichment: Enrichment, parent: T): Promise<void>;
 
-  async resolveLookups(entries: readonly StoredEnrichment<T>[], items: T[], record: Cells): Promise<void> {
+  async resolveLookups(entries: readonly StoredEnrichment<T>[], items: T[], record: Cells, schema: Schema): Promise<void> {
     for (const item of items) {
       for (const entry of entries) {
         const { enrichment } = entry;
@@ -27,16 +28,21 @@ export abstract class CreateEnrichmentStrategy<T> {
           continue;
         }
         if ((enrichment.type ?? "object") !== "object") continue;
-        const name = record[enrichment.destinationProperty];
-        if (!this.presentCell(name)) continue;
+        const dest = enrichment.destinationProperty;
+        const name = record[dest];
+        if (!this.presentCell(name)) {
+          const column = schema.columns[dest];
+          if (column && !column.nullable) throw new DatasourceError(`Unknown ${dest}`);
+          continue;
+        }
         if (this.presentCell(record[enrichment.sourceProperty])) continue;
         const found = await via.readSingle(new Where(new Operator.Equals(enrichment.relatedProperty, name)));
         if (!found)
-          throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
+          throw new DatasourceError(`Unknown ${dest} "${String(name)}"`);
         const id = this.getCell(found, enrichment.relatedKey);
         if (!this.presentCell(id))
-          throw new DatasourceError(`Unknown ${enrichment.destinationProperty} "${String(name)}"`);
-        this.stamp(record, enrichment.sourceProperty, id);
+          throw new DatasourceError(`Unknown ${dest} "${String(name)}"`);
+        record[enrichment.sourceProperty] = id;
       }
     }
   }

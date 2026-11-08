@@ -333,33 +333,14 @@ export class CRUDRepository<T = Cells>
 
   private lookupRow = async (item: T): Promise<Cells> => {
     const record = this.objectConverter!.reverseConvert(item);
-    this.alignLookupKeys(record, false);
-    await this.write.resolveLookups?.(this.tree, [item], record);
-    this.alignLookupKeys(record, true);
-    this.requireLookupSources(record);
-    return this.mapped(record);
-  };
-
-  private alignLookupKeys = (record: Cells, fromSource: boolean): void => {
     for (const source of this.objectSourceProperties()) {
       const column = this.column(source);
-      if (fromSource) {
-        if (assigned(record[source] ?? null)) record[column] = record[source]!;
-        continue;
-      }
       if (!assigned(record[source] ?? null) && assigned(record[column] ?? null)) record[source] = record[column]!;
     }
-  };
-
-  private requireLookupSources = (record: Cells): void => {
-    for (const entry of enrichmentsOf<T>(this)!) {
-      const enrichment = entry.enrichment;
-      if ((enrichment.type ?? "object") !== "object" || enrichment.association) continue;
-      if (assigned(record[enrichment.sourceProperty] ?? null)) continue;
-      const column = this.schema.columns[enrichment.destinationProperty];
-      if (!column || column.nullable) continue;
-      throw new DatasourceError(`Unknown ${enrichment.destinationProperty}`);
-    }
+    await this.write.resolveLookups?.(this.tree, [item], record, this.schema);
+    for (const source of this.objectSourceProperties())
+      if (assigned(record[source] ?? null)) record[this.column(source)] = record[source]!;
+    return this.mapped(record);
   };
 
   private idWhere = (record: Cells): IWhere => {

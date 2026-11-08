@@ -1,8 +1,6 @@
 # Contacts CLI
 
-Dest is a new folder inside this clone. From the clone, `mkdir dest && cd dest`, then copy this sample onto `./`, install Datasources, generate, build, and run.
-
-Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` in `.env`), not every engine listed in `settings.yaml`. The program prints `expected.txt`.
+From `quick_starts/contacts_cli/{csharp,rust,typescript}`, install the published Datasources packages, generate, and run. Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` in `.env`), not every engine listed in `settings.yaml`. The program prints `expected.txt`.
 
 ## sqlite
 
@@ -10,9 +8,6 @@ Generate writes SQL for the providers `setup` installed (`INSTALLED_PROVIDERS` i
 ```csharp
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
-dotnet new console
-cp -R ../quick_starts/contacts_cli/csharp/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 dotnet add package Datasources
 npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect csharp
@@ -22,9 +17,6 @@ dotnet run
 ```rust
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
-cargo init
-cp -R ../quick_starts/contacts_cli/rust/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect rust
@@ -33,9 +25,6 @@ cargo run
 ```typescript
 export PROVIDER=sqlite
 export DATASOURCE_URL=sqlite:///./app.sqlite
-npm init -y
-cp -R ../quick_starts/contacts_cli/typescript/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 npm install @deterministic-code/datasources
 npx @deterministic-code/datasources-cli setup --yes sqlite
 npx @deterministic-code/datasources-cli generate all --dialect typescript
@@ -49,9 +38,6 @@ npx tsx src/main.ts
 ```csharp
 export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
-dotnet new console
-cp -R ../quick_starts/contacts_cli/csharp/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 docker compose up -d --wait
 dotnet add package Datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres
@@ -68,9 +54,6 @@ docker compose down -v
 ```rust
 export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
-cargo init
-cp -R ../quick_starts/contacts_cli/rust/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 docker compose up -d --wait
 cargo add datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres
@@ -85,9 +68,6 @@ docker compose down -v
 ```typescript
 export PROVIDER=mysql
 export DATASOURCE_URL=mysql://ds:ds@127.0.0.1:3306/datasources
-npm init -y
-cp -R ../quick_starts/contacts_cli/typescript/. ./
-cp -R ../quick_starts/contacts_cli/shared/deterministic ./deterministic
 docker compose up -d --wait
 npm install @deterministic-code/datasources
 npx @deterministic-code/datasources-cli setup --yes mysql postgres

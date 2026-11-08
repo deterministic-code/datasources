@@ -112,8 +112,9 @@ export const planRepositories = (
     const readSet = new Set(readProperties);
     for (const item of enrichments) {
       if (item.kind !== "object") continue;
-      const fieldName = yamlFields.find((name) => property(name) === item.source);
-      if (fieldName !== undefined) mapField(fieldName);
+      const yamlName = yamlFields.find((name) => property(name) === item.source) ?? item.source;
+      const to = sqlColumn(yamlName);
+      if (item.source !== to) mapped.set(item.source, to);
       if (!readSet.has(item.source)) {
         readSet.add(item.source);
         readProperties.push(item.source);
