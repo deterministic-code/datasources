@@ -15,12 +15,12 @@ fn params(list: &[RoutineParameter]) -> String {
         .join(",\n")
 }
 
-fn type_of(parameters: &[RoutineParameter], name: &str, fallback: &str) -> String {
+fn type_of(parameters: &[RoutineParameter], name: &str) -> String {
     parameters
         .iter()
         .find(|p| p.name == name)
         .map(|p| p.r#type.clone())
-        .unwrap_or_else(|| fallback.to_string())
+        .unwrap_or_else(|| panic!("missing parameter \"{name}\""))
 }
 
 fn recordset(columns: &[RoutineParameter]) -> String {
@@ -76,7 +76,7 @@ impl PostgresStoredProcedureStatementRenderer {
         let signature = statement
             .by_properties()
             .iter()
-            .map(|c| format!("{c} {}", type_of(statement.parameters(), c, statement.key_type())))
+            .map(|c| format!("{c} {}", type_of(statement.parameters(), c)))
             .collect::<Vec<_>>()
             .join(", ");
         let pred = statement
@@ -131,7 +131,7 @@ impl PostgresStoredProcedureStatementRenderer {
         };
         let signature = by
             .iter()
-            .map(|c| format!("{c} {}", type_of(statement.parameters(), c, statement.key_type())))
+            .map(|c| format!("{c} {}", type_of(statement.parameters(), c)))
             .collect::<Vec<_>>()
             .join(", ");
         let pred = by

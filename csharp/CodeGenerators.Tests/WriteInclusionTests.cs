@@ -37,6 +37,18 @@ public class WriteInclusionTests
     }
 
     [Fact]
+    public void PkOfThrowsWhenPrimaryKeyIsMissing()
+    {
+        var table = new SqlTable
+        {
+            Name = "item",
+            Fields = [new SpecTypeField { Name = "name", Type = "string", Kind = "primitive", Base = "string", IsArray = false, IsNullable = false }],
+        };
+        var error = Assert.Throws<InvalidOperationException>(() => ProcedureFields.PkOf(table));
+        Assert.Equal("item: missing primary key", error.Message);
+    }
+
+    [Fact]
     public void ParserMergesInheritedDatasourceOverlays()
     {
         var spec = SpecParser.Parse(new Dictionary<string, string>

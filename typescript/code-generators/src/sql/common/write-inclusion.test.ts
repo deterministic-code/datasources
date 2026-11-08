@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveWriteInclusion, writeInclusionOf } from "./write-inclusion.ts";
+import { pkFieldOf } from "./procedures/helpers.ts";
 import type { TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 
 const field = (name: string): TypeField => ({
@@ -31,5 +32,11 @@ describe("write inclusion", () => {
       writeInclusionOf(field("created"), ["id"], { name: "created", includeInCreate: false, includeInUpdate: false })
         .includeInCreate,
     ).toBe(false);
+  });
+});
+
+describe("pkFieldOf", () => {
+  it("throws when the primary key field is missing", () => {
+    expect(() => pkFieldOf({ fields: [{ name: "name", type: "string" }] })).toThrow("missing primary key");
   });
 });

@@ -19,10 +19,11 @@ const same = (left: string[], right: string[]): boolean =>
 
 export const byGroupsFromDatasource = (types: SqlTable[]): Map<string, string[][]> =>
   new Map(
-    types.map((type) => {
+    types.flatMap((type) => {
       const overlay = overlayOf(type);
       const pk = pkName(type, overlay);
-      const groups: string[][] = pk === undefined ? [] : [[pk]];
+      if (pk === undefined) return [];
+      const groups: string[][] = [[pk]];
       const add = (props: string[]): void => {
         if (props.length === 0) return;
         if (groups.some((group) => same(group, props))) return;
@@ -34,6 +35,6 @@ export const byGroupsFromDatasource = (types: SqlTable[]): Map<string, string[][
       for (const index of type.indexes.filter((item) => item.isUnique)) {
         add(index.fields);
       }
-      return [type.name, groups] as const;
+      return [[type.name, groups] as const];
     }),
   );

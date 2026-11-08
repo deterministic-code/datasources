@@ -23,7 +23,9 @@ public static class NestedSelectTypes
         HashSet<string> ancestors)
     {
         var next = new HashSet<string>(ancestors, StringComparer.Ordinal) { type.Name };
-        var key = Entity(type.Fields.FirstOrDefault(field => field.IsId)?.Name ?? type.Ids?.FirstOrDefault() ?? "id");
+        var identity = type.Fields.FirstOrDefault(field => field.IsId)?.Name ?? type.Ids?.FirstOrDefault()
+            ?? throw new InvalidOperationException($"{type.Name}: missing primary key");
+        var key = Entity(identity);
         var properties = type.Fields
             .Where(field => field.References is null && field.ReferencePair is null)
             .Select(field => Entity(field.Name))
@@ -61,12 +63,7 @@ public static class NestedSelectTypes
         };
     }
 
-    static (string Table, string Column) Target(SpecTypeField field)
-    {
-        if (field.ReferencePair is { Count: 2 } pair) return (pair[0], pair[1]);
-        var parts = (field.References ?? "").Split('.', 2);
-        return (parts.ElementAtOrDefault(0) ?? "", parts.ElementAtOrDefault(1) ?? "");
-    }
+    static (string Table, string Column) Target(SpecTypeField field) => SpecTables.ReferenceTarget(field);
 
     static string RelationName(string field, string table)
     {

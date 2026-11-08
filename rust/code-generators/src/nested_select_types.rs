@@ -38,7 +38,7 @@ fn build(
             .find(|field| field.is_id)
             .map(|field| field.name.as_str())
             .or_else(|| type_def.ids.as_ref().and_then(|ids| ids.first()).map(String::as_str))
-            .unwrap_or("id"),
+            .unwrap_or_else(|| panic!("{}: missing primary key", type_def.name)),
     );
     let properties = type_def
         .fields
@@ -89,15 +89,7 @@ fn build(
 }
 
 fn target(field: &SpecTypeField) -> (String, String) {
-    if let Some(pair) = field.reference_pair.as_ref() {
-        if pair.len() == 2 {
-            return (pair[0].clone(), pair[1].clone());
-        }
-    }
-    match field.references.as_deref().unwrap_or("").split_once('.') {
-        Some((table, column)) => (table.to_string(), column.to_string()),
-        None => (String::new(), String::new()),
-    }
+    crate::spec::reference_target(field)
 }
 
 fn relation_name(field: &str, table: &str) -> String {
@@ -189,5 +181,11 @@ mod tests {
             .relations
             .iter()
             .any(|item| item.name == "Addresses" && item.kind == NestedSelectRelationKind::List));
+    }
+
+    #[test]
+    #[should_panic(expected = "item: missing primary key")]
+    fn throws_when_type_has_no_primary_key() {
+        from_spec(&[typed("item", vec![field("name", false, None)])], "item");
     }
 }

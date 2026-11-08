@@ -58,7 +58,11 @@ export const planRepositories = (
   };
   const repoName = (tableName: string): string => viewByTable.get(tableName)?.name ?? tableName;
   const property = (name: string): string => casing.convertFields(name);
-  const identity = (name: string): string => property(identityColumns(expanded.get(name), spec.datasource.find((table) => table.name === name))[0] ?? "id");
+  const identity = (name: string): string => {
+    const col = identityColumns(expanded.get(name), spec.datasource.find((table) => table.name === name))[0];
+    if (col === undefined) throw new Error(`${name}: missing primary key`);
+    return property(col);
+  };
   const included = new Set(spec.datasource.map((table) => table.name));
   const skip = (table: DatasourceTable, repoType: Type | undefined): boolean => {
     if (abstractParent(table)) return true;
@@ -169,7 +173,6 @@ const relations = (
     return { via, viaType: typeName(via) };
   };
   const planned: PlannedEnrichment[] = [];
-  const source = identity(authored.inherits ?? authored.name);
   for (const field of authored.fields) {
     if (!isCollectionField(field)) continue;
     if (field.isMap === true) {
@@ -189,7 +192,7 @@ const relations = (
       };
       planned.push({
         destination: property(field.name),
-        source,
+        source: identity(authored.inherits ?? authored.name),
         relatedKey: property(owner.field),
         relatedProperty: nested === undefined ? property(roleColumn("value")) : undefined,
         kind: "dictionary",
@@ -207,11 +210,12 @@ const relations = (
       const via = named(otherRef.type);
       const link = named(ref.type);
       const relatedType = types.get(otherRef.type) ?? expanded.get(otherRef.type);
+      if (relatedType === undefined) throw new Error(`${otherRef.type}: missing type`);
       planned.push({
         destination: property(field.name),
-        source,
+        source: identity(authored.inherits ?? authored.name),
         relatedKey: identity(otherRef.type),
-        relatedProperty: (relatedType ?? { fields: [] }).fields.some((item) => item.name === "name") ? property("name") : undefined,
+        relatedProperty: relatedType.fields.some((item) => item.name === "name") ? property("name") : undefined,
         kind: "linked",
         via: via.via,
         viaType: via.viaType,
@@ -224,7 +228,7 @@ const relations = (
       const via = named(ref.type);
       planned.push({
         destination: property(field.name),
-        source,
+        source: identity(authored.inherits ?? authored.name),
         relatedKey: property(ref.field),
         kind: "list",
         via: via.via,

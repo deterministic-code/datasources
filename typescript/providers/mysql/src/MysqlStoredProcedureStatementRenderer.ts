@@ -13,6 +13,8 @@ import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
 import { MysqlDriver } from "./MysqlDriver.ts";
 
 const typeOf = (parameter: RoutineParameter): string => MysqlDriver.nativeParam(parameter);
+const param = (parameters: readonly RoutineParameter[], name: string, proc: string): RoutineParameter =>
+  parameters.find((p) => p.name === name) ?? (() => { throw new Error(`${proc}: missing parameter "${name}"`); })();
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  IN ${p.name} ${typeOf(p)}`).join(",\n");
@@ -70,7 +72,7 @@ export class MysqlStoredProcedureStatementRenderer {
     }
     const signature = statement.byProperties
       .map((c) => {
-        const type = typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType });
+        const type = typeOf(param(statement.parameters, c, statement.name));
         return `IN ${c} ${type}`;
       })
       .join(", ");
@@ -103,7 +105,7 @@ ${sets.join(",\n")}
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
       .map((c) => {
-        const type = typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType });
+        const type = typeOf(param(statement.parameters, c, statement.name));
         return `IN ${c} ${type}`;
       })
       .join(", ");
@@ -153,10 +155,8 @@ ${sets.join(",\n")}
   }
 
   renderBulkDelete(statement: CreateBulkDeleteStoredProcedureStatement): string {
-    const key = statement.columns.find((c) => c.name === statement.key) ?? {
-      name: statement.key,
-      type: statement.keyType,
-    };
+    const key = statement.columns.find((c) => c.name === statement.key)
+      ?? (() => { throw new Error(`${statement.name}: missing key column "${statement.key}"`); })();
     return procedure(
       statement.name,
       `IN ${statement.payload.name} ${typeOf(statement.payload)}`,

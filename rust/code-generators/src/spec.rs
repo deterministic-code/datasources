@@ -241,7 +241,7 @@ fn map_table(table: &deterministic_generators_common::DatasourceTable) -> Dataso
 
 fn map_seed(row: &deterministic_generators_common::SeedRow) -> SeedRow {
     SeedRow {
-        id: i32::try_from(row.id).unwrap_or(i32::MAX),
+        id: i32::try_from(row.id).unwrap_or_else(|_| panic!("seed id {} does not fit in i32", row.id)),
         row: row
             .row
             .iter()
@@ -524,7 +524,7 @@ pub fn identity_columns(type_: Option<&SpecType>, table: Option<&DatasourceTable
     if let Some(fixed) = table.and_then(|t| t.fields.iter().find(|f| f.is_fixed_id == Some(true))) {
         return vec![fixed.name.clone()];
     }
-    if type_.and_then(|t| t.inherits.as_deref()) == Some("set") || type_.is_none() {
+    if type_.and_then(|t| t.inherits.as_deref()) == Some("set") {
         vec!["id".into()]
     } else {
         vec![]
@@ -532,7 +532,10 @@ pub fn identity_columns(type_: Option<&SpecType>, table: Option<&DatasourceTable
 }
 
 pub fn pk_name(type_: &SpecType, table: Option<&DatasourceTable>) -> String {
-    identity_columns(Some(type_), table).into_iter().next().unwrap_or_else(|| "id".into())
+    identity_columns(Some(type_), table)
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("{}: missing primary key", type_.name))
 }
 
 pub fn is_pk_field(field: &SpecTypeField, type_: &SpecType, table: Option<&DatasourceTable>) -> bool {
@@ -573,14 +576,20 @@ pub fn table_by_name(spec: &ParsedSpec) -> HashMap<String, DatasourceTable> {
 }
 
 pub fn reference_target(field: &SpecTypeField) -> (String, String) {
-    if let Some(pair) = field.reference_pair.as_ref().filter(|p| p.len() == 2) {
+    if let Some(pair) = field.reference_pair.as_ref() {
+        if pair.len() != 2 {
+            panic!("invalid reference");
+        }
         return (pair[0].clone(), pair[1].clone());
     }
-    let parts: Vec<&str> = field.references.as_deref().unwrap_or("").splitn(2, '.').collect();
-    (
-        parts.first().copied().unwrap_or("").into(),
-        parts.get(1).copied().unwrap_or("").into(),
-    )
+    match field.references.as_deref() {
+        None | Some("") => (String::new(), String::new()),
+        Some(text) => text
+            .split_once('.')
+            .filter(|(table, col)| !table.is_empty() && !col.is_empty())
+            .map(|(table, col)| (table.into(), col.into()))
+            .unwrap_or_else(|| panic!("invalid reference \"{text}\"")),
+    }
 }
 
 pub fn split_dot(value: &str) -> Option<(String, String)> {

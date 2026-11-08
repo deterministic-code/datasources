@@ -189,7 +189,7 @@ export const seedInsertStatementOf = (
     table.tableName,
     columns.map((column, i) => ({
       name: CreateTableStatement.columnName(fieldStem(table, column), naming),
-      value: values[i] ?? "NULL",
+      value: values[i] ?? (() => { throw new Error(`${table.name}: missing seed value for column "${column}"`); })(),
     })),
   );
 
@@ -202,7 +202,7 @@ export const identityInsertStatementOf = (
   const keys = tableIdentity(table);
   return new IdentityInsertStatement(
     table.tableName,
-    CreateTableStatement.columnName(fieldStem(table, keys[0] ?? "id"), naming),
+    CreateTableStatement.columnName(fieldStem(table, keys[0] ?? (() => { throw new Error(`${table.name}: missing primary key`); })()), naming),
     inserts,
     identity,
   );

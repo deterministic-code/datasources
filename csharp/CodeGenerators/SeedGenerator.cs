@@ -62,20 +62,23 @@ public static class SeedGenerator
         foreach (var table in tables)
         {
             if (!seeds.TryGetValue(table.Name, out var rows) || rows.Count == 0) continue;
-            var id = SqlSchema.TableIdentity(table).FirstOrDefault() ?? "id";
-            var field = table.Fields.FirstOrDefault(f => f.Name == id);
+            var id = SqlSchema.TableIdentity(table).FirstOrDefault()
+                ?? throw new InvalidOperationException($"{table.Name}: missing primary key");
+            var field = table.Fields.FirstOrDefault(f => f.Name == id)
+                ?? throw new InvalidOperationException($"{table.Name}: missing primary key field \"{id}\"");
             lines.Add($"-- Seeds: {table.TableName}");
             foreach (var seed in rows)
                 lines.Add(GenerateSql.Render(dialect, new SqlSeedStatement(
                     table.TableName,
-                    [new SqlSeedColumn(CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, id), naming), field?.ConverterField() ?? new SpecField { Type = PkType(table) }, IdValue(table, seed.Id))],
+                    [new SqlSeedColumn(CreateTableStatement.ColumnName(SqlSchema.FieldStem(table, id), naming), field.ConverterField(), IdValue(table, seed.Id))],
                     "delete")));
         }
         return lines;
     }
 
     static string PkType(SqlTable table) =>
-        table.Fields.FirstOrDefault(f => SpecTables.IsPkField(f, table.AsType(), SqlSchema.OverlayOf(table)))?.Type ?? "integer";
+        table.Fields.FirstOrDefault(f => SpecTables.IsPkField(f, table.AsType(), SqlSchema.OverlayOf(table)))?.Type
+        ?? throw new InvalidOperationException($"{table.Name}: missing primary key");
 
     static string SeedUuid(string tableName, int id)
     {
@@ -98,7 +101,7 @@ public static class SeedGenerator
     static SqlSeedColumn ColumnOf(SqlTable table, StatementNaming naming, string logical, SeedRow seed)
     {
         var field = table.Fields.FirstOrDefault(f => f.Name == logical);
-        var spec = field?.ConverterField() ?? new SpecField { Type = "string", Name = logical };
+        var spec = (field ?? throw new InvalidOperationException($"{table.Name}: missing field \"{logical}\"")).ConverterField();
         var generated = SqlSchema.IsGeneratedIdentity(table) ? SqlSchema.TableIdentity(table) : [];
         object? value = generated.Contains(logical) ? IdValue(table, seed.Id)
             : logical == "uuid" ? SeedUuid(table.Name, seed.Id)

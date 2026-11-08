@@ -53,7 +53,8 @@ public static class GenerateProcedures
         {
             var parameters = logical.Select(name =>
             {
-                var field = t.Fields.FirstOrDefault(f => f.Name == name) ?? pk;
+                var field = t.Fields.FirstOrDefault(f => f.Name == name)
+                    ?? throw new InvalidOperationException($"{t.Name}: missing field \"{name}\"");
                 return Param(field);
             }).ToList();
             var update = parameters

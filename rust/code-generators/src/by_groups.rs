@@ -3,15 +3,14 @@ use crate::spec;
 use std::collections::HashMap;
 
 pub fn from(types: &[SqlTable]) -> HashMap<String, Vec<Vec<String>>> {
-    types
-        .iter()
-        .map(|r#type| (r#type.name.clone(), of(r#type)))
-        .collect()
+    types.iter().filter_map(of).collect()
 }
 
-fn of(r#type: &SqlTable) -> Vec<Vec<String>> {
+fn of(r#type: &SqlTable) -> Option<(String, Vec<Vec<String>>)> {
     let overlay = schema::overlay_of(r#type);
-    let pk = spec::pk_name(&r#type.as_type(), Some(&overlay));
+    let pk = spec::identity_columns(Some(&r#type.as_type()), Some(&overlay))
+        .into_iter()
+        .next()?;
     let mut groups = vec![vec![pk.clone()]];
     let mut add = |props: Vec<String>| {
         if props.is_empty() {
@@ -30,5 +29,5 @@ fn of(r#type: &SqlTable) -> Vec<Vec<String>> {
     for index in r#type.indexes.iter().filter(|index| index.is_unique) {
         add(index.fields.clone());
     }
-    groups
+    Some((r#type.name.clone(), groups))
 }

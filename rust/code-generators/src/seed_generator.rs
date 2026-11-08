@@ -2,7 +2,7 @@ use crate::schema::{self, field_stem, SqlTable};
 use datasources::{CreateTableStatement, StatementNaming};
 use crate::spec::{self, SeedRow, SpecTypeField};
 use crate::sql_dialect;
-use datasources::{Result, SpecField, SqlSeedColumn, SqlSeedStatement};
+use datasources::{Result, SqlSeedColumn, SqlSeedStatement};
 use serde_yaml::Value;
 use sha1::{Digest, Sha1};
 use indexmap::IndexMap;
@@ -88,16 +88,13 @@ pub fn deletes(
         let id = schema::table_identity(table)
             .into_iter()
             .next()
-            .unwrap_or_else(|| "id".into());
-        let field = table.fields.iter().find(|f| f.name == id);
+            .unwrap_or_else(|| panic!("{}: missing primary key", table.name));
+        let field = table.fields.iter().find(|f| f.name == id).unwrap_or_else(|| {
+            panic!("{}: missing primary key field \"{id}\"", table.name)
+        });
         lines.push(format!("-- Seeds: {}", table.table_name));
         for seed in rows {
-            let spec = field
-                .map(SpecTypeField::converter_field)
-                .unwrap_or(SpecField {
-                    type_name: pk_type(table),
-                    ..SpecField::default()
-                });
+            let spec = field.converter_field();
             lines.push(sql_dialect::render_sql(
                 dialect,
                 &SqlSeedStatement::new(
@@ -124,7 +121,7 @@ fn pk_type(table: &SqlTable) -> String {
         .iter()
         .find(|f| spec::is_pk_field(f, &table.as_type(), Some(&overlay)))
         .map(|f| f.type_name.clone())
-        .unwrap_or_else(|| "integer".into())
+        .unwrap_or_else(|| panic!("{}: missing primary key", table.name))
 }
 
 fn seed_uuid(table_name: &str, id: i32) -> String {
@@ -165,11 +162,9 @@ fn id_value(table: &SqlTable, id: i32) -> String {
 
 fn column_of(table: &SqlTable, naming: &StatementNaming, logical: &str, seed: &SeedRow) -> SqlSeedColumn {
     let field = table.fields.iter().find(|f| f.name == logical);
-    let spec = field.map(SpecTypeField::converter_field).unwrap_or(SpecField {
-        type_name: "string".into(),
-        name: Some(logical.into()),
-        ..SpecField::default()
-    });
+    let spec = field
+        .map(SpecTypeField::converter_field)
+        .unwrap_or_else(|| panic!("{}: missing field \"{logical}\"", table.name));
     let generated = if schema::is_generated_identity(table) {
         schema::table_identity(table)
     } else {

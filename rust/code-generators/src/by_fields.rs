@@ -7,7 +7,9 @@ pub fn from(types: &[SqlTable]) -> HashMap<String, Vec<String>> {
         .iter()
         .filter_map(|r#type| {
             let overlay = schema::overlay_of(r#type);
-            let pk = spec::pk_name(&r#type.as_type(), Some(&overlay));
+            let pk = spec::identity_columns(Some(&r#type.as_type()), Some(&overlay))
+                .into_iter()
+                .next()?;
             let names: Vec<String> = spec::unique_lookup_fields(&r#type.as_type(), Some(&overlay))
                 .into_iter()
                 .filter(|name| name != &pk)

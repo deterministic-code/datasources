@@ -118,9 +118,8 @@ public static class GenerateSql
     {
         var indexes = table.Indexes.Select(idx =>
             Render(dialect, TableStatements.CreateIndex(naming, table, idx)));
-        var pk = SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table));
         var trigger = SqlSchema.HasAuditColumns(table)
-            ? Render(dialect, TableStatements.CreateTrigger(table, naming, pk ?? "id"))
+            ? Render(dialect, TableStatements.CreateTrigger(table, naming, SpecTables.PkName(table.AsType(), SqlSchema.OverlayOf(table))))
             : "";
         return
         [

@@ -13,6 +13,8 @@ import { DefaultStatementTextRenderer } from "@deterministic-code/datasources";
 import { OracleDriver } from "./OracleDriver.ts";
 
 const typeOf = (parameter: RoutineParameter): string => OracleDriver.nativeParam(parameter);
+const param = (parameters: readonly RoutineParameter[], name: string, proc: string): RoutineParameter =>
+  parameters.find((p) => p.name === name) ?? (() => { throw new Error(`${proc}: missing parameter "${name}"`); })();
 
 const params = (list: readonly RoutineParameter[]): string =>
   list.map((p) => `  ${p.name} IN ${typeOf(p)}`).join(",\n");
@@ -51,7 +53,7 @@ BEGIN
 END;`;
     }
     const signature = statement.byProperties
-      .map((c) => `${c} IN ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
+      .map((c) => `${c} IN ${typeOf(param(statement.parameters, c, statement.name))}`)
       .join(", ");
     const pred = statement.byProperties.map((c) => `t.${c} = ${c}`).join(" AND ");
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${signature}) AS
@@ -82,7 +84,7 @@ END;`;
   renderDelete(statement: CreateDeleteStoredProcedureStatement): string {
     const by = statement.byProperties.length > 0 ? statement.byProperties : [statement.key];
     const signature = by
-      .map((c) => `${c} IN ${typeOf(statement.parameters.find((p) => p.name === c) ?? { name: c, type: statement.keyType })}`)
+      .map((c) => `${c} IN ${typeOf(param(statement.parameters, c, statement.name))}`)
       .join(", ");
     const pred = by.map((c) => `t.${c} = ${c}`).join(" AND ");
     return `CREATE OR REPLACE PROCEDURE ${statement.name}(${signature}) AS

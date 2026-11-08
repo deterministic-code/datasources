@@ -13,12 +13,12 @@ export interface ProcTable {
   pkName?: string;
 }
 
-/** The entity's primary key: `pkName` when set, else a field named `id`. */
-export const pkFieldOf = (table: ProcTable): ProcField =>
-  (table.pkName
-    ? table.fields.find((f) => f.name === table.pkName)
-    : undefined) ??
-  table.fields.find((f) => f.name === "id") ?? { name: "id", type: "integer" };
+/** The entity's primary key field. */
+export const pkFieldOf = (table: ProcTable): ProcField => {
+  const field = table.fields.find((f) => f.name === table.pkName);
+  if (field === undefined) throw new Error("missing primary key");
+  return field;
+};
 
 export const createParamFields = (table: ProcTable): ProcField[] =>
   table.fields.filter((f) => f.includeInCreate !== false);

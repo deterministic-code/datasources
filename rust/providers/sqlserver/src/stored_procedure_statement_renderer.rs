@@ -12,8 +12,8 @@ fn params(list: &[RoutineParameter]) -> String {
     list.iter().map(|p| format!("  @{} {}", p.name, crate::SqlServerDriver::native_param(p))).collect::<Vec<_>>().join(",\n")
 }
 
-fn type_of(parameters: &[RoutineParameter], name: &str, fallback: &str) -> String {
-    parameters.iter().find(|p| p.name == name).map(|p| p.r#type.clone()).unwrap_or_else(|| fallback.to_string())
+fn type_of(parameters: &[RoutineParameter], name: &str) -> String {
+    parameters.iter().find(|p| p.name == name).map(|p| p.r#type.clone()).unwrap_or_else(|| panic!("missing parameter \"{name}\""))
 }
 
 fn openjson(columns: &[RoutineParameter]) -> String {
@@ -59,7 +59,7 @@ impl SqlServerStoredProcedureStatementRenderer {
                 statement.key(),
             );
         }
-        let signature = statement.by_properties().iter().map(|c| format!("@{c} {}", type_of(statement.parameters(), c, statement.key_type()))).collect::<Vec<_>>().join(", ");
+        let signature = statement.by_properties().iter().map(|c| format!("@{c} {}", type_of(statement.parameters(), c))).collect::<Vec<_>>().join(", ");
         let pred = statement.by_properties().iter().map(|c| format!("{c} = @{c}")).collect::<Vec<_>>().join(" AND ");
         format!(
             "CREATE OR ALTER PROCEDURE {} {signature}\nAS\nBEGIN\n  SELECT {cols} FROM {} WHERE {pred};\nEND;\nGO",
@@ -88,7 +88,7 @@ impl SqlServerStoredProcedureStatementRenderer {
 
     pub fn render_delete(&self, statement: &CreateDeleteStoredProcedureStatement) -> String {
         let by = if statement.by_properties().is_empty() { vec![statement.key().to_string()] } else { statement.by_properties().to_vec() };
-        let signature = by.iter().map(|c| format!("@{c} {}", type_of(statement.parameters(), c, statement.key_type()))).collect::<Vec<_>>().join(", ");
+        let signature = by.iter().map(|c| format!("@{c} {}", type_of(statement.parameters(), c))).collect::<Vec<_>>().join(", ");
         let pred = by.iter().map(|c| format!("{c} = @{c}")).collect::<Vec<_>>().join(" AND ");
         format!(
             "CREATE OR ALTER PROCEDURE {} {signature}\nAS\nBEGIN\n  DELETE FROM {} WHERE {pred};\n  SELECT @@ROWCOUNT AS affected;\nEND;\nGO",

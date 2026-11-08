@@ -29,7 +29,9 @@ const build = (
 ): NestedSelectType => {
   const next = new Set(ancestors);
   next.add(type.name);
-  const key = entity(type.fields.find((field) => field.isId)?.name ?? type.ids?.[0] ?? "id");
+  const identity = type.fields.find((field) => field.isId)?.name ?? type.ids?.[0];
+  if (identity === undefined) throw new Error(`${type.name}: missing primary key`);
+  const key = entity(identity);
   const properties = type.fields
     .filter((field) => field.references === undefined)
     .map((field) => entity(field.name));

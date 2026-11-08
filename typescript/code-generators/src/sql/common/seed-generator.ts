@@ -15,8 +15,11 @@ import {
 
 const SEED_UUID_NAMESPACE = "9b3a8e6c-2f1d-4a5b-8c9d-1e2f3a4b5c6d";
 
-const pkType = (table: LiveTable): string =>
-  table.fields.find((f) => isPkField(f, table, overlayOf(table)))?.type ?? "integer";
+const pkType = (table: LiveTable): string => {
+  const field = table.fields.find((f) => isPkField(f, table, overlayOf(table)));
+  if (field === undefined) throw new Error(`${table.name}: missing primary key`);
+  return field.type;
+};
 
 const seedUuid = (tableName: string, id: number): string => {
   const bytes = Buffer.from(
@@ -60,7 +63,8 @@ const columnOf = (
   seed: SeedRow,
 ): { column: string; field: SpecField; value: unknown } => {
   const field = table.fields.find((f) => f.name === logical);
-  const spec = field ? converterFieldOf(field) : { type: "string", name: logical };
+  if (field === undefined) throw new Error(`${table.name}: missing field "${logical}"`);
+  const spec = converterFieldOf(field);
   const generated = isGeneratedIdentity(table) ? tableIdentity(table) : [];
   const value = generated.includes(logical)
     ? idValue(table, seed.id)
@@ -122,8 +126,10 @@ export const seedDeletes = (
   for (const table of tables) {
     const rows = seeds.get(table.name) ?? [];
     if (rows.length === 0) continue;
-    const id = tableIdentity(table)[0] ?? "id";
+    const id = tableIdentity(table)[0];
+    if (id === undefined) throw new Error(`${table.name}: missing primary key`);
     const field = table.fields.find((f) => f.name === id);
+    if (field === undefined) throw new Error(`${table.name}: missing primary key field "${id}"`);
     lines.push(`-- Seeds: ${table.tableName}`);
     for (const seed of rows)
       lines.push(
@@ -134,7 +140,7 @@ export const seedDeletes = (
             [
               {
                 column: CreateTableStatement.columnName(fieldStem(table, id), naming),
-                field: field ? converterFieldOf(field) : { type: pkType(table) },
+                field: converterFieldOf(field),
                 value: idValue(table, seed.id),
               },
             ],
