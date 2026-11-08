@@ -11,7 +11,6 @@ use crate::i_repository::IRepository;
 use crate::IWhere;
 use crate::mappers::{IdentityMapper, Mapper};
 use crate::parameter::Parameter;
-use crate::read_input::ReadInput;
 use crate::reader::Reader;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
@@ -62,6 +61,31 @@ pub struct ReadonlyRepository<T: Entity = Row> {
     pub(crate) enrichments: Arc<Mutex<Vec<StoredEnrichment<T>>>>,
     pub(crate) schema: Schema,
     entity: PhantomData<T>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum ReadQuery<'a> {
+    All,
+    Statement(&'a dyn Statement),
+    Where(&'a dyn IWhere),
+}
+
+impl<'a> ReadQuery<'a> {
+    fn statement(query: Option<&'a dyn Statement>) -> Self {
+        query.map(Self::Statement).unwrap_or(Self::All)
+    }
+
+    pub(crate) fn clause(clause: &'a dyn IWhere) -> Self {
+        Self::Where(clause)
+    }
+
+    fn memory_where(self) -> Option<&'a dyn IWhere> {
+        match self {
+            Self::Where(clause) => Some(clause),
+            Self::Statement(statement) => statement.predicate(),
+            Self::All => None,
+        }
+    }
 }
 
 impl<T: Entity> ReadonlyRepository<T> {
@@ -274,7 +298,7 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     async fn read_tracked(
         &self,
-        query: Option<&dyn ReadInput>,
+        query: ReadQuery<'_>,
         parameters: Option<&[Parameter]>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
@@ -284,7 +308,7 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     async fn read_items(
         &self,
-        query: Option<&dyn ReadInput>,
+        query: ReadQuery<'_>,
         parameters: Option<&[Parameter]>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<(Row, Option<Row>)>> {
@@ -315,13 +339,13 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     async fn fetch_renamed(
         &self,
-        query: Option<&dyn ReadInput>,
+        query: ReadQuery<'_>,
         parameters: Option<&[Parameter]>,
         mappers: &StatementMappers,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Vec<Row>> {
         if let Some(memory) = &self.memory {
-            return Ok(memory.filter_input(query));
+            return Ok(memory.filter(query.memory_where()));
         }
         let reader = self.reader_for(query, parameters, mappers, options).await?;
         self.rows_from(reader, mappers).await
@@ -336,20 +360,23 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     async fn reader_for(
         &self,
-        query: Option<&dyn ReadInput>,
+        query: ReadQuery<'_>,
         parameters: Option<&[Parameter]>,
         mappers: &StatementMappers,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Box<dyn Reader>> {
         self.ensure_open().await?;
-        if let Some(where_clause) = query.and_then(ReadInput::as_where) {
+        if let ReadQuery::Where(where_clause) = query {
             let (statement, params) = self.stored_query(where_clause, mappers, options)?;
             return self
                 .command()
                 .execute_reader_statement(&statement, Some(parameters.unwrap_or(&params)))
                 .await;
         }
-        let statement = query.and_then(ReadInput::as_statement);
+        let statement = match query {
+            ReadQuery::Statement(statement) => Some(statement),
+            _ => None,
+        };
         match statement {
             Some(statement) if statement.kind() == StatementKind::Procedure => {
                 let stored = statement
@@ -516,7 +543,7 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     pub async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<T>> {
         IReadonlyRepository::read_single(self, query, options).await
@@ -524,10 +551,26 @@ impl<T: Entity> ReadonlyRepository<T> {
 
     pub fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
         IReadonlyRepository::read(self, query, options)
+    }
+
+    pub async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        IReadonlyRepository::read_single_where(self, clause, options).await
+    }
+
+    pub fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        IReadonlyRepository::read_where(self, clause, options)
     }
 }
 
@@ -540,7 +583,7 @@ impl<T: Entity> IRepository for ReadonlyRepository<T> {
 impl<T: Entity> ReadonlyRepository<T> {
     pub(crate) fn read_rows<'a>(
         &'a self,
-        query: Option<&'a dyn ReadInput>,
+        query: ReadQuery<'a>,
         parameters: Option<&'a [Parameter]>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
@@ -558,7 +601,7 @@ impl<T: Entity> ReadonlyRepository<T> {
                     }
                     if let Some(memory) = &self.memory {
                         let items = memory
-                            .filter_input(query)
+                            .filter(query.memory_where())
                             .into_iter()
                             .map(|row| self.convert_renamed(row, options))
                             .collect::<Result<Vec<_>>>()?;
@@ -581,7 +624,7 @@ impl<T: Entity> ReadonlyRepository<T> {
 impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<T>> {
         self.read(query, options).try_next().await
@@ -589,16 +632,42 @@ impl<T: Entity> IReadonlyRepository<T> for ReadonlyRepository<T> {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.read_query(ReadQuery::statement(query), options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.read_where(clause, options).try_next().await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.read_query(ReadQuery::clause(clause), options)
+    }
+}
+
+impl<T: Entity> ReadonlyRepository<T> {
+    fn read_query<'a>(
+        &'a self,
+        query: ReadQuery<'a>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
         if !self.enriched_with(options) {
-            return map_stream(self.read_rows(Some(query), None, options));
+            return map_stream(self.read_rows(query, None, options));
         }
         Box::pin(try_unfold(None, move |state| async move {
             match state {
                 None => {
-                    let pairs = self.read_tracked(Some(query), None, options).await?;
+                    let pairs = self.read_tracked(query, None, options).await?;
                     next_entities(self.fill_rows(pairs, options).await?)
                 }
                 Some(items) => next_entities_iter(items),

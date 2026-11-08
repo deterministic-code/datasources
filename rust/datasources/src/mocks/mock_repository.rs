@@ -1,7 +1,8 @@
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
 use crate::id_key::IdKey;
-use crate::read_input::ReadInput;
+use crate::IWhere;
+use crate::statement::Statement;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
@@ -73,7 +74,7 @@ impl IReadonlyRepository for MockRepository {
 
     async fn read_single(
         &self,
-        _query: &dyn ReadInput,
+        _query: Option<&dyn Statement>,
         _options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
         if let Some(error) = &*self.read_single_error.lock().expect("mock") {
@@ -84,7 +85,7 @@ impl IReadonlyRepository for MockRepository {
 
     fn read<'a>(
         &'a self,
-        _query: &'a dyn ReadInput,
+        _query: Option<&'a dyn Statement>,
         _options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         if let Some(error) = &*self.get_error.lock().expect("mock") {
@@ -93,6 +94,22 @@ impl IReadonlyRepository for MockRepository {
         }
         let items = self.items.lock().expect("mock").clone();
         Box::pin(iter(items.into_iter().map(Ok)))
+    }
+
+    async fn read_single_where(
+        &self,
+        _clause: &dyn IWhere,
+        _options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
+        self.read_single(None, _options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        _clause: &'a dyn IWhere,
+        _options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.read(None, _options)
     }
 }
 
@@ -121,6 +138,6 @@ impl ICRUDRepository for MockRepository {
     }
 
     async fn read_single_by_id(&self, _id: &dyn IdKey) -> Result<Option<Row>> {
-        self.read_single(&(), None).await
+        self.read_single(None, None).await
     }
 }

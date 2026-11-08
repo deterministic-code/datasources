@@ -203,7 +203,7 @@ describe("generated rust compiles", () => {
 
   it("plain", async () => {
     const texts = await generate(yaml(entity("contact", idName())));
-    expect(textOf(texts, "contactsRepository.rs")).not.toContain("pub struct ContactsRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("pub struct ContactsRepository");
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
   });
 
@@ -221,7 +221,10 @@ describe("generated rust compiles", () => {
       ),
     );
     expect(textOf(texts, "contactsRepository.rs")).toContain("pub struct ContactsRepository");
-    expect(textOf(texts, "contactsRepository.rs")).toContain("Ok(Self { repo: Arc::new(repo), address })");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("async fn read_single_where");
+    expect(textOf(texts, "contactsRepository.rs")).not.toContain("ReadInput");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("pub address: AddressesRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("Ok(Self { inner: Arc::new(repo), address })");
     expect(textOf(texts, "contactsRepository.rs")).toContain("EnrichmentPropertyType::List");
   });
 
@@ -345,8 +348,8 @@ describe("generated rust compiles", () => {
       ),
       { "languages.rust.casing.fields": "snake" },
     );
-    expect(textOf(texts, "contactsRepository.rs")).toContain("pub fn contacts_repository");
-    expect(textOf(texts, "contactsRepository.rs")).toContain("addresses_repository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("AddressesRepository::new");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("addresses_row_repository");
   });
 
   it("fields camel", async () => {
@@ -359,7 +362,7 @@ describe("generated rust compiles", () => {
       ),
       { "languages.rust.casing.fields": "camel" },
     );
-    expect(textOf(texts, "contactsRepository.rs")).toContain("pub fn contactsRepository");
+    expect(textOf(texts, "contactsRepository.rs")).toContain("AddressesRepository::new");
     expect(textOf(texts, "contactsRepository.rs")).toContain("addressesRowRepository");
   });
 
@@ -403,7 +406,7 @@ describe("generated rust compiles", () => {
   it("REST contacts", async () => {
     const texts = await generate(restFiles(), { "languages.typescript.casing.fields": "camel" });
     expect(textOf(texts, "contactsRepository.rs")).toContain(
-      "Ok(Self { repo: Arc::new(repo), address, phone, contact_settings, contact_preferences, contact_source })",
+      "Ok(Self { inner: Arc::new(repo), address, phone, contact_settings, contact_preferences, contact_source })",
     );
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
   });
@@ -411,6 +414,6 @@ describe("generated rust compiles", () => {
   it("QS contacts", async () => {
     const texts = await generate(qsFiles());
     expect(textOf(texts, "repositoryRegistry.rs")).toContain("fn contacts(");
-    expect(textOf(texts, "contactsRepository.rs")).toMatch(/Ok\(Self \{ repo: Arc::new\(repo\), /);
+    expect(textOf(texts, "contactsRepository.rs")).toMatch(/Ok\(Self \{ inner: Arc::new\(repo\), /);
   });
 });

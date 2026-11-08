@@ -1,7 +1,8 @@
 use crate::crud_repository::CRUDRepository;
 use crate::i_repository::IRepository;
 use crate::id_key::IdKey;
-use crate::read_input::ReadInput;
+use crate::IWhere;
+use crate::statement::Statement;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
@@ -111,7 +112,7 @@ impl IReadonlyRepository for ContactsService {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
         self.contacts.read_single(query, options).await
@@ -119,10 +120,26 @@ impl IReadonlyRepository for ContactsService {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         self.contacts.read(query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
+        self.contacts.read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.contacts.read_where(clause, options)
     }
 }
 

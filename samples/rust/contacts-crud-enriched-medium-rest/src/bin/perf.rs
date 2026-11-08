@@ -688,11 +688,11 @@ async fn run_reads(
         ("firstName", &name_where),
     ] {
         let default_ms = time(|| async {
-            check_enriched(&contacts_repo.read(&where_clause).try_collect::<Vec<_>>().await?, expected, related, check)
+            check_enriched(&contacts_repo.read_where(where_clause, None).try_collect::<Vec<_>>().await?, expected, related, check)
         })
         .await?;
         let hashset_ms = time(|| async {
-            check_enriched(&hashset_repo.read(&where_clause).try_collect::<Vec<_>>().await?, expected, related, check)
+            check_enriched(&hashset_repo.read_where(where_clause, None).try_collect::<Vec<_>>().await?, expected, related, check)
         })
         .await?;
         let fields = [
@@ -728,7 +728,7 @@ async fn run_reads(
         let select = SelectStatement::new(options);
         let flat_ms = time(|| async {
             check_mapped(
-                &mapper.map(join_repo.read(&select).try_collect::<Vec<_>>().await?),
+                &mapper.map(join_repo.read(Some(&select), None).try_collect::<Vec<_>>().await?),
                 expected,
                 related,
                 check,

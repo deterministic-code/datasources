@@ -19,6 +19,7 @@ samples/rust/user-roles-simple-cli
 down_flags="down -v --remove-orphans -t 0"
 fail=0
 live=""
+rust_live=""
 live_projects=""
 sample_dirs=""
 suite_pid=$$
@@ -146,21 +147,43 @@ slug() {
   printf '%s' "$1" | tr '/_' '-'
 }
 
+prune_live() {
+  kept=""
+  n=0
+  for pid in $1; do
+    if kill -0 "$pid" 2>/dev/null; then
+      kept="$kept $pid"
+      n=$((n + 1))
+    else
+      wait "$pid" || kill_suite "sample exited $?"
+    fi
+  done
+}
+
 await_slot() {
+  waiting=$1
   [ "$fail" -eq 0 ] || kill_suite "already failed"
   while :; do
-    next=""
-    n=0
-    for pid in $live; do
+    prune_live "$live"
+    live=$kept
+    running=$n
+    rust_kept=""
+    rust_n=0
+    for pid in $rust_live; do
       if kill -0 "$pid" 2>/dev/null; then
-        next="$next $pid"
-        n=$((n + 1))
-      else
-        wait "$pid" || kill_suite "sample exited $?"
+        rust_kept="$rust_kept $pid"
+        rust_n=$((rust_n + 1))
       fi
     done
-    live=$next
-    [ "$n" -lt "$parallel" ] && return
+    rust_live=$rust_kept
+    case "$waiting" in
+      samples/rust/*)
+        [ "$rust_n" -eq 0 ] && [ "$running" -lt "$parallel" ] && return
+        ;;
+      *)
+        [ "$running" -lt "$parallel" ] && return
+        ;;
+    esac
     sleep 1
   done
 }
@@ -198,13 +221,18 @@ run_compose() {
   export COMPOSE_PROJECT_NAME=$project
   start=$(date +%s)
   e2e_log "start $dir"
+  built=0
+  run_watched docker compose build app || built=$?
+  if [ "$built" -ne 0 ]; then
+    return "$built"
+  fi
   up=0
   run_watched docker compose up -d --wait mysql postgres || up=$?
   if [ "$up" -ne 0 ]; then
     return "$up"
   fi
   run=0
-  run_watched docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" runner sh -ec '
+  run_watched docker compose run --rm --no-deps -v "$repo:/opt/repo:ro" app sh -ec '
     set -e -o pipefail
     start=$(date +%s)
     printf "e2e-workdir: start sqlite\n"
@@ -305,7 +333,7 @@ build_toolchains $sample_dirs
 warmup_cli
 
 for dir in "$@"; do
-  await_slot
+  await_slot "$dir"
   project="e2e-$(slug "$dir")"
   compose="$repo/$dir/compose.yml"
   live_projects="$live_projects $project:$compose"
@@ -319,6 +347,9 @@ for dir in "$@"; do
     exit 0
   ) &
   live="$live $!"
+  case "$dir" in
+    samples/rust/*) rust_live="$rust_live $!" ;;
+  esac
 done
 await_all
 e2e_log "suite done $(($(date +%s) - suite_start))s"

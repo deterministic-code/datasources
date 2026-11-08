@@ -65,11 +65,6 @@ impl UpdateStatement {
     }
 }
 
-impl crate::ReadInput for UpdateStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for UpdateStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

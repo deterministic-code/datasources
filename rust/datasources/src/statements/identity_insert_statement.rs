@@ -51,8 +51,3 @@ impl Statement for IdentityInsertStatement {
     }
 }
 
-impl crate::ReadInput for IdentityInsertStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

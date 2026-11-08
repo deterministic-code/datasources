@@ -3,9 +3,10 @@ use crate::json_object::JsonObjectSerializer;
 use crate::json_row::snake_key;
 use crate::repositories::contact_groups_repository::ContactGroupsRepository;
 use crate::repositories::contacts_repository::ContactsRepository;
+use crate::repositories::legacy_contacts_repository::LegacyContactsRepository;
 use crate::{Address, Contact, ContactGroup, LegacyContact, Phone};
 use chrono::{DateTime, Utc};
-use datasources::{DatasourceError, Operator, ReadInput, Value, Where, CRUDRepository};
+use datasources::{DatasourceError, Operator, Value, Where, CRUDRepository};
 use futures_util::TryStreamExt;
 use std::collections::HashMap;
 
@@ -16,7 +17,7 @@ pub struct HttpResult {
 
 pub struct Api {
     contacts: ContactsRepository,
-    legacy: CRUDRepository<LegacyContact>,
+    legacy: LegacyContactsRepository,
     groups_repo: ContactGroupsRepository,
     clock: Clock,
 }
@@ -24,7 +25,7 @@ pub struct Api {
 impl Api {
     pub fn new(
         contacts: ContactsRepository,
-        legacy: CRUDRepository<LegacyContact>,
+        legacy: LegacyContactsRepository,
         groups_repo: ContactGroupsRepository,
         clock: Clock,
     ) -> Self {
@@ -83,19 +84,19 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        if self.contacts.read_single(&by).await?.is_none() {
+        if self.contacts.read_single_where(&by, None).await?.is_none() {
             return Ok(empty(404));
         }
         let mut contact = stamp(read(body)?, &self.clock);
         contact.id = i32::try_from(id).map_err(|_| ApiError::bad("id is required"))?;
         self.contacts.update(contact, None).await?;
-        Ok(ok(200, &self.contacts.read_single(&by).await?.unwrap_or_default())?)
+        Ok(ok(200, &self.contacts.read_single_where(&by, None).await?.unwrap_or_default())?)
     }
 
     async fn delete_contact(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        let Some(contact) = self.contacts.read_single(&by).await? else {
+        let Some(contact) = self.contacts.read_single_where(&by, None).await? else {
             return Ok(empty(404));
         };
         self.contacts.delete(contact, None).await?;
@@ -118,13 +119,13 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let id = required_number(query, "id")?;
         let by = Where::new(Operator::equals("id", id));
-        if self.groups_repo.read_single(&by).await?.is_none() {
+        if self.groups_repo.read_single_where(&by, None).await?.is_none() {
             return Ok(empty(404));
         }
         let mut group = stamp_group(read(body)?, &self.clock);
         group.id = i32::try_from(id).map_err(|_| ApiError::bad("id is required"))?;
         self.groups_repo.update(group, None).await?;
-        Ok(ok(200, &self.groups_repo.read_single(&by).await?.unwrap_or_default())?)
+        Ok(ok(200, &self.groups_repo.read_single_where(&by, None).await?.unwrap_or_default())?)
     }
 
     async fn get_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
@@ -151,19 +152,19 @@ impl Api {
     ) -> Result<HttpResult, ApiError> {
         let key = required(query, "key")?;
         let by = Where::new(Operator::equals("key", key.clone()));
-        if self.legacy.read_single(&by).await?.is_none() {
+        if self.legacy.read_single_where(&by, None).await?.is_none() {
             return Ok(empty(404));
         }
         let mut row = text_legacy(read(body)?, &self.clock);
         row.key = key;
         self.legacy.update(row, None).await?;
-        Ok(ok(200, &self.legacy.read_single(&by).await?.unwrap_or_default())?)
+        Ok(ok(200, &self.legacy.read_single_where(&by, None).await?.unwrap_or_default())?)
     }
 
     async fn delete_legacy(&self, query: &HashMap<String, String>) -> Result<HttpResult, ApiError> {
         let key = required(query, "key")?;
         let by = Where::new(Operator::equals("key", key));
-        let Some(row) = self.legacy.read_single(&by).await? else {
+        let Some(row) = self.legacy.read_single_where(&by, None).await? else {
             return Ok(empty(404));
         };
         self.legacy.delete(row, None).await?;
@@ -175,12 +176,10 @@ impl Api {
         repo: &CRUDRepository<T>,
         filter: Option<Where>,
     ) -> Result<Vec<T>, ApiError> {
-        let none = ();
-        let query: &dyn ReadInput = filter
-            .as_ref()
-            .map(|item| item as &dyn ReadInput)
-            .unwrap_or(&none);
-        Ok(repo.read(query).try_collect::<Vec<_>>().await?)
+        Ok(match filter.as_ref() {
+            Some(clause) => repo.read_where(clause, None).try_collect::<Vec<_>>().await?,
+            None => repo.read(None, None).try_collect::<Vec<_>>().await?,
+        })
     }
 }
 

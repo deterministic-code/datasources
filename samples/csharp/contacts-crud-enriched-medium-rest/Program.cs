@@ -42,8 +42,11 @@ if (ada.FirstName != "Ada" || ada.Addresses.Count != 2 || ada.Phones.Count != 1
     || ada.Addresses[0].Line2 != "Room 12" || ada.Addresses[1].AddressTypeName != "Work")
     throw new InvalidOperationException("create ada");
 var loaded = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id)));
-if (loaded?.Addresses.Count != 2 || loaded.Addresses[0].Latitude is not null)
+if (loaded is null || loaded.Addresses[0].Latitude is not null)
     throw new InvalidOperationException("read ada");
+RequireAdaChildren(loaded, "Home", "London", "555-0100");
+if (loaded.Addresses.First(row => row.Line1 == "1 Strand").AddressTypeName != "Work")
+    throw new InvalidOperationException("read work address");
 
 await contacts.Update(new Contact
 {
@@ -72,10 +75,12 @@ await contacts.Update(new Contact
     Prefs = ada.Prefs,
 });
 var after = await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id)));
-if (after?.FirstName != "Ada Byron" || after.Addresses.Count != 2
-    || after.Addresses.First(row => row.Line1 == "12 Analytical Engine").AddressTypeName != "Work"
+if (after is null || after.FirstName != "Ada Byron"
     || after.Addresses.First(row => row.Line1 == "12 Analytical Engine").Country != "FR")
     throw new InvalidOperationException("update ada");
+RequireAdaChildren(after, "Work", "Cambridge", "555-0111");
+if (after.Addresses.First(row => row.Line1 == "1 College").AddressTypeName != "Home")
+    throw new InvalidOperationException("update home address");
 
 var omitted = await contacts.Create(new Contact
 {
@@ -161,3 +166,14 @@ if (zeroed?.Addresses[0].Latitude != 0 || zeroed.Addresses[0].LabelNote != ""
 await contacts.Delete(after);
 if (await contacts.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id))) is not null)
     throw new InvalidOperationException("delete ada");
+
+static void RequireAdaChildren(Contact row, string engineType, string engineCity, string number)
+{
+    if (row.Addresses.Count != 2 || row.Phones.Count != 1)
+        throw new InvalidOperationException("child counts");
+    var engine = row.Addresses.First(address => address.Line1 == "12 Analytical Engine");
+    if (engine.AddressTypeName != engineType || engine.City != engineCity)
+        throw new InvalidOperationException("engine address");
+    if (row.Phones[0].Number != number || row.Phones[0].PhoneTypeName != "Mobile")
+        throw new InvalidOperationException("phone");
+}

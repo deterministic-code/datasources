@@ -86,11 +86,11 @@ pub async fn contacts_parity(
     let query = contacts_join_query(None);
     let eager = from_mapped_contacts(&Mapper::map(
         &FlatToNestedMapper::new(contacts_view()),
-        join_repo.read(&query, None).try_collect::<Vec<_>>().await?,
+        join_repo.read(Some(&query), None).try_collect::<Vec<_>>().await?,
     ));
     let enriched = from_enriched_contacts(
         &contacts_service_of(connection, verbose.then_some(middleware), field)
-            .read(&(), None)
+            .read(None, None)
             .try_collect::<Vec<_>>().await?,
     );
     Ok((eager, enriched))

@@ -23,8 +23,11 @@ if (ada.firstName !== "Ada" || ada.addresses.length !== 2 || ada.phones.length !
   || ada.addresses[0].line2 !== "Room 12" || ada.addresses[1].addressTypeName !== "Work")
   throw new Error("create ada");
 const loaded = await contacts.readSingle(new Where(new Operator.Equals("id", ada.id)));
-if (loaded?.addresses.length !== 2 || loaded.addresses[0].latitude != null)
+if (loaded == null || loaded.addresses[0].latitude != null)
   throw new Error("read ada");
+requireAdaChildren(loaded, "Home", "London", "555-0100");
+if (loaded.addresses.find((row) => row.line1 === "1 Strand")?.addressTypeName !== "Work")
+  throw new Error("read work address");
 
 await contacts.update({
   id: ada.id,
@@ -42,10 +45,12 @@ await contacts.update({
   prefs: ada.prefs,
 });
 const after = await contacts.readSingle(new Where(new Operator.Equals("id", ada.id)));
-if (after?.firstName !== "Ada Byron" || after.addresses.length !== 2
-  || after.addresses.find((row) => row.line1 === "12 Analytical Engine")?.addressTypeName !== "Work"
+if (after == null || after.firstName !== "Ada Byron"
   || after.addresses.find((row) => row.line1 === "12 Analytical Engine")?.country !== "FR")
   throw new Error("update ada");
+requireAdaChildren(after, "Work", "Cambridge", "555-0111");
+if (after.addresses.find((row) => row.line1 === "1 College")?.addressTypeName !== "Home")
+  throw new Error("update home address");
 
 const omitted = await contacts.create({
   firstName: "Outlier",
@@ -120,3 +125,18 @@ if (zeroed?.addresses[0].latitude !== 0 || zeroed.addresses[0].labelNote !== ""
 await contacts.delete(after);
 if ((await contacts.readSingle(new Where(new Operator.Equals("id", ada.id)))) != null)
   throw new Error("delete ada");
+
+function requireAdaChildren(
+  row: {
+    addresses: { line1: string; city: string; addressTypeName: string }[];
+    phones: { number: string; phoneTypeName: string }[];
+  },
+  engineType: string,
+  engineCity: string,
+  number: string,
+) {
+  if (row.addresses.length !== 2 || row.phones.length !== 1) throw new Error("child counts");
+  const engine = row.addresses.find((address) => address.line1 === "12 Analytical Engine");
+  if (engine?.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
+  if (row.phones[0].number !== number || row.phones[0].phoneTypeName !== "Mobile") throw new Error("phone");
+}

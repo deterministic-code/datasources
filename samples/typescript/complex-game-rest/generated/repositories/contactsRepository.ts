@@ -1,0 +1,55 @@
+import type { Contact } from "../types/view/contact";
+import { CRUDRepository, CRUDRepositoryBuilder, DictionaryMapper, ReadonlyRepository, Schema, type IConnection } from "@deterministic-code/datasources";
+import { AddressesRepository } from "./addressesRepository";
+import { PhonesRepository } from "./phonesRepository";
+import { ContactSettingsRepository } from "./contactSettingsRepository";
+import { ContactPreferencesRepository } from "./contactPreferencesRepository";
+import { ContactSourcesRepository } from "./contactSourcesRepository";
+const options = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<Contact>()
+    .add({ entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts_bases"]]), propertyMappings: new DictionaryMapper([["firstName", "first_name"], ["lastName", "last_name"], ["userId", "user_id"]]), ids: ["id"], createProperties: ["firstName", "lastName", "email", "notes", "userId"], updateProperties: ["uuid", "firstName", "lastName", "email", "notes", "userId"], readProperties: ["id", "uuid", "created", "updated", "version", "firstName", "lastName", "email", "notes", "userId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, firstName: { type: "string", nullable: false, hasDefault: false }, lastName: { type: "string", nullable: false, hasDefault: false }, email: { type: "string", nullable: true, hasDefault: false }, notes: { type: "string", nullable: true, hasDefault: false }, userId: { type: "biginteger", nullable: false, hasDefault: false }, contactSourceName: { type: "string", nullable: false, hasDefault: false }, description: { type: "string", nullable: true, hasDefault: false } }) })
+    .add("sqlite", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts_bases"]]), propertyMappings: new DictionaryMapper([["firstName", "first_name"], ["lastName", "last_name"], ["userId", "user_id"]]), ids: ["id"], createProperties: ["uuid", "created", "version", "firstName", "lastName", "email", "notes", "userId"], updateProperties: ["uuid", "created", "version", "firstName", "lastName", "email", "notes", "userId"], readProperties: ["id", "uuid", "created", "updated", "version", "firstName", "lastName", "email", "notes", "userId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, firstName: { type: "string", nullable: false, hasDefault: false }, lastName: { type: "string", nullable: false, hasDefault: false }, email: { type: "string", nullable: true, hasDefault: false }, notes: { type: "string", nullable: true, hasDefault: false }, userId: { type: "biginteger", nullable: false, hasDefault: false }, contactSourceName: { type: "string", nullable: false, hasDefault: false }, description: { type: "string", nullable: true, hasDefault: false } }) })
+    .for(connection);
+
+const readonlyOptions = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<Contact>()
+    .add({ entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts_bases"]]), propertyMappings: new DictionaryMapper([["firstName", "first_name"], ["lastName", "last_name"], ["userId", "user_id"]]), readProperties: ["id", "uuid", "created", "updated", "version", "firstName", "lastName", "email", "notes", "userId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, firstName: { type: "string", nullable: false, hasDefault: false }, lastName: { type: "string", nullable: false, hasDefault: false }, email: { type: "string", nullable: true, hasDefault: false }, notes: { type: "string", nullable: true, hasDefault: false }, userId: { type: "biginteger", nullable: false, hasDefault: false }, contactSourceName: { type: "string", nullable: false, hasDefault: false }, description: { type: "string", nullable: true, hasDefault: false } }) })
+    .add("sqlite", { entity: "Contact", entityMapper: new DictionaryMapper([["Contact", "contacts_bases"]]), propertyMappings: new DictionaryMapper([["firstName", "first_name"], ["lastName", "last_name"], ["userId", "user_id"]]), readProperties: ["id", "uuid", "created", "updated", "version", "firstName", "lastName", "email", "notes", "userId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, firstName: { type: "string", nullable: false, hasDefault: false }, lastName: { type: "string", nullable: false, hasDefault: false }, email: { type: "string", nullable: true, hasDefault: false }, notes: { type: "string", nullable: true, hasDefault: false }, userId: { type: "biginteger", nullable: false, hasDefault: false }, contactSourceName: { type: "string", nullable: false, hasDefault: false }, description: { type: "string", nullable: true, hasDefault: false } }) })
+    .for(connection);
+
+export class ContactsRepository extends CRUDRepository<Contact> {
+  readonly address: AddressesRepository;
+  readonly phone: PhonesRepository;
+  readonly contactSettings: ContactSettingsRepository;
+  readonly contactPreferences: ContactPreferencesRepository;
+  readonly contactSource: ContactSourcesRepository;
+  constructor(connection: IConnection) {
+    super(connection, options(connection));
+    this.address = new AddressesRepository(connection);
+    this.phone = new PhonesRepository(connection);
+    this.contactSettings = new ContactSettingsRepository(connection);
+    this.contactPreferences = new ContactPreferencesRepository(connection);
+    this.contactSource = new ContactSourcesRepository(connection);
+    this.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, this.address);
+    this.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, this.phone);
+    this.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" }, this.contactSettings);
+    this.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", type: "dictionary" }, this.contactPreferences);
+    this.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, this.contactSource);
+    this.addEnriched({ destinationProperty: "description", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "description", type: "object" }, this.contactSource);
+  }
+  static createReadonly(connection: IConnection) {
+    const repo = new ReadonlyRepository<Contact>(connection, readonlyOptions(connection));
+    const address = new AddressesRepository(connection);
+    const phone = new PhonesRepository(connection);
+    const contactSettings = new ContactSettingsRepository(connection);
+    const contactPreferences = new ContactPreferencesRepository(connection);
+    const contactSource = new ContactSourcesRepository(connection);
+    repo.addEnriched({ destinationProperty: "addresses", sourceProperty: "id", relatedKey: "contactId", type: "list" }, address);
+    repo.addEnriched({ destinationProperty: "phones", sourceProperty: "id", relatedKey: "contactId", type: "list" }, phone);
+    repo.addEnriched({ destinationProperty: "settings", sourceProperty: "id", relatedKey: "contactId", relatedProperty: "value", type: "dictionary" }, contactSettings);
+    repo.addEnriched({ destinationProperty: "prefs", sourceProperty: "id", relatedKey: "contactId", type: "dictionary" }, contactPreferences);
+    repo.addEnriched({ destinationProperty: "contactSourceName", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "name", type: "object" }, contactSource);
+    repo.addEnriched({ destinationProperty: "description", sourceProperty: "contactSourceId", relatedKey: "id", relatedProperty: "description", type: "object" }, contactSource);
+    return repo;
+  }
+}

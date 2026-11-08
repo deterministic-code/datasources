@@ -65,8 +65,3 @@ impl Statement for CreateBulkDeleteStoredProcedureStatement {
     }
 }
 
-impl crate::ReadInput for CreateBulkDeleteStoredProcedureStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

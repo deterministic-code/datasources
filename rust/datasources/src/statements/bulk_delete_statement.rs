@@ -35,11 +35,6 @@ impl BulkDeleteStatement {
     }
 }
 
-impl crate::ReadInput for BulkDeleteStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for BulkDeleteStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

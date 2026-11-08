@@ -510,26 +510,42 @@ pub trait IReadonlyRepository: IRepository
 Returns the first row, or `None` when the result is empty.
 
 ```rust
-async fn read_single(&self, query: &dyn ReadInput, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
+async fn read_single(&self, query: Option<&dyn Statement>, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
 ```
 
-- `query` — query, where, or stored procedure
+- `query` — select or stored procedure; `None` reads the mapped entity
 - `options` — optional [ReadonlyRepositoryMappingOptions](#readonlyrepositorymappingoptions); omitted mapping uses the repository constructor
 
 **Returns** `Result<Option<Row>>`
+
+##### read_single_where(clause, options)
+
+C# `ReadSingle(IWhere)`.
+
+```rust
+async fn read_single_where(&self, clause: &dyn IWhere, options: Option<&ReadonlyRepositoryMappingOptions>) -> Result<Option<Row>>
+```
 
 ##### read(query, options)
 
 Returns every row.
 
 ```rust
-fn read<'a>(&'a self, query: &'a dyn ReadInput, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
+fn read<'a>(&'a self, query: Option<&'a dyn Statement>, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
 ```
 
-- `query` — query, where, or stored procedure
+- `query` — select or stored procedure; `None` reads the mapped entity
 - `options` — optional [ReadonlyRepositoryMappingOptions](#readonlyrepositorymappingoptions); omitted mapping uses the repository constructor
 
 **Returns** stream of `Result<Row>`
+
+##### read_where(clause, options)
+
+C# `Read(IWhere)`.
+
+```rust
+fn read_where<'a>(&'a self, clause: &'a dyn IWhere, options: Option<&'a ReadonlyRepositoryMappingOptions>) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>>
+```
 
 #### ReadonlyRepository
 

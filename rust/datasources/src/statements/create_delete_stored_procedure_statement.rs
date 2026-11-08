@@ -93,8 +93,3 @@ impl Statement for CreateDeleteStoredProcedureStatement {
     }
 }
 
-impl crate::ReadInput for CreateDeleteStoredProcedureStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

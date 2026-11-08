@@ -79,6 +79,24 @@ fn alan() -> Contact {
     }
 }
 
+fn require_ada_children(row: &Contact, engine_type: &str, engine_city: &str, number: &str) -> Result<()> {
+    if row.addresses.len() != 2 || row.phones.len() != 1 {
+        return Err(DatasourceError::message("child counts"));
+    }
+    let engine = row
+        .addresses
+        .iter()
+        .find(|address| address.line1 == "12 Analytical Engine")
+        .ok_or_else(|| DatasourceError::message("engine address"))?;
+    if engine.address_type_name != engine_type || engine.city != engine_city {
+        return Err(DatasourceError::message("engine address"));
+    }
+    if row.phones[0].number != number || row.phones[0].phone_type_name != "Mobile" {
+        return Err(DatasourceError::message("phone"));
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     register();
@@ -102,16 +120,24 @@ async fn main() -> Result<()> {
     }
 
     let ada_read = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", ada.id)))
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("read ada"))?;
-    if ada_read.addresses.len() != 2 || ada_read.phones.len() != 1 || ada_read.settings.len() != 1
-        || ada_read.prefs.len() != 1
-    {
+    if ada_read.settings.len() != 1 || ada_read.prefs.len() != 1 {
         return Err(DatasourceError::message("read ada enrichments"));
     }
+    require_ada_children(&ada_read, "Home", "London", "555-0100")?;
+    if ada_read
+        .addresses
+        .iter()
+        .find(|address| address.line1 == "1 Strand")
+        .map(|address| address.address_type_name.as_str())
+        != Some("Work")
+    {
+        return Err(DatasourceError::message("read work address"));
+    }
     let alan_read = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", alan.id)))
+        .read_single_where(&Where::new(Operator::equals("id", alan.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("read alan"))?;
     if alan_read.addresses[0].city != "Bletchley" {
@@ -157,16 +183,29 @@ async fn main() -> Result<()> {
         }, None)
         .await?;
     let ada_after = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", ada.id)))
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("update"))?;
     if ada_after.first_name != "Ada Byron"
-        || ada_after.addresses.len() != 2
-        || ada_after.phones[0].number != "555-0111"
         || ada_after.settings.get("theme") != Some(&"sepia".into())
-        || !ada_after.addresses.iter().any(|address| address.city == "Cambridge")
+        || ada_after
+            .addresses
+            .iter()
+            .find(|address| address.line1 == "12 Analytical Engine")
+            .and_then(|address| address.country.as_deref())
+            != Some("FR")
     {
         return Err(DatasourceError::message("update ada"));
+    }
+    require_ada_children(&ada_after, "Work", "Cambridge", "555-0111")?;
+    if ada_after
+        .addresses
+        .iter()
+        .find(|address| address.line1 == "1 College")
+        .map(|address| address.address_type_name.as_str())
+        != Some("Home")
+    {
+        return Err(DatasourceError::message("update home address"));
     }
 
     let omitted = contacts_repo
@@ -222,7 +261,7 @@ async fn main() -> Result<()> {
         }, None)
         .await?;
     let valued = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", omitted.id)))
+        .read_single_where(&Where::new(Operator::equals("id", omitted.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("outlier value"))?;
     if valued.addresses[0].latitude != Some(51)
@@ -259,7 +298,7 @@ async fn main() -> Result<()> {
         }, None)
         .await?;
     let zeroed = contacts_repo
-        .read_single(&Where::new(Operator::equals("id", omitted.id)))
+        .read_single_where(&Where::new(Operator::equals("id", omitted.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("outlier zero"))?;
     if zeroed.addresses[0].latitude != Some(0)
@@ -272,7 +311,7 @@ async fn main() -> Result<()> {
 
     contacts_repo.delete(ada_after, None).await?;
     if contacts_repo
-        .read_single(&Where::new(Operator::equals("id", ada.id)))
+        .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .is_some()
     {
@@ -280,7 +319,7 @@ async fn main() -> Result<()> {
     }
     contacts_repo.delete(alan_read, None).await?;
     if contacts_repo
-        .read_single(&Where::new(Operator::equals("id", alan.id)))
+        .read_single_where(&Where::new(Operator::equals("id", alan.id)), None)
         .await?
         .is_some()
     {

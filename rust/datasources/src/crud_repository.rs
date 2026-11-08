@@ -15,7 +15,7 @@ use crate::i_unit_of_work::IUnitOfWork;
 use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::parameter::Parameter;
-use crate::read_input::ReadInput;
+use crate::statement::Statement;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::create_enrichment_strategy::merge_lookups;
@@ -293,7 +293,7 @@ impl<T: Entity> CRUDRepository<T> {
         let clause = self.id_where(&record)?;
         let row = self
             .readonly
-            .read_rows(Some(&clause), None, None)
+            .read_rows(crate::readonly_repository::ReadQuery::clause(&clause), None, None)
             .try_next()
             .await?;
         Ok(row)
@@ -627,7 +627,7 @@ impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<T>> {
         self.readonly.read_single(query, options).await
@@ -635,10 +635,26 @@ impl<T: Entity> IReadonlyRepository<T> for CRUDRepository<T> {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
         self.readonly.read(query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<T>> {
+        self.readonly.read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<T>> + Send + 'a>> {
+        self.readonly.read_where(clause, options)
     }
 }
 

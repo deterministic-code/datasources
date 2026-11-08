@@ -1,0 +1,20 @@
+import type { UserGroup } from "../types/datasource/userGroup";
+import { CRUDRepository, CRUDRepositoryBuilder, DictionaryMapper, ReadonlyRepository, Schema, type IConnection } from "@deterministic-code/datasources";
+const options = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<UserGroup>()
+    .add({ entity: "UserGroup", entityMapper: new DictionaryMapper([["UserGroup", "user_groups"]]), propertyMappings: new DictionaryMapper([["userId", "user_id"], ["groupId", "group_id"]]), ids: ["id"], createProperties: ["userId", "groupId"], updateProperties: ["uuid", "userId", "groupId"], readProperties: ["id", "uuid", "created", "updated", "version", "userId", "groupId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, userId: { type: "biginteger", nullable: false, hasDefault: false }, groupId: { type: "biginteger", nullable: false, hasDefault: false } }) })
+    .add("sqlite", { entity: "UserGroup", entityMapper: new DictionaryMapper([["UserGroup", "user_groups"]]), propertyMappings: new DictionaryMapper([["userId", "user_id"], ["groupId", "group_id"]]), ids: ["id"], createProperties: ["uuid", "created", "version", "userId", "groupId"], updateProperties: ["uuid", "created", "version", "userId", "groupId"], readProperties: ["id", "uuid", "created", "updated", "version", "userId", "groupId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, userId: { type: "biginteger", nullable: false, hasDefault: false }, groupId: { type: "biginteger", nullable: false, hasDefault: false } }) })
+    .for(connection);
+
+const readonlyOptions = (connection: IConnection) =>
+  new CRUDRepositoryBuilder<UserGroup>()
+    .add({ entity: "UserGroup", entityMapper: new DictionaryMapper([["UserGroup", "user_groups"]]), propertyMappings: new DictionaryMapper([["userId", "user_id"], ["groupId", "group_id"]]), readProperties: ["id", "uuid", "created", "updated", "version", "userId", "groupId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, userId: { type: "biginteger", nullable: false, hasDefault: false }, groupId: { type: "biginteger", nullable: false, hasDefault: false } }) })
+    .add("sqlite", { entity: "UserGroup", entityMapper: new DictionaryMapper([["UserGroup", "user_groups"]]), propertyMappings: new DictionaryMapper([["userId", "user_id"], ["groupId", "group_id"]]), readProperties: ["id", "uuid", "created", "updated", "version", "userId", "groupId"], schema: new Schema({ id: { type: "biginteger", nullable: false, hasDefault: false, isId: true }, uuid: { type: "uuid", nullable: false, hasDefault: true }, created: { type: "datetime", nullable: false, hasDefault: true }, updated: { type: "datetime", nullable: false, hasDefault: true }, version: { type: "binary", nullable: false, hasDefault: true }, userId: { type: "biginteger", nullable: false, hasDefault: false }, groupId: { type: "biginteger", nullable: false, hasDefault: false } }) })
+    .for(connection);
+
+export class UserGroupsRepository extends CRUDRepository<UserGroup> {
+  constructor(connection: IConnection) {
+    super(connection, options(connection));
+  }
+  static createReadonly = (connection: IConnection) => new ReadonlyRepository<UserGroup>(connection, readonlyOptions(connection));
+}

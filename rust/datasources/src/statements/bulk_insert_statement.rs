@@ -53,11 +53,6 @@ impl BulkInsertStatement {
     }
 }
 
-impl crate::ReadInput for BulkInsertStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for BulkInsertStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

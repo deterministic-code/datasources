@@ -1,0 +1,26 @@
+#![allow(non_snake_case)]
+pub mod addressesRepository;
+pub mod addressTypesRepository;
+pub mod categoriesRepository;
+pub mod contactsRepository;
+pub mod contactChangeLogsRepository;
+pub mod contactGroupsRepository;
+pub mod contactGroupMembersRepository;
+pub mod contactPreferencesRepository;
+pub mod contactSettingsRepository;
+pub mod contactSourcesRepository;
+pub mod gameSettingsRepository;
+pub mod gameStatesRepository;
+pub mod gamesRepository;
+pub mod gamesCategoriesRepository;
+pub mod groupsRepository;
+pub mod legacyContactsRepository;
+pub mod phonesRepository;
+pub mod phoneTypesRepository;
+pub mod reviewsRepository;
+pub mod rolesRepository;
+pub mod usersRepository;
+pub mod userGroupsRepository;
+pub mod userRolesRepository;
+pub mod userSettingsRepository;
+pub mod repositoryRegistry;

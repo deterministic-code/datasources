@@ -1,7 +1,6 @@
 use crate::datasource_error::DatasourceError;
 use crate::IWhere;
 use crate::id_key::IdKey;
-use crate::read_input::{where_of, ReadInput};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
@@ -53,10 +52,6 @@ impl SharedItems {
                     .collect()
             }
         }
-    }
-
-    pub fn filter_input(&self, query: Option<&dyn ReadInput>) -> Vec<Row> {
-        self.filter(where_of(query))
     }
 
     pub fn insert(&self, item: &mut Row) -> Row {

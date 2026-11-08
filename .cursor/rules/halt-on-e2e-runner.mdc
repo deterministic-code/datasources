@@ -1,0 +1,12 @@
+---
+description: Stop instead of inventing a custom E2E runner
+alwaysApply: true
+---
+
+# Halt on a custom E2E runner
+
+HALT IMMEDIATELY if you add a `runner` service, a fake e2e harness, or a Dockerfile under `scripts/` that stands in for a sample.
+
+The sample directory is the container. The Dockerfile lives in that folder so the run is visible. Compose `build: .`. Work runs on tmpfs.
+
+A custom runner becomes a fake test full of quick fixes that hide underlying bugs. That is toxic. Do not paper over a failing real `sqlite.sh` / `mysql-postgres.sh` / Dockerfile with a sidecar runner.

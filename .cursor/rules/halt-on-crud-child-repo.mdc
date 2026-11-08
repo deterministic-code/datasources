@@ -1,0 +1,12 @@
+---
+description: Generated child repository fields are *Repository types
+alwaysApply: true
+---
+
+# Halt on CRUDRepository child fields
+
+HALT IMMEDIATELY if a generated repository child member is `CRUDRepository`, `ICRUDRepository`, or `Arc<CRUDRepository>`.
+
+C#, TypeScript, and Rust child fields are the generated class (`AddressesRepository Address`, `readonly address: AddressesRepository`, `pub address: AddressesRepository`). Construct them with `new AddressesRepository(connection)` / `AddressesRepository::new`. Do not unwrap a child to `CRUDRepository`.
+
+`npm test` runs `scripts/generated-child-repos.test.mjs`. That is the check. E2E is not.

@@ -77,23 +77,45 @@ export const planRepositories = (
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
     const enrichments = relations(authored!, casing, types, expanded, repoName, identity, typeName);
     const skipColumns = new Set(enrichments.filter((item) => item.kind === "object").map((item) => item.destination));
-    const schema = schemaFields(shape, property, skipColumns);
-    const names = new Set(schema.map((column) => column.from));
+    const schema = schemaFields(shape, property);
+    const names = new Set(schema.filter((column) => !skipColumns.has(column.from)).map((column) => column.from));
     const columns = persistedColumnFields(shape).filter((field) => names.has(property(field.name)));
     const ids = identityColumns(shape, table);
+    const inherited = expanded.get(authored!.inherits ?? "") ?? types.get(authored!.inherits ?? "");
+    const sqlColumn = (fieldName: string): string =>
+      CreateTableStatement.columnName(overlays.get(fieldName)?.mapping ?? fieldName, naming.naming);
+    const yamlFields = [
+      ...overlays.keys(),
+      ...(inherited?.fields.map((field) => field.name) ?? []),
+      ...table.fields.map((field) => field.name),
+    ];
+    const mapped = new Map<string, string>();
+    const mapField = (fieldName: string): void => {
+      const from = property(fieldName);
+      const to = sqlColumn(fieldName);
+      if (from !== to) mapped.set(from, to);
+    };
+    for (const field of columns) mapField(field.name);
+    const readProperties = columns.map((field) => property(field.name));
+    const readSet = new Set(readProperties);
+    for (const item of enrichments) {
+      if (item.kind !== "object") continue;
+      const fieldName = yamlFields.find((name) => property(name) === item.source);
+      if (fieldName !== undefined) mapField(fieldName);
+      if (!readSet.has(item.source)) {
+        readSet.add(item.source);
+        readProperties.push(item.source);
+      }
+    }
     return [
       {
         specName: authored!.name,
         typeName: typeName(authored!.name),
         typeHome: authored!.tags.includes("view_type") ? "view" : "datasource",
         table: CreateTableStatement.tableName(table.mapping ?? table.name, naming.naming),
-        propertyMappings: columns.flatMap((field) => {
-          const from = property(field.name);
-          const to = CreateTableStatement.columnName(overlays.get(field.name)?.mapping ?? field.name, naming.naming);
-          return from === to ? [] : [{ from, to }];
-        }),
+        propertyMappings: [...mapped].map(([from, to]) => ({ from, to })),
         ids: ids.map(property),
-        readProperties: schema.map((column) => column.from),
+        readProperties,
         createProperties: columns
           .filter((field) => writeInclusionOf(field, ids, overlays.get(field.name)).includeInCreate)
           .map((field) => property(field.name)),

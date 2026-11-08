@@ -45,8 +45,3 @@ impl Statement for AlterTableStatement {
     }
 }
 
-impl crate::ReadInput for AlterTableStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

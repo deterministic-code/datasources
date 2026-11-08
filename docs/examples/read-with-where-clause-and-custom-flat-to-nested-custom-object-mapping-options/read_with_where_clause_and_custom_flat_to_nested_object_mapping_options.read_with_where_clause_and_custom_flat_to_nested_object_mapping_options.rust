@@ -16,7 +16,7 @@ parents.add_enriched(
 );
 let parent = record(&[("Type", created_type.get("Id").unwrap().clone())]);
 parents.create(parent).await.unwrap();
-let enriched = parents.read_single(&(), None).await.unwrap();
+let enriched = parents.read_single(None, None).await.unwrap();
 
 let command = Arc::new(MockCommand::new());
 command.reader_rows.lock().unwrap().extend([
@@ -71,6 +71,6 @@ options.enrichment = Some(Arc::new(NestedToObjectEnrichmentStrategy::new(TypeMap
     ],
 ))));
 let items = join_repo
-    .read(&join, Some(&options))
+    .read(Some(&join), Some(&options))
     .try_collect::<Vec<_>>().await
     .unwrap();

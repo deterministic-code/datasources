@@ -33,8 +33,3 @@ impl Statement for DropTriggerStatement {
     }
 }
 
-impl crate::ReadInput for DropTriggerStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

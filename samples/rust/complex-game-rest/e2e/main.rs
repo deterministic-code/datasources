@@ -1,25 +1,23 @@
 use complex_game_rest::{
-    register, Api, Category, Contact, ContactSource, Game, GameState, Group, Repositories, Review, Role, User,
+    register, AddressType, Api, Category, Contact, ContactSource, Game, GameState, Group, PhoneType,
+    Repositories, Review, Role, User,
 };
 use datasources::{default, DatasourceError, Result};
 use serde_json::Value;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     register();
     let ds = default()?;
-    let api = Api::new(
-        ds.users(),
-        ds.categories(),
-        ds.games(),
-        ds.reviews(),
-        ds.game_states(),
-        ds.contacts(),
-        complex_game_rest::clock::Clock::new(),
-    );
+    let connection = ds.bind_connection(None);
+    let api = Api::open(Arc::clone(&connection), complex_game_rest::clock::Clock::new())?;
     let role = ds.roles().create(Role { name: "player".into(), description: "plays".into(), ..Default::default() }).await?;
     let group = ds.groups().create(Group { name: "guild".into(), description: "guild".into(), ..Default::default() }).await?;
     ds.contact_sources().create(ContactSource { name: "Manual".into(), ..Default::default() }).await?;
+    ds.address_types().create(AddressType { name: "Home".into(), ..Default::default() }).await?;
+    ds.address_types().create(AddressType { name: "Work".into(), ..Default::default() }).await?;
+    ds.phone_types().create(PhoneType { name: "Mobile".into(), ..Default::default() }).await?;
 
     let user = call(&api, "POST", "/users", Some(json(&[
         ("username", Value::String("ada".into())),
@@ -114,15 +112,64 @@ async fn main() -> Result<()> {
         ("last_name", Value::String("Lovelace".into())),
         ("contact_source_name", Value::String("Manual".into())),
         ("user_id", Value::String(user_id.to_string())),
+        ("addresses", array(&[
+            object(&[
+                ("address_type_name", Value::String("Home".into())),
+                ("line1", Value::String("12 Analytical Engine".into())),
+                ("city", Value::String("London".into())),
+                ("country", Value::String("GB".into())),
+            ]),
+            object(&[
+                ("address_type_name", Value::String("Work".into())),
+                ("line1", Value::String("1 Strand".into())),
+                ("city", Value::String("London".into())),
+                ("country", Value::String("GB".into())),
+            ]),
+        ])),
+        ("phones", array(&[object(&[
+            ("phone_type_name", Value::String("Mobile".into())),
+            ("number", Value::String("555-0100".into())),
+        ])])),
     ])), 201).await?;
     let contact_id = contact["id"].as_i64().ok_or_else(|| DatasourceError::message("contact id"))?;
-    call(&api, "GET", &format!("/contacts?userId={user_id}"), None, 200).await?;
+    let created = call(&api, "GET", &format!("/contacts?id={contact_id}"), None, 200).await?;
+    require_ada_children(&created, "Home", "London", "555-0100")?;
+    if address_by_line1(contact_row(&created)?, "1 Strand")?["address_type_name"] != "Work" {
+        return Err(DatasourceError::message("create work address"));
+    }
+    let engine_id = address_by_line1(contact_row(&created)?, "12 Analytical Engine")?["id"].clone();
+    let phone_id = contact_row(&created)?["phones"][0]["id"].clone();
     call(&api, "PUT", &format!("/contacts?id={contact_id}"), Some(json(&[
         ("first_name", Value::String("Ada Byron".into())),
         ("last_name", Value::String("Lovelace".into())),
         ("contact_source_name", Value::String("Manual".into())),
         ("user_id", Value::String(user_id.to_string())),
+        ("addresses", array(&[
+            object(&[
+                ("id", engine_id),
+                ("address_type_name", Value::String("Work".into())),
+                ("line1", Value::String("12 Analytical Engine".into())),
+                ("city", Value::String("Cambridge".into())),
+                ("country", Value::String("FR".into())),
+            ]),
+            object(&[
+                ("address_type_name", Value::String("Home".into())),
+                ("line1", Value::String("1 College".into())),
+                ("city", Value::String("Cambridge".into())),
+                ("country", Value::String("GB".into())),
+            ]),
+        ])),
+        ("phones", array(&[object(&[
+            ("id", phone_id),
+            ("phone_type_name", Value::String("Mobile".into())),
+            ("number", Value::String("555-0111".into())),
+        ])])),
     ])), 200).await?;
+    let updated = call(&api, "GET", &format!("/contacts?id={contact_id}"), None, 200).await?;
+    require_ada_children(&updated, "Work", "Cambridge", "555-0111")?;
+    if address_by_line1(contact_row(&updated)?, "1 College")?["address_type_name"] != "Home" {
+        return Err(DatasourceError::message("update home address"));
+    }
 
     for target in [
         format!("/contacts?id={contact_id}"),
@@ -138,6 +185,41 @@ async fn main() -> Result<()> {
         call(&api, "PUT", &target, Some("{}".into()), 404).await?;
     }
     let _ = (User::default(), Game::default(), Category::default(), Review::default(), GameState::default(), Contact::default());
+    Ok(())
+}
+
+fn contact_row(listed: &Value) -> Result<&Value> {
+    listed
+        .as_array()
+        .and_then(|rows| rows.first())
+        .ok_or_else(|| DatasourceError::message("contact list"))
+}
+
+fn address_by_line1<'a>(contact: &'a Value, line1: &str) -> Result<&'a Value> {
+    contact["addresses"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|address| address["line1"] == line1))
+        .ok_or_else(|| DatasourceError::message(line1.to_string()))
+}
+
+fn require_ada_children(listed: &Value, engine_type: &str, engine_city: &str, number: &str) -> Result<()> {
+    let contact = contact_row(listed)?;
+    let addresses = contact["addresses"]
+        .as_array()
+        .ok_or_else(|| DatasourceError::message("addresses"))?;
+    let phones = contact["phones"]
+        .as_array()
+        .ok_or_else(|| DatasourceError::message("phones"))?;
+    if addresses.len() != 2 || phones.len() != 1 {
+        return Err(DatasourceError::message("child counts"));
+    }
+    let engine = address_by_line1(contact, "12 Analytical Engine")?;
+    if engine["address_type_name"] != engine_type || engine["city"] != engine_city {
+        return Err(DatasourceError::message("engine address"));
+    }
+    if phones[0]["number"] != number || phones[0]["phone_type_name"] != "Mobile" {
+        return Err(DatasourceError::message("phone"));
+    }
     Ok(())
 }
 

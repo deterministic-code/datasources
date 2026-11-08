@@ -32,11 +32,6 @@ impl MockSelectStatement {
     }
 }
 
-impl crate::ReadInput for MockSelectStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}
 
 impl Statement for MockSelectStatement {
     fn accept(&self, _text: &StatementTextRenderer) -> String {

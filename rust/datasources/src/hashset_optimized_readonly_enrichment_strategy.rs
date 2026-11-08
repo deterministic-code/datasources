@@ -31,7 +31,7 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             return Ok(());
         }
         let loaded = via
-            .read(&Where::new(Operator::in_list(
+            .read_where(&Where::new(Operator::in_list(
                 enrichment.related_key.clone(),
                 keys.values().cloned().collect(),
             )), None)
@@ -78,7 +78,7 @@ impl<T: Entity, TRelated: Entity> ReadonlyEnrichmentStrategy<T, TRelated>
             return Ok(());
         }
         let loaded = via
-            .read(&Where::new(Operator::in_list(
+            .read_where(&Where::new(Operator::in_list(
                 enrichment.related_key.clone(),
                 keys.values().cloned().collect(),
             )), None)

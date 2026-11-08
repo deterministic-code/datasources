@@ -1,0 +1,19 @@
+#![allow(dead_code, unused_imports, non_snake_case)]
+#[path = "types/datasource/userBase.rs"]
+pub mod userBase;
+#[path = "types/datasource/role.rs"]
+pub mod role;
+#[path = "types/datasource/group.rs"]
+pub mod group;
+#[path = "types/datasource/userGroup.rs"]
+pub mod userGroup;
+#[path = "types/datasource/userRole.rs"]
+pub mod userRole;
+pub use userBase::*;
+pub use role::*;
+pub use group::*;
+pub use userGroup::*;
+pub use userRole::*;
+mod schema_objects;
+pub mod repositories;
+pub use repositories::repositoryRegistry::Repositories;

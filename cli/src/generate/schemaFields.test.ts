@@ -29,6 +29,12 @@ types:
   - contact:
       tags: [view_type]
       inherits: contact_base
+      union:
+        - gender
+      extract:
+        - gender.name
+      mapping:
+        gender.name: gender_type_name
       remove_fields:
         - gender_type_id
 `,
@@ -66,5 +72,11 @@ describe("schemaFields", () => {
     const contact = planRepositories(spec, "rust", {}).find((model) => model.specName === "contact");
     expect(contact?.schema.some((column) => column.from === "gender_type_id")).toBe(false);
     expect(contact?.schema.some((column) => column.from === "id" && column.type === "integer")).toBe(true);
+    expect(contact?.propertyMappings).toEqual([]);
+    const csharp = planRepositories(spec, "csharp", {}).find((model) => model.specName === "contact");
+    expect(csharp?.propertyMappings).toContainEqual({ from: "GenderTypeId", to: "gender_type_id" });
+    expect(csharp?.readProperties).toContain("GenderTypeId");
+    expect(csharp?.createProperties).not.toContain("GenderTypeId");
+    expect(csharp?.schema.some((column) => column.from === "GenderTypeId")).toBe(false);
   });
 });

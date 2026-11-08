@@ -53,11 +53,6 @@ impl Where {
     }
 }
 
-impl crate::ReadInput for Where {
-    fn as_where(&self) -> Option<&dyn IWhere> {
-        Some(self)
-    }
-}
 
 impl crate::ICondition for Where {
     fn as_any(&self) -> &dyn std::any::Any {

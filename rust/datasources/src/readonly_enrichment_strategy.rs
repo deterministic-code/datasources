@@ -52,7 +52,7 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
             let cache_key = key_of(&key);
             if !cache.contains_key(&cache_key) {
                 let related = via
-                    .read_single(
+                    .read_single_where(
                         &Where::new(Operator::equals(
                             enrichment.related_key.clone(),
                             key.clone(),
@@ -90,7 +90,7 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
                 continue;
             };
             let related = via
-                .read(
+                .read_where(
                     &Where::new(Operator::equals(
                         enrichment.related_key.clone(),
                         key,
@@ -117,7 +117,7 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
             continue;
         };
         let related = via
-            .read(
+            .read_where(
                 &Where::new(Operator::equals(
                     enrichment.related_key.clone(),
                     key,
@@ -162,7 +162,7 @@ pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
             continue;
         };
         let links = link
-            .read(
+            .read_where(
                 &Where::new(Operator::equals(association.parent.clone(), key)),
                 None,
             )
@@ -174,7 +174,7 @@ pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
                 continue;
             };
             if let Some(entity) = via
-                .read_single(
+                .read_single_where(
                     &Where::new(Operator::equals(
                         enrichment.related_key.clone(),
                         id,

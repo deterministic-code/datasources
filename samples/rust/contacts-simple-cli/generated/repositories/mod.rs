@@ -1,0 +1,19 @@
+#![allow(non_snake_case)]
+pub mod addressesRepository;
+pub mod addressAttributesRepository;
+pub mod addressLabelsRepository;
+pub mod addressTypesRepository;
+pub mod contactsRepository;
+pub mod contactAttributesRepository;
+pub mod contactLabelsRepository;
+pub mod emailsRepository;
+pub mod emailAttributesRepository;
+pub mod emailLabelsRepository;
+pub mod emailTypesRepository;
+pub mod gendersRepository;
+pub mod labelsRepository;
+pub mod phonesRepository;
+pub mod phoneAttributesRepository;
+pub mod phoneLabelsRepository;
+pub mod phoneTypesRepository;
+pub mod repositoryRegistry;

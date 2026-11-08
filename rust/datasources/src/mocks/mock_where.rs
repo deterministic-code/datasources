@@ -21,11 +21,6 @@ impl MockWhere {
     }
 }
 
-impl crate::ReadInput for MockWhere {
-    fn as_where(&self) -> Option<&dyn crate::IWhere> {
-        Some(self)
-    }
-}
 
 impl ICondition for MockWhere {
     fn as_any(&self) -> &dyn std::any::Any {

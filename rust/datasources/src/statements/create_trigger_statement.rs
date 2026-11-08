@@ -60,8 +60,3 @@ impl Statement for CreateTriggerStatement {
     }
 }
 
-impl crate::ReadInput for CreateTriggerStatement {
-    fn as_statement(&self) -> Option<&dyn crate::Statement> {
-        Some(self)
-    }
-}

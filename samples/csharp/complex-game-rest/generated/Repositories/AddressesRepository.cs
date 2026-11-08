@@ -1,0 +1,140 @@
+using Datasources;
+
+public sealed class AddressesRepository : CRUDRepository<Backend.Types.View.Address>
+{
+    public AddressTypesRepository AddressType { get; }
+
+    public AddressesRepository(IConnection connection) : base(connection, Options(connection))
+    {
+        AddressType = new AddressTypesRepository(connection);
+        AddEnriched(new("AddressTypeName", "AddressTypeId", "Id", "Name"), AddressType);
+        AddEnriched(new("Description", "AddressTypeId", "Id", "Description"), AddressType);
+    }
+
+    public static IReadonlyRepository<Backend.Types.View.Address> CreateReadonly(IConnection connection)
+    {
+        var repo = new ReadonlyRepository<Backend.Types.View.Address>(connection, Options(connection));
+        var AddressType = new AddressTypesRepository(connection);
+        repo.AddEnriched(new("AddressTypeName", "AddressTypeId", "Id", "Name"), AddressType);
+        repo.AddEnriched(new("Description", "AddressTypeId", "Id", "Description"), AddressType);
+        return repo;
+    }
+
+    static CRUDRepositoryOptions<Backend.Types.View.Address> Options(IConnection connection) =>
+        new CRUDRepositoryBuilder<Backend.Types.View.Address>()
+            .Add(new()
+            {
+                Entity = "Address",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Address"] = "addresses" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["Latitude"] = "latitude",
+                    ["LabelNote"] = "label_note",
+                    ["Floor"] = "floor",
+                    ["Score"] = "score",
+                    ["ExternalId"] = "external_id",
+                    ["IsVerified"] = "is_verified",
+                    ["VerifiedAt"] = "verified_at",
+                    ["Stamp"] = "stamp",
+                    ["ContactId"] = "contact_id",
+                    ["Line1"] = "line1",
+                    ["Line2"] = "line2",
+                    ["City"] = "city",
+                    ["Region"] = "region",
+                    ["PostalCode"] = "postal_code",
+                    ["Country"] = "country",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                CreateProperties = ["Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                UpdateProperties = ["Uuid", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("biginteger", false, false, true),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["Latitude"] = new("integer", true, false),
+                    ["LabelNote"] = new("string", true, false),
+                    ["Floor"] = new("unsignedinteger", true, false),
+                    ["Score"] = new("decimal", true, false),
+                    ["ExternalId"] = new("uuid", true, false),
+                    ["IsVerified"] = new("boolean", true, false),
+                    ["VerifiedAt"] = new("datetime", true, false),
+                    ["Stamp"] = new("binary", true, false),
+                    ["ContactId"] = new("biginteger", false, false),
+                    ["Line1"] = new("string", false, false),
+                    ["Line2"] = new("string", true, false),
+                    ["City"] = new("string", false, false),
+                    ["Region"] = new("string", true, false),
+                    ["PostalCode"] = new("string", true, false),
+                    ["Country"] = new("string", true, false),
+                    ["AddressTypeName"] = new("string", false, false),
+                    ["Description"] = new("string", true, false),
+                }),
+            })
+            .Add("sqlite", new()
+            {
+                Entity = "Address",
+                EntityMapper = new DictionaryMapper<string>(new Dictionary<string, string> { ["Address"] = "addresses" }),
+                PropertyMappings = new DictionaryMapper<string>(new Dictionary<string, string>
+                {
+                    ["Id"] = "id",
+                    ["Uuid"] = "uuid",
+                    ["Created"] = "created",
+                    ["Updated"] = "updated",
+                    ["Version"] = "version",
+                    ["Latitude"] = "latitude",
+                    ["LabelNote"] = "label_note",
+                    ["Floor"] = "floor",
+                    ["Score"] = "score",
+                    ["ExternalId"] = "external_id",
+                    ["IsVerified"] = "is_verified",
+                    ["VerifiedAt"] = "verified_at",
+                    ["Stamp"] = "stamp",
+                    ["ContactId"] = "contact_id",
+                    ["Line1"] = "line1",
+                    ["Line2"] = "line2",
+                    ["City"] = "city",
+                    ["Region"] = "region",
+                    ["PostalCode"] = "postal_code",
+                    ["Country"] = "country",
+                }),
+                Ids = ["Id"],
+                ReadProperties = ["Id", "Uuid", "Created", "Updated", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                CreateProperties = ["Uuid", "Created", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                UpdateProperties = ["Uuid", "Created", "Version", "Latitude", "LabelNote", "Floor", "Score", "ExternalId", "IsVerified", "VerifiedAt", "Stamp", "ContactId", "Line1", "Line2", "City", "Region", "PostalCode", "Country"],
+                Schema = new(new Dictionary<string, SchemaColumn>
+                {
+                    ["Id"] = new("biginteger", false, false, true),
+                    ["Uuid"] = new("uuid", false, true),
+                    ["Created"] = new("datetime", false, true),
+                    ["Updated"] = new("datetime", false, true),
+                    ["Version"] = new("binary", false, true),
+                    ["Latitude"] = new("integer", true, false),
+                    ["LabelNote"] = new("string", true, false),
+                    ["Floor"] = new("unsignedinteger", true, false),
+                    ["Score"] = new("decimal", true, false),
+                    ["ExternalId"] = new("uuid", true, false),
+                    ["IsVerified"] = new("boolean", true, false),
+                    ["VerifiedAt"] = new("datetime", true, false),
+                    ["Stamp"] = new("binary", true, false),
+                    ["ContactId"] = new("biginteger", false, false),
+                    ["Line1"] = new("string", false, false),
+                    ["Line2"] = new("string", true, false),
+                    ["City"] = new("string", false, false),
+                    ["Region"] = new("string", true, false),
+                    ["PostalCode"] = new("string", true, false),
+                    ["Country"] = new("string", true, false),
+                    ["AddressTypeName"] = new("string", false, false),
+                    ["Description"] = new("string", true, false),
+                }),
+            })
+            .For(connection);
+}

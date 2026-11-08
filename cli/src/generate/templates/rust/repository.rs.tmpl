@@ -1,18 +1,19 @@
-use datasources::{Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, {{#hasEnrichments}}Enrichment, EnrichmentPropertyType, {{/hasEnrichments}}{{#hasLinked}}Association, {{/hasLinked}}{{#hasIcrud}}ICRUDRepository, {{/hasIcrud}}ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Result};
+use datasources::{Connection, CRUDRepository, {{#builder}}CRUDRepositoryBuilder, {{/builder}}CRUDRepositoryOptions, DictionaryMapper, {{#hasEnrichments}}Enrichment, EnrichmentPropertyType, {{/hasEnrichments}}{{#hasLinked}}Association, {{/hasLinked}}EnrichmentVia, ICRUDRepository, IReadonlyRepository, IRepository, IWhere, ReadonlyRepository, ReadonlyRepositoryMappingOptions, Schema, SchemaColumn, Statement, Result, async_trait, CommandMiddleware, IdKey, Response, Stream};
 {{#typed}}use super::super::{{entityType}};
 {{/typed}}
 {{#child}}
-use super::super::{{typeName}};
+use super::{{module}}::{{className}};
 {{/child}}
+use std::any::TypeId;
 use std::collections::HashMap;
-use std::sync::Arc;
-{{#wrapped}}
 use std::ops::Deref;
+use std::pin::Pin;
+use std::sync::Arc;
 
 pub struct {{className}} {
-    pub repo: Arc<CRUDRepository<{{entityType}}>>,
+    pub(crate) inner: Arc<CRUDRepository<{{entityType}}>>,
 {{#child}}
-    pub {{field}}: Arc<CRUDRepository<{{typeName}}>>,
+    pub {{field}}: {{className}},
 {{/child}}
 }
 
@@ -20,33 +21,136 @@ impl {{className}} {
     pub fn new(connection: Arc<dyn Connection>) -> Result<Self> {
 {{>crud}}
 {{#child}}
-        let {{field}} = Arc::new(super::{{module}}::{{repoFn}}(Arc::clone(&connection))?);
+        let {{field}} = {{className}}::new(Arc::clone(&connection))?;
 {{/child}}
-        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = CRUDRepository::<{{entityType}}>::new(Arc::clone(&connection), options)?;
+        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = CRUDRepository::<{{entityType}}>::new({{#shareConnection}}Arc::clone(&connection){{/shareConnection}}{{^shareConnection}}connection{{/shareConnection}}, options)?;
 {{#enrichments}}
-        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), Arc::clone(&{{via}}), Arc::clone(&{{link}}) as Arc<dyn ICRUDRepository<_>>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);{{/linked}}
+        {{#linked}}repo.add_linked(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, EnrichmentPropertyType::List).linked(Association::new("{{parentFk}}", "{{relatedFk}}")), &{{via}}, Arc::clone(&{{link}}.inner) as Arc<dyn ICRUDRepository<_>>, None);{{/linked}}{{^linked}}repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), &{{via}}, None);{{/linked}}
 {{/enrichments}}
-        Ok(Self { repo: Arc::new(repo){{childFields}} })
+        Ok(Self { inner: Arc::new(repo){{childFields}} })
+    }
+
+    pub fn create_readonly(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<{{entityType}}>> {
+        let mut options = ReadonlyRepositoryMappingOptions::default();
+        options.entity = "{{typeName}}".into();
+        options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
+            ("{{typeName}}".into(), "{{table}}".into()),
+        ])));
+{{#propertyMappings}}
+{{#first}}        options.property_mappings = Some(Arc::new(DictionaryMapper::new([
+{{/first}}            ("{{from}}".into(), "{{to}}".into()),
+{{#last}}        ])));
+{{/last}}
+{{/propertyMappings}}
+        options.schema = Schema::new(HashMap::from([
+{{#schema}}
+            ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}, is_id: {{#isId}}true{{/isId}}{{^isId}}false{{/isId}} }),
+{{/schema}}
+        ]));
+        options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];
+{{#readonlyChildren}}
+        let {{field}} = {{className}}::new(Arc::clone(&connection))?;
+{{/readonlyChildren}}
+        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
+{{#enrichments}}
+        repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), &{{via}}, None);
+{{/enrichments}}
+        Ok(repo)
     }
 }
 
 impl Deref for {{className}} {
     type Target = CRUDRepository<{{entityType}}>;
     fn deref(&self) -> &Self::Target {
-        self.repo.as_ref()
+        self.inner.as_ref()
     }
 }
 
-pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{entityType}}>> {
-    Arc::try_unwrap({{className}}::new(connection)?.repo).map_err(|_| datasources::DatasourceError::message("repository"))
+impl EnrichmentVia<{{entityType}}> for &{{className}} {
+    fn into_repos(
+        self,
+    ) -> (
+        Arc<dyn IReadonlyRepository<{{entityType}}>>,
+        Option<Arc<dyn ICRUDRepository<{{entityType}}>>>,
+    ) {
+        (
+            Arc::clone(&self.inner) as Arc<dyn IReadonlyRepository<{{entityType}}>>,
+            Some(Arc::clone(&self.inner) as Arc<dyn ICRUDRepository<{{entityType}}>>),
+        )
+    }
 }
-{{/wrapped}}
-{{^wrapped}}
-pub fn {{repoFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<{{entityType}}>> {
-{{>crud}}
-    CRUDRepository::<{{entityType}}>::new(connection, options)
+
+impl IRepository for {{className}} {
+    fn entity_type(&self) -> TypeId {
+        IRepository::entity_type(self.inner.as_ref())
+    }
 }
-{{/wrapped}}
+
+#[async_trait]
+impl IReadonlyRepository<{{entityType}}> for {{className}} {
+    fn to_crud(self: Arc<Self>) -> Option<Arc<dyn ICRUDRepository<{{entityType}}>>> {
+        Some(self)
+    }
+
+    async fn read_single(
+        &self,
+        query: Option<&dyn Statement>,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<{{entityType}}>> {
+        self.inner.as_ref().read_single(query, options).await
+    }
+
+    fn read<'a>(
+        &'a self,
+        query: Option<&'a dyn Statement>,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
+        IReadonlyRepository::read(self.inner.as_ref(), query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<{{entityType}}>> {
+        self.inner.as_ref().read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
+        IReadonlyRepository::read_where(self.inner.as_ref(), clause, options)
+    }
+}
+
+#[async_trait]
+impl ICRUDRepository<{{entityType}}> for {{className}} {
+    async fn create(&self, item: {{entityType}}) -> Result<{{entityType}}> {
+        self.inner.create(item).await
+    }
+
+    async fn update(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        ICRUDRepository::update(self.inner.as_ref(), item, by_where).await
+    }
+
+    async fn delete(&self, item: {{entityType}}, by_where: Option<&dyn IWhere>) -> Result<Response> {
+        ICRUDRepository::delete(self.inner.as_ref(), item, by_where).await
+    }
+
+    async fn read_single_by_id(&self, id: &dyn IdKey) -> Result<Option<{{entityType}}>> {
+        self.inner.read_single_by_id(id).await
+    }
+
+    fn id_names(&self) -> Vec<String> {
+        self.inner.id_names()
+    }
+
+    fn add_middleware(&self, middleware: Arc<dyn CommandMiddleware>) {
+        self.inner.add_middleware(middleware)
+    }
+}
 
 pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datasources::Row>> {
 {{#setup}}
@@ -65,39 +169,9 @@ pub fn {{rowFn}}(connection: Arc<dyn Connection>) -> Result<CRUDRepository<datas
     CRUDRepository::<datasources::Row>::new(connection, options)
 {{/setup}}
 }
-
-pub fn {{readonlyFn}}(connection: Arc<dyn Connection>) -> Result<ReadonlyRepository<{{entityType}}>> {
-    let mut options = ReadonlyRepositoryMappingOptions::default();
-    options.entity = "{{typeName}}".into();
-    options.entity_mapper = Some(Arc::new(DictionaryMapper::new([
-        ("{{typeName}}".into(), "{{table}}".into()),
-    ])));
-{{#propertyMappings}}
-{{#first}}    options.property_mappings = Some(Arc::new(DictionaryMapper::new([
-{{/first}}        ("{{from}}".into(), "{{to}}".into()),
-{{#last}}    ])));
-{{/last}}
-{{/propertyMappings}}
-    options.schema = Schema::new(HashMap::from([
-{{#schema}}
-        ("{{from}}".into(), SchemaColumn { type_name: "{{type}}".into(), nullable: {{#nullable}}true{{/nullable}}{{^nullable}}false{{/nullable}}, has_default: {{#hasDefault}}true{{/hasDefault}}{{^hasDefault}}false{{/hasDefault}}, is_id: {{#isId}}true{{/isId}}{{^isId}}false{{/isId}} }),
-{{/schema}}
-    ]));
-    options.read_properties = vec![{{#readProperties}}{{#comma}}, {{/comma}}"{{name}}".into(){{/readProperties}}];
-{{#readonlyChildren}}
-        let {{field}} = Arc::new(super::{{module}}::{{repoFn}}(Arc::clone(&connection))?);
-{{/readonlyChildren}}
-        let {{#hasEnrichments}}mut {{/hasEnrichments}}repo = ReadonlyRepository::<{{entityType}}>::new(connection, options)?;
-{{#enrichments}}
-        repo.add_enriched(Enrichment::new("{{destination}}", "{{source}}", "{{relatedKey}}", {{#relatedProperty}}Some("{{relatedProperty}}".into()){{/relatedProperty}}{{^relatedProperty}}None{{/relatedProperty}}, {{#object}}EnrichmentPropertyType::Object{{/object}}{{#dictionary}}EnrichmentPropertyType::Dictionary{{/dictionary}}{{#list}}EnrichmentPropertyType::List{{/list}}), Arc::clone(&{{via}}), None);
-{{/enrichments}}
-        Ok(repo)
-}
 {{#optimisticConcurrency}}
 
-use datasources::{async_trait, CommandMiddleware, DatasourceError, IReadonlyRepository, IRepository, IdKey, IWhere, ReadInput, Response, Stream, Value, Where, eq};
-use std::any::TypeId;
-use std::pin::Pin;
+use datasources::{DatasourceError, Value, Where, eq};
 
 pub struct {{optimisticClass}} {
     repo: CRUDRepository<{{entityType}}>,
@@ -131,7 +205,7 @@ impl IReadonlyRepository<{{entityType}}> for {{optimisticClass}} {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<{{entityType}}>> {
         self.repo.read_single(query, options).await
@@ -139,10 +213,26 @@ impl IReadonlyRepository<{{entityType}}> for {{optimisticClass}} {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
         self.repo.read(query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<{{entityType}}>> {
+        self.repo.read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<{{entityType}}>> + Send + 'a>> {
+        self.repo.read_where(clause, options)
     }
 }
 

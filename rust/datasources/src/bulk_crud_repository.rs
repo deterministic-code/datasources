@@ -10,7 +10,7 @@ use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
 use crate::IWhere;
 use crate::id_key::IdKey;
-use crate::read_input::ReadInput;
+use crate::statement::Statement;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
@@ -251,7 +251,7 @@ impl IReadonlyRepository for BulkCRUDRepository {
 
     async fn read_single(
         &self,
-        query: &dyn ReadInput,
+        query: Option<&dyn Statement>,
         options: Option<&crate::ReadonlyRepositoryMappingOptions>,
     ) -> Result<Option<Row>> {
         self.crud.read_single(query, options).await
@@ -259,10 +259,26 @@ impl IReadonlyRepository for BulkCRUDRepository {
 
     fn read<'a>(
         &'a self,
-        query: &'a dyn ReadInput,
+        query: Option<&'a dyn Statement>,
         options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
     ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
         self.crud.read(query, options)
+    }
+
+    async fn read_single_where(
+        &self,
+        clause: &dyn IWhere,
+        options: Option<&crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Result<Option<Row>> {
+        self.crud.read_single_where(clause, options).await
+    }
+
+    fn read_where<'a>(
+        &'a self,
+        clause: &'a dyn IWhere,
+        options: Option<&'a crate::ReadonlyRepositoryMappingOptions>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Row>> + Send + 'a>> {
+        self.crud.read_where(clause, options)
     }
 }
 
