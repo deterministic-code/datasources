@@ -23,6 +23,10 @@ console.log(`created ${alan.id} ${alan.givenName} ${alan.emails[0].address} ${al
 
 const adaRead = await contactsRepo.readSingle(new Where(new Operator.Equals("id", ada.id)));
 if (adaRead == null) throw new Error("read");
+const addressFk: typeof adaRead.id = adaRead.addresses[0].contactId;
+const emailFk: typeof adaRead.id = adaRead.emails[0].contactId;
+const phoneFk: typeof adaRead.id = adaRead.phones[0].contactId;
+if (addressFk !== adaRead.id || emailFk !== adaRead.id || phoneFk !== adaRead.id) throw new Error("foreign key");
 console.log(`read ${adaRead.id} ${adaRead.givenName} emails=${adaRead.emails.length} phones=${adaRead.phones.length} addresses=${adaRead.addresses.length}`);
 
 const alanRead = await contactsRepo.readSingle(new Where(new Operator.Equals("id", alan.id)));

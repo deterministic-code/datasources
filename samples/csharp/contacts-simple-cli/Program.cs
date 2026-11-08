@@ -45,6 +45,10 @@ Console.WriteLine(
 
 var adaRead = await contactsRepo.ReadSingle(new Where(new Datasources.Operator.Equals("Id", ada.Id)))
     ?? throw new InvalidOperationException("read");
+if (adaRead.Addresses[0].ContactId != adaRead.Id
+    || adaRead.Emails[0].ContactId != adaRead.Id
+    || adaRead.Phones[0].ContactId != adaRead.Id)
+    throw new InvalidOperationException("foreign key");
 Console.WriteLine(
     $"read {adaRead.Id} {adaRead.GivenName} emails={adaRead.Emails.Count} phones={adaRead.Phones.Count} addresses={adaRead.Addresses.Count}");
 

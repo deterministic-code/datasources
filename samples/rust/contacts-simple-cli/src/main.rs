@@ -80,6 +80,12 @@ async fn main() -> Result<()> {
         .read_single_where(&Where::new(Operator::equals("id", ada.id)), None)
         .await?
         .ok_or_else(|| DatasourceError::message("read"))?;
+    if ada_read.addresses[0].contact_id != ada_read.id
+        || ada_read.emails[0].contact_id != ada_read.id
+        || ada_read.phones[0].contact_id != ada_read.id
+    {
+        return Err(DatasourceError::message("foreign key"));
+    }
     println!(
         "read {} {} emails={} phones={} addresses={}",
         ada_read.id,

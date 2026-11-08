@@ -91,8 +91,14 @@ fn require_ada_children(row: &Contact, engine_type: &str, engine_city: &str, num
     if engine.address_type_name != engine_type || engine.city != engine_city {
         return Err(DatasourceError::message("engine address"));
     }
+    if engine.contact_id != row.id {
+        return Err(DatasourceError::message("address contact id"));
+    }
     if row.phones[0].number != number || row.phones[0].phone_type_name != "Mobile" {
         return Err(DatasourceError::message("phone"));
+    }
+    if row.phones[0].contact_id != row.id {
+        return Err(DatasourceError::message("phone contact id"));
     }
     Ok(())
 }

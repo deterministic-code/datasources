@@ -217,8 +217,14 @@ fn require_ada_children(listed: &Value, engine_type: &str, engine_city: &str, nu
     if engine["address_type_name"] != engine_type || engine["city"] != engine_city {
         return Err(DatasourceError::message("engine address"));
     }
+    if engine["contact_id"].as_i64() != contact["id"].as_i64() {
+        return Err(DatasourceError::message("address contact id"));
+    }
     if phones[0]["number"] != number || phones[0]["phone_type_name"] != "Mobile" {
         return Err(DatasourceError::message("phone"));
+    }
+    if phones[0]["contact_id"].as_i64() != contact["id"].as_i64() {
+        return Err(DatasourceError::message("phone contact id"));
     }
     Ok(())
 }

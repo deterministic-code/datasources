@@ -60,6 +60,9 @@ mod readonly_repository;
 #[path = "../tests/repository_spec.rs"]
 mod repository_spec;
 #[cfg(test)]
+#[path = "../tests/foreign_key_type.rs"]
+mod foreign_key_type;
+#[cfg(test)]
 #[path = "../tests/generate_sql.rs"]
 mod generate_sql;
 #[cfg(test)]

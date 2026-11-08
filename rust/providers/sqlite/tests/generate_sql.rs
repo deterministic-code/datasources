@@ -294,9 +294,22 @@ types:
         .captures(&sql)
         .unwrap()[1]
         .to_string();
-    assert!(Regex::new(r#""gender_type_id" INTEGER"#)
+    let genders = Regex::new(r#"CREATE TABLE "genders" \(([\s\S]*?)\);"#)
         .unwrap()
-        .is_match(&contacts));
+        .captures(&sql)
+        .unwrap()[1]
+        .to_string();
+    let parent_id = Regex::new(r#""id" ([A-Z]+)"#)
+        .unwrap()
+        .captures(&genders)
+        .unwrap()[1]
+        .to_string();
+    let foreign_key = Regex::new(r#""gender_type_id" ([A-Z]+)"#)
+        .unwrap()
+        .captures(&contacts)
+        .unwrap()[1]
+        .to_string();
+    assert_eq!(foreign_key, parent_id);
     assert!(!Regex::new(r#""gender_type_id" TEXT"#)
         .unwrap()
         .is_match(&contacts));

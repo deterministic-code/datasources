@@ -158,8 +158,9 @@ async function call(api: Api, method: string, target: string, body: object | und
 }
 
 type ContactJson = {
-  addresses: Array<{ id?: number; line1: string; addressTypeName: string; city: string }>;
-  phones: Array<{ id?: number; number: string; phoneTypeName: string }>;
+  id: number;
+  addresses: Array<{ id?: number; line1: string; addressTypeName: string; city: string; contactId: number }>;
+  phones: Array<{ id?: number; number: string; phoneTypeName: string; contactId: number }>;
 };
 
 function contactRow(listed: unknown): ContactJson {
@@ -178,6 +179,10 @@ function requireAdaChildren(listed: unknown, engineType: string, engineCity: str
   if (contact.addresses.length !== 2 || contact.phones.length !== 1) throw new Error("child counts");
   const engine = addressByLine1(contact, "12 Analytical Engine");
   if (engine.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
+  const addressFk: typeof contact.id = engine.contactId;
+  if (typeof engine.contactId !== "number" || addressFk !== contact.id) throw new Error("address contactId");
   const phone = contact.phones[0];
   if (phone.number !== number || phone.phoneTypeName !== "Mobile") throw new Error("phone");
+  const phoneFk: typeof contact.id = phone.contactId;
+  if (typeof phone.contactId !== "number" || phoneFk !== contact.id) throw new Error("phone contactId");
 }

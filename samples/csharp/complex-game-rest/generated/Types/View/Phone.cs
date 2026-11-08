@@ -9,7 +9,7 @@ public class Phone
     public System.DateTime Created { get; set; } = DateTime.UtcNow;
     public System.DateTime Updated { get; set; } = DateTime.UtcNow;
     public byte[] Version { get; set; } = new byte[] { 0 };
-    public string ContactId { get; set; } = "";
+    public long ContactId { get; set; }
     public string Number { get; set; } = "";
     public string? Label { get; set; }
     public string PhoneTypeName { get; set; } = "";

@@ -128,8 +128,9 @@ if ((await contacts.readSingle(new Where(new Operator.Equals("id", ada.id)))) !=
 
 function requireAdaChildren(
   row: {
-    addresses: { line1: string; city: string; addressTypeName: string }[];
-    phones: { number: string; phoneTypeName: string }[];
+    id: number;
+    addresses: { line1: string; city: string; addressTypeName: string; contactId: number }[];
+    phones: { number: string; phoneTypeName: string; contactId: number }[];
   },
   engineType: string,
   engineCity: string,
@@ -138,5 +139,9 @@ function requireAdaChildren(
   if (row.addresses.length !== 2 || row.phones.length !== 1) throw new Error("child counts");
   const engine = row.addresses.find((address) => address.line1 === "12 Analytical Engine");
   if (engine?.addressTypeName !== engineType || engine.city !== engineCity) throw new Error("engine address");
+  const addressFk: typeof row.id = engine.contactId;
+  if (addressFk !== row.id) throw new Error("address contactId");
   if (row.phones[0].number !== number || row.phones[0].phoneTypeName !== "Mobile") throw new Error("phone");
+  const phoneFk: typeof row.id = row.phones[0].contactId;
+  if (phoneFk !== row.id) throw new Error("phone contactId");
 }

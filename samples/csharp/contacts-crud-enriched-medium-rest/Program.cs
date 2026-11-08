@@ -174,6 +174,10 @@ static void RequireAdaChildren(Contact row, string engineType, string engineCity
     var engine = row.Addresses.First(address => address.Line1 == "12 Analytical Engine");
     if (engine.AddressTypeName != engineType || engine.City != engineCity)
         throw new InvalidOperationException("engine address");
+    if (engine.ContactId != row.Id)
+        throw new InvalidOperationException("address contact id");
     if (row.Phones[0].Number != number || row.Phones[0].PhoneTypeName != "Mobile")
         throw new InvalidOperationException("phone");
+    if (row.Phones[0].ContactId != row.Id)
+        throw new InvalidOperationException("phone contact id");
 }
