@@ -125,6 +125,25 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T>, IEnriched<
     return this;
   }
 
+  addLinked<TRelated extends object, TLink extends object>(
+    enrichment: Enrichment,
+    via: IReadonlyRepository<TRelated>,
+    link: IReadonlyRepository<TLink>,
+    strategy?: IReadonlyEnrichmentStrategy<T & object>,
+  ): this {
+    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
+    this.entries().push(
+      new StoredEnrichment<T, TRelated>(
+        enrichment,
+        (parents, sources) => chosen.applyLinked(via, link, enrichment, parents as (T & object)[], sources),
+        undefined,
+        undefined,
+        via,
+      ) as unknown as StoredEnrichment<T>,
+    );
+    return this;
+  }
+
   async *read(
     query?: ReadQuery,
     parameters?: Parameter[],

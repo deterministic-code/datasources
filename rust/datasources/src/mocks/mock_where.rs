@@ -21,7 +21,6 @@ impl MockWhere {
     }
 }
 
-
 impl ICondition for MockWhere {
     fn as_any(&self) -> &dyn std::any::Any {
         self

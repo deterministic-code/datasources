@@ -1,12 +1,12 @@
 use super::expression::Expression;
+use super::i_where::IWhere;
 use super::identifier::Identifier;
+use super::nested_select_statement::NestedSelectStatement;
 use super::nested_where_argument::NestedWhereArgument;
 use super::operator::Operator;
 use super::statement::Statement;
 use super::statement_text_renderer::StatementTextRenderer;
 use super::Where;
-use super::i_where::IWhere;
-use super::nested_select_statement::NestedSelectStatement;
 use crate::statements::SelectStatementOptions;
 use crate::SelectStatement;
 
@@ -64,7 +64,11 @@ fn with_arguments(select: &SelectStatement, arguments: &[NestedWhereArgument]) -
     }
     let field_refs: Vec<&str> = select.fields.iter().map(String::as_str).collect();
     let group: Vec<&str> = select.group_by.iter().map(String::as_str).collect();
-    let aliases: Vec<Option<&str>> = select.aliases.iter().map(|alias| alias.as_deref()).collect();
+    let aliases: Vec<Option<&str>> = select
+        .aliases
+        .iter()
+        .map(|alias| alias.as_deref())
+        .collect();
     SelectStatement::new(SelectStatementOptions {
         distinct: select.distinct,
         joins: &select.joins,
@@ -89,4 +93,3 @@ impl Statement for CreateNestedReadStoredProcedureStatement {
         self
     }
 }
-

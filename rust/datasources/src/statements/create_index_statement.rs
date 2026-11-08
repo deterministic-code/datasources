@@ -55,4 +55,3 @@ impl Statement for CreateIndexStatement {
         self
     }
 }
-

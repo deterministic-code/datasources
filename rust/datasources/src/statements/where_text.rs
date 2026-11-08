@@ -28,7 +28,6 @@ impl WhereText {
     }
 }
 
-
 impl crate::ICondition for WhereText {
     fn as_any(&self) -> &dyn std::any::Any {
         self

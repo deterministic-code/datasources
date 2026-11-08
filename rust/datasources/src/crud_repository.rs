@@ -1,36 +1,36 @@
 use crate::built_repository::BuiltRepository;
 use crate::command_middleware::CommandMiddleware;
 use crate::connection::Connection;
+use crate::converters::SchemaObject;
+use crate::create_enrichment_strategy::merge_lookups;
 use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::crud_repository_statements::CRUDRepositoryStatements;
 use crate::datasource_error::DatasourceError;
-use crate::entity::Entity;
 use crate::default_readonly_enrichment_strategy::DefaultReadonlyEnrichmentStrategy;
-use crate::converters::SchemaObject;
 use crate::default_write_enrichment_strategy::DefaultWriteEnrichmentStrategy;
 use crate::enrichment_via::EnrichmentVia;
+use crate::entity::Entity;
 use crate::i_repository::IRepository;
 use crate::i_unit_of_work::IUnitOfWork;
-use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::parameter::Parameter;
-use crate::statement::Statement;
 use crate::readonly_enrichment_strategy::ReadonlyEnrichmentStrategy;
 use crate::readonly_repository::ReadonlyRepository;
-use crate::create_enrichment_strategy::merge_lookups;
 use crate::repository::{map_row, to_stored, ICRUDRepository, IReadonlyRepository};
 use crate::repository_tree::RepositoryTree;
 use crate::repository_tree_node::RepositoryTreeNode;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::stored_enrichment::StoredEnrichment;
 use crate::stubs::StubRepository;
 use crate::unit_of_work_transaction::UnitOfWorkTransaction;
 use crate::value::Value;
 use crate::write_enrichment_strategy::WriteEnrichmentStrategy;
 use crate::write_mode::WriteMode;
+use crate::IWhere;
 use crate::{Expression, Literal, Operator, Where};
 use async_trait::async_trait;
 use futures_core::Stream;
@@ -79,7 +79,10 @@ impl<T: SchemaObject> CRUDRepository<T> {
 }
 
 impl<T: Entity> CRUDRepository<T> {
-    fn from_options(connection: Arc<dyn Connection>, options: CRUDRepositoryOptions) -> Result<Self> {
+    fn from_options(
+        connection: Arc<dyn Connection>,
+        options: CRUDRepositoryOptions,
+    ) -> Result<Self> {
         let create_properties = options.create_properties.clone();
         let update_properties = options.update_properties.clone();
         let built = CRUDRepositoryBuilder::parts(connection, options)?;
@@ -119,7 +122,10 @@ impl<T: Entity> CRUDRepository<T> {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn memory_with(items: Vec<Row>, write: Option<Arc<dyn WriteEnrichmentStrategy<T>>>) -> Self {
+    pub(crate) fn memory_with(
+        items: Vec<Row>,
+        write: Option<Arc<dyn WriteEnrichmentStrategy<T>>>,
+    ) -> Self {
         let ids = vec!["id".into()];
         let readonly = ReadonlyRepository::memory(items);
         let tree = tree_for(&readonly);
@@ -131,7 +137,8 @@ impl<T: Entity> CRUDRepository<T> {
             update_properties: None,
             create_zeros: Row::new(),
             tree,
-            write: write.unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::<T>::default())),
+            write: write
+                .unwrap_or_else(|| Arc::new(DefaultWriteEnrichmentStrategy::<T>::default())),
             entity: PhantomData,
         }
     }
@@ -293,7 +300,11 @@ impl<T: Entity> CRUDRepository<T> {
         let clause = self.id_where(&record)?;
         let row = self
             .readonly
-            .read_rows(crate::readonly_repository::ReadQuery::clause(&clause), None, None)
+            .read_rows(
+                crate::readonly_repository::ReadQuery::clause(&clause),
+                None,
+                None,
+            )
             .try_next()
             .await?;
         Ok(row)
@@ -593,7 +604,9 @@ impl<T: Entity> CRUDRepository<T> {
         let source = row.clone();
         let mut items = vec![map_row(row)?];
         if self.enriched() {
-            self.readonly.fill(&mut items, Some(&[Some(source)])).await?;
+            self.readonly
+                .fill(&mut items, Some(&[Some(source)]))
+                .await?;
         }
         Ok(items.pop().expect("mapped row"))
     }
@@ -676,7 +689,11 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
                     return Ok(*item);
                 }
                 self.write
-                    .persist(&self.tree, std::slice::from_mut(&mut *item), WriteMode::Create)
+                    .persist(
+                        &self.tree,
+                        std::slice::from_mut(&mut *item),
+                        WriteMode::Create,
+                    )
                     .await?;
                 let id = self.id_value(&created);
                 if self.ids.len() == 1 && !matches!(id, Value::Null) {
@@ -703,7 +720,11 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
                 let response = self.save(&row, by_where).await?;
                 if self.enriched() {
                     self.write
-                        .persist(&self.tree, std::slice::from_mut(&mut *item), WriteMode::Update)
+                        .persist(
+                            &self.tree,
+                            std::slice::from_mut(&mut *item),
+                            WriteMode::Update,
+                        )
                         .await?;
                 }
                 Ok(response)
@@ -719,7 +740,11 @@ impl<T: Entity> ICRUDRepository<T> for CRUDRepository<T> {
             || async {
                 if self.enriched() {
                     self.write
-                        .persist(&self.tree, std::slice::from_mut(&mut item), WriteMode::Delete)
+                        .persist(
+                            &self.tree,
+                            std::slice::from_mut(&mut item),
+                            WriteMode::Delete,
+                        )
                         .await?;
                 }
                 self.remove(&self.reverse_convert(&item)?, by_where).await

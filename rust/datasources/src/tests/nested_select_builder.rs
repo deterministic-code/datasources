@@ -1,10 +1,26 @@
 use crate::*;
 
 fn contact_graph() -> NestedSelectType {
-    let source = NestedSelectType::new("ContactSource", "Id", vec!["Id".into(), "Name".into()], vec![]);
-    let type_def = NestedSelectType::new("ContactType", "Id", vec!["Id".into(), "Name".into()], vec![]);
-    let address_type = NestedSelectType::new("AddressType", "Id", vec!["Id".into(), "Name".into()], vec![]);
-    let phone_type = NestedSelectType::new("PhoneType", "Id", vec!["Id".into(), "Name".into()], vec![]);
+    let source = NestedSelectType::new(
+        "ContactSource",
+        "Id",
+        vec!["Id".into(), "Name".into()],
+        vec![],
+    );
+    let type_def = NestedSelectType::new(
+        "ContactType",
+        "Id",
+        vec!["Id".into(), "Name".into()],
+        vec![],
+    );
+    let address_type = NestedSelectType::new(
+        "AddressType",
+        "Id",
+        vec!["Id".into(), "Name".into()],
+        vec![],
+    );
+    let phone_type =
+        NestedSelectType::new("PhoneType", "Id", vec!["Id".into(), "Name".into()], vec![]);
     let address = NestedSelectType::new(
         "Address",
         "Id",
@@ -32,7 +48,12 @@ fn contact_graph() -> NestedSelectType {
     NestedSelectType::new(
         "Contact",
         "Id",
-        vec!["Id".into(), "FirstName".into(), "LastName".into(), "Email".into()],
+        vec![
+            "Id".into(),
+            "FirstName".into(),
+            "LastName".into(),
+            "Email".into(),
+        ],
         vec![
             NestedSelectRelation::new(
                 "ContactSource",
@@ -48,15 +69,28 @@ fn contact_graph() -> NestedSelectType {
                 "Id",
                 type_def,
             ),
-            NestedSelectRelation::new("Addresses", NestedSelectRelationKind::List, "Id", "ContactId", address),
-            NestedSelectRelation::new("Phones", NestedSelectRelationKind::List, "Id", "ContactId", phone),
+            NestedSelectRelation::new(
+                "Addresses",
+                NestedSelectRelationKind::List,
+                "Id",
+                "ContactId",
+                address,
+            ),
+            NestedSelectRelation::new(
+                "Phones",
+                NestedSelectRelationKind::List,
+                "Id",
+                "ContactId",
+                phone,
+            ),
         ],
     )
 }
 
 #[test]
 fn builds_contact_joins_and_map() {
-    let nested = NestedSelectBuilder::build(&contact_graph(), NestedSelectBuilderOptions::default());
+    let nested =
+        NestedSelectBuilder::build(&contact_graph(), NestedSelectBuilderOptions::default());
     assert_eq!(nested.select.table, "Contact");
     assert_eq!(nested.select.fields.len(), 17);
     assert_eq!(nested.select.joins.len(), 6);
@@ -76,8 +110,16 @@ fn stop_at_drops_phones() {
             ..NestedSelectBuilderOptions::default()
         },
     );
-    assert!(nested.select.fields.iter().all(|field| !field.contains("Phone")));
-    assert!(nested.select.joins.iter().all(|join| !join.table.contains("Phone")));
+    assert!(nested
+        .select
+        .fields
+        .iter()
+        .all(|field| !field.contains("Phone")));
+    assert!(nested
+        .select
+        .joins
+        .iter()
+        .all(|join| !join.table.contains("Phone")));
     assert!(nested.map.fields.iter().all(|(name, _)| name != "Phones"));
 }
 

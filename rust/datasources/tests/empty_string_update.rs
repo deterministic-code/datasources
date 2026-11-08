@@ -27,12 +27,18 @@ async fn update_keeps_explicit_empty_string_on_nullable() {
     ]));
     options.update_properties = Some(vec!["note".into()]);
     let repo = CRUDRepository::<Row>::new(connection, options).unwrap();
-    repo.create(record(&[("id", Value::Int(1)), ("note", Value::from("side"))]))
-        .await
-        .expect("create");
-    repo.update(record(&[("id", Value::Int(1)), ("note", Value::from(""))]), None)
-        .await
-        .expect("update");
+    repo.create(record(&[
+        ("id", Value::Int(1)),
+        ("note", Value::from("side")),
+    ]))
+    .await
+    .expect("create");
+    repo.update(
+        record(&[("id", Value::Int(1)), ("note", Value::from(""))]),
+        None,
+    )
+    .await
+    .expect("update");
     assert_eq!(
         repo.read_single(None, None).await.unwrap().unwrap()["note"],
         Value::from("")

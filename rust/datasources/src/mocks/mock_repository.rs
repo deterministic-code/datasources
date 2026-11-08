@@ -1,13 +1,13 @@
 use crate::datasource_error::DatasourceError;
 use crate::i_repository::IRepository;
 use crate::id_key::IdKey;
-use crate::IWhere;
-use crate::statement::Statement;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
+use crate::statement::Statement;
 use crate::value::Value;
+use crate::IWhere;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::stream::{iter, once};
@@ -55,11 +55,19 @@ impl MockRepository {
         *self.delete_error.lock().expect("mock") = Some(message.into());
     }
 
-    pub async fn update(&self, item: Row, by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
+    pub async fn update(
+        &self,
+        item: Row,
+        by_where: Option<&dyn crate::IWhere>,
+    ) -> Result<Response> {
         ICRUDRepository::update(self, item, by_where).await
     }
 
-    pub async fn delete(&self, item: Row, by_where: Option<&dyn crate::IWhere>) -> Result<Response> {
+    pub async fn delete(
+        &self,
+        item: Row,
+        by_where: Option<&dyn crate::IWhere>,
+    ) -> Result<Response> {
         ICRUDRepository::delete(self, item, by_where).await
     }
 }

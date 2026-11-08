@@ -226,13 +226,19 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                     if let Some(writer) = link.row_writer() {
                         match mode {
                             WriteMode::Create => {
-                                self.create.create_linked(writer, enrichment, parent).await?
+                                self.create
+                                    .create_linked(writer, enrichment, parent)
+                                    .await?
                             }
                             WriteMode::Update => {
-                                self.update.update_linked(writer, enrichment, parent).await?
+                                self.update
+                                    .update_linked(writer, enrichment, parent)
+                                    .await?
                             }
                             WriteMode::Delete => {
-                                self.delete.delete_linked(writer, enrichment, parent).await?
+                                self.delete
+                                    .delete_linked(writer, enrichment, parent)
+                                    .await?
                             }
                         }
                     } else {
@@ -264,10 +270,14 @@ impl<T: Entity> DefaultWriteEnrichmentStrategy<T> {
                 if let Some(writer) = persist.row_writer() {
                     match mode {
                         WriteMode::Create => {
-                            self.create.create_children(writer, enrichment, parent).await?
+                            self.create
+                                .create_children(writer, enrichment, parent)
+                                .await?
                         }
                         WriteMode::Update => {
-                            self.update.update_children(writer, enrichment, parent).await?
+                            self.update
+                                .update_children(writer, enrichment, parent)
+                                .await?
                         }
                         WriteMode::Delete => {
                             self.delete

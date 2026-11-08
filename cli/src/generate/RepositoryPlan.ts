@@ -7,7 +7,6 @@ import { writeInclusionOf } from "@deterministic-code/datasources-code-generator
 import type { DatasourceTable, IDeterministic, Type, TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 import type { Dialect } from "./GenerateRequest.ts";
 import type { PlannedEnrichment, RepositoryModel } from "./RepositoryModel.ts";
-import { inferredSpec, schemaFields } from "./schemaFields.ts";
 
 const referenceOf = (references: TypeField["references"]): { type: string; field: string } | undefined => {
   if (references === undefined) return undefined;
@@ -40,7 +39,6 @@ export const planRepositories = (
   const paths = new Paths();
   const naming = createCasing(settings);
   const typeName = (specName: string): string => casing.convertTypes(paths.typeStem(specName));
-  spec = inferredSpec(spec);
   const types = new Map(spec.types.map((type) => [type.name, type]));
   const expanded = new Map(spec.expandedTypes.map((type) => [type.name, type]));
   const referenced = new Set<string>();
@@ -77,9 +75,11 @@ export const planRepositories = (
     const overlays = new Map(table.fields.map((field) => [field.name, field]));
     const enrichments = relations(authored!, casing, types, expanded, repoName, identity, typeName);
     const skipColumns = new Set(enrichments.filter((item) => item.kind === "object").map((item) => item.destination));
-    const schema = schemaFields(shape, property);
-    const names = new Set(schema.filter((column) => !skipColumns.has(column.from)).map((column) => column.from));
-    const columns = persistedColumnFields(shape).filter((field) => names.has(property(field.name)));
+    const schema = persistedColumnFields(shape).filter((field) => field.type.length > 0);
+    const names = new Set(
+      schema.filter((field) => !skipColumns.has(property(field.name))).map((field) => property(field.name)),
+    );
+    const columns = schema.filter((field) => names.has(property(field.name)));
     const ids = identityColumns(shape, table);
     const inherited = expanded.get(authored!.inherits ?? "") ?? types.get(authored!.inherits ?? "");
     const sqlColumn = (fieldName: string): string =>

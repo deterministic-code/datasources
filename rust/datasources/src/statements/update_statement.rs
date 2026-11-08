@@ -1,10 +1,10 @@
 use super::default_statement_text_renderer::DefaultStatementTextRenderer;
+use super::i_where::IWhere;
 use super::statement::Statement;
 use super::statement_text_renderer::StatementTextRenderer;
 use super::update_statement_text_renderer::UpdateStatementTextRenderer;
-use super::i_where::IWhere;
-use crate::parameter::Parameter;
 use super::where_text::boxed;
+use crate::parameter::Parameter;
 
 pub struct UpdateStatement {
     table: String,
@@ -64,7 +64,6 @@ impl UpdateStatement {
             .1
     }
 }
-
 
 impl Statement for UpdateStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {

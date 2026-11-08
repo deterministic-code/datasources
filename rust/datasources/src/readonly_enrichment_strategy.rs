@@ -1,5 +1,5 @@
-use crate::entity::{assign_one, assign_related, Entity};
 use crate::enrichment::Enrichment;
+use crate::entity::{assign_one, assign_related, Entity};
 use crate::repository::IReadonlyRepository;
 use crate::result::Result;
 use crate::row::Row;
@@ -45,8 +45,11 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
     ) -> Result<()> {
         let mut cache: HashMap<String, Option<TRelated>> = HashMap::new();
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-            else {
+            let Some(key) = source_key_of(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index),
+            ) else {
                 continue;
             };
             let cache_key = key_of(&key);
@@ -85,16 +88,16 @@ pub trait ReadonlyEnrichmentStrategy<T: Entity, TRelated: Entity = Row>: Send + 
         sources: Option<&[Option<Row>]>,
     ) -> Result<()> {
         for (index, parent) in parents.iter_mut().enumerate() {
-            let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-            else {
+            let Some(key) = source_key_of(
+                parent,
+                &enrichment.source_property,
+                source_at(sources, index),
+            ) else {
                 continue;
             };
             let related = via
                 .read_where(
-                    &Where::new(Operator::equals(
-                        enrichment.related_key.clone(),
-                        key,
-                    )),
+                    &Where::new(Operator::equals(enrichment.related_key.clone(), key)),
                     None,
                 )
                 .try_collect::<Vec<_>>()
@@ -112,30 +115,36 @@ async fn apply_dictionary<T: Entity, TRelated: Entity>(
     sources: Option<&[Option<Row>]>,
 ) -> Result<()> {
     for (index, parent) in parents.iter_mut().enumerate() {
-        let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-        else {
+        let Some(key) = source_key_of(
+            parent,
+            &enrichment.source_property,
+            source_at(sources, index),
+        ) else {
             continue;
         };
         let related = via
             .read_where(
-                &Where::new(Operator::equals(
-                    enrichment.related_key.clone(),
-                    key,
-                )),
+                &Where::new(Operator::equals(enrichment.related_key.clone(), key)),
                 None,
             )
             .try_collect::<Vec<_>>()
             .await?;
         match enrichment.related_property.as_deref() {
             Some(select) => {
-                let key_name = crate::create_enrichment_strategy::map_key::<TRelated>(&enrichment.related_key);
+                let key_name = crate::create_enrichment_strategy::map_key::<TRelated>(
+                    enrichment,
+                    related.first(),
+                );
                 let rows = related
                     .into_iter()
                     .filter_map(|item| {
-                        let key = item.cell(key_name).or_else(|| item.cell("key")).or_else(|| item.cell("Key"))?;
+                        let key = item
+                            .cell(&key_name)
+                            .or_else(|| item.cell("key"))
+                            .or_else(|| item.cell("Key"))?;
                         let value = item.cell(select)?;
                         let mut row = Row::new();
-                        row.insert(key_name.to_string(), key);
+                        row.insert(key_name.clone(), key);
                         row.insert(select.to_string(), value);
                         Some(row)
                     })
@@ -157,8 +166,11 @@ pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
 ) -> Result<()> {
     let association = enrichment.association.as_ref().expect("association");
     for (index, parent) in parents.iter_mut().enumerate() {
-        let Some(key) = source_key_of(parent, &enrichment.source_property, source_at(sources, index))
-        else {
+        let Some(key) = source_key_of(
+            parent,
+            &enrichment.source_property,
+            source_at(sources, index),
+        ) else {
             continue;
         };
         let links = link
@@ -175,10 +187,7 @@ pub(crate) async fn apply_linked<T: Entity, TRelated: Entity, TLink: Entity>(
             };
             if let Some(entity) = via
                 .read_single_where(
-                    &Where::new(Operator::equals(
-                        enrichment.related_key.clone(),
-                        id,
-                    )),
+                    &Where::new(Operator::equals(enrichment.related_key.clone(), id)),
                     None,
                 )
                 .await?

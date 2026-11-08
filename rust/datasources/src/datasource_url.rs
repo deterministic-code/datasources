@@ -18,7 +18,11 @@ impl DatasourceUrl {
             "" => None,
             path if path.starts_with('/') => {
                 let rest = &path[1..];
-                if rest.is_empty() { None } else { Some(rest) }
+                if rest.is_empty() {
+                    None
+                } else {
+                    Some(rest)
+                }
             }
             path => Some(path),
         }

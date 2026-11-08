@@ -1,12 +1,12 @@
 use crate::command_middleware::CommandMiddleware;
 use crate::entity::Entity;
 use crate::i_repository::IRepository;
-use crate::IWhere;
 use crate::id_key::IdKey;
 use crate::response::Response;
 use crate::result::Result;
 use crate::row::Row;
 use crate::statement::Statement;
+use crate::IWhere;
 use async_trait::async_trait;
 use futures_core::Stream;
 use futures_util::StreamExt;
@@ -106,7 +106,9 @@ impl<T: Entity> IReadonlyRepository<T> for AsReadonly<T> {
     }
 }
 
-pub fn as_readonly<T: Entity>(repo: Arc<dyn ICRUDRepository<T>>) -> Arc<dyn IReadonlyRepository<T>> {
+pub fn as_readonly<T: Entity>(
+    repo: Arc<dyn ICRUDRepository<T>>,
+) -> Arc<dyn IReadonlyRepository<T>> {
     Arc::new(AsReadonly(repo))
 }
 

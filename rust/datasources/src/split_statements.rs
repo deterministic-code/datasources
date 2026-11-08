@@ -165,19 +165,18 @@ fn word(chars: &[char], i: usize, token: &str) -> bool {
 
 fn routine(sql: &str, start: usize, i: usize) -> bool {
     let head = sql[start..i].to_ascii_uppercase();
-    head.contains("CREATE PROCEDURE") || head.contains("CREATE FUNCTION") || head.contains("CREATE TRIGGER")
+    head.contains("CREATE PROCEDURE")
+        || head.contains("CREATE FUNCTION")
+        || head.contains("CREATE TRIGGER")
 }
 
 fn ends_with_word(sql: &str, token: &str) -> bool {
     let trimmed = sql.trim_end();
-    trimmed
-        .to_ascii_uppercase()
-        .ends_with(token)
-        && (trimmed.len() == token.len()
-            || {
-                let before = trimmed.as_bytes()[trimmed.len() - token.len() - 1];
-                !before.is_ascii_alphanumeric() && before != b'_'
-            })
+    trimmed.to_ascii_uppercase().ends_with(token)
+        && (trimmed.len() == token.len() || {
+            let before = trimmed.as_bytes()[trimmed.len() - token.len() - 1];
+            !before.is_ascii_alphanumeric() && before != b'_'
+        })
 }
 
 fn byte_index(sql: &str, char_index: usize) -> usize {

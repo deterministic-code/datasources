@@ -53,7 +53,6 @@ impl BulkInsertStatement {
     }
 }
 
-
 impl Statement for BulkInsertStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
         text.statements().visit_bulk_insert(self, text)

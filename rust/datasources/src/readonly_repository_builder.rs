@@ -62,9 +62,11 @@ pub(crate) fn assemble(
         names = schema.columns.keys().cloned().collect();
     }
     names.sort_by(|left, right| {
-        Mapper::map(&property_mappings, left.clone()).cmp(&Mapper::map(&property_mappings, right.clone()))
+        Mapper::map(&property_mappings, left.clone())
+            .cmp(&Mapper::map(&property_mappings, right.clone()))
     });
-    let mappings = StatementMappers::new(Arc::clone(&entity_mapper), Arc::clone(&property_mappings));
+    let mappings =
+        StatementMappers::new(Arc::clone(&entity_mapper), Arc::clone(&property_mappings));
     Ok(BuiltRepository {
         connection,
         row_converter,

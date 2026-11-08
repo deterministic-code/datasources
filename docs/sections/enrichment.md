@@ -1,6 +1,6 @@
 # Enrichment
 
-One related fill. `destinationProperty` is the parent property that gets filled, `sourceProperty` is the parent key, and `relatedKey` is the key on the related row. `relatedProperty` copies one related property. `type` is [EnrichmentPropertyType](#enrichmentpropertytype). `association` names the junction columns for a link.
+One related fill. `destinationProperty` is the parent property that gets filled, `sourceProperty` is the parent key, and `relatedKey` is the key on the related row. `relatedProperty` copies one related property. A dictionary map key is the leftover property on the related object. `type` is [EnrichmentPropertyType](#enrichmentpropertytype). `association` names the junction columns for a link.
 
 ## Classes
 
@@ -92,7 +92,7 @@ List: "list"
 
 ##### Dictionary
 
-Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
+Related rows keyed by the leftover property on the related object. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
 
 ```typescript
 Dictionary: "dictionary"
@@ -238,7 +238,7 @@ List
 
 ##### Dictionary
 
-Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
+Related rows keyed by the leftover property on the related object. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
 
 ```csharp
 Dictionary
@@ -410,7 +410,7 @@ List
 
 ##### Dictionary
 
-Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
+Related rows keyed by the leftover property on the related object. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value.
 
 ```rust
 Dictionary

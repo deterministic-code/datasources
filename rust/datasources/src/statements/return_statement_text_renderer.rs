@@ -1,12 +1,16 @@
+use super::return_statement::ReturnStatement;
 use crate::parameter::Parameter;
 use crate::parameter_direction::ParameterDirection;
-use super::return_statement::ReturnStatement;
 
 pub struct ReturnStatementTextRenderer;
 
 impl ReturnStatementTextRenderer {
     pub fn render(&self, statement: &ReturnStatement) -> String {
-        format!("SELECT {}({})", statement.name(), args(statement.parameters()))
+        format!(
+            "SELECT {}({})",
+            statement.name(),
+            args(statement.parameters())
+        )
     }
 }
 

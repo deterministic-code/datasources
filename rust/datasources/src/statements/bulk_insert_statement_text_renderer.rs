@@ -12,7 +12,11 @@ impl BulkInsertStatementTextRenderer {
     }
 
     pub fn render(&self, statement: &BulkInsertStatement) -> String {
-        Self::render_with(statement, |name| self.quote(name), |name| self.parameter(name))
+        Self::render_with(
+            statement,
+            |name| self.quote(name),
+            |name| self.parameter(name),
+        )
     }
 
     pub fn render_with(

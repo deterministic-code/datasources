@@ -35,7 +35,6 @@ impl BulkDeleteStatement {
     }
 }
 
-
 impl Statement for BulkDeleteStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
         text.statements().visit_bulk_delete(self, text)

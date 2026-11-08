@@ -1,4 +1,4 @@
-import type { Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, relatedObjectNames, valueObjectNames, type Enrichment } from "./Enrichment.ts";
 import type { ICRUDRepository } from "./ICRUDRepository.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
 import type { Scalar } from "./builders/Scalar.ts";
@@ -143,12 +143,12 @@ export abstract class CreateEnrichmentStrategy<T> {
 const mapPayload = (
   value: Scalar | object | undefined,
   enrichment?: Enrichment,
-  writer?: { type: new () => object },
+  writer?: { schema?: { columns: Record<string, unknown> }; type?: new () => object },
 ): object[] => {
   if (value === undefined || value === null || typeof value === "string") return [];
   if (Array.isArray(value)) return value.filter((item) => item !== null && typeof item === "object");
-  if (enrichment?.type !== "dictionary" || typeof value !== "object") return [];
-  const keyName = mapKeyName(enrichment.relatedKey, probe(writer));
+  if (!enrichment || enrichment.type !== "dictionary" || typeof value !== "object") return [];
+  const keyName = dictionaryMapKey(enrichment, relatedObjectNames(writer), valueObjectNames(value));
   const valueName = enrichment.relatedProperty ?? (keyName === "Key" ? "Value" : "value");
   return Object.entries(value as Record<string, Scalar | object>)
     .sort(([left], [right]) => left.localeCompare(right))
@@ -159,17 +159,3 @@ const mapPayload = (
     );
 };
 
-const probe = (writer?: { type: new () => object }): object | undefined => {
-  try {
-    return writer ? new writer.type() : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const mapKeyName = (relatedKey: string, child?: object): string =>
-  child && "Key" in child ? "Key"
-    : child && "key" in child ? "key"
-      : child && "Name" in child ? "Name"
-        : child && "name" in child ? "name"
-          : relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";

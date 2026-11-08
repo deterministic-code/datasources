@@ -97,23 +97,13 @@ public class DefaultReadonlyEnrichmentStrategy<T> : IReadonlyEnrichmentStrategy<
             var map = (IDictionary)Activator.CreateInstance(Prop(parent, enrichment.DestinationProperty).PropertyType)!;
             await foreach (var item in via.Read(new Where(new Operator.Equals(enrichment.RelatedKey, Value.From(key)))))
             {
-                if (Get(item!, MapKey<TRelated>()) is not { } entry) continue;
+                if (Get(item!, DictionaryMapKey.Of<TRelated>(enrichment, DictionaryMapKey.ValueType(typeof(T), enrichment.DestinationProperty))) is not { } entry) continue;
                 map[entry] = enrichment.RelatedProperty is { } select
                     ? Get(item, select)
                     : CopyValue(item!, enrichment, Prop(parent, enrichment.DestinationProperty).PropertyType);
             }
             Set(parent, enrichment.DestinationProperty, map);
         }
-    }
-
-    static string MapKey<TRelated>()
-    {
-        var type = typeof(TRelated);
-        return type.GetProperty("Key") is not null ? "Key"
-            : type.GetProperty("key") is not null ? "key"
-            : type.GetProperty("Name") is not null ? "Name"
-            : type.GetProperty("name") is not null ? "name"
-            : "Key";
     }
 
     static object? CopyValue(object item, Enrichment enrichment, Type mapType)

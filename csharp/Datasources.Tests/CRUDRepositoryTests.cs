@@ -57,6 +57,14 @@ public class CRUDRepositoryTests
         public Dictionary<string, string> Settings { get; set; } = [];
     }
 
+    sealed class AsdfSetting
+    {
+        public long Id { get; set; }
+        public long ParentId { get; set; }
+        public string Asdfasdfa { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
     sealed class Parent
     {
         public long Id { get; set; }
@@ -259,6 +267,46 @@ public class CRUDRepositoryTests
         Assert.Equal("dark", stored.Value);
         var loaded = await hostsRepo.ReadSingle();
         Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark" }, loaded!.Settings);
+    }
+
+    [Fact]
+    public async Task RoundTripsDictionaryWhenKeyPropertyIsName()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<NamedHost>(connection);
+        var settingsRepo = Open<NamedSetting>(connection);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
+        var created = await hostsRepo.Create(new NamedHost
+        {
+            Label = "ada",
+            Settings = { ["theme"] = "dark", ["locale"] = "en-GB" },
+        });
+        Assert.True(created.Id > 0);
+        var loaded = await hostsRepo.ReadSingle();
+        Assert.Equal(new Dictionary<string, string> { ["theme"] = "dark", ["locale"] = "en-GB" }, loaded!.Settings);
+        await hostsRepo.Update(new NamedHost { Id = created.Id, Label = "ada", Settings = [] });
+        Assert.Empty((await hostsRepo.ReadSingle())!.Settings);
+    }
+
+    [Fact]
+    public async Task RoundTripsDictionaryWhenKeyPropertyIsAsdfasdfa()
+    {
+        var connection = await Setup();
+        var hostsRepo = Open<NamedHost>(connection);
+        var settingsRepo = Open<AsdfSetting>(connection);
+        hostsRepo.AddEnriched(new("Settings", "Id", "ParentId", "Value", EnrichmentPropertyType.Dictionary), settingsRepo);
+        var created = await hostsRepo.Create(new NamedHost
+        {
+            Label = "ada",
+            Settings = { ["alpha"] = "one", ["beta"] = "two" },
+        });
+        var stored = await settingsRepo.Read().ToListAsync();
+        Assert.Equal(2, stored.Count);
+        Assert.Contains(stored, row => row.Asdfasdfa == "alpha" && row.Value == "one");
+        Assert.Contains(stored, row => row.Asdfasdfa == "beta" && row.Value == "two");
+        Assert.Equal(new Dictionary<string, string> { ["alpha"] = "one", ["beta"] = "two" }, (await hostsRepo.ReadSingle())!.Settings);
+        await hostsRepo.Update(new NamedHost { Id = created.Id, Label = "ada", Settings = { ["alpha"] = "uno" } });
+        Assert.Equal(new Dictionary<string, string> { ["alpha"] = "uno" }, (await hostsRepo.ReadSingle())!.Settings);
     }
 
     [Fact]

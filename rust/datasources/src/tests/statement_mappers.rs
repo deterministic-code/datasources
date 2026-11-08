@@ -8,10 +8,11 @@ use crate::mappers::{DictionaryMapper, Mapper};
 use crate::*;
 
 fn mappings() -> StatementMappers {
-    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
-        ("User".to_string(), "people".to_string()),
-        ("Role".to_string(), "roles".to_string()),
-    ]));
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("User".to_string(), "people".to_string()),
+            ("Role".to_string(), "roles".to_string()),
+        ]));
     let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
         Arc::new(DictionaryMapper::new([
             ("Name".to_string(), "full_name".to_string()),
@@ -124,10 +125,7 @@ fn maps_writes() {
     assert_eq!(parameters[1].value, Value::Text("Name:BEA".into()));
 
     let delete = names
-        .apply_delete(
-            &DeleteStatement::new("User", Some(&where_clause)),
-            &mapper,
-        )
+        .apply_delete(&DeleteStatement::new("User", Some(&where_clause)), &mapper)
         .unwrap();
     assert_eq!(
         stmt_text(&delete),
@@ -161,10 +159,11 @@ fn leaves_raw_and_other_statements() {
 
 #[test]
 fn maps_select_field_alias() {
-    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
-        ("Contact".to_string(), "contacts_base".to_string()),
-        ("Address".to_string(), "address".to_string()),
-    ]));
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("Contact".to_string(), "contacts_base".to_string()),
+            ("Address".to_string(), "address".to_string()),
+        ]));
     let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
         Arc::new(DictionaryMapper::new([
             ("Id".to_string(), "id".to_string()),
@@ -172,11 +171,7 @@ fn maps_select_field_alias() {
             ("ContactId".to_string(), "contact_id".to_string()),
         ]));
     let mappings = StatementMappers::new(entities, properties);
-    let fields = [
-        "Contact.Id",
-        "Contact.FirstName",
-        "Address.Id",
-    ];
+    let fields = ["Contact.Id", "Contact.FirstName", "Address.Id"];
     let joins = [Join::left("Address", "Contact.Id", "Address.ContactId")];
     let select = SelectStatement::new(SelectStatementOptions {
         joins: &joins,
@@ -191,15 +186,16 @@ fn maps_select_field_alias() {
 
 #[test]
 fn maps_contacts_select() {
-    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
-        ("Contact".to_string(), "contacts_base".to_string()),
-        ("ContactSource".to_string(), "contact_source".to_string()),
-        ("ContactType".to_string(), "contact_type".to_string()),
-        ("Address".to_string(), "address".to_string()),
-        ("AddressType".to_string(), "address_type".to_string()),
-        ("Phone".to_string(), "phone".to_string()),
-        ("PhoneType".to_string(), "phone_type".to_string()),
-    ]));
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("Contact".to_string(), "contacts_base".to_string()),
+            ("ContactSource".to_string(), "contact_source".to_string()),
+            ("ContactType".to_string(), "contact_type".to_string()),
+            ("Address".to_string(), "address".to_string()),
+            ("AddressType".to_string(), "address_type".to_string()),
+            ("Phone".to_string(), "phone".to_string()),
+            ("PhoneType".to_string(), "phone_type".to_string()),
+        ]));
     let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
         Arc::new(DictionaryMapper::new([
             ("Id".to_string(), "id".to_string()),
@@ -211,7 +207,10 @@ fn maps_contacts_select() {
             ("City".to_string(), "city".to_string()),
             ("Number".to_string(), "number".to_string()),
             ("ContactId".to_string(), "contact_id".to_string()),
-            ("ContactSourceId".to_string(), "contact_source_id".to_string()),
+            (
+                "ContactSourceId".to_string(),
+                "contact_source_id".to_string(),
+            ),
             ("ContactTypeId".to_string(), "contact_type_id".to_string()),
             ("AddressTypeId".to_string(), "address_type_id".to_string()),
             ("PhoneTypeId".to_string(), "phone_type_id".to_string()),
@@ -273,11 +272,12 @@ fn maps_contacts_select() {
 
 #[test]
 fn rejects_select_field_alias() {
-    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
-        ("Contact".to_string(), "contacts_base".to_string()),
-    ]));
-    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
-        Arc::new(DictionaryMapper::new([("Id".to_string(), "id".to_string())]));
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new(
+        [("Contact".to_string(), "contacts_base".to_string())],
+    ));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(
+        DictionaryMapper::new([("Id".to_string(), "id".to_string())]),
+    );
     let mappings = StatementMappers::new(entities, properties);
     let fields = ["Contact.Id AS Id"];
     let select = SelectStatement::new(SelectStatementOptions::new("Contact", &fields));
@@ -293,11 +293,12 @@ fn rejects_select_field_alias() {
 
 #[test]
 fn maps_aggregate_alias_from_lookup() {
-    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
-        ("Contact".to_string(), "contacts_base".to_string()),
-    ]));
-    let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
-        Arc::new(DictionaryMapper::new([("Id".to_string(), "id".to_string())]));
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new(
+        [("Contact".to_string(), "contacts_base".to_string())],
+    ));
+    let properties: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(
+        DictionaryMapper::new([("Id".to_string(), "id".to_string())]),
+    );
     let mappings = StatementMappers::new(entities, properties);
     let count = Aggregate::count("Contact.Id");
     let fields = [count.as_str()];
@@ -311,12 +312,13 @@ fn maps_aggregate_alias_from_lookup() {
 
 #[test]
 fn maps_nested_path_alias() {
-    let entities: Arc<dyn Mapper<String, String> + Send + Sync> = Arc::new(DictionaryMapper::new([
-        ("Contact".to_string(), "contacts_base".to_string()),
-        ("Address".to_string(), "address".to_string()),
-        ("AddressType".to_string(), "address_type".to_string()),
-        ("ContactSource".to_string(), "contact_source".to_string()),
-    ]));
+    let entities: Arc<dyn Mapper<String, String> + Send + Sync> =
+        Arc::new(DictionaryMapper::new([
+            ("Contact".to_string(), "contacts_base".to_string()),
+            ("Address".to_string(), "address".to_string()),
+            ("AddressType".to_string(), "address_type".to_string()),
+            ("ContactSource".to_string(), "contact_source".to_string()),
+        ]));
     let properties: Arc<dyn Mapper<String, String> + Send + Sync> =
         Arc::new(DictionaryMapper::new([
             ("Id".to_string(), "id".to_string()),

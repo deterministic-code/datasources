@@ -238,6 +238,39 @@ types:
     expect(models.map((model) => model.specName)).toEqual(
       expect.arrayContaining(["user", "games", "contact", "categories", "reviews", "game_states"]),
     );
+    const typescript = await deterministic.generateRepositories({
+      dialect: "typescript",
+      reader: memoryReader(loaded.files),
+      settings: loaded.settings,
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    const gamesTs = textOf(typescript, "gamesRepository.ts");
+    const usersTs = textOf(typescript, "usersRepository.ts");
+    const contactsTs = textOf(typescript, "contactsRepository.ts");
+    expect(gamesTs).not.toContain("keyProperty");
+    expect(usersTs).not.toContain("keyProperty");
+    expect(contactsTs).not.toContain("keyProperty");
+    const rust = await deterministic.generateRepositories({
+      dialect: "rust",
+      reader: memoryReader(loaded.files),
+      settings: loaded.settings,
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    expect(textOf(rust, "gamesRepository.rs")).not.toContain("with_key");
+    expect(textOf(rust, "usersRepository.rs")).not.toContain("with_key");
+    expect(textOf(rust, "contactsRepository.rs")).not.toContain("with_key");
+    const csharp = await deterministic.generateRepositories({
+      dialect: "csharp",
+      reader: memoryReader(loaded.files),
+      settings: loaded.settings,
+      env: { INSTALLED_PROVIDERS: "sqlite" },
+    });
+    expect(textOf(csharp, "GamesRepository.cs")).not.toContain("KeyProperty");
+    expect(textOf(csharp, "UsersRepository.cs")).not.toContain("KeyProperty");
+    expect(textOf(csharp, "ContactsRepository.cs")).not.toContain("KeyProperty");
+    const readonlyLinked = gamesTs.slice(gamesTs.indexOf("static createReadonly"));
+    expect(readonlyLinked).toContain("repo.addLinked");
+    expect(readonlyLinked).toContain('association: { parent: "gameId", related: "categoryId" }');
     const entries = await deterministic.generateTypes({
       dialect: "typescript",
       reader: memoryReader(loaded.files),
@@ -526,6 +559,9 @@ types: []
     expect(contactTs).toContain('destinationProperty: "settings"');
     expect(contactTs).toContain('destinationProperty: "prefs"');
     expect(contactTs).toContain('destinationProperty: "contactSourceName"');
+    expect(contactTs).not.toContain("keyProperty");
+    expect(contactRs).not.toContain("with_key");
+    expect(contactCs).not.toContain("KeyProperty");
     expect(contactTs).toContain('type: "list"');
     expect(contactTs).toContain('type: "dictionary"');
     expect(textOf(typescript, "contactGroupsRepository.ts")).toContain("addLinked");
@@ -710,15 +746,15 @@ types: []
       { "backend.datasources": "sqlite" },
     );
     const address = models.find((model) => model.specName === "address");
-    const contactId = models.find((model) => model.specName === "contact")?.schema.find((column) => column.isId);
+    const contactId = models.find((model) => model.specName === "contact")?.schema.find((field) => field.isId === true);
     expect(address?.readProperties).not.toContain("AddressTypeName");
     expect(address?.readProperties).toContain("AddressTypeId");
     expect(address?.createProperties).not.toContain("AddressTypeId");
     expect(address?.updateProperties).not.toContain("AddressTypeId");
-    expect(address?.schema.some((column) => column.from === "AddressTypeId")).toBe(false);
+    expect(address?.schema.some((field) => field.name === "address_type_id")).toBe(false);
     expect(address?.propertyMappings).toContainEqual({ from: "AddressTypeId", to: "address_type_id" });
-    expect(address?.schema.some((column) => column.from === "AddressTypeName" && column.type === "string")).toBe(true);
-    expect(address?.schema.some((column) => column.from === "ContactId" && column.type === contactId?.type)).toBe(true);
+    expect(address?.schema.some((field) => field.name === "address_type_name" && field.type === "string")).toBe(true);
+    expect(address?.schema.some((field) => field.name === "contact_id" && field.type === contactId?.type)).toBe(true);
     expect(address?.enrichments.some((item) => item.destination === "AddressTypeName" && item.kind === "object")).toBe(true);
   });
 

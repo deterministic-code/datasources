@@ -103,9 +103,13 @@ impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
                 .map(|value| self.converted(field.name, value, false))
                 .transpose()?;
             partial = match (is_column(field.shape()), cell.as_ref()) {
-                (true, Some(cell)) if *cell != Value::Null => {
-                    set_field(partial, field.name, cell, field.shape(), self.should_coerce_id)?
-                }
+                (true, Some(cell)) if *cell != Value::Null => set_field(
+                    partial,
+                    field.name,
+                    cell,
+                    field.shape(),
+                    self.should_coerce_id,
+                )?,
                 (true, _) if field.shape().type_identifier.contains("DateTime") => set_field(
                     partial,
                     field.name,
@@ -116,7 +120,11 @@ impl<T: SchemaObject> TypeConverter<T, Row> for MetaDataRowTypeConverter<T> {
                 _ => partial.set_nth_field_to_default(index).map_err(reflect)?,
             };
         }
-        partial.build().map_err(reflect)?.materialize().map_err(reflect)
+        partial
+            .build()
+            .map_err(reflect)?
+            .materialize()
+            .map_err(reflect)
     }
 
     fn reverse_convert(&self, to: &T) -> Result<Row> {
@@ -205,7 +213,10 @@ pub(crate) fn change_value<'a>(
     let cell = match assignable(cell, shape, coerce_id) {
         true => cell.clone(),
         false => changed(cell, shape, coerce_id).ok_or_else(|| {
-            DatasourceError::message(format!("Cannot assign {cell:?} to {}", shape.type_identifier))
+            DatasourceError::message(format!(
+                "Cannot assign {cell:?} to {}",
+                shape.type_identifier
+            ))
         })?,
     };
     write_value(partial, &cell, shape, coerce_id)
@@ -219,7 +230,9 @@ fn write_value<'a>(
 ) -> Result<Partial<'a>> {
     let set = match cell {
         Value::Bool(flag) => partial.set(*flag),
-        Value::Int(n) if coerce_id && ScalarType::try_from_shape(shape) == Some(ScalarType::I32) => {
+        Value::Int(n)
+            if coerce_id && ScalarType::try_from_shape(shape) == Some(ScalarType::I32) =>
+        {
             partial.set(*n as i32)
         }
         Value::Int(n) if ScalarType::try_from_shape(shape) == Some(ScalarType::U32) => {
@@ -311,7 +324,12 @@ pub(crate) fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
         .or_else(|| value.get::<u32>().ok().map(|n| Value::from(*n as i64)))
         .or_else(|| value.get::<i64>().ok().map(|n| Value::from(*n)))
         .or_else(|| value.get::<f64>().ok().map(|n| Value::from(*n)))
-        .or_else(|| value.get::<String>().ok().map(|text| Value::from(text.clone())))
+        .or_else(|| {
+            value
+                .get::<String>()
+                .ok()
+                .map(|text| Value::from(text.clone()))
+        })
         .or_else(|| {
             value
                 .get::<chrono::DateTime<chrono::Utc>>()
@@ -325,13 +343,21 @@ pub(crate) fn peek_value(value: Peek<'_, '_>) -> Option<Value> {
                 .ok()
                 .map(|number| Value::from(*number))
         })
-        .or_else(|| value.get::<Vec<u8>>().ok().map(|bytes| Value::from(bytes.clone())))
+        .or_else(|| {
+            value
+                .get::<Vec<u8>>()
+                .ok()
+                .map(|bytes| Value::from(bytes.clone()))
+        })
 }
 
 pub(crate) fn struct_fields(shape: &'static Shape) -> Result<&'static [Field]> {
     match shape.ty {
         Type::User(UserType::Struct(st)) => Ok(st.fields),
-        _ => Err(DatasourceError::message(format!("{} is not a struct", shape.type_identifier))),
+        _ => Err(DatasourceError::message(format!(
+            "{} is not a struct",
+            shape.type_identifier
+        ))),
     }
 }
 
@@ -358,7 +384,10 @@ fn is_option(shape: &'static Shape) -> bool {
 fn option_inner(shape: &'static Shape) -> Result<&'static Shape> {
     match shape.def {
         Def::Option(option) => Ok(option.t()),
-        _ => Err(DatasourceError::message(format!("{} is not an option", shape.type_identifier))),
+        _ => Err(DatasourceError::message(format!(
+            "{} is not an option",
+            shape.type_identifier
+        ))),
     }
 }
 

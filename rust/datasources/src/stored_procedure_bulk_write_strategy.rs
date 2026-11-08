@@ -4,7 +4,6 @@ use crate::connection::Connection;
 use crate::crud_repository_builder::{write_statements, CRUDRepositoryBuilder};
 use crate::crud_repository_options::CRUDRepositoryOptions;
 use crate::datasource_error::DatasourceError;
-use crate::IWhere;
 use crate::parameter::Parameter;
 use crate::parameter_direction::ParameterDirection;
 use crate::response::Response;
@@ -12,6 +11,7 @@ use crate::result::Result;
 use crate::row::Row;
 use crate::value::Value;
 use crate::ExecuteStoredProcedureStatement;
+use crate::IWhere;
 use async_trait::async_trait;
 use base64::Engine;
 use chrono::{DateTime, Utc};
@@ -90,7 +90,14 @@ impl StoredProcedureBulkWriteStrategy {
         let mut row = Row::new();
         for name in statements.read_columns() {
             let physical = self.column(name);
-            if create && self.identity(name) && !assigned(stored.get(name).or_else(|| stored.get(self.ids()[0].as_str()))) {
+            if create
+                && self.identity(name)
+                && !assigned(
+                    stored
+                        .get(name)
+                        .or_else(|| stored.get(self.ids()[0].as_str())),
+                )
+            {
                 continue;
             }
             let value = stored
@@ -147,7 +154,8 @@ impl StoredProcedureBulkWriteStrategy {
         if self.ids().len() != 1 {
             return;
         }
-        let found = parameters.and_then(|list| list.iter().find(|parameter| parameter.name == "ids"));
+        let found =
+            parameters.and_then(|list| list.iter().find(|parameter| parameter.name == "ids"));
         let ids = parse_ids(found.map(|parameter| &parameter.value));
         let column = self.ids()[0].clone();
         for (item, id) in items.iter_mut().zip(ids) {

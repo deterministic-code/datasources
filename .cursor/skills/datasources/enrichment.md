@@ -220,7 +220,7 @@ let created = parents
 assert!(num(&created, "Id") > 0);
 ```
 
-#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L480-L490)
+#### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/CRUDRepository.test.ts#L730-L740)
 
 ```typescript
 const connection = await setup();
@@ -233,7 +233,7 @@ const created = await parentsRepo.create(Object.assign(new Parent(), { TypeName:
 
 ## Enrichment
 
-One related fill. `destinationProperty` is the parent property that gets filled, `sourceProperty` is the parent key, and `relatedKey` is the key on the related row. `relatedProperty` copies one related property. `type` is [EnrichmentPropertyType](#enrichmentpropertytype). `association` names the junction columns for a link.
+One related fill. `destinationProperty` is the parent property that gets filled, `sourceProperty` is the parent key, and `relatedKey` is the key on the related row. `relatedProperty` copies one related property. A dictionary map key is the leftover property on the related object. `type` is [EnrichmentPropertyType](#enrichmentpropertytype). `association` names the junction columns for a link.
 
 ### Classes
 
@@ -268,7 +268,7 @@ const EnrichmentPropertyType
 | --- | --- |
 | Object | One related row. `relatedProperty` copies one field. |
 | List | Related rows. Written with the parent when the repository can persist. |
-| Dictionary | Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
+| Dictionary | Related rows keyed by the leftover property on the related object. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
 | Custom | Rejected until its fill is defined. |
 
 ##### Association {#typescript-association}
@@ -346,7 +346,7 @@ public enum EnrichmentPropertyType
 | --- | --- |
 | Object | One related row. `RelatedProperty` copies one field. |
 | List | Related rows. Written with the parent when the repository can persist. |
-| Dictionary | Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
+| Dictionary | Related rows keyed by the leftover property on the related object. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
 | Custom | Rejected until its fill is defined. |
 
 ##### Association {#csharp-association}
@@ -471,7 +471,7 @@ pub enum EnrichmentPropertyType
 | --- | --- |
 | Object | One related row. `related_property` copies one field. |
 | List | Related rows. Written with the parent when the repository can persist. |
-| Dictionary | Related rows keyed by `key`. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
+| Dictionary | Related rows keyed by the leftover property on the related object. Written with the parent when the repository can persist. `relatedProperty` copies one related field as the map value; otherwise remaining fields form the value. |
 | Custom | Rejected until its fill is defined. |
 
 ##### Association {#rust-association}

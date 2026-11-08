@@ -45,7 +45,10 @@ fn round_trips_the_write_examples() {
         "DELETE FROM \"user\" WHERE id = $id",
         "DELETE FROM users WHERE name NOT LIKE $name",
     ] {
-        assert_eq!(stmt_text(StatementParser::parse(sql).unwrap().as_ref()), sql);
+        assert_eq!(
+            stmt_text(StatementParser::parse(sql).unwrap().as_ref()),
+            sql
+        );
     }
 }
 
@@ -148,7 +151,10 @@ fn builds_the_where_tree() {
 #[test]
 fn keeps_a_string_beside_a_column_as_its_parameter() {
     let query = StatementParser::parse("SELECT id FROM users WHERE name = 'ada'").unwrap();
-    assert_eq!(stmt_text(query.as_ref()), "SELECT id FROM users WHERE name = $name");
+    assert_eq!(
+        stmt_text(query.as_ref()),
+        "SELECT id FROM users WHERE name = $name"
+    );
     let parameters = query.predicate().unwrap().parameters();
     assert_eq!(parameters.len(), 1);
     assert_eq!(parameters[0].value, Value::Text("ada".into()));

@@ -57,11 +57,11 @@ impl CreateBulkUpdateStoredProcedureStatement {
 
 impl Statement for CreateBulkUpdateStoredProcedureStatement {
     fn accept(&self, text: &StatementTextRenderer) -> String {
-        text.statements().visit_create_bulk_update_stored_procedure(self, text)
+        text.statements()
+            .visit_create_bulk_update_stored_procedure(self, text)
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 }
-

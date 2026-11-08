@@ -161,7 +161,9 @@ fn as_row_crud<TChild: Entity>(
         return None;
     }
     Some(unsafe {
-        std::mem::transmute::<Arc<dyn ICRUDRepository<TChild>>, Arc<dyn ICRUDRepository>>(repository)
+        std::mem::transmute::<Arc<dyn ICRUDRepository<TChild>>, Arc<dyn ICRUDRepository>>(
+            repository,
+        )
     })
 }
 

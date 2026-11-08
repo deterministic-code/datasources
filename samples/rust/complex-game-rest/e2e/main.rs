@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
     let user = call(&api, "POST", "/users", Some(json(&[
         ("username", Value::String("ada".into())),
         ("password", Value::String("secret".into())),
-        ("settings", object(&[("theme", Value::String("dark".into()))])),
+        ("settings", object(&[("theme", Value::String("dark".into())), ("locale", Value::String("en-GB".into()))])),
         ("roles", array(&[object(&[("name", role.name.clone().into()), ("description", role.description.clone().into())])])),
         ("groups", array(&[object(&[("name", group.name.clone().into()), ("description", group.description.clone().into())])])),
     ])), 201).await?;
@@ -31,17 +31,27 @@ async fn main() -> Result<()> {
     if listed.as_array().map(Vec::len) != Some(1) {
         return Err(DatasourceError::message("get users username"));
     }
+    require_user(&listed[0], "ada", &[("theme", "dark"), ("locale", "en-GB")], &role.name, &group.name)?;
     call(&api, "PUT", &format!("/users?id={user_id}"), Some(json(&[
         ("username", Value::String("ada-byron".into())),
         ("password", Value::String("secret".into())),
-        ("settings", object(&[("theme", Value::String("sepia".into()))])),
-        ("roles", array(&[object(&[("name", role.name.into())])])),
-        ("groups", array(&[object(&[("name", group.name.into())])])),
+        ("settings", object(&[("theme", Value::String("sepia".into())), ("locale", Value::String("en-US".into()))])),
+        ("roles", array(&[object(&[("name", role.name.clone().into())])])),
+        ("groups", array(&[object(&[("name", group.name.clone().into())])])),
     ])), 200).await?;
     let loaded = call(&api, "GET", &format!("/users?id={user_id}"), None, 200).await?;
     if loaded[0]["username"] != "ada-byron" {
         return Err(DatasourceError::message("put users"));
     }
+    require_user(&loaded[0], "ada-byron", &[("theme", "sepia"), ("locale", "en-US")], &role.name, &group.name)?;
+    call(&api, "PUT", &format!("/users?id={user_id}"), Some(json(&[
+        ("username", Value::String("ada-byron".into())),
+        ("password", Value::String("secret".into())),
+        ("settings", object(&[])),
+        ("roles", array(&[object(&[("name", role.name.clone().into())])])),
+        ("groups", array(&[object(&[("name", group.name.clone().into())])])),
+    ])), 200).await?;
+    require_user(&call(&api, "GET", &format!("/users?id={user_id}"), None, 200).await?[0], "ada-byron", &[], &role.name, &group.name)?;
 
     let root = call(&api, "POST", "/categories", Some(json(&[("name", Value::String("arcade".into())), ("description", Value::String("root".into()))])), 201).await?;
     let root_id = root["id"].as_i64().ok_or_else(|| DatasourceError::message("root id"))?;
@@ -64,18 +74,27 @@ async fn main() -> Result<()> {
         ("name", Value::String("star".into())),
         ("description", Value::String("space".into())),
         ("location", Value::String("orbit".into())),
-        ("settings", object(&[("lives", Value::String("3".into()))])),
+        ("settings", object(&[("lives", Value::String("3".into())), ("mode", Value::String("arcade".into()))])),
         ("categories", array(&[object(&[("id", child_id.into()), ("name", Value::String("shooter".into()))])])),
     ])), 201).await?;
     let game_id = game["id"].as_i64().ok_or_else(|| DatasourceError::message("game id"))?;
-    call(&api, "GET", &format!("/games?id={game_id}"), None, 200).await?;
+    require_game(&call(&api, "GET", &format!("/games?id={game_id}"), None, 200).await?, "star", &[("lives", "3"), ("mode", "arcade")], child_id)?;
     call(&api, "PUT", &format!("/games?id={game_id}"), Some(json(&[
         ("name", Value::String("star-2".into())),
         ("description", Value::String("space".into())),
         ("location", Value::String("orbit".into())),
-        ("settings", object(&[("lives", Value::String("5".into()))])),
+        ("settings", object(&[("lives", Value::String("5".into())), ("mode", Value::String("hard".into()))])),
         ("categories", array(&[object(&[("id", child_id.into()), ("name", Value::String("shooter".into()))])])),
     ])), 200).await?;
+    require_game(&call(&api, "GET", &format!("/games?id={game_id}"), None, 200).await?, "star-2", &[("lives", "5"), ("mode", "hard")], child_id)?;
+    call(&api, "PUT", &format!("/games?id={game_id}"), Some(json(&[
+        ("name", Value::String("star-2".into())),
+        ("description", Value::String("space".into())),
+        ("location", Value::String("orbit".into())),
+        ("settings", object(&[])),
+        ("categories", array(&[object(&[("id", child_id.into()), ("name", Value::String("shooter".into()))])])),
+    ])), 200).await?;
+    require_game(&call(&api, "GET", &format!("/games?id={game_id}"), None, 200).await?, "star-2", &[], child_id)?;
 
     let review = call(&api, "POST", "/reviews", Some(json(&[
         ("game_id", game_id.into()),
@@ -111,7 +130,9 @@ async fn main() -> Result<()> {
         ("first_name", Value::String("Ada".into())),
         ("last_name", Value::String("Lovelace".into())),
         ("contact_source_name", Value::String("Manual".into())),
-        ("user_id", Value::String(user_id.to_string())),
+        ("user_id", user_id.into()),
+        ("settings", object(&[("theme", Value::String("dark".into())), ("volume", Value::String("loud".into()))])),
+        ("prefs", object(&[("home", object(&[("locale", Value::String("en-GB".into())), ("timezone", Value::String("Europe/London".into()))]))])),
         ("addresses", array(&[
             object(&[
                 ("address_type_name", Value::String("Home".into())),
@@ -134,6 +155,7 @@ async fn main() -> Result<()> {
     let contact_id = contact["id"].as_i64().ok_or_else(|| DatasourceError::message("contact id"))?;
     let created = call(&api, "GET", &format!("/contacts?id={contact_id}"), None, 200).await?;
     require_ada_children(&created, "Home", "London", "555-0100")?;
+    require_contact_maps(&created, &[("theme", "dark"), ("volume", "loud")], "en-GB", "Europe/London")?;
     if address_by_line1(contact_row(&created)?, "1 Strand")?["address_type_name"] != "Work" {
         return Err(DatasourceError::message("create work address"));
     }
@@ -143,10 +165,12 @@ async fn main() -> Result<()> {
         ("first_name", Value::String("Ada Byron".into())),
         ("last_name", Value::String("Lovelace".into())),
         ("contact_source_name", Value::String("Manual".into())),
-        ("user_id", Value::String(user_id.to_string())),
+        ("user_id", user_id.into()),
+        ("settings", object(&[("theme", Value::String("sepia".into())), ("volume", Value::String("quiet".into()))])),
+        ("prefs", object(&[("home", object(&[("locale", Value::String("en-US".into())), ("timezone", Value::String("America/New_York".into()))]))])),
         ("addresses", array(&[
             object(&[
-                ("id", engine_id),
+                ("id", engine_id.clone()),
                 ("address_type_name", Value::String("Work".into())),
                 ("line1", Value::String("12 Analytical Engine".into())),
                 ("city", Value::String("Cambridge".into())),
@@ -160,16 +184,48 @@ async fn main() -> Result<()> {
             ]),
         ])),
         ("phones", array(&[object(&[
-            ("id", phone_id),
+            ("id", phone_id.clone()),
             ("phone_type_name", Value::String("Mobile".into())),
             ("number", Value::String("555-0111".into())),
         ])])),
     ])), 200).await?;
     let updated = call(&api, "GET", &format!("/contacts?id={contact_id}"), None, 200).await?;
     require_ada_children(&updated, "Work", "Cambridge", "555-0111")?;
+    require_contact_maps(&updated, &[("theme", "sepia"), ("volume", "quiet")], "en-US", "America/New_York")?;
     if address_by_line1(contact_row(&updated)?, "1 College")?["address_type_name"] != "Home" {
         return Err(DatasourceError::message("update home address"));
     }
+    let college_id = address_by_line1(contact_row(&updated)?, "1 College")?["id"].clone();
+    call(&api, "PUT", &format!("/contacts?id={contact_id}"), Some(json(&[
+        ("first_name", Value::String("Ada Byron".into())),
+        ("last_name", Value::String("Lovelace".into())),
+        ("contact_source_name", Value::String("Manual".into())),
+        ("user_id", user_id.into()),
+        ("settings", object(&[])),
+        ("prefs", object(&[("home", object(&[("locale", Value::String("en-US".into())), ("timezone", Value::String("America/New_York".into()))]))])),
+        ("addresses", array(&[
+            object(&[
+                ("id", engine_id),
+                ("address_type_name", Value::String("Work".into())),
+                ("line1", Value::String("12 Analytical Engine".into())),
+                ("city", Value::String("Cambridge".into())),
+                ("country", Value::String("FR".into())),
+            ]),
+            object(&[
+                ("id", college_id),
+                ("address_type_name", Value::String("Home".into())),
+                ("line1", Value::String("1 College".into())),
+                ("city", Value::String("Cambridge".into())),
+                ("country", Value::String("GB".into())),
+            ]),
+        ])),
+        ("phones", array(&[object(&[
+            ("id", phone_id),
+            ("phone_type_name", Value::String("Mobile".into())),
+            ("number", Value::String("555-0111".into())),
+        ])])),
+    ])), 200).await?;
+    require_contact_maps(&call(&api, "GET", &format!("/contacts?id={contact_id}"), None, 200).await?, &[], "en-US", "America/New_York")?;
 
     for target in [
         format!("/contacts?id={contact_id}"),
@@ -185,6 +241,57 @@ async fn main() -> Result<()> {
         call(&api, "PUT", &target, Some("{}".into()), 404).await?;
     }
     let _ = (User::default(), Game::default(), Category::default(), Review::default(), GameState::default(), Contact::default());
+    Ok(())
+}
+
+fn require_settings(row: &Value, expected: &[(&str, &str)], label: &str) -> Result<()> {
+    let settings = row["settings"].as_object().ok_or_else(|| DatasourceError::message(label))?;
+    if settings.len() != expected.len() {
+        return Err(DatasourceError::message(label));
+    }
+    for (key, value) in expected {
+        if settings.get(*key).and_then(Value::as_str) != Some(*value) {
+            return Err(DatasourceError::message(label));
+        }
+    }
+    Ok(())
+}
+
+fn require_user(user: &Value, username: &str, settings: &[(&str, &str)], role_name: &str, group_name: &str) -> Result<()> {
+    if user["username"] != username {
+        return Err(DatasourceError::message("user username"));
+    }
+    require_settings(user, settings, "user settings")?;
+    let roles = user["roles"].as_array().ok_or_else(|| DatasourceError::message("user roles"))?;
+    if !roles.iter().any(|item| item["name"] == role_name) {
+        return Err(DatasourceError::message("user roles"));
+    }
+    let groups = user["groups"].as_array().ok_or_else(|| DatasourceError::message("user groups"))?;
+    if !groups.iter().any(|item| item["name"] == group_name) {
+        return Err(DatasourceError::message("user groups"));
+    }
+    Ok(())
+}
+
+fn require_game(listed: &Value, name: &str, settings: &[(&str, &str)], category_id: i64) -> Result<()> {
+    let game = listed.as_array().and_then(|rows| rows.first()).ok_or_else(|| DatasourceError::message("game list"))?;
+    if game["name"] != name {
+        return Err(DatasourceError::message("game name"));
+    }
+    require_settings(game, settings, "game settings")?;
+    let categories = game["categories"].as_array().ok_or_else(|| DatasourceError::message("game categories"))?;
+    if !categories.iter().any(|item| item["id"] == category_id && item["name"] == "shooter") {
+        return Err(DatasourceError::message("game categories"));
+    }
+    Ok(())
+}
+
+fn require_contact_maps(listed: &Value, settings: &[(&str, &str)], locale: &str, timezone: &str) -> Result<()> {
+    let contact = contact_row(listed)?;
+    require_settings(contact, settings, "contact settings")?;
+    if contact["prefs"]["home"]["locale"] != locale || contact["prefs"]["home"]["timezone"] != timezone {
+        return Err(DatasourceError::message("contact prefs"));
+    }
     Ok(())
 }
 

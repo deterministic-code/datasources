@@ -148,7 +148,11 @@ fn authority_of(authority: &str, has_path: bool) -> Option<Authority> {
 fn user_of(user: &str) -> Option<(Option<String>, Option<String>)> {
     let colon = user.find(':');
     let username = decode(colon.map(|at| &user[..at]).unwrap_or(user))?;
-    let username = if username.is_empty() { None } else { Some(username) };
+    let username = if username.is_empty() {
+        None
+    } else {
+        Some(username)
+    };
     let password = match colon {
         Some(at) => Some(decode(&user[at + 1..])?),
         None => None,

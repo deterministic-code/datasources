@@ -1,6 +1,6 @@
 import type { Scalar } from "./builders/Scalar.ts";
 import { DatasourceError } from "./DatasourceError.ts";
-import type { Enrichment } from "./Enrichment.ts";
+import { dictionaryMapKey, relatedObjectNames, valueObjectNames, type Enrichment } from "./Enrichment.ts";
 import { EnrichmentPropertyType } from "./EnrichmentPropertyType.ts";
 import type { IReadonlyEnrichmentStrategy } from "./IReadonlyEnrichmentStrategy.ts";
 import type { IReadonlyRepository } from "./IReadonlyRepository.ts";
@@ -102,7 +102,11 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
     parents: T[],
     sources?: (Row | undefined)[],
   ): Promise<void> {
-    const mapKey = mapKeyName(enrichment.relatedKey, probe(via));
+    const mapKey = dictionaryMapKey(
+      enrichment,
+      relatedObjectNames(via),
+      valueObjectNames(((parents[0] ?? {}) as Props)[enrichment.destinationProperty] as object ?? {}),
+    );
     for (const [index, parent] of parents.entries()) {
       const key = this.sourceKey(parent, enrichment, sources, index);
       if (key === undefined || key === null) continue;
@@ -186,18 +190,4 @@ export class DefaultReadonlyEnrichmentStrategy<T extends object>
   };
 }
 
-const probe = (via?: { type: new () => object }): object | undefined => {
-  try {
-    return via ? new via.type() : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const mapKeyName = (relatedKey: string, child?: object): string =>
-  child && "Key" in child ? "Key"
-    : child && "key" in child ? "key"
-      : child && "Name" in child ? "Name"
-        : child && "name" in child ? "name"
-          : relatedKey.includes("_") || relatedKey[0] !== relatedKey[0]?.toUpperCase() ? "key" : "Key";
 

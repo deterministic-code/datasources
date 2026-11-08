@@ -34,7 +34,7 @@ class CSharpRepositories extends RepositoryGenerator {
   private repository(model: RepositoryModel, casing: ICasingStrategy): Record<string, unknown> {
     const children = this.childrenOf(model, casing);
     const enrichments = model.enrichments.map((item) => this.enrichmentOf(item, casing));
-    const dialects = this.dialectsBag(model);
+    const dialects = this.dialectsBag(model, casing);
     const token = model.optimisticConcurrency;
     return {
       typeName: model.typeName,
@@ -44,7 +44,7 @@ class CSharpRepositories extends RepositoryGenerator {
       enrichments,
       setup: children.length === 0 && enrichments.length === 0 ? undefined : {},
       builder: dialects.length === 0 ? undefined : { dialects },
-      schema: this.schemaBag(model.schema),
+      schema: this.schemaBag(model.schema, casing),
       ...this.optionsOf(model),
       optimisticConcurrency: token === undefined
         ? undefined

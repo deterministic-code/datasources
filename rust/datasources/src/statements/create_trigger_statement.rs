@@ -29,7 +29,10 @@ impl CreateTriggerStatement {
             format!("trg_{entity}_updated_at")
         } else {
             let stem = naming.physical_stem(entity);
-            naming.letter(&naming.convert(&format!("trg_{stem}_updated_at"), naming.trigger_name_casing))
+            naming.letter(&naming.convert(
+                &format!("trg_{stem}_updated_at"),
+                naming.trigger_name_casing,
+            ))
         }
     }
 
@@ -59,4 +62,3 @@ impl Statement for CreateTriggerStatement {
         self
     }
 }
-

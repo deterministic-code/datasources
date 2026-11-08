@@ -120,7 +120,7 @@ export class CRUDRepository<T = Cells>
   private readonly createProperties?: readonly string[];
   private readonly updateProperties?: readonly string[];
   protected createZeros?: Cells;
-  private readonly schema: Schema;
+  readonly schema: Schema;
   private readonly crudStatements: CRUDRepositoryStatements;
   private readonly tree: IRepositoryTree;
   private readonly write: IWriteEnrichmentStrategy<T>;
@@ -165,12 +165,8 @@ export class CRUDRepository<T = Cells>
     link: ICRUDRepository<TLink>,
     strategy?: IReadonlyEnrichmentStrategy<T & object>,
   ): this {
-    const chosen = strategy ?? new DefaultReadonlyEnrichmentStrategy<T & object>();
-    super.addEnriched(enrichment, via, strategy);
-    const stored = lastEnrichment<T, TRelated, TLink>(this);
-    stored.apply = (parents, sources) =>
-      chosen.applyLinked(via, link, enrichment, parents as (T & object)[], sources);
-    stored.link = link;
+    super.addLinked(enrichment, via, link, strategy);
+    lastEnrichment<T, TRelated, TLink>(this).link = link;
     return this;
   }
 

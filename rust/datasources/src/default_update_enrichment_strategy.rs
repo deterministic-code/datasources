@@ -52,7 +52,10 @@ pub(crate) async fn update_children<T: Entity, TChild: Entity>(
         }
     }
     let ids = writer.id_names();
-    let keep: HashSet<String> = related.iter().filter_map(|child| child_key(child, &ids)).collect();
+    let keep: HashSet<String> = related
+        .iter()
+        .filter_map(|child| child_key(child, &ids))
+        .collect();
     for child in existing.iter().filter(|child| {
         child_key::<TChild>(*child, &ids)
             .map(|key| !keep.contains(&key))
@@ -92,10 +95,13 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         &enrichment.destination_property,
     )?;
     let existing = writer
-        .read_where(&Where::new(Operator::equals(
-            association.parent.clone(),
-            parent_key.clone(),
-        )), None)
+        .read_where(
+            &Where::new(Operator::equals(
+                association.parent.clone(),
+                parent_key.clone(),
+            )),
+            None,
+        )
         .try_collect::<Vec<_>>()
         .await?;
     let wanted = related_ids(parent, enrichment)?;
@@ -112,10 +118,11 @@ pub(crate) async fn update_linked<T: Entity, TLink: Entity>(
         writer.delete(row.clone(), None).await?;
     }
     for id in wanted {
-        if existing
-            .iter()
-            .any(|row| row.cell(&association.related).map(|value| value.wire_text()) == Some(id.wire_text()))
-        {
+        if existing.iter().any(|row| {
+            row.cell(&association.related)
+                .map(|value| value.wire_text())
+                == Some(id.wire_text())
+        }) {
             continue;
         }
         let mut row = TLink::default();
@@ -137,8 +144,10 @@ fn dict_key<TChild: Entity>(child: &TChild) -> String {
 fn child_key<TChild: Entity>(child: &TChild, ids: &[String]) -> Option<String> {
     if ids.is_empty()
         || ids.iter().any(|name| match child.cell(name) {
-            Some(value) => matches!(value, Value::Null | Value::Int(0))
-                || matches!(&value, Value::Text(text) if text.is_empty()),
+            Some(value) => {
+                matches!(value, Value::Null | Value::Int(0))
+                    || matches!(&value, Value::Text(text) if text.is_empty())
+            }
             None => true,
         })
     {
@@ -146,7 +155,12 @@ fn child_key<TChild: Entity>(child: &TChild, ids: &[String]) -> Option<String> {
     }
     Some(
         ids.iter()
-            .map(|name| child.cell(name).map(|value| value.wire_text()).unwrap_or_default())
+            .map(|name| {
+                child
+                    .cell(name)
+                    .map(|value| value.wire_text())
+                    .unwrap_or_default()
+            })
             .collect::<Vec<_>>()
             .join("\u{1f}"),
     )

@@ -1,5 +1,5 @@
 import type { ICasingStrategy } from "@deterministic-code/generators-common/casing-strategy";
-import type { SchemaColumn } from "./schemaFields.ts";
+import type { TypeField } from "@deterministic-code/deterministic-generators-common/parser";
 
 export type Pair = { from: string; to: string };
 
@@ -32,7 +32,7 @@ export type RepositoryModel = {
   readProperties: string[];
   createProperties: string[];
   updateProperties: string[];
-  schema: SchemaColumn[];
+  schema: TypeField[];
   optionsByProvider?: Record<string, RepositoryOptionsModel>;
   optimisticConcurrency?: OptimisticConcurrency;
   enrichments: PlannedEnrichment[];

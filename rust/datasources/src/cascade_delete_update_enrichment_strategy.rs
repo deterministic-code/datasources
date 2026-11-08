@@ -1,4 +1,3 @@
-use futures_util::TryStreamExt;
 use crate::default_create_enrichment_strategy::{create_children, create_links};
 use crate::default_write_enrichment_strategy::required;
 use crate::delete_enrichment_strategy::load;
@@ -10,6 +9,7 @@ use crate::update_enrichment_strategy::UpdateEnrichmentStrategy;
 use crate::value::Value;
 use crate::{Operator, Where};
 use async_trait::async_trait;
+use futures_util::TryStreamExt;
 use std::sync::Arc;
 
 pub struct CascadeDeleteUpdateEnrichmentStrategy;
@@ -45,11 +45,15 @@ impl<T: Entity> UpdateEnrichmentStrategy<T> for CascadeDeleteUpdateEnrichmentStr
             &enrichment.destination_property,
         )?;
         let existing = writer
-            .read_where(&Where::new(Operator::equals(
+            .read_where(
+                &Where::new(Operator::equals(
                     association.parent.clone(),
                     parent_key.clone(),
-                )), None)
-            .try_collect::<Vec<_>>().await?;
+                )),
+                None,
+            )
+            .try_collect::<Vec<_>>()
+            .await?;
         for row in &existing {
             let Some(related) = row.get(&association.related).cloned() else {
                 continue;

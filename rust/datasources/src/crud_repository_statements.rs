@@ -1,4 +1,3 @@
-use crate::IWhere;
 use crate::mappers::IdentityMapper;
 use crate::parameter::Parameter;
 use crate::readonly_repository_statements::ReadonlyRepositoryStatements;
@@ -8,6 +7,7 @@ use crate::statements::{
     DeleteStatement, InsertStatement, SelectInsertedIdStatement, UpdateStatement,
 };
 use crate::value::Value;
+use crate::IWhere;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -27,11 +27,7 @@ impl CRUDRepositoryStatements {
         )
     }
 
-    pub fn new(
-        table: impl Into<String>,
-        columns: Vec<String>,
-        mappings: StatementMappers,
-    ) -> Self {
+    pub fn new(table: impl Into<String>, columns: Vec<String>, mappings: StatementMappers) -> Self {
         Self {
             read: ReadonlyRepositoryStatements::new(table, columns, mappings),
         }

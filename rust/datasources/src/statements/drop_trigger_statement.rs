@@ -32,4 +32,3 @@ impl Statement for DropTriggerStatement {
         self
     }
 }
-

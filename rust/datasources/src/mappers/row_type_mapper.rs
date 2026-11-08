@@ -26,7 +26,8 @@ mod tests {
 
     #[test]
     fn maps_a_flat_row_and_back() {
-        let mapper = RowTypeMapper::transform(RowTypeConverter::new(std::collections::HashMap::new()));
+        let mapper =
+            RowTypeMapper::transform(RowTypeConverter::new(std::collections::HashMap::new()));
         let row = HashMap::from([("id".into(), Value::Int(1))]);
         assert_eq!(Mapper::map(&mapper, row.clone()), row);
         assert_eq!(Mapper::reverse_map(&mapper, row.clone()), row);

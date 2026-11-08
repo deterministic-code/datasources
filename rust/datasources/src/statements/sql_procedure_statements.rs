@@ -105,25 +105,46 @@ pub fn sql_procedure_statements_of(source: &ProcedureSource) -> Vec<Box<dyn Stat
 }
 
 pub fn procedure_name_of(statement: &dyn Statement) -> String {
-    if let Some(s) = statement.as_any().downcast_ref::<CreateCreateStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateCreateStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
-    if let Some(s) = statement.as_any().downcast_ref::<CreateReadStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateReadStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
-    if let Some(s) = statement.as_any().downcast_ref::<CreateUpdateStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateUpdateStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
-    if let Some(s) = statement.as_any().downcast_ref::<CreateDeleteStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateDeleteStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
-    if let Some(s) = statement.as_any().downcast_ref::<CreateBulkCreateStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateBulkCreateStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
-    if let Some(s) = statement.as_any().downcast_ref::<CreateBulkUpdateStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateBulkUpdateStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
-    if let Some(s) = statement.as_any().downcast_ref::<CreateBulkDeleteStoredProcedureStatement>() {
+    if let Some(s) = statement
+        .as_any()
+        .downcast_ref::<CreateBulkDeleteStoredProcedureStatement>()
+    {
         return s.name().to_string();
     }
     panic!("procedure statement has no name");

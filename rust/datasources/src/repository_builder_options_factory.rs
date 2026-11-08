@@ -19,7 +19,11 @@ impl RepositoryBuilderOptionsFactory {
         self
     }
 
-    pub fn add_for(&mut self, dialect: impl Into<String>, options: CRUDRepositoryOptions) -> &mut Self {
+    pub fn add_for(
+        &mut self,
+        dialect: impl Into<String>,
+        options: CRUDRepositoryOptions,
+    ) -> &mut Self {
         self.items.insert(dialect.into(), options);
         self
     }

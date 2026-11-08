@@ -2,11 +2,7 @@ use crate::{default, register, reset, MockDriver};
 
 fn clear_env() {
     reset();
-    for key in [
-        "INSTALLED_PROVIDERS",
-        "DATASOURCE_URL",
-        "PROVIDER",
-    ] {
+    for key in ["INSTALLED_PROVIDERS", "DATASOURCE_URL", "PROVIDER"] {
         std::env::remove_var(key);
     }
     register("sqlite", MockDriver::arc());

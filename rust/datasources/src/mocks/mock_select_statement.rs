@@ -1,6 +1,6 @@
+use crate::statement::Statement;
 use crate::ISelectStatement;
 use crate::IWhere;
-use crate::statement::Statement;
 use crate::StatementTextRenderer;
 use std::sync::Mutex;
 
@@ -31,7 +31,6 @@ impl MockSelectStatement {
         *self.accept_calls.lock().expect("mock")
     }
 }
-
 
 impl Statement for MockSelectStatement {
     fn accept(&self, _text: &StatementTextRenderer) -> String {

@@ -175,9 +175,7 @@ impl Named {
 impl ReadonlyRepositoryFactory for RepositoryFactory {
     fn register<T: Entity>(&self, repository: Arc<dyn IReadonlyRepository<T>>) {
         let type_id = TypeId::of::<T>();
-        self.lock()
-            .readonly
-            .insert(type_id, Arc::new(repository));
+        self.lock().readonly.insert(type_id, Arc::new(repository));
     }
 
     fn create<T: Entity>(&self) -> Result<Arc<dyn IReadonlyRepository<T>>> {
@@ -258,7 +256,10 @@ mod tests {
         let factory = RepositoryFactory::new();
         match factory.create::<Row>() {
             Ok(_) => panic!("expected missing type"),
-            Err(err) => assert_eq!(err.to_string(), "CRUDRepository \"HashMap\" is not registered"),
+            Err(err) => assert_eq!(
+                err.to_string(),
+                "CRUDRepository \"HashMap\" is not registered"
+            ),
         }
     }
 

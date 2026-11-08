@@ -1,6 +1,5 @@
 use crate::{
-    Command, Mapper, MockCommand, Native, Parameter, Row, RowTypeConverter, TransformMapper,
-    Value,
+    Command, Mapper, MockCommand, Native, Parameter, Row, RowTypeConverter, TransformMapper, Value,
 };
 
 fn row(pairs: &[(&str, Value)]) -> Row {

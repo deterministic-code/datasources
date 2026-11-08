@@ -14,7 +14,10 @@ fn postgres_url() {
     assert_eq!(url.path, "/datasources");
     assert_eq!(url.datasource(), Some("datasources"));
     assert_eq!(url.schema.as_deref(), Some("public"));
-    assert_eq!(url.options.get("sslmode").map(String::as_str), Some("require"));
+    assert_eq!(
+        url.options.get("sslmode").map(String::as_str),
+        Some("require")
+    );
 }
 
 #[test]
@@ -36,9 +39,13 @@ fn schema_only() {
 
 #[test]
 fn options_only() {
-    let url = DatasourceUrlParser::parse("postgres://127.0.0.1/datasources?sslmode=require").unwrap();
+    let url =
+        DatasourceUrlParser::parse("postgres://127.0.0.1/datasources?sslmode=require").unwrap();
     assert!(url.schema.is_none());
-    assert_eq!(url.options.get("sslmode").map(String::as_str), Some("require"));
+    assert_eq!(
+        url.options.get("sslmode").map(String::as_str),
+        Some("require")
+    );
 }
 
 #[test]
@@ -47,7 +54,10 @@ fn repeated_option_keeps_the_last_value() {
         "postgres://127.0.0.1/datasources?sslmode=require&sslmode=disable",
     )
     .unwrap();
-    assert_eq!(url.options.get("sslmode").map(String::as_str), Some("disable"));
+    assert_eq!(
+        url.options.get("sslmode").map(String::as_str),
+        Some("disable")
+    );
 }
 
 #[test]
@@ -173,7 +183,10 @@ fn edges() {
     assert_eq!(DatasourceUrlParser::parse("postgres://%zz:5432/db"), None);
     assert_eq!(DatasourceUrlParser::parse("json://%zz"), None);
     assert_eq!(DatasourceUrlParser::parse("postgres://%zz/db"), None);
-    assert_eq!(DatasourceUrlParser::parse("postgres://h/db?sslmode=%zz"), None);
+    assert_eq!(
+        DatasourceUrlParser::parse("postgres://h/db?sslmode=%zz"),
+        None
+    );
     let query = DatasourceUrlParser::parse("postgres://h/db?&sslmode=on").unwrap();
     assert_eq!(query.options.get("sslmode").map(String::as_str), Some("on"));
 }

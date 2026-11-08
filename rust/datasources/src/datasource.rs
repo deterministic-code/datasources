@@ -1,13 +1,13 @@
 use crate::command::Command;
-use crate::datasource_error::DatasourceError;
 use crate::connection::Connection;
 use crate::converters::{RowTypeConverter, TypeConverter};
-use crate::entity::Entity;
 use crate::create_crud_repository_options::create_crud_repository_options;
 use crate::create_readonly_repository_mapping_options::create_readonly_repository_mapping_options;
 use crate::crud_repository::CRUDRepository;
 use crate::crud_repository_options::CRUDRepositoryOptions;
+use crate::datasource_error::DatasourceError;
 use crate::driver::Driver;
+use crate::entity::Entity;
 use crate::readonly_repository::ReadonlyRepository;
 use crate::readonly_repository_mapping_options::ReadonlyRepositoryMappingOptions;
 use crate::repository::{ICRUDRepository, IReadonlyRepository};
@@ -67,9 +67,11 @@ impl dyn Datasource {
         options: Option<ReadonlyRepositoryMappingOptions>,
     ) -> Arc<dyn IReadonlyRepository<T>> {
         let bound = self.bind_connection(connection);
-        T::create_readonly_repository(bound, apply_readonly::<T>(options), |connection, options| {
-            self.readonly_repository_from(connection, options)
-        })
+        T::create_readonly_repository(
+            bound,
+            apply_readonly::<T>(options),
+            |connection, options| self.readonly_repository_from(connection, options),
+        )
     }
 
     pub fn create_repository_by_name<T: Entity>(

@@ -30,7 +30,10 @@ fn generated_shape_tokens_compile() {
 fn object_converter_assigns_matching_cells() {
     let created = datasources::chrono::Utc::now();
     let mut row = Row::new();
-    row.insert("uuid".into(), Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"));
+    row.insert(
+        "uuid".into(),
+        Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"),
+    );
     row.insert("created".into(), Value::DateTime(created));
     row.insert("version".into(), Value::Binary(vec![0]));
     row.insert("contact_id".into(), Value::from("1"));
@@ -49,7 +52,10 @@ fn object_converter_assigns_matching_cells() {
 fn object_converter_uses_default_for_null() {
     let created = datasources::chrono::Utc::now();
     let mut row = Row::new();
-    row.insert("uuid".into(), Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"));
+    row.insert(
+        "uuid".into(),
+        Value::from("54ef41f2-0cb4-4c72-97a7-776fd183f5ed"),
+    );
     row.insert("created".into(), Value::DateTime(created));
     row.insert("version".into(), Value::Binary(vec![0]));
     row.insert("contact_id".into(), Value::from("1"));
