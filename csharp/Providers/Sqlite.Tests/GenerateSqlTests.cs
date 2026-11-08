@@ -251,7 +251,10 @@ public class GenerateSqlTests
             """), new Dictionary<string, string>(), ["sqlite"]);
         var sql = entries.Single(e => e.Filename.EndsWith("0001_initial_up.sql")).Content;
         var contacts = System.Text.RegularExpressions.Regex.Match(sql, @"CREATE TABLE ""contacts"" \(([\s\S]*?)\);").Groups[1].Value;
-        Assert.Matches(@"""gender_type_id"" INTEGER", contacts);
+        var genders = System.Text.RegularExpressions.Regex.Match(sql, @"CREATE TABLE ""genders"" \(([\s\S]*?)\);").Groups[1].Value;
+        Assert.Equal(
+            System.Text.RegularExpressions.Regex.Match(genders, @"""id"" ([A-Z]+)").Groups[1].Value,
+            System.Text.RegularExpressions.Regex.Match(contacts, @"""gender_type_id"" ([A-Z]+)").Groups[1].Value);
         Assert.DoesNotMatch(@"""gender_type_id"" TEXT", contacts);
     }
 

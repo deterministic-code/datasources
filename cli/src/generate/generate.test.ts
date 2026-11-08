@@ -65,6 +65,15 @@ const textOf = (entries: { kind: string; filename: string; contents?: string }[]
   return entry.contents;
 };
 
+const fieldType = (text: string, field: string): string => {
+  const match =
+    text.match(new RegExp(`public (\\S+) ${field} `)) ??
+    text.match(new RegExp(`\\b${field}[!?]?: ([^;\\n]+)`)) ??
+    text.match(new RegExp(`pub ${field}: ([^,;\\n]+)`));
+  if (match === null || match[1] === undefined) throw new Error(`missing ${field}`);
+  return match[1].trim();
+};
+
 const mem = (files: Record<string, string> = {}): { files: Record<string, string>; fs: Fs } => {
   const store = { ...files };
   return {
@@ -695,11 +704,13 @@ types: []
     expect(template(rust)?.updateProperties).not.toContain("template_type_id");
     expect(template(rust)?.createProperties).not.toContain("template_type_name");
     expect(template(rust)?.updateProperties).not.toContain("template_type_name");
-    const address = planRepositories(
+    const models = planRepositories(
       await DeterministicParser(memoryReader(contactsFiles())).parse({ "backend.datasources": "sqlite" }),
       "csharp",
       { "backend.datasources": "sqlite" },
-    ).find((model) => model.specName === "address");
+    );
+    const address = models.find((model) => model.specName === "address");
+    const contactId = models.find((model) => model.specName === "contact")?.schema.find((column) => column.isId);
     expect(address?.readProperties).not.toContain("AddressTypeName");
     expect(address?.readProperties).toContain("AddressTypeId");
     expect(address?.createProperties).not.toContain("AddressTypeId");
@@ -707,7 +718,7 @@ types: []
     expect(address?.schema.some((column) => column.from === "AddressTypeId")).toBe(false);
     expect(address?.propertyMappings).toContainEqual({ from: "AddressTypeId", to: "address_type_id" });
     expect(address?.schema.some((column) => column.from === "AddressTypeName" && column.type === "string")).toBe(true);
-    expect(address?.schema.some((column) => column.from === "ContactId" && column.type === "integer")).toBe(true);
+    expect(address?.schema.some((column) => column.from === "ContactId" && column.type === contactId?.type)).toBe(true);
     expect(address?.enrichments.some((item) => item.destination === "AddressTypeName" && item.kind === "object")).toBe(true);
   });
 
@@ -1238,6 +1249,31 @@ types:
     );
     expect(store.files[join(cwd, "src/types.rs")]).toBeUndefined();
     expect(store.files[join(cwd, "src/datasources_register.rs")]).toBeUndefined();
+  });
+
+  it("infers untyped reference fields from the parent column", async () => {
+    const csharp = await deterministic.generateTypes(request("csharp"));
+    expect(fieldType(textOf(csharp, "View/Address.cs"), "ContactId")).toBe(fieldType(textOf(csharp, "View/Contact.cs"), "Id"));
+    expect(fieldType(textOf(csharp, "Datasource/AddressBase.cs"), "ContactId")).toBe(
+      fieldType(textOf(csharp, "Datasource/Base.cs"), "Id"),
+    );
+    expect(textOf(csharp, "View/Address.cs")).not.toMatch(/string ContactId/);
+    const typescript = await deterministic.generateTypes(request("typescript"));
+    expect(fieldType(textOf(typescript, "datasource/addressBase.ts"), "contactId")).toBe(
+      fieldType(textOf(typescript, "datasource/contactsBase.ts"), "id"),
+    );
+    expect(fieldType(textOf(typescript, "datasource/addressBase.ts"), "contactId")).toBe(
+      fieldType(textOf(typescript, "datasource/addressBase.ts"), "id"),
+    );
+    expect(textOf(typescript, "view/address.ts")).not.toMatch(/contactId:\s*string/);
+    const rust = await deterministic.generateTypes(request("rust"));
+    expect(fieldType(textOf(rust, "types/view/address.rs"), "contact_id")).toBe(
+      fieldType(textOf(rust, "types/view/contact.rs"), "id"),
+    );
+    expect(fieldType(textOf(rust, "types/datasource/addressBase.rs"), "contact_id")).toBe(
+      fieldType(textOf(rust, "types/datasource/contactsBase.rs"), "id"),
+    );
+    expect(textOf(rust, "types/view/address.rs")).toMatch(/pub contact_id: i32/);
   });
 
   it("emits C# auto-properties without a semicolon after the accessor", async () => {

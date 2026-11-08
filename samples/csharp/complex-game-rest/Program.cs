@@ -179,10 +179,16 @@ static void RequireAdaChildren(JsonElement listed, string engineType, string eng
     if (engine.GetProperty("addressTypeName").GetString() != engineType
         || engine.GetProperty("city").GetString() != engineCity)
         throw new InvalidOperationException("engine address");
+    if (engine.GetProperty("contactId").ValueKind != JsonValueKind.Number
+        || engine.GetProperty("contactId").GetInt64() != contact.GetProperty("id").GetInt64())
+        throw new InvalidOperationException("address contact id");
     var phone = contact.GetProperty("phones")[0];
     if (phone.GetProperty("number").GetString() != number
         || phone.GetProperty("phoneTypeName").GetString() != "Mobile")
         throw new InvalidOperationException("phone");
+    if (phone.GetProperty("contactId").ValueKind != JsonValueKind.Number
+        || phone.GetProperty("contactId").GetInt64() != contact.GetProperty("id").GetInt64())
+        throw new InvalidOperationException("phone contact id");
 }
 
 static string Json(object value) => JsonSerializer.Serialize(value);

@@ -80,6 +80,12 @@ case "$sample" in
     ;;
   samples/rust/*)
     export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
+    case "${CARGO_TARGET_DIR:-}" in
+      /cargo-target*)
+        export CARGO_TARGET_DIR="/tmp${CARGO_TARGET_DIR}"
+        mkdir -p "$CARGO_TARGET_DIR"
+        ;;
+    esac
     "$@"
     ;;
   *)

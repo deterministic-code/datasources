@@ -67,6 +67,17 @@ describe("schemaFields", () => {
     expect(schemaFields(type as Type, (name) => name)).toEqual([]);
   });
 
+  it("copies the parent id type onto an untyped reference", async () => {
+    const spec = inferredSpec(await DeterministicParser(memoryReader(files)).parse({}));
+    const genderId = spec.expandedTypes.find((type) => type.name === "gender")?.fields.find((item) => item.name === "id");
+    const fk = spec.expandedTypes
+      .find((type) => type.name === "contact_base")
+      ?.fields.find((item) => item.name === "gender_type_id");
+    expect(fk?.type).toBe(genderId?.type);
+    expect(fk?.kind).toBe(genderId?.kind);
+    expect(fk?.base).toBe(genderId?.base);
+  });
+
   it("plans the view schema from the same expanded object", async () => {
     const spec = await DeterministicParser(memoryReader(files)).parse({});
     const contact = planRepositories(spec, "rust", {}).find((model) => model.specName === "contact");

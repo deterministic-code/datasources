@@ -17,7 +17,7 @@ public class Address
     public bool? IsVerified { get; set; }
     public System.DateTime? VerifiedAt { get; set; }
     public byte[]? Stamp { get; set; }
-    public string ContactId { get; set; } = "";
+    public long ContactId { get; set; }
     public string Line1 { get; set; } = "";
     public string? Line2 { get; set; }
     public string City { get; set; } = "";

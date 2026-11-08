@@ -291,8 +291,11 @@ describe("generate-sql base defaults", () => {
     assert.ok(up, "expected initial up migration");
     const sql = "contents" in up ? String(up.contents) : up.content;
     const contacts = sql.match(/CREATE TABLE "contacts" \(([\s\S]*?)\);/)?.[1];
+    const genders = sql.match(/CREATE TABLE "genders" \(([\s\S]*?)\);/)?.[1];
     assert.ok(contacts, "expected contacts table body");
-    assert.match(contacts, /"gender_type_id" INTEGER/);
+    assert.ok(genders, "expected genders table body");
+    const parentId = genders.match(/"id" ([A-Z]+)/)?.[1];
+    assert.equal(contacts.match(/"gender_type_id" ([A-Z]+)/)?.[1], parentId);
     assert.doesNotMatch(contacts, /"gender_type_id" TEXT/);
   });
 });

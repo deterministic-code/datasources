@@ -15,7 +15,7 @@ public class Contact
     public string LastName { get; set; } = "";
     public string? Email { get; set; }
     public string? Notes { get; set; }
-    public string UserId { get; set; } = "";
+    public long UserId { get; set; }
     public string ContactSourceName { get; set; } = "";
     public string? Description { get; set; }
     public List<Address> Addresses { get; set; } = [];
