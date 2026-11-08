@@ -190,12 +190,12 @@ options.entity_mapper = Some(std::sync::Arc::new(snake_then_plural()));
 options.property_mappings = Some(std::sync::Arc::new(snake()));
 let repo = ds.create_readonly_repository::<Row>(Some(connection), Some(options));
 let by_id = repo
-    .read_single(&Where::binary("Id", eq, 1_i64), None)
+    .read_single_where(&Where::binary("Id", eq, 1_i64), None)
     .await
     .unwrap()
     .unwrap();
 let row = repo
-    .read(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
+    .read_where(&Where::binary("Username", eq, "grace").and("IsEnabled", eq, 0_i64), None)
     .try_collect::<Vec<_>>().await
     .unwrap()
     .into_iter()
@@ -322,7 +322,7 @@ let by_id = users_repo
     .unwrap()
     .unwrap();
 let matches = users_repo
-    .read(&Where::binary("Username", eq, "ada").and(
+    .read_where(&Where::binary("Username", eq, "ada").and(
             "IsEnabled",
             eq,
             Value::Bool(true),
@@ -652,7 +652,7 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(&Where::binary("Key", eq, key.clone()), None)
+    .read_single_where(&Where::binary("Key", eq, key.clone()), None)
     .await
     .unwrap()
     .unwrap();
@@ -678,7 +678,7 @@ let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_vers
     .await
     .unwrap();
 let current = users_repo
-    .read_single(&Where::binary("Key", eq, key.clone()), None)
+    .read_single_where(&Where::binary("Key", eq, key.clone()), None)
     .await
     .unwrap()
     .unwrap();
@@ -956,7 +956,7 @@ let ids = parents
     ])
     .await
     .unwrap();
-let stored_parents = parents.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+let stored_parents = parents.read(None, None).try_collect::<Vec<_>>().await.unwrap();
 ```
 
 #### TypeScript [⟨/⟩](https://github.com/deterministic-code/datasources/blob/main/typescript/datasources/src/BulkCRUDRepository.test.ts#L33-L49)

@@ -1206,7 +1206,7 @@ let by_id = users_repo
     .unwrap()
     .unwrap();
 let matches = users_repo
-    .read(&Where::binary("Username", eq, "ada").and(
+    .read_where(&Where::binary("Username", eq, "ada").and(
             "IsEnabled",
             eq,
             Value::Bool(true),
@@ -1419,8 +1419,8 @@ let created = users
     ))
     .await
     .unwrap();
-let created_role_links = seeded.user_roles.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
-let created_group_links = seeded.user_groups.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+let created_role_links = seeded.user_roles.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+let created_group_links = seeded.user_groups.read(None, None).try_collect::<Vec<_>>().await.unwrap();
 let mut next = ada(
     &seeded,
     encode_rows(&[seeded.editor_role.clone()]),
@@ -1433,8 +1433,8 @@ let updated = users
     .await
     .unwrap()
     .unwrap();
-let updated_role_links = seeded.user_roles.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
-let updated_group_links = seeded.user_groups.read(&(), None).try_collect::<Vec<_>>().await.unwrap();
+let updated_role_links = seeded.user_roles.read(None, None).try_collect::<Vec<_>>().await.unwrap();
+let updated_group_links = seeded.user_groups.read(None, None).try_collect::<Vec<_>>().await.unwrap();
 let removed = users
     .delete(record(&[("id", created.get("id").unwrap().clone())]), None)
     .await
@@ -1862,7 +1862,7 @@ let Value::Int(id) = created.get("Id").cloned().unwrap_or(Value::Null) else {
     panic!("expected insert id");
 };
 let loaded = contacts_repo
-    .read_single(&Where::new(Operator::equals("Id", Value::Int(id))), None)
+    .read_single_where(&Where::new(Operator::equals("Id", Value::Int(id))), None)
     .await
     .unwrap()
     .unwrap();
@@ -2157,7 +2157,7 @@ grace.insert("Roles".into(), encode_rows(&[viewer_role]));
 let grace = users_repo.create(grace).await.unwrap();
 let key = user.get("Key").cloned().unwrap();
 let mut loaded = users_repo
-    .read_single(&Where::binary("Key", eq, key.clone()), None)
+    .read_single_where(&Where::binary("Key", eq, key.clone()), None)
     .await
     .unwrap()
     .unwrap();
@@ -2183,7 +2183,7 @@ let updated = ICRUDRepository::update(&users_repo, loaded.clone(), Some(&by_vers
     .await
     .unwrap();
 let current = users_repo
-    .read_single(&Where::binary("Key", eq, key.clone()), None)
+    .read_single_where(&Where::binary("Key", eq, key.clone()), None)
     .await
     .unwrap()
     .unwrap();
